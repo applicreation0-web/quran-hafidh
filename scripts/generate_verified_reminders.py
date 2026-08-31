@@ -97,10 +97,10 @@ def marker_present(text, marker):
     return re.search(pattern, text) is not None
 
 def thematic_fit(record):
-    # The visible hadith itself must carry the selected theme.
-    visible = norm(
-        (record.get("title", "") + " " + record.get("hadith_text", "")).strip()
-    )
+    # HadeethEnc's title is the editorial summary of the hadith's central point.
+    # Requiring the theme there avoids false matches caused by narrator names,
+    # family relations or incidental details in the full report.
+    title = norm(record.get("title", ""))
     context = norm(
         " ".join(
             record.get(key, "") for key in
@@ -109,18 +109,24 @@ def thematic_fit(record):
     )
 
     # Sensitive/context-heavy material is excluded aggressively, including
-    # inflected forms such as combattre/combattant or derivatives.
-    if any(norm(marker) in context for marker in EXCLUDED_CONTEXT_MARKERS):
+    # inflected forms and technical/legal contexts.
+    hard_exclusions = EXCLUDED_CONTEXT_MARKERS + (
+        "sacrifi", "egorg", "chatie", "chatiment", "malediction",
+        "grand peche", "grands peches", "tetee", "allaitement",
+        "epousa", "epousee", "mariage", "sacralisation",
+        "ablution majeure", "toilette intime"
+    )
+    if any(norm(marker) in context for marker in hard_exclusions):
         return None
 
     best_theme = None
     best_score = 0
     for theme, markers in THEMES:
-        direct_hits = sum(1 for marker in markers if marker_present(visible, marker))
-        if direct_hits <= 0:
+        title_hits = sum(1 for marker in markers if marker_present(title, marker))
+        if title_hits <= 0:
             continue
         contextual_hits = sum(1 for marker in markers if marker_present(context, marker))
-        score = direct_hits * 10 + contextual_hits
+        score = title_hits * 20 + contextual_hits
         if score > best_score:
             best_theme = theme
             best_score = score
