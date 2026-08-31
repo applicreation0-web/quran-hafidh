@@ -1,38 +1,30 @@
 package com.quranunlock.guard
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 
+/**
+ * Intentional, transparent browser coverage.
+ *
+ * Quran Safeguard is an awareness tool, not a general-purpose web firewall.
+ * Only these eight mainstream browsers are part of the web rule.
+ */
 object BrowserDetector {
-    @Volatile
-    private var cachedPackages: Set<String>? = null
+    val supportedPackages: Set<String> = setOf(
+        "com.android.chrome",                 // Google Chrome
+        "org.mozilla.firefox",               // Mozilla Firefox
+        "com.microsoft.emmx",                // Microsoft Edge
+        "com.brave.browser",                 // Brave
+        "com.opera.browser",                 // Opera
+        "com.sec.android.app.sbrowser",      // Samsung Internet
+        "com.duckduckgo.mobile.android",     // DuckDuckGo
+        "com.vivaldi.browser"                // Vivaldi
+    )
 
-    fun isBrowser(context: Context, packageName: String): Boolean =
-        packageName in browserPackages(context)
-
-    fun browserPackages(context: Context): Set<String> {
-        cachedPackages?.let { return it }
-
-        val packages = sequenceOf("https://example.com", "http://example.com")
-            .flatMap { url ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                    addCategory(Intent.CATEGORY_BROWSABLE)
-                }
-                context.packageManager
-                    .queryIntentActivities(intent, 0)
-                    .asSequence()
-                    .mapNotNull { it.activityInfo?.packageName }
-            }
-            .filterNot { it == context.packageName }
-            .filterNot { ProtectedApps.isAlwaysAllowed(it) }
-            .toSet()
-
-        cachedPackages = packages
-        return packages
+    fun isBrowser(context: Context, packageName: String): Boolean {
+        @Suppress("UNUSED_VARIABLE")
+        val ignoredContext = context
+        return packageName in supportedPackages
     }
 
-    fun refresh() {
-        cachedPackages = null
-    }
+    fun refresh() = Unit
 }
