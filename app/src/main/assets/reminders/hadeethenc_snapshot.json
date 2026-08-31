@@ -40,27 +40,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_5373",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن عبد الله بن عمرو بن العاص رضي الله عنهما أن رسول الله صلى الله عليه وسلم قال: «من الكبائر شَتْمُ الرجل والديه» قيل: وهل يسبّ الرجل والديه؟ قال: «نعم، يسبّ أبا الرجل فيسبّ أباه، ويسبّ أمّه، فيسبّ أمّه».",
-    "frenchText": "ʽAbdullah ibn ʽAmr ibn Al-ʽÂṣ (qu'Allah l'agrée, lui et son père) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « Parmi les grands péchés figure le fait qu'un homme insulte ses parents. - On a dit : Un homme peut-il insulter ses parents ? - Il répondit : Oui ! Il insulte le père d'un homme qui à son tour insulte le sien ; et il insulte la mère d'un autre qui en réponse insulte la sienne. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/5373",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "5373",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_5321",
     "type": "HADITH",
     "theme": "coran",
@@ -143,88 +122,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_5731",
-    "type": "HADITH",
-    "theme": "priere",
-    "arabicText": "عن أبي الشعثاء، قال: كنا قُعُودًا مع أبي هريرة رضي الله عنه في المسجد، فأذن المؤذن، فقام رجل من المسجد يمشي، فأَتْبَعَهُ أبو هريرة بَصَرَهُ حتى خرج من المسجد، فقال أبو هريرة: أما هذا فقد عصى أبا القاسم صلى الله عليه وسلم .",
-    "frenchText": "Abû ash-Sha'thâ` relate : « Nous étions assis dans la mosquée avec Abû Hurayrah (qu'Allah l'agrée), quand le muezzin appela à la prière. C'est alors qu'un homme se leva et marcha pour sortir de la mosquée. Abû Hurayrah le suivit du regard jusqu'à ce qu'il sorte de la mosquée et dit : « Quant à celui-ci, il a désobéi à Abu al-Qâsim (sur lui la paix et le salut) ! »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/5731",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "prière",
-      "discipline personnelle"
-    ],
-    "sourceId": "5731",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_58073",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن ابن عباس، قال: \"تَزَوَّج النبيُّ صلى الله عليه وسلم مَيْمُونَة وهو مُحْرِمٌ، وبَنَى بِها وهو حَلالٌ، وماتَتْ بِسَرِف\".",
-    "frenchText": "Ibn 'Abbâs (qu'Allah l'agrée, lui et son père) relate : « Le Prophète (sur lui la paix et le salut) a épousé Maymûnah alors qu'il était en état de sacralisation ; il consomma le mariage alors qu'il avait quitté l'état de sacralisation ; et elle mourut à Sarif. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/58073",
-    "authenticity": "[Sa chaine de transmission est authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "58073",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_8359",
-    "type": "HADITH",
-    "theme": "proprete",
-    "arabicText": "عن عبد الله بن عباس رضي الله عنهما أن النبي صلى الله عليه وسلم كان يغتسل بفضل ميمونة رضي الله عنها .",
-    "frenchText": "Abdallah ibn ‘Abbâs (qu’Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) faisait son ablution majeure avec le reste de l’eau de Maymûnah (qu’Allah l’agrée).",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/8359",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "propreté",
-      "hygiène",
-      "pureté",
-      "ablutions"
-    ],
-    "sourceId": "8359",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_10412",
-    "type": "HADITH",
-    "theme": "douceur",
-    "arabicText": "عن أبي هريرة رضي الله عنه: أن رسول الله صلى الله عليه وسلم قال: «يَنْزِلُ رَبُّنَا تَبَارَكَ وَتَعَالَى كُلَّ لَيْلَةٍ إِلَى السَّمَاءِ الدُّنْيَا حِينَ يَبْقَى ثُلُثُ اللَّيْلِ الْآخِرُ، يَقُولُ: «مَنْ يَدْعُونِي فَأَسْتَجِيبَ لَهُ؟ مَنْ يَسْأَلُنِي فَأُعْطِيَهُ؟ مَنْ يَسْتَغْفِرُنِي فَأَغْفِرَ لَهُ؟».",
-    "frenchText": "Aboû Hourayrah (qu'Allah l'agrée) relate que le Messager d'Allah (qu'Allah le couvre d'éloges et le préserve) a dit : « Notre Seigneur, Béni et Exalté soit-Il, descend chaque nuit au ciel le plus bas lorsqu'il ne reste que le dernier tiers de la nuit , Il déclare alors : Qui M'invoque afin que Je l'exauce ? Qui Me demande afin que Je lui donne ? Qui implore Mon pardon afin que Je lui pardonne ? »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10412",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "douceur",
-      "pardon",
-      "maîtrise de soi",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10412",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_10656",
     "type": "HADITH",
     "theme": "priere",
@@ -239,27 +136,6 @@
       "discipline personnelle"
     ],
     "sourceId": "10656",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_11195",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن علي رضي الله عنه قال: ما رأيتُ النبيَّ صلى الله عليه وسلم يُفَدِّي رجلًا بعد سعد سمعتُه يقول: «ارم فداك أبي وأمي».",
-    "frenchText": "Alî (qu'Allah l'agrée) relate : « Je n'ai jamais entendu le Prophète (sur lui la paix et le salut) dire qu'il sacrifierait père et mère pour quelqu'un d'autre que pour Sa'd. Je l'ai entendu lui dire : \"Tire ! Que mon père et ma mère soient sacrifiés pour toi !\" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11195",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "11195",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -281,47 +157,6 @@
       "liens de parenté"
     ],
     "sourceId": "11301",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_2938",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن عَبْدُ الله بْنُ عَبَّاسٍ رضي الله عنه قال: «استَفْتَى سعد بن عُبَادَةَ رسول الله في نَذْرٍ كان على أمِّه، تُوُفِّيَتْ قبل أَنْ تقضيَهُ، قال رسول الله صلى الله عليه وسلم : فاقْضِهِ عنها».",
-    "frenchText": "‘Abdallah ibn ‘Abbas (qu’Allah l'agrée, lui et son père) relate : « Sa’d ibn ‘Ubâdah a requis l’avis du Messager d’Allah (sur lui la paix et le salut) au sujet de sa mère qui avait fait un vœu mais est morte avant de pouvoir l’accomplir. Le Messager d’Allah (sur lui la paix et le salut) lui répondit : « Accompli-le pour elle ! »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2938",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "2938",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_2996",
-    "type": "HADITH",
-    "theme": "coran",
-    "arabicText": "عن عبد الله بن مسعودٍ رضي الله عنه مرفوعًا: (من حلف على يَمِينِ صَبْرٍ يَقْتَطِعُ بها مال امرئ مسلم، هو فيها فاجر، لقي الله وهو عليه غضبان)، ونزلت: (إن الذين يشترون بعهد الله وأيمانهم ثمنا قليلا) إلى آخر الآية\".",
-    "frenchText": "‘Abdullah ibn Mas’ûd (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Quiconque jure en prêtant un faux serment afin de s’accaparer les biens d’un musulman rencontrera Allah en colère contre lui. » Alors, fut révélé : {(Ceux qui vendent leur pacte avec Allah et leurs serments à un vil prix...)} [Coran : 3/77], jusqu’à la fin du verset.",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2996",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "mérite du Coran",
-      "lecture du Coran",
-      "apprentissage du Coran"
-    ],
-    "sourceId": "2996",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -367,25 +202,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_3443",
-    "type": "HADITH",
-    "theme": "priere",
-    "arabicText": "عن عبد الله بن عمر رضي الله عنهما قال: كان النبي صلى الله عليه وسلم يزورُ قُبَاءَ راكبًا وماشيًا، فيُصَلِّي فيه ركعتين. \nوفي رواية: كان النبي صلى الله عليه وسلم يأتي مسجد قُبَاءَ كل سَبْتٍ راكبًا وماشيًا، وكان ابن عُمر يفعله.",
-    "frenchText": "ʽAbdullah ibn ʽUmar (qu'Allah l'agrée, lui et son père) dit : « Le Prophète (sur lui la paix et le salut) se rendait à Qubâ` à pied ou à dos de monture, et il y priait deux unités de prière. » Dans une [autre] version : « Le Prophète (sur lui la paix et le salut) se rendait à la mosquée de Qubâ` tous les samedis, à pied ou à dos de monture. Ibn ‘Umar faisait de même. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim dans ses deux versions] • https://hadeethenc.com/fr/browse/hadith/3443",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "prière",
-      "discipline personnelle"
-    ],
-    "sourceId": "3443",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_3601",
     "type": "HADITH",
     "theme": "coran",
@@ -401,27 +217,6 @@
       "apprentissage du Coran"
     ],
     "sourceId": "3601",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_3854",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن عبد الله بن عمرو رضي الله عنهما عن النبي صلى الله عليه وسلم قال: «لَيْسَ الْوَاصِلُ بِالْمُكَافِئِ، وَلَكِنِ الْوَاصِلُ الَّذِي إِذَا قُطِعَتْ رَحِمُهُ وَصَلَهَا».",
-    "frenchText": "'Abdoullah ibn 'Amr (qu'Allah l'agrée, lui et son père) relate que le Prophète (qu'Allah le couvre d'éloges et le préserve) a dit : \" Celui qui entretient le lien de parenté n'est pas celui qui le fait en contrepartie, celui qui entretient le lien de parenté est celui qui entretient son lien de parenté lorsqu'il est rompu ! \"",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al Bukhârî] • https://hadeethenc.com/fr/browse/hadith/3854",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "3854",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -653,89 +448,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_58074",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن يَزِيد بن الأصمِّ قال: حدَّثَتْني مَيْمونَة بنت الحارث رضي الله عنها «أن رسول الله صلى الله عليه وسلم تَزَوَّجها وهو حلال»، قال: «وكانت خالَتي، وخالةَ ابنِ عباس».",
-    "frenchText": "Yazîd ibn Al-Aṣṣam a dit : « Maymûnah bint Al-Ḥârith (qu'Allah l'agrée) m'a relaté que le Messager d'Allah (sur lui la paix et le salut) l'a épousée alors qu'il était en état de désacralisation. » Puis, il a dit : « C'était ma tante maternelle et celle de Ibn 'Abbâs (qu'Allah l'agrée, lui et son père). »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/58074",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "58074",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_58193",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن عبد الله بن عمر رضي الله عنهما أنَّ رسول الله صلى الله عليه وسلم قال: «عُذِّبت امرأة في هِرَّة سَجَنَتْها حتى ماتت، فدخلت فيها النار، لا هي أطعمتها ولا سَقتها، إذ حبستها، ولا هي تَركتْها تأكل مِن خَشَاشِ الأرض».",
-    "frenchText": "Abdallah ibn 'Umar (qu'Allah l’agrée, lui et son père) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « Une femme a été châtiée pour avoir emprisonné une chatte jusqu'à ce qu'elle meure. Pour cela, elle est entrée en Enfer. Elle ne l'a ni nourrie, ni abreuvée lorsqu'elle l'a enfermée et elle ne l'a pas non plus laissée se nourrir des bestioles de la terre. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/58193",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "58193",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_10051",
-    "type": "HADITH",
-    "theme": "voisinage",
-    "arabicText": "عن أبي هريرة رضي الله عنه مرفوعًا: «اتقوا اللَّعَّانَيْن» قالوا: وما اللَّعَّانَانِ يا رسول الله؟ قال: «الذي يَتَخَلَّى في طريق الناس، أو في ظِلِّهم».",
-    "frenchText": "Abû Hurayrah (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Craignez les deux grandes causes de malédiction ! - Ils dirent : Et quelles sont les deux grandes causes de malédiction, ô, Messager d'Allah ? - Il dit : Celui qui fait ses besoins sur le chemin des gens ou sur les endroits ombragés que ceux-ci utilisent ! »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/10051",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "voisinage",
-      "respect du voisin",
-      "espaces communs"
-    ],
-    "sourceId": "10051",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_10102",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن أبي هريرة رضي الله عنه قال: أخذ الحسن بن علي رضي الله عنهما تمرة من تمر الصدقة فجعلها في فيه، فقال رسول الله صلى الله عليه وسلم : «كَخْ كَخْ ارْمِ بها، أما علمت أنَّا لا نأكل الصدقة!؟». \nوفي رواية: «أنَّا لا تَحِلُّ لنا الصدقة».",
-    "frenchText": "Abû Hurayrah (qu’Allah l’agrée) relate : « Al-Ḥassan ibn ‘Alî (qu'Allah l’agrée, lui et son père) prit l'une des dattes réservées à l’aumône et la mit dans sa bouche. Le Messager d’Allah (sur lui la paix et le salut) lui dit alors : \" Attention ! Attention ! Jette-la ! Ne sais-tu pas que nous ne mangeons pas les aumônes !? \" » Dans une version : « … les aumônes ne nous sont pas autorisées ! »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim - Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10102",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "10102",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_10623",
     "type": "HADITH",
     "theme": "priere",
@@ -814,27 +526,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_10997",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن ابن عباس رضي الله عنهما عن النبي صلى الله عليه وسلم قال: «لا يَنْبغي لِعَبْدٍ أنْ يقول: أنا خيرٌ مِن يونس بن مَتَّى» ونسبه إلى أبيه.",
-    "frenchText": "Ibn 'Abbâs (qu'Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) a dit : « Il ne convient pas à un serviteur de dire : \"Je suis meilleur que Jonas fils de Matta !\" » Et il a attribué cela à son père.",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10997",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "10997",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_11248",
     "type": "HADITH",
     "theme": "priere",
@@ -854,14 +545,14 @@
     "displayEligible": true
   },
   {
-    "id": "he_11270",
+    "id": "he_2938",
     "type": "HADITH",
     "theme": "famille",
-    "arabicText": "عن عبد الله بن عمرو بن العاص رضي الله عنهما قال: قال لي رسول الله صلى الله عليه وسلم : «يا عبد الله، لا تكن مثل فلان كان يقوم الليل، فترك قيام الليل».",
-    "frenchText": "‘Abdallah ibn ‘Amr ibn Al-’Âṣ (qu’Allah l'agrée, lui et son père) relate que le Messager d’Allah (sur lui la paix et le salut) lui a dit : « Ô ‘Abdallah ! Ne sois pas comme Untel qui veillait la nuit en prière, puis a délaissé la prière nocturne ! »",
+    "arabicText": "عن عَبْدُ الله بْنُ عَبَّاسٍ رضي الله عنه قال: «استَفْتَى سعد بن عُبَادَةَ رسول الله في نَذْرٍ كان على أمِّه، تُوُفِّيَتْ قبل أَنْ تقضيَهُ، قال رسول الله صلى الله عليه وسلم : فاقْضِهِ عنها».",
+    "frenchText": "‘Abdallah ibn ‘Abbas (qu’Allah l'agrée, lui et son père) relate : « Sa’d ibn ‘Ubâdah a requis l’avis du Messager d’Allah (sur lui la paix et le salut) au sujet de sa mère qui avait fait un vœu mais est morte avant de pouvoir l’accomplir. Le Messager d’Allah (sur lui la paix et le salut) lui répondit : « Accompli-le pour elle ! »",
     "author": "Prophète Muhammad ﷺ",
     "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11270",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2938",
     "authenticity": "[Authentique]",
     "tags": [
       "famille",
@@ -869,7 +560,7 @@
       "enfants",
       "liens de parenté"
     ],
-    "sourceId": "11270",
+    "sourceId": "2938",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -890,27 +581,6 @@
       "apprentissage du Coran"
     ],
     "sourceId": "3009",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_3023",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن عبد الله بن عمر رضي الله عنهما قال: ((رَقيت يومًا على بيت حفصة، فرَأَيتُ النبيَّ -صلَّى الله عليه وسلَّم-يَقضِي حاجته مُسْتَقبِل الشام، مُسْتَدبِر الكعبة)). \nوفي رواية: ((مُسْتَقبِلا بَيتَ المَقدِس)) .",
-    "frenchText": "‘Abdullah ibn ‘Umar (qu’Allah l'agrée, lui et son père) relate : « Un jour, je suis monté sur la demeure de Ḥafṣah et j’aperçus le Prophète (sur lui la paix et le salut) qui faisait ses besoins, tourné vers la Syrie, dos à la Ka’bah. » Et dans une version : « tourné vers Jérusalem. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3023",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "3023",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -956,42 +626,20 @@
     "displayEligible": true
   },
   {
-    "id": "he_3439",
+    "id": "he_3443",
     "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن عبد الله بن أبي أوفى رضي الله عنهما أنَّ رسول الله -صلَّى الله عليه وسلَّم- بَشَّرَ خَدِيجَةَ رضي الله عنها بِبَيتٍ فِي الجنَّة مِنْ قَصَبٍ، لاَ صَخَبَ فِيهِ، ولاَ نَصَبٍ.",
-    "frenchText": "Abdullah ibn Abî Awfâ (qu'Allah l'agrée, lui et son père) relate que le Messager d'Allah (sur lui la paix et le salut) a annoncé à Khadîjah (qu'Allah l'agrée) qu'au Paradis, elle aurait une demeure en roseau où il n'y a ni tumulte ni fatigue.",
+    "theme": "priere",
+    "arabicText": "عن عبد الله بن عمر رضي الله عنهما قال: كان النبي صلى الله عليه وسلم يزورُ قُبَاءَ راكبًا وماشيًا، فيُصَلِّي فيه ركعتين. \nوفي رواية: كان النبي صلى الله عليه وسلم يأتي مسجد قُبَاءَ كل سَبْتٍ راكبًا وماشيًا، وكان ابن عُمر يفعله.",
+    "frenchText": "ʽAbdullah ibn ʽUmar (qu'Allah l'agrée, lui et son père) dit : « Le Prophète (sur lui la paix et le salut) se rendait à Qubâ` à pied ou à dos de monture, et il y priait deux unités de prière. » Dans une [autre] version : « Le Prophète (sur lui la paix et le salut) se rendait à la mosquée de Qubâ` tous les samedis, à pied ou à dos de monture. Ibn ‘Umar faisait de même. »",
     "author": "Prophète Muhammad ﷺ",
     "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3439",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim dans ses deux versions] • https://hadeethenc.com/fr/browse/hadith/3443",
     "authenticity": "[Authentique]",
     "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
+      "prière",
+      "discipline personnelle"
     ],
-    "sourceId": "3439",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_3464",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن زياد بن جبير قال: رَأَيتُ ابنَ عُمَرَ أَتَى عَلَى رجل قد أَنَاخَ بَدَنَتَهُ، فَنَحَرَهَا، فَقَالَ: ابْعَثْهَا قِيَاماً مُقَيَّدَةً، سُنَّةَ مُحَمَّدٍ -صلَّى الله عليه وسلَّم-.",
-    "frenchText": "Ziyâd ibn Jubayr relate : « J’ai vu Ibn ‘Umar venir à la rencontre d’un homme qui avait agenouillé son chameau et qui l'égorgea. Il lui dit alors : « Laisse-le debout et attache-le ! C'est la tradition de Muḥammad (sur lui la paix et le salut). »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3464",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "3464",
+    "sourceId": "3443",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -1072,6 +720,27 @@
       "apprentissage du Coran"
     ],
     "sourceId": "3734",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3854",
+    "type": "HADITH",
+    "theme": "famille",
+    "arabicText": "عن عبد الله بن عمرو رضي الله عنهما عن النبي صلى الله عليه وسلم قال: «لَيْسَ الْوَاصِلُ بِالْمُكَافِئِ، وَلَكِنِ الْوَاصِلُ الَّذِي إِذَا قُطِعَتْ رَحِمُهُ وَصَلَهَا».",
+    "frenchText": "'Abdoullah ibn 'Amr (qu'Allah l'agrée, lui et son père) relate que le Prophète (qu'Allah le couvre d'éloges et le préserve) a dit : \" Celui qui entretient le lien de parenté n'est pas celui qui le fait en contrepartie, celui qui entretient le lien de parenté est celui qui entretient son lien de parenté lorsqu'il est rompu ! \"",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al Bukhârî] • https://hadeethenc.com/fr/browse/hadith/3854",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "famille",
+      "parents",
+      "enfants",
+      "liens de parenté"
+    ],
+    "sourceId": "3854",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -1239,48 +908,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_58075",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن إياس بن سلمة، عن أبيه، قال: «رَخَّصَ رسول الله صلى الله عليه وسلم عَامَ أَوْطَاسٍ، في المُتْعَة ثلاثا، ثم نَهَى عنها».",
-    "frenchText": "Iyâs ibn Salamah relate de son père qu'il a dit : « Le Messager d'Allah (sur lui la paix et le salut) autorisa, l'année de [la bataille] d'Awṭâss, le mariage temporaire pendant trois jours, puis il l'interdit. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/58075",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "58075",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_5830",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن أسامة بن زيد رضي الله عنهما عن النبي صلى الله عليه وسلم قال: «مَا تَرَكْتُ بَعْدِي فِتْنَةً أَضَرَّ عَلَى الرِّجَالِ مِنَ النِّسَاءِ».",
-    "frenchText": "Ousâmah ibn Zayd (qu'Allah l'agrée, lui et son père) relate que le Prophète (qu'Allah le couvre d'éloges et le préserve) a dit : « Je n’ai pas laissé derrière moi une tentation plus préjudiciable pour les hommes que les femmes. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/5830",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "5830",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_5882",
     "type": "HADITH",
     "theme": "dhikr",
@@ -1340,27 +967,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_6084",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عن جابر بن عبد الله رضي الله عنهما قال: \"كنا نعزل والقرآن ينزل\".\nقال سفيان: لو كان شيئا ينهى عنه؛ لنهانا عنه القرآن.",
-    "frenchText": "Jâbir ibn ‘Abdillah (qu’Allah l'agrée, lui et son père) relate : « Nous pratiquions l’éjaculation externe alors que le Coran descendait encore. Sufyân a dit : \" Si c'était quelque chose d’interdit, le Coran nous l’aurait interdit ! \" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/6084",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "6084",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_6094",
     "type": "HADITH",
     "theme": "voisinage",
@@ -1376,26 +982,6 @@
       "espaces communs"
     ],
     "sourceId": "6094",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_6212",
-    "type": "HADITH",
-    "theme": "coran",
-    "arabicText": "عن أبي موسى الأشعري رضي الله عنه : أن رسول الله صلى الله عليه وسلم قال له: «لقد أُوتيتَ مِزْمَاراً من مزامير آل داود».\nوفي رواية لمسلم: أنّ رسول الله صلى الله عليه وسلم قال له: «لو رَأيتَنِي وأنا أستمع لقراءتك البارحة».",
-    "frenchText": "Abû Mûsâ Al-Ashʽarî (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) lui a dit : « Il t’a été accordé l’une des flûtes de la famille de Dâwud ! » Et dans une version rapportée par Muslim, le Messager d’Allah (sur lui la paix et le salut) lui a dit : « Si tu avais pu me voir hier, alors que j’écoutais ta récitation ! »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/6212",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "mérite du Coran",
-      "lecture du Coran",
-      "apprentissage du Coran"
-    ],
-    "sourceId": "6212",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -1442,26 +1028,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_65046",
-    "type": "HADITH",
-    "theme": "coran",
-    "arabicText": "عَنْ ‌أَبِي هُرَيْرَةَ رَضِيَ اللهُ عَنْهُ قَالَ: كَانَ أَهْلُ الْكِتَابِ يَقْرَؤُونَ التَّوْرَاةَ بِالْعِبْرَانِيَّةِ، وَيُفَسِّرُونَهَا بِالْعَرَبِيَّةِ لِأَهْلِ الْإِسْلَامِ، فَقَالَ رَسُولُ اللهِ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ: «لَا تُصَدِّقُوا أَهْلَ الْكِتَابِ وَلَا تُكَذِّبُوهُمْ، وَقُولُوا: {آمَنَّا بِاللهِ وَمَا أُنْزِلَ إِلَيْنَا} [البقرة: 136] الْآيَةَ».",
-    "frenchText": "Aboû Hourayrah (qu'Allah l'agrée) relate : « Les Gens du Livre lisaient la Torah en hébreu et l'expliquaient en arabe aux musulmans. Le Messager d'Allah (qu’Allah le couvre d’éloges et le préserve) a alors dit : \"Ne déclarez pas véridique les gens du Livre, et ne les traitez pas non-plus de menteurs ! Dites : { Nous avons cru en Allah et en ce qui nous a été révélé } [Sourate Al-Baqarah (La Vache) : 2/136].",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al Bukhârî] • https://hadeethenc.com/fr/browse/hadith/65046",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "mérite du Coran",
-      "lecture du Coran",
-      "apprentissage du Coran"
-    ],
-    "sourceId": "65046",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_6828",
     "type": "HADITH",
     "theme": "coran",
@@ -1477,26 +1043,6 @@
       "apprentissage du Coran"
     ],
     "sourceId": "6828",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_6984",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن أبي هريرة رضي الله عنه أن رسول الله صلى الله عليه وسلم قال: «لا ينبغي لصِدِّيق أن يكون لعَّانًا».",
-    "frenchText": "Abû Hurayrah (qu'Allah l'agrée) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « Il n'est pas convenable, pour un véridique, d'être imprécateur. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/6984",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "6984",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -1561,46 +1107,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_10114",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن عقبة بن عامر رضي الله عنه : أن رسول الله صلى الله عليه وسلم قال: «ألَمْ تَرَ آيَاتٍ أُنْزِلَتْ هذِهِ اللَّيْلَةَ لَمْ يُرَ مِثْلُهُنَّ قَطُّ؟ (قل أعوذ برب الفلق) و(قل أعوذ برب الناس)».",
-    "frenchText": "‘Uqbah ibn ‘Âmir (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Ne vois-tu pas que cette nuit des versets jamais égalés m’ont été révélés ? {( Dis : \"Je me réfugie auprès du Seigneur de l’aube naissante.\" )} et {( Dis : \"Je me réfugie auprès du Seigneur des hommes.\" )} »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/10114",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10114",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_10119",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن عمر بن الخطاب رضي الله عنه : أن النبي صلى الله عليه وسلم قال: «إن اللهَ يَرفعُ بهذا الكِتابِ أقْواماً ويَضَعُ به آخَرِينَ».",
-    "frenchText": "‘Umar ibn Al-Khaṭṭâb (qu'Allah l'agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Par ce livre, Allah élève des gens et en rabaisse d’autres. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/10119",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10119",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_10120",
     "type": "HADITH",
     "theme": "entraide",
@@ -1641,26 +1147,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_10560",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن أبي هريرة رضي الله عنه قال: قال رسول الله صلى الله عليه وسلم : «على أَنْقَابِ المدينةِ ملائكةٌ لا يدخلُها الطَّاعونُ، ولا الدَّجَّالُ».",
-    "frenchText": "Abû Hurayrah (qu'Allah l'agrée) relate : « Le Messager d’Allah (sur lui la paix et le salut) a dit : \" Aux accès de Médine, il y a des Anges. Ni la peste, ni le Faux-Messie (« Ad-Dajjâl ») ne peuvent y entrer ! \" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10560",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10560",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_10599",
     "type": "HADITH",
     "theme": "entraide",
@@ -1683,7 +1169,7 @@
   {
     "id": "he_10643",
     "type": "HADITH",
-    "theme": "famille",
+    "theme": "entraide",
     "arabicText": "عن جابر رضي الله عنه قال: «كان رسول الله صلى الله عليه وسلم يُصلِّي على راحِلَته، حيث تَوَجَّهَت فإذا أراد الفَرِيضة نَزل فاسْتَقبل القِبْلة».",
     "frenchText": "Jâbir ibn 'Abdillah (qu'Allah l'agrée, lui et son père) dit : « Le Messager d'Allah (sur lui la paix et le salut) priait sur sa monture, quelle que soit la direction qu'elle prenait ; mais lorsqu'il voulait faire la prière obligatoire, il descendait et se tournait vers la Qiblah. »",
     "author": "Prophète Muhammad ﷺ",
@@ -1691,10 +1177,9 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/10643",
     "authenticity": "[Authentique]",
     "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
     ],
     "sourceId": "10643",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -1782,46 +1267,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_10860",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن جُبَيْر بن مُطْعِم رضي الله عنه قال: قال رسول الله صلى الله عليه وسلم : «لِي خمسة أسْماء: أنا محمد، وأحمد، وأنا الماحِي الذي يَمْحُو الله بي الكفر، وأنا الحاشِر الذي يُحشَر الناس على قَدَمِي، وأنا العاقِب».",
-    "frenchText": "Jubayr ibn Muṭ'im (qu'Allah l'agrée) relate : « Le Messager d'Allah (sur lui la paix et le salut) a dit : \" J'ai cinq noms : Je suis Muḥammad, Aḥmad, Al-Mâḥî, celui par qui Allah efface la mécréance, je suis Al-Ḥâshir, celui après qui les gens seront ressuscités, et je suis Al-'Âqib. \" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10860",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10860",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_10868",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن طلحة بن عبيد الله رضي الله عنه قال: كنَّا نصلِّي والدواب تمرُّ بين أيدينا فذكرنا ذلك لرسول الله صلى الله عليه وسلم فقال: «مِثْلُ مُؤْخِرَةِ الرَّحْلِ تكون بين يدي أحدكم، ثم لا يضُرُّه ما مر بين يديه».",
-    "frenchText": "Ṭalḥah ibn 'Ubaydillah (qu'Allah l'agrée) relate : « Nous priions tandis que les animaux passaient devant nous. Nous en fîmes part au Messager d'Allah (sur lui la paix et le salut) qui dit : \" Qu'une chose semblable à l'arrière d'une selle (de chameau) soit placée devant l'un d'entre-vous, puis, ce qui passera devant lui ne lui portera aucun préjudice ! \" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/10868",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10868",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_10874",
     "type": "HADITH",
     "theme": "entraide",
@@ -1863,7 +1308,7 @@
   {
     "id": "he_10876",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن أنس بن مالك رضي الله عنه : أن رسول الله صلى الله عليه وسلم قال: «إذا قُدِّمَ العَشَاءُ ، فابدءوا به قبل أن تُصَلُّوا صلاة المغرب، ولا تَعْجَلوا عن عَشَائِكم».",
     "frenchText": "Anas ibn Mâlik (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Lorsque le dîner est servi, commencez par lui avant d’accomplir prière du couchant, et ne hâtez pas votre repas ! »",
     "author": "Prophète Muhammad ﷺ",
@@ -1871,9 +1316,8 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10876",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
     "sourceId": "10876",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -1903,7 +1347,7 @@
   {
     "id": "he_10881",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن أنس بن مالك رضي الله عنه قال: كان قِرَام لعائشة سَترت به جانب بَيتها، فقال النبي صلى الله عليه وسلم : «أَمِيطِي عنَّا قِرَامَكِ هذا، فإنه لا تَزال تصاوِيُره تَعْرِض في صلاتي».",
     "frenchText": "Anas ibn Mâlik (qu’Allah l’agrée) relate : « ʽÂ’ishah (qu’Allah l’agrée) avait un voile avec lequel elle recouvrait un côté de sa maison. Le Prophète (sur lui la paix et le salut) lui dit : \"Débarrasse-nous de ce voile ! Ses images ne cessent de se présenter lors de ma prière !\" »",
     "author": "Prophète Muhammad ﷺ",
@@ -1911,9 +1355,8 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/10881",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
     "sourceId": "10881",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -1943,7 +1386,7 @@
   {
     "id": "he_10931",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن مالك بن الحويرث رضي الله عنه : أنه رأى النبي صلى الله عليه وسلم يصلي، فإذا كان في وِتْرٍ من صلاته لم ينهض حتى يستوي قاعداً.",
     "frenchText": "Mâlik ibn Al-Ḥuwayrith (qu’Allah l’agrée) relate qu’il a observé le Prophète (sur lui la paix et le salut) accomplir la prière et que, lorsqu’il concluait une unité de prière impaire, il ne se relevait pas avant de s'être parfaitement assis.",
     "author": "Prophète Muhammad ﷺ",
@@ -1951,30 +1394,10 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/10931",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "10931",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_10951",
-    "type": "HADITH",
-    "theme": "priere",
-    "arabicText": "عن عمران بن حصين رضي الله عنه قال: كَانَتْ بِي بَوَاسِيرُ، فَسَأَلْتُ النَّبِيَّ صَلَّى اللهُ عَلَيْهِ وَسَلَّمَ عَنِ الصَّلَاةِ، فَقَالَ: «صَلِّ قَائِمًا، فَإِنْ لَمْ تَسْتَطِعْ فَقَاعِدًا، فَإِنْ لَمْ تَسْتَطِعْ فَعَلَى جَنْبٍ».",
-    "frenchText": "'Imrân ibn Houṣayn (qu’Allah l’agrée) relate : « Je souffrais d’hémorroïdes, j’ai alors questionné le Prophète (qu'Allah le couvre d'éloges et le préserve) concernant la manière d'accomplir la prière, et il m'a dit : \" Prie debout, si tu ne peux pas, alors assis ; et si tu ne peux pas, alors sur le côté \".",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al Bukhârî] • https://hadeethenc.com/fr/browse/hadith/10951",
-    "authenticity": "[Authentique]",
-    "tags": [
       "prière",
       "discipline personnelle"
     ],
-    "sourceId": "10951",
+    "sourceId": "10931",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -2023,7 +1446,7 @@
   {
     "id": "he_10975",
     "type": "HADITH",
-    "theme": "famille",
+    "theme": "entraide",
     "arabicText": "عن ابن عباس رضي الله عنهما قال: «بُعِث رسولُ الله صلى الله عليه وسلم لِأَربعين سَنَة، فَمَكَثَ بِمكة ثلاثَ عشرة سنة يوحَى إليه، ثم أُمِرَ بالهِجْرة فَهاجَر عشر سِنِين، ومات وهو ابنُ ثَلاثٍ وستِّين».",
     "frenchText": "Ibn 'Abbâs (qu'Allah l'agrée, lui et son père) a dit : « Le Messager d'Allah (sur lui la paix et le salut) fut envoyé à l'âge de quarante ans, il a vécu à La Mecque durant treize ans à recevoir la Révélation. Puis, il lui a été ordonné d'émigrer, il a alors émigré durant dix ans. Enfin, il est mort à l'âge de soixante-trois ans. »",
     "author": "Prophète Muhammad ﷺ",
@@ -2031,10 +1454,9 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/10975",
     "authenticity": "[Authentique]",
     "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
     ],
     "sourceId": "10975",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -2064,7 +1486,7 @@
   {
     "id": "he_10996",
     "type": "HADITH",
-    "theme": "famille",
+    "theme": "entraide",
     "arabicText": "عن ابن عمر رضي الله عنهما عن النبي صلى الله عليه وسلم قال: «الكَريمُ، ابنُ الكَريمِ، ابنِ الكَريمِ، ابنِ الكَريمِ يوسفُ بنُ يعقوبَ بنِ إسحاقَ بنِ إبراهيمَ -عليهم السلام-».",
     "frenchText": "Ibn 'Umar (qu'Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) a dit : « Le noble, fils du noble, fils du noble, fils du noble : Joseph (Yûsuf), fils de Jacob (Ya'qûb), fils d'Isaac (Is'hâq), fils d'Abraham (Ibrâhîm) - sur eux la paix. »",
     "author": "Prophète Muhammad ﷺ",
@@ -2072,10 +1494,9 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/10996",
     "authenticity": "[Authentique]",
     "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
     ],
     "sourceId": "10996",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -2106,7 +1527,7 @@
   {
     "id": "he_11168",
     "type": "HADITH",
-    "theme": "famille",
+    "theme": "douceur",
     "arabicText": "عن المسور بن مخرمة رضي الله عنهما مرفوعًا: «فاطمة بَضْعة مني، فمَن أغضبها أغضبني».",
     "frenchText": "Al-Miswar ibn Makhramah (qu’Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) a dit : « Fâṭimah est une partie de moi-même ; quiconque la met en colère, me met en colère. »",
     "author": "Prophète Muhammad ﷺ",
@@ -2114,32 +1535,12 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11168",
     "authenticity": "[Authentique]",
     "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "11168",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_11176",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن عائشة رضي الله عنها ، قالت: «لم يتزوج النبي صلى الله عليه وسلم على خديجة حتى ماتت».",
-    "frenchText": "ʽA’ishah (qu'Allah l'agrée) a dit : « Le Prophète (sur lui la paix et le salut) n’épousa pas d’autres femmes que Khadîjah, jusqu'à ce qu’elle ne meurt. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/11176",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
+      "douceur",
+      "pardon",
+      "maîtrise de soi",
       "bonnes mœurs"
     ],
-    "sourceId": "11176",
+    "sourceId": "11168",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -2166,66 +1567,6 @@
     "displayEligible": true
   },
   {
-    "id": "he_11189",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن البراء رضي الله عنه قال: لما تُوفِّي إبراهيم -عليه السلام-، قال رسول الله صلى الله عليه وسلم : «إنَّ له مُرْضِعًا في الجنة».",
-    "frenchText": "Al-Barâ’ (qu'Allah l'agrée) relate : « Quand Ibrâhîm (sur lui la paix) décéda, le Messager d’Allah (sur lui la paix et le salut) a dit : \"Certes, il a une nourrice au Paradis !\" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/11189",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "11189",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_11190",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن أنس بن مالك رضي الله عنه مرفوعًا: «إنَّ لكل أُمَّة أمِينًا، وإنَّ أمِيننا -أيتُها الأمة- أبو عُبيدة بن الجَرَّاح».",
-    "frenchText": "Anas ibn Mâlik (qu'Allah l'agrée) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « Dans chaque communauté se trouve un homme honnête, et le nôtre, celui de cette communauté, est Abû 'Ubaydah ibn Al-Jarrâḥ. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11190",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "11190",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_11209",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن أبي أيوب رضي الله عنه، قال: خرج النبي صلى الله عليه وسلم وقد وَجَبَت الشمس، فسمع صوتا فقال: «يهودُ تُعذَّب في قبورها».",
-    "frenchText": "Abû Ayyûb (qu’Allah l’agrée) relate : « Le Prophète (sur lui la paix et le salut) sortit après le coucher du soleil, il entendit des voix et dit : \"Les Juifs se font châtier dans leurs tombes !\" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11209",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "11209",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_11215",
     "type": "HADITH",
     "theme": "entraide",
@@ -2241,26 +1582,6 @@
       "bonnes mœurs"
     ],
     "sourceId": "11215",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_11216",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن أبي هريرة رضي الله عنه مرفوعًا: «لا تقومُ الساعةُ حتى تخرجَ نارٌ من أرض الحِجاز تُضيءُ أعناقَ الإبل ببُصْرى».",
-    "frenchText": "Abû Hurayrah (qu'Allah l'agrée) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « L'Heure n'adviendra pas avant qu'un feu n'apparaisse dans le Ḥijâz et n'éclaire les cous des chameaux à Buṣrâ. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11216",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "11216",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -2288,7 +1609,7 @@
   {
     "id": "he_11253",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن عبد الله بنِ مُغَفَّلِ المُزَنِيِّ رضي الله عنهما قال: قال رسول الله صلى الله عليه وسلم : «صَلُّوا قبل المغرب ركعتين»، ثم قال: «صَلُّوا قبل المغرب ركعتين لمن شاء»، خشية أن يتخذها الناس سُنة.",
     "frenchText": "Abdullah ibn Mughaffal Al-Muzanî (qu'Allah l'agrée) relate : « Le Messager d'Allah (sur lui la paix et le salut) a dit : \"Priez avant le Maghrib, deux unités de prière !\" Puis, il répéta : \"Priez avant le Maghrib, deux unités de prière, pour qui le voudra ! » de crainte que les gens ne considèrent cela comme une tradition prophétique continuelle. »",
     "author": "Prophète Muhammad ﷺ",
@@ -2296,9 +1617,8 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/11253",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
     "sourceId": "11253",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -2308,7 +1628,7 @@
   {
     "id": "he_11261",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن أبي هريرة رضي الله عنه قال: قال رسول الله صلى الله عليه وسلم : «أفضل الصِّيام، بعد رمضان، شَهر الله المُحَّرم، وأفضل الصلاة، بعد الفَريضة، صلاة الليل».",
     "frenchText": "Abû Hurayrah (qu'Allah l'agrée) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « Le meilleur jeûne après le Ramadan est celui du mois d'Allah Al-Muḥarram, et la meilleure prière après la prière prescrite est la prière nocturne. »",
     "author": "Prophète Muhammad ﷺ",
@@ -2316,9 +1636,8 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/11261",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
     "sourceId": "11261",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -2346,21 +1665,20 @@
     "displayEligible": true
   },
   {
-    "id": "he_11275",
+    "id": "he_11270",
     "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن أبي سعيد الخدري رضي الله عنه أن النبي صلى الله عليه وسلم قال: «أَوْتِرُوا قبل أن تُصبحِوُا».",
-    "frenchText": "Abû Saʽîd Al-Khudrî (qu'Allah l'agrée) relate que le Prophète (sur lui la paix et le salut) a dit : « Accomplissez le « Witr » avant l’apparition de l’aube. »",
+    "theme": "priere",
+    "arabicText": "عن عبد الله بن عمرو بن العاص رضي الله عنهما قال: قال لي رسول الله صلى الله عليه وسلم : «يا عبد الله، لا تكن مثل فلان كان يقوم الليل، فترك قيام الليل».",
+    "frenchText": "‘Abdallah ibn ‘Amr ibn Al-’Âṣ (qu’Allah l'agrée, lui et son père) relate que le Messager d’Allah (sur lui la paix et le salut) lui a dit : « Ô ‘Abdallah ! Ne sois pas comme Untel qui veillait la nuit en prière, puis a délaissé la prière nocturne ! »",
     "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/11275",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/11270",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
-    "sourceId": "11275",
+    "sourceId": "11270",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -2368,7 +1686,7 @@
   {
     "id": "he_11278",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن جابر رضي الله عنه قال: قال رسول الله صلى الله عليه وسلم : «من خاف أن لا يقوم من آخِرِ الليل فليوتر أوله، ومن طَمِعَ أن يقوم آخره فليوتر آخر الليل، فإن صلاة آخر الليل مشهودة، وذلك أفضل».",
     "frenchText": "Jabir ibn 'Abdillah (qu'Allah l'agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Quiconque craint de ne pas se réveiller en fin de nuit, qu'il prie le « Witr » au début de celle-ci ! Et celui qui désire veiller la dernière partie de la nuit, qu'il prie le « Witr » en fin de nuit ! Car la prière de la fin de la nuit a des témoins, et c'est préférable. »",
     "author": "Prophète Muhammad ﷺ",
@@ -2376,9 +1694,8 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/11278",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
     "sourceId": "11278",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -2448,7 +1765,7 @@
   {
     "id": "he_11283",
     "type": "HADITH",
-    "theme": "entraide",
+    "theme": "priere",
     "arabicText": "عن زَيد بن أرْقَم رضي الله عنه : أنه رأى قوما يصلُّون من الضُّحى، فقال: أمَا لقد عَلِموا أن الصلاة في غير هذه السَّاعة أفضل، إن رسول الله صلى الله عليه وسلم ، قال: «صلاة الأَوَّابِين حين تَرْمَضُ الفِصَال».",
     "frenchText": "Zayd ibn Arqam (qu'Allah l'agrée) relate que lorsqu’il vit des gens qui accomplissaient la prière de la matinée, il dit : « Ne savent-ils pas que la prière est plus méritoire à un autre moment ? Le Messager d'Allah (sur lui la paix et le salut) a certes dit : \"La prière de ceux qui reviennent sans cesse à Allah a lieu lorsque les chamelons se brûlent !\" »",
     "author": "Prophète Muhammad ﷺ",
@@ -2456,31 +1773,10 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/11283",
     "authenticity": "[Authentique]",
     "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
+      "prière",
+      "discipline personnelle"
     ],
     "sourceId": "11283",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
-    "id": "he_11291",
-    "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "أن رسول الله صلى الله عليه وسلم رأى في أصحابه تأخُّرًا فقال لهم: «تَقَدَّمُوا فَأْتَمُّوا بي، وليأتمَّ بكم مَن بعدكم، لا يزال قومٌ يتأخرون حتى يؤخرَّهم اللهُ».",
-    "frenchText": "Abû Saʽîd Al-Khudrî (qu'Allah l'agrée) relate : « Le Messager d'Allah (sur lui la paix et le salut) constata que ses Compagnons avaient tendance à se tenir en retrait. Il leur dit alors : \"Avancez et suivez-moi ! Et que ceux derrière vous, vous suivent ! Les gens ne cessent de se tenir en retrait jusqu'à ce que ce soit Allah qui les laisse en retrait !\" »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/11291",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "entraide",
-      "vie en communauté",
-      "bonnes mœurs"
-    ],
-    "sourceId": "11291",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
@@ -2506,30 +1802,9 @@
     "displayEligible": true
   },
   {
-    "id": "he_2935",
-    "type": "HADITH",
-    "theme": "famille",
-    "arabicText": "عَنْ ابْنِ عَبَّاسٍ رضي الله عنهما أَنَّ النَّبِيَّ صلى الله عليه وسلم قَالَ: ««إذَا أَكَلَ أَحَدُكُمْ طَعَامًا فَلا يَمْسَحْ يَدَهُ حَتَّى يَلْعَقَهَا، أَوْ يُلْعِقَهَا».",
-    "frenchText": "‘Abdallah ibn ‘Abbâs (qu’Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) a dit : « Lorsque que l’un d’entre vous finit de manger, qu’il n’essuie pas sa main avant de la lécher ou de la faire lécher. »",
-    "author": "Prophète Muhammad ﷺ",
-    "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2935",
-    "authenticity": "[Authentique]",
-    "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
-    ],
-    "sourceId": "2935",
-    "translationSource": "HadeethEnc.com Français v1.17.0",
-    "sourceSnapshotDate": "2026-08-31",
-    "displayEligible": true
-  },
-  {
     "id": "he_2947",
     "type": "HADITH",
-    "theme": "famille",
+    "theme": "entraide",
     "arabicText": "عبدُ الله بنُ عمر رضي اللهُ عنهما «أَنَّ النَّبِي صلى الله عليه وسلم قَطَع فِي مِجَنٍّ قِيمَتُهُ -وَفِي لَفْظٍ: ثَمَنُهُ- ثَلاثَةُ دَرَاهِمَ».",
     "frenchText": "Abdallah ibn 'Umar (qu'Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) trancha la main d'un homme qui avait volé un bouclier dont la valeur était - et dans une expression : dont le prix était - de trois dirhams.",
     "author": "Prophète Muhammad ﷺ",
@@ -2537,10 +1812,9 @@
     "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2947",
     "authenticity": "[Authentique]",
     "tags": [
-      "famille",
-      "parents",
-      "enfants",
-      "liens de parenté"
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
     ],
     "sourceId": "2947",
     "translationSource": "HadeethEnc.com Français v1.17.0",
@@ -2548,21 +1822,719 @@
     "displayEligible": true
   },
   {
-    "id": "he_2950",
+    "id": "he_2996",
     "type": "HADITH",
-    "theme": "entraide",
-    "arabicText": "عن عمران بن حصين رضي الله عنهما «أن رجلا عَضَّ يَدَ رجل؛ فَنَزَعَ يَدَهُ من فِيهِ؛ فوقعت ثَنِيَّتُهُ؛ فاختصما إلى النبي صلى الله عليه وسلم فقال: يَعَضُّ أحدُكم أخاه كما يَعَضُّ الفَحْلُ؛ لا دِيَةَ لك».",
-    "frenchText": "Imrân ibn Al-Ḥuṣayn (qu'Allah l'agrée) relate : « Un homme mordit la main d'un autre qui, en la retirant, lui arracha les canines. Les deux hommes allèrent se plaindre au Prophète (sur lui la paix et le salut) qui dit : « Comment quelqu’un peut-il mordre son frère comme un animal ? Tu n'as droit à aucune compensation ! »",
+    "theme": "douceur",
+    "arabicText": "عن عبد الله بن مسعودٍ رضي الله عنه مرفوعًا: (من حلف على يَمِينِ صَبْرٍ يَقْتَطِعُ بها مال امرئ مسلم، هو فيها فاجر، لقي الله وهو عليه غضبان)، ونزلت: (إن الذين يشترون بعهد الله وأيمانهم ثمنا قليلا) إلى آخر الآية\".",
+    "frenchText": "‘Abdullah ibn Mas’ûd (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Quiconque jure en prêtant un faux serment afin de s’accaparer les biens d’un musulman rencontrera Allah en colère contre lui. » Alors, fut révélé : {(Ceux qui vendent leur pacte avec Allah et leurs serments à un vil prix...)} [Coran : 3/77], jusqu’à la fin du verset.",
     "author": "Prophète Muhammad ﷺ",
     "book": "Sahih al-Bukhari / Sahih Muslim",
-    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2950",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/2996",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "douceur",
+      "pardon",
+      "maîtrise de soi",
+      "bonnes mœurs"
+    ],
+    "sourceId": "2996",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3000",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أَسْمَاء بِنْت أَبِي بَكْرٍ رضي الله عنهما قالت: «نَحَرْنَا عَلَى عَهْدِ رَسُولِ الله صلى الله عليه وسلم فَرَسًا فَأَكَلْنَاهُ». وَفِي رِوَايَةٍ «وَنَحْنُ بِالْمَدِينَةِ».",
+    "frenchText": "Asmâ' bint Abî Bakr (qu'Allah l'agrée, elle et son père) a dit : « A l'époque du Messager d'Allah (sur lui la paix et le salut), nous avons saigné un cheval et l'avons mangé. » Dans une autre version : « Nous étions à Médine. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3000",
     "authenticity": "[Authentique]",
     "tags": [
       "entraide",
       "vie en communauté",
       "bonnes mœurs"
     ],
-    "sourceId": "2950",
+    "sourceId": "3000",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3002",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عمر بن الخطاب رضي الله عنه أَنَّ رَسُولَ الله صلى الله عليه وسلم «نهى عن لُبُوسِ الحَرِيرِ إلا هكذا، ورَفَعَ لنا رسول الله صلى الله عليه وسلم أُصْبُعَيْهِ: السَّبَّابَةَ، والوُسْطَى».\nولمسلم «نهى رسول الله صلى الله عليه وسلم عن لُبْس ِالحَرِيرِ إلا مَوْضِعَ أُصْبُعَيْنِ، أو ثلاثٍ، أو أربعٍ».",
+    "frenchText": "‘Umar ibn Al-Khaṭṭâb (qu’Allah l’agrée) a dit : Le Messager d’Allah (sur lui la paix et le salut) a interdit de porter de la soie, en disant : « sauf de tel à tel endroit », et il leva l’index et le majeur. Dans une version de Muslim : « Le Messager d’Allah (sur lui la paix et le salut) a interdit de porter de la soie, sauf une surface de deux, trois ou quatre doigts. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3002",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3002",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3023",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عبد الله بن عمر رضي الله عنهما قال: ((رَقيت يومًا على بيت حفصة، فرَأَيتُ النبيَّ -صلَّى الله عليه وسلَّم-يَقضِي حاجته مُسْتَقبِل الشام، مُسْتَدبِر الكعبة)). \nوفي رواية: ((مُسْتَقبِلا بَيتَ المَقدِس)) .",
+    "frenchText": "‘Abdullah ibn ‘Umar (qu’Allah l'agrée, lui et son père) relate : « Un jour, je suis monté sur la demeure de Ḥafṣah et j’aperçus le Prophète (sur lui la paix et le salut) qui faisait ses besoins, tourné vers la Syrie, dos à la Ka’bah. » Et dans une version : « tourné vers Jérusalem. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3023",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3023",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3036",
+    "type": "HADITH",
+    "theme": "priere",
+    "arabicText": "عن أنس بن مالك رضي الله عنه قال: «جاء أعرابِيُّ، فبَالَ في طَائِفَة المَسجد، فَزَجَرَه النَّاسُ، فَنَهَاهُمُ النبِيُّ صلى الله عليه وسلم فَلمَّا قَضَى بَولَه أَمر النبي صلى الله عليه وسلم بِذَنُوب من ماء، فَأُهرِيقَ عليه».",
+    "frenchText": "Anas ibn Mâlik (qu'Allah l'agrée) relate : « Un bédouin vint et se mit à uriner dans un coin de la mosquée. Les gens commencèrent à l’apostropher mais le Prophète (sur lui la paix et le salut) le leur défendit. Lorsque le bédouin eut terminé, le Prophète (sur lui la paix et le salut) ordonna [qu’on amène] un seau d’eau et qu’on en verse le contenu sur l'urine ».",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3036",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "prière",
+      "discipline personnelle"
+    ],
+    "sourceId": "3036",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3041",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أبي بكر الصديق رضي الله عنه قال: ارْقَبُوا محمَّدًا -صلَّى اللهُ عليهِ وسلَّم- فِي أَهلِ بَيتِهِ.",
+    "frenchText": "Abû Bakr Aṣ-Ṣiddîq (qu’Allah l’agrée) a dit : « Faites preuve d’égard envers Muḥammad (sur lui la paix et le salut) en respectant les gens de sa maison. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3041",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3041",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3043",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أنس بن مالك رضي الله عنه قال: خَرَجتُ معَ جَرِير بنِ عَبدِ الله البَجَلِي رضي الله عنه في سَفَرٍ، فَكَانَ يَخْدُمُنِي، فقُلتُ لَهُ: لا تفْعَل، فقَال: إِنِّي قَدْ رَأَيتُ الأَنْصَارَ تَصْنَعُ بِرَسُولِ الله صلى الله عليه وسلم شَيئًا آلَيتُ عَلَى نَفْسِي أَنْ لاَ أَصْحَبَ أَحدًا مِنْهُم إِلاَّ خَدَمْتُه.",
+    "frenchText": "Anas ibn Mâlik (qu’Allah l’agrée) relate : « Je partis en voyage avec Jarîr ibn ‘Abdillah Al-Bajalî. Comme il me servait, je lui ai dit : « N’agis pas de la sorte ! » Mais, il me répondit : « J’ai vu les Anṣâr agir avec le Messager d’Allah (sur lui la paix et le salut) d’une façon telle que je me suis juré qu’à chaque fois que j’accompagnerai l’un d’entre eux, je le servirai ! »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3043",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3043",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3055",
+    "type": "HADITH",
+    "theme": "bonnes_moeurs",
+    "arabicText": "عن عمران بن حصين رضي الله عنهما قَالَ: قَالَ رسولُ اللَّه -صَلّى اللهُ عَلَيْهِ وسَلَّم-: «الحَيَاءُ لاَ يَأْتِي إِلاَّ بِخَيرٍ». \nوفي رواية : «الحَيَاءُ خَيرٌ كُلُّهٌ» أو قال: «الحَيَاءُ كُلُّهُ خَيرٌ».",
+    "frenchText": "‘Imrân ibn Ḥusayn (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « La pudeur n’apporte que du bien. » Et dans une autre version, il est dit : « La pudeur est entièrement un bien. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim - Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3055",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "bonnes mœurs",
+      "comportement"
+    ],
+    "sourceId": "3055",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3066",
+    "type": "HADITH",
+    "theme": "priere",
+    "arabicText": "عن عائشة وعبد الله بن عمر وأنس بن مالك رضي الله عنهم مرفوعاً: «إِذَا أُقِيمَت الصَّلاَة، وحَضَرَ العَشَاء، فَابْدَءُوا بِالعَشَاء».",
+    "frenchText": "ʽÂ'ishah, ‘Abdullah ibn ‘Umar et Anas ibn Mâlik (qu’Allah les agrée) relatent que le Messager d’Allah (sur lui la paix et le salut) a dit : « Lorsque l’appel [indiquant que la prière est imminente] a été fait et que le repas a été servi, commencez par le repas ! »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim dans l'ensemble de ses versions] • https://hadeethenc.com/fr/browse/hadith/3066",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "prière",
+      "discipline personnelle"
+    ],
+    "sourceId": "3066",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3090",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عبد الله بن عَبَّاس رضي الله عنهما قال: أقبلْتُ راكبا على حِمار أَتَانٍ، وأنا يومئذ قد نَاهَزْتُ الاحْتِلامَ، ورسول الله صلى الله عليه وسلم يصلِّي بالناس بِمِنًى إلى غير جِدار، مررتُ بين يدي بعض الصفّ، فنزلت، فأرسلتُ الأَتَانَ تَرْتَعُ، ودخلتُ في الصفّ، فلم يُنْكِرْ ذلك عليَّ أحد.",
+    "frenchText": "ʽAbdullah ibn ʽAbbâs (qu'Allah l'agrée, lui et son père) dit : « Je suis arrivé sur le dos d’une ânesse, j’approchais alors de la puberté, tandis que l’Envoyé d’Allah (sur lui la paix et le salut) dirigeait la prière à Minâ, sans aucun mur devant lui. Je passai devant le rang, et envoyai ensuite paître l’ânesse. Après, je me plaçai dans le rang, sans que personne ne me reproche quoi que ce soit ».",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3090",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3090",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3097",
+    "type": "HADITH",
+    "theme": "priere",
+    "arabicText": "عن أبي جُهَيْمِ بْنِ الْحَارِثِ بْنِ الصِّمَّةِ الأنصاري رضي الله عنه مرفوعاً: «لو يعلم المار بين يدي الْمُصَلِّي ماذا عليه لكان أن يَقِفَ أربعين خيرا له من أن يَمُرَّ بين يديه». \nقال أَبُو النَّضْرِ: لا أدري: قال أربعين يوما أو شهرا أو سنة.",
+    "frenchText": "Abû Juhaym ibn Al-Ḥârith ibn Aṣ-Ṣimmah Al-Anṣârî (qu’Allah l’agrée) relate que le Messager d'Allah (sur lui la paix et le salut) a dit : « Si celui qui passe devant le fidèle (lors de sa prière) savait quel péché il commet, il préférerait attendre quarante plutôt que de passer devant lui, et cela serait meilleur pour lui. » Abû An-Naḍr a dit : « Je ne sais pas s’il a dit quarante jours, mois ou années. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3097",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "prière",
+      "discipline personnelle"
+    ],
+    "sourceId": "3097",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3106",
+    "type": "HADITH",
+    "theme": "priere",
+    "arabicText": "عن عبد الله بن عُمَرَ وأبي هُرَيْرَةَ وأبي ذر رضي الله عنهم عن النبي - صلى الله عليه وسلم - أنه قال: «إذا اشْتَدَّ الْحَرُّ فَأَبْرِدُوا بالصلاة. فإن شدة الْحَرِّ من فَيْحِ جَهَنَّمَ».",
+    "frenchText": "ʽAbdullah ibn ʽUmar, Abû Hurayrah et Abû Dharr (qu'Allah les agrée) relatent que le Messager d’Allah (que la paix et le salut soient sur lui) a dit : « Lorsque la chaleur est ardente, attendez un moment plus frais afin de prier la prière du midi, car l'ardeur de la chaleur est certes un souffle de l'enfer ! »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî - Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3106",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "prière",
+      "discipline personnelle"
+    ],
+    "sourceId": "3106",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3108",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عبد الله بن عُمَر رضي الله عنه قال: «اسْتَأْذَنَ الْعَبَّاسُ بن عَبْدِ الْمُطَّلِب رسول الله صلى الله عليه وسلم : أن يبيت بمكة ليالي مِنى، من أجل سِقَايَتِه فأذن له».",
+    "frenchText": "‘Abdullah ibn ‘Umar (qu’Allah l'agrée, lui et son père) relate qu’Al-‘Abbâs ibn ‘Abd Al-Muṭṭalib demanda l’autorisation au Messager d’Allah (sur lui la paix et le salut) de passer la nuit à La Mecque, lors des nuits de Mina, afin d’abreuver les pèlerins et ce dernier la lui donna.",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3108",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3108",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3112",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن مَسْلَمَةَ سَعِيدِ بْنِ يَزِيد قال: سألت أنس بن مالك: أكان النبي صلى الله عليه وسلم يُصَلِّي في نَعْلَيْهِ؟ قال: «نعم».",
+    "frenchText": "Maslamah Saʽîd ibn Yazîd relate : « J'ai questionné Anas ibn Mâlik : Le Prophète (sur lui la paix et le salut) priait-il avec ses chaussures ? - Il répondit : Oui ! »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3112",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3112",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3124",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عائشة رضي الله عنها قالت: «أَهدَى رسول الله صلى الله عليه وسلم مَرَّةً غَنَمًا».",
+    "frenchText": "ʽÂ'ishah (qu’Allah l’agrée) relate : « Une fois, le Messager d’Allah (sur lui la paix et le salut) donna en offrande un mouton. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3124",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3124",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3130",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن سمرة بن جندب رضي الله عنه قال: لقد كنت على عَهْدِ رسولِ الله صلى الله عليه وسلم غُلاما، فكنت أحفظ عنه، فما يمنعني من القول إلا أن هاهنا رِجَالًا هم أَسَنُّ مِنِّي.",
+    "frenchText": "Samurah ibn Jundub (qu'Allah l'agrée) relate : « A l'époque du Messager d'Allah (sur lui la paix et le salut), j'étais un jeune garçon et j'apprenais ce qu'il disait. Rien ne m'empêchait de parler, si ce n'est la présence d'hommes plus âgés que moi. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/3130",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3130",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3162",
+    "type": "HADITH",
+    "theme": "patience",
+    "arabicText": "عن أبي هريرة رضي الله عنه مرفوعًا: «يقول الله تعالى : ما لِعَبدِي المُؤمن عِندِي جَزَاء إِذَا قَبَضتُ صَفِيَّه مِنْ أَهلِ الدُّنيَا ثُمَّ احْتَسَبَه إِلاَّ الجنَّة».",
+    "frenchText": "Abû Hurayrah (qu’Allah l’agrée) relate que le Prophète (sur lui la paix et le salut) a dit : « Allah, Exalté soit-Il, dit : « Lorsque j’enlève à mon serviteur croyant un être cher de cette vie d'ici-bas, et qu’il endure la douleur pour Moi, Je n’ai d’autre récompense pour lui que le Paradis. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3162",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "patience",
+      "maîtrise de soi",
+      "bonnes habitudes"
+    ],
+    "sourceId": "3162",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3226",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أبي قَتَادَةَ الأَنْصَارِيِّ رضي الله عنه قال: «أن رسول الله صلى الله عليه وسلم كان يُصَلِّي وهو حامل أُمَامَةَ بنت زينب بنت رسول الله صلى الله عليه وسلم ».\nولأبي العاص بن الربيع بن عبد شَمْسٍ رضي الله عنه : «فإذا سجد وضعها، وإذا قام حملها».",
+    "frenchText": "Abu Qatâdah Al-Anṣârî (qu'Allah l'agrée) relate : « Le Messager d'Allah (sur lui la paix et le salut) priait tout en portant Umâmah, fille de Zaynab, fille du Messager d'Allah (sur lui la paix et le salut) ». Et Abu Al-'Aṣ ibn Ar-Rabi' ibn 'Abd Ash-shams (qu'Allah l'agrée) relate : « Il la déposait quand il se prosternait et la portait quand il se tenait debout. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3226",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3226",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3300",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أنس بن مالك رضي الله عنه قال: «إنكم لتعملون أعمالا هي أَدَقُّ في أعينكم من الشَّعْرِ، كنا نَعُدُّهَا على عهد رسول الله - صلى الله عليه وسلم - من المُوبِقَاتِ».",
+    "frenchText": "Anas ibn Mâlik (qu'Allah l'agrée) a dit : « Vous commettez des actes que vous considérez aussi insignifiants qu’un cheveu, alors que nous les considérions, à l’époque du Messager d’Allah (sur lui la paix et le salut), comme des péchés destructeurs. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3300",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3300",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3351",
+    "type": "HADITH",
+    "theme": "proprete",
+    "arabicText": "عن أم سلمة رضي الله عنها قالت: «جاءت أمُّ سُلَيمٍ امرأةُ أَبِي طَلحة إلى رسول الله صلى الله عليه وسلم فقالت: يا رسول الله، إنَّ الله لا يَسْتَحيِي من الحَقِّ، فهل على المرأة من غُسْلٍ إِذَا هِيَ احْتَلَمَت؟ فقال رسول الله صلى الله عليه وسلم : نعم، إِذَا رَأَت المَاء».",
+    "frenchText": "Umm Salamah (qu’Allah l’agrée) relate : « Umm Sulaym, la femme d’Abû Ṭalḥah, est venue questionner le Messager d’Allah (sur lui la paix et le salut) : « Ô Messager d’Allah ! Certes Allah n’a pas honte de la vérité ! La femme doit elle se purifier lorsqu’elle fait un rêve érotique ? – Oui, répondit le Messager d’Allah (sur lui la paix et le salut), si elle voit le liquide. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3351",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "propreté",
+      "hygiène",
+      "pureté",
+      "ablutions"
+    ],
+    "sourceId": "3351",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3369",
+    "type": "HADITH",
+    "theme": "voisinage",
+    "arabicText": "عن أبي هريرة رضي الله عنه مرفوعًا: «إِنَّ الله تَعَالى يَقُول يَوْمَ القِيَامَة: أَيْنَ المُتَحَابُّونَ بِجَلاَلِي؟ اليَوم أُظِلُّهُم فِي ظِلِّي يَوْمَ لاَ ظِلَّ إِلاَّ ظِلِّي».",
+    "frenchText": "Abû Hurayrah (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Au Jour de la Résurrection, Allah - Exalté soit-Il - demandera : Où sont ceux qui s’aimaient en Ma Majesté ? Aujourd’hui, Je les ombrage de Mon ombre, en ce Jour où il n’y a d’ombre que la Mienne. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/3369",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "voisinage",
+      "respect du voisin",
+      "espaces communs"
+    ],
+    "sourceId": "3369",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3441",
+    "type": "HADITH",
+    "theme": "priere",
+    "arabicText": "عن عبد الله بن عمر رضي الله عنهما أَنَّ رَسُولَ اللَّهِ صلى الله عليه وسلم قَالَ: «صلاةُ الجَمَاعَة أَفضَلُ من صَلاَة الفَذِّ بِسَبعٍ وعِشرِين دَرَجَة».",
+    "frenchText": "‘Abdullah ibn ‘Umar (qu'Allah l'agrée, lui et son père) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « La prière en groupe est supérieure à la prière individuelle de vingt-sept degrés. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3441",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "prière",
+      "discipline personnelle"
+    ],
+    "sourceId": "3441",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3463",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أنس بن مالك رضي الله عنه أَنَّ النَبيَّ -صلَّى الله عليه وسلَّم- كَان إِذَا تَكَلَّمَ بِكَلِمَةٍ أَعَادَهَا ثَلاَثًا حَتَّى تُفْهَمَ عَنْهُ، وَإِذَا أَتَى عَلَى قَوْمٍ فَسَلَّمَ عَلَيهِم سَلَّمَ عَلَيهِم ثَلاَثًا.",
+    "frenchText": "Anas ibn Mâlik (qu’Allah l’agrée) relate que lorsque le Prophète (sur lui la paix et le salut) prononçait une phrase, il la répétait trois fois, jusqu’à ce qu’elle soit [bien] comprise. De même, lorsqu’il se retrouvait devant une assemblée, il saluait les gens trois fois.",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3463",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3463",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3466",
+    "type": "HADITH",
+    "theme": "voisinage",
+    "arabicText": "عن أنس رضي الله عنه : أن رجلين من أصحاب النبي صلى الله عليه وسلم خرجا من عند النبي صلى الله عليه وسلم في ليلة مظلمة ومعهما مثلُ المصباحين بين أيديهما، فلما افترقا، صار مع كل واحد منهما واحد حتى أتى أهله.",
+    "frenchText": "Anas (qu’Allah l’agrée) relate : « Deux hommes parmi les Compagnons sortirent, lors d’une nuit obscure, de chez le Prophète (sur lui la paix et le salut). Deux lumières, semblables à deux lanternes, éclairaient la route devant eux. Lorsqu’ils se séparèrent, une lumière accompagna chacun d’eux jusqu’à chez lui. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3466",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "voisinage",
+      "respect du voisin",
+      "espaces communs"
+    ],
+    "sourceId": "3466",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3528",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عَبدُ اللَّهِ بنِ عَبَّاسٍ رضي الله عنهما قال: «بِتُّ عِندَ خَالَتِي مَيمُونَة، فَقَام النَبيَّ صلى الله عليه وسلم يُصَلِّي مِن اللَّيل، فَقُمتُ عَن يَسَارِه، فَأَخَذ بِرَأسِي فَأَقَامَنِي عن يَمِينِه».",
+    "frenchText": "ʽAbdullah ibn ʽAbbâs (qu'Allah l'agrée, lui et son père) relate : « Je passai la nuit chez ma tante Maymûnah lorsque le Prophète (sur lui la paix et le salut) se leva, de nuit, pour prier. Je me levai et me mis debout à sa gauche. Il me saisit alors par la tête et me plaça à sa droite. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3528",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3528",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3539",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن عَائِشَة رضي الله عنها قالت: (لقد كان رسولُ الله صلى الله عليه وسلم يُصَلِّي الفَجر، فَيَشهَدُ معه نِسَاء مِن المُؤمِنَات، مُتَلَفِّعَاتٍ بِمُرُوطِهِنَّ، ثم يَرجِعْن إلى بُيُوتِهِنَّ مَا يُعْرِفُهُنَّ أحدٌ من الغَلَس).",
+    "frenchText": "ʽÂ'ishah (qu’Allah l’agrée) dit : « Lorsque le Messager d’Allah (sur lui la paix et la paix) priait la prière de l'aube (« ṣalât al-fajr »), des femmes parmi les croyantes assistaient [à la prière] avec lui. Elles étaient enveloppées dans leurs vêtements et rentraient ensuite chez elles. L’obscurité faisait qu’on ne les reconnaissait pas. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3539",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3539",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3594",
+    "type": "HADITH",
+    "theme": "douceur",
+    "arabicText": "عن أبي عبد الرحمن عبد الله بن مسعود رضي الله عنه قال: كَأَنِّي أَنْظُر إلى رسول الله صلى الله عليه وسلم يَحْكِي نَبِيًّا من الأنبياء، صلوات الله وسلامه عليهم، ضربه قومه فَأَدْمَوْهُ، وهو يمَسحُ الدَم عن وجهِهِ، يقول: «اللهم اغفر لِقَوْمِي؛ فإنهم لا يعلمون».",
+    "frenchText": "Abû ‘Abd ar-Rahmân ʽAbdullah ibn Masʽûd (qu’Allah l’agrée) a dit : « Je revois encore le Messager d’Allah (sur lui la paix et le salut) nous raconter [l’histoire d’] un Prophète parmi les Prophètes (que la paix soit sur eux tous). Son peuple l’avait frappé au point de le faire saigner et, en essuyant le sang de son visage, il disait : « Ô Allah ! Pardonne à mon peuple car ils ne savent pas ! »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/3594",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "douceur",
+      "pardon",
+      "maîtrise de soi",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3594",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3633",
+    "type": "HADITH",
+    "theme": "famille",
+    "arabicText": "عن وَاثِلَةَ بن الأَسْقَعِ ـ رضي الله عنه ـ مرفوعاً: «إن من أعظم الفِرَى أن يَدَّعِيَ الرجلُ إلى غير أبيه، أو يُرِي عَيْنَهُ ما لم تَرَ، أو يقول على رسول الله صلى الله عليه وسلم ما لم يَقْلْ».",
+    "frenchText": "Wâthilah ibn Al-Asqa’ (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « S’attribuer et s’affilier à un père autre que le sien, prétendre avoir vu en rêve ce que l’on n’a pas vu ou attribuer au Messager d’Allah (sur lui la paix et le salut) des paroles qu’il n’a pas dites, font partie des pires mensonges. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bûkhârî] • https://hadeethenc.com/fr/browse/hadith/3633",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "famille",
+      "parents",
+      "enfants",
+      "liens de parenté"
+    ],
+    "sourceId": "3633",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3655",
+    "type": "HADITH",
+    "theme": "priere",
+    "arabicText": "عن ابن عمر رضي الله عنهما أن النبي صلى الله عليه وسلم قال: «بادروا الصبح بالوتر».",
+    "frenchText": "Ibn ʽUmar (qu'Allah l'agrée, lui et son père) relate que le Prophète (sur lui la paix et le salut) a dit : « Faites précéder la prière de l'aube (« ṣalât aṣ-Ṣubḥ ») de la prière impaire (« ṣalât al-Witr »). »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/3655",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "prière",
+      "discipline personnelle"
+    ],
+    "sourceId": "3655",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3754",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أبي هريرة رضي الله عنه أن رسول الله صلى الله عليه وسلم قال: «كان زكريا -عليه السلام- نجَّارا».",
+    "frenchText": "Abû Hurayrah (qu’Allah l’agrée) relate que le Messager d’Allah (sur lui la paix et le salut) a dit : « Zakariyâ (sur lui la paix) était menuisier. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/3754",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3754",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_3757",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن المِقْدَادُ رضي الله عنه في حديثه الطويل: كنا نَرَفَعُ للنبي صلى الله عليه وسلم نَصِيبَهُ من اللَّبَنِ ، فَيَجِيءُ من الليل، فَيُسَلِّمُ تسليما لا يُوقِظُ نائما، ويُسْمِعُ اليَقْظَانَ، فجاء النبي صلى الله عليه وسلم فَسَلَّمَ كما كان يُسَلِّمُ.",
+    "frenchText": "Dans son long hadith, Al-Miqdâd (qu’Allah l’agrée) a dit : « Nous apportions au Prophète (sur lui la paix et le salut) sa part de lait. Il revenait au cours de la nuit et nous saluait de sorte à se faire entendre de celui qui était éveillé sans pour autant réveiller celui qui dormait. Cette nuit-là, le Prophète (sur lui la paix et le salut) revint et, comme à l'accoutumée, il [nous] salua. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Muslim] • https://hadeethenc.com/fr/browse/hadith/3757",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "3757",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_4217",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أنس بن مالك رضي الله عنه مرفوعاً: إن الله عز وجل تابع الوحي على رسول الله صلى الله عليه وسلم قبل وفاته حتَّى تُوُفِّيَ أكثر ما كان الوحي.",
+    "frenchText": "Anas ibn Mâlik (qu’Allah l’agrée) relate au sujet du Messager d’Allah (sur lui la paix et le salut) : « Certes Allah, à Lui la Puissance et la Grandeur, intensifia la fréquence de la Révélation sur le Messager d’Allah (sur lui la paix et le salut) à l’approche de sa mort et jusqu’à ce qu’il décède. Lors de ce laps de temps, elle fut plus soutenue qu’à l’ordinaire. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/4217",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "4217",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_4221",
+    "type": "HADITH",
+    "theme": "proprete",
+    "arabicText": "عن أنس بن مالك رضي الله عنه أَنَّ رسولَ اللهِ صلى الله عليه وسلم أُتِيَ بِلَبَنٍ قد شِيبَ بماءٍ، وعن يمينهِ أَعْرَابِيٌّ، وعن يَسَارِه أبو بكرٍ رضي الله عنه فَشَرِبَ، ثم أَعْطَى الأَعْرَابِيَّ، وقال: «الأَيْمَنَ فَالأَيْمَنَ».",
+    "frenchText": "Anas ibn Mâlik (qu’Allah l'agrée) relate qu’on apporta au Messager d’Allah (sur lui la paix et le salut) du lait coupé avec de l’eau. Il y avait un bédouin à sa droite et Abû Bakr à sa gauche (qu’Allah les agrées tous les deux). Après avoir fini de boire, le Prophète (sur lui la paix et le salut) donna le récipient au bédouin en disant : « Celui à droite, puis celui à droite. »",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/4221",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "propreté",
+      "hygiène",
+      "pureté",
+      "ablutions"
+    ],
+    "sourceId": "4221",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_4225",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أنس بن مالك رضي الله عنه أَنَّ رسولَ اللهِ صلى الله عليه وسلم كان يَتَنَفَّسُ في الشَّرَابِ ثَلَاثًا.",
+    "frenchText": "Anas ibn Mâlik (qu'Allah l'agrée) relate que le Messager d'Allah (sur lui la paix et le salut) avait l'habitude, lorsqu’il buvait, de reprendre son souffle à trois reprises.",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/4225",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "4225",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_4228",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن أم المؤمنين عائشة رضي الله عنها قالت: إِنْ كَانَ رسولُ اللهِ صلى الله عليه وسلم لَيَدَعُ العَمَلَ، وهو يُحِبُّ أَنْ يَعْمَلَ بِهِ؛ خَشْيَةَ أَنْ يَعْمَلَ بِهِ النَّاسُ فَيُفْرَضَ عَلَيْهِمْ.",
+    "frenchText": "La mère des croyants, ʽÂ‘ishah (qu’Allah l’agrée), relate qu’il arrivait que le Messager d’Allah (sur lui la paix et le salut) délaisse une œuvre, alors qu’il aimait la pratiquer, de crainte que les gens ne la pratiquent à leur tour et qu’elle devienne obligatoire pour eux.",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/4228",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "4228",
+    "translationSource": "HadeethEnc.com Français v1.17.0",
+    "sourceSnapshotDate": "2026-08-31",
+    "displayEligible": true
+  },
+  {
+    "id": "he_4231",
+    "type": "HADITH",
+    "theme": "entraide",
+    "arabicText": "عن جابر رضي الله عنه أن النبي صلى الله عليه وسلم اشْتَرَى منه بَعِيراً، فَوَزَنَ له فَأرْجَح.",
+    "frenchText": "Jâbir (qu’Allah l’agrée) relate que le Prophète (sur lui la paix et le salut) lui acheta un chameau, il le pesa pour lui et ajouta à son poids.",
+    "author": "Prophète Muhammad ﷺ",
+    "book": "Sahih al-Bukhari / Sahih Muslim",
+    "reference": "HadeethEnc.com Français v1.17.0 • [Rapporté par Al-Bukhârî et Muslim] • https://hadeethenc.com/fr/browse/hadith/4231",
+    "authenticity": "[Authentique]",
+    "tags": [
+      "entraide",
+      "vie en communauté",
+      "bonnes mœurs"
+    ],
+    "sourceId": "4231",
     "translationSource": "HadeethEnc.com Français v1.17.0",
     "sourceSnapshotDate": "2026-08-31",
     "displayEligible": true
