@@ -177,16 +177,20 @@ class MushafReaderActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReadingForSummary(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.isUnlocked(this@MushafReaderActivity, challengeKey)) {
-                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                if (GuardPrefs.hasReachedReadingBottom(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                ) {
                                     GuardDiagnostics.log(
                                         this@MushafReaderActivity,
-                                        "READING_UNLOCKED",
+                                        "READING_COMPLETED_PENDING_SUMMARY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
@@ -196,6 +200,7 @@ class MushafReaderActivity : ComponentActivity() {
                                             ReadingCompleteActivity::class.java
                                         ).apply {
                                             putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
+                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
                                             putExtra(
                                                 ReadingCompleteActivity.EXTRA_ELAPSED_MS,
                                                 elapsed
