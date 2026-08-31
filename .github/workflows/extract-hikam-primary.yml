@@ -1,4 +1,4 @@
-name: Extract primary Al-Hikam corpus
+name: Extract primary Al-Hikam corpus # complete
 
 on:
   push:
