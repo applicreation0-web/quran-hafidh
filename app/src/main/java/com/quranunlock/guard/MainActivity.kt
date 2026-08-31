@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -48,6 +49,23 @@ class MainActivity : ComponentActivity() {
         serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
     }
 
+    private fun openAccessibilitySettings() {
+        runCatching {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+    }
+
+    private fun openAppSystemSettings() {
+        runCatching {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -62,7 +80,7 @@ class MainActivity : ComponentActivity() {
                         onAccept = {
                             GuardPrefs.saveAccessibilityConsent(this@MainActivity)
                             showDisclosure = false
-                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            openAccessibilitySettings()
                         },
                         onLater = { showDisclosure = false }
                     )
@@ -71,7 +89,7 @@ class MainActivity : ComponentActivity() {
                         serviceEnabled = serviceEnabledState.value,
                         onActivateProtection = {
                             if (GuardPrefs.hasAccessibilityConsent(this@MainActivity)) {
-                                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                                openAccessibilitySettings()
                             } else {
                                 showDisclosure = true
                             }
@@ -118,6 +136,10 @@ class MainActivity : ComponentActivity() {
         }
         var saved by remember { mutableStateOf(false) }
         val jokers = GuardPrefs.remainingJokers(this@MainActivity)
+        val readingsCompleted = GuardPrefs.readingsCompleted(this@MainActivity)
+        val totalReadingMs = GuardPrefs.totalReadingMs(this@MainActivity)
+        val averageReadingMs = GuardPrefs.averageReadingMs(this@MainActivity)
+        val lastReadingMs = GuardPrefs.lastReadingMs(this@MainActivity)
 
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -141,6 +163,15 @@ class MainActivity : ComponentActivity() {
                 Text(
                     "Simple, volontaire et privé. Tu gardes toujours le contrôle de ton téléphone.",
                     style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Réglages",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Protection, applications, lecture et récurrence sont configurables ici.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -170,12 +201,46 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text(
                                 if (serviceEnabled) {
-                                    "Vérifier le service"
+                                    "Ouvrir les réglages de protection"
                                 } else {
                                     "Activer la protection"
                                 }
                             )
                         }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { openAppSystemSettings() }
+                        ) {
+                            Text("Infos et autorisations Android")
+                        }
+                    }
+                }
+
+                SectionTitle("Suivi de lecture")
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "$readingsCompleted page(s) validée(s)",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text("Temps total : ${formatDashboardDuration(totalReadingMs)}")
+                        Text("Moyenne : ${formatDashboardDuration(averageReadingMs)} par page")
+                        Text(
+                            if (lastReadingMs > 0L) {
+                                "Dernière lecture : ${formatDashboardDuration(lastReadingMs)}"
+                            } else {
+                                "Aucune lecture terminée enregistrée pour le moment."
+                            },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Suivi enregistré uniquement sur ce téléphone.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -465,7 +530,7 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun QuranSafeguardTheme(content: @Composable () -> Unit) {
+fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
         primary = Color(0xFF0B6B4F),
         onPrimary = Color.White,
@@ -477,4 +542,17 @@ private fun QuranSafeguardTheme(content: @Composable () -> Unit) {
         onSurfaceVariant = Color(0xFF56615B)
     )
     MaterialTheme(colorScheme = colors, content = content)
+}
+
+private fun formatDashboardDuration(milliseconds: Long): String {
+    val totalSeconds = (milliseconds / 1000L).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+
+    return when {
+        hours > 0L -> "${hours}h ${minutes}min"
+        minutes > 0L -> "${minutes}min ${seconds}s"
+        else -> "${seconds}s"
+    }
 }

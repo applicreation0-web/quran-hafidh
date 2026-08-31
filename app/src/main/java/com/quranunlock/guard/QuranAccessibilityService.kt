@@ -9,7 +9,8 @@ import android.view.accessibility.AccessibilityEvent
 
 class QuranAccessibilityService : AccessibilityService() {
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var pendingGateLaunch: Runnable? = null
+    private val pendingLaunches = mutableListOf<Runnable>()
+    private var lastObservedPackage: String? = null
     private var lastInterceptedPackage: String? = null
     private var lastInterceptAt = 0L
 
@@ -20,24 +21,44 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
+        lastObservedPackage = packageName
+
         if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
 
         val now = SystemClock.elapsedRealtime()
-        if (lastInterceptedPackage == packageName && now - lastInterceptAt < 1200L) return
+        if (lastInterceptedPackage == packageName && now - lastInterceptAt < 450L) return
+
         lastInterceptedPackage = packageName
         lastInterceptAt = now
+        cancelPendingLaunches()
 
-        pendingGateLaunch?.let(mainHandler::removeCallbacks)
+        val wentHome = performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
 
-        val launchGate = Runnable {
-            pendingGateLaunch = null
+        scheduleGateLaunch(packageName, if (wentHome) 250L else 0L)
+        // Safety retry: some Android builds occasionally drop the first
+        // foreground launch after GLOBAL_ACTION_HOME. If Quran Safeguard is not
+        // observed in front, try once more shortly afterwards.
+        scheduleGateLaunch(packageName, if (wentHome) 900L else 500L, retry = true)
+    }
+
+    private fun scheduleGateLaunch(
+        packageName: String,
+        delayMs: Long,
+        retry: Boolean = false
+    ) {
+        lateinit var task: Runnable
+        task = Runnable {
+            pendingLaunches.remove(task)
+
             if (GuardPrefs.isUnlocked(this, packageName)) return@Runnable
+            if (retry && lastObservedPackage == this.packageName) return@Runnable
 
             val intent = Intent(this, GateActivity::class.java).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
                         Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
                 )
                 putExtra(GateActivity.EXTRA_TARGET_PACKAGE, packageName)
@@ -46,20 +67,19 @@ class QuranAccessibilityService : AccessibilityService() {
             runCatching { startActivity(intent) }
         }
 
-        pendingGateLaunch = launchGate
+        pendingLaunches += task
+        mainHandler.postDelayed(task, delayMs)
+    }
 
-        // GLOBAL_ACTION_HOME is asynchronous. Launching the gate immediately
-        // can race with the Home action, causing Android to put the gate behind
-        // the launcher. Wait briefly for Home to settle, then show the Quran gate.
-        val wentHome = performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
-        mainHandler.postDelayed(launchGate, if (wentHome) 350L else 0L)
+    private fun cancelPendingLaunches() {
+        pendingLaunches.forEach(mainHandler::removeCallbacks)
+        pendingLaunches.clear()
     }
 
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
-        pendingGateLaunch?.let(mainHandler::removeCallbacks)
-        pendingGateLaunch = null
+        cancelPendingLaunches()
         super.onDestroy()
     }
 }
