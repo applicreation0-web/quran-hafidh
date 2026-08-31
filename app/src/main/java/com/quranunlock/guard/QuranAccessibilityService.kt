@@ -25,7 +25,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
         // Remove the protected app from the foreground first. This prevents
         // interaction with content hidden behind the Quran challenge.
-        performGlobalAction(GLOBAL_ACTION_HOME)
+        performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
 
         val intent = Intent(this, GateActivity::class.java).apply {
             addFlags(
