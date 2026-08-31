@@ -9,12 +9,21 @@ enum class HikamVerificationStatus {
     PENDING_VERIFICATION
 }
 
+enum class HikamTranslationStatus {
+    VERIFIED,
+    PENDING_VERIFICATION,
+    MISSING
+}
+
 data class HikamEntry(
     val id: String,
     val collection: String,
     val author: String,
     val arabic: String,
     val french: String,
+    val translationStatus: HikamTranslationStatus,
+    val translationSources: List<String>,
+    val translationMethod: String?,
     val explanation: String?,
     val sourceTitle: String,
     val sourceEdition: String,
@@ -32,6 +41,9 @@ data class HikamEntry(
 ) {
     fun toDailyReminder(): DailyReminder {
         check(verificationStatus == HikamVerificationStatus.VERIFIED)
+        check(translationStatus == HikamTranslationStatus.VERIFIED)
+        check(french.isNotBlank())
+        check(translationSources.isNotEmpty())
         check(textType == "author_wisdom")
         return DailyReminder(
             id = "hikam_corpus_" + id,
@@ -71,7 +83,10 @@ object HikamCorpus {
 
     fun verified(context: Context): List<HikamEntry> =
         all(context).filter {
-            it.verificationStatus == HikamVerificationStatus.VERIFIED
+            it.verificationStatus == HikamVerificationStatus.VERIFIED &&
+                it.translationStatus == HikamTranslationStatus.VERIFIED &&
+                it.french.isNotBlank() &&
+                it.translationSources.isNotEmpty()
         }
 
     fun pending(context: Context): List<HikamEntry> =
@@ -106,6 +121,13 @@ object HikamCorpus {
             author = obj.getString("author"),
             arabic = obj.getString("arabic"),
             french = obj.optString("french"),
+            translationStatus = when (obj.optString("translation_status")) {
+                "verified" -> HikamTranslationStatus.VERIFIED
+                "pending_verification" -> HikamTranslationStatus.PENDING_VERIFICATION
+                else -> HikamTranslationStatus.MISSING
+            },
+            translationSources = obj.stringList("translation_sources"),
+            translationMethod = obj.optString("translation_method").takeIf { it.isNotBlank() },
             explanation = obj.optString("explanation").takeIf { it.isNotBlank() },
             sourceTitle = obj.getString("source_title"),
             sourceEdition = obj.getString("source_edition"),
