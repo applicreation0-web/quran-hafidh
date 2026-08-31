@@ -69,6 +69,33 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun shareInstallationGuide() {
+        val guide = """
+            Quran Safeguard 🌿
+
+            Installation simple :
+            1. Installe l’application qui t’a été envoyée.
+            2. Ouvre Quran Safeguard.
+            3. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
+            4. Autorise l’application à fonctionner normalement en arrière-plan si Android te le demande.
+            5. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
+            6. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
+
+            Si une étape te semble inhabituelle, reviens simplement dans Quran Safeguard : le guide reste disponible.
+            Bonne installation 🌿
+        """.trimIndent()
+
+        startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, guide)
+                },
+                "Partager le guide d’installation"
+            )
+        )
+    }
+
     private fun testProtection() {
         val candidates = buildList {
             add("com.android.chrome")
@@ -166,6 +193,12 @@ class MainActivity : ComponentActivity() {
         val totalReadingMs = GuardPrefs.totalReadingMs(this@MainActivity)
         val averageReadingMs = GuardPrefs.averageReadingMs(this@MainActivity)
         val lastReadingMs = GuardPrefs.lastReadingMs(this@MainActivity)
+        val todaySummary = GuardPrefs.dailyReadingSummary(this@MainActivity)
+        val sevenDayAverage = GuardPrefs.averageReadingMsForWindow(this@MainActivity, 7)
+        val previousSevenDayAverage =
+            GuardPrefs.averageReadingMsForWindow(this@MainActivity, 7, offsetDays = 7)
+        val thirtyDayAverage = GuardPrefs.averageReadingMsForWindow(this@MainActivity, 30)
+        val atypicalReadingCount = GuardPrefs.atypicalReadingCount(this@MainActivity, 30)
         val serviceAlive = GuardHealth.serviceLooksAlive(this@MainActivity)
         val lastEventAge = GuardHealth.lastProtectedEventAgeMs(this@MainActivity)
         val recentDiagnostics = GuardDiagnostics.recent(this@MainActivity, 5)
@@ -262,6 +295,52 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                SectionTitle("Aujourd’hui")
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        Text(
+                            dailyReadingMessage(todaySummary),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (todaySummary.pages > 0) {
+                            Text(
+                                todaySummary.pages.toString() + " page(s) • " +
+                                    formatDashboardDuration(todaySummary.totalMs)
+                            )
+                            Text(
+                                "Temps moyen : " +
+                                    formatDashboardDuration(todaySummary.averageMs) +
+                                    " par page"
+                            )
+                            if (sevenDayAverage > 0L) {
+                                Text(
+                                    "Moyenne 7 jours : " +
+                                        formatDashboardDuration(sevenDayAverage) +
+                                        " • 30 jours : " +
+                                        formatDashboardDuration(thirtyDayAverage),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            val trend = readingTrendLabel(
+                                sevenDayAverage,
+                                previousSevenDayAverage
+                            )
+                            if (trend.isNotBlank()) {
+                                Text(
+                                    trend,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+
                 SectionTitle("Suivi de lecture")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
@@ -287,6 +366,14 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (atypicalReadingCount > 0) {
+                            Text(
+                                atypicalReadingCount.toString() +
+                                    " lecture(s) au rythme inhabituel repérée(s) sur 30 jours — aucune sanction automatique.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         if (recentHistory.isNotEmpty()) {
                             HorizontalDivider()
                             Text("Historique récent", fontWeight = FontWeight.SemiBold)
@@ -295,7 +382,10 @@ class MainActivity : ComponentActivity() {
                                     if (entry.method == "joker") {
                                         "Joker • page ${entry.page} • ${entry.packageName}"
                                     } else {
-                                        "Page ${entry.page} • ${formatDashboardDuration(entry.elapsedMs)} • ${entry.packageName}"
+                                        "Page " + entry.page + " • " +
+                                            formatDashboardDuration(entry.elapsedMs) + " • " +
+                                            entry.packageName +
+                                            if (entry.atypicalFast) " • rythme inhabituel" else ""
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -337,7 +427,8 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text("• 1 page complète avant de continuer.")
-                        Text("• 60 secondes avec la page Quran affichée au premier plan.")
+                        Text("• La page conserve son format 15 lignes et se parcourt naturellement jusqu’en bas.")
+                        Text("• Le chrono mesure votre rythme réel sans imposer une vitesse de lecture.")
                         Text("• 3 jokers maximum par jour.")
                         Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
                         Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
@@ -382,7 +473,7 @@ class MainActivity : ComponentActivity() {
                             protectedPackages.addAll(installedApps.map { it.packageName })
                             GuardPrefs.saveProtectedPackages(this@MainActivity, protectedPackages.toSet())
                         }
-                    ) { Text("Tout choisir") }
+                    ) { Text("Tout sélectionner") }
 
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
@@ -390,7 +481,7 @@ class MainActivity : ComponentActivity() {
                             protectedPackages.clear()
                             GuardPrefs.saveProtectedPackages(this@MainActivity, emptySet())
                         }
-                    ) { Text("Effacer") }
+                    ) { Text("Tout désélectionner") }
                 }
 
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -463,6 +554,59 @@ class MainActivity : ComponentActivity() {
                 val maxUnit = if (mode == QuranSelectionMode.JUZ) 30 else 60
                 val unitLabel = if (mode == QuranSelectionMode.JUZ) "Juz" else "Hizb"
 
+                Text(
+                    currentSelection.size.toString() + " " + unitLabel +
+                        if (currentSelection.size > 1) " sélectionnés" else " sélectionné",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            currentSelection.clear()
+                            currentSelection.addAll((1..maxUnit).toList())
+                            when (mode) {
+                                QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
+                                    this@MainActivity,
+                                    selectedJuz.toSet()
+                                )
+                                QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(
+                                    this@MainActivity,
+                                    selectedHizb.toSet()
+                                )
+                            }
+                        }
+                    ) { Text("Tout sélectionner") }
+
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            currentSelection.clear()
+                            when (mode) {
+                                QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
+                                    this@MainActivity,
+                                    emptySet()
+                                )
+                                QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(
+                                    this@MainActivity,
+                                    emptySet()
+                                )
+                            }
+                        }
+                    ) { Text("Tout désélectionner") }
+                }
+                if (currentSelection.isEmpty()) {
+                    Text(
+                        "Aucun filtre actif : l’ensemble du Quran reste éligible jusqu’à votre prochaine sélection.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(10.dp)) {
                         (1..maxUnit).chunked(3).forEach { units ->
@@ -477,7 +621,7 @@ class MainActivity : ComponentActivity() {
                                             onCheckedChange = { checked ->
                                                 if (checked) {
                                                     if (unit !in currentSelection) currentSelection.add(unit)
-                                                } else if (currentSelection.size > 1) {
+                                                } else {
                                                     currentSelection.remove(unit)
                                                 }
                                                 when (mode) {
@@ -502,11 +646,12 @@ class MainActivity : ComponentActivity() {
 
                 SectionTitle("Récurrence")
                 Text(
-                    "Après une lecture, l’application reste accessible pendant la durée choisie. Un joker reste plafonné à ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.",
+                    "Après une lecture, chaque application dispose de son propre budget. Le compteur avance uniquement lorsqu’elle est réellement au premier plan, avec un maximum de 20 minutes. Un joker reste plafonné à " +
+                        GuardPrefs.JOKER_MAX_UNLOCK_MINUTES + " minutes.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                val durationChoices = listOf(1, 5, 10, 15, 30, 60, 120)
+                val durationChoices = listOf(1, 5, 10, 15, 20)
                 durationChoices.chunked(2).forEach { rowChoices ->
                     Row(modifier = Modifier.fillMaxWidth()) {
                         rowChoices.forEach { minutes ->
@@ -521,16 +666,39 @@ class MainActivity : ComponentActivity() {
                                         GuardPrefs.saveUnlockMinutes(this@MainActivity, minutes)
                                     }
                                 )
-                                Text(
-                                    when (minutes) {
-                                        60 -> "1 heure"
-                                        120 -> "2 heures"
-                                        else -> "$minutes min"
-                                    }
-                                )
+                                Text(minutes.toString() + " min")
                             }
                         }
                         if (rowChoices.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+
+                SectionTitle("Installation & invitation")
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Une installation simple, étape par étape 🌿",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text("1. Installer puis ouvrir Quran Safeguard.")
+                        Text("2. Activer calmement la protection dans les réglages d’accessibilité.")
+                        Text("3. Autoriser le fonctionnement en arrière-plan si Android le propose.")
+                        Text("4. Choisir les applications et les Juz/Hizb souhaités.")
+                        Text("5. Tester la protection pour confirmer que tout fonctionne.")
+                        Text(
+                            "Le guide peut être partagé avec une invitation afin que la personne sache exactement quoi faire.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { shareInstallationGuide() }
+                        ) {
+                            Text("Partager le guide d’installation")
+                        }
                     }
                 }
 
@@ -619,14 +787,31 @@ fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
         primary = Color(0xFF0B6B4F),
         onPrimary = Color.White,
-        secondary = Color(0xFF8B6B2B),
-        background = Color(0xFFF8F6EF),
-        surface = Color(0xFFFFFCF5),
-        surfaceVariant = Color(0xFFEDE9DD),
-        onSurface = Color(0xFF1D2622),
-        onSurfaceVariant = Color(0xFF56615B)
+        secondary = Color(0xFF2F7D63),
+        background = Color(0xFFF7FBF8),
+        surface = Color(0xFFFFFFFF),
+        surfaceVariant = Color(0xFFE8F3ED),
+        onSurface = Color(0xFF17231E),
+        onSurfaceVariant = Color(0xFF52635B)
     )
     MaterialTheme(colorScheme = colors, content = content)
+}
+
+private fun dailyReadingMessage(summary: DailyReadingSummary): String =
+    if (summary.pages > 0) {
+        "Belle progression aujourd’hui 🌿"
+    } else {
+        "Chaque page compte. Votre prochaine lecture vous attend 🌿"
+    }
+
+private fun readingTrendLabel(current: Long, previous: Long): String {
+    if (current <= 0L || previous <= 0L) return ""
+    val percent = ((previous - current) * 100L / previous).toInt()
+    return when {
+        percent >= 5 -> "Votre temps moyen est plus court de " + percent + "% cette semaine — sans objectif de vitesse."
+        percent <= -5 -> "Votre rythme est plus posé cette semaine — prenez le temps qui vous convient."
+        else -> "Votre rythme reste régulier cette semaine."
+    }
 }
 
 private fun formatDashboardDuration(milliseconds: Long): String {

@@ -3,14 +3,23 @@ package com.applicreation0.quransafeguard
 import android.content.Context
 import android.os.SystemClock
 import android.provider.Settings
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 
 data class ReadingHistoryEntry(
     val epochMs: Long,
     val packageName: String,
     val page: Int,
     val elapsedMs: Long,
-    val method: String
+    val method: String,
+    val atypicalFast: Boolean = false
+)
+
+data class DailyReadingSummary(
+    val pages: Int,
+    val totalMs: Long,
+    val averageMs: Long
 )
 
 object GuardPrefs {
@@ -19,8 +28,12 @@ object GuardPrefs {
     const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
 
     private const val FILE = "guard_prefs"
-    private const val UNLOCK_UNTIL_ELAPSED_PREFIX = "unlock_elapsed_until_"
-    private const val UNLOCK_STARTED_ELAPSED_PREFIX = "unlock_elapsed_started_"
+    private const val LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX = "unlock_elapsed_until_"
+    private const val LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX = "unlock_elapsed_started_"
+    private const val UNLOCK_REMAINING_MS_PREFIX = "unlock_remaining_ms_"
+    private const val UNLOCK_FOREGROUND_STARTED_PREFIX = "unlock_foreground_started_"
+    private const val UNLOCK_GRANTED_MS_PREFIX = "unlock_granted_ms_"
+    private const val UNLOCK_REMINDER_MASK_PREFIX = "unlock_reminder_mask_"
     private const val CHALLENGE_PREFIX = "challenge_page_"
     private const val SELECTED_JUZ = "selected_juz"
     private const val SELECTED_HIZB = "selected_hizb"
@@ -38,11 +51,12 @@ object GuardPrefs {
     private const val READING_PAGE_PREFIX = "reading_page_"
     private const val READING_ACCUMULATED_PREFIX = "reading_accumulated_"
     private const val READING_STARTED_PREFIX = "reading_started_"
+    private const val READING_BOTTOM_REACHED_PREFIX = "reading_bottom_reached_"
     private const val READINGS_COMPLETED = "readings_completed"
     private const val TOTAL_READING_MS = "total_reading_ms"
     private const val LAST_READING_MS = "last_reading_ms"
     private const val READING_HISTORY = "reading_history"
-    private const val MAX_READING_HISTORY = 100
+    private const val MAX_READING_HISTORY = 1000
 
     // Prevents a simple clock jump from immediately creating a new joker day
     // while the device stays on. Offline-only protection cannot fully defeat a
@@ -78,17 +92,21 @@ object GuardPrefs {
     }
 
     private fun unlockForMinutes(context: Context, packageName: String, minutes: Int) {
-        val now = SystemClock.elapsedRealtime()
-        val until = now + minutes * 60_000L
+        val grantedMs = minutes.coerceIn(1, 20) * 60_000L
 
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
-            .putLong(UNLOCK_STARTED_ELAPSED_PREFIX + packageName, now)
-            .putLong(UNLOCK_UNTIL_ELAPSED_PREFIX + packageName, until)
+            .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, grantedMs)
+            .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, grantedMs)
+            .putInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, 0)
+            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+            .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
+            .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
             .remove(CHALLENGE_PREFIX + packageName)
             .remove(READING_PAGE_PREFIX + packageName)
             .remove(READING_ACCUMULATED_PREFIX + packageName)
             .remove(READING_STARTED_PREFIX + packageName)
+            .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
             .apply()
     }
 
@@ -99,27 +117,105 @@ object GuardPrefs {
             .remove(READING_PAGE_PREFIX + challengeKey)
             .remove(READING_ACCUMULATED_PREFIX + challengeKey)
             .remove(READING_STARTED_PREFIX + challengeKey)
+            .remove(READING_BOTTOM_REACHED_PREFIX + challengeKey)
             .apply()
     }
 
-    fun isUnlocked(context: Context, packageName: String): Boolean {
-        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val started = prefs.getLong(UNLOCK_STARTED_ELAPSED_PREFIX + packageName, -1L)
-        val until = prefs.getLong(UNLOCK_UNTIL_ELAPSED_PREFIX + packageName, -1L)
-        val now = SystemClock.elapsedRealtime()
+    fun isUnlocked(context: Context, packageName: String): Boolean =
+        remainingUnlockMs(context, packageName) > 0L
 
-        if (started < 0L || until <= started) return false
-        if (now < started) return false
-        return now < until
+    @Synchronized
+    fun remainingUnlockMs(context: Context, packageName: String): Long {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val key = UNLOCK_REMAINING_MS_PREFIX + packageName
+
+        if (!prefs.contains(key)) {
+            val now = SystemClock.elapsedRealtime()
+            val legacyUntil = prefs.getLong(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName, -1L)
+            val legacyRemaining = if (legacyUntil > now) legacyUntil - now else 0L
+            if (legacyUntil >= 0L) {
+                prefs.edit()
+                    .putLong(key, legacyRemaining)
+                    .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, legacyRemaining)
+                    .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
+                    .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
+                    .commit()
+            }
+        }
+
+        val stored = prefs.getLong(key, 0L).coerceAtLeast(0L)
+        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L)
+        if (started < 0L) return stored
+
+        val now = SystemClock.elapsedRealtime()
+        val live = if (now >= started) now - started else 0L
+        return (stored - live).coerceAtLeast(0L)
+    }
+
+    @Synchronized
+    fun beginUnlockForeground(context: Context, packageName: String) {
+        if (remainingUnlockMs(context, packageName) <= 0L) return
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        if (prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L) >= 0L) return
+        prefs.edit()
+            .putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, SystemClock.elapsedRealtime())
+            .commit()
+    }
+
+    @Synchronized
+    fun endUnlockForeground(context: Context, packageName: String): Long {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val remaining = remainingUnlockMs(context, packageName)
+        prefs.edit()
+            .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, remaining)
+            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+            .commit()
+        return remaining
+    }
+
+    @Synchronized
+    fun expireUnlock(context: Context, packageName: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, 0L)
+            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+            .apply()
+    }
+
+    @Synchronized
+    fun markUsageReminderShown(
+        context: Context,
+        packageName: String,
+        thresholdMinutes: Int
+    ): Boolean {
+        val bit = when (thresholdMinutes) {
+            10 -> 1
+            5 -> 2
+            1 -> 4
+            else -> return false
+        }
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val granted = prefs.getLong(UNLOCK_GRANTED_MS_PREFIX + packageName, 0L)
+        val thresholdMs = thresholdMinutes * 60_000L
+        if (granted <= thresholdMs || remainingUnlockMs(context, packageName) > thresholdMs) {
+            return false
+        }
+
+        val currentMask = prefs.getInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, 0)
+        if (currentMask and bit != 0) return false
+        prefs.edit()
+            .putInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, currentMask or bit)
+            .apply()
+        return true
     }
 
     fun unlockMinutes(context: Context): Int =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .getInt(UNLOCK_MINUTES, 10)
-            .coerceIn(1, 120)
+            .coerceIn(1, 20)
 
     fun saveUnlockMinutes(context: Context, minutes: Int) {
-        require(minutes in setOf(1, 5, 10, 15, 30, 60, 120))
+        require(minutes in setOf(1, 5, 10, 15, 20))
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putInt(UNLOCK_MINUTES, minutes)
@@ -255,7 +351,6 @@ object GuardPrefs {
         return stored.mapNotNull { it.toIntOrNull() }
             .filter { it in validRange }
             .toSet()
-            .ifEmpty { validRange.toSet() }
     }
 
     private fun saveSelection(
@@ -264,7 +359,6 @@ object GuardPrefs {
         values: Set<Int>,
         validRange: IntRange
     ) {
-        require(values.isNotEmpty()) { "At least one Quran section must be selected." }
         require(values.all { it in validRange }) { "Invalid Quran section." }
 
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -286,10 +380,19 @@ object GuardPrefs {
             QuranSelectionMode.HIZB -> selectedHizb(context)
         }
 
+        val effectiveUnits = if (selectedUnits.isEmpty()) {
+            when (mode) {
+                QuranSelectionMode.JUZ -> (1..30).toSet()
+                QuranSelectionMode.HIZB -> (1..60).toSet()
+            }
+        } else {
+            selectedUnits
+        }
+
         val recentPages = recentChallengePages(context)
         val page = QuranPageSelector.randomPage(
             mode = mode,
-            selectedUnits = selectedUnits,
+            selectedUnits = effectiveUnits,
             recentPagesNewestFirst = recentPages,
             maxRecentExclusions = MAX_RECENT_CHALLENGE_PAGES
         )
@@ -310,6 +413,7 @@ object GuardPrefs {
             .putInt(READING_PAGE_PREFIX + challengeKey, page)
             .putLong(READING_ACCUMULATED_PREFIX + challengeKey, 0L)
             .remove(READING_STARTED_PREFIX + challengeKey)
+            .putBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, false)
             .commit()
     }
 
@@ -364,6 +468,20 @@ object GuardPrefs {
         return accumulated + live
     }
 
+    fun markReadingBottomReached(context: Context, challengeKey: String, page: Int) {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        if (prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0) != page) return
+        prefs.edit()
+            .putBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, true)
+            .apply()
+    }
+
+    fun hasReachedReadingBottom(context: Context, challengeKey: String, page: Int): Boolean {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        return prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0) == page &&
+            prefs.getBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, false)
+    }
+
     @Synchronized
     fun completeReadingAndUnlock(
         context: Context,
@@ -371,8 +489,9 @@ object GuardPrefs {
         page: Int
     ): Long {
         val elapsed = readingElapsedMs(context, challengeKey, page)
-        if (elapsed < 60_000L) return elapsed
+        if (!hasReachedReadingBottom(context, challengeKey, page)) return elapsed
 
+        val atypicalFast = isAtypicallyFast(context, elapsed)
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val completed = prefs.getInt(READINGS_COMPLETED, 0).coerceAtLeast(0)
         val total = prefs.getLong(TOTAL_READING_MS, 0L).coerceAtLeast(0L)
@@ -388,8 +507,18 @@ object GuardPrefs {
             packageName = challengeKey,
             page = page,
             elapsedMs = elapsed,
-            method = "reading"
+            method = "reading",
+            atypicalFast = atypicalFast
         )
+
+        if (atypicalFast) {
+            GuardDiagnostics.log(
+                context,
+                "READING_ATYPICAL_FAST",
+                challengeKey,
+                "page=$page elapsedMs=$elapsed"
+            )
+        }
 
         unlock(context, challengeKey)
         return elapsed
@@ -434,14 +563,16 @@ object GuardPrefs {
         packageName: String,
         page: Int,
         elapsedMs: Long,
-        method: String
+        method: String,
+        atypicalFast: Boolean = false
     ) {
         val entry = listOf(
             System.currentTimeMillis().toString(),
             packageName,
             page.toString(),
             elapsedMs.coerceAtLeast(0L).toString(),
-            method
+            method,
+            atypicalFast.toString()
         ).joinToString("|")
 
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -462,15 +593,76 @@ object GuardPrefs {
     }
 
     private fun parseHistoryEntry(raw: String): ReadingHistoryEntry? {
-        val parts = raw.split('|', limit = 5)
-        if (parts.size != 5) return null
+        val parts = raw.split('|', limit = 6)
+        if (parts.size < 5) return null
         return ReadingHistoryEntry(
             epochMs = parts[0].toLongOrNull() ?: return null,
             packageName = parts[1],
             page = parts[2].toIntOrNull() ?: return null,
             elapsedMs = parts[3].toLongOrNull() ?: return null,
-            method = parts[4]
+            method = parts[4],
+            atypicalFast = parts.getOrNull(5) == "true"
         )
+    }
+
+    private fun completedReadings(context: Context): List<ReadingHistoryEntry> =
+        readingHistory(context, MAX_READING_HISTORY)
+            .filter { it.method == "reading" }
+
+    fun dailyReadingSummary(
+        context: Context,
+        date: LocalDate = LocalDate.now()
+    ): DailyReadingSummary {
+        val zone = ZoneId.systemDefault()
+        val entries = completedReadings(context).filter { entry ->
+            Instant.ofEpochMilli(entry.epochMs).atZone(zone).toLocalDate() == date
+        }
+        val total = entries.sumOf { it.elapsedMs.coerceAtLeast(0L) }
+        return DailyReadingSummary(
+            pages = entries.size,
+            totalMs = total,
+            averageMs = if (entries.isNotEmpty()) total / entries.size else 0L
+        )
+    }
+
+    fun averageReadingMsForWindow(
+        context: Context,
+        days: Int,
+        offsetDays: Int = 0
+    ): Long {
+        require(days > 0)
+        require(offsetDays >= 0)
+        val zone = ZoneId.systemDefault()
+        val end = LocalDate.now().minusDays(offsetDays.toLong())
+        val start = end.minusDays((days - 1).toLong())
+        val entries = completedReadings(context).filter { entry ->
+            val date = Instant.ofEpochMilli(entry.epochMs).atZone(zone).toLocalDate()
+            !date.isBefore(start) && !date.isAfter(end)
+        }
+        return if (entries.isNotEmpty()) entries.sumOf { it.elapsedMs } / entries.size else 0L
+    }
+
+    fun atypicalReadingCount(context: Context, days: Int = 30): Int {
+        val zone = ZoneId.systemDefault()
+        val start = LocalDate.now().minusDays((days - 1).coerceAtLeast(0).toLong())
+        return completedReadings(context).count { entry ->
+            entry.atypicalFast &&
+                !Instant.ofEpochMilli(entry.epochMs).atZone(zone).toLocalDate().isBefore(start)
+        }
+    }
+
+    private fun isAtypicallyFast(context: Context, elapsedMs: Long): Boolean {
+        val sample = completedReadings(context)
+            .asSequence()
+            .map { it.elapsedMs }
+            .filter { it > 0L }
+            .take(30)
+            .sorted()
+            .toList()
+
+        if (sample.size < 8) return false
+        val median = sample[sample.size / 2]
+        return elapsedMs > 0L && elapsedMs * 4L < median
     }
 
     fun recentChallengePages(context: Context): List<Int> {
