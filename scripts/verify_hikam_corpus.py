@@ -67,9 +67,14 @@ for item in pending:
     ), f"Verified entry incorrectly left pending: {item['id']}"
 
 candidate_ids={x["id"] for x in candidates}
-assert {x["id"] for x in active}.issubset(candidate_ids)
-assert {x["id"] for x in pending}.issubset(candidate_ids)
-assert not ({x["id"] for x in active} & {x["id"] for x in pending})
+active_ids={x["id"] for x in active}
+pending_ids={x["id"] for x in pending}
+assert active_ids.issubset(candidate_ids)
+assert pending_ids.issubset(candidate_ids)
+assert not (active_ids & pending_ids)
+assert active_ids | pending_ids == candidate_ids, (
+    "Every candidate must be either active verified or pending"
+)
 
 print(json.dumps({
     "candidates":len(candidates),
