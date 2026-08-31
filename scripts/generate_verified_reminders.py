@@ -44,7 +44,9 @@ THEMES = [
     )),
     ("patience", (
         "patience", "patient", "epreuve", "endure", "endurance",
-        "constance", "affliction", "ne te mets pas en colere"
+        "constance", "affliction", "ne te mets pas en colere",
+        "patience est une lumiere", "don meilleur que la patience",
+        "affaire du croyant"
     )),
     ("sincerite", (
         "intention", "sincerite", "sincere", "ostentation",
@@ -52,11 +54,13 @@ THEMES = [
     )),
     ("gratitude", (
         "remercie", "remercier", "reconnaissant", "gratitude",
-        "bienfait d'allah", "bienfaits d'allah"
+        "bienfait d'allah", "bienfaits d'allah", "ne remercie pas les gens",
+        "regardez ceux qui sont en dessous"
     )),
     ("generosite", (
         "aumone", "charite", "genereux", "depense pour", "nourrir",
-        "donner a manger", "cadeau", "faites l'aumone"
+        "donner a manger", "cadeau", "faites l'aumone",
+        "toute bonne action est une aumone", "bonne parole est une aumone"
     )),
     ("proprete", (
         "siwak", "dents", "purification est", "ablutions",
@@ -65,12 +69,15 @@ THEMES = [
     ("entraide", (
         "vient en aide", "aide son frere", "soulage", "besoin de son frere",
         "visite le malade", "visiter le malade", "reconcilier",
-        "facilite a", "dissipe une", "retire du chemin"
+        "facilite a", "dissipe une", "retire du chemin",
+        "soulage un croyant", "allah vient en aide", "repandez le salut",
+        "droits du musulman", "aime pour son frere"
     )),
     ("discipline", (
         "actions les plus aimees", "action la plus aimee", "regularite",
         "assiduite", "constamment", "ne faiblis pas", "ce qui t'est utile",
-        "profite de", "cinq avant cinq"
+        "profite de", "cinq avant cinq", "croyant fort", "sois assidu",
+        "oeuvre reguliere", "action reguliere"
     )),
     ("bonnes_moeurs", (
         "verite", "mensonge", "langue", "insulte", "injure", "pudeur",
@@ -78,7 +85,25 @@ THEMES = [
         "calomnie", "soupcon", "trahison", "honnetete", "justice",
         "injustice", "oppression", "sourire", "parle en bien",
         "qu'il se taise", "bon comportement", "bonnes manieres",
-        "bon caractere", "meilleur d'entre vous", "meilleurs d'entre vous"
+        "bon caractere", "meilleur d'entre vous", "meilleurs d'entre vous",
+        "bonne parole", "a l'abri de sa langue", "a l'abri de sa main",
+        "ne vous enviez pas", "ne vous detestez pas", "ne vous tournez pas le dos"
+    )),
+    ("science", (
+        "recherche de la science", "recherche d'une science", "cherche la science",
+        "comprehension de la religion", "comprenne la religion",
+        "apprend une science", "enseigne une science", "chemin vers le paradis",
+        "savants sont les heritiers", "transmettez de moi"
+    )),
+    ("dhikr", (
+        "deux paroles legeres", "subhanallah", "gloire a allah",
+        "louange a allah", "rappel d'allah", "se souvient d'allah",
+        "invoque allah", "demande pardon", "cent fois"
+    )),
+    ("priere", (
+        "cinq prieres", "les cinq prieres", "priere est une lumiere",
+        "priere en groupe", "priere en congregation", "priere efface",
+        "prosternes-toi davantage", "plus proche de son seigneur"
     )),
 ]
 
@@ -154,6 +179,7 @@ def theme_tags(theme):
         "entraide": ["entraide", "vie en communauté", "bonnes mœurs"],
         "discipline": ["discipline personnelle", "gestion du temps", "bonnes habitudes"],
         "bonnes_moeurs": ["bonnes mœurs", "comportement"],
+        "science": ["science utile", "apprentissage", "transmission"],
         "dhikr": ["rappel d’Allah", "bonnes habitudes"],
         "priere": ["prière", "discipline personnelle"],
     }
