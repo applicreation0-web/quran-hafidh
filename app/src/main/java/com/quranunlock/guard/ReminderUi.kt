@@ -72,8 +72,8 @@ fun DailyReminderCard(
                         " • " + reminder.sourceVersion +
                         " • ID " + reminder.sourceId
                 } else {
-                    "Source vérifiée : " + reminder.sourceProvider +
-                        " • " + reminder.reviewStatus
+                    "Attribution vérifiée sur le texte source • revue " +
+                        reminder.sourceFetchedAt
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
