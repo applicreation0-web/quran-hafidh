@@ -23,6 +23,113 @@ BOOK_PATTERNS = [
     ("Musnad Ahmad", ("ahmad", "aḥmad")),
 ]
 
+THEMES = [
+    ("coran", (
+        "coran", "qur'an", "sourate", "verset", "reciter", "recitation",
+        "apprendre le coran", "enseigner le coran", "memoriser"
+    )),
+    ("famille", (
+        "mere", "pere", "parents", "enfant", "famille", "parente",
+        "epouse", "epoux", "orphelin"
+    )),
+    ("voisinage", (
+        "voisin", "chemin", "route", "nuisance", "passant", "ombre"
+    )),
+    ("douceur", (
+        "douceur", "doux", "misericorde", "clemence", "indulgence",
+        "pardonne", "pardon", "sourire", "colere", "bon caractere"
+    )),
+    ("patience", (
+        "patience", "patient", "epreuve", "endure", "endurance",
+        "constance", "affliction"
+    )),
+    ("sincerite", (
+        "intention", "sincerite", "sincere", "ostentation"
+    )),
+    ("gratitude", (
+        "remercie", "remercier", "reconnaissant", "gratitude", "bienfait"
+    )),
+    ("generosite", (
+        "aumone", "charite", "genereux", "depense", "nourrir",
+        "don", "cadeau"
+    )),
+    ("proprete", (
+        "proprete", "purification", "purifier", "ablution", "siwak",
+        "bouche", "dents", "eau", "propre"
+    )),
+    ("entraide", (
+        "aide", "aider", "soulage", "besoin de son frere", "fraternite",
+        "visite le malade", "visiter le malade", "salutation", "paix"
+    )),
+    ("discipline", (
+        "regularite", "assiduite", "action la plus aimee", "actions les plus aimees",
+        "moderation", "constamment", "habitude", "temps"
+    )),
+    ("bonnes_moeurs", (
+        "verite", "mensonge", "langue", "insulte", "injure", "pudeur",
+        "modestie", "bienfaisance", "compassion", "sourire", "saluer",
+        "meilleur d'entre vous", "meilleurs d'entre vous"
+    )),
+    ("dhikr", (
+        "invoquer", "invocation", "rappel d'allah", "se souvenir d'allah",
+        "subhanallah", "al hamdu", "louange", "istighfar", "pardon d'allah"
+    )),
+    ("priere", (
+        "priere", "prosternation", "mosquee", "adhan", "appel a la priere"
+    )),
+]
+
+EXCLUDED_CONTEXT_MARKERS = (
+    "guerre", "combat", "combatt", "tuer", "tue ", "tua ", "mise a mort",
+    "epée", "epee", "armee", "expedition", "butin", "captif", "prisonnier",
+    "esclave", "affranchi", "fornication", "adultere", "lapid", "fouet",
+    "flog", "peine legale", "chatiment corporel", "menstrue", "regles",
+    "rapport charnel", "rapports charnels", "organe genital", "sperme",
+    "coit", "janaba", "impurete majeure", "divorce", "talaq", "heritage",
+    "succession", "dette", "usure", "vente", "transaction", "juge",
+    "temoignage juridique", "testament", "sacrifice animal", "egorger"
+)
+
+def thematic_fit(record):
+    source = " ".join(
+        record.get(key, "") for key in
+        ("title", "hadith_text", "explanation", "benefits")
+    )
+    normalized = norm(source)
+    if any(marker in normalized for marker in EXCLUDED_CONTEXT_MARKERS):
+        return None
+
+    best_theme = None
+    best_score = 0
+    for theme, markers in THEMES:
+        score = sum(1 for marker in markers if norm(marker) in normalized)
+        if score > best_score:
+            best_theme = theme
+            best_score = score
+
+    if best_score <= 0:
+        return None
+    return best_theme, best_score
+
+def theme_tags(theme):
+    mapping = {
+        "coran": ["mérite du Coran", "lecture du Coran", "apprentissage du Coran"],
+        "famille": ["famille", "parents", "enfants", "liens de parenté"],
+        "voisinage": ["voisinage", "respect du voisin", "espaces communs"],
+        "douceur": ["douceur", "pardon", "maîtrise de soi", "bonnes mœurs"],
+        "patience": ["patience", "maîtrise de soi", "bonnes habitudes"],
+        "sincerite": ["sincérité", "intention", "bonnes habitudes"],
+        "gratitude": ["gratitude", "bienfaits"],
+        "generosite": ["générosité", "entraide", "vie en communauté"],
+        "proprete": ["propreté", "hygiène", "pureté", "ablutions"],
+        "entraide": ["entraide", "vie en communauté", "bonnes mœurs"],
+        "discipline": ["discipline personnelle", "gestion du temps", "bonnes habitudes"],
+        "bonnes_moeurs": ["bonnes mœurs", "comportement"],
+        "dhikr": ["rappel d’Allah", "bonnes habitudes"],
+        "priere": ["prière", "discipline personnelle"],
+    }
+    return mapping.get(theme, ["bonnes mœurs", "comportement"])
+
 def norm(value):
     value = unicodedata.normalize("NFKD", str(value or ""))
     return "".join(ch for ch in value if not unicodedata.combining(ch)).lower().strip()
@@ -143,19 +250,25 @@ for row in rows:
         continue
 
     # Short daily reminders only; exact HadeethEnc wording is never rewritten.
-    if len(french) > 520 or len(arabic) > 850:
+    if len(french) > 420 or len(arabic) > 750:
         continue
 
-    priority = 0 if any(
+    fit = thematic_fit(row)
+    if fit is None:
+        continue
+    theme, theme_score = fit
+
+    collection_priority = 0 if any(
         book in ("Sahih al-Bukhari", "Sahih Muslim") for book in books
     ) else 1
 
     candidates.append((
-        priority,
+        collection_priority,
+        -theme_score,
         {
             "id": "he_" + hid,
             "type": "HADITH",
-            "theme": "bonnes_moeurs",
+            "theme": theme,
             "arabicText": arabic,
             "frenchText": french,
             "author": "Prophète Muhammad ﷺ",
@@ -165,17 +278,18 @@ for row in rows:
                 " • " + takhrij + " • " + link
             ),
             "authenticity": grade,
-            "tags": ["bonnes mœurs", "comportement"],
+            "tags": theme_tags(theme),
             "sourceId": hid,
             "translationSource": "HadeethEnc.com Français " + FR_VERSION,
-            "sourceSnapshotDate": "2026-08-31"
+            "sourceSnapshotDate": "2026-08-31",
+            "displayEligible": True
         }
     ))
 
-candidates.sort(key=lambda item: (item[0], item[1]["id"]))
+candidates.sort(key=lambda item: (item[0], item[1], item[2]["id"]))
 unique = []
 seen = set()
-for _, record in candidates:
+for _, _, record in candidates:
     if record["id"] in seen:
         continue
     seen.add(record["id"])
