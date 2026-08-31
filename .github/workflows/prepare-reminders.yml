@@ -37,11 +37,21 @@ jobs:
           python scripts/inspect_hadeethenc_xlsx.py \
             generated/hadeethenc_fr.xlsx generated/hadeethenc_ar.xlsx
 
-      - name: Upload official source workbooks
+      - name: Build verified local hadith dataset
+        run: |
+          python scripts/build_verified_reminders.py \
+            --fr-xlsx generated/hadeethenc_fr.xlsx \
+            --ar-xlsx generated/hadeethenc_ar.xlsx \
+            --target 144 \
+            --output generated/verified_hadiths.json
+
+      - name: Upload reviewed dataset and official source workbooks
         uses: actions/upload-artifact@v4
         with:
-          name: hadeethenc-official-workbooks
+          name: verified-hadiths-candidate
           path: |
+            generated/verified_hadiths.json
+            generated/verified_hadiths.json.sha256
             generated/hadeethenc_fr.xlsx
             generated/hadeethenc_ar.xlsx
           if-no-files-found: error
