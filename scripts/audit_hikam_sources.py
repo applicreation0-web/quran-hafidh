@@ -4,6 +4,7 @@ import json
 import re
 import unicodedata
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 UA = {"User-Agent": "QuranSafeguard-HikamAudit/1.1"}
@@ -80,20 +81,29 @@ def harvest(urls):
     all_entries = {}
     pages = {}
     failures = []
-    for url in urls:
+
+    def one(url):
         try:
             raw = fetch(url)
+            return url, extract_numbered(textify(raw)), None
         except Exception as exc:
-            failures.append({"url": url, "error": str(exc)})
-            continue
-        found = extract_numbered(textify(raw))
-        if found:
-            pages[url] = sorted(found)
-        for n, body in found.items():
-            if 1 <= n <= 264:
-                current = all_entries.get(n)
-                if current is None or len(body) < len(current):
-                    all_entries[n] = body
+            return url, {}, str(exc)
+
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        futures = [pool.submit(one, url) for url in urls]
+        for future in as_completed(futures):
+            url, found, error = future.result()
+            if error:
+                failures.append({"url": url, "error": error})
+                continue
+            if found:
+                pages[url] = sorted(found)
+            for n, body in found.items():
+                if 1 <= n <= 264:
+                    current = all_entries.get(n)
+                    if current is None or len(body) < len(current):
+                        all_entries[n] = body
+
     return all_entries, pages, failures
 
 primary, primary_pages, primary_failures = harvest(PRIMARY_URLS)
