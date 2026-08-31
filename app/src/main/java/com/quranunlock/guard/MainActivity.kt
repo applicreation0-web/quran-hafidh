@@ -621,7 +621,7 @@ class MainActivity : ComponentActivity() {
                                             onCheckedChange = { checked ->
                                                 if (checked) {
                                                     if (unit !in currentSelection) currentSelection.add(unit)
-                                                } else if (currentSelection.size > 1) {
+                                                } else {
                                                     currentSelection.remove(unit)
                                                 }
                                                 when (mode) {
