@@ -100,7 +100,6 @@ class QuranAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            @Suppress("DEPRECATION")
             registerReceiver(screenReceiver, filter)
         }
         screenReceiverRegistered = true
