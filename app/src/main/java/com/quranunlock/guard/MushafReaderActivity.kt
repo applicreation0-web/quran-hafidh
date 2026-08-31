@@ -113,7 +113,7 @@ class MushafReaderActivity : ComponentActivity() {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                            .padding(horizontal = 4.dp, vertical = 6.dp)
                     ) {
                         Text(
                             "Mushaf de Médine • Page $page",
@@ -316,12 +316,15 @@ private fun MushafPageWebView(
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         onReady()
-                        view?.post {
-                            val contentHeightPx = ((view.contentHeight) * view.scale).toInt()
-                            if (contentHeightPx > 0 &&
-                                view.scrollY + view.height >= contentHeightPx - 24
-                            ) {
-                                onBottomReached()
+                        view?.let { webView ->
+                            webView.post {
+                                val contentHeightPx =
+                                    (webView.contentHeight * webView.scale).toInt()
+                                if (contentHeightPx > 0 &&
+                                    webView.scrollY + webView.height >= contentHeightPx - 24
+                                ) {
+                                    onBottomReached()
+                                }
                             }
                         }
                     }
