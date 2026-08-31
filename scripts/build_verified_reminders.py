@@ -18,41 +18,41 @@ NS = {
 }
 
 TAG_RULES = {
-    "bonnes mœurs": ["bon comportement", "comportement", "caractère", "caractere", "vertu", "sourire", "bonne parole", "politesse", "insulte", "injure"],
-    "comportement": ["comportement", "caractère", "caractere", "conduite", "parole"],
-    "douceur": ["douceur", "doux", "bienveillance", "clémence", "clemence", "miséricorde", "misericorde"],
-    "patience": ["patience", "patient", "endurance", "épreuve", "epreuve"],
-    "maîtrise de soi": ["colère", "colere", "maîtrise", "maitrise", "retenir sa langue", "pardon", "pardonne"],
-    "sincérité": ["sincérité", "sincerite", "intention", "ostentation", "ikhl"],
+    "bonnes mœurs": ["meilleurs comportements", "meilleur comportement", "bon comportement", "bonne parole", "sourire", "n'insultez", "n’insultez", "pudeur", "modestie", "caractère", "caractere"],
+    "comportement": ["comportement", "caractère", "caractere", "bonne parole", "sourire", "pudeur", "insulte"],
+    "douceur": ["douceur", "doux", "bienveillance", "miséricorde", "misericorde", "clémence", "clemence"],
+    "patience": ["patience", "patient", "patiente", "éprouve", "eprouve", "épreuve", "epreuve"],
+    "maîtrise de soi": ["colère", "colere", "fort n'est pas", "fort n’est pas", "maîtrise", "maitrise", "pardonne", "pardon"],
+    "sincérité": ["sincérité", "sincerite", "intention", "intentions", "ostentation"],
     "intention": ["intention", "intentions"],
-    "gratitude": ["gratitude", "remerci", "reconnaissan"],
-    "générosité": ["aumône", "aumone", "charité", "charite", "généros", "generos", "dépense", "depense", "donner"],
-    "pardon": ["pardon", "pardonne", "indulgence"],
-    "mérite du Coran": ["mérite du coran", "merite du coran", "meilleur d'entre vous", "coran"],
-    "lecture du Coran": ["lire le coran", "lecture du coran", "récitation du coran", "recitation du coran", "récite le coran", "recite le coran", "récitait le coran", "recitait le coran", "réciter le coran", "reciter le coran"],
-    "apprentissage du Coran": ["apprend le coran", "apprendre le coran", "appris le coran", "apprentissage du coran", "enseigne le coran", "enseigné le coran", "enseigne à autrui", "enseignement du coran"],
-    "mise en pratique du Coran": ["coran est une preuve", "mettre en pratique", "agit selon le coran", "coran"],
-    "coran": ["coran", "qur", "sourate", "verset", "récitation", "recitation"],
-    "famille": ["famille", "parents", "père", "pere", "mère", "mere", "époux", "epoux", "épouse", "epouse", "enfants", "liens de parenté", "liens de parente"],
-    "parents": ["parents", "père", "pere", "mère", "mere", "papa", "maman"],
-    "conjoint": ["époux", "epoux", "épouse", "epouse", "mariage", "conjoint"],
-    "enfants": ["enfant", "enfants", "éducation des enfants", "education des enfants", "miséricorde envers les enfants", "misericorde envers les enfants"],
-    "liens de parenté": ["parenté", "parente", "liens de parenté", "proches parents"],
-    "voisinage": ["voisin", "voisinage"],
-    "respect du voisin": ["voisin", "tort à son voisin", "tort a son voisin"],
-    "entraide": ["entraide", "aide", "secours", "besoin de son frère", "besoin de son frere", "soulage"],
-    "vie en communauté": ["musulman", "frère", "frere", "communauté", "communaute", "réconcil", "reconcil", "gens"],
-    "propreté": ["propreté", "proprete", "purification", "impureté", "impurete", "saleté", "salete", "nettoyer"],
-    "hygiène": ["hygiène", "hygiene", "siwâk", "siwak", "bouche", "dents", "laver"],
-    "pureté": ["pureté", "purete", "purification", "état de pureté", "etat de purete"],
-    "ablutions": ["ablution", "wud", "wuḍ"],
-    "soin du corps": ["corps", "bouche", "dents", "cheveux", "ongles", "laver"],
-    "propreté des vêtements et des lieux": ["vêtement", "vetement", "habit", "lieu", "mosquée", "mosquee", "route", "chemin", "saleté", "salete"],
+    "gratitude": ["remercie", "remercier", "remerciement", "reconnaissance", "bonne nouvelle", "réjouissant", "rejouissant"],
+    "générosité": ["aumône", "aumone", "dépense", "depense", "dépenses", "depenses", "donne", "donner", "charité", "charite", "générosité", "generosite", "généreux", "genereux"],
+    "pardon": ["pardonne", "pardonner", "pardon", "indulgence"],
+    "mérite du Coran": ["meilleur d'entre vous est celui qui a appris le coran", "meilleur d’entre vous est celui qui a appris le coran", "mérite du coran", "merite du coran"],
+    "lecture du Coran": ["récite le coran", "recite le coran", "récitait le coran", "recitait le coran", "réciter le coran", "reciter le coran", "lecture du coran", "récitation du coran", "recitation du coran", "lisez le coran"],
+    "apprentissage du Coran": ["appris le coran", "apprendre le coran", "enseigne le coran", "enseigné le coran", "enseigner le coran"],
+    "mise en pratique du Coran": ["mettaient en application", "mettre le coran en application", "met le coran en application", "comportement du prophète", "comportement du prophete"],
+    "coran": ["coran", "sourate", "verset"],
+    "famille": ["mère", "mere", "père", "pere", "parents", "épouse", "epouse", "époux", "epoux", "enfant", "enfants", "famille", "parenté", "parente"],
+    "parents": ["mère", "mere", "père", "pere", "parents"],
+    "conjoint": ["épouse", "epouse", "époux", "epoux", "mariage", "conjoint"],
+    "enfants": ["enfant", "enfants"],
+    "liens de parenté": ["parenté", "parente", "liens de parenté", "liens de parente"],
+    "voisinage": ["voisin", "voisins"],
+    "respect du voisin": ["voisin", "voisins"],
+    "entraide": ["aide son frère", "aide son frere", "vient en aide", "soulage", "besoin de son frère", "besoin de son frere", "entraide"],
+    "vie en communauté": ["frère musulman", "frere musulman", "musulman est le frère", "musulman est le frere", "compagnon", "réconcilie", "reconcilie", "salue son frère", "salue son frere"],
+    "propreté": ["purification", "ablution", "ablutions", "siwâk", "siwak", "bouche", "dents", "impureté", "impurete", "laver", "lavage"],
+    "hygiène": ["siwâk", "siwak", "bouche", "dents", "laver", "lavage"],
+    "pureté": ["purification", "pureté", "purete"],
+    "ablutions": ["ablution", "ablutions"],
+    "soin du corps": ["siwâk", "siwak", "bouche", "dents", "cheveux", "ongles", "corps"],
+    "propreté des vêtements et des lieux": ["vêtement", "vetement", "vêtements", "vetements", "mosquée", "mosquee", "route", "chemin", "impureté", "impurete"],
     "hygiène bucco-dentaire": ["siwâk", "siwak", "bouche", "dents"],
-    "respect des espaces communs": ["route", "chemin", "mosquée", "mosquee", "nuisance", "épine", "epine"],
-    "gestion du temps": ["temps", "heure", "matin", "soir", "retarder", "hâter", "hater"],
-    "discipline personnelle": ["assidu", "régulier", "regulier", "constance", "habitude", "persév", "persev", "effort"],
-    "bonnes habitudes": ["habitude", "régulier", "regulier", "assidu", "constance", "chaque jour"],
+    "respect des espaces communs": ["route", "chemin", "mosquée", "mosquee", "épine", "epine", "nuisance"],
+    "gestion du temps": ["temps", "heure", "matin", "soir", "chaque jour", "jeudi", "avant que"],
+    "discipline personnelle": ["chaque jour", "habitude", "avait l'habitude", "avait l’habitude", "assidu", "régulier", "regulier", "constance"],
+    "bonnes habitudes": ["chaque jour", "habitude", "avait l'habitude", "avait l’habitude", "assidu", "régulier", "regulier", "constance"],
 }
 
 PRIMARY_THEME_PRIORITY = [
@@ -62,11 +62,11 @@ PRIMARY_THEME_PRIORITY = [
     "douceur",
     "coran",
     "patience",
+    "pardon",
     "maîtrise de soi",
     "sincérité",
     "gratitude",
     "générosité",
-    "pardon",
     "entraide",
     "vie en communauté",
     "gestion du temps",
@@ -78,6 +78,14 @@ def norm(value):
     value = unicodedata.normalize("NFKD", value or "")
     value = "".join(ch for ch in value if not unicodedata.combining(ch))
     return re.sub(r"\s+", " ", value.lower()).strip()
+
+def contains_phrase(text, phrase):
+    normalized_text = norm(text)
+    normalized_phrase = norm(phrase)
+    return re.search(
+        r"(?<!\\w)" + re.escape(normalized_phrase) + r"(?!\\w)",
+        normalized_text
+    ) is not None
 
 def col_index(ref):
     letters = "".join(ch for ch in ref if ch.isalpha())
@@ -186,35 +194,47 @@ EXCLUDED_TONE_KEYWORDS = [
     "enfer",
     "châtiment",
     "chatiment",
+    "maudit",
     "malédiction",
     "malediction",
-    "maudit",
-    "lapid",
+    "lapidation",
     "fornication",
     "adultère",
     "adultere",
-    "coupez-lui",
-    "coupez lui",
-    "combattez",
+    "coupez",
+    "combat",
     "tuez",
     "mise à mort",
     "mise a mort",
+    "flagella",
+    "alcool",
+    "enivre",
+    "hypocrite",
+    "polythéisme",
+    "polytheisme",
+    "martyr",
+    "tombe",
+    "tombes",
+    "antéchrist",
+    "antechrist",
+    "sang",
+    "peste",
+    "guerre",
+    "détruits",
+    "detruits",
 ]
 
 def has_unsuitable_daily_tone(row):
-    title = norm(row.get("title", ""))
-    return any(norm(word) in title for word in EXCLUDED_TONE_KEYWORDS)
+    title = row.get("title", "")
+    return any(contains_phrase(title, word) for word in EXCLUDED_TONE_KEYWORDS)
 
 def derive_tags(row):
-    # Use the official short title + stated benefits only. Narrator/context text
-    # creates false positives such as "fils de..." being mistaken for family advice.
-    haystack = norm(" ".join([
-        row.get("title", ""),
-        row.get("benefits", ""),
-    ]))
+    # The daily theme must be visible in the short reminder itself.
+    # Explanations/benefits are not used for classification, preventing contextual false positives.
+    title = row.get("title", "")
     tags = set()
     for tag, needles in TAG_RULES.items():
-        if any(norm(needle) in haystack for needle in needles):
+        if any(contains_phrase(title, needle) for needle in needles):
             tags.add(tag)
     return tags
 
