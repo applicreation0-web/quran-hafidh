@@ -14,7 +14,7 @@ object AppMigrations {
     private const val GUARD_PREFS = "guard_prefs"
     private const val SCHEMA_KEY = "data_schema_version"
     private const val LAST_APP_VERSION_KEY = "last_app_version_code"
-    private const val BACKUP_DONE_KEY = "legacy_backup_done"
+    private const val LAST_BACKUP_SCHEMA_KEY = "last_backup_schema"
 
     const val CURRENT_SCHEMA = 3
 
@@ -29,7 +29,8 @@ object AppMigrations {
         }
 
         return runCatching {
-            if (!state.getBoolean(BACKUP_DONE_KEY, false)) {
+            val lastBackupSchema = state.getInt(LAST_BACKUP_SCHEMA_KEY, 0)
+            if (lastBackupSchema < CURRENT_SCHEMA) {
                 backupPreferences(
                     source = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE),
                     destination = context.getSharedPreferences(
@@ -37,7 +38,9 @@ object AppMigrations {
                         Context.MODE_PRIVATE
                     )
                 )
-                state.edit().putBoolean(BACKUP_DONE_KEY, true).commit()
+                state.edit()
+                    .putInt(LAST_BACKUP_SCHEMA_KEY, CURRENT_SCHEMA)
+                    .commit()
             }
 
             var schema = from
@@ -72,9 +75,14 @@ object AppMigrations {
 
     private fun migrateToSchema2(context: Context) {
         val prefs = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
-        if (!prefs.contains("unlock_minutes")) return
+        val raw = prefs.all["unlock_minutes"] ?: return
+        val old = when (raw) {
+            is Int -> raw
+            is Long -> raw.toInt()
+            is String -> raw.toIntOrNull()
+            else -> null
+        } ?: return
 
-        val old = prefs.getInt("unlock_minutes", 10)
         val migrated = when {
             old <= 1 -> 1
             old <= 5 -> 5
@@ -83,7 +91,7 @@ object AppMigrations {
             else -> 20
         }
 
-        if (migrated != old) {
+        if (raw !is Int || migrated != old) {
             prefs.edit().putInt("unlock_minutes", migrated).commit()
         }
     }
