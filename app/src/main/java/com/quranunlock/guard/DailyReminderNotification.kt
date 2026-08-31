@@ -25,14 +25,17 @@ object DailyReminderScheduler {
         }
 
         val now = ZonedDateTime.now()
-        var next = now
+        val todayAt20 = now
             .withHour(DailyReminderManager.NOTIFICATION_HOUR)
             .withMinute(0)
             .withSecond(0)
             .withNano(0)
 
-        if (!next.isAfter(now)) {
-            next = next.plusDays(1)
+        val next = when {
+            now.isBefore(todayAt20) -> todayAt20
+            !DailyReminderManager.wasNotificationShownToday(context) ->
+                now.plusSeconds(5)
+            else -> todayAt20.plusDays(1)
         }
 
         val alarmManager = context.getSystemService(AlarmManager::class.java)
@@ -56,6 +59,7 @@ object DailyReminderScheduler {
 
     fun showToday(context: Context) {
         if (!DailyReminderManager.notificationsEnabled(context)) return
+        if (DailyReminderManager.wasNotificationShownToday(context)) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
@@ -140,6 +144,7 @@ object DailyReminderScheduler {
             .build()
 
         manager.notify(NOTIFICATION_ID, notification)
+        DailyReminderManager.markNotificationShown(context)
         GuardDiagnostics.log(context, "DAILY_REMINDER_SHOWN", detail = reminder.id)
     }
 
