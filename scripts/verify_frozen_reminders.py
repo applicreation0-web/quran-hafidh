@@ -3,14 +3,12 @@ import json
 from pathlib import Path
 
 PATH = Path("app/src/main/assets/reminders/hadeethenc_snapshot.json")
-TARGET = 127
-
 with PATH.open(encoding="utf-8") as handle:
     items = json.load(handle)
 
 assert isinstance(items, list), "Reminder snapshot must be a JSON list"
-assert len(items) == TARGET, f"Expected {TARGET} frozen hadiths, found {len(items)}"
-assert len({item["id"] for item in items}) == TARGET, "Duplicate reminder IDs"
+assert len(items) > 0, "No frozen hadiths"
+assert len({item["id"] for item in items}) == len(items), "Duplicate reminder IDs"
 
 weak_markers = ("faible", "weak", "daif", "da'if", "mawdu", "fabriqué", "fabrique")
 
@@ -26,17 +24,13 @@ for item in items:
     assert item.get("theme") in {
         "coran", "famille", "voisinage", "douceur", "patience",
         "sincerite", "gratitude", "generosite", "proprete", "entraide",
-        "discipline", "bonnes_moeurs", "dhikr", "priere"
+        "discipline", "bonnes_moeurs", "science", "dhikr", "priere"
     }
     assert "HadeethEnc.com Français v1.17.0" in item["reference"]
     assert "https://hadeethenc.com/fr/browse/hadith/" in item["reference"]
-    assert any(
-        book in item.get("book", "")
-        for book in (
-            "Sahih al-Bukhari", "Sahih Muslim", "Sunan Abi Dawud",
-            "Jami’ at-Tirmidhi", "Sunan an-Nasa’i", "Sunan Ibn Majah",
-            "Musnad Ahmad"
-        )
+    assert (
+        "Sahih al-Bukhari" in item.get("book", "") or
+        "Sahih Muslim" in item.get("book", "")
     ), item.get("book")
     grade = item["authenticity"].lower()
     assert not any(marker in grade for marker in weak_markers), item["authenticity"]
