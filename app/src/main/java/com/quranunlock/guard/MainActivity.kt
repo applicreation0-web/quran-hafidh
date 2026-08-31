@@ -99,8 +99,8 @@ class MainActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "Tous les navigateurs HTTP/HTTPS détectés sont protégés automatiquement, " +
-                                "même s’ils ne figurent pas dans la liste ci-dessous."
+                            "Le Mushaf de Médine (604 pages, Hafs ‘an ‘Asim) est intégré directement et fonctionne hors ligne. " +
+                                "Aucune application Quran supplémentaire n’est nécessaire."
                         )
                         Spacer(Modifier.height(24.dp))
 
@@ -321,7 +321,7 @@ class MainActivity : ComponentActivity() {
                                     Intent(this@MainActivity, GateActivity::class.java).apply {
                                         putExtra(
                                             GateActivity.EXTRA_TARGET_PACKAGE,
-                                            ProtectedApps.ANDROID_SETTINGS
+                                            GuardPrefs.UNINSTALL_CHALLENGE_KEY
                                         )
                                         putExtra(
                                             GateActivity.EXTRA_PURPOSE,
