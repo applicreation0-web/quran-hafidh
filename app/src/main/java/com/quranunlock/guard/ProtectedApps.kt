@@ -4,12 +4,10 @@ import android.content.Context
 
 object ProtectedApps {
     const val PLAY_STORE = "com.android.vending"
-    const val QURAN_FOR_ANDROID = "com.quran.labs.androidquran"
     const val ANDROID_SETTINGS = "com.android.settings"
 
     private val alwaysAllowed = setOf(
-        PLAY_STORE,
-        QURAN_FOR_ANDROID
+        PLAY_STORE
     )
 
     val defaultPackages = setOf(
@@ -41,8 +39,6 @@ object ProtectedApps {
         if (isAlwaysAllowed(packageName)) return false
         if (packageName == ANDROID_SETTINGS) return true
 
-        // Any app able to browse normal HTTP/HTTPS links is protected automatically,
-        // even when it was installed after Quran Unlock was configured.
         if (BrowserDetector.isBrowser(context, packageName)) return true
 
         return packageName in GuardPrefs.protectedPackages(context)
