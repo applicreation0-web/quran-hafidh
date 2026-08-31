@@ -327,20 +327,6 @@ def select_items(candidates, target):
             selected.append(match)
             selected_ids.add(match["id"])
 
-    # Ensure every weekly primary theme also has a dedicated eligible item.
-    for theme in PRIMARY_THEME_PRIORITY:
-        match = next(
-            (item for item in ordered if item["theme"] == theme),
-            None
-        )
-        if match is None:
-            raise RuntimeError(
-                f"Weekly theme has no verified short item: {theme!r}"
-            )
-        if match["id"] not in selected_ids:
-            selected.append(match)
-            selected_ids.add(match["id"])
-
     # Then fill in round-robin by weekly theme, preserving source priority
     # inside each theme. This prevents one large theme from dominating the library.
     by_theme = {
