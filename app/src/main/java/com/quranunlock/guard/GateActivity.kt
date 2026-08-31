@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
@@ -80,7 +81,18 @@ class GateActivity : ComponentActivity() {
                         Text(verse.translation, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
                         Text(verse.reference, style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(36.dp))
+                        Spacer(Modifier.height(28.dp))
+
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                QuranReaderLauncher.open(this@GateActivity)
+                            }
+                        ) {
+                            Text("Lire dans Quran for Android")
+                        }
+
+                        Spacer(Modifier.height(12.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = secondsLeft == 0,
