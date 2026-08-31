@@ -303,6 +303,37 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        Spacer(Modifier.height(24.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(24.dp))
+
+                        Text("5. Désinstallation", style = MaterialTheme.typography.titleLarge)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "La désinstallation reste libre après une seule page Quran. " +
+                                "Aucun délai de 24 h et aucun joker n’est utilisé."
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(this@MainActivity, GateActivity::class.java).apply {
+                                        putExtra(
+                                            GateActivity.EXTRA_TARGET_PACKAGE,
+                                            ProtectedApps.ANDROID_SETTINGS
+                                        )
+                                        putExtra(
+                                            GateActivity.EXTRA_PURPOSE,
+                                            GateActivity.PURPOSE_UNINSTALL
+                                        )
+                                    }
+                                )
+                            }
+                        ) {
+                            Text("Lire une page puis désinstaller")
+                        }
+
                         Spacer(Modifier.height(32.dp))
                     }
                 }
