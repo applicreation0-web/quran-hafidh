@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import difflib
-import io
 import json
 import re
+import subprocess
+import tempfile
 import unicodedata
 import urllib.request
 from pathlib import Path
-
-from pypdf import PdfReader
 
 PDF_URL = "https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_000802_al-mostafa.pdf"
 PRIMARY = Path("app/src/main/assets/hikam/primary_extraction.json")
@@ -36,7 +35,7 @@ def normalize(value):
     value = re.sub(r"[^\u0600-\u06ff]", "", value)
     return value
 
-def extract_ordered(reader):
+def extract_ordered(raw_text):
     blocks=[]
     current=[]
     started=False
@@ -49,33 +48,49 @@ def extract_ordered(reader):
                 blocks.append(text)
         current=[]
 
-    for page in reader.pages:
-        text=page.extract_text() or ""
-        for raw_line in text.splitlines():
-            line=re.sub(r"\s+", " ", raw_line).strip()
-            if not line:
-                continue
-            if re.match(r"^الحكمة\s+", line):
-                if started:
-                    flush()
-                started=True
-                continue
-            if not started:
-                continue
-            # Remove recurring page headers/footers and conversion credits.
-            if "ابن عطاء" in line and "الحكم العطائية" in line:
-                continue
-            if line.startswith("Source:") or line.startswith("To Pdf:"):
-                continue
-            current.append(line)
+    for raw_line in raw_text.splitlines():
+        line=re.sub(r"\s+", " ", raw_line).strip()
+        if not line:
+            continue
+        if re.match(r"^الحكمة\s+", line):
+            if started:
+                flush()
+            started=True
+            continue
+        if not started:
+            continue
+        if "ابن عطاء" in line and "الحكم العطائية" in line:
+            continue
+        if line.startswith("Source:") or line.startswith("To Pdf:"):
+            continue
+        current.append(line)
     flush()
     return blocks
+
+def extract_pdf_text(pdf_bytes):
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf_path=Path(tmp)/"hikam.pdf"
+        pdf_path.write_bytes(pdf_bytes)
+        attempts=[]
+        for mode in ("-layout","-raw"):
+            txt_path=Path(tmp)/(mode.replace("-","")+".txt")
+            subprocess.run(
+                ["pdftotext",mode,"-enc","UTF-8",str(pdf_path),str(txt_path)],
+                check=True
+            )
+            text=txt_path.read_text(encoding="utf-8",errors="replace")
+            attempts.append((text.count("الحكمة"),mode,text))
+        attempts.sort(key=lambda item:item[0],reverse=True)
+        count,mode,text=attempts[0]
+        print(json.dumps({"pdftotext_mode":mode,"heading_mentions":count},ensure_ascii=False))
+        return text
 
 primary=json.loads(PRIMARY.read_text(encoding="utf-8"))
 primary_entries=primary["entries"]
 
-reader=PdfReader(io.BytesIO(fetch()))
-secondary=extract_ordered(reader)
+pdf_bytes=fetch()
+pdf_text=extract_pdf_text(pdf_bytes)
+secondary=extract_ordered(pdf_text)
 
 if len(secondary) != 264:
     raise SystemExit(f"Expected 264 secondary Hikam headings, extracted {len(secondary)}")
@@ -117,7 +132,7 @@ payload={
         "title":"الحكم العطائية — ابن عطاء الله السكندري",
         "url":PDF_URL,
         "source_credit":"al-mostafa PDF; linked by Damas Cultural Society",
-        "pages":len(reader.pages),
+        "pages":38,
         "numbering_method":"264 sequential explicit 'الحكمة ...' headings"
     },
     "summary":{
