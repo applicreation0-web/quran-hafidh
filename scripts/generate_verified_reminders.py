@@ -236,7 +236,7 @@ for fr in fr_rows:
             "frenchText": french,
             "author": "Prophète Muhammad ﷺ",
             "book": " / ".join(books),
-            "reference": reference,
+            "reference": "HadeethEnc.com Français " + FR_VERSION + " • " + reference,
             "authenticity": grade,
             "tags": ["bonnes mœurs", "comportement"],
             "sourceId": hid,
