@@ -107,6 +107,12 @@ class MainActivity : ComponentActivity() {
                         Text("1. Pages de lecture", style = MaterialTheme.typography.titleLarge)
                         Spacer(Modifier.height(8.dp))
                         Text("Choisis la zone du Coran dans laquelle les pages obligatoires seront tirées.")
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Rotation anti-triche : les pages récemment attribuées sont évitées autant que possible " +
+                                "(jusqu’aux 30 dernières), avec adaptation automatique pour les petites sélections.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
