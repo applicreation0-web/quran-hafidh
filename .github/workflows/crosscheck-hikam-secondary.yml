@@ -1,4 +1,4 @@
-name: Cross-check complete Al-Hikam Arabic corpus
+name: Cross-check complete Al-Hikam Arabic corpus # retry
 
 on:
   push:
