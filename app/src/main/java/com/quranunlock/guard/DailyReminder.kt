@@ -410,6 +410,7 @@ object DailyReminderManager {
         val desiredType = dailyTypeCycle[Math.floorMod(date.dayOfWeek.value - 1, dailyTypeCycle.size)]
 
         val selected = chooseReminder(
+            context = context,
             epochDay = epochDay,
             theme = theme,
             desiredType = desiredType,
@@ -431,6 +432,7 @@ object DailyReminderManager {
     }
 
     private fun chooseReminder(
+        context: Context,
         epochDay: Long,
         theme: String,
         desiredType: ReminderType,
@@ -441,9 +443,10 @@ object DailyReminderManager {
 
         val tiers = listOf(
             fresh.filter { it.type == desiredType && (it.theme == theme || theme in it.tags) },
-            fresh.filter { it.type == desiredType },
             fresh.filter { it.theme == theme || theme in it.tags },
+            fresh.filter { it.type == desiredType },
             fresh,
+            all.filter { it.theme == theme || theme in it.tags },
             all.filter { it.type == desiredType },
             all
         )
