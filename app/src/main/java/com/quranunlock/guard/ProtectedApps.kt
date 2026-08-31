@@ -1,16 +1,18 @@
 package com.quranunlock.guard
 
+import android.content.Context
+
 object ProtectedApps {
     const val PLAY_STORE = "com.android.vending"
     const val QURAN_FOR_ANDROID = "com.quran.labs.androidquran"
+    const val ANDROID_SETTINGS = "com.android.settings"
 
     private val alwaysAllowed = setOf(
         PLAY_STORE,
         QURAN_FOR_ANDROID
     )
 
-    val packages = setOf(
-        "com.android.settings",
+    val defaultPackages = setOf(
         "com.google.android.youtube",
         "com.whatsapp",
         "org.telegram.messenger",
@@ -31,6 +33,13 @@ object ProtectedApps {
         "com.duckduckgo.mobile.android"
     )
 
-    fun isProtected(packageName: String): Boolean =
-        packageName !in alwaysAllowed && packageName in packages
+    fun isAlwaysAllowed(packageName: String): Boolean =
+        packageName in alwaysAllowed
+
+    fun isProtected(context: Context, packageName: String): Boolean {
+        if (packageName == context.packageName) return false
+        if (isAlwaysAllowed(packageName)) return false
+        if (packageName == ANDROID_SETTINGS) return true
+        return packageName in GuardPrefs.protectedPackages(context)
+    }
 }
