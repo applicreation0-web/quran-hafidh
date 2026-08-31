@@ -21,7 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,7 +37,7 @@ class GateActivity : ComponentActivity() {
         const val EXTRA_PURPOSE = "purpose"
         const val PURPOSE_ACCESS = "access"
         const val PURPOSE_UNINSTALL = "uninstall"
-        private const val MIN_READING_SECONDS = 60
+        private const val MIN_READING_MS = 60_000L
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -49,8 +49,8 @@ class GateActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val targetPackage = intent.getStringExtra(EXTRA_TARGET_PACKAGE)
-        if (targetPackage.isNullOrBlank()) {
+        val challengeKey = intent.getStringExtra(EXTRA_TARGET_PACKAGE)
+        if (challengeKey.isNullOrBlank()) {
             finish()
             return
         }
@@ -58,7 +58,9 @@ class GateActivity : ComponentActivity() {
         val purpose = intent.getStringExtra(EXTRA_PURPOSE) ?: PURPOSE_ACCESS
         val uninstallFlow = purpose == PURPOSE_UNINSTALL
 
-        val page = GuardPrefs.challengePage(this, targetPackage)
+        val page = GuardPrefs.challengePage(this, challengeKey)
+        GuardPrefs.ensureReadingSession(this, challengeKey, page)
+
         val mode = GuardPrefs.selectionMode(this)
         val sectionLabel = when (mode) {
             QuranSelectionMode.JUZ ->
@@ -70,19 +72,32 @@ class GateActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var secondsLeft by remember { mutableIntStateOf(MIN_READING_SECONDS) }
-                    var quranOpened by remember { mutableStateOf(false) }
+                    var readingMs by remember {
+                        mutableLongStateOf(
+                            GuardPrefs.readingElapsedMs(
+                                this@GateActivity,
+                                challengeKey,
+                                page
+                            )
+                        )
+                    }
                     var jokersRemaining by remember {
-                        mutableIntStateOf(GuardPrefs.remainingJokers(this@GateActivity))
+                        mutableStateOf(GuardPrefs.remainingJokers(this@GateActivity))
                     }
 
-                    LaunchedEffect(quranOpened) {
-                        if (!quranOpened) return@LaunchedEffect
-                        while (secondsLeft > 0) {
-                            delay(1000)
-                            secondsLeft--
+                    LaunchedEffect(challengeKey, page) {
+                        while (true) {
+                            readingMs = GuardPrefs.readingElapsedMs(
+                                this@GateActivity,
+                                challengeKey,
+                                page
+                            )
+                            delay(500)
                         }
                     }
+
+                    val secondsValidated = (readingMs / 1000L).coerceAtMost(60L)
+                    val readingComplete = readingMs >= MIN_READING_MS
 
                     Column(
                         modifier = Modifier
@@ -99,70 +114,86 @@ class GateActivity : ComponentActivity() {
                             },
                             style = MaterialTheme.typography.headlineMedium
                         )
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(20.dp))
                         Text(
-                            "Page " + page,
-                            style = MaterialTheme.typography.displayMedium,
+                            "Mushaf de Médine • Page " + page,
+                            style = MaterialTheme.typography.headlineSmall,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(sectionLabel, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Lis entièrement cette page dans Quran for Android. " +
-                                "Utilise « Go to page / Aller à la page » et saisis le numéro ci-dessus, puis reviens ici.",
+                            "La page est intégrée à Quran Unlock. Le compteur avance uniquement " +
+                                "pendant que cette page est réellement affichée au premier plan.",
                             textAlign = TextAlign.Center
                         )
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(24.dp))
 
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
-                                quranOpened = true
-                                QuranReaderLauncher.open(this@GateActivity)
+                                startActivity(
+                                    Intent(
+                                        this@GateActivity,
+                                        MushafReaderActivity::class.java
+                                    ).apply {
+                                        putExtra(MushafReaderActivity.EXTRA_PAGE, page)
+                                        putExtra(
+                                            MushafReaderActivity.EXTRA_CHALLENGE_KEY,
+                                            challengeKey
+                                        )
+                                    }
+                                )
                             }
                         ) {
-                            Text("Ouvrir Quran puis aller à la page " + page)
+                            Text("Lire la page " + page)
                         }
+
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Temps de lecture validé : " +
+                                secondsValidated +
+                                " / 60 s"
+                        )
 
                         Spacer(Modifier.height(12.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = quranOpened && secondsLeft == 0,
+                            enabled = readingComplete,
                             onClick = {
-                                GuardPrefs.unlock(this@GateActivity, targetPackage)
-                                setResult(Activity.RESULT_OK)
-
                                 if (uninstallFlow) {
-                                    val appDetails = Intent(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.parse("package:" + packageName)
-                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    startActivity(appDetails)
+                                    GuardPrefs.completeChallengeWithoutUnlock(
+                                        this@GateActivity,
+                                        challengeKey
+                                    )
+                                    openSystemUninstall()
+                                } else {
+                                    GuardPrefs.unlock(this@GateActivity, challengeKey)
                                 }
 
+                                setResult(Activity.RESULT_OK)
                                 finish()
                             }
                         ) {
-                            val label = when {
-                                !quranOpened -> "Ouvre d’abord Quran"
-                                secondsLeft > 0 -> "Lecture en cours… " + secondsLeft + "s"
-                                uninstallFlow -> "J’ai lu — ouvrir la désinstallation"
-                                else -> "J’ai lu entièrement la page " + page
-                            }
-                            Text(label)
+                            Text(
+                                when {
+                                    !readingComplete -> "Terminer la lecture de la page"
+                                    uninstallFlow -> "Page lue — désinstaller"
+                                    else -> "Page lue — continuer"
+                                }
+                            )
                         }
 
                         Spacer(Modifier.height(20.dp))
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !uninstallFlow &&
-                                jokersRemaining > 0 &&
-                                targetPackage != ProtectedApps.ANDROID_SETTINGS,
+                            enabled = !uninstallFlow && jokersRemaining > 0,
                             onClick = {
                                 if (GuardPrefs.consumeJoker(this@GateActivity)) {
-                                    jokersRemaining = GuardPrefs.remainingJokers(this@GateActivity)
-                                    GuardPrefs.unlock(this@GateActivity, targetPackage)
+                                    jokersRemaining =
+                                        GuardPrefs.remainingJokers(this@GateActivity)
+                                    GuardPrefs.unlock(this@GateActivity, challengeKey)
                                     setResult(Activity.RESULT_OK)
                                     finish()
                                 } else {
@@ -174,8 +205,6 @@ class GateActivity : ComponentActivity() {
                                 when {
                                     uninstallFlow ->
                                         "Pas de joker pour la désinstallation"
-                                    targetPackage == ProtectedApps.ANDROID_SETTINGS ->
-                                        "Jokers désactivés pour les Paramètres Android"
                                     jokersRemaining > 0 ->
                                         "Utiliser 1 joker — " +
                                             jokersRemaining +
@@ -190,6 +219,23 @@ class GateActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun openSystemUninstall() {
+        val uninstall = Intent(
+            Intent.ACTION_DELETE,
+            Uri.parse("package:" + packageName)
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        runCatching {
+            startActivity(uninstall)
+        }.getOrElse {
+            val appDetails = Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + packageName)
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(appDetails)
         }
     }
 }
