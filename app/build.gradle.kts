@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val generateVerifiedReminderSnapshot by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("python3", "scripts/generate_verified_reminders.py")
+}
+
 val verifyMushafPages by tasks.registering {
     doLast {
         val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
@@ -42,6 +47,7 @@ android {
 }
 
 tasks.named("preBuild").configure {
+    dependsOn(generateVerifiedReminderSnapshot)
     dependsOn(verifyMushafPages)
 }
 
