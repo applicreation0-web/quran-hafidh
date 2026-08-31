@@ -236,6 +236,9 @@ class MainActivity : ComponentActivity() {
         val todayReminder = remember(refreshToken) {
             DailyReminderManager.today(this@MainActivity)
         }
+        val contentCounts = remember(refreshToken) {
+            ReligiousContentCatalog.counts(this@MainActivity)
+        }
         val notificationGranted =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(
@@ -406,6 +409,41 @@ class MainActivity : ComponentActivity() {
 
                 SectionTitle("Rappel du jour")
                 DailyReminderCard(reminder = todayReminder)
+
+                SectionTitle("Bibliothèque vérifiée")
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            "Hadiths vérifiés : ${contentCounts.verifiedHadiths}",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text("Ḥikam vérifiées : ${contentCounts.verifiedHikam}")
+                        Text("Textes d’al-Ghazālī vérifiés : ${contentCounts.verifiedGhazali}")
+                        Text("Adhkār : ${contentCounts.adhkar}")
+                        Text("Autres contenus : ${contentCounts.other}")
+                        Text(
+                            "Les contenus encore en vérification ne sont jamais comptés ni présentés comme actifs.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        HikamLibraryActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Ouvrir la bibliothèque des Ḥikam")
+                        }
+                    }
+                }
 
                 SectionTitle("Rappels bienveillants")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {

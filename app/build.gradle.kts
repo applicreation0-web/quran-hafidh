@@ -8,6 +8,11 @@ val verifyFrozenReminderSnapshot by tasks.registering(Exec::class) {
     commandLine("python3", "scripts/verify_frozen_reminders.py")
 }
 
+val verifyHikamCorpus by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("python3", "scripts/verify_hikam_corpus.py")
+}
+
 val verifyMushafPages by tasks.registering {
     doLast {
         val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
@@ -37,8 +42,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.8.1"
+        versionCode = 12
+        versionName = "0.9.0"
     }
 
     buildFeatures {
@@ -48,6 +53,7 @@ android {
 
 tasks.named("preBuild").configure {
     dependsOn(verifyFrozenReminderSnapshot)
+    dependsOn(verifyHikamCorpus)
     dependsOn(verifyMushafPages)
 }
 
