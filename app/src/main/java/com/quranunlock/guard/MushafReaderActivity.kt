@@ -22,8 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import org.brotli.dec.BrotliInputStream
 
 class MushafReaderActivity : ComponentActivity() {
     companion object {
@@ -47,16 +48,21 @@ class MushafReaderActivity : ComponentActivity() {
             return
         }
 
-        val assetPath = "mushaf/hafs/kfqc/svg/%03d.svg".format(page)
-        val assetExists = runCatching {
-            assets.open(assetPath).use { }
-            true
-        }.getOrDefault(false)
+        val assetPath = "mushaf/hafs/kfqc/svg-br/%03d.svg.br".format(page)
+        val svgContent = runCatching {
+            assets.open(assetPath).use { compressed ->
+                BrotliInputStream(compressed).bufferedReader(Charsets.UTF_8).use {
+                    it.readText()
+                }
+            }
+        }.getOrNull()
 
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var loadFailed by remember { mutableStateOf(!assetExists) }
+                    var loadFailed by remember {
+                        mutableStateOf(svgContent.isNullOrBlank())
+                    }
 
                     Column(
                         modifier = Modifier
@@ -69,9 +75,9 @@ class MushafReaderActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(8.dp))
 
-                        if (assetExists && !loadFailed) {
+                        if (!svgContent.isNullOrBlank() && !loadFailed) {
                             MushafPageWebView(
-                                assetPath = assetPath,
+                                svgContent = svgContent,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f),
@@ -139,7 +145,7 @@ class MushafReaderActivity : ComponentActivity() {
 @SuppressLint("SetJavaScriptEnabled")
 @androidx.compose.runtime.Composable
 private fun MushafPageWebView(
-    assetPath: String,
+    svgContent: String,
     modifier: Modifier = Modifier,
     onReady: () -> Unit,
     onFailure: () -> Unit
@@ -150,7 +156,7 @@ private fun MushafPageWebView(
             WebView(context).apply {
                 settings.javaScriptEnabled = false
                 settings.domStorageEnabled = false
-                settings.allowFileAccess = true
+                settings.allowFileAccess = false
                 settings.allowContentAccess = false
                 settings.blockNetworkLoads = true
                 settings.builtInZoomControls = true
@@ -162,15 +168,10 @@ private fun MushafPageWebView(
                     override fun shouldOverrideUrlLoading(
                         view: WebView?,
                         request: WebResourceRequest?
-                    ): Boolean {
-                        val url = request?.url ?: return true
-                        return url.scheme != "file"
-                    }
+                    ): Boolean = true
 
                     override fun onPageFinished(view: WebView?, url: String?) {
-                        if (url?.startsWith("file:///android_asset/") == true) {
-                            onReady()
-                        }
+                        onReady()
                     }
 
                     override fun onReceivedError(
@@ -184,7 +185,13 @@ private fun MushafPageWebView(
                     }
                 }
 
-                loadUrl("file:///android_asset/" + assetPath)
+                loadDataWithBaseURL(
+                    null,
+                    svgContent,
+                    "image/svg+xml",
+                    "UTF-8",
+                    null
+                )
             }
         }
     )
