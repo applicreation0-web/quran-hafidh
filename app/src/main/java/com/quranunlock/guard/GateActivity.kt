@@ -42,7 +42,13 @@ class GateActivity : ComponentActivity() {
         }
 
         val page = GuardPrefs.challengePage(this, targetPackage)
-        val juzLabels = QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz $it" }
+        val mode = GuardPrefs.selectionMode(this)
+        val sectionLabel = when (mode) {
+            QuranSelectionMode.JUZ ->
+                QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz $it" }
+            QuranSelectionMode.HIZB ->
+                QuranPageSelector.hizbForPage(page).joinToString(" / ") { "Hizb $it" }
+        }
 
         setContent {
             MaterialTheme {
@@ -65,7 +71,10 @@ class GateActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Une page avant de continuer", style = MaterialTheme.typography.headlineMedium)
+                        Text(
+                            "Une page avant de continuer",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
                         Spacer(Modifier.height(28.dp))
                         Text(
                             "Page $page",
@@ -73,10 +82,11 @@ class GateActivity : ComponentActivity() {
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text(juzLabels, style = MaterialTheme.typography.titleMedium)
+                        Text(sectionLabel, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Lis entièrement cette page dans Quran for Android. Utilise « Go to page / Aller à la page » et saisis le numéro ci-dessus, puis reviens ici.",
+                            "Lis entièrement cette page dans Quran for Android. " +
+                                "Utilise « Go to page / Aller à la page » et saisis le numéro ci-dessus, puis reviens ici.",
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(28.dp))
