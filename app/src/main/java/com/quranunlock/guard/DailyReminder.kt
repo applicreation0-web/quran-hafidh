@@ -94,7 +94,7 @@ object ReminderLibrary {
             book = "Sahih Muslim",
             reference = "Hadith 223 • Livre 2, hadith 1",
             authenticity = "Sahih",
-            tags = setOf("propreté", "hygiène", "pureté", "ablutions", "soin du corps")
+            tags = setOf("propreté", "hygiène", "pureté", "ablutions", "soin du corps", "propreté des vêtements et des lieux")
         ),
         DailyReminder(
             id = "hadith_nasai_5",
@@ -191,6 +191,42 @@ object ReminderLibrary {
             reference = "Hadith 6138 • également Muslim 47",
             authenticity = "Sahih",
             tags = setOf("liens de parenté", "famille", "entraide", "vie en communauté")
+        ),
+        DailyReminder(
+            id = "hadith_muslim_223_quran",
+            type = ReminderType.HADITH,
+            theme = "coran",
+            arabicText = "وَالْقُرْآنُ حُجَّةٌ لَكَ أَوْ عَلَيْكَ.",
+            frenchText = "Le Coran est une preuve en ta faveur ou contre toi.",
+            author = "Prophète Muhammad ﷺ",
+            book = "Sahih Muslim",
+            reference = "Hadith 223 • Livre 2, hadith 1",
+            authenticity = "Sahih",
+            tags = setOf("mise en pratique du Coran", "lecture du Coran", "discipline personnelle")
+        ),
+        DailyReminder(
+            id = "hadith_tirmidhi_1956_common_space",
+            type = ReminderType.HADITH,
+            theme = "communauté",
+            arabicText = "وَإِمَاطَتُكَ الْحَجَرَ وَالشَّوْكَةَ وَالْعَظْمَ عَنِ الطَّرِيقِ لَكَ صَدَقَةٌ.",
+            frenchText = "Retirer de la route une pierre, une épine ou un os est pour toi une aumône.",
+            author = "Prophète Muhammad ﷺ",
+            book = "Jami’ at-Tirmidhi",
+            reference = "Hadith 1956",
+            authenticity = "Hasan (Darussalam)",
+            tags = setOf("respect des espaces communs", "propreté des lieux", "entraide", "vie en communauté")
+        ),
+        DailyReminder(
+            id = "hadith_muslim_2699_help",
+            type = ReminderType.HADITH,
+            theme = "entraide",
+            arabicText = "وَاللَّهُ فِي عَوْنِ الْعَبْدِ مَا كَانَ الْعَبْدُ فِي عَوْنِ أَخِيهِ.",
+            frenchText = "Allah vient en aide au serviteur tant que le serviteur vient en aide à son frère.",
+            author = "Prophète Muhammad ﷺ",
+            book = "Sahih Muslim",
+            reference = "Hadith 2699a • Livre 48, hadith 48",
+            authenticity = "Sahih",
+            tags = setOf("entraide", "vie en communauté", "générosité", "liens de parenté")
         ),
         DailyReminder(
             id = "ghazali_bidaya_religion_two_halves",
