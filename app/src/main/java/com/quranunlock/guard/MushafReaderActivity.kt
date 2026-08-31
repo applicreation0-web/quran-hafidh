@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -26,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -36,7 +36,6 @@ class MushafReaderActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PAGE = "page"
         const val EXTRA_CHALLENGE_KEY = "challenge_key"
-        private const val REQUIRED_READING_MS = 60_000L
     }
 
     private var page = 0
@@ -82,6 +81,15 @@ class MushafReaderActivity : ComponentActivity() {
                             )
                         )
                     }
+                    var bottomReached by remember {
+                        mutableStateOf(
+                            GuardPrefs.hasReachedReadingBottom(
+                                this@MushafReaderActivity,
+                                challengeKey,
+                                page
+                            )
+                        )
+                    }
 
                     LaunchedEffect(page, challengeKey) {
                         while (true) {
@@ -90,15 +98,17 @@ class MushafReaderActivity : ComponentActivity() {
                                 challengeKey,
                                 page
                             )
+                            bottomReached = GuardPrefs.hasReachedReadingBottom(
+                                this@MushafReaderActivity,
+                                challengeKey,
+                                page
+                            )
                             delay(250)
                         }
                     }
 
-                    val readingComplete = readingMs >= REQUIRED_READING_MS
-                    val progress =
-                        (readingMs.toFloat() / REQUIRED_READING_MS.toFloat()).coerceIn(0f, 1f)
-                    val remainingSeconds =
-                        ((REQUIRED_READING_MS - readingMs).coerceAtLeast(0L) + 999L) / 1000L
+                    val readerViewportHeight =
+                        LocalConfiguration.current.screenWidthDp.dp * 0.82f
 
                     Column(
                         modifier = Modifier
@@ -111,22 +121,26 @@ class MushafReaderActivity : ComponentActivity() {
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            if (readingComplete) {
-                                "Lecture validée • ${formatReadingDuration(readingMs)}"
+                            if (bottomReached) {
+                                "Bas de page atteint • ${formatReadingDuration(readingMs)} de lecture"
                             } else {
-                                "Lecture ${formatReadingDuration(readingMs)} / 01:00 • ${remainingSeconds}s restantes"
+                                "Lecture en cours • ${formatReadingDuration(readingMs)}"
                             },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (readingComplete) {
+                            color = if (bottomReached) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )
-                        Spacer(Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.fillMaxWidth()
+                        Text(
+                            if (bottomReached) {
+                                "Prenez le temps de terminer sereinement avant de continuer."
+                            } else {
+                                "Faites défiler naturellement la page jusqu’en bas, à votre rythme."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(10.dp))
 
@@ -135,8 +149,16 @@ class MushafReaderActivity : ComponentActivity() {
                                 svgContent = svgContent,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .weight(1f),
+                                    .height(readerViewportHeight),
                                 onReady = { markPageReady() },
+                                onBottomReached = {
+                                    GuardPrefs.markReadingBottomReached(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                    bottomReached = true
+                                },
                                 onFailure = {
                                     loadFailed = true
                                     markPageUnavailable()
@@ -152,28 +174,30 @@ class MushafReaderActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = readingComplete,
+                            enabled = bottomReached,
                             onClick = {
                                 val elapsed = GuardPrefs.completeReadingAndUnlock(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                GuardRuntime.interception.markUnlocked(challengeKey)
-                                GuardDiagnostics.log(
-                                    this@MushafReaderActivity,
-                                    "READING_UNLOCKED",
-                                    challengeKey,
-                                    "page=$page elapsedMs=$elapsed"
-                                )
-                                finishAffinity()
+                                if (GuardPrefs.isUnlocked(this@MushafReaderActivity, challengeKey)) {
+                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                    GuardDiagnostics.log(
+                                        this@MushafReaderActivity,
+                                        "READING_UNLOCKED",
+                                        challengeKey,
+                                        "page=$page elapsedMs=$elapsed"
+                                    )
+                                    finishAffinity()
+                                }
                             }
                         ) {
                             Text(
-                                if (readingComplete) {
-                                    "Lecture validée — continuer"
+                                if (bottomReached) {
+                                    "Page lue — continuer"
                                 } else {
-                                    "Continuer après 60 secondes"
+                                    "Faites défiler jusqu’en bas"
                                 }
                             )
                         }
@@ -256,6 +280,7 @@ private fun MushafPageWebView(
     svgContent: String,
     modifier: Modifier = Modifier,
     onReady: () -> Unit,
+    onBottomReached: () -> Unit,
     onFailure: () -> Unit
 ) {
     AndroidView(
@@ -273,6 +298,16 @@ private fun MushafPageWebView(
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
 
+                setOnScrollChangeListener { view, _, scrollY, _, _ ->
+                    val webView = view as WebView
+                    val contentHeightPx = (webView.contentHeight * webView.scale).toInt()
+                    if (contentHeightPx > 0 &&
+                        scrollY + webView.height >= contentHeightPx - 24
+                    ) {
+                        onBottomReached()
+                    }
+                }
+
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(
                         view: WebView?,
@@ -281,6 +316,14 @@ private fun MushafPageWebView(
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         onReady()
+                        view?.post {
+                            val contentHeightPx = ((view.contentHeight) * view.scale).toInt()
+                            if (contentHeightPx > 0 &&
+                                view.scrollY + view.height >= contentHeightPx - 24
+                            ) {
+                                onBottomReached()
+                            }
+                        }
                     }
 
                     override fun onReceivedError(
