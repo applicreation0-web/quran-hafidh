@@ -78,7 +78,7 @@ object AuthenticAdhkarLibrary {
             arabicText = "اللَّهُمَّ بِكَ أَصْبَحْنَا وَبِكَ أَمْسَيْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ الْمَصِيرُ",
             frenchText = "Ô Allah, c’est par Toi que nous entrons dans le matin, par Toi que nous entrons dans le soir, par Toi que nous vivons et par Toi que nous mourons, et vers Toi est le retour.",
             source = "Jami’ at-Tirmidhi 3391",
-            authenticity = "Sahih (Darussalam)"
+            authenticity = "Hasan selon at-Tirmidhi ; Sahih (Darussalam)"
         ),
         AdhkarItem(
             id = "bika_amsayna",
@@ -87,7 +87,7 @@ object AuthenticAdhkarLibrary {
             arabicText = "اللَّهُمَّ بِكَ أَمْسَيْنَا وَبِكَ أَصْبَحْنَا وَبِكَ نَحْيَا وَبِكَ نَمُوتُ وَإِلَيْكَ النُّشُورُ",
             frenchText = "Ô Allah, c’est par Toi que nous entrons dans le soir, par Toi que nous entrons dans le matin, par Toi que nous vivons et par Toi que nous mourons, et vers Toi est la résurrection.",
             source = "Jami’ at-Tirmidhi 3391",
-            authenticity = "Sahih (Darussalam)"
+            authenticity = "Hasan selon at-Tirmidhi ; Sahih (Darussalam)"
         ),
         AdhkarItem(
             id = "alim_alghayb",

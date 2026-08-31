@@ -64,6 +64,18 @@ class MigrationAndAdhkarTest {
     }
 
     @Test
+    fun everyAdhkarHasVerifiedProvenance() {
+        val ids = AuthenticAdhkarLibrary.items.map { it.id }.toSet()
+        assertEquals(ids, ReligiousSourceRegistry.adhkarSources.keys)
+
+        ReligiousSourceRegistry.adhkarSources.values.forEach { source ->
+            assertTrue(source.sourceUrl.startsWith("https://"))
+            assertTrue(source.verificationDate.isNotBlank())
+            assertTrue(source.note.isNotBlank())
+        }
+    }
+
+    @Test
     fun bothMorningAndEveningCollectionsExist() {
         assertNotNull(AuthenticAdhkarLibrary.forPeriod(AdhkarPeriod.MORNING))
         assertNotNull(AuthenticAdhkarLibrary.forPeriod(AdhkarPeriod.EVENING))

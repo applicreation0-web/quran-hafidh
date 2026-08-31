@@ -19,9 +19,11 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 ## Spiritual reminders
 
 - One main reminder is selected locally for each day and remains stable throughout that day.
-- The bundled library targets 150 verified entries for the experimental 0.8 release.
+- The bundled library has no numerical quota: only texts that pass authenticity, provenance and suitability checks are enabled.
 - Arabic is shown first, followed by French and an identifiable source.
+- Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
 - Hadith, al-Ghazali quotations and al-Hikam are explicitly distinguished.
+- Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
 - No transliteration is shown by default.
 - A gentle daily notification targets 20:00 local time.
 - Authenticated morning adhkar are offered between Fajr and sunrise.

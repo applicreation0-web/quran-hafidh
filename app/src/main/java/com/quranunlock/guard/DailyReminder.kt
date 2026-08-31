@@ -189,7 +189,7 @@ object ReminderLibrary {
             frenchText = "Que celui qui croit en Allah et au Jour dernier entretienne ses liens de parenté.",
             author = "Prophète Muhammad ﷺ",
             book = "Sahih al-Bukhari",
-            reference = "Hadith 6138 • également Muslim 47",
+            reference = "Hadith 6138 • Livre 78, hadith 165 • également Muslim 47",
             authenticity = "Sahih",
             tags = setOf("liens de parenté", "famille", "entraide", "vie en communauté")
         ),
@@ -332,6 +332,9 @@ object ReminderLibrary {
                                     ?.let(::add)
                             }
                         }
+                    }
+                    if (!obj.optBoolean("displayEligible", false)) {
+                        continue
                     }
                     add(
                         DailyReminder(
