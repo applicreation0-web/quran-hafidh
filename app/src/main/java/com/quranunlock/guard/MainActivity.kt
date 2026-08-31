@@ -203,6 +203,9 @@ class MainActivity : ComponentActivity() {
         val lastEventAge = GuardHealth.lastProtectedEventAgeMs(this@MainActivity)
         val recentDiagnostics = GuardDiagnostics.recent(this@MainActivity, 5)
         val recentHistory = GuardPrefs.readingHistory(this@MainActivity, 5)
+        val todayReminder = remember {
+            DailyReminderManager.today(this@MainActivity)
+        }
 
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -340,6 +343,9 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+
+                SectionTitle("Rappel du jour")
+                DailyReminderCard(reminder = todayReminder)
 
                 SectionTitle("Suivi de lecture")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
