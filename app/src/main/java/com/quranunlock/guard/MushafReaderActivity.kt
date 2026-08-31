@@ -185,10 +185,37 @@ private fun MushafPageWebView(
                     }
                 }
 
+                val html = """
+                    <!doctype html>
+                    <html>
+                    <head>
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                      <style>
+                        html, body {
+                          margin: 0;
+                          padding: 0;
+                          background: #ffffff;
+                          width: 100%;
+                          min-height: 100%;
+                        }
+                        svg {
+                          display: block;
+                          width: 100%;
+                          height: auto;
+                          max-width: 100%;
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      $svgContent
+                    </body>
+                    </html>
+                """.trimIndent()
+
                 loadDataWithBaseURL(
-                    null,
-                    svgContent,
-                    "image/svg+xml",
+                    "https://quran-safeguard.local/",
+                    html,
+                    "text/html",
                     "UTF-8",
                     null
                 )
