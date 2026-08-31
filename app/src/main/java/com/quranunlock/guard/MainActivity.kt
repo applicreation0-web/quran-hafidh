@@ -1,12 +1,18 @@
 package com.applicreation0.quransafeguard
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     private val serviceEnabledState = mutableStateOf(false)
@@ -74,14 +81,15 @@ class MainActivity : ComponentActivity() {
             Quran Safeguard 🌿
 
             Installation simple :
-            1. Installe l’application qui t’a été envoyée.
-            2. Ouvre Quran Safeguard.
-            3. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
-            4. Autorise l’application à fonctionner normalement en arrière-plan si Android te le demande.
-            5. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
-            6. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
+            1. Ouvre le lien privé Google Play Quran Safeguard qui t’a été envoyé.
+            2. Utilise le compte Google autorisé et rejoins le test si Google Play le demande.
+            3. Installe Quran Safeguard depuis Google Play puis ouvre l’application.
+            4. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
+            5. Autorise les rappels et, si tu le souhaites, la localisation approximative utilisée uniquement sur le téléphone pour calculer Fajr, le lever du soleil, ‘Asr et Maghrib.
+            6. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
+            7. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
 
-            Si une étape te semble inhabituelle, reviens simplement dans Quran Safeguard : le guide reste disponible.
+            N’installe pas d’APK reçu par message ou par email. En cas de doute, reviens simplement dans Quran Safeguard.
             Bonne installation 🌿
         """.trimIndent()
 
@@ -94,6 +102,28 @@ class MainActivity : ComponentActivity() {
                 "Partager le guide d’installation"
             )
         )
+    }
+
+    private fun captureApproximateLocation(): Boolean {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+
+        val manager = getSystemService(LocationManager::class.java) ?: return false
+        val location = manager.getProviders(true)
+            .mapNotNull { provider ->
+                runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
+            }
+            .maxByOrNull { it.time }
+            ?: return false
+
+        ReminderPrefs.saveLocation(this, location.latitude, location.longitude)
+        MindfulReminderScheduler.scheduleAll(this)
+        return true
     }
 
     private fun testProtection() {
@@ -205,6 +235,36 @@ class MainActivity : ComponentActivity() {
         val recentHistory = GuardPrefs.readingHistory(this@MainActivity, 5)
         val todayReminder = remember(refreshToken) {
             DailyReminderManager.today(this@MainActivity)
+        }
+        val notificationGranted =
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+        val locationSaved = ReminderPrefs.location(this@MainActivity) != null
+
+        val reminderPermissionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val locationGranted =
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true ||
+                    ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+            if (locationGranted) {
+                if (!captureApproximateLocation()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Localisation autorisée. Ouvrez l’application un peu plus tard si Android n’a pas encore de position disponible.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            MindfulReminderScheduler.scheduleAll(this@MainActivity)
+            refreshState.value += 1
         }
 
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -346,6 +406,64 @@ class MainActivity : ComponentActivity() {
 
                 SectionTitle("Rappel du jour")
                 DailyReminderCard(reminder = todayReminder)
+
+                SectionTitle("Rappels bienveillants")
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "20:00 • rappel du jour et petit bilan 🌿",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Adhkâr : matin entre Fajr et le lever du soleil ; soir entre ‘Asr et Maghrib.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Les horaires sont calculés sur ce téléphone. La localisation approximative n’est ni envoyée ni partagée.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Notifications : " + if (notificationGranted) "autorisées ✓" else "à autoriser" +
+                                " • horaires locaux : " + if (locationSaved) "configurés ✓" else "à configurer",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val requested = buildList {
+                                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        add(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                }.toTypedArray()
+                                reminderPermissionLauncher.launch(requested)
+                            }
+                        ) {
+                            Text(
+                                if (notificationGranted && locationSaved) {
+                                    "Actualiser les horaires des rappels"
+                                } else {
+                                    "Activer les rappels matin / soir"
+                                }
+                            )
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(this@MainActivity, AdhkarActivity::class.java)
+                                        .putExtra(AdhkarActivity.EXTRA_PERIOD, AdhkarPeriod.MORNING.name)
+                                )
+                            }
+                        ) {
+                            Text("Voir les adhkâr authentifiés")
+                        }
+                    }
+                }
 
                 SectionTitle("Suivi de lecture")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -689,11 +807,12 @@ class MainActivity : ComponentActivity() {
                             "Une installation simple, étape par étape 🌿",
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text("1. Installer puis ouvrir Quran Safeguard.")
-                        Text("2. Activer calmement la protection dans les réglages d’accessibilité.")
-                        Text("3. Autoriser le fonctionnement en arrière-plan si Android le propose.")
-                        Text("4. Choisir les applications et les Juz/Hizb souhaités.")
-                        Text("5. Tester la protection pour confirmer que tout fonctionne.")
+                        Text("1. Ouvrir le lien privé Google Play avec le compte invité.")
+                        Text("2. Rejoindre le test puis installer Quran Safeguard depuis Google Play.")
+                        Text("3. Activer calmement la protection dans les réglages d’accessibilité.")
+                        Text("4. Autoriser les rappels et, si souhaité, les horaires locaux des adhkâr.")
+                        Text("5. Choisir les applications et les Juz/Hizb souhaités.")
+                        Text("6. Tester la protection pour confirmer que tout fonctionne.")
                         Text(
                             "Le guide peut être partagé avec une invitation afin que la personne sache exactement quoi faire.",
                             style = MaterialTheme.typography.bodySmall,
