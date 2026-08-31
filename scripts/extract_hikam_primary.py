@@ -76,22 +76,57 @@ def normalize(value):
     return re.sub(r"\s+", " ", value).strip()
 
 def extract(text):
+    # Parse the matn as a sequence: a numbered marker opens one Hikma and
+    # continuation lines belong to it until the next numbered marker.
+    # This avoids both truncating multi-line Hikam and swallowing later ones.
+    digit_map = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+    lines = [
+        re.sub(r"\\s+", " ", x.translate(digit_map)).strip()
+        for x in text.splitlines()
+        if x.strip()
+    ]
+
     entries = []
-    lines = [x.strip() for x in text.splitlines() if x.strip()]
+    current_number = None
+    buffer = []
+
+    def flush():
+        nonlocal current_number, buffer
+        if current_number is None:
+            buffer = []
+            return
+        body = clean(" ".join(buffer))
+        if (
+            1 <= current_number <= 264
+            and re.search(r"[\\u0600-\\u06ff]", body)
+            and 12 <= len(normalize(body)) <= 1800
+        ):
+            entries.append((current_number, body))
+        current_number = None
+        buffer = []
+
     for line in lines:
-        m = re.match(r"^(\d{1,3})\s*[-–—]\s*(.+)$", line)
+        # Stop page-navigation/footer material from attaching to the last Hikma.
+        if any(marker in line for marker in (
+            "صفحات الكتاب", "الرئيسية /", "الصفحة السابقة",
+            "© 2026", "Ahlulbayt Library"
+        )):
+            flush()
+            continue
+
+        m = re.match(r"^(\\d{1,3})\\s*[-–—]\\s*(.*)$", line)
         if m:
-            n = int(m.group(1))
-            body = clean(m.group(2))
-            if 1 <= n <= 264 and re.search(r"[\u0600-\u06ff]", body) and len(normalize(body)) >= 12:
-                entries.append((n, body))
-    compact = " ".join(lines)
-    pat = re.compile(r"(?<!\d)(\d{1,3})\s*[-–—]\s*(.+?)(?=(?:\s+\d{1,3}\s*[-–—])|$)")
-    for m in pat.finditer(compact):
-        n = int(m.group(1))
-        body = clean(m.group(2))
-        if 1 <= n <= 264 and re.search(r"[\u0600-\u06ff]", body) and 12 <= len(normalize(body)) <= 1800:
-            entries.append((n, body))
+            flush()
+            current_number = int(m.group(1))
+            first = m.group(2).strip()
+            if first:
+                buffer.append(first)
+            continue
+
+        if current_number is not None:
+            buffer.append(line)
+
+    flush()
     return entries
 
 pages = {}
@@ -118,9 +153,8 @@ for page in sorted(pages):
 selected = {}
 duplicates = []
 for number, rows in sorted(candidates.items()):
-    # The compact candidate reaches the next numbered marker and therefore
-    # preserves multi-line / multi-clause Hikam. Site metadata is already cut.
-    # Pick the longest unique clean candidate on the canonical page.
+    # Sequence parsing already preserves complete boundaries. If the HTML
+    # repeats a number, keep the longest unique occurrence on its canonical page.
     unique_rows = {}
     for row in rows:
         key = normalize(row["arabic"])
