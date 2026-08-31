@@ -808,7 +808,7 @@ private fun readingTrendLabel(current: Long, previous: Long): String {
     if (current <= 0L || previous <= 0L) return ""
     val percent = ((previous - current) * 100L / previous).toInt()
     return when {
-        percent >= 5 -> "Votre temps moyen s’améliore progressivement : " + percent + "% sur les 7 derniers jours."
+        percent >= 5 -> "Votre temps moyen est plus court de " + percent + "% cette semaine — sans objectif de vitesse."
         percent <= -5 -> "Votre rythme est plus posé cette semaine — prenez le temps qui vous convient."
         else -> "Votre rythme reste régulier cette semaine."
     }
