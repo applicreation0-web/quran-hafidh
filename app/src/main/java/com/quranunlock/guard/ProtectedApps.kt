@@ -40,6 +40,11 @@ object ProtectedApps {
         if (packageName == context.packageName) return false
         if (isAlwaysAllowed(packageName)) return false
         if (packageName == ANDROID_SETTINGS) return true
+
+        // Any app able to browse normal HTTP/HTTPS links is protected automatically,
+        // even when it was installed after Quran Unlock was configured.
+        if (BrowserDetector.isBrowser(context, packageName)) return true
+
         return packageName in GuardPrefs.protectedPackages(context)
     }
 }
