@@ -2,9 +2,7 @@ package com.quranunlock.guard
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -34,9 +32,6 @@ import kotlinx.coroutines.delay
 class GateActivity : ComponentActivity() {
     companion object {
         const val EXTRA_TARGET_PACKAGE = "target_package"
-        const val EXTRA_PURPOSE = "purpose"
-        const val PURPOSE_ACCESS = "access"
-        const val PURPOSE_UNINSTALL = "uninstall"
         private const val MIN_READING_MS = 60_000L
     }
 
@@ -55,18 +50,15 @@ class GateActivity : ComponentActivity() {
             return
         }
 
-        val purpose = intent.getStringExtra(EXTRA_PURPOSE) ?: PURPOSE_ACCESS
-        val uninstallFlow = purpose == PURPOSE_UNINSTALL
-
         val page = GuardPrefs.challengePage(this, challengeKey)
         GuardPrefs.ensureReadingSession(this, challengeKey, page)
 
         val mode = GuardPrefs.selectionMode(this)
         val sectionLabel = when (mode) {
             QuranSelectionMode.JUZ ->
-                QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz " + it }
+                QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz $it" }
             QuranSelectionMode.HIZB ->
-                QuranPageSelector.hizbForPage(page).joinToString(" / ") { "Hizb " + it }
+                QuranPageSelector.hizbForPage(page).joinToString(" / ") { "Hizb $it" }
         }
 
         setContent {
@@ -107,16 +99,12 @@ class GateActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            if (uninstallFlow) {
-                                "Une page avant la désinstallation"
-                            } else {
-                                "Une page avant de continuer"
-                            },
+                            "Une page avant de continuer",
                             style = MaterialTheme.typography.headlineMedium
                         )
-                        Spacer(Modifier.height(20.dp))
+                        Spacer(Modifier.height(16.dp))
                         Text(
-                            "Mushaf de Médine • Page " + page,
+                            "Mushaf de Médine • Page $page",
                             style = MaterialTheme.typography.headlineSmall,
                             textAlign = TextAlign.Center
                         )
@@ -124,8 +112,7 @@ class GateActivity : ComponentActivity() {
                         Text(sectionLabel, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "La page est intégrée à Quran Unlock. Le compteur avance uniquement " +
-                                "pendant que cette page est réellement affichée au premier plan.",
+                            "Le compteur avance uniquement lorsque cette page est réellement affichée au premier plan.",
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(24.dp))
@@ -146,41 +133,26 @@ class GateActivity : ComponentActivity() {
                                     }
                                 )
                             }
-                        ) {
-                            Text("Lire la page " + page)
-                        }
+                        ) { Text("Lire la page $page") }
 
                         Spacer(Modifier.height(12.dp))
-                        Text(
-                            "Temps de lecture validé : " +
-                                secondsValidated +
-                                " / 60 s"
-                        )
+                        Text("Temps de lecture validé : $secondsValidated / 60 s")
 
                         Spacer(Modifier.height(12.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = readingComplete,
                             onClick = {
-                                if (uninstallFlow) {
-                                    GuardPrefs.completeChallengeWithoutUnlock(
-                                        this@GateActivity,
-                                        challengeKey
-                                    )
-                                    openSystemUninstall()
-                                } else {
-                                    GuardPrefs.unlock(this@GateActivity, challengeKey)
-                                }
-
+                                GuardPrefs.unlock(this@GateActivity, challengeKey)
                                 setResult(Activity.RESULT_OK)
                                 finish()
                             }
                         ) {
                             Text(
-                                when {
-                                    !readingComplete -> "Terminer la lecture de la page"
-                                    uninstallFlow -> "Page lue — désinstaller"
-                                    else -> "Page lue — continuer"
+                                if (readingComplete) {
+                                    "Page lue — continuer"
+                                } else {
+                                    "Terminer la lecture de la page"
                                 }
                             )
                         }
@@ -188,58 +160,34 @@ class GateActivity : ComponentActivity() {
                         Spacer(Modifier.height(20.dp))
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !uninstallFlow &&
-                                challengeKey != ProtectedApps.ANDROID_SETTINGS &&
-                                jokersRemaining > 0,
+                            enabled = jokersRemaining > 0,
                             onClick = {
                                 if (GuardPrefs.consumeJoker(this@GateActivity)) {
                                     jokersRemaining =
                                         GuardPrefs.remainingJokers(this@GateActivity)
-                                    GuardPrefs.unlock(this@GateActivity, challengeKey)
+                                    GuardPrefs.unlockWithJoker(
+                                        this@GateActivity,
+                                        challengeKey
+                                    )
                                     setResult(Activity.RESULT_OK)
                                     finish()
                                 } else {
-                                    jokersRemaining = 0
+                                    jokersRemaining =
+                                        GuardPrefs.remainingJokers(this@GateActivity)
                                 }
                             }
                         ) {
                             Text(
-                                when {
-                                    uninstallFlow ->
-                                        "Pas de joker pour la désinstallation"
-                                    challengeKey == ProtectedApps.ANDROID_SETTINGS ->
-                                        "Jokers désactivés pour les Paramètres Android"
-                                    jokersRemaining > 0 ->
-                                        "Utiliser 1 joker — " +
-                                            jokersRemaining +
-                                            "/" +
-                                            GuardPrefs.DAILY_JOKERS +
-                                            " restants"
-                                    else ->
-                                        "Aucun joker restant aujourd’hui"
+                                if (jokersRemaining > 0) {
+                                    "Utiliser 1 joker — $jokersRemaining/${GuardPrefs.DAILY_JOKERS} • ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} min max"
+                                } else {
+                                    "Aucun joker restant aujourd’hui"
                                 }
                             )
                         }
                     }
                 }
             }
-        }
-    }
-
-    private fun openSystemUninstall() {
-        val uninstall = Intent(
-            Intent.ACTION_DELETE,
-            Uri.parse("package:" + packageName)
-        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
-        runCatching {
-            startActivity(uninstall)
-        }.getOrElse {
-            val appDetails = Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:" + packageName)
-            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(appDetails)
         }
     }
 }
