@@ -1,147 +1,197 @@
 #!/usr/bin/env python3
 import argparse
-import concurrent.futures
 import hashlib
 import json
 import re
-import time
 import unicodedata
-import urllib.parse
-import urllib.request
+import zipfile
+import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
 
-BASE = "https://hadeethenc.com/api/v1"
-TRANSLATION_VERSION = "fr-v1.17.0"
 SOURCE_PROVIDER = "HadeethEnc.com"
-FETCHED_AT = "2026-08-31"
+BUILD_REVIEW_DATE = "2026-08-31"
 
-THEME_RULES = {
-    "coran": ["coran", "qur", "récitation", "recitation", "sourate", "verset"],
-    "famille": ["famille", "parent", "père", "pere", "mère", "mere", "époux", "epoux", "épouse", "epouse", "enfant"],
-    "voisinage": ["voisin", "voisinage"],
-    "propreté": ["propreté", "proprete", "purification", "ablution", "siwak", "hygiène", "hygiene"],
-    "douceur": ["douceur", "doux", "bienveillance", "clémence", "clemence"],
-    "patience": ["patience", "patient", "endurance"],
-    "maîtrise de soi": ["colère", "colere", "maîtrise", "maitrise", "pardon", "humilité", "humilite"],
-    "sincérité": ["sincérité", "sincerite", "intention", "ostentation"],
-    "gratitude": ["gratitude", "remerci", "reconnaissan"],
-    "générosité": ["aumône", "aumone", "généros", "generos", "dépense", "depense", "charité", "charite"],
-    "entraide": ["entraide", "aide", "secours", "besoin", "frère", "frere"],
-    "communauté": ["compagnon", "gens", "musulman", "communauté", "communaute", "réconcil", "reconcil"],
-    "discipline": ["temps", "habitude", "assidu", "régular", "regular", "effort", "constan", "science", "savoir"],
-    "bonnes mœurs": ["comportement", "caractère", "caractere", "vertu", "convenance", "politesse", "sourire", "parole"],
+NS = {
+    "m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+    "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
 }
 
-CATEGORY_HINTS = [
-    "coran", "qur", "vertu", "mérite", "merite", "convenance", "caractère", "caractere",
-    "parent", "famille", "voisin", "purification", "ablution", "propreté", "proprete",
-    "rappel", "invocation", "aumône", "aumone", "patience", "douceur", "colère", "colere",
-    "liens", "compagn", "science", "savoir", "fratern", "entraide", "comportement"
+TAG_RULES = {
+    "bonnes mœurs": ["bon comportement", "comportement", "caractère", "caractere", "vertu", "sourire", "bonne parole", "politesse", "insulte", "injure"],
+    "comportement": ["comportement", "caractère", "caractere", "conduite", "parole"],
+    "douceur": ["douceur", "doux", "bienveillance", "clémence", "clemence", "miséricorde", "misericorde"],
+    "patience": ["patience", "patient", "endurance", "épreuve", "epreuve"],
+    "maîtrise de soi": ["colère", "colere", "maîtrise", "maitrise", "retenir sa langue", "pardon", "pardonne"],
+    "sincérité": ["sincérité", "sincerite", "intention", "ostentation", "ikhl"],
+    "intention": ["intention", "intentions"],
+    "gratitude": ["gratitude", "remerci", "reconnaissan"],
+    "générosité": ["aumône", "aumone", "charité", "charite", "généros", "generos", "dépense", "depense", "donner"],
+    "pardon": ["pardon", "pardonne", "indulgence"],
+    "mérite du Coran": ["mérite du coran", "merite du coran", "meilleur d'entre vous", "coran"],
+    "lecture du Coran": ["récit", "recit", "lire le coran", "lecture du coran", "récitation", "recitation"],
+    "apprentissage du Coran": ["apprend le coran", "apprendre le coran", "enseigne le coran", "enseignement du coran"],
+    "mise en pratique du Coran": ["coran est une preuve", "mettre en pratique", "agit selon le coran", "coran"],
+    "coran": ["coran", "qur", "sourate", "verset", "récitation", "recitation"],
+    "famille": ["famille", "parent", "père", "pere", "mère", "mere", "époux", "epoux", "épouse", "epouse", "enfant", "fils", "fille"],
+    "parents": ["parents", "père", "pere", "mère", "mere", "papa", "maman"],
+    "conjoint": ["époux", "epoux", "épouse", "epouse", "mari", "femme"],
+    "enfants": ["enfant", "fils", "fille", "garçon", "garcon"],
+    "liens de parenté": ["parenté", "parente", "liens de parenté", "proches parents"],
+    "voisinage": ["voisin", "voisinage"],
+    "respect du voisin": ["voisin", "tort à son voisin", "tort a son voisin"],
+    "entraide": ["entraide", "aide", "secours", "besoin de son frère", "besoin de son frere", "soulage"],
+    "vie en communauté": ["musulman", "frère", "frere", "communauté", "communaute", "réconcil", "reconcil", "gens"],
+    "propreté": ["propreté", "proprete", "purification", "propre", "impureté", "impurete", "saleté", "salete"],
+    "hygiène": ["hygiène", "hygiene", "siwâk", "siwak", "bouche", "dents", "laver"],
+    "pureté": ["pureté", "purete", "purification", "ṭah", "tah"],
+    "ablutions": ["ablution", "wud", "wuḍ"],
+    "soin du corps": ["corps", "bouche", "dents", "cheveux", "ongles", "laver"],
+    "propreté des vêtements et des lieux": ["vêtement", "vetement", "habit", "lieu", "mosquée", "mosquee", "route", "chemin", "saleté", "salete"],
+    "hygiène bucco-dentaire": ["siwâk", "siwak", "bouche", "dents"],
+    "respect des espaces communs": ["route", "chemin", "mosquée", "mosquee", "nuisance", "épine", "epine"],
+    "gestion du temps": ["temps", "heure", "matin", "soir", "retarder", "hâter", "hater"],
+    "discipline personnelle": ["assidu", "régulier", "regulier", "constance", "habitude", "persév", "persev", "effort"],
+    "bonnes habitudes": ["habitude", "régulier", "regulier", "assidu", "constance", "chaque jour"],
+}
+
+PRIMARY_THEME_PRIORITY = [
+    "voisinage",
+    "famille",
+    "propreté",
+    "douceur",
+    "coran",
+    "patience",
+    "maîtrise de soi",
+    "sincérité",
+    "gratitude",
+    "générosité",
+    "pardon",
+    "entraide",
+    "vie en communauté",
+    "gestion du temps",
+    "discipline personnelle",
+    "bonnes mœurs",
 ]
 
-MIN_THEME_COUNTS = {
-    "coran": 3,
-    "famille": 3,
-    "voisinage": 1,
-    "propreté": 3,
-    "douceur": 3,
-    "patience": 2,
-    "maîtrise de soi": 2,
-    "sincérité": 2,
-    "gratitude": 1,
-    "générosité": 2,
-    "entraide": 2,
-    "communauté": 3,
-    "discipline": 2,
-    "bonnes mœurs": 3,
+MIN_PRIMARY_THEME_COUNTS = {
+    "coran": 5,
+    "famille": 5,
+    "voisinage": 2,
+    "propreté": 5,
+    "douceur": 5,
+    "patience": 4,
+    "maîtrise de soi": 4,
+    "sincérité": 3,
+    "gratitude": 2,
+    "générosité": 3,
+    "pardon": 2,
+    "entraide": 3,
+    "vie en communauté": 5,
+    "gestion du temps": 2,
+    "discipline personnelle": 3,
+    "bonnes mœurs": 6,
 }
-
-def get_json(path, params=None, retries=8):
-    url = BASE + path
-    if params:
-        url += "?" + urllib.parse.urlencode(params)
-    last = None
-    delays = [2, 4, 6, 8, 12, 16, 20, 24]
-
-    for attempt in range(retries):
-        try:
-            req = urllib.request.Request(
-                url,
-                headers={
-                    "User-Agent": "QuranSafeguardReminderBuilder/0.8",
-                    "Accept": "application/json,text/plain;q=0.9,*/*;q=0.1",
-                    "Accept-Language": "fr,en;q=0.5",
-                    "Referer": "https://hadeethenc.com/fr/home",
-                    "Cache-Control": "no-cache",
-                }
-            )
-            with urllib.request.urlopen(req, timeout=60) as response:
-                raw = response.read().decode("utf-8-sig", "replace").strip()
-                content_type = response.headers.get("Content-Type", "")
-                if response.status != 200:
-                    raise RuntimeError(
-                        f"HTTP {response.status} content-type={content_type}"
-                    )
-                try:
-                    return json.loads(raw)
-                except json.JSONDecodeError as exc:
-                    preview = re.sub(r"\\s+", " ", raw[:180])
-                    raise RuntimeError(
-                        f"Non-JSON response content-type={content_type} preview={preview!r}"
-                    ) from exc
-        except Exception as exc:
-            last = exc
-            if attempt + 1 < retries:
-                time.sleep(delays[min(attempt, len(delays) - 1)])
-
-    raise RuntimeError(f"Failed API request {url}: {last}")
 
 def norm(value):
     value = unicodedata.normalize("NFKD", value or "")
     value = "".join(ch for ch in value if not unicodedata.combining(ch))
-    return value.lower()
+    return re.sub(r"\s+", " ", value.lower()).strip()
 
-def compact_spaces(value):
-    return re.sub(r"\s+", " ", (value or "")).strip()
+def col_index(ref):
+    letters = "".join(ch for ch in ref if ch.isalpha())
+    value = 0
+    for ch in letters:
+        value = value * 26 + (ord(ch.upper()) - 64)
+    return value - 1
 
-def theme_for(fr, category_titles):
-    haystack = norm(" ".join([
-        " ".join(category_titles),
-        fr.get("title") or "",
-        fr.get("hadeeth") or "",
-        " ".join(fr.get("categories") or []),
-    ]))
-    for theme, words in THEME_RULES.items():
-        if any(norm(word) in haystack for word in words):
-            return theme
-    return None
+def workbook_rows(path):
+    with zipfile.ZipFile(path) as z:
+        shared = []
+        if "xl/sharedStrings.xml" in z.namelist():
+            root = ET.fromstring(z.read("xl/sharedStrings.xml"))
+            for si in root.findall("m:si", NS):
+                shared.append("".join(t.text or "" for t in si.findall(".//m:t", NS)))
 
-def grade_kind(fr, ar):
-    grade_ar = compact_spaces(
-        ar.get("grade") or ar.get("grade_ar") or fr.get("grade_ar")
-    )
-    grade_fr = compact_spaces(fr.get("grade"))
-    combined = norm(grade_fr) + " " + grade_ar
+        workbook = ET.fromstring(z.read("xl/workbook.xml"))
+        rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
+        relmap = {rel.attrib["Id"]: rel.attrib["Target"] for rel in rels}
+        first = workbook.find("m:sheets/m:sheet", NS)
+        if first is None:
+            raise RuntimeError(f"No worksheet in {path}")
+        rid = first.attrib["{%s}id" % NS["r"]]
+        target = relmap[rid]
+        sheet_path = target if target.startswith("xl/") else "xl/" + target.lstrip("/")
+        root = ET.fromstring(z.read(sheet_path))
 
-    if "ضعيف" in grade_ar or "faible" in combined or "weak" in combined:
-        return None
-    if "صحيح" in grade_ar or "authentique" in combined or "sahih" in combined:
+        rows = []
+        for row in root.findall(".//m:sheetData/m:row", NS):
+            values = {}
+            for cell in row.findall("m:c", NS):
+                idx = col_index(cell.attrib.get("r", "A1"))
+                typ = cell.attrib.get("t")
+                inline = cell.find("m:is/m:t", NS)
+                value_node = cell.find("m:v", NS)
+                value = ""
+                if inline is not None:
+                    value = inline.text or ""
+                elif value_node is not None:
+                    value = value_node.text or ""
+                    if typ == "s" and value.isdigit():
+                        value = shared[int(value)]
+                values[idx] = value
+            if values:
+                rows.append([values.get(i, "") for i in range(max(values) + 1)])
+        return rows
+
+def load_table(path):
+    rows = workbook_rows(path)
+    if len(rows) < 3:
+        raise RuntimeError(f"Unexpected workbook structure: {path}")
+
+    metadata = rows[0][0] if rows[0] else ""
+    headers = rows[1]
+    table = []
+    for raw in rows[2:]:
+        padded = raw + [""] * (len(headers) - len(raw))
+        table.append({headers[i]: padded[i] for i in range(len(headers))})
+    return metadata, table
+
+def parse_version(metadata, language):
+    match = re.search(r"\(v([0-9.]+)\)", metadata)
+    if not match:
+        raise RuntimeError(f"Missing version in {language} workbook metadata")
+    return f"{language}-v{match.group(1)}"
+
+def parse_last_update(metadata):
+    match = re.search(r"Last update:\s*([0-9-]+)", metadata)
+    return match.group(1) if match else BUILD_REVIEW_DATE
+
+def is_accepted_grade(row):
+    grade_ar = row.get("grade_ar", "").strip()
+    grade_fr = norm(row.get("grade", ""))
+    if "ضعيف" in grade_ar or "faible" in grade_fr or "weak" in grade_fr:
+        return False
+    return "صحيح" in grade_ar or "حسن" in grade_ar or "authentique" in grade_fr or "[bon" in grade_fr
+
+def hadith_grade(row):
+    grade_ar = row.get("grade_ar", "").strip()
+    if "صحيح" in grade_ar:
         return "Sahih"
-    if "حسن" in grade_ar or re.search(r"\bbon\b", combined) or "hasan" in combined:
+    if "حسن" in grade_ar:
         return "Hasan"
-    return None
+    return row.get("grade", "").strip()
 
-def collection_from_reference(reference):
-    raw = norm(reference)
+def collection_from_takhrij(takhrij_fr, takhrij_ar):
+    raw = norm(takhrij_fr + " " + takhrij_ar)
     collections = []
     mapping = [
-        (["bukhari", "boukhari", "البخاري"], "Sahih al-Bukhari"),
-        (["muslim", "مسلم"], "Sahih Muslim"),
-        (["tirmidhi", "الترمذي"], "Jami’ at-Tirmidhi"),
+        (["bukh", "boukh", "البخاري", "متفق عليه"], "Sahih al-Bukhari"),
+        (["muslim", "مسلم", "متفق عليه"], "Sahih Muslim"),
+        (["tirmidh", "الترمذي"], "Jami’ at-Tirmidhi"),
         (["nasa", "النسائي"], "Sunan an-Nasa’i"),
-        (["abu dawud", "abou dawud", "أبو داود"], "Sunan Abi Dawud"),
-        (["ibn majah", "ابن ماجه"], "Sunan Ibn Majah"),
+        (["abu daw", "abou daw", "أبو داود"], "Sunan Abi Dawud"),
+        (["ibn maj", "ابن ماجه"], "Sunan Ibn Majah"),
         (["ahmad", "أحمد"], "Musnad Ahmad"),
         (["darimi", "الدارمي"], "Sunan ad-Darimi"),
         (["malik", "مالك"], "Al-Muwatta’"),
@@ -149,129 +199,130 @@ def collection_from_reference(reference):
     for needles, label in mapping:
         if any(norm(needle) in raw for needle in needles):
             collections.append(label)
-    return " / ".join(collections) if collections else "Référence HadeethEnc"
+    return " / ".join(dict.fromkeys(collections)) if collections else "Recueil indiqué par HadeethEnc"
 
-def fetch_pair(hid):
-    fr = get_json("/hadeeths/one/", {"language": "fr", "id": hid})
-    ar = get_json("/hadeeths/one/", {"language": "ar", "id": hid})
-    return hid, fr, ar
+def derive_tags(row):
+    haystack = norm(" ".join([
+        row.get("title", ""),
+        row.get("hadith_text", ""),
+        row.get("explanation", ""),
+        row.get("benefits", ""),
+    ]))
+    tags = set()
+    for tag, needles in TAG_RULES.items():
+        if any(norm(needle) in haystack for needle in needles):
+            tags.add(tag)
+    return tags
 
-def build_item(hid, fr, ar, category_titles):
-    french = compact_spaces(fr.get("hadeeth"))
-    arabic = compact_spaces(ar.get("hadeeth") or fr.get("hadeeth_ar"))
-    reference = compact_spaces(ar.get("reference") or fr.get("reference"))
-    grade = grade_kind(fr, ar)
-    theme = theme_for(fr, category_titles)
-
-    if not theme or not grade:
-        return None
-    if not french or not arabic or not reference:
-        return None
-    if len(french) > 620 or len(arabic) > 620:
-        return None
-
-    return {
-        "id": "hadeethenc_" + hid,
-        "type": "HADITH",
-        "theme": theme,
-        "arabicText": arabic,
-        "frenchText": french,
-        "author": "Prophète Muhammad ﷺ",
-        "book": collection_from_reference(reference),
-        "reference": reference,
-        "authenticity": grade,
-        "tags": sorted({theme, "hadith authentifié"}),
-        "sourceProvider": SOURCE_PROVIDER,
-        "sourceId": hid,
-        "sourceVersion": TRANSLATION_VERSION,
-        "sourceFetchedAt": FETCHED_AT,
-        "reviewStatus": "VERIFIED_OFFICIAL_SOURCE",
-        "translationStatus": "SOURCE_TRANSLATION_UNMODIFIED",
-        "sourceUrl": "https://hadeethenc.com/fr/browse/hadith/" + hid,
-    }
-
-def collect_candidate_ids():
-    categories = get_json("/categories/list/", {"language": "fr"})
-    selected = [
-        category for category in categories
-        if any(norm(hint) in norm(category.get("title") or "") for hint in CATEGORY_HINTS)
-    ]
-    selected.sort(
-        key=lambda c: (
-            0 if any(
-                norm(h) in norm(c.get("title") or "")
-                for h in ["caractere", "vertu", "merite", "coran", "famille", "voisin"]
-            ) else 1,
-            -(int(c.get("hadeeths_count") or 0)),
-            int(c.get("id") or 0),
-        )
-    )
-
-    category_titles_by_id = defaultdict(set)
-    ordered_ids = []
-
-    for category in selected:
-        page = 1
-        while True:
-            listing = get_json(
-                "/hadeeths/list/",
-                {
-                    "language": "fr",
-                    "category_id": str(category["id"]),
-                    "page": page,
-                    "per_page": 100,
-                },
-            )
-            data = listing.get("data") or []
-            if not data:
-                break
-            for brief in data:
-                hid = str(brief.get("id") or "")
-                if not hid:
-                    continue
-                if hid not in category_titles_by_id:
-                    ordered_ids.append(hid)
-                category_titles_by_id[hid].add(category.get("title") or "")
-
-            meta = listing.get("meta") or {}
-            if page >= int(meta.get("last_page") or page):
-                break
-            page += 1
-
-    return ordered_ids, category_titles_by_id
+def primary_theme(tags):
+    for theme in PRIMARY_THEME_PRIORITY:
+        if theme in tags:
+            return theme
+    return None
 
 def source_priority(item):
-    book = item.get("book") or ""
+    book = item["book"]
     if "Sahih al-Bukhari" in book or "Sahih Muslim" in book:
         return 0
-    if item.get("authenticity") == "Sahih":
+    if item["authenticity"] == "Sahih":
         return 1
     return 2
 
-def select_with_theme_minimums(valid_items, target):
-    valid_items = sorted(
-        valid_items,
-        key=lambda item: (source_priority(item), item["sourceId"])
+def build_candidates(fr_rows, ar_by_id, fr_version, fr_last_update):
+    candidates = []
+    seen = set()
+
+    for row in fr_rows:
+        hid = row.get("id", "").strip()
+        if not hid or hid in seen:
+            continue
+        seen.add(hid)
+
+        arabic_row = ar_by_id.get(hid)
+        if arabic_row is None:
+            continue
+        if not is_accepted_grade(row):
+            continue
+
+        title_ar = row.get("title_ar", "").strip()
+        title_fr = row.get("title", "").strip()
+        if not title_ar or not title_fr:
+            continue
+
+        # Cross-check official French embedded Arabic title against Arabic workbook.
+        if norm(title_ar) != norm(arabic_row.get("title", "")):
+            continue
+
+        grade_ar = row.get("grade_ar", "").strip()
+        if grade_ar and grade_ar != arabic_row.get("grade", "").strip():
+            continue
+
+        # Keep reminders genuinely short while preserving HadeethEnc wording verbatim.
+        if len(title_fr) > 520 or len(title_ar) > 520:
+            continue
+
+        tags = derive_tags(row)
+        theme = primary_theme(tags)
+        if theme is None:
+            continue
+
+        takhrij_fr = row.get("takhrij", "").strip()
+        takhrij_ar = row.get("takhrij_ar", "").strip()
+        if not takhrij_fr or not takhrij_ar:
+            continue
+
+        candidates.append({
+            "id": "hadeethenc_" + hid,
+            "type": "HADITH",
+            "theme": theme,
+            "arabicText": title_ar,
+            "frenchText": title_fr,
+            "author": "Prophète Muhammad ﷺ",
+            "book": collection_from_takhrij(takhrij_fr, takhrij_ar),
+            "reference": "HadeethEnc #" + hid + " • " + takhrij_fr,
+            "authenticity": hadith_grade(row),
+            "tags": sorted(tags | {"hadith authentifié"}),
+            "sourceProvider": SOURCE_PROVIDER,
+            "sourceId": hid,
+            "sourceVersion": fr_version,
+            "sourceFetchedAt": fr_last_update,
+            "reviewStatus": "VERIFIED_OFFICIAL_SOURCE",
+            "translationStatus": "SOURCE_TRANSLATION_UNMODIFIED",
+            "sourceUrl": row.get("link", "").strip(),
+        })
+
+    return candidates
+
+def select_items(candidates, target):
+    ordered = sorted(
+        candidates,
+        key=lambda item: (
+            source_priority(item),
+            len(item["frenchText"]),
+            int(item["sourceId"]) if item["sourceId"].isdigit() else 10**9,
+        )
     )
+
     by_theme = defaultdict(list)
-    for item in valid_items:
+    for item in ordered:
         by_theme[item["theme"]].append(item)
 
     selected = []
     selected_ids = set()
 
-    for theme, minimum in MIN_THEME_COUNTS.items():
-        candidates = by_theme.get(theme, [])
-        if len(candidates) < minimum:
+    for theme, minimum in MIN_PRIMARY_THEME_COUNTS.items():
+        available = by_theme.get(theme, [])
+        if len(available) < minimum:
             raise RuntimeError(
-                f"Authenticity gate: theme '{theme}' has only {len(candidates)} verified items; "
+                f"Theme gate failed: {theme!r} has {len(available)} verified short items, "
                 f"{minimum} required."
             )
-        for item in candidates[:minimum]:
-            selected.append(item)
-            selected_ids.add(item["id"])
+        for item in available[:minimum]:
+            if item["id"] not in selected_ids:
+                selected.append(item)
+                selected_ids.add(item["id"])
 
-    for item in valid_items:
+    for item in ordered:
         if len(selected) >= target:
             break
         if item["id"] not in selected_ids:
@@ -280,77 +331,84 @@ def select_with_theme_minimums(valid_items, target):
 
     if len(selected) != target:
         raise RuntimeError(
-            f"Expected exactly {target} verified hadiths, found {len(selected)} after thematic gates."
+            f"Expected exactly {target} verified reminders; selected {len(selected)} "
+            f"from {len(candidates)} eligible entries."
         )
     return selected
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--fr-xlsx", required=True)
+    parser.add_argument("--ar-xlsx", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--target", type=int, default=144)
     args = parser.parse_args()
 
-    ordered_ids, category_titles_by_id = collect_candidate_ids()
-    if len(ordered_ids) < args.target:
+    fr_meta, fr_rows = load_table(args.fr_xlsx)
+    ar_meta, ar_rows = load_table(args.ar_xlsx)
+    fr_version = parse_version(fr_meta, "fr")
+    ar_version = parse_version(ar_meta, "ar")
+    fr_last_update = parse_last_update(fr_meta)
+
+    if fr_version != "fr-v1.17.0":
         raise SystemExit(
-            f"Only {len(ordered_ids)} thematic French HadeethEnc candidates found."
+            f"French source version changed from reviewed fr-v1.17.0 to {fr_version}; "
+            "manual review required before updating the app."
         )
 
-    valid_items = []
-    batch_size = 60
-    for start in range(0, len(ordered_ids), batch_size):
-        batch = ordered_ids[start:start + batch_size]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            futures = [executor.submit(fetch_pair, hid) for hid in batch]
-            for future in concurrent.futures.as_completed(futures):
-                hid, fr, ar = future.result()
-                item = build_item(hid, fr, ar, category_titles_by_id[hid])
-                if item:
-                    valid_items.append(item)
+    ar_by_id = {row.get("id", "").strip(): row for row in ar_rows if row.get("id", "").strip()}
+    candidates = build_candidates(fr_rows, ar_by_id, fr_version, fr_last_update)
+    items = select_items(candidates, args.target)
 
-        # Preserve deterministic category/list ordering after concurrent fetch.
-        order = {hid: index for index, hid in enumerate(ordered_ids)}
-        valid_items.sort(key=lambda item: order[item["sourceId"]])
+    requested_tags = set(TAG_RULES)
+    covered_tags = {tag for item in items for tag in item["tags"]}
+    missing_tags = sorted(requested_tags - covered_tags)
+    if missing_tags:
+        raise SystemExit(
+            "Requested thematic coverage missing after selection: " + ", ".join(missing_tags)
+        )
 
-        # Do not stop until every theme minimum is already satisfiable.
-        counts = defaultdict(int)
-        for item in valid_items:
-            counts[item["theme"]] += 1
-        if len(valid_items) >= args.target and all(
-            counts[theme] >= minimum for theme, minimum in MIN_THEME_COUNTS.items()
-        ):
-            break
-
-    try:
-        items = select_with_theme_minimums(valid_items, args.target)
-    except RuntimeError as exc:
-        raise SystemExit(str(exc))
+    theme_counts = {
+        theme: sum(1 for item in items if item["theme"] == theme)
+        for theme in PRIMARY_THEME_PRIORITY
+    }
+    book_counts = defaultdict(int)
+    grade_counts = defaultdict(int)
+    for item in items:
+        book_counts[item["book"]] += 1
+        grade_counts[item["authenticity"]] += 1
 
     payload = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "sourceProvider": SOURCE_PROVIDER,
-        "translationVersion": TRANSLATION_VERSION,
-        "fetchedAt": FETCHED_AT,
+        "frenchSourceVersion": fr_version,
+        "arabicSourceVersion": ar_version,
+        "sourceLastUpdate": fr_last_update,
+        "reviewedAt": BUILD_REVIEW_DATE,
         "count": len(items),
-        "themeCounts": dict(sorted(
-            ((theme, sum(1 for item in items if item["theme"] == theme))
-             for theme in THEME_RULES),
-            key=lambda pair: pair[0]
-        )),
+        "themeCounts": theme_counts,
+        "gradeCounts": dict(sorted(grade_counts.items())),
         "items": items,
     }
 
     canonical = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
-    payload_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(canonical, encoding="utf-8")
-    out.with_suffix(out.suffix + ".sha256").write_text(payload_hash + "\n", encoding="utf-8")
+    out.with_suffix(out.suffix + ".sha256").write_text(digest + "\n", encoding="utf-8")
 
-    print(f"Wrote {len(items)} verified hadiths to {out}")
-    print("themeCounts=" + json.dumps(payload["themeCounts"], ensure_ascii=False, sort_keys=True))
-    print(f"sha256={payload_hash}")
+    print(f"French source: {fr_version} updated {fr_last_update}")
+    print(f"Arabic cross-check source: {ar_version}")
+    print(f"Eligible verified short reminders: {len(candidates)}")
+    print(f"Selected: {len(items)}")
+    print("Theme counts:", json.dumps(theme_counts, ensure_ascii=False, sort_keys=True))
+    print("Grade counts:", json.dumps(dict(grade_counts), ensure_ascii=False, sort_keys=True))
+    print("Top source groups:", json.dumps(
+        dict(sorted(book_counts.items(), key=lambda p: (-p[1], p[0]))[:12]),
+        ensure_ascii=False
+    ))
+    print(f"sha256={digest}")
 
 if __name__ == "__main__":
     main()
