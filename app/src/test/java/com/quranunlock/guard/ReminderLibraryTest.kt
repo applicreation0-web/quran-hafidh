@@ -24,6 +24,18 @@ class ReminderLibraryTest {
     }
 
     @Test
+    fun everyCuratedReminderHasVerifiedProvenance() {
+        val ids = ReminderLibrary.items.map { it.id }.toSet()
+        assertEquals(ids, ReligiousSourceRegistry.reminderSources.keys)
+
+        ReligiousSourceRegistry.reminderSources.values.forEach { source ->
+            assertTrue(source.sourceUrl.startsWith("https://"))
+            assertTrue(source.verificationDate.isNotBlank())
+            assertTrue(source.note.isNotBlank())
+        }
+    }
+
+    @Test
     fun hadithsAreClearlySeparatedFromScholarWisdom() {
         val hadiths = ReminderLibrary.items.filter { it.type == ReminderType.HADITH }
         val scholarWisdom = ReminderLibrary.items.filter { it.type != ReminderType.HADITH }
