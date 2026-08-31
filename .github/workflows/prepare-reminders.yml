@@ -1,0 +1,35 @@
+name: Prepare verified reminder dataset
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "scripts/build_verified_reminders.py"
+      - ".github/workflows/prepare-reminders.yml"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build verified local hadith dataset
+        run: |
+          python scripts/build_verified_reminders.py \
+            --target 144 \
+            --output generated/verified_hadiths.json
+
+      - name: Upload reviewed candidate dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-hadiths-candidate
+          path: |
+            generated/verified_hadiths.json
+            generated/verified_hadiths.json.sha256
+          if-no-files-found: error
