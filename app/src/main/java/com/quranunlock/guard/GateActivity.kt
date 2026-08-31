@@ -85,6 +85,15 @@ class GateActivity : ComponentActivity() {
         val page = GuardPrefs.challengePage(this, challengeKey)
         GuardPrefs.ensureReadingSession(this, challengeKey, page)
 
+        if (GuardPrefs.hasPendingCompletedReading(this, challengeKey, page)) {
+            openReadingComplete(
+                page,
+                GuardPrefs.pendingCompletedReadingElapsedMs(this, challengeKey, page)
+            )
+            finish()
+            return
+        }
+
         val mode = GuardPrefs.selectionMode(this)
         val sectionLabel = when (mode) {
             QuranSelectionMode.JUZ ->
@@ -176,32 +185,24 @@ class GateActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReading(
                                     this@GateActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.isUnlocked(this@GateActivity, challengeKey)) {
-                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                if (GuardPrefs.hasPendingCompletedReading(
+                                        this@GateActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                ) {
                                     GuardDiagnostics.log(
                                         this@GateActivity,
-                                        "READING_UNLOCKED",
+                                        "READING_COMPLETED_PENDING_SUMMARY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
-                                    setResult(Activity.RESULT_OK)
-                                    startActivity(
-                                        Intent(
-                                            this@GateActivity,
-                                            ReadingCompleteActivity::class.java
-                                        ).apply {
-                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
-                                            putExtra(
-                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
-                                                elapsed
-                                            )
-                                        }
-                                    )
+                                    openReadingComplete(page, elapsed)
                                     finish()
                                 }
                             }
@@ -271,6 +272,16 @@ class GateActivity : ComponentActivity() {
             GuardRuntime.interception.markGateHidden(challengeKey)
         }
         super.onStop()
+    }
+
+    private fun openReadingComplete(page: Int, elapsedMs: Long) {
+        startActivity(
+            Intent(this, ReadingCompleteActivity::class.java).apply {
+                putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
+                putExtra(ReadingCompleteActivity.EXTRA_ELAPSED_MS, elapsedMs)
+                putExtra(ReadingCompleteActivity.EXTRA_TARGET_PACKAGE, challengeKey)
+            }
+        )
     }
 
     private fun openReader(page: Int) {
