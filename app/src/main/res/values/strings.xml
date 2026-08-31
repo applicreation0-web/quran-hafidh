@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Quran Unlock</string>
+    <string name="accessibility_description">Intercepte les applications protégées et demande une lecture du Coran avant de les ouvrir.</string>
+</resources>
