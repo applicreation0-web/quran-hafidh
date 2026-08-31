@@ -90,6 +90,15 @@ object DailyReminderScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val today = GuardPrefs.dailyReadingSummary(context)
+        val daySummary = if (today.pages > 0) {
+            "Aujourd’hui : " + today.pages + " page(s) • " +
+                formatReminderDuration(today.totalMs) +
+                " • moyenne " + formatReminderDuration(today.averageMs) + " / page"
+        } else {
+            "Aujourd’hui, chaque occasion de lecture reste une nouvelle possibilité 🌿"
+        }
+
         val sourceLine = buildString {
             append(reminder.book)
             if (reminder.reference.isNotBlank()) {
@@ -103,6 +112,8 @@ object DailyReminderScheduler {
         }
 
         val bigText = buildString {
+            append(daySummary)
+            append("\n\n")
             append(reminder.arabicText)
             append("\n\n")
             append(reminder.frenchText)
@@ -158,6 +169,18 @@ object DailyReminderScheduler {
                 setShowBadge(false)
             }
         )
+    }
+}
+
+private fun formatReminderDuration(milliseconds: Long): String {
+    val totalSeconds = (milliseconds / 1000L).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return when {
+        hours > 0L -> hours.toString() + "h " + minutes + "min"
+        minutes > 0L -> minutes.toString() + "min " + seconds + "s"
+        else -> seconds.toString() + "s"
     }
 }
 
