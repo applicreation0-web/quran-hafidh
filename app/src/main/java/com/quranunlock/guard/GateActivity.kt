@@ -188,7 +188,9 @@ class GateActivity : ComponentActivity() {
                         Spacer(Modifier.height(20.dp))
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = !uninstallFlow && jokersRemaining > 0,
+                            enabled = !uninstallFlow &&
+                                challengeKey != ProtectedApps.ANDROID_SETTINGS &&
+                                jokersRemaining > 0,
                             onClick = {
                                 if (GuardPrefs.consumeJoker(this@GateActivity)) {
                                     jokersRemaining =
@@ -205,6 +207,8 @@ class GateActivity : ComponentActivity() {
                                 when {
                                     uninstallFlow ->
                                         "Pas de joker pour la désinstallation"
+                                    challengeKey == ProtectedApps.ANDROID_SETTINGS ->
+                                        "Jokers désactivés pour les Paramètres Android"
                                     jokersRemaining > 0 ->
                                         "Utiliser 1 joker — " +
                                             jokersRemaining +
