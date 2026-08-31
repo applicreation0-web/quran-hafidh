@@ -27,56 +27,58 @@ BOOK_PATTERNS = [
 THEMES = [
     ("coran", (
         "coran", "qur'an", "sourate", "verset", "reciter", "recitation",
-        "apprendre le coran", "enseigner le coran", "memoriser"
+        "apprendre le coran", "enseigner le coran", "memoriser le coran"
     )),
     ("famille", (
-        "mere", "pere", "parents", "enfant", "famille", "parente",
-        "epouse", "epoux", "orphelin"
+        "ses parents", "vos parents", "les parents", "lien de parente",
+        "liens de parente", "entretenir les liens", "envers sa famille",
+        "envers votre famille", "ses enfants", "vos enfants", "orphelin"
     )),
     ("voisinage", (
-        "voisin", "chemin", "route", "nuisance", "passant", "ombre"
+        "son voisin", "votre voisin", "le voisin", "les voisins",
+        "chemin des gens", "sur le chemin", "nuisance", "passant"
     )),
     ("douceur", (
         "douceur", "doux", "misericorde", "clemence", "indulgence",
-        "pardonne", "pardon", "sourire", "colere", "bon caractere"
+        "pardonne", "pardon", "colere", "bon caractere", "meilleur comportement"
     )),
     ("patience", (
         "patience", "patient", "epreuve", "endure", "endurance",
-        "constance", "affliction"
+        "constance", "affliction", "ne te mets pas en colere"
     )),
     ("sincerite", (
-        "intention", "sincerite", "sincere", "ostentation"
+        "intention", "sincerite", "sincere", "ostentation",
+        "pour allah", "visage d'allah"
     )),
     ("gratitude", (
-        "remercie", "remercier", "reconnaissant", "gratitude", "bienfait"
+        "remercie", "remercier", "reconnaissant", "gratitude",
+        "bienfait d'allah", "bienfaits d'allah"
     )),
     ("generosite", (
-        "aumone", "charite", "genereux", "depense", "nourrir",
-        "don", "cadeau"
+        "aumone", "charite", "genereux", "depense pour", "nourrir",
+        "donner a manger", "cadeau", "faites l'aumone"
     )),
     ("proprete", (
-        "proprete", "purification", "purifier", "ablution", "siwak",
-        "bouche", "dents", "eau", "propre"
+        "siwak", "dents", "purification est", "ablutions",
+        "se purifier", "proprete", "propre"
     )),
     ("entraide", (
-        "aide", "aider", "soulage", "besoin de son frere", "fraternite",
-        "visite le malade", "visiter le malade", "salutation", "paix"
+        "vient en aide", "aide son frere", "soulage", "besoin de son frere",
+        "visite le malade", "visiter le malade", "reconcilier",
+        "facilite a", "dissipe une", "retire du chemin"
     )),
     ("discipline", (
-        "regularite", "assiduite", "action la plus aimee", "actions les plus aimees",
-        "moderation", "constamment", "habitude", "temps"
+        "actions les plus aimees", "action la plus aimee", "regularite",
+        "assiduite", "constamment", "ne faiblis pas", "ce qui t'est utile",
+        "profite de", "cinq avant cinq"
     )),
     ("bonnes_moeurs", (
         "verite", "mensonge", "langue", "insulte", "injure", "pudeur",
-        "modestie", "bienfaisance", "compassion", "sourire", "saluer",
-        "meilleur d'entre vous", "meilleurs d'entre vous"
-    )),
-    ("dhikr", (
-        "invoquer", "invocation", "rappel d'allah", "se souvenir d'allah",
-        "subhanallah", "al hamdu", "louange", "istighfar", "pardon d'allah"
-    )),
-    ("priere", (
-        "priere", "prosternation", "mosquee", "adhan", "appel a la priere"
+        "modestie", "humilite", "orgueil", "arrogance", "medisance",
+        "calomnie", "soupcon", "trahison", "honnetete", "justice",
+        "injustice", "oppression", "sourire", "parle en bien",
+        "qu'il se taise", "bon comportement", "bonnes manieres",
+        "bon caractere", "meilleur d'entre vous", "meilleurs d'entre vous"
     )),
 ]
 
@@ -114,7 +116,10 @@ def thematic_fit(record):
         "sacrifi", "egorg", "chatie", "chatiment", "malediction",
         "grand peche", "grands peches", "tetee", "allaitement",
         "epousa", "epousee", "mariage", "sacralisation",
-        "ablution majeure", "toilette intime"
+        "ablution majeure", "toilette intime", "position des mains",
+        "lever les mains", "sur sa monture", "priere du couchant",
+        "sermon du vendredi", "revelation descend", "alcool", "vin",
+        "noms d'allah, cent moins un"
     )
     if any(norm(marker) in context for marker in hard_exclusions):
         return None
@@ -311,20 +316,40 @@ for row in rows:
     ))
 
 candidates.sort(key=lambda item: (item[0], item[1], item[2]["id"]))
-unique = []
-seen = set()
+
+by_theme = {}
+for candidate in candidates:
+    record = candidate[2]
+    by_theme.setdefault(record["theme"], []).append(candidate)
+
+# First pass: cap broad themes so no single keyword family dominates.
+selected = []
+selected_ids = set()
+per_theme_cap = 16
+for theme, _ in THEMES:
+    for candidate in by_theme.get(theme, [])[:per_theme_cap]:
+        record = candidate[2]
+        if record["id"] in selected_ids:
+            continue
+        selected_ids.add(record["id"])
+        selected.append(record)
+
+# Second pass: fill remaining slots by authenticity/source priority and score.
 for _, _, record in candidates:
-    if record["id"] in seen:
-        continue
-    seen.add(record["id"])
-    unique.append(record)
-    if len(unique) >= TARGET:
+    if len(selected) >= TARGET:
         break
+    if record["id"] in selected_ids:
+        continue
+    selected_ids.add(record["id"])
+    selected.append(record)
+
+unique = selected[:TARGET]
 
 if len(unique) < TARGET:
+    counts = {theme: len(rows) for theme, rows in by_theme.items()}
     raise SystemExit(
-        "Only %d authentic records with recognized collection and precise "
-        "HadeethEnc reference collected; need %d" % (len(unique), TARGET)
+        "Only %d thematically suitable authentic records collected; need %d. "
+        "Theme counts=%s" % (len(unique), TARGET, counts)
     )
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
