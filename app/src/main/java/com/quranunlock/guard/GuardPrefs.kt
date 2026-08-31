@@ -209,7 +209,7 @@ object GuardPrefs {
 
     fun saveProtectedPackages(context: Context, packages: Set<String>) {
         val filtered = packages
-            .filterNot { ProtectedApps.isAlwaysAllowed(it) }
+            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
             .toSet()
 
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)

@@ -44,7 +44,7 @@ class QuranAccessibilityService : AccessibilityService() {
             this,
             code = "TARGET_DETECTED",
             packageName = packageName,
-            detail = "eventType=${event.eventType}"
+            detail = "eventType=${event.eventType} class=${event.className ?: "?"}"
         )
 
         cancelPendingLaunches()

@@ -17,7 +17,7 @@ object AppCatalog {
             .mapNotNull { resolveInfo ->
                 val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
                 if (packageName == context.packageName) return@mapNotNull null
-                if (ProtectedApps.isAlwaysAllowed(packageName)) return@mapNotNull null
+                if (ProtectedApps.isAlwaysAllowed(context, packageName)) return@mapNotNull null
                 if (packageName == ProtectedApps.ANDROID_SETTINGS) return@mapNotNull null
 
                 val label = resolveInfo.loadLabel(context.packageManager)
