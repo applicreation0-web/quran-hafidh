@@ -1,4 +1,4 @@
-name: Freeze curated verified reminder snapshot
+name: Freeze curated verified reminder snapshot # authenticity-first
 
 on:
   push:
