@@ -18,7 +18,12 @@ object GuardPrefs {
     private const val JOKERS_USED = "jokers_used"
 
     fun unlock(context: Context, packageName: String) {
-        val durationMs = unlockMinutes(context) * 60_000L
+        val minutes = if (packageName == ProtectedApps.ANDROID_SETTINGS) {
+            1
+        } else {
+            unlockMinutes(context)
+        }
+        val durationMs = minutes * 60_000L
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putLong(UNLOCK_PREFIX + packageName, System.currentTimeMillis() + durationMs)
