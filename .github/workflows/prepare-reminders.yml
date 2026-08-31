@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - "scripts/build_verified_reminders.py"
+      - "scripts/inspect_hadeethenc_xlsx.py"
       - ".github/workflows/prepare-reminders.yml"
 
 jobs:
@@ -19,6 +20,23 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Download official HadeethEnc French and Arabic exports
+        run: |
+          mkdir -p generated
+          curl -fL --retry 8 --retry-delay 3 --retry-all-errors \
+            -A "QuranSafeguardReminderBuilder/0.8" \
+            -o generated/hadeethenc_fr.xlsx \
+            https://hadeethenc.com/browse/download/fr
+          curl -fL --retry 8 --retry-delay 3 --retry-all-errors \
+            -A "QuranSafeguardReminderBuilder/0.8" \
+            -o generated/hadeethenc_ar.xlsx \
+            https://hadeethenc.com/browse/download/ar
+
+      - name: Inspect official workbook schemas
+        run: |
+          python scripts/inspect_hadeethenc_xlsx.py \
+            generated/hadeethenc_fr.xlsx generated/hadeethenc_ar.xlsx
+
       - name: Build verified local hadith dataset
         run: |
           python scripts/build_verified_reminders.py \
@@ -32,4 +50,6 @@ jobs:
           path: |
             generated/verified_hadiths.json
             generated/verified_hadiths.json.sha256
+            generated/hadeethenc_fr.xlsx
+            generated/hadeethenc_ar.xlsx
           if-no-files-found: error
