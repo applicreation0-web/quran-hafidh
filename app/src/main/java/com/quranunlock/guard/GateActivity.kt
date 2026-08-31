@@ -33,7 +33,6 @@ import kotlinx.coroutines.delay
 class GateActivity : ComponentActivity() {
     companion object {
         const val EXTRA_TARGET_PACKAGE = "target_package"
-        private const val MIN_READING_MS = 60_000L
     }
 
     private var challengeKey: String = ""
@@ -109,6 +108,15 @@ class GateActivity : ComponentActivity() {
                     var jokersRemaining by remember {
                         mutableStateOf(GuardPrefs.remainingJokers(this@GateActivity))
                     }
+                    var bottomReached by remember {
+                        mutableStateOf(
+                            GuardPrefs.hasReachedReadingBottom(
+                                this@GateActivity,
+                                challengeKey,
+                                page
+                            )
+                        )
+                    }
 
                     LaunchedEffect(challengeKey, page) {
                         while (true) {
@@ -117,12 +125,14 @@ class GateActivity : ComponentActivity() {
                                 challengeKey,
                                 page
                             )
+                            bottomReached = GuardPrefs.hasReachedReadingBottom(
+                                this@GateActivity,
+                                challengeKey,
+                                page
+                            )
                             delay(500)
                         }
                     }
-
-                    val secondsValidated = (readingMs / 1000L).coerceAtMost(60L)
-                    val readingComplete = readingMs >= MIN_READING_MS
 
                     Column(
                         modifier = Modifier
@@ -145,7 +155,7 @@ class GateActivity : ComponentActivity() {
                         Text(sectionLabel, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Le compteur avance uniquement lorsque cette page est réellement affichée au premier plan.",
+                            "Le chrono mesure votre temps réel de lecture. Il se met en pause si vous quittez la page.",
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(24.dp))
@@ -156,34 +166,39 @@ class GateActivity : ComponentActivity() {
                         ) { Text("Lire la page $page") }
 
                         Spacer(Modifier.height(12.dp))
-                        Text("Temps de lecture validé : $secondsValidated / 60 s")
+                        Text(
+                            "Temps de lecture : " + formatGateDuration(readingMs) +
+                                if (bottomReached) " • bas de page atteint" else ""
+                        )
 
                         Spacer(Modifier.height(12.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = readingComplete,
+                            enabled = bottomReached,
                             onClick = {
                                 GuardPrefs.completeReadingAndUnlock(
                                     this@GateActivity,
                                     challengeKey,
                                     page
                                 )
-                                GuardRuntime.interception.markUnlocked(challengeKey)
-                                GuardDiagnostics.log(
-                                    this@GateActivity,
-                                    "READING_UNLOCKED",
-                                    challengeKey,
-                                    "page=$page"
-                                )
-                                setResult(Activity.RESULT_OK)
-                                finishAffinity()
+                                if (GuardPrefs.isUnlocked(this@GateActivity, challengeKey)) {
+                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                    GuardDiagnostics.log(
+                                        this@GateActivity,
+                                        "READING_UNLOCKED",
+                                        challengeKey,
+                                        "page=$page"
+                                    )
+                                    setResult(Activity.RESULT_OK)
+                                    finishAffinity()
+                                }
                             }
                         ) {
                             Text(
-                                if (readingComplete) {
+                                if (bottomReached) {
                                     "Page lue — continuer"
                                 } else {
-                                    "Terminer la lecture de la page"
+                                    "Faites défiler la page jusqu’en bas"
                                 }
                             )
                         }
@@ -255,4 +270,12 @@ class GateActivity : ComponentActivity() {
             }
         )
     }
+}
+
+
+private fun formatGateDuration(milliseconds: Long): String {
+    val seconds = (milliseconds / 1000L).coerceAtLeast(0L)
+    val minutesPart = seconds / 60L
+    val secondsPart = seconds % 60L
+    return "%02d:%02d".format(minutesPart, secondsPart)
 }
