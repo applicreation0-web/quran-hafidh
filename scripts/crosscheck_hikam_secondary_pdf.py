@@ -28,18 +28,25 @@ def fetch():
 def extract(reader):
     raw = "\n".join((p.extract_text() or "") for p in reader.pages)
     raw = raw.translate(str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789"))
-    raw = re.sub(r"[\u0000-\u001f]+", "\n", raw)
-    # pypdf preserves Arabic visual order imperfectly, but numbered markers are stable.
-    markers = list(re.finditer(r"(?m)^\s*(\d{1,3})\s*[◊◇]?\s*", raw))
+    raw = re.sub(r"[\u0000-\u001f]+", " ", raw)
+    raw = re.sub(r"\s+", " ", raw)
+
+    # The PDF text layer alternates between "1 ◊" and "◊ 14".
+    marker_re = re.compile(r"(?:(?P<a>\d{1,3})\s*[◊◇]|[◊◇]\s*(?P<b>\d{1,3}))")
+    markers = []
+    for m in marker_re.finditer(raw):
+        token = m.group("a") or m.group("b")
+        n = int(token)
+        if 1 <= n <= 264:
+            markers.append((m, n))
+
     entries = {}
-    for i, marker in enumerate(markers):
-        n = int(marker.group(1))
-        if not 1 <= n <= 264:
-            continue
-        end = markers[i+1].start() if i+1 < len(markers) else len(raw)
+    for i, (marker, n) in enumerate(markers):
+        end = markers[i+1][0].start() if i+1 < len(markers) else len(raw)
         body = raw[marker.end():end].strip()
         if re.search(r"[\u0600-\u06ff]", body):
-            entries[n] = body
+            # First occurrence wins; later page furniture can repeat numbers.
+            entries.setdefault(n, body)
     return entries
 
 primary = json.loads(PRIMARY.read_text(encoding="utf-8"))
