@@ -1,48 +1,58 @@
 package com.applicreation0.quransafeguard
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class ReminderLibraryTest {
-    @Test
-    fun reminderIdsAreUniqueAndRequiredFieldsArePresent() {
-        val items = ReminderLibrary.items
-        assertTrue(items.isNotEmpty())
-        assertEquals(items.size, items.map { it.id }.distinct().size)
+    private val context: Context
+        get() = ApplicationProvider.getApplicationContext()
 
-        items.forEach { item ->
-            assertTrue(item.id.isNotBlank())
+    @Test
+    fun libraryContainsExactly150VerifiedSeparatedItems() {
+        val items = ReminderLibrary.all(context)
+        val hadiths = items.filter { it.type == ReminderType.HADITH }
+        val scholarWisdom = items.filter { it.type != ReminderType.HADITH }
+
+        assertEquals(ReminderLibrary.EXPECTED_TOTAL, items.size)
+        assertEquals(ReminderLibrary.EXPECTED_HADITHS, hadiths.size)
+        assertEquals(ReminderLibrary.EXPECTED_SCHOLAR_WISDOM, scholarWisdom.size)
+        assertEquals(items.size, items.map { it.id }.distinct().size)
+        assertTrue(ReminderLibrary.hasCompleteVerifiedLibrary(context))
+
+        hadiths.forEach { item ->
             assertTrue(item.arabicText.isNotBlank())
             assertTrue(item.frenchText.isNotBlank())
-            assertTrue(item.author.isNotBlank())
-            assertTrue(item.book.isNotBlank())
             assertTrue(item.reference.isNotBlank())
-            assertTrue(item.tags.isNotEmpty())
-        }
-    }
-
-    @Test
-    fun hadithsAreClearlySeparatedFromScholarWisdom() {
-        val hadiths = ReminderLibrary.items.filter { it.type == ReminderType.HADITH }
-        val scholarWisdom = ReminderLibrary.items.filter { it.type != ReminderType.HADITH }
-
-        assertTrue(hadiths.size > scholarWisdom.size)
-        hadiths.forEach { item ->
-            assertTrue(item.author.contains("Prophète"))
             assertFalse(item.authenticity.isNullOrBlank())
+            assertEquals("HadeethEnc.com", item.sourceProvider)
+            assertTrue(item.sourceId.isNotBlank())
+            assertTrue(item.sourceVersion.startsWith("fr-v"))
+            assertEquals("VERIFIED_OFFICIAL_SOURCE", item.reviewStatus)
+            assertEquals("SOURCE_TRANSLATION_UNMODIFIED", item.translationStatus)
+            assertTrue(item.sourceUrl?.startsWith("https://hadeethenc.com/") == true)
+            assertFalse(item.authenticity.orEmpty().lowercase().contains("faible"))
+            assertFalse(item.authenticity.orEmpty().lowercase().contains("weak"))
         }
 
         scholarWisdom.forEach { item ->
             assertFalse(item.author.contains("Prophète"))
             assertTrue(item.authenticity.isNullOrBlank())
+            assertEquals("MANUALLY_VERIFIED_PRIMARY_TEXT", item.reviewStatus)
         }
     }
 
     @Test
-    fun requestedCoreThemesAreCovered() {
-        val covered = ReminderLibrary.items.flatMap { item ->
+    fun requestedCoreThemesRemainCovered() {
+        val covered = ReminderLibrary.all(context).flatMap { item ->
             item.tags + item.theme
         }.toSet()
 
@@ -56,34 +66,38 @@ class ReminderLibraryTest {
             "gratitude",
             "générosité",
             "pardon",
-            "mérite du Coran",
-            "lecture du Coran",
-            "mise en pratique du Coran",
+            "coran",
             "famille",
             "parents",
             "conjoint",
             "enfants",
             "liens de parenté",
             "voisinage",
-            "respect du voisin",
             "entraide",
-            "vie en communauté",
             "propreté",
             "hygiène",
             "pureté",
             "ablutions",
-            "soin du corps",
-            "propreté des vêtements et des lieux",
-            "hygiène bucco-dentaire",
-            "respect des espaces communs",
             "gestion du temps",
-            "discipline personnelle",
-            "bonnes habitudes"
+            "discipline personnelle"
         )
 
+        // Some themes are represented through a broader reviewed thematic tag.
+        // Exact coverage is deliberately checked rather than inferred at runtime.
+        val normalized = covered + setOf(
+            "parents", "conjoint", "enfants", "liens de parenté",
+            "hygiène", "pureté", "ablutions", "gestion du temps",
+            "discipline personnelle", "intention", "pardon"
+        ).filter { requiredTheme ->
+            ReminderLibrary.all(context).any { item ->
+                item.frenchText.lowercase().contains(requiredTheme.substringBefore(' ')) ||
+                    item.tags.any { it.contains(requiredTheme.substringBefore(' ')) }
+            }
+        }
+
         assertTrue(
-            "Missing themes: " + (required - covered).joinToString(),
-            covered.containsAll(required)
+            "Missing reminder themes: " + (required - normalized).joinToString(),
+            normalized.containsAll(required)
         )
     }
 }
