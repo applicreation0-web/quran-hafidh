@@ -3,6 +3,7 @@ import io
 import json
 import os
 import unicodedata
+import re
 import urllib.request
 import zipfile
 import xml.etree.ElementTree as ET
@@ -90,24 +91,39 @@ EXCLUDED_CONTEXT_MARKERS = (
     "temoignage juridique", "testament", "sacrifice animal", "egorger"
 )
 
+def marker_present(text, marker):
+    normalized_marker = norm(marker)
+    pattern = r"(?<![a-z0-9])" + re.escape(normalized_marker) + r"(?![a-z0-9])"
+    return re.search(pattern, text) is not None
+
 def thematic_fit(record):
-    source = " ".join(
-        record.get(key, "") for key in
-        ("title", "hadith_text", "explanation", "benefits")
+    # The visible hadith itself must carry the selected theme.
+    visible = norm(
+        (record.get("title", "") + " " + record.get("hadith_text", "")).strip()
     )
-    normalized = norm(source)
-    if any(marker in normalized for marker in EXCLUDED_CONTEXT_MARKERS):
+    context = norm(
+        " ".join(
+            record.get(key, "") for key in
+            ("title", "hadith_text", "explanation", "benefits")
+        )
+    )
+
+    if any(marker_present(context, marker) for marker in EXCLUDED_CONTEXT_MARKERS):
         return None
 
     best_theme = None
     best_score = 0
     for theme, markers in THEMES:
-        score = sum(1 for marker in markers if norm(marker) in normalized)
+        direct_hits = sum(1 for marker in markers if marker_present(visible, marker))
+        if direct_hits <= 0:
+            continue
+        contextual_hits = sum(1 for marker in markers if marker_present(context, marker))
+        score = direct_hits * 10 + contextual_hits
         if score > best_score:
             best_theme = theme
             best_score = score
 
-    if best_score <= 0:
+    if best_theme is None:
         return None
     return best_theme, best_score
 
