@@ -427,10 +427,38 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Notifications : " + if (notificationGranted) "autorisées ✓" else "à autoriser" +
-                                " • horaires locaux : " + if (locationSaved) "configurés ✓" else "à configurer",
+                            "Notifications : " +
+                                (if (notificationGranted) "autorisées ✓" else "à autoriser") +
+                                " • horaires locaux : " +
+                                (if (locationSaved) "configurés ✓" else "à configurer"),
                             style = MaterialTheme.typography.bodySmall
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = ReminderPrefs.hanafiAsr(this@MainActivity),
+                                onCheckedChange = { enabled ->
+                                    ReminderPrefs.setHanafiAsr(this@MainActivity, enabled)
+                                    MindfulReminderScheduler.scheduleAll(this@MainActivity)
+                                    refreshState.value += 1
+                                }
+                            )
+                            Column {
+                                Text("Calcul de ‘Asr hanafi")
+                                Text(
+                                    if (ReminderPrefs.hanafiAsr(this@MainActivity)) {
+                                        "Activé • méthode MWL avec ‘Asr hanafi"
+                                    } else {
+                                        "Désactivé • méthode MWL avec ‘Asr standard"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
