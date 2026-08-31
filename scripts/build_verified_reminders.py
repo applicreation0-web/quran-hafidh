@@ -29,22 +29,22 @@ TAG_RULES = {
     "générosité": ["aumône", "aumone", "charité", "charite", "généros", "generos", "dépense", "depense", "donner"],
     "pardon": ["pardon", "pardonne", "indulgence"],
     "mérite du Coran": ["mérite du coran", "merite du coran", "meilleur d'entre vous", "coran"],
-    "lecture du Coran": ["récit", "recit", "lire le coran", "lecture du coran", "récitation", "recitation"],
+    "lecture du Coran": ["lire le coran", "lecture du coran", "récitation du coran", "recitation du coran"],
     "apprentissage du Coran": ["apprend le coran", "apprendre le coran", "enseigne le coran", "enseignement du coran"],
     "mise en pratique du Coran": ["coran est une preuve", "mettre en pratique", "agit selon le coran", "coran"],
     "coran": ["coran", "qur", "sourate", "verset", "récitation", "recitation"],
-    "famille": ["famille", "parent", "père", "pere", "mère", "mere", "époux", "epoux", "épouse", "epouse", "enfant", "fils", "fille"],
+    "famille": ["famille", "parents", "père", "pere", "mère", "mere", "époux", "epoux", "épouse", "epouse", "enfants", "liens de parenté", "liens de parente"],
     "parents": ["parents", "père", "pere", "mère", "mere", "papa", "maman"],
-    "conjoint": ["époux", "epoux", "épouse", "epouse", "mari", "femme"],
-    "enfants": ["enfant", "fils", "fille", "garçon", "garcon"],
+    "conjoint": ["époux", "epoux", "épouse", "epouse", "mariage", "conjoint"],
+    "enfants": ["enfant", "enfants", "éducation des enfants", "education des enfants", "miséricorde envers les enfants", "misericorde envers les enfants"],
     "liens de parenté": ["parenté", "parente", "liens de parenté", "proches parents"],
     "voisinage": ["voisin", "voisinage"],
     "respect du voisin": ["voisin", "tort à son voisin", "tort a son voisin"],
     "entraide": ["entraide", "aide", "secours", "besoin de son frère", "besoin de son frere", "soulage"],
     "vie en communauté": ["musulman", "frère", "frere", "communauté", "communaute", "réconcil", "reconcil", "gens"],
-    "propreté": ["propreté", "proprete", "purification", "propre", "impureté", "impurete", "saleté", "salete"],
+    "propreté": ["propreté", "proprete", "purification", "impureté", "impurete", "saleté", "salete", "nettoyer"],
     "hygiène": ["hygiène", "hygiene", "siwâk", "siwak", "bouche", "dents", "laver"],
-    "pureté": ["pureté", "purete", "purification", "ṭah", "tah"],
+    "pureté": ["pureté", "purete", "purification", "état de pureté", "etat de purete"],
     "ablutions": ["ablution", "wud", "wuḍ"],
     "soin du corps": ["corps", "bouche", "dents", "cheveux", "ongles", "laver"],
     "propreté des vêtements et des lieux": ["vêtement", "vetement", "habit", "lieu", "mosquée", "mosquee", "route", "chemin", "saleté", "salete"],
@@ -182,11 +182,34 @@ def collection_from_takhrij(takhrij_fr, takhrij_ar):
             collections.append(label)
     return " / ".join(dict.fromkeys(collections)) if collections else "Recueil indiqué par HadeethEnc"
 
+EXCLUDED_TONE_KEYWORDS = [
+    "enfer",
+    "châtiment",
+    "chatiment",
+    "malédiction",
+    "malediction",
+    "maudit",
+    "lapid",
+    "fornication",
+    "adultère",
+    "adultere",
+    "coupez-lui",
+    "coupez lui",
+    "combattez",
+    "tuez",
+    "mise à mort",
+    "mise a mort",
+]
+
+def has_unsuitable_daily_tone(row):
+    title = norm(row.get("title", ""))
+    return any(norm(word) in title for word in EXCLUDED_TONE_KEYWORDS)
+
 def derive_tags(row):
+    # Use the official short title + stated benefits only. Narrator/context text
+    # creates false positives such as "fils de..." being mistaken for family advice.
     haystack = norm(" ".join([
         row.get("title", ""),
-        row.get("hadith_text", ""),
-        row.get("explanation", ""),
         row.get("benefits", ""),
     ]))
     tags = set()
@@ -223,6 +246,8 @@ def build_candidates(fr_rows, ar_by_id, fr_version, fr_last_update):
         if arabic_row is None:
             continue
         if not is_accepted_grade(row):
+            continue
+        if has_unsuitable_daily_tone(row):
             continue
 
         title_ar = row.get("title_ar", "").strip()
@@ -316,6 +341,31 @@ def select_items(candidates, target):
             selected.append(match)
             selected_ids.add(match["id"])
 
+    # Then fill in round-robin by weekly theme, preserving source priority
+    # inside each theme. This prevents one large theme from dominating the library.
+    by_theme = {
+        theme: [item for item in ordered if item["theme"] == theme]
+        for theme in PRIMARY_THEME_PRIORITY
+    }
+    cursors = {theme: 0 for theme in PRIMARY_THEME_PRIORITY}
+    made_progress = True
+    while len(selected) < target and made_progress:
+        made_progress = False
+        for theme in PRIMARY_THEME_PRIORITY:
+            items = by_theme[theme]
+            while cursors[theme] < len(items):
+                item = items[cursors[theme]]
+                cursors[theme] += 1
+                if item["id"] in selected_ids:
+                    continue
+                selected.append(item)
+                selected_ids.add(item["id"])
+                made_progress = True
+                break
+            if len(selected) >= target:
+                break
+
+    # If a small theme is exhausted, fill the remainder from all verified items.
     for item in ordered:
         if len(selected) >= target:
             break
