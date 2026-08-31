@@ -1,7 +1,6 @@
 package com.applicreation0.quransafeguard
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -64,6 +63,9 @@ class MushafReaderActivity : ComponentActivity() {
                 }
             }
         }.getOrNull()
+
+        GuardRuntime.interception.markReaderVisible(challengeKey)
+        GuardDiagnostics.log(this, "READER_VISIBLE", challengeKey, "page=$page")
 
         setContent {
             QuranSafeguardTheme {
@@ -152,12 +154,19 @@ class MushafReaderActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = readingComplete,
                             onClick = {
-                                GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReadingAndUnlock(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                continueToTarget()
+                                GuardRuntime.interception.markUnlocked(challengeKey)
+                                GuardDiagnostics.log(
+                                    this@MushafReaderActivity,
+                                    "READING_UNLOCKED",
+                                    challengeKey,
+                                    "page=$page elapsedMs=$elapsed"
+                                )
+                                finishAffinity()
                             }
                         ) {
                             Text(
@@ -184,6 +193,20 @@ class MushafReaderActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (challengeKey.isNotBlank()) {
+            GuardRuntime.interception.markReaderVisible(challengeKey)
+        }
+    }
+
+    override fun onStop() {
+        if (challengeKey.isNotBlank()) {
+            GuardRuntime.interception.markReaderHidden(challengeKey)
+        }
+        super.onStop()
     }
 
     override fun onResume() {
@@ -217,17 +240,7 @@ class MushafReaderActivity : ComponentActivity() {
         pageReady = false
     }
 
-    private fun continueToTarget() {
-        val launchIntent = packageManager.getLaunchIntentForPackage(challengeKey)
-        if (launchIntent != null) {
-            launchIntent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-            )
-            startActivity(launchIntent)
-        }
-        finishAffinity()
-    }
+
 }
 
 private fun formatReadingDuration(milliseconds: Long): String {
