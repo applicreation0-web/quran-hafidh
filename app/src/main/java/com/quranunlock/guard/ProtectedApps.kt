@@ -2,6 +2,12 @@ package com.quranunlock.guard
 
 object ProtectedApps {
     const val PLAY_STORE = "com.android.vending"
+    const val QURAN_FOR_ANDROID = "com.quran.labs.androidquran"
+
+    private val alwaysAllowed = setOf(
+        PLAY_STORE,
+        QURAN_FOR_ANDROID
+    )
 
     val packages = setOf(
         "com.android.settings",
@@ -26,5 +32,5 @@ object ProtectedApps {
     )
 
     fun isProtected(packageName: String): Boolean =
-        packageName != PLAY_STORE && packageName in packages
+        packageName !in alwaysAllowed && packageName in packages
 }
