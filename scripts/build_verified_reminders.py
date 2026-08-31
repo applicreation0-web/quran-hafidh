@@ -46,7 +46,7 @@ MIN_THEME_COUNTS = {
     "voisinage": 2,
     "propreté": 4,
     "douceur": 4,
-    "patience": 4,
+    "patience": 3,
     "maîtrise de soi": 4,
     "sincérité": 4,
     "gratitude": 3,
