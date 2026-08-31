@@ -220,6 +220,7 @@ object AppMigrations {
 
     private fun normalizeReminderPreferences(prefs: SharedPreferences) {
         normalizeLong(prefs, "selected_epoch_day")
+        normalizeLong(prefs, "last_notification_epoch_day")
         normalizeBoolean(prefs, "notification_enabled", defaultValue = true)
 
         listOf("selected_id", "recent_ids").forEach { key ->
