@@ -433,7 +433,7 @@ private fun AccessibilityDisclosureScreen(
             )
             Spacer(Modifier.height(18.dp))
             Text(
-                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Cela permet de reconnaître les applications que tu as choisi d’accompagner avec une pause Quran."
+                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Lorsqu’une application choisie est détectée, Quran Safeguard quitte son écran, revient à l’accueil Android et affiche la pause Quran."
             )
             Spacer(Modifier.height(12.dp))
             Text(
