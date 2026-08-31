@@ -1,4 +1,4 @@
-name: Audit Al-Hikam sources # retry
+name: Audit Al-Hikam sources # parallel
 
 on:
   push:
