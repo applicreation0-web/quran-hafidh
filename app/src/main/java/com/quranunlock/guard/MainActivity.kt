@@ -429,6 +429,19 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        HikamLibraryActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Ouvrir la bibliothèque des Ḥikam")
+                        }
                     }
                 }
 
