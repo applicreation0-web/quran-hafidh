@@ -1,4 +1,4 @@
-name: Recheck Al-Hikam against clean secondary Arabic edition
+name: Recheck Al-Hikam against clean secondary Arabic edition # poppler
 
 on:
   push:
@@ -17,7 +17,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: python3 -m pip install --disable-pip-version-check pypdf==5.9.0
+      - name: Install Poppler text extraction
+        run: sudo apt-get update -qq && sudo apt-get install -y poppler-utils
       - name: Cross-check clean independently numbered edition
         run: python3 scripts/crosscheck_hikam_secondary_pdf.py
       - name: Commit cross-check and remove temporary workflow
