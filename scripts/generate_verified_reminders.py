@@ -8,7 +8,6 @@ import urllib.request
 import zipfile
 import xml.etree.ElementTree as ET
 
-TARGET = 127
 OUT = "app/src/main/assets/reminders/hadeethenc_snapshot.json"
 FR_URL = "https://hadeethenc.com/browse/download/fr"
 FR_VERSION = "v1.17.0"
@@ -313,12 +312,12 @@ for row in rows:
         continue
     theme, theme_score = fit
 
-    collection_priority = 0 if any(
+    if not any(
         book in ("Sahih al-Bukhari", "Sahih Muslim") for book in books
-    ) else 1
+    ):
+        continue
 
     candidates.append((
-        collection_priority,
         -theme_score,
         {
             "id": "he_" + hid,
@@ -341,53 +340,41 @@ for row in rows:
         }
     ))
 
-candidates.sort(key=lambda item: (item[0], item[1], item[2]["id"]))
+candidates.sort(key=lambda item: (item[0], item[1]["id"]))
 
 by_theme = {}
 for candidate in candidates:
-    record = candidate[2]
+    record = candidate[1]
     by_theme.setdefault(record["theme"], []).append(candidate)
 
-# First pass: cap broad themes so no single keyword family dominates.
+# Keep every candidate that passes authenticity + topic rules, but cap
+# very broad themes so the daily library remains balanced.
 selected = []
 selected_ids = set()
 per_theme_cap = 16
 for theme, _ in THEMES:
     for candidate in by_theme.get(theme, [])[:per_theme_cap]:
-        record = candidate[2]
+        record = candidate[1]
         if record["id"] in selected_ids:
             continue
         selected_ids.add(record["id"])
         selected.append(record)
 
-# Second pass: fill remaining slots by authenticity/source priority and score.
-for _, _, record in candidates:
-    if len(selected) >= TARGET:
-        break
-    if record["id"] in selected_ids:
-        continue
-    selected_ids.add(record["id"])
-    selected.append(record)
+unique = selected
+if not unique:
+    raise SystemExit("No thematically suitable Bukhari/Muslim reminders found")
 
-unique = selected[:TARGET]
+counts = {}
+for item in unique:
+    counts[item["theme"]] = counts.get(item["theme"], 0) + 1
 
-if len(unique) < TARGET:
-    counts = {theme: len(rows) for theme, rows in by_theme.items()}
-    raise SystemExit(
-        "Only %d thematically suitable authentic records collected; need %d. "
-        "Theme counts=%s" % (len(unique), TARGET, counts)
-    )
 
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 with open(OUT, "w", encoding="utf-8") as handle:
     json.dump(unique, handle, ensure_ascii=False, indent=2)
 
-primary = sum(
-    1 for item in unique
-    if "Sahih al-Bukhari" in item["book"] or "Sahih Muslim" in item["book"]
-)
 print(
     "generated", len(unique), OUT,
     "from HadeethEnc Français", FR_VERSION,
-    "Bukhari/Muslim-priority entries:", primary
+    "Bukhari/Muslim only; theme counts:", counts
 )
