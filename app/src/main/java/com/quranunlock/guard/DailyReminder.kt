@@ -252,6 +252,7 @@ object DailyReminderManager {
     private const val ID_KEY = "selected_id"
     private const val RECENT_KEY = "recent_ids"
     private const val NOTIFICATION_ENABLED = "notification_enabled"
+    private const val LAST_NOTIFICATION_DAY = "last_notification_epoch_day"
     private const val MAX_RECENT = 60
 
     const val NOTIFICATION_HOUR = 20
@@ -289,6 +290,23 @@ object DailyReminderManager {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(NOTIFICATION_ENABLED, enabled)
+            .apply()
+    }
+
+    fun wasNotificationShownToday(
+        context: Context,
+        date: LocalDate = LocalDate.now()
+    ): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getLong(LAST_NOTIFICATION_DAY, Long.MIN_VALUE) == date.toEpochDay()
+
+    fun markNotificationShown(
+        context: Context,
+        date: LocalDate = LocalDate.now()
+    ) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putLong(LAST_NOTIFICATION_DAY, date.toEpochDay())
             .apply()
     }
 
