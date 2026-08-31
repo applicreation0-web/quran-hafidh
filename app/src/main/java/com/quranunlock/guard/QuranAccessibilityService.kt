@@ -1,4 +1,4 @@
-package com.quranunlock.guard
+package com.applicreation0.quransafeguard
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
