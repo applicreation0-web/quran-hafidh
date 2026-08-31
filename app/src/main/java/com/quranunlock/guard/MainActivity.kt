@@ -224,6 +224,20 @@ class MainActivity : ComponentActivity() {
                         }
 
                         Spacer(Modifier.height(24.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(24.dp))
+
+                        Text("4. Jokers", style = MaterialTheme.typography.titleLarge)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "3 jokers sont disponibles chaque jour. Un joker évite la lecture d’une page " +
+                                "et ouvre l’application pour la durée de récurrence choisie. " +
+                                "Jokers restants aujourd’hui : " +
+                                GuardPrefs.remainingJokers(this@MainActivity) +
+                                "/3."
+                        )
+
+                        Spacer(Modifier.height(24.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
