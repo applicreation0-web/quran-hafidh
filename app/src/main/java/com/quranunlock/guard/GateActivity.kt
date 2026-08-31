@@ -126,7 +126,7 @@ class GateActivity : ComponentActivity() {
                         Spacer(Modifier.height(20.dp))
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = jokersRemaining > 0,
+                            enabled = jokersRemaining > 0 && targetPackage != ProtectedApps.ANDROID_SETTINGS,
                             onClick = {
                                 if (GuardPrefs.consumeJoker(this@GateActivity)) {
                                     jokersRemaining = GuardPrefs.remainingJokers(this@GateActivity)
@@ -139,7 +139,9 @@ class GateActivity : ComponentActivity() {
                             }
                         ) {
                             Text(
-                                if (jokersRemaining > 0) {
+                                if (targetPackage == ProtectedApps.ANDROID_SETTINGS) {
+                                    "Jokers désactivés pour les Paramètres Android"
+                                } else if (jokersRemaining > 0) {
                                     "Utiliser 1 joker — " +
                                         jokersRemaining +
                                         "/" +
