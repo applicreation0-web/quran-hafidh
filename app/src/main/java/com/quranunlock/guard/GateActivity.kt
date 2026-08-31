@@ -1,7 +1,10 @@
 package com.quranunlock.guard
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -31,16 +34,23 @@ import kotlinx.coroutines.delay
 class GateActivity : ComponentActivity() {
     companion object {
         const val EXTRA_TARGET_PACKAGE = "target_package"
+        const val EXTRA_PURPOSE = "purpose"
+        const val PURPOSE_ACCESS = "access"
+        const val PURPOSE_UNINSTALL = "uninstall"
         private const val MIN_READING_SECONDS = 60
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val targetPackage = intent.getStringExtra(EXTRA_TARGET_PACKAGE)
         if (targetPackage.isNullOrBlank()) {
             finish()
             return
         }
+
+        val purpose = intent.getStringExtra(EXTRA_PURPOSE) ?: PURPOSE_ACCESS
+        val uninstallFlow = purpose == PURPOSE_UNINSTALL
 
         val page = GuardPrefs.challengePage(this, targetPackage)
         val mode = GuardPrefs.selectionMode(this)
@@ -76,7 +86,11 @@ class GateActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Une page avant de continuer",
+                            if (uninstallFlow) {
+                                "Une page avant la désinstallation"
+                            } else {
+                                "Une page avant de continuer"
+                            },
                             style = MaterialTheme.typography.headlineMedium
                         )
                         Spacer(Modifier.height(28.dp))
@@ -112,12 +126,22 @@ class GateActivity : ComponentActivity() {
                             onClick = {
                                 GuardPrefs.unlock(this@GateActivity, targetPackage)
                                 setResult(Activity.RESULT_OK)
+
+                                if (uninstallFlow) {
+                                    val appDetails = Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.parse("package:" + packageName)
+                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    startActivity(appDetails)
+                                }
+
                                 finish()
                             }
                         ) {
                             val label = when {
                                 !quranOpened -> "Ouvre d’abord Quran"
                                 secondsLeft > 0 -> "Lecture en cours… " + secondsLeft + "s"
+                                uninstallFlow -> "J’ai lu — ouvrir la désinstallation"
                                 else -> "J’ai lu entièrement la page " + page
                             }
                             Text(label)
@@ -126,7 +150,9 @@ class GateActivity : ComponentActivity() {
                         Spacer(Modifier.height(20.dp))
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = jokersRemaining > 0 && targetPackage != ProtectedApps.ANDROID_SETTINGS,
+                            enabled = !uninstallFlow &&
+                                jokersRemaining > 0 &&
+                                targetPackage != ProtectedApps.ANDROID_SETTINGS,
                             onClick = {
                                 if (GuardPrefs.consumeJoker(this@GateActivity)) {
                                     jokersRemaining = GuardPrefs.remainingJokers(this@GateActivity)
@@ -139,16 +165,19 @@ class GateActivity : ComponentActivity() {
                             }
                         ) {
                             Text(
-                                if (targetPackage == ProtectedApps.ANDROID_SETTINGS) {
-                                    "Jokers désactivés pour les Paramètres Android"
-                                } else if (jokersRemaining > 0) {
-                                    "Utiliser 1 joker — " +
-                                        jokersRemaining +
-                                        "/" +
-                                        GuardPrefs.DAILY_JOKERS +
-                                        " restants"
-                                } else {
-                                    "Aucun joker restant aujourd’hui"
+                                when {
+                                    uninstallFlow ->
+                                        "Pas de joker pour la désinstallation"
+                                    targetPackage == ProtectedApps.ANDROID_SETTINGS ->
+                                        "Jokers désactivés pour les Paramètres Android"
+                                    jokersRemaining > 0 ->
+                                        "Utiliser 1 joker — " +
+                                            jokersRemaining +
+                                            "/" +
+                                            GuardPrefs.DAILY_JOKERS +
+                                            " restants"
+                                    else ->
+                                        "Aucun joker restant aujourd’hui"
                                 }
                             )
                         }
