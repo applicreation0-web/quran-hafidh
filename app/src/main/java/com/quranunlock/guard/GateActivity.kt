@@ -190,7 +190,7 @@ class GateActivity : ComponentActivity() {
                                         "page=$page"
                                     )
                                     setResult(Activity.RESULT_OK)
-                                    finishAffinity()
+                                    finishAndRemoveTask()
                                 }
                             }
                         ) {
@@ -222,7 +222,7 @@ class GateActivity : ComponentActivity() {
                                         challengeKey
                                     )
                                     setResult(Activity.RESULT_OK)
-                                    finishAffinity()
+                                    finishAndRemoveTask()
                                 } else {
                                     jokersRemaining =
                                         GuardPrefs.remainingJokers(this@GateActivity)
