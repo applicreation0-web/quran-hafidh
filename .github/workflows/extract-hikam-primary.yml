@@ -1,0 +1,31 @@
+name: Extract primary Al-Hikam corpus
+
+on:
+  push:
+    branches:
+      - quran-safeguard-hikam-complete-corpus
+    paths:
+      - ".github/workflows/extract-hikam-primary.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract complete primary numbering
+        run: python3 scripts/extract_hikam_primary.py
+      - name: Commit extraction and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "quran-safeguard-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/hikam/primary_extraction.json
+          git rm .github/workflows/extract-hikam-primary.yml
+          git commit -m "Record primary Al-Hikam extraction"
+          git push origin HEAD:quran-safeguard-hikam-complete-corpus
