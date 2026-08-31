@@ -218,7 +218,19 @@ def collect_candidate_ids():
 
     return ordered_ids, category_titles_by_id
 
+def source_priority(item):
+    book = item.get("book") or ""
+    if "Sahih al-Bukhari" in book or "Sahih Muslim" in book:
+        return 0
+    if item.get("authenticity") == "Sahih":
+        return 1
+    return 2
+
 def select_with_theme_minimums(valid_items, target):
+    valid_items = sorted(
+        valid_items,
+        key=lambda item: (source_priority(item), item["sourceId"])
+    )
     by_theme = defaultdict(list)
     for item in valid_items:
         by_theme[item["theme"]].append(item)
