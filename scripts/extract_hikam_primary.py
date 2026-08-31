@@ -94,6 +94,21 @@ for number, rows in sorted(candidates.items()):
             ]
         })
 
+# One source page omits the numeric marker for 233 in machine parsing.
+# The text is recovered only because it was independently verified in:
+# - Ibn 'Ajiba index/digital edition: Najaf Desert Library
+# - University of Ghardaia academic appendix of Matn al-Hikam
+if 233 not in selected:
+    selected[233] = {
+        "page": None,
+        "arabic": "العِلْمُ إِنْ قَارَنَتْهُ الخَشْيَةُ فَلَكَ، وَإِلَّا فَعَلَيْكَ.",
+        "recovered_from_crosscheck": True,
+        "recovery_sources": [
+            "https://najafdesertlibrary.com/book/إيقاظ-الهمم-في-شرح-حكم-سيدي-أحمد-بن-عطاء-الله-السكندري/v/1/p/74",
+            "https://dspace.univ-ghardaia.edu.dz/jspui/bitstream/123456789/4884/1/408.04.106.pdf"
+        ]
+    }
+
 missing = [n for n in range(1, 265) if n not in selected]
 
 payload = {
@@ -109,10 +124,12 @@ payload = {
     "entries": [
         {
             "source_number": n,
-            "source_page": selected[n]["page"],
+            "source_page": selected[n].get("page"),
             "arabic": selected[n]["arabic"],
             "normalized_arabic": normalize(selected[n]["arabic"]),
-            "verification_status": "pending_secondary_crosscheck"
+            "verification_status": "pending_secondary_crosscheck",
+            "recovered_from_crosscheck": selected[n].get("recovered_from_crosscheck", False),
+            "recovery_sources": selected[n].get("recovery_sources", [])
         }
         for n in sorted(selected)
     ]
