@@ -305,8 +305,16 @@ object ReminderLibrary {
 
     private var cachedBundled: List<DailyReminder>? = null
 
-    fun all(context: Context): List<DailyReminder> =
-        items + bundled(context)
+    fun all(context: Context): List<DailyReminder> {
+        val verifiedHikam = HikamCorpus.verified(context)
+        val replacedLegacyIds = verifiedHikam.mapNotNull { entry ->
+            entry.sourceNumber.toIntOrNull()?.let { number -> "hikma_$number" }
+        }.toSet()
+
+        return items.filterNot { it.id in replacedLegacyIds } +
+            bundled(context) +
+            verifiedHikam.map { it.toDailyReminder() }
+    }
 
     fun byId(context: Context, id: String): DailyReminder? =
         all(context).firstOrNull { it.id == id }
