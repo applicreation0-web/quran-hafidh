@@ -6,25 +6,21 @@ import unicodedata
 import urllib.request
 from pathlib import Path
 
-UA = {"User-Agent": "QuranSafeguard-HikamAudit/1.0"}
+UA = {"User-Agent": "QuranSafeguard-HikamAudit/1.1"}
 
-PRIMARY_URL = (
-    "https://najafdesertlibrary.com/book/"
-    "%D8%A5%D9%8A%D9%82%D8%A7%D8%B8-%D8%A7%D9%84%D9%87%D9%85%D9%85-%D9%81%D9%8A-%D8%B4%D8%B1%D8%AD-"
-    "%D8%AD%D9%83%D9%85-%D8%B3%D9%8A%D8%AF%D9%8A-%D8%A3%D8%AD%D9%85%D8%AF-%D8%A8%D9%86-%D8%B9%D8%B7%D8%A7%D8%A1-"
-    "%D8%A7%D9%84%D9%84%D9%87-%D8%A7%D9%84%D8%B3%D9%83%D9%86%D8%AF%D8%B1%D9%8A/v/1/p/614"
-)
-SECONDARY_URLS = [
+PRIMARY_URLS = [
     f"https://ablibrary.net/book_content/8787/{page}"
     for page in range(1, 116)
+]
+
+SECONDARY_URLS = [
+    f"http://arabic-books.amuslim.org/%D8%A7%D9%84%D8%B1%D9%82%D8%A7%D9%82%20%D9%88%D8%A7%D9%84%D8%A2%D8%AF%D8%A7%D8%A8%20%D9%88%D8%A7%D9%84%D8%A3%D8%B0%D9%83%D8%A7%D8%B1/Web/8045/{page:03d}.htm"
+    for page in range(1, 35)
 ]
 
 OUT = Path("app/src/main/assets/hikam/source_audit.json")
 
 ARABIC_BLOCK = re.compile(r"[\u0600-\u06ff]")
-NUMBERED = re.compile(
-    r"(?<!\d)(\d{1,3})\s*[-–—]\s*([^\n\r<>]{8,900}?)(?=(?:\s+\d{1,3}\s*[-–—])|$)"
-)
 
 def fetch(url):
     req = urllib.request.Request(url, headers=UA)
@@ -34,7 +30,9 @@ def fetch(url):
 def textify(raw):
     raw = re.sub(r"<script\b[^>]*>.*?</script>", " ", raw, flags=re.S|re.I)
     raw = re.sub(r"<style\b[^>]*>.*?</style>", " ", raw, flags=re.S|re.I)
-    raw = re.sub(r"<[^>]+>", "\n", raw)
+    raw = re.sub(r"<br\s*/?>", "\n", raw, flags=re.I)
+    raw = re.sub(r"</p>|</li>|</div>|</h\d>", "\n", raw, flags=re.I)
+    raw = re.sub(r"<[^>]+>", " ", raw)
     raw = html.unescape(raw)
     raw = raw.replace("\xa0", " ")
     raw = re.sub(r"[ \t]+", " ", raw)
@@ -45,58 +43,68 @@ def normalize_arabic(value):
     value = unicodedata.normalize("NFC", value)
     value = re.sub(r"[\u064b-\u065f\u0670\u06d6-\u06ed]", "", value)
     value = value.replace("ـ", "")
-    value = re.sub(r"[«»“”\[\](){}،؛؟.,:؛!?]", " ", value)
+    value = value.replace("ٱ", "ا")
+    value = re.sub(r"[«»“”\[\](){}،؛؟.,:;!?]", " ", value)
     value = re.sub(r"\s+", " ", value).strip()
     return value
 
+def clean_body(body):
+    body = re.sub(r"\s+", " ", body).strip()
+    body = re.sub(r"^[\]\[(){}\s]+|[\]\[(){}\s]+$", "", body)
+    return body
+
 def extract_numbered(text):
     entries = {}
-    # line-oriented first
-    for line in text.splitlines():
-        line = line.strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in lines:
         m = re.match(r"^(\d{1,3})\s*[-–—]\s*(.+)$", line)
         if not m:
             continue
         num = int(m.group(1))
-        body = m.group(2).strip()
-        if 1 <= num <= 400 and ARABIC_BLOCK.search(body):
+        body = clean_body(m.group(2))
+        if 1 <= num <= 400 and ARABIC_BLOCK.search(body) and 8 <= len(body) <= 1600:
             entries.setdefault(num, body)
-    # fallback over compact text
-    compact = re.sub(r"\s+", " ", text)
-    for m in NUMBERED.finditer(compact):
+
+    compact = " ".join(lines)
+    pattern = re.compile(
+        r"(?<!\d)(\d{1,3})\s*[-–—]\s*(.+?)(?=(?:\s+\d{1,3}\s*[-–—])|$)"
+    )
+    for m in pattern.finditer(compact):
         num = int(m.group(1))
-        body = m.group(2).strip()
-        if 1 <= num <= 400 and ARABIC_BLOCK.search(body):
+        body = clean_body(m.group(2))
+        if 1 <= num <= 400 and ARABIC_BLOCK.search(body) and 8 <= len(body) <= 1600:
             entries.setdefault(num, body)
     return entries
 
-primary_html = fetch(PRIMARY_URL)
-primary_text = textify(primary_html)
-primary_all = extract_numbered(primary_text)
-primary_hikam = {n:t for n,t in primary_all.items() if 1 <= n <= 264}
+def harvest(urls):
+    all_entries = {}
+    pages = {}
+    failures = []
+    for url in urls:
+        try:
+            raw = fetch(url)
+        except Exception as exc:
+            failures.append({"url": url, "error": str(exc)})
+            continue
+        found = extract_numbered(textify(raw))
+        if found:
+            pages[url] = sorted(found)
+        for n, body in found.items():
+            if 1 <= n <= 264:
+                current = all_entries.get(n)
+                if current is None or len(body) < len(current):
+                    all_entries[n] = body
+    return all_entries, pages, failures
 
-secondary_all = {}
-secondary_pages = {}
-for url in SECONDARY_URLS:
-    try:
-        raw = fetch(url)
-    except Exception:
-        continue
-    found = extract_numbered(textify(raw))
-    if not found:
-        continue
-    page = int(url.rsplit("/",1)[1])
-    secondary_pages[str(page)] = sorted(found)
-    for n,t in found.items():
-        if 1 <= n <= 264:
-            secondary_all.setdefault(n, t)
+primary, primary_pages, primary_failures = harvest(PRIMARY_URLS)
+secondary, secondary_pages, secondary_failures = harvest(SECONDARY_URLS)
 
 matches = []
 variants = []
 missing_secondary = []
-for n in sorted(primary_hikam):
-    p = normalize_arabic(primary_hikam[n])
-    sraw = secondary_all.get(n)
+for n in sorted(primary):
+    p = normalize_arabic(primary[n])
+    sraw = secondary.get(n)
     if sraw is None:
         missing_secondary.append(n)
         continue
@@ -104,33 +112,44 @@ for n in sorted(primary_hikam):
     if p == s:
         matches.append(n)
     else:
-        # allow one normalized text to contain the other when a source carries
-        # a short editorial suffix/prefix; keep it as variant for human review.
+        ratio = 0.0
+        if p and s:
+            common = min(len(p), len(s))
+            ratio = sum(1 for a,b in zip(p,s) if a == b) / max(len(p), len(s))
         variants.append({
             "number": n,
-            "primary": primary_hikam[n],
+            "primary": primary[n],
             "secondary": sraw,
             "primary_normalized": p,
             "secondary_normalized": s,
+            "rough_prefix_similarity": round(ratio, 4),
         })
 
 payload = {
     "primary": {
-        "url": PRIMARY_URL,
-        "source_title": "إيقاظ الهمم في شرح الحكم",
-        "commentator": "أحمد بن عجيبة الحسني",
-        "edition_note": "Dār al-Kutub al-ʿIlmiyya, Beirut, 1426/2005, ed. ʿĀṣim Ibrāhīm al-Kayyālī (bibliographic cross-check)",
-        "detected_numbered_entries": len(primary_all),
-        "detected_hikam_1_264": len(primary_hikam),
-        "min": min(primary_hikam) if primary_hikam else None,
-        "max": max(primary_hikam) if primary_hikam else None,
-        "missing_1_264": [n for n in range(1,265) if n not in primary_hikam],
+        "source_title": "اللطائف الإلهية في شرح مختارات من الحكم العطائية",
+        "digital_library": "مكتبة أهل البيت",
+        "base_url": "https://ablibrary.net/book_content/8787/",
+        "detected_hikam_1_264": len(primary),
+        "missing_1_264": [n for n in range(1,265) if n not in primary],
+        "pages_with_numbered_entries": primary_pages,
+        "fetch_failures": primary_failures,
     },
     "secondary": {
-        "base": "https://ablibrary.net/book_content/8787/",
-        "detected_hikam_1_264": len(secondary_all),
-        "missing_1_264": [n for n in range(1,265) if n not in secondary_all],
+        "source_title": "إيقاظ الهمم في شرح الحكم - ابن عجيبة",
+        "digital_library": "Shamela text mirror",
+        "base_url": "http://arabic-books.amuslim.org/.../Web/8045/",
+        "detected_hikam_1_264": len(secondary),
+        "missing_1_264": [n for n in range(1,265) if n not in secondary],
         "pages_with_numbered_entries": secondary_pages,
+        "fetch_failures": secondary_failures,
+    },
+    "bibliographic_reference": {
+        "title": "إيقاظ الهمم في شرح الحكم",
+        "commentator": "أحمد بن محمد بن عجيبة الحسني",
+        "edition": "دار الكتب العلمية، بيروت، 1426/2005",
+        "editor": "عاصم إبراهيم الكيالي الحسيني الشاذلي الدرقاوي",
+        "note": "Bibliographic identity cross-checked independently; the digital text mirror is used for textual comparison, not to invent numbering."
     },
     "cross_check": {
         "exact_normalized_matches": len(matches),
@@ -141,22 +160,22 @@ payload = {
         "missing_secondary": missing_secondary,
     },
     "primary_entries": [
-        {"source_number": n, "arabic": primary_hikam[n]}
-        for n in sorted(primary_hikam)
+        {"source_number": n, "arabic": primary[n]}
+        for n in sorted(primary)
     ],
     "secondary_entries": [
-        {"source_number": n, "arabic": secondary_all[n]}
-        for n in sorted(secondary_all)
+        {"source_number": n, "arabic": secondary[n]}
+        for n in sorted(secondary)
     ],
 }
 
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 print(json.dumps({
-    "primary_hikam": len(primary_hikam),
-    "secondary_hikam": len(secondary_all),
+    "primary": len(primary),
+    "secondary": len(secondary),
     "matches": len(matches),
     "variants": len(variants),
-    "missing_primary": payload["primary"]["missing_1_264"],
-    "missing_secondary_count": len(missing_secondary),
+    "missing_primary": len(payload["primary"]["missing_1_264"]),
+    "missing_secondary": len(payload["secondary"]["missing_1_264"]),
 }, ensure_ascii=False))
