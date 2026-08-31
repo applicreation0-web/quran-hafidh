@@ -59,3 +59,14 @@ jobs:
           name: quran-safeguard-release-unsigned
           path: app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
+
+      - name: Upload Android signing tools
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-signing-tools-36
+          path: |
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0/apksigner
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0/zipalign
+            ${{ env.ANDROID_HOME }}/build-tools/36.0.0/lib/apksigner.jar
+          if-no-files-found: error
