@@ -108,7 +108,9 @@ def thematic_fit(record):
         )
     )
 
-    if any(marker_present(context, marker) for marker in EXCLUDED_CONTEXT_MARKERS):
+    # Sensitive/context-heavy material is excluded aggressively, including
+    # inflected forms such as combattre/combattant or derivatives.
+    if any(norm(marker) in context for marker in EXCLUDED_CONTEXT_MARKERS):
         return None
 
     best_theme = None
