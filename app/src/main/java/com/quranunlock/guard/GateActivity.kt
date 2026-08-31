@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
@@ -45,9 +46,9 @@ class GateActivity : ComponentActivity() {
         val mode = GuardPrefs.selectionMode(this)
         val sectionLabel = when (mode) {
             QuranSelectionMode.JUZ ->
-                QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz $it" }
+                QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz " + it }
             QuranSelectionMode.HIZB ->
-                QuranPageSelector.hizbForPage(page).joinToString(" / ") { "Hizb $it" }
+                QuranPageSelector.hizbForPage(page).joinToString(" / ") { "Hizb " + it }
         }
 
         setContent {
@@ -55,6 +56,9 @@ class GateActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var secondsLeft by remember { mutableIntStateOf(MIN_READING_SECONDS) }
                     var quranOpened by remember { mutableStateOf(false) }
+                    var jokersRemaining by remember {
+                        mutableIntStateOf(GuardPrefs.remainingJokers(this@GateActivity))
+                    }
 
                     LaunchedEffect(quranOpened) {
                         if (!quranOpened) return@LaunchedEffect
@@ -77,7 +81,7 @@ class GateActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(28.dp))
                         Text(
-                            "Page $page",
+                            "Page " + page,
                             style = MaterialTheme.typography.displayMedium,
                             textAlign = TextAlign.Center
                         )
@@ -98,7 +102,7 @@ class GateActivity : ComponentActivity() {
                                 QuranReaderLauncher.open(this@GateActivity)
                             }
                         ) {
-                            Text("Ouvrir Quran puis aller à la page $page")
+                            Text("Ouvrir Quran puis aller à la page " + page)
                         }
 
                         Spacer(Modifier.height(12.dp))
@@ -114,9 +118,37 @@ class GateActivity : ComponentActivity() {
                             val label = when {
                                 !quranOpened -> "Ouvre d’abord Quran"
                                 secondsLeft > 0 -> "Lecture en cours… " + secondsLeft + "s"
-                                else -> "J’ai lu entièrement la page $page"
+                                else -> "J’ai lu entièrement la page " + page
                             }
                             Text(label)
+                        }
+
+                        Spacer(Modifier.height(20.dp))
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = jokersRemaining > 0,
+                            onClick = {
+                                if (GuardPrefs.consumeJoker(this@GateActivity)) {
+                                    jokersRemaining = GuardPrefs.remainingJokers(this@GateActivity)
+                                    GuardPrefs.unlock(this@GateActivity, targetPackage)
+                                    setResult(Activity.RESULT_OK)
+                                    finish()
+                                } else {
+                                    jokersRemaining = 0
+                                }
+                            }
+                        ) {
+                            Text(
+                                if (jokersRemaining > 0) {
+                                    "Utiliser 1 joker — " +
+                                        jokersRemaining +
+                                        "/" +
+                                        GuardPrefs.DAILY_JOKERS +
+                                        " restants"
+                                } else {
+                                    "Aucun joker restant aujourd’hui"
+                                }
+                            )
                         }
                     }
                 }
