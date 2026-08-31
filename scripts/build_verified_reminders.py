@@ -41,20 +41,20 @@ CATEGORY_HINTS = [
 ]
 
 MIN_THEME_COUNTS = {
-    "coran": 5,
-    "famille": 5,
-    "voisinage": 2,
-    "propreté": 4,
-    "douceur": 4,
-    "patience": 3,
-    "maîtrise de soi": 4,
-    "sincérité": 4,
-    "gratitude": 3,
-    "générosité": 3,
-    "entraide": 3,
-    "communauté": 4,
-    "discipline": 4,
-    "bonnes mœurs": 5,
+    "coran": 3,
+    "famille": 3,
+    "voisinage": 1,
+    "propreté": 3,
+    "douceur": 3,
+    "patience": 2,
+    "maîtrise de soi": 2,
+    "sincérité": 2,
+    "gratitude": 1,
+    "générosité": 2,
+    "entraide": 2,
+    "communauté": 3,
+    "discipline": 2,
+    "bonnes mœurs": 3,
 }
 
 def get_json(path, params=None, retries=5):
