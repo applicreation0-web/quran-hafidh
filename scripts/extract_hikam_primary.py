@@ -59,7 +59,9 @@ def clean(body):
     # on a digital page, without touching the matn itself.
     for marker in (
         "صفحات الكتاب", "الرئيسية /", "الصفحة السابقة",
-        "© 2026", "Ahlulbayt Library", "مكتبة أهل البيت الرقمية"
+        "© 2026", "Ahlulbayt Library", "مكتبة أهل البيت الرقمية",
+        "تمّت بعونه تعالى الحكم العطائية الكبرى",
+        "تمت بعونه تعالى الحكم العطائية الكبرى"
     ):
         if marker in body:
             body = body.split(marker, 1)[0].strip()
