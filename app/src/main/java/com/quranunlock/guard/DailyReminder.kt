@@ -179,11 +179,22 @@ object ReminderLibrary {
             hadiths.all { item ->
                 item.type == ReminderType.HADITH &&
                     item.authenticity?.isNotBlank() == true &&
+                    item.reference.isNotBlank() &&
                     item.sourceProvider == "HadeethEnc.com" &&
                     item.sourceId.isNotBlank() &&
                     item.sourceVersion.isNotBlank() &&
                     item.reviewStatus == "VERIFIED_OFFICIAL_SOURCE" &&
                     item.translationStatus == "SOURCE_TRANSLATION_UNMODIFIED"
+            } &&
+            scholarItems.all { item ->
+                item.type != ReminderType.HADITH &&
+                    item.author.isNotBlank() &&
+                    item.book.isNotBlank() &&
+                    item.reference.isNotBlank() &&
+                    item.sourceId.isNotBlank() &&
+                    item.sourceVersion.isNotBlank() &&
+                    item.reviewStatus == "MANUALLY_VERIFIED_PRIMARY_TEXT" &&
+                    item.translationStatus == "EDITORIAL_TRANSLATION_REVIEWED"
             }
     }
 
