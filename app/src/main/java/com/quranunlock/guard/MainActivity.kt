@@ -33,6 +33,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
+    private val serviceEnabledState = mutableStateOf(false)
+
+    override fun onResume() {
+        super.onResume()
+        BrowserDetector.refresh()
+        serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -80,6 +88,20 @@ class MainActivity : ComponentActivity() {
                         Text("Quran Unlock", style = MaterialTheme.typography.headlineLarge)
                         Spacer(Modifier.height(8.dp))
                         Text("Réglages de protection")
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            if (serviceEnabledState.value) {
+                                "Protection active ✓"
+                            } else {
+                                "Protection inactive — active le service d’accessibilité"
+                            },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Tous les navigateurs HTTP/HTTPS détectés sont protégés automatiquement, " +
+                                "même s’ils ne figurent pas dans la liste ci-dessous."
+                        )
                         Spacer(Modifier.height(24.dp))
 
                         Text("1. Pages de lecture", style = MaterialTheme.typography.titleLarge)
@@ -253,6 +275,7 @@ class MainActivity : ComponentActivity() {
                                     protectedPackages.toSet()
                                 )
                                 GuardPrefs.saveUnlockMinutes(this@MainActivity, unlockMinutes)
+                                BrowserDetector.refresh()
                                 saved = true
                             }
                         ) {
@@ -266,7 +289,13 @@ class MainActivity : ComponentActivity() {
                                 startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                             }
                         ) {
-                            Text("Activer / vérifier la protection")
+                            Text(
+                                if (serviceEnabledState.value) {
+                                    "Vérifier le service d’accessibilité"
+                                } else {
+                                    "Activer la protection"
+                                }
+                            )
                         }
                         Spacer(Modifier.height(32.dp))
                     }
