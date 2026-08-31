@@ -2,11 +2,13 @@ package com.quranunlock.guard
 
 import android.content.Context
 import android.os.SystemClock
+import android.provider.Settings
 import java.time.LocalDate
 
 object GuardPrefs {
     const val DAILY_JOKERS = 3
-    const val UNINSTALL_CHALLENGE_KEY = "__quran_unlock_uninstall__"
+    const val JOKER_MAX_UNLOCK_MINUTES = 5
+    const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
 
     private const val FILE = "guard_prefs"
     private const val UNLOCK_UNTIL_ELAPSED_PREFIX = "unlock_elapsed_until_"
@@ -19,18 +21,42 @@ object GuardPrefs {
     private const val UNLOCK_MINUTES = "unlock_minutes"
     private const val JOKER_DAY = "joker_epoch_day"
     private const val JOKERS_USED = "jokers_used"
+    private const val JOKER_REFILL_WALL = "joker_refill_wall"
+    private const val JOKER_REFILL_ELAPSED = "joker_refill_elapsed"
+    private const val JOKER_REFILL_BOOT = "joker_refill_boot"
+    private const val ACCESSIBILITY_CONSENT = "accessibility_consent"
     private const val RECENT_CHALLENGE_PAGES = "recent_challenge_pages"
     private const val MAX_RECENT_CHALLENGE_PAGES = 30
     private const val READING_PAGE_PREFIX = "reading_page_"
     private const val READING_ACCUMULATED_PREFIX = "reading_accumulated_"
     private const val READING_STARTED_PREFIX = "reading_started_"
 
+    // Prevents a simple clock jump from immediately creating a new joker day
+    // while the device stays on. Offline-only protection cannot fully defeat a
+    // deliberate clock change combined with a reboot.
+    private const val MIN_JOKER_REFILL_INTERVAL_MS = 20L * 60L * 60L * 1000L
+
+    fun hasAccessibilityConsent(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(ACCESSIBILITY_CONSENT, false)
+
+    fun saveAccessibilityConsent(context: Context) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(ACCESSIBILITY_CONSENT, true)
+            .apply()
+    }
+
     fun unlock(context: Context, packageName: String) {
-        val minutes = if (packageName == ProtectedApps.ANDROID_SETTINGS) {
-            1
-        } else {
-            unlockMinutes(context)
-        }
+        unlockForMinutes(context, packageName, unlockMinutes(context))
+    }
+
+    fun unlockWithJoker(context: Context, packageName: String) {
+        val minutes = minOf(unlockMinutes(context), JOKER_MAX_UNLOCK_MINUTES)
+        unlockForMinutes(context, packageName, minutes)
+    }
+
+    private fun unlockForMinutes(context: Context, packageName: String, minutes: Int) {
         val now = SystemClock.elapsedRealtime()
         val until = now + minutes * 60_000L
 
@@ -82,14 +108,14 @@ object GuardPrefs {
     @Synchronized
     fun remainingJokers(context: Context): Int {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        normalizeJokerDay(prefs)
+        normalizeJokerDay(context, prefs)
         return (DAILY_JOKERS - prefs.getInt(JOKERS_USED, 0)).coerceIn(0, DAILY_JOKERS)
     }
 
     @Synchronized
     fun consumeJoker(context: Context): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        normalizeJokerDay(prefs)
+        normalizeJokerDay(context, prefs)
 
         val used = prefs.getInt(JOKERS_USED, 0).coerceAtLeast(0)
         if (used >= DAILY_JOKERS) return false
@@ -101,26 +127,55 @@ object GuardPrefs {
         return true
     }
 
-    private fun normalizeJokerDay(prefs: android.content.SharedPreferences) {
+    private fun normalizeJokerDay(
+        context: Context,
+        prefs: android.content.SharedPreferences
+    ) {
         val currentDay = LocalDate.now().toEpochDay()
         val storedDay = prefs.getLong(JOKER_DAY, Long.MIN_VALUE)
+        val nowWall = System.currentTimeMillis()
+        val nowElapsed = SystemClock.elapsedRealtime()
+        val bootCount = runCatching {
+            Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
+        }.getOrDefault(-1)
 
-        when {
-            storedDay == Long.MIN_VALUE -> {
-                prefs.edit()
-                    .putLong(JOKER_DAY, currentDay)
-                    .putInt(JOKERS_USED, 0)
-                    .commit()
-            }
-            currentDay > storedDay -> {
-                prefs.edit()
-                    .putLong(JOKER_DAY, currentDay)
-                    .putInt(JOKERS_USED, 0)
-                    .commit()
-            }
-            currentDay < storedDay -> {
-                // Date rollback detected: do not refill jokers.
-            }
+        if (storedDay == Long.MIN_VALUE) {
+            prefs.edit()
+                .putLong(JOKER_DAY, currentDay)
+                .putInt(JOKERS_USED, 0)
+                .putLong(JOKER_REFILL_WALL, nowWall)
+                .putLong(JOKER_REFILL_ELAPSED, nowElapsed)
+                .putInt(JOKER_REFILL_BOOT, bootCount)
+                .commit()
+            return
+        }
+
+        // Rolling the calendar backwards never refills jokers.
+        if (currentDay <= storedDay) return
+
+        val lastWall = prefs.getLong(JOKER_REFILL_WALL, nowWall)
+        val lastElapsed = prefs.getLong(JOKER_REFILL_ELAPSED, nowElapsed)
+        val lastBoot = prefs.getInt(JOKER_REFILL_BOOT, bootCount)
+
+        val sameBoot = bootCount >= 0 && bootCount == lastBoot
+        val enoughRealElapsed =
+            sameBoot &&
+                nowElapsed >= lastElapsed &&
+                nowElapsed - lastElapsed >= MIN_JOKER_REFILL_INTERVAL_MS
+
+        val enoughWallElapsed =
+            !sameBoot &&
+                nowWall >= lastWall &&
+                nowWall - lastWall >= MIN_JOKER_REFILL_INTERVAL_MS
+
+        if (enoughRealElapsed || enoughWallElapsed) {
+            prefs.edit()
+                .putLong(JOKER_DAY, currentDay)
+                .putInt(JOKERS_USED, 0)
+                .putLong(JOKER_REFILL_WALL, nowWall)
+                .putLong(JOKER_REFILL_ELAPSED, nowElapsed)
+                .putInt(JOKER_REFILL_BOOT, bootCount)
+                .commit()
         }
     }
 
@@ -134,7 +189,6 @@ object GuardPrefs {
     fun saveProtectedPackages(context: Context, packages: Set<String>) {
         val filtered = packages
             .filterNot { ProtectedApps.isAlwaysAllowed(it) }
-            .filterNot { it == ProtectedApps.ANDROID_SETTINGS }
             .toSet()
 
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
