@@ -108,8 +108,17 @@ class MushafReaderActivity : ComponentActivity() {
                         }
                     }
 
-                    val readerViewportHeight =
-                        LocalConfiguration.current.screenWidthDp.dp * 0.82f
+                    val configuration = LocalConfiguration.current
+                    val pageRatio = mushafPageHeightToWidthRatio(svgContent)
+                    val renderedPageHeightDp =
+                        (configuration.screenWidthDp - 8).coerceAtLeast(1) * pageRatio
+                    val desiredHalfPageDp = renderedPageHeightDp * 0.52f
+                    val screenCapDp = configuration.screenHeightDp * 0.62f
+                    val readerViewportHeight = minOf(
+                        desiredHalfPageDp,
+                        screenCapDp,
+                        renderedPageHeightDp * 0.58f
+                    ).coerceAtLeast(180f).dp
 
                     Column(
                         modifier = Modifier
@@ -177,16 +186,20 @@ class MushafReaderActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReading(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.isUnlocked(this@MushafReaderActivity, challengeKey)) {
-                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                if (GuardPrefs.hasPendingCompletedReading(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                ) {
                                     GuardDiagnostics.log(
                                         this@MushafReaderActivity,
-                                        "READING_UNLOCKED",
+                                        "READING_COMPLETED_PENDING_SUMMARY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
@@ -199,6 +212,10 @@ class MushafReaderActivity : ComponentActivity() {
                                             putExtra(
                                                 ReadingCompleteActivity.EXTRA_ELAPSED_MS,
                                                 elapsed
+                                            )
+                                            putExtra(
+                                                ReadingCompleteActivity.EXTRA_TARGET_PACKAGE,
+                                                challengeKey
                                             )
                                         }
                                     )
@@ -280,6 +297,21 @@ class MushafReaderActivity : ComponentActivity() {
 
 }
 
+private fun mushafPageHeightToWidthRatio(svgContent: String?): Float {
+    if (svgContent.isNullOrBlank()) return 1.55f
+
+    val match = Regex(
+        """viewBox\s*=\s*["']\s*[-0-9.]+\s+[-0-9.]+\s+([0-9.]+)\s+([0-9.]+)\s*["']""",
+        RegexOption.IGNORE_CASE
+    ).find(svgContent) ?: return 1.55f
+
+    val width = match.groupValues.getOrNull(1)?.toFloatOrNull() ?: return 1.55f
+    val height = match.groupValues.getOrNull(2)?.toFloatOrNull() ?: return 1.55f
+    if (width <= 0f || height <= width) return 1.55f
+
+    return (height / width).coerceIn(1.2f, 2.2f)
+}
+
 private fun formatReadingDuration(milliseconds: Long): String {
     val seconds = (milliseconds / 1000L).coerceAtLeast(0L)
     val minutesPart = seconds / 60L
@@ -306,15 +338,21 @@ private fun MushafPageWebView(
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
                 settings.blockNetworkLoads = true
-                settings.builtInZoomControls = true
+                settings.builtInZoomControls = false
                 settings.displayZoomControls = false
+                settings.setSupportZoom(false)
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
 
-                setOnScrollChangeListener { view, _, scrollY, _, _ ->
+                var userHasScrolled = false
+                setOnScrollChangeListener { view, _, scrollY, _, oldScrollY ->
                     val webView = view as WebView
+                    if (scrollY > oldScrollY && scrollY > 24) {
+                        userHasScrolled = true
+                    }
                     val contentHeightPx = (webView.contentHeight * webView.scale).toInt()
-                    if (contentHeightPx > 0 &&
+                    if (userHasScrolled &&
+                        contentHeightPx > webView.height &&
                         scrollY + webView.height >= contentHeightPx - 24
                     ) {
                         onBottomReached()
@@ -329,17 +367,6 @@ private fun MushafPageWebView(
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         onReady()
-                        view?.let { webView ->
-                            webView.post {
-                                val contentHeightPx =
-                                    (webView.contentHeight * webView.scale).toInt()
-                                if (contentHeightPx > 0 &&
-                                    webView.scrollY + webView.height >= contentHeightPx - 24
-                                ) {
-                                    onBottomReached()
-                                }
-                            }
-                        }
                     }
 
                     override fun onReceivedError(

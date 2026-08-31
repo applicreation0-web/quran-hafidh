@@ -1,7 +1,9 @@
 package com.applicreation0.quransafeguard
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,6 +27,7 @@ class ReadingCompleteActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PAGE = "page"
         const val EXTRA_ELAPSED_MS = "elapsed_ms"
+        const val EXTRA_TARGET_PACKAGE = "target_package"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,8 +35,38 @@ class ReadingCompleteActivity : ComponentActivity() {
 
         val page = intent.getIntExtra(EXTRA_PAGE, 0)
         val elapsedMs = intent.getLongExtra(EXTRA_ELAPSED_MS, 0L)
-        val reminder = DailyReminderManager.today(this)
+        val targetPackage = intent.getStringExtra(EXTRA_TARGET_PACKAGE).orEmpty()
+
+        if (page !in 1..604 || targetPackage.isBlank() ||
+            !GuardPrefs.hasPendingCompletedReading(this, targetPackage, page)
+        ) {
+            finish()
+            return
+        }
+
+        val reminder = runCatching { DailyReminderManager.today(this) }.getOrNull()
         val today = GuardPrefs.dailyReadingSummary(this)
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    GuardDiagnostics.log(
+                        this@ReadingCompleteActivity,
+                        "READING_SUMMARY_LEFT_WITHOUT_UNLOCK",
+                        targetPackage,
+                        "page=$page"
+                    )
+                    startActivity(
+                        Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_HOME)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    )
+                    finishAndRemoveTask()
+                }
+            }
+        )
 
         setContent {
             QuranSafeguardTheme {
@@ -42,7 +75,23 @@ class ReadingCompleteActivity : ComponentActivity() {
                     elapsedMs = elapsedMs,
                     today = today,
                     reminder = reminder,
-                    onContinue = { finishAndRemoveTask() }
+                    onContinue = {
+                        if (GuardPrefs.unlockAfterCompletedReading(
+                                this@ReadingCompleteActivity,
+                                targetPackage,
+                                page
+                            )
+                        ) {
+                            GuardRuntime.interception.markUnlocked(targetPackage)
+                            GuardDiagnostics.log(
+                                this@ReadingCompleteActivity,
+                                "READING_UNLOCKED_AFTER_SUMMARY",
+                                targetPackage,
+                                "page=$page elapsedMs=$elapsedMs"
+                            )
+                            finishAndRemoveTask()
+                        }
+                    }
                 )
             }
         }
@@ -54,7 +103,7 @@ private fun ReadingCompleteScreen(
     page: Int,
     elapsedMs: Long,
     today: DailyReadingSummary,
-    reminder: DailyReminder,
+    reminder: DailyReminder?,
     onContinue: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -94,7 +143,15 @@ private fun ReadingCompleteScreen(
                 )
             }
 
-            DailyReminderCard(reminder = reminder)
+            if (reminder != null) {
+                DailyReminderCard(reminder = reminder)
+            } else {
+                Text(
+                    "Le rappel du jour n’est pas disponible. Aucun contenu non vérifié n’est affiché.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(Modifier.height(2.dp))
             Button(

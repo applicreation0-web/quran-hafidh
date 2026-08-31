@@ -52,6 +52,8 @@ object GuardPrefs {
     private const val READING_ACCUMULATED_PREFIX = "reading_accumulated_"
     private const val READING_STARTED_PREFIX = "reading_started_"
     private const val READING_BOTTOM_REACHED_PREFIX = "reading_bottom_reached_"
+    private const val READING_COMPLETED_PENDING_PAGE_PREFIX = "reading_completed_pending_page_"
+    private const val READING_COMPLETED_PENDING_ELAPSED_PREFIX = "reading_completed_pending_elapsed_"
     private const val READINGS_COMPLETED = "readings_completed"
     private const val TOTAL_READING_MS = "total_reading_ms"
     private const val LAST_READING_MS = "last_reading_ms"
@@ -107,6 +109,8 @@ object GuardPrefs {
             .remove(READING_ACCUMULATED_PREFIX + packageName)
             .remove(READING_STARTED_PREFIX + packageName)
             .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
+            .remove(READING_COMPLETED_PENDING_PAGE_PREFIX + packageName)
+            .remove(READING_COMPLETED_PENDING_ELAPSED_PREFIX + packageName)
             .apply()
     }
 
@@ -118,6 +122,8 @@ object GuardPrefs {
             .remove(READING_ACCUMULATED_PREFIX + challengeKey)
             .remove(READING_STARTED_PREFIX + challengeKey)
             .remove(READING_BOTTOM_REACHED_PREFIX + challengeKey)
+            .remove(READING_COMPLETED_PENDING_PAGE_PREFIX + challengeKey)
+            .remove(READING_COMPLETED_PENDING_ELAPSED_PREFIX + challengeKey)
             .apply()
     }
 
@@ -483,24 +489,42 @@ object GuardPrefs {
     }
 
     @Synchronized
-    fun completeReadingAndUnlock(
+    fun completeReading(
         context: Context,
         challengeKey: String,
         page: Int
     ): Long {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val pendingPage = prefs.getInt(
+            READING_COMPLETED_PENDING_PAGE_PREFIX + challengeKey,
+            0
+        )
+        if (pendingPage == page) {
+            return prefs.getLong(
+                READING_COMPLETED_PENDING_ELAPSED_PREFIX + challengeKey,
+                0L
+            ).coerceAtLeast(0L)
+        }
+
         val elapsed = readingElapsedMs(context, challengeKey, page)
         if (!hasReachedReadingBottom(context, challengeKey, page)) return elapsed
 
         val atypicalFast = isAtypicallyFast(context, elapsed)
-        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val completed = prefs.getInt(READINGS_COMPLETED, 0).coerceAtLeast(0)
         val total = prefs.getLong(TOTAL_READING_MS, 0L).coerceAtLeast(0L)
 
-        prefs.edit()
-            .putInt(READINGS_COMPLETED, completed + 1)
-            .putLong(TOTAL_READING_MS, total + elapsed)
-            .putLong(LAST_READING_MS, elapsed)
-            .commit()
+        check(
+            prefs.edit()
+                .putInt(READINGS_COMPLETED, completed + 1)
+                .putLong(TOTAL_READING_MS, total + elapsed)
+                .putLong(LAST_READING_MS, elapsed)
+                .putInt(READING_COMPLETED_PENDING_PAGE_PREFIX + challengeKey, page)
+                .putLong(
+                    READING_COMPLETED_PENDING_ELAPSED_PREFIX + challengeKey,
+                    elapsed
+                )
+                .commit()
+        )
 
         recordHistory(
             context = context,
@@ -520,8 +544,40 @@ object GuardPrefs {
             )
         }
 
-        unlock(context, challengeKey)
         return elapsed
+    }
+
+    fun hasPendingCompletedReading(
+        context: Context,
+        challengeKey: String,
+        page: Int
+    ): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getInt(READING_COMPLETED_PENDING_PAGE_PREFIX + challengeKey, 0) == page
+
+    fun pendingCompletedReadingElapsedMs(
+        context: Context,
+        challengeKey: String,
+        page: Int
+    ): Long {
+        if (!hasPendingCompletedReading(context, challengeKey, page)) return 0L
+        return context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getLong(
+                READING_COMPLETED_PENDING_ELAPSED_PREFIX + challengeKey,
+                0L
+            )
+            .coerceAtLeast(0L)
+    }
+
+    @Synchronized
+    fun unlockAfterCompletedReading(
+        context: Context,
+        challengeKey: String,
+        page: Int
+    ): Boolean {
+        if (!hasPendingCompletedReading(context, challengeKey, page)) return false
+        unlock(context, challengeKey)
+        return true
     }
 
     fun readingsCompleted(context: Context): Int =

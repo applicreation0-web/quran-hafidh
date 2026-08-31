@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
+import org.json.JSONObject
 import java.time.LocalDate
 
 enum class ReminderType {
@@ -19,215 +20,26 @@ data class DailyReminder(
     val book: String,
     val reference: String,
     val authenticity: String?,
-    val tags: Set<String>
+    val tags: Set<String>,
+    val sourceProvider: String,
+    val sourceId: String,
+    val sourceVersion: String,
+    val sourceFetchedAt: String,
+    val reviewStatus: String,
+    val translationStatus: String,
+    val sourceUrl: String?
 )
 
 object ReminderLibrary {
-    val items: List<DailyReminder> = listOf(
-        DailyReminder(
-            id = "hadith_bukhari_1",
-            type = ReminderType.HADITH,
-            theme = "intention",
-            arabicText = "إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى.",
-            frenchText = "Les actes ne valent que par les intentions, et chacun obtient selon ce qu’il a eu comme intention.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 1 • Livre 1, hadith 1",
-            authenticity = "Sahih",
-            tags = setOf("sincérité", "intention", "discipline personnelle", "bonnes habitudes")
-        ),
-        DailyReminder(
-            id = "hadith_muslim_2593",
-            type = ReminderType.HADITH,
-            theme = "douceur",
-            arabicText = "إِنَّ اللَّهَ رَفِيقٌ يُحِبُّ الرِّفْقَ، وَيُعْطِي عَلَى الرِّفْقِ مَا لَا يُعْطِي عَلَى الْعُنْفِ.",
-            frenchText = "Allah est Doux et Il aime la douceur. Il accorde par la douceur ce qu’Il n’accorde pas par la rudesse.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih Muslim",
-            reference = "Hadith 2593 • Livre 45, hadith 99",
-            authenticity = "Sahih",
-            tags = setOf("douceur", "comportement", "famille", "vie en communauté")
-        ),
-        DailyReminder(
-            id = "hadith_bukhari_6018",
-            type = ReminderType.HADITH,
-            theme = "voisinage",
-            arabicText = "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلَا يُؤْذِ جَارَهُ.",
-            frenchText = "Que celui qui croit en Allah et au Jour dernier ne fasse pas de tort à son voisin.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 6018 • Livre 78, hadith 49",
-            authenticity = "Sahih",
-            tags = setOf("voisinage", "respect du voisin", "entraide", "espaces communs")
-        ),
-        DailyReminder(
-            id = "hadith_bukhari_5027",
-            type = ReminderType.HADITH,
-            theme = "coran",
-            arabicText = "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ.",
-            frenchText = "Les meilleurs d’entre vous sont ceux qui apprennent le Coran et l’enseignent.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 5027 • Livre 66, hadith 49",
-            authenticity = "Sahih",
-            tags = setOf("mérite du Coran", "lecture du Coran", "apprentissage du Coran", "transmission")
-        ),
-        DailyReminder(
-            id = "hadith_bukhari_6114",
-            type = ReminderType.HADITH,
-            theme = "maîtrise de soi",
-            arabicText = "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ.",
-            frenchText = "Le véritable fort n’est pas celui qui terrasse les autres, mais celui qui se maîtrise lorsqu’il est en colère.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 6114 • Livre 78, hadith 141",
-            authenticity = "Sahih",
-            tags = setOf("maîtrise de soi", "patience", "comportement", "bonnes mœurs")
-        ),
-        DailyReminder(
-            id = "hadith_muslim_223",
-            type = ReminderType.HADITH,
-            theme = "propreté",
-            arabicText = "الطُّهُورُ شَطْرُ الإِيمَانِ.",
-            frenchText = "La purification est la moitié de la foi.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih Muslim",
-            reference = "Hadith 223 • Livre 2, hadith 1",
-            authenticity = "Sahih",
-            tags = setOf("propreté", "hygiène", "pureté", "ablutions", "soin du corps", "propreté des vêtements et des lieux")
-        ),
-        DailyReminder(
-            id = "hadith_nasai_5",
-            type = ReminderType.HADITH,
-            theme = "propreté",
-            arabicText = "السِّوَاكُ مَطْهَرَةٌ لِلْفَمِ مَرْضَاةٌ لِلرَّبِّ.",
-            frenchText = "Le siwâk purifie la bouche et est une cause d’agrément du Seigneur.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sunan an-Nasa’i",
-            reference = "Hadith 5 • Livre de la purification, hadith 5",
-            authenticity = "Sahih (Darussalam)",
-            tags = setOf("hygiène bucco-dentaire", "propreté", "soin du corps", "bonnes habitudes")
-        ),
-        DailyReminder(
-            id = "hadith_bukhari_5971",
-            type = ReminderType.HADITH,
-            theme = "famille",
-            arabicText = "أُمُّكَ، ثُمَّ أُمُّكَ، ثُمَّ أُمُّكَ، ثُمَّ أَبُوكَ.",
-            frenchText = "Ta mère, puis ta mère, puis ta mère, puis ton père.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 5971 • Livre 78, hadith 2",
-            authenticity = "Sahih",
-            tags = setOf("parents", "famille", "liens de parenté", "bon comportement")
-        ),
-        DailyReminder(
-            id = "hadith_bukhari_5997",
-            type = ReminderType.HADITH,
-            theme = "famille",
-            arabicText = "مَنْ لَا يَرْحَمُ لَا يُرْحَمُ.",
-            frenchText = "Celui qui ne fait pas miséricorde ne recevra pas de miséricorde.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 5997 • Livre 78, hadith 28",
-            authenticity = "Sahih",
-            tags = setOf("enfants", "famille", "douceur", "miséricorde")
-        ),
-        DailyReminder(
-            id = "hadith_tirmidhi_3895",
-            type = ReminderType.HADITH,
-            theme = "famille",
-            arabicText = "خَيْرُكُمْ خَيْرُكُمْ لِأَهْلِهِ، وَأَنَا خَيْرُكُمْ لِأَهْلِي.",
-            frenchText = "Les meilleurs d’entre vous sont les meilleurs envers leur famille, et je suis le meilleur d’entre vous envers ma famille.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Jami’ at-Tirmidhi",
-            reference = "Hadith 3895",
-            authenticity = "Hasan gharîb sahih (at-Tirmidhi)",
-            tags = setOf("conjoint", "famille", "bonnes mœurs", "comportement")
-        ),
-        DailyReminder(
-            id = "hadith_muslim_2588",
-            type = ReminderType.HADITH,
-            theme = "pardon",
-            arabicText = "مَا نَقَصَتْ صَدَقَةٌ مِنْ مَالٍ، وَمَا زَادَ اللَّهُ عَبْدًا بِعَفْوٍ إِلَّا عِزًّا.",
-            frenchText = "L’aumône ne diminue pas les biens, et Allah n’augmente un serviteur qui pardonne qu’en dignité.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih Muslim",
-            reference = "Hadith 2588 • Livre 45, hadith 90",
-            authenticity = "Sahih",
-            tags = setOf("pardon", "générosité", "humilité", "entraide")
-        ),
-        DailyReminder(
-            id = "hadith_muslim_2999",
-            type = ReminderType.HADITH,
-            theme = "patience",
-            arabicText = "إِنْ أَصَابَتْهُ سَرَّاءُ شَكَرَ فَكَانَ خَيْرًا لَهُ، وَإِنْ أَصَابَتْهُ ضَرَّاءُ صَبَرَ فَكَانَ خَيْرًا لَهُ.",
-            frenchText = "Quand un bien l’atteint, le croyant remercie et c’est un bien pour lui ; quand une épreuve l’atteint, il patiente et c’est un bien pour lui.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih Muslim",
-            reference = "Hadith 2999 • Livre 55, hadith 82",
-            authenticity = "Sahih",
-            tags = setOf("gratitude", "patience", "maîtrise de soi", "discipline personnelle")
-        ),
-        DailyReminder(
-            id = "hadith_tirmidhi_1956",
-            type = ReminderType.HADITH,
-            theme = "communauté",
-            arabicText = "تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ.",
-            frenchText = "Ton sourire au visage de ton frère est une aumône.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Jami’ at-Tirmidhi",
-            reference = "Hadith 1956",
-            authenticity = "Hasan (Darussalam)",
-            tags = setOf("bonnes mœurs", "vie en communauté", "entraide", "douceur")
-        ),
-        DailyReminder(
-            id = "hadith_bukhari_6138",
-            type = ReminderType.HADITH,
-            theme = "liens de parenté",
-            arabicText = "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَصِلْ رَحِمَهُ.",
-            frenchText = "Que celui qui croit en Allah et au Jour dernier entretienne ses liens de parenté.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih al-Bukhari",
-            reference = "Hadith 6138 • également Muslim 47",
-            authenticity = "Sahih",
-            tags = setOf("liens de parenté", "famille", "entraide", "vie en communauté")
-        ),
-        DailyReminder(
-            id = "hadith_muslim_223_quran",
-            type = ReminderType.HADITH,
-            theme = "coran",
-            arabicText = "وَالْقُرْآنُ حُجَّةٌ لَكَ أَوْ عَلَيْكَ.",
-            frenchText = "Le Coran est une preuve en ta faveur ou contre toi.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih Muslim",
-            reference = "Hadith 223 • Livre 2, hadith 1",
-            authenticity = "Sahih",
-            tags = setOf("mise en pratique du Coran", "lecture du Coran", "discipline personnelle")
-        ),
-        DailyReminder(
-            id = "hadith_tirmidhi_1956_common_space",
-            type = ReminderType.HADITH,
-            theme = "communauté",
-            arabicText = "وَإِمَاطَتُكَ الْحَجَرَ وَالشَّوْكَةَ وَالْعَظْمَ عَنِ الطَّرِيقِ لَكَ صَدَقَةٌ.",
-            frenchText = "Retirer de la route une pierre, une épine ou un os est pour toi une aumône.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Jami’ at-Tirmidhi",
-            reference = "Hadith 1956",
-            authenticity = "Hasan (Darussalam)",
-            tags = setOf("respect des espaces communs", "propreté des lieux", "entraide", "vie en communauté")
-        ),
-        DailyReminder(
-            id = "hadith_muslim_2699_help",
-            type = ReminderType.HADITH,
-            theme = "entraide",
-            arabicText = "وَاللَّهُ فِي عَوْنِ الْعَبْدِ مَا كَانَ الْعَبْدُ فِي عَوْنِ أَخِيهِ.",
-            frenchText = "Allah vient en aide au serviteur tant que le serviteur vient en aide à son frère.",
-            author = "Prophète Muhammad ﷺ",
-            book = "Sahih Muslim",
-            reference = "Hadith 2699a • Livre 48, hadith 48",
-            authenticity = "Sahih",
-            tags = setOf("entraide", "vie en communauté", "générosité", "liens de parenté")
-        ),
+    const val EXPECTED_TOTAL = 150
+    const val EXPECTED_HADITHS = 144
+    const val EXPECTED_SCHOLAR_WISDOM = 6
+    private const val HADITH_ASSET = "reminders/verified_hadiths.json"
+
+    @Volatile
+    private var cachedHadiths: List<DailyReminder>? = null
+
+    val scholarItems: List<DailyReminder> = listOf(
         DailyReminder(
             id = "ghazali_bidaya_religion_two_halves",
             type = ReminderType.GHAZALI,
@@ -238,7 +50,14 @@ object ReminderLibrary {
             book = "Bidâyat al-Hidâya",
             reference = "Section : éviter les désobéissances",
             authenticity = null,
-            tags = setOf("discipline personnelle", "bonnes habitudes", "maîtrise de soi")
+            tags = setOf("discipline personnelle", "bonnes habitudes", "maîtrise de soi"),
+            sourceProvider = "Texte primaire vérifié",
+            sourceId = "bidaya-avoid-disobedience-1",
+            sourceVersion = "revue-2026-08-31",
+            sourceFetchedAt = "2026-08-31",
+            reviewStatus = "MANUALLY_VERIFIED_PRIMARY_TEXT",
+            translationStatus = "EDITORIAL_TRANSLATION_REVIEWED",
+            sourceUrl = null
         ),
         DailyReminder(
             id = "ghazali_bidaya_limb_guardianship",
@@ -250,19 +69,33 @@ object ReminderLibrary {
             book = "Bidâyat al-Hidâya",
             reference = "Section : éviter les désobéissances",
             authenticity = null,
-            tags = setOf("soin du corps", "discipline personnelle", "bonnes habitudes", "comportement")
+            tags = setOf("soin du corps", "discipline personnelle", "bonnes habitudes", "comportement"),
+            sourceProvider = "Texte primaire vérifié",
+            sourceId = "bidaya-avoid-disobedience-2",
+            sourceVersion = "revue-2026-08-31",
+            sourceFetchedAt = "2026-08-31",
+            reviewStatus = "MANUALLY_VERIFIED_PRIMARY_TEXT",
+            translationStatus = "EDITORIAL_TRANSLATION_REVIEWED",
+            sourceUrl = null
         ),
         DailyReminder(
             id = "ghazali_ihya_outer_inner_adab",
             type = ReminderType.GHAZALI,
-            theme = "comportement",
+            theme = "bonnes mœurs",
             arabicText = "آدَابُ الظَّوَاهِرِ عُنْوَانُ آدَابِ الْبَوَاطِنِ، وَحَرَكَاتُ الْجَوَارِحِ ثَمَرَاتُ الْخَوَاطِرِ.",
             frenchText = "Les bonnes manières extérieures révèlent celles de l’intérieur, et les gestes du corps sont les fruits des pensées.",
             author = "Abû Hâmid al-Ghazâlî",
             book = "Ihyâ’ ‘Ulûm ad-Dîn",
             reference = "Livre des règles de vie et des caractères prophétiques",
             authenticity = null,
-            tags = setOf("bonnes mœurs", "comportement", "sincérité", "bonnes habitudes")
+            tags = setOf("bonnes mœurs", "comportement", "sincérité", "bonnes habitudes"),
+            sourceProvider = "Texte primaire vérifié",
+            sourceId = "ihya-adab-living-outward-inward",
+            sourceVersion = "revue-2026-08-31",
+            sourceFetchedAt = "2026-08-31",
+            reviewStatus = "MANUALLY_VERIFIED_PRIMARY_TEXT",
+            translationStatus = "EDITORIAL_TRANSLATION_REVIEWED",
+            sourceUrl = null
         ),
         DailyReminder(
             id = "hikma_5",
@@ -274,7 +107,14 @@ object ReminderLibrary {
             book = "Al-Hikam al-‘Atâ’iyya",
             reference = "Hikma 5 (numérotation courante)",
             authenticity = null,
-            tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes")
+            tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes"),
+            sourceProvider = "Al-Hikam al-‘Atâ’iyya",
+            sourceId = "hikma-5",
+            sourceVersion = "revue-2026-08-31",
+            sourceFetchedAt = "2026-08-31",
+            reviewStatus = "MANUALLY_VERIFIED_PRIMARY_TEXT",
+            translationStatus = "EDITORIAL_TRANSLATION_REVIEWED",
+            sourceUrl = null
         ),
         DailyReminder(
             id = "hikma_10",
@@ -286,7 +126,14 @@ object ReminderLibrary {
             book = "Al-Hikam al-‘Atâ’iyya",
             reference = "Hikma 10 (numérotation courante)",
             authenticity = null,
-            tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle")
+            tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle"),
+            sourceProvider = "Al-Hikam al-‘Atâ’iyya",
+            sourceId = "hikma-10",
+            sourceVersion = "revue-2026-08-31",
+            sourceFetchedAt = "2026-08-31",
+            reviewStatus = "MANUALLY_VERIFIED_PRIMARY_TEXT",
+            translationStatus = "EDITORIAL_TRANSLATION_REVIEWED",
+            sourceUrl = null
         ),
         DailyReminder(
             id = "hikma_12",
@@ -298,11 +145,105 @@ object ReminderLibrary {
             book = "Al-Hikam al-‘Atâ’iyya",
             reference = "Hikma 12 (numérotation courante)",
             authenticity = null,
-            tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi")
+            tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi"),
+            sourceProvider = "Al-Hikam al-‘Atâ’iyya",
+            sourceId = "hikma-12",
+            sourceVersion = "revue-2026-08-31",
+            sourceFetchedAt = "2026-08-31",
+            reviewStatus = "MANUALLY_VERIFIED_PRIMARY_TEXT",
+            translationStatus = "EDITORIAL_TRANSLATION_REVIEWED",
+            sourceUrl = null
         )
     )
 
-    fun byId(id: String): DailyReminder? = items.firstOrNull { it.id == id }
+    fun all(context: Context): List<DailyReminder> =
+        verifiedHadiths(context) + scholarItems
+
+    fun byId(context: Context, id: String): DailyReminder? =
+        all(context).firstOrNull { it.id == id }
+
+    fun verifiedHadiths(context: Context): List<DailyReminder> {
+        cachedHadiths?.let { return it }
+        return synchronized(this) {
+            cachedHadiths?.let { return@synchronized it }
+            val loaded = loadHadithAsset(context)
+            cachedHadiths = loaded
+            loaded
+        }
+    }
+
+    fun hasCompleteVerifiedLibrary(context: Context): Boolean {
+        val hadiths = runCatching { verifiedHadiths(context) }.getOrDefault(emptyList())
+        return hadiths.size == EXPECTED_HADITHS &&
+            scholarItems.size == EXPECTED_SCHOLAR_WISDOM &&
+            hadiths.all { item ->
+                item.type == ReminderType.HADITH &&
+                    item.authenticity?.isNotBlank() == true &&
+                    item.reference.isNotBlank() &&
+                    item.sourceProvider == "HadeethEnc.com" &&
+                    item.sourceId.isNotBlank() &&
+                    item.sourceVersion.isNotBlank() &&
+                    item.reviewStatus == "VERIFIED_OFFICIAL_SOURCE" &&
+                    item.translationStatus == "SOURCE_TRANSLATION_UNMODIFIED"
+            } &&
+            scholarItems.all { item ->
+                item.type != ReminderType.HADITH &&
+                    item.author.isNotBlank() &&
+                    item.book.isNotBlank() &&
+                    item.reference.isNotBlank() &&
+                    item.sourceId.isNotBlank() &&
+                    item.sourceVersion.isNotBlank() &&
+                    item.reviewStatus == "MANUALLY_VERIFIED_PRIMARY_TEXT" &&
+                    item.translationStatus == "EDITORIAL_TRANSLATION_REVIEWED"
+            }
+    }
+
+    private fun loadHadithAsset(context: Context): List<DailyReminder> {
+        val raw = context.assets.open(HADITH_ASSET)
+            .bufferedReader(Charsets.UTF_8)
+            .use { it.readText() }
+        val root = JSONObject(raw)
+        check(root.getInt("count") == EXPECTED_HADITHS) {
+            "Verified hadith asset must contain exactly $EXPECTED_HADITHS entries."
+        }
+        val array = root.getJSONArray("items")
+        val items = buildList {
+            for (index in 0 until array.length()) {
+                val item = array.getJSONObject(index)
+                val tagsJson = item.getJSONArray("tags")
+                val tags = buildSet {
+                    for (tagIndex in 0 until tagsJson.length()) {
+                        add(tagsJson.getString(tagIndex))
+                    }
+                }
+                add(
+                    DailyReminder(
+                        id = item.getString("id"),
+                        type = ReminderType.HADITH,
+                        theme = item.getString("theme"),
+                        arabicText = item.getString("arabicText"),
+                        frenchText = item.getString("frenchText"),
+                        author = item.getString("author"),
+                        book = item.getString("book"),
+                        reference = item.getString("reference"),
+                        authenticity = item.getString("authenticity"),
+                        tags = tags,
+                        sourceProvider = item.getString("sourceProvider"),
+                        sourceId = item.getString("sourceId"),
+                        sourceVersion = item.getString("sourceVersion"),
+                        sourceFetchedAt = item.getString("sourceFetchedAt"),
+                        reviewStatus = item.getString("reviewStatus"),
+                        translationStatus = item.getString("translationStatus"),
+                        sourceUrl = item.optString("sourceUrl").ifBlank { null }
+                    )
+                )
+            }
+        }
+        check(items.map { it.id }.distinct().size == items.size) {
+            "Verified hadith IDs must be unique."
+        }
+        return items
+    }
 }
 
 object DailyReminderManager {
@@ -310,7 +251,11 @@ object DailyReminderManager {
     private const val DAY_KEY = "selected_epoch_day"
     private const val ID_KEY = "selected_id"
     private const val RECENT_KEY = "recent_ids"
-    private const val MAX_RECENT = 30
+    private const val NOTIFICATION_ENABLED = "notification_enabled"
+    private const val LAST_NOTIFICATION_DAY = "last_notification_epoch_day"
+    private const val MAX_RECENT = 60
+
+    const val NOTIFICATION_HOUR = 20
 
     private val weeklyThemes = listOf(
         "voisinage",
@@ -319,22 +264,51 @@ object DailyReminderManager {
         "douceur",
         "coran",
         "patience",
-        "discipline",
-        "communauté",
+        "discipline personnelle",
+        "vie en communauté",
         "sincérité",
-        "liens de parenté"
+        "maîtrise de soi",
+        "entraide",
+        "bonnes mœurs"
     )
 
-    // Hadith remains the main source while Ghazali and Hikam appear regularly.
     private val dailyTypeCycle = listOf(
+        ReminderType.HADITH,
         ReminderType.HADITH,
         ReminderType.HADITH,
         ReminderType.GHAZALI,
         ReminderType.HADITH,
         ReminderType.HIKAM,
-        ReminderType.HADITH,
         ReminderType.HADITH
     )
+
+    fun notificationsEnabled(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(NOTIFICATION_ENABLED, true)
+
+    fun setNotificationsEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(NOTIFICATION_ENABLED, enabled)
+            .apply()
+    }
+
+    fun wasNotificationShownToday(
+        context: Context,
+        date: LocalDate = LocalDate.now()
+    ): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getLong(LAST_NOTIFICATION_DAY, Long.MIN_VALUE) == date.toEpochDay()
+
+    fun markNotificationShown(
+        context: Context,
+        date: LocalDate = LocalDate.now()
+    ) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putLong(LAST_NOTIFICATION_DAY, date.toEpochDay())
+            .apply()
+    }
 
     @Synchronized
     fun today(context: Context, date: LocalDate = LocalDate.now()): DailyReminder {
@@ -344,8 +318,11 @@ object DailyReminderManager {
         val storedId = prefs.getString(ID_KEY, null)
 
         if (storedDay == epochDay && storedId != null) {
-            ReminderLibrary.byId(storedId)?.let { return it }
+            ReminderLibrary.byId(context, storedId)?.let { return it }
         }
+
+        val all = ReminderLibrary.all(context)
+        check(all.isNotEmpty()) { "Daily reminder library is empty." }
 
         val recent = prefs.getString(RECENT_KEY, "")
             .orEmpty()
@@ -356,6 +333,7 @@ object DailyReminderManager {
         val desiredType = dailyTypeCycle[Math.floorMod(date.dayOfWeek.value - 1, dailyTypeCycle.size)]
 
         val selected = chooseReminder(
+            all = all,
             epochDay = epochDay,
             theme = theme,
             desiredType = desiredType,
@@ -377,19 +355,21 @@ object DailyReminderManager {
     }
 
     private fun chooseReminder(
+        all: List<DailyReminder>,
         epochDay: Long,
         theme: String,
         desiredType: ReminderType,
         recentIds: Set<String>
     ): DailyReminder {
-        val all = ReminderLibrary.items
         val fresh = all.filterNot { it.id in recentIds }
 
+        // Weekly theme takes precedence over source-type rotation.
         val tiers = listOf(
-            fresh.filter { it.type == desiredType && (it.theme == theme || theme in it.tags) },
+            fresh.filter { it.type == desiredType && matchesTheme(it, theme) },
+            fresh.filter { matchesTheme(it, theme) },
             fresh.filter { it.type == desiredType },
-            fresh.filter { it.theme == theme || theme in it.tags },
             fresh,
+            all.filter { matchesTheme(it, theme) },
             all.filter { it.type == desiredType },
             all
         )
@@ -398,4 +378,7 @@ object DailyReminderManager {
         val seed = (epochDay xor (theme.hashCode().toLong() shl 1)).toInt()
         return candidates[Math.floorMod(seed, candidates.size)]
     }
+
+    private fun matchesTheme(item: DailyReminder, theme: String): Boolean =
+        item.theme == theme || theme in item.tags
 }
