@@ -189,7 +189,7 @@ class MushafReaderActivity : ComponentActivity() {
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
-                                    finishAffinity()
+                                    finishAndRemoveTask()
                                 }
                             }
                         ) {
