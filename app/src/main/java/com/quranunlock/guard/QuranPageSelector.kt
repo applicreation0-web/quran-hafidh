@@ -1,6 +1,6 @@
 package com.quranunlock.guard
 
-import kotlin.random.Random
+import java.security.SecureRandom
 
 enum class QuranSelectionMode {
     JUZ,
@@ -8,6 +8,8 @@ enum class QuranSelectionMode {
 }
 
 object QuranPageSelector {
+    private val secureRandom = SecureRandom()
+
     private val pagesByJuz: Map<Int, IntRange> = mapOf(
         1 to (1..21),
         2 to (22..41),
@@ -58,23 +60,56 @@ object QuranPageSelector {
             start..end
         }
 
-    fun randomPage(mode: QuranSelectionMode, selectedUnits: Set<Int>): Int {
+    fun availablePages(
+        mode: QuranSelectionMode,
+        selectedUnits: Set<Int>
+    ): List<Int> {
         val ranges = when (mode) {
             QuranSelectionMode.JUZ -> {
-                val valid = selectedUnits.filter { it in 1..30 }.ifEmpty { (1..30).toList() }
+                val valid = selectedUnits.filter { it in 1..30 }
+                    .ifEmpty { (1..30).toList() }
                 valid.map { pagesByJuz.getValue(it) }
             }
+
             QuranSelectionMode.HIZB -> {
-                val valid = selectedUnits.filter { it in 1..60 }.ifEmpty { (1..60).toList() }
+                val valid = selectedUnits.filter { it in 1..60 }
+                    .ifEmpty { (1..60).toList() }
                 valid.map { pagesByHizb.getValue(it) }
             }
         }
 
-        val candidatePages = ranges
+        return ranges
             .flatMap { it.toList() }
             .distinct()
+            .sorted()
+    }
 
-        return candidatePages[Random.nextInt(candidatePages.size)]
+    fun randomPage(
+        mode: QuranSelectionMode,
+        selectedUnits: Set<Int>,
+        recentPagesNewestFirst: List<Int>,
+        maxRecentExclusions: Int = 30
+    ): Int {
+        val candidates = availablePages(mode, selectedUnits)
+        require(candidates.isNotEmpty()) { "No Quran pages available." }
+
+        val candidateSet = candidates.toSet()
+        val maxExclusions = minOf(
+            maxRecentExclusions,
+            (candidates.size - 1).coerceAtLeast(0)
+        )
+
+        val excluded = recentPagesNewestFirst
+            .asSequence()
+            .filter { it in candidateSet }
+            .distinct()
+            .take(maxExclusions)
+            .toSet()
+
+        val eligible = candidates.filterNot { it in excluded }
+            .ifEmpty { candidates }
+
+        return eligible[secureRandom.nextInt(eligible.size)]
     }
 
     fun juzForPage(page: Int): List<Int> =
