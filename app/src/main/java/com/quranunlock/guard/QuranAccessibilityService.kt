@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 
@@ -113,7 +114,12 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
-        handleForegroundPackage(packageName)
+
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        ) {
+            handleReliableForegroundPackage(packageName)
+        }
 
         if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
@@ -138,7 +144,12 @@ class QuranAccessibilityService : AccessibilityService() {
         scheduleRetry(packageName, 900L, "retry_2")
     }
 
-    private fun handleForegroundPackage(packageName: String) {
+    private fun handleReliableForegroundPackage(packageName: String) {
+        if (packageName == currentInputMethodPackage()) {
+            // IME windows sit above the app being used. They must not pause the
+            // protected app budget merely because the user is typing.
+            return
+        }
         if (foregroundPackage == packageName) return
 
         val previousUnlocked = foregroundUnlockedPackage
@@ -156,6 +167,16 @@ class QuranAccessibilityService : AccessibilityService() {
             foregroundUnlockedPackage = packageName
         }
     }
+
+    private fun currentInputMethodPackage(): String? =
+        runCatching {
+            Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.DEFAULT_INPUT_METHOD
+            )
+                ?.substringBefore('/')
+                ?.takeIf { it.isNotBlank() }
+        }.getOrNull()
 
     private fun maybeShowUsageReminder(packageName: String) {
         val thresholds = listOf(
