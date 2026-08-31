@@ -7,6 +7,8 @@ object GuardPrefs {
     private const val UNLOCK_PREFIX = "unlock_until_"
     private const val CHALLENGE_PREFIX = "challenge_page_"
     private const val SELECTED_JUZ = "selected_juz"
+    private const val SELECTED_HIZB = "selected_hizb"
+    private const val SELECTION_MODE = "selection_mode"
 
     fun unlock(context: Context, packageName: String, durationMs: Long = 10 * 60 * 1000L) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -22,22 +24,58 @@ object GuardPrefs {
         return System.currentTimeMillis() < until
     }
 
-    fun selectedJuz(context: Context): Set<Int> {
+    fun selectionMode(context: Context): QuranSelectionMode {
         val stored = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getStringSet(SELECTED_JUZ, null)
-            ?: return (1..30).toSet()
+            .getString(SELECTION_MODE, QuranSelectionMode.JUZ.name)
 
-        return stored.mapNotNull { it.toIntOrNull() }
-            .filter { it in 1..30 }
-            .toSet()
-            .ifEmpty { (1..30).toSet() }
+        return runCatching { QuranSelectionMode.valueOf(stored ?: QuranSelectionMode.JUZ.name) }
+            .getOrDefault(QuranSelectionMode.JUZ)
     }
 
-    fun saveSelectedJuz(context: Context, juz: Set<Int>) {
-        require(juz.isNotEmpty()) { "At least one juz must be selected." }
+    fun saveSelectionMode(context: Context, mode: QuranSelectionMode) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
-            .putStringSet(SELECTED_JUZ, juz.map(Int::toString).toSet())
+            .putString(SELECTION_MODE, mode.name)
+            .apply()
+    }
+
+    fun selectedJuz(context: Context): Set<Int> =
+        readSelection(context, SELECTED_JUZ, 1..30)
+
+    fun selectedHizb(context: Context): Set<Int> =
+        readSelection(context, SELECTED_HIZB, 1..60)
+
+    fun saveSelectedJuz(context: Context, juz: Set<Int>) {
+        saveSelection(context, SELECTED_JUZ, juz, 1..30)
+    }
+
+    fun saveSelectedHizb(context: Context, hizb: Set<Int>) {
+        saveSelection(context, SELECTED_HIZB, hizb, 1..60)
+    }
+
+    private fun readSelection(context: Context, key: String, validRange: IntRange): Set<Int> {
+        val stored = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getStringSet(key, null)
+            ?: return validRange.toSet()
+
+        return stored.mapNotNull { it.toIntOrNull() }
+            .filter { it in validRange }
+            .toSet()
+            .ifEmpty { validRange.toSet() }
+    }
+
+    private fun saveSelection(
+        context: Context,
+        key: String,
+        values: Set<Int>,
+        validRange: IntRange
+    ) {
+        require(values.isNotEmpty()) { "At least one Quran section must be selected." }
+        require(values.all { it in validRange }) { "Invalid Quran section." }
+
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putStringSet(key, values.map(Int::toString).toSet())
             .apply()
     }
 
@@ -47,7 +85,13 @@ object GuardPrefs {
         val existing = prefs.getInt(key, 0)
         if (existing in 1..604) return existing
 
-        val page = QuranPageSelector.randomPage(selectedJuz(context))
+        val mode = selectionMode(context)
+        val selectedUnits = when (mode) {
+            QuranSelectionMode.JUZ -> selectedJuz(context)
+            QuranSelectionMode.HIZB -> selectedHizb(context)
+        }
+
+        val page = QuranPageSelector.randomPage(mode, selectedUnits)
         prefs.edit().putInt(key, page).apply()
         return page
     }
