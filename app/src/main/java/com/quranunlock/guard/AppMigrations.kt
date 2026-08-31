@@ -2,6 +2,7 @@ package com.applicreation0.quransafeguard
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 
 data class MigrationResult(
     val fromSchema: Int,
@@ -108,8 +109,12 @@ object AppMigrations {
     ) {
         val versionCode = runCatching {
             val info = context.packageManager.getPackageInfo(context.packageName, 0)
-            @Suppress("DEPRECATION")
-            info.longVersionCode
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode.toLong()
+            }
         }.getOrDefault(0L)
 
         state.edit()
