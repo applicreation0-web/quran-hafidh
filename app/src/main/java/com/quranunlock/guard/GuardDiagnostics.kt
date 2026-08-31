@@ -30,7 +30,7 @@ object GuardDiagnostics {
             sanitize(code),
             sanitize(packageName.orEmpty()),
             sanitize(detail)
-        ).joinToString("	")
+        ).joinToString("\t")
 
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val existing = prefs.getString(LOG, "").orEmpty()
@@ -43,8 +43,7 @@ object GuardDiagnostics {
             addAll(existing)
         }.take(MAX_ENTRIES)
 
-        prefs.edit().putString(LOG, updated.joinToString("
-")).apply()
+        prefs.edit().putString(LOG, updated.joinToString("\n")).apply()
     }
 
     fun recent(context: Context, limit: Int = 12): List<DiagnosticEntry> =
@@ -71,7 +70,7 @@ object GuardDiagnostics {
     }
 
     private fun parse(raw: String): DiagnosticEntry? {
-        val parts = raw.split('	', limit = 4)
+        val parts = raw.split('\t', limit = 4)
         if (parts.size < 4) return null
         val epoch = parts[0].toLongOrNull() ?: return null
         return DiagnosticEntry(
@@ -83,6 +82,5 @@ object GuardDiagnostics {
     }
 
     private fun sanitize(value: String): String =
-        value.replace('	', ' ').replace('
-', ' ')
+        value.replace('\t', ' ').replace('\n', ' ')
 }
