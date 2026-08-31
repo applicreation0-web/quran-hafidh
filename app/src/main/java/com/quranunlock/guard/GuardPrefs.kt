@@ -1,8 +1,11 @@
 package com.quranunlock.guard
 
 import android.content.Context
+import java.time.LocalDate
 
 object GuardPrefs {
+    const val DAILY_JOKERS = 3
+
     private const val FILE = "guard_prefs"
     private const val UNLOCK_PREFIX = "unlock_until_"
     private const val CHALLENGE_PREFIX = "challenge_page_"
@@ -11,6 +14,8 @@ object GuardPrefs {
     private const val SELECTION_MODE = "selection_mode"
     private const val PROTECTED_PACKAGES = "protected_packages"
     private const val UNLOCK_MINUTES = "unlock_minutes"
+    private const val JOKER_DAY = "joker_epoch_day"
+    private const val JOKERS_USED = "jokers_used"
 
     fun unlock(context: Context, packageName: String) {
         val durationMs = unlockMinutes(context) * 60_000L
@@ -38,6 +43,51 @@ object GuardPrefs {
             .edit()
             .putInt(UNLOCK_MINUTES, minutes)
             .apply()
+    }
+
+    @Synchronized
+    fun remainingJokers(context: Context): Int {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        normalizeJokerDay(prefs)
+        return (DAILY_JOKERS - prefs.getInt(JOKERS_USED, 0)).coerceIn(0, DAILY_JOKERS)
+    }
+
+    @Synchronized
+    fun consumeJoker(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        normalizeJokerDay(prefs)
+
+        val used = prefs.getInt(JOKERS_USED, 0).coerceAtLeast(0)
+        if (used >= DAILY_JOKERS) return false
+
+        prefs.edit()
+            .putInt(JOKERS_USED, used + 1)
+            .commit()
+
+        return true
+    }
+
+    private fun normalizeJokerDay(prefs: android.content.SharedPreferences) {
+        val currentDay = LocalDate.now().toEpochDay()
+        val storedDay = prefs.getLong(JOKER_DAY, Long.MIN_VALUE)
+
+        when {
+            storedDay == Long.MIN_VALUE -> {
+                prefs.edit()
+                    .putLong(JOKER_DAY, currentDay)
+                    .putInt(JOKERS_USED, 0)
+                    .commit()
+            }
+            currentDay > storedDay -> {
+                prefs.edit()
+                    .putLong(JOKER_DAY, currentDay)
+                    .putInt(JOKERS_USED, 0)
+                    .commit()
+            }
+            currentDay < storedDay -> {
+                // Date rollback detected: do not refill jokers.
+            }
+        }
     }
 
     fun protectedPackages(context: Context): Set<String> {
