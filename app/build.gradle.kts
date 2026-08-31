@@ -5,19 +5,19 @@ plugins {
 
 val verifyMushafPages by tasks.registering {
     doLast {
-        val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg")
+        val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
         val missing = (1..604).filter { page ->
-            !mushafDir.resolve("%03d.svg".format(page)).isFile
+            !mushafDir.resolve("%03d.svg.br".format(page)).isFile
         }
 
         check(missing.isEmpty()) {
-            "Missing Medina Mushaf SVG pages: " +
+            "Missing Medina Mushaf Brotli pages: " +
                 missing.take(10).joinToString() +
                 ". Run scripts/fetch_mushaf_pages.sh before building."
         }
 
         check(mushafDir.listFiles { file ->
-            file.isFile && file.name.matches(Regex("\\d{3}\\.svg"))
+            file.isFile && file.name.matches(Regex("\\d{3}\\.svg\\.br"))
         }?.size == 604) {
             "The embedded Hafs/KFQC Mushaf must contain exactly 604 canonical pages."
         }
@@ -53,6 +53,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("org.brotli:dec:0.1.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
 }
