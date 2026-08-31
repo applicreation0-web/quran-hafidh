@@ -9,8 +9,11 @@ object GuardPrefs {
     private const val SELECTED_JUZ = "selected_juz"
     private const val SELECTED_HIZB = "selected_hizb"
     private const val SELECTION_MODE = "selection_mode"
+    private const val PROTECTED_PACKAGES = "protected_packages"
+    private const val UNLOCK_MINUTES = "unlock_minutes"
 
-    fun unlock(context: Context, packageName: String, durationMs: Long = 10 * 60 * 1000L) {
+    fun unlock(context: Context, packageName: String) {
+        val durationMs = unlockMinutes(context) * 60_000L
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putLong(UNLOCK_PREFIX + packageName, System.currentTimeMillis() + durationMs)
@@ -22,6 +25,38 @@ object GuardPrefs {
         val until = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .getLong(UNLOCK_PREFIX + packageName, 0L)
         return System.currentTimeMillis() < until
+    }
+
+    fun unlockMinutes(context: Context): Int =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getInt(UNLOCK_MINUTES, 10)
+            .coerceIn(1, 120)
+
+    fun saveUnlockMinutes(context: Context, minutes: Int) {
+        require(minutes in setOf(1, 5, 10, 15, 30, 60, 120))
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(UNLOCK_MINUTES, minutes)
+            .apply()
+    }
+
+    fun protectedPackages(context: Context): Set<String> {
+        val stored = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getStringSet(PROTECTED_PACKAGES, null)
+            ?: return ProtectedApps.defaultPackages
+        return stored.toSet()
+    }
+
+    fun saveProtectedPackages(context: Context, packages: Set<String>) {
+        val filtered = packages
+            .filterNot { ProtectedApps.isAlwaysAllowed(it) }
+            .filterNot { it == ProtectedApps.ANDROID_SETTINGS }
+            .toSet()
+
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putStringSet(PROTECTED_PACKAGES, filtered)
+            .apply()
     }
 
     fun selectionMode(context: Context): QuranSelectionMode {
