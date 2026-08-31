@@ -2,6 +2,11 @@ package com.quranunlock.guard
 
 import kotlin.random.Random
 
+enum class QuranSelectionMode {
+    JUZ,
+    HIZB
+}
+
 object QuranPageSelector {
     private val pagesByJuz: Map<Int, IntRange> = mapOf(
         1 to (1..21),
@@ -36,14 +41,45 @@ object QuranPageSelector {
         30 to (582..604)
     )
 
-    fun randomPage(selectedJuz: Set<Int>): Int {
-        val validJuz = selectedJuz.filter { it in 1..30 }.ifEmpty { (1..30).toList() }
-        val candidatePages = validJuz
-            .flatMap { pagesByJuz.getValue(it).toList() }
+    // First Madani Mushaf page containing the start of each of the 60 Hizb.
+    private val hizbStartPages = listOf(
+        1, 11, 22, 32, 42, 51, 62, 72, 82, 92,
+        102, 112, 121, 132, 142, 151, 162, 173, 182, 192,
+        201, 212, 222, 231, 242, 252, 262, 272, 282, 292,
+        302, 312, 322, 332, 342, 352, 362, 371, 382, 392,
+        402, 413, 422, 431, 442, 451, 462, 472, 482, 491,
+        502, 513, 522, 531, 542, 553, 562, 572, 582, 591
+    )
+
+    private val pagesByHizb: Map<Int, IntRange> =
+        (1..60).associateWith { hizb ->
+            val start = hizbStartPages[hizb - 1]
+            val end = if (hizb == 60) 604 else hizbStartPages[hizb]
+            start..end
+        }
+
+    fun randomPage(mode: QuranSelectionMode, selectedUnits: Set<Int>): Int {
+        val ranges = when (mode) {
+            QuranSelectionMode.JUZ -> {
+                val valid = selectedUnits.filter { it in 1..30 }.ifEmpty { (1..30).toList() }
+                valid.map { pagesByJuz.getValue(it) }
+            }
+            QuranSelectionMode.HIZB -> {
+                val valid = selectedUnits.filter { it in 1..60 }.ifEmpty { (1..60).toList() }
+                valid.map { pagesByHizb.getValue(it) }
+            }
+        }
+
+        val candidatePages = ranges
+            .flatMap { it.toList() }
             .distinct()
+
         return candidatePages[Random.nextInt(candidatePages.size)]
     }
 
     fun juzForPage(page: Int): List<Int> =
         pagesByJuz.filterValues { page in it }.keys.sorted()
+
+    fun hizbForPage(page: Int): List<Int> =
+        pagesByHizb.filterValues { page in it }.keys.sorted()
 }
