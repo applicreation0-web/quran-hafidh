@@ -176,7 +176,7 @@ class GateActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReadingAndUnlock(
                                     this@GateActivity,
                                     challengeKey,
                                     page
@@ -187,10 +187,22 @@ class GateActivity : ComponentActivity() {
                                         this@GateActivity,
                                         "READING_UNLOCKED",
                                         challengeKey,
-                                        "page=$page"
+                                        "page=$page elapsedMs=$elapsed"
                                     )
                                     setResult(Activity.RESULT_OK)
-                                    finishAndRemoveTask()
+                                    startActivity(
+                                        Intent(
+                                            this@GateActivity,
+                                            ReadingCompleteActivity::class.java
+                                        ).apply {
+                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
+                                            putExtra(
+                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
+                                                elapsed
+                                            )
+                                        }
+                                    )
+                                    finish()
                                 }
                             }
                         ) {
