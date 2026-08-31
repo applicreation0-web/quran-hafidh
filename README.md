@@ -23,6 +23,10 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - Arabic is shown first, followed by French and an identifiable source.
 - Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
 - Hadith, al-Ghazali quotations and al-Hikam are explicitly distinguished.
+- Al-Hikam al-'Ata'iyya are stored as a dedicated offline `author_wisdom` corpus, never as hadith.
+- Version 0.9.0 contains 264 verified and French-translated Hikam using the reference numbering 1–264; each entry retains its edition, source number, source provenance, translation provenance and themes.
+- The Al-Hikam library is searchable offline by number, Arabic/French text, theme or author.
+- No Hikma is eligible for reminders unless both its Arabic verification and French translation status are `verified`.
 - Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
 - No transliteration is shown by default.
 - A gentle daily notification targets 20:00 local time.
