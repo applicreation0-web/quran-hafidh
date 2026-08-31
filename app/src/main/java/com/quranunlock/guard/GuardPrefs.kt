@@ -601,7 +601,7 @@ object GuardPrefs {
             page = parts[2].toIntOrNull() ?: return null,
             elapsedMs = parts[3].toLongOrNull() ?: return null,
             method = parts[4],
-            atypicalFast = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: false
+            atypicalFast = parts.getOrNull(5) == "true"
         )
     }
 
