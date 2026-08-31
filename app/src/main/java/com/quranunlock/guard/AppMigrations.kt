@@ -36,9 +36,12 @@ object AppMigrations {
         }
 
         val backupSchema = readIntSafely(state, LAST_BACKUP_SCHEMA_KEY, 0)
+        var completeBackupAvailable = backupSchema >= CURRENT_SCHEMA
+
         return runCatching {
-            if (backupSchema < CURRENT_SCHEMA) {
+            if (!completeBackupAvailable) {
                 backupAllPersistentData(context, CURRENT_SCHEMA)
+                completeBackupAvailable = true
                 check(
                     state.edit()
                         .putInt(LAST_BACKUP_SCHEMA_KEY, CURRENT_SCHEMA)
@@ -62,7 +65,9 @@ object AppMigrations {
             rememberCurrentAppVersion(context, state)
             MigrationResult(from, CURRENT_SCHEMA, true)
         }.getOrElse { error ->
-            runCatching { restoreAllPersistentData(context, CURRENT_SCHEMA) }
+            if (completeBackupAvailable) {
+                runCatching { restoreAllPersistentData(context, CURRENT_SCHEMA) }
+            }
             state.edit()
                 .putInt(SCHEMA_KEY, from)
                 .apply()
