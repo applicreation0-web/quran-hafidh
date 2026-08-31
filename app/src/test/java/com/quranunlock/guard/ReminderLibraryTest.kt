@@ -9,7 +9,7 @@ class ReminderLibraryTest {
     @Test
     fun reminderIdsAreUniqueAndRequiredFieldsArePresent() {
         val items = ReminderLibrary.items
-        assertTrue(items.isNotEmpty())
+        assertEquals(23, items.size)
         assertEquals(items.size, items.map { it.id }.distinct().size)
 
         items.forEach { item ->
