@@ -78,3 +78,13 @@ Other downsides of sideloading:
 - users are more likely to confuse a copied or modified APK with the official build.
 
 For Quran Safeguard's current goals — private, simple and secure — Internal Testing is the recommended route.
+
+
+## Do not mix official delivery channels after Play App Signing
+
+When Play App Signing is enabled, Google Play holds the app-signing key used for the APKs delivered to users, while the developer normally keeps a separate upload key for AAB uploads.
+
+Therefore, do not treat an APK signed only with a different local/upload key as an interchangeable update for a Play-installed build. Android requires compatible application signatures for in-place updates.
+
+For invited testers, keep one official route:
+**Play Console internal/closed test → Google Play installation → Google Play updates.**
