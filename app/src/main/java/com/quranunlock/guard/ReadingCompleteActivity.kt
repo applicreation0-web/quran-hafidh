@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 class ReadingCompleteActivity : ComponentActivity() {
     companion object {
         const val EXTRA_PAGE = "page"
+        const val EXTRA_CHALLENGE_KEY = "challenge_key"
         const val EXTRA_ELAPSED_MS = "elapsed_ms"
     }
 
@@ -31,7 +32,12 @@ class ReadingCompleteActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val page = intent.getIntExtra(EXTRA_PAGE, 0)
+        val challengeKey = intent.getStringExtra(EXTRA_CHALLENGE_KEY).orEmpty()
         val elapsedMs = intent.getLongExtra(EXTRA_ELAPSED_MS, 0L)
+        if (page !in 1..604 || challengeKey.isBlank()) {
+            finish()
+            return
+        }
         val reminder = DailyReminderManager.today(this)
         val today = GuardPrefs.dailyReadingSummary(this)
 
@@ -42,7 +48,18 @@ class ReadingCompleteActivity : ComponentActivity() {
                     elapsedMs = elapsedMs,
                     today = today,
                     reminder = reminder,
-                    onContinue = { finishAndRemoveTask() }
+                    onContinue = {
+                        if (GuardPrefs.unlockAfterReadingSummary(this, challengeKey, page)) {
+                            GuardRuntime.interception.markUnlocked(challengeKey)
+                            GuardDiagnostics.log(
+                                this,
+                                "READING_UNLOCKED_AFTER_SUMMARY",
+                                challengeKey,
+                                "page=$page elapsedMs=$elapsedMs"
+                            )
+                            finishAndRemoveTask()
+                        }
+                    }
                 )
             }
         }
