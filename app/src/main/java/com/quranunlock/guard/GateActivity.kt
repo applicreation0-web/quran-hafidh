@@ -2,7 +2,6 @@ package com.quranunlock.guard
 
 import android.app.Activity
 import android.os.Bundle
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -14,12 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,15 +30,8 @@ import kotlinx.coroutines.delay
 class GateActivity : ComponentActivity() {
     companion object {
         const val EXTRA_TARGET_PACKAGE = "target_package"
+        private const val MIN_READING_SECONDS = 60
     }
-
-    private data class Verse(val arabic: String, val translation: String, val reference: String)
-
-    private val verses = listOf(
-        Verse("وَالْعَصْرِ", "Par le Temps !", "Al-ʿAsr 103:1"),
-        Verse("إِنَّ الْإِنسَانَ لَفِي خُسْرٍ", "L’être humain est certes en perdition.", "Al-ʿAsr 103:2"),
-        Verse("إِنَّ مَعَ الْعُسْرِ يُسْرًا", "Avec la difficulté est certes une facilité.", "Ash-Sharh 94:6")
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,14 +41,17 @@ class GateActivity : ComponentActivity() {
             return
         }
 
-        val verse = verses[(SystemClock.elapsedRealtime() % verses.size).toInt()]
+        val page = GuardPrefs.challengePage(this, targetPackage)
+        val juzLabels = QuranPageSelector.juzForPage(page).joinToString(" / ") { "Juz $it" }
 
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var secondsLeft by remember { mutableIntStateOf(12) }
+                    var secondsLeft by remember { mutableIntStateOf(MIN_READING_SECONDS) }
+                    var quranOpened by remember { mutableStateOf(false) }
 
-                    LaunchedEffect(Unit) {
+                    LaunchedEffect(quranOpened) {
+                        if (!quranOpened) return@LaunchedEffect
                         while (secondsLeft > 0) {
                             delay(1000)
                             secondsLeft--
@@ -70,39 +65,48 @@ class GateActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Lis avant de continuer", style = MaterialTheme.typography.headlineMedium)
-                        Spacer(Modifier.height(32.dp))
+                        Text("Une page avant de continuer", style = MaterialTheme.typography.headlineMedium)
+                        Spacer(Modifier.height(28.dp))
                         Text(
-                            verse.arabic,
-                            style = MaterialTheme.typography.headlineLarge,
+                            "Page $page",
+                            style = MaterialTheme.typography.displayMedium,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(Modifier.height(18.dp))
-                        Text(verse.translation, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(8.dp))
-                        Text(verse.reference, style = MaterialTheme.typography.labelLarge)
+                        Text(juzLabels, style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Lis entièrement cette page dans Quran for Android, puis reviens ici.",
+                            textAlign = TextAlign.Center
+                        )
                         Spacer(Modifier.height(28.dp))
 
-                        OutlinedButton(
+                        Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
+                                quranOpened = true
                                 QuranReaderLauncher.open(this@GateActivity)
                             }
                         ) {
-                            Text("Lire dans Quran for Android")
+                            Text("Ouvrir Quran — page $page")
                         }
 
                         Spacer(Modifier.height(12.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = secondsLeft == 0,
+                            enabled = quranOpened && secondsLeft == 0,
                             onClick = {
                                 GuardPrefs.unlock(this@GateActivity, targetPackage)
                                 setResult(Activity.RESULT_OK)
                                 finish()
                             }
                         ) {
-                            Text(if (secondsLeft > 0) "Lecture… " + secondsLeft + "s" else "J’ai lu — déverrouiller")
+                            val label = when {
+                                !quranOpened -> "Ouvre d’abord Quran"
+                                secondsLeft > 0 -> "Lecture en cours… " + secondsLeft + "s"
+                                else -> "J’ai lu entièrement la page $page"
+                            }
+                            Text(label)
                         }
                     }
                 }
