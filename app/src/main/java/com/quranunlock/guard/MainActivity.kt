@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -32,15 +33,29 @@ import androidx.compose.ui.unit.dp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val selected = remember {
+                    var mode by remember {
+                        mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
+                    }
+                    val selectedJuz = remember {
                         mutableStateListOf<Int>().apply {
                             addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
                         }
                     }
+                    val selectedHizb = remember {
+                        mutableStateListOf<Int>().apply {
+                            addAll(GuardPrefs.selectedHizb(this@MainActivity).sorted())
+                        }
+                    }
                     var saved by remember { mutableStateOf(false) }
+
+                    val currentSelection =
+                        if (mode == QuranSelectionMode.JUZ) selectedJuz else selectedHizb
+                    val maxUnit = if (mode == QuranSelectionMode.JUZ) 30 else 60
+                    val unitLabel = if (mode == QuranSelectionMode.JUZ) "Juz" else "Hizb"
 
                     Column(
                         modifier = Modifier
@@ -50,31 +65,65 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Text("Quran Unlock", style = MaterialTheme.typography.headlineLarge)
                         Spacer(Modifier.height(12.dp))
-                        Text("Choisis les juz dans lesquels Quran Unlock pourra sélectionner la page obligatoire.")
-                        Spacer(Modifier.height(20.dp))
+                        Text("Choisis comment limiter les pages qui pourront être imposées.")
+                        Spacer(Modifier.height(16.dp))
 
-                        (1..30).chunked(3).forEach { rowJuz ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = mode == QuranSelectionMode.JUZ,
+                                onClick = {
+                                    mode = QuranSelectionMode.JUZ
+                                    saved = false
+                                }
+                            )
+                            Text("Par Juz")
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(
+                                selected = mode == QuranSelectionMode.HIZB,
+                                onClick = {
+                                    mode = QuranSelectionMode.HIZB
+                                    saved = false
+                                }
+                            )
+                            Text("Par Hizb — sélection plus précise")
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            if (mode == QuranSelectionMode.JUZ) {
+                                "Sélectionne un ou plusieurs des 30 juz."
+                            } else {
+                                "Sélectionne un ou plusieurs des 60 hizb. Pratique si tu ne mémorises encore qu’une petite partie du Coran."
+                            }
+                        )
+                        Spacer(Modifier.height(16.dp))
+
+                        (1..maxUnit).chunked(3).forEach { rowUnits ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                rowJuz.forEach { juz ->
+                                rowUnits.forEach { unit ->
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.weight(1f)
                                     ) {
                                         Checkbox(
-                                            checked = juz in selected,
+                                            checked = unit in currentSelection,
                                             onCheckedChange = { checked ->
                                                 saved = false
                                                 if (checked) {
-                                                    if (juz !in selected) selected.add(juz)
-                                                } else if (selected.size > 1) {
-                                                    selected.remove(juz)
+                                                    if (unit !in currentSelection) {
+                                                        currentSelection.add(unit)
+                                                    }
+                                                } else if (currentSelection.size > 1) {
+                                                    currentSelection.remove(unit)
                                                 }
                                             }
                                         )
-                                        Text("Juz $juz")
+                                        Text("$unitLabel $unit")
                                     }
                                 }
                             }
@@ -83,19 +132,38 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(16.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = selected.isNotEmpty(),
+                            enabled = currentSelection.isNotEmpty(),
                             onClick = {
-                                GuardPrefs.saveSelectedJuz(this@MainActivity, selected.toSet())
+                                GuardPrefs.saveSelectionMode(this@MainActivity, mode)
+                                when (mode) {
+                                    QuranSelectionMode.JUZ ->
+                                        GuardPrefs.saveSelectedJuz(
+                                            this@MainActivity,
+                                            selectedJuz.toSet()
+                                        )
+                                    QuranSelectionMode.HIZB ->
+                                        GuardPrefs.saveSelectedHizb(
+                                            this@MainActivity,
+                                            selectedHizb.toSet()
+                                        )
+                                }
                                 saved = true
                             }
                         ) {
-                            Text(if (saved) "Juz enregistrés ✓" else "Enregistrer les juz")
+                            Text(
+                                if (saved) {
+                                    "Sélection enregistrée ✓"
+                                } else {
+                                    "Enregistrer la sélection"
+                                }
+                            )
                         }
 
                         Spacer(Modifier.height(28.dp))
                         Text(
-                            "À chaque nouveau blocage, une seule page est tirée au sort parmi ces juz. " +
-                                "La même page reste imposée jusqu’à validation."
+                            "À chaque nouveau blocage, une page est choisie uniquement dans les " +
+                                unitLabel.lowercase() +
+                                " sélectionnés. La page reste la même jusqu’à validation."
                         )
                         Spacer(Modifier.height(20.dp))
 
