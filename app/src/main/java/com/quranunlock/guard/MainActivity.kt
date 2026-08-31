@@ -168,7 +168,7 @@ class MainActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "Coche les applications qui devront demander une page. " +
-                                "Paramètres Android reste toujours protégé. Google Play et Quran restent toujours autorisés."
+                                "Paramètres Android reste toujours protégé. Google Play reste toujours autorisé ; le Mushaf est intégré à Quran Unlock."
                         )
                         Spacer(Modifier.height(12.dp))
 
