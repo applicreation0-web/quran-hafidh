@@ -7,10 +7,11 @@ object ProtectedApps {
     const val ANDROID_SETTINGS = "com.android.settings"
 
     private val alwaysAllowed = setOf(
-        PLAY_STORE
+        PLAY_STORE,
+        ANDROID_SETTINGS
     )
 
-    val defaultPackages = setOf(
+    private val defaultAwarenessApps = setOf(
         "com.google.android.youtube",
         "com.whatsapp",
         "org.telegram.messenger",
@@ -20,16 +21,11 @@ object ProtectedApps {
         "com.instagram.android",
         "com.facebook.katana",
         "com.twitter.android",
-        "com.zhiliaoapp.musically",
-        "com.google.android.apps.chrome",
-        "org.mozilla.firefox",
-        "com.brave.browser",
-        "com.opera.browser",
-        "com.opera.mini.native",
-        "com.microsoft.emmx",
-        "com.sec.android.app.sbrowser",
-        "com.duckduckgo.mobile.android"
+        "com.zhiliaoapp.musically"
     )
+
+    val defaultPackages: Set<String> =
+        defaultAwarenessApps + BrowserDetector.supportedPackages
 
     fun isAlwaysAllowed(packageName: String): Boolean =
         packageName in alwaysAllowed
@@ -37,8 +33,8 @@ object ProtectedApps {
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
         if (isAlwaysAllowed(packageName)) return false
-        if (packageName == ANDROID_SETTINGS) return true
 
+        // Web coverage is deliberately limited to the eight supported browsers.
         if (BrowserDetector.isBrowser(context, packageName)) return true
 
         return packageName in GuardPrefs.protectedPackages(context)
