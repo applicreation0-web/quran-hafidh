@@ -71,7 +71,7 @@ class GateActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme {
+            QuranSafeguardTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var readingMs by remember {
                         mutableLongStateOf(
@@ -139,7 +139,11 @@ class GateActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = readingComplete,
                             onClick = {
-                                GuardPrefs.unlock(this@GateActivity, challengeKey)
+                                GuardPrefs.completeReadingAndUnlock(
+                                    this@GateActivity,
+                                    challengeKey,
+                                    page
+                                )
                                 setResult(Activity.RESULT_OK)
                                 finish()
                             }
