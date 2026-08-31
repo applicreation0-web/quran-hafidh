@@ -154,5 +154,6 @@ class QuranSafeguardApp : android.app.Application() {
             code = if (result.succeeded) "MIGRATION_OK" else "MIGRATION_DEFERRED",
             detail = "schema=" + result.fromSchema + "->" + result.toSchema
         )
+        MindfulReminderScheduler.scheduleAll(this)
     }
 }
