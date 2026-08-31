@@ -1,7 +1,10 @@
 package com.applicreation0.quransafeguard
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -49,7 +52,29 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
+        DailyReminderScheduler.scheduleNext(this)
         refreshState.value += 1
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        refreshState.value += 1
+    }
+
+    private fun requestReminderNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                DailyReminderManager.NOTIFICATION_HOUR * 100 + 1
+            )
+        }
     }
 
     private fun openAccessibilitySettings() {
@@ -73,14 +98,17 @@ class MainActivity : ComponentActivity() {
         val guide = """
             Quran Safeguard 🌿
 
-            Installation simple :
-            1. Installe l’application qui t’a été envoyée.
-            2. Ouvre Quran Safeguard.
-            3. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
-            4. Autorise l’application à fonctionner normalement en arrière-plan si Android te le demande.
-            5. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
-            6. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
+            Installation simple et sûre :
+            1. Ouvre le lien privé Google Play qui t’a été envoyé.
+            2. Vérifie que tu utilises le compte Google invité au test.
+            3. Appuie sur “Participer au test” si Google Play le propose.
+            4. Installe Quran Safeguard directement depuis Google Play, puis ouvre l’application.
+            5. Lis l’explication du service d’accessibilité et active la protection si tu souhaites l’utiliser.
+            6. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
+            7. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
+            8. Si tu le souhaites, autorise le rappel quotidien discret de 20h.
 
+            Pour ta sécurité, n’installe pas d’APK reçu par message, e-mail ou site tiers.
             Si une étape te semble inhabituelle, reviens simplement dans Quran Safeguard : le guide reste disponible.
             Bonne installation 🌿
         """.trimIndent()
@@ -204,7 +232,17 @@ class MainActivity : ComponentActivity() {
         val recentDiagnostics = GuardDiagnostics.recent(this@MainActivity, 5)
         val recentHistory = GuardPrefs.readingHistory(this@MainActivity, 5)
         val todayReminder = remember(refreshToken) {
-            DailyReminderManager.today(this@MainActivity)
+            runCatching { DailyReminderManager.today(this@MainActivity) }.getOrNull()
+        }
+        var reminderNotificationsEnabled by remember(refreshToken) {
+            mutableStateOf(DailyReminderManager.notificationsEnabled(this@MainActivity))
+        }
+        val notificationPermissionMissing =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+        val reminderLibraryVerified = remember(refreshToken) {
+            ReminderLibrary.hasCompleteVerifiedLibrary(this@MainActivity)
         }
 
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -345,7 +383,77 @@ class MainActivity : ComponentActivity() {
                 }
 
                 SectionTitle("Rappel du jour")
-                DailyReminderCard(reminder = todayReminder)
+                if (todayReminder != null) {
+                    DailyReminderCard(reminder = todayReminder)
+                } else {
+                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            "La bibliothèque locale de rappels n’est pas disponible. Aucun contenu non vérifié ne sera affiché.",
+                            modifier = Modifier.padding(18.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = reminderNotificationsEnabled,
+                                onCheckedChange = { enabled ->
+                                    reminderNotificationsEnabled = enabled
+                                    DailyReminderManager.setNotificationsEnabled(
+                                        this@MainActivity,
+                                        enabled
+                                    )
+                                    if (enabled) {
+                                        DailyReminderScheduler.scheduleNext(this@MainActivity)
+                                    } else {
+                                        DailyReminderScheduler.cancel(this@MainActivity)
+                                    }
+                                }
+                            )
+                            Column {
+                                Text(
+                                    "Rappel discret chaque jour à 20h",
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    "Même rappel que dans l’application • sans vibration",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (reminderNotificationsEnabled && notificationPermissionMissing) {
+                            OutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { requestReminderNotificationPermission() }
+                            ) {
+                                Text("Autoriser le rappel de 20h")
+                            }
+                        }
+
+                        Text(
+                            if (reminderLibraryVerified) {
+                                "Bibliothèque locale vérifiée : " +
+                                    ReminderLibrary.EXPECTED_TOTAL + " rappels."
+                            } else {
+                                "Vérification de la bibliothèque requise avant diffusion."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (reminderLibraryVerified) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
+                        )
+                    }
+                }
 
                 SectionTitle("Suivi de lecture")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -689,11 +797,16 @@ class MainActivity : ComponentActivity() {
                             "Une installation simple, étape par étape 🌿",
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text("1. Installer puis ouvrir Quran Safeguard.")
-                        Text("2. Activer calmement la protection dans les réglages d’accessibilité.")
-                        Text("3. Autoriser le fonctionnement en arrière-plan si Android le propose.")
-                        Text("4. Choisir les applications et les Juz/Hizb souhaités.")
-                        Text("5. Tester la protection pour confirmer que tout fonctionne.")
+                        Text("1. Ouvrir le lien privé Google Play avec le compte invité.")
+                        Text("2. Participer au test puis installer depuis Google Play.")
+                        Text("3. Ouvrir Quran Safeguard et lire l’explication de la protection.")
+                        Text("4. Activer l’accessibilité si souhaité, puis choisir applications et Juz/Hizb.")
+                        Text("5. Tester la protection et, si souhaité, autoriser le rappel discret de 20h.")
+                        Text(
+                            "Ne jamais installer une copie reçue par message, e-mail ou site tiers.",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
                         Text(
                             "Le guide peut être partagé avec une invitation afin que la personne sache exactement quoi faire.",
                             style = MaterialTheme.typography.bodySmall,
