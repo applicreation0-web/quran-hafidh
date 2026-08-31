@@ -65,6 +65,19 @@ fun DailyReminderCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Text(
+                if (reminder.type == ReminderType.HADITH) {
+                    "Source/Traduction : " + reminder.sourceProvider +
+                        " • " + reminder.sourceVersion +
+                        " • ID " + reminder.sourceId
+                } else {
+                    "Source vérifiée : " + reminder.sourceProvider +
+                        " • " + reminder.reviewStatus
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
