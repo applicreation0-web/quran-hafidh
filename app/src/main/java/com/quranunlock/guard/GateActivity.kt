@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,6 +59,29 @@ class GateActivity : ComponentActivity() {
             finish()
             return
         }
+
+        GuardRuntime.interception.markGateVisible(challengeKey)
+        GuardDiagnostics.log(this, "GATE_VISIBLE", challengeKey)
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    GuardDiagnostics.log(
+                        this@GateActivity,
+                        "GATE_BACK_TO_HOME",
+                        challengeKey
+                    )
+                    startActivity(
+                        Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_HOME)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    )
+                    finish()
+                }
+            }
+        )
 
         val page = GuardPrefs.challengePage(this, challengeKey)
         GuardPrefs.ensureReadingSession(this, challengeKey, page)
@@ -144,8 +168,15 @@ class GateActivity : ComponentActivity() {
                                     challengeKey,
                                     page
                                 )
+                                GuardRuntime.interception.markUnlocked(challengeKey)
+                                GuardDiagnostics.log(
+                                    this@GateActivity,
+                                    "READING_UNLOCKED",
+                                    challengeKey,
+                                    "page=$page"
+                                )
                                 setResult(Activity.RESULT_OK)
-                                finish()
+                                finishAffinity()
                             }
                         ) {
                             Text(
@@ -169,8 +200,14 @@ class GateActivity : ComponentActivity() {
                                         this@GateActivity,
                                         challengeKey
                                     )
+                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                    GuardDiagnostics.log(
+                                        this@GateActivity,
+                                        "JOKER_UNLOCKED",
+                                        challengeKey
+                                    )
                                     setResult(Activity.RESULT_OK)
-                                    finish()
+                                    finishAffinity()
                                 } else {
                                     jokersRemaining =
                                         GuardPrefs.remainingJokers(this@GateActivity)
@@ -193,6 +230,20 @@ class GateActivity : ComponentActivity() {
         // Open the Quran page immediately. If the reader is closed too early,
         // this control screen remains behind it with the accumulated progress.
         window.decorView.post { openReader(page) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (challengeKey.isNotBlank()) {
+            GuardRuntime.interception.markGateVisible(challengeKey)
+        }
+    }
+
+    override fun onStop() {
+        if (challengeKey.isNotBlank()) {
+            GuardRuntime.interception.markGateHidden(challengeKey)
+        }
+        super.onStop()
     }
 
     private fun openReader(page: Int) {
