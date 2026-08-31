@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QuranUnlock"
+rootProject.name = "QuranSafeguard"
 include(":app")
