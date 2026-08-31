@@ -203,7 +203,7 @@ class MainActivity : ComponentActivity() {
         val lastEventAge = GuardHealth.lastProtectedEventAgeMs(this@MainActivity)
         val recentDiagnostics = GuardDiagnostics.recent(this@MainActivity, 5)
         val recentHistory = GuardPrefs.readingHistory(this@MainActivity, 5)
-        val todayReminder = remember {
+        val todayReminder = remember(refreshToken) {
             DailyReminderManager.today(this@MainActivity)
         }
 
