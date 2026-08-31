@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -189,7 +190,19 @@ class MushafReaderActivity : ComponentActivity() {
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
-                                    finishAndRemoveTask()
+                                    startActivity(
+                                        Intent(
+                                            this@MushafReaderActivity,
+                                            ReadingCompleteActivity::class.java
+                                        ).apply {
+                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
+                                            putExtra(
+                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
+                                                elapsed
+                                            )
+                                        }
+                                    )
+                                    finish()
                                 }
                             }
                         ) {
