@@ -11,6 +11,31 @@ UA = {"User-Agent": "QuranSafeguard-HikamPrimary/1.0"}
 BASE = "https://ablibrary.net/book_content/8787/"
 OUT = Path("app/src/main/assets/hikam/primary_extraction.json")
 
+# Dedicated matn pages and their expected numbering. This prevents a typo/
+# duplicate marker on another page from being mistaken for the canonical entry.
+PAGE_RANGES = {
+    95: (1, 12),
+    96: (13, 21),
+    97: (22, 34),
+    98: (35, 45),
+    99: (46, 58),
+    100: (59, 71),
+    101: (72, 88),
+    102: (89, 104),
+    103: (105, 118),
+    104: (119, 132),
+    105: (133, 145),
+    106: (146, 159),
+    107: (160, 174),
+    108: (175, 189),
+    109: (190, 204),
+    110: (205, 218),
+    111: (219, 232),
+    112: (234, 245),
+    113: (246, 256),
+    114: (257, 264),
+}
+
 def fetch_page(page):
     url = BASE + str(page)
     req = urllib.request.Request(url, headers=UA)
@@ -30,6 +55,14 @@ def textify(raw):
 
 def clean(body):
     body = re.sub(r"\s+", " ", body).strip()
+    # Strip navigation/site metadata that follows the last numbered hikma
+    # on a digital page, without touching the matn itself.
+    for marker in (
+        "صفحات الكتاب", "الرئيسية /", "الصفحة السابقة",
+        "© 2026", "Ahlulbayt Library", "مكتبة أهل البيت الرقمية"
+    ):
+        if marker in body:
+            body = body.split(marker, 1)[0].strip()
     body = body.strip("[](){} ـ")
     return body
 
@@ -74,25 +107,40 @@ with ThreadPoolExecutor(max_workers=32) as pool:
 
 candidates = {}
 for page in sorted(pages):
+    lower, upper = PAGE_RANGES[page]
     for number, body in extract(textify(pages[page])):
+        if not (lower <= number <= upper):
+            continue
         candidates.setdefault(number, []).append({"page": page, "arabic": body})
 
 selected = {}
 duplicates = []
 for number, rows in sorted(candidates.items()):
-    # Prefer the shortest numbered line; commentary pages can repeat the hikma.
-    rows = sorted(rows, key=lambda row: (len(normalize(row["arabic"])), row["page"]))
+    # The compact candidate reaches the next numbered marker and therefore
+    # preserves multi-line / multi-clause Hikam. Site metadata is already cut.
+    # Pick the longest unique clean candidate on the canonical page.
+    unique_rows = {}
+    for row in rows:
+        key = normalize(row["arabic"])
+        if key:
+            unique_rows.setdefault(key, row)
+    rows = list(unique_rows.values())
+    rows = sorted(
+        rows,
+        key=lambda row: (-len(normalize(row["arabic"])), row["page"])
+    )
     winner = rows[0]
     selected[number] = winner
-    normalized = {}
-    for row in rows:
-        normalized.setdefault(normalize(row["arabic"]), []).append(row["page"])
-    if len(normalized) > 1:
+    if len(rows) > 1:
         duplicates.append({
             "source_number": number,
-            "variants": [
-                {"normalized": key, "pages": value}
-                for key, value in normalized.items()
+            "selected": normalize(winner["arabic"]),
+            "alternatives": [
+                {
+                    "normalized": normalize(row["arabic"]),
+                    "page": row["page"]
+                }
+                for row in rows[1:]
             ]
         })
 
