@@ -48,21 +48,23 @@ def extract(text):
         if m:
             n = int(m.group(1))
             body = clean(m.group(2))
-            if 1 <= n <= 264 and re.search(r"[\u0600-\u06ff]", body):
+            if 1 <= n <= 264 and re.search(r"[\u0600-\u06ff]", body) and len(normalize(body)) >= 12:
                 entries.append((n, body))
     compact = " ".join(lines)
     pat = re.compile(r"(?<!\d)(\d{1,3})\s*[-–—]\s*(.+?)(?=(?:\s+\d{1,3}\s*[-–—])|$)")
     for m in pat.finditer(compact):
         n = int(m.group(1))
         body = clean(m.group(2))
-        if 1 <= n <= 264 and re.search(r"[\u0600-\u06ff]", body) and len(body) <= 1800:
+        if 1 <= n <= 264 and re.search(r"[\u0600-\u06ff]", body) and 12 <= len(normalize(body)) <= 1800:
             entries.append((n, body))
     return entries
 
 pages = {}
 failures = []
 with ThreadPoolExecutor(max_workers=32) as pool:
-    futures = [pool.submit(fetch_page, p) for p in range(1, 116)]
+    # The complete numbered matn is contained in digital pages 95..114.
+    # Earlier pages contain commentary and unrelated numbered lists.
+    futures = [pool.submit(fetch_page, p) for p in range(95, 115)]
     for fut in as_completed(futures):
         try:
             page, raw = fut.result()
