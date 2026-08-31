@@ -17,6 +17,19 @@ NS = {
     "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
 }
 
+# Authenticity and editorial suitability are distinct gates.
+# These IDs remain authentic in HadeethEnc but were manually rejected for the
+# daily-reminder surface because the short title is overly contextual, harsh,
+# intimate/legal, fragmentary, or likely to be misunderstood without commentary.
+EDITORIAL_EXCLUDED_IDS = {
+    "2996", "3005", "3044", "3070", "3120", "3140", "3306", "3415",
+    "3533", "3563", "3667", "3915", "4179", "4234", "4293", "4830",
+    "5367", "5513", "5735", "5738", "58078", "58098", "58102", "58172",
+    "6020", "6045", "6083", "6094", "6212", "6376", "6377", "6404",
+    "65009", "6612", "66513", "8291", "8308", "8915", "10567", "10895",
+    "10968", "10992", "11168", "11180", "11218", "11269",
+}
+
 TAG_RULES = {
     "bonnes mœurs": ["meilleurs comportements", "meilleur comportement", "bon comportement", "bonne parole", "sourire", "n'insultez", "n’insultez", "pudeur", "modestie", "caractère", "caractere"],
     "comportement": ["comportement", "caractère", "caractere", "bonne parole", "sourire", "pudeur", "insulte"],
@@ -271,7 +284,7 @@ def build_candidates(fr_rows, ar_by_id, fr_version, fr_last_update):
 
     for row in fr_rows:
         hid = row.get("id", "").strip()
-        if not hid or hid in seen:
+        if not hid or hid in seen or hid in EDITORIAL_EXCLUDED_IDS:
             continue
         seen.add(hid)
 
