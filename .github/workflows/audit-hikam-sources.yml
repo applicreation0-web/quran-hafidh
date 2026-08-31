@@ -1,4 +1,4 @@
-name: Audit Al-Hikam sources
+name: Audit Al-Hikam sources # retry
 
 on:
   push:
