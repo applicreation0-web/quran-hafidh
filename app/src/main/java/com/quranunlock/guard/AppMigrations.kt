@@ -183,8 +183,12 @@ object AppMigrations {
 
                 key.startsWith("unlock_reminder_mask_") ||
                     key.startsWith("challenge_page_") ||
-                    key.startsWith("reading_page_") ->
+                    key.startsWith("reading_page_") ||
+                    key.startsWith("reading_completed_pending_page_") ->
                     normalizeInt(prefs, key, min = 0)
+
+                key.startsWith("reading_completed_pending_elapsed_") ->
+                    normalizeLong(prefs, key, min = 0L)
 
                 key.startsWith("reading_bottom_reached_") ->
                     normalizeBoolean(prefs, key)
