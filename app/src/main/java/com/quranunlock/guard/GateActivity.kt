@@ -76,7 +76,7 @@ class GateActivity : ComponentActivity() {
                         Text(juzLabels, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            "Lis entièrement cette page dans Quran for Android, puis reviens ici.",
+                            "Lis entièrement cette page dans Quran for Android. Utilise « Go to page / Aller à la page » et saisis le numéro ci-dessus, puis reviens ici.",
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(28.dp))
@@ -88,7 +88,7 @@ class GateActivity : ComponentActivity() {
                                 QuranReaderLauncher.open(this@GateActivity)
                             }
                         ) {
-                            Text("Ouvrir Quran — page $page")
+                            Text("Ouvrir Quran puis aller à la page $page")
                         }
 
                         Spacer(Modifier.height(12.dp))
