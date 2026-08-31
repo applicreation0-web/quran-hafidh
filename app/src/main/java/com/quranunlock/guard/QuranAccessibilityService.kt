@@ -1,7 +1,11 @@
 package com.applicreation0.quransafeguard
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -13,6 +17,20 @@ class QuranAccessibilityService : AccessibilityService() {
     private val pendingLaunches = mutableListOf<Runnable>()
     private var foregroundPackage: String? = null
     private var foregroundUnlockedPackage: String? = null
+    private var screenReceiverRegistered = false
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                foregroundUnlockedPackage?.let {
+                    GuardPrefs.endUnlockForeground(this@QuranAccessibilityService, it)
+                }
+                foregroundUnlockedPackage = null
+                foregroundPackage = null
+                GuardDiagnostics.log(this@QuranAccessibilityService, "SCREEN_OFF_USAGE_PAUSED")
+            }
+        }
+    }
 
     private val heartbeat = object : Runnable {
         override fun run() {
@@ -69,10 +87,29 @@ class QuranAccessibilityService : AccessibilityService() {
         GuardRuntime.interception.reset()
         GuardHealth.markConnected(this)
         GuardDiagnostics.log(this, "SERVICE_CONNECTED")
+        registerScreenReceiverIfNeeded()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.post(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         mainHandler.post(usageTicker)
+    }
+
+    private fun registerScreenReceiverIfNeeded() {
+        if (screenReceiverRegistered) return
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(screenReceiver, filter)
+        }
+        screenReceiverRegistered = true
+    }
+
+    private fun unregisterScreenReceiverIfNeeded() {
+        if (!screenReceiverRegistered) return
+        runCatching { unregisterReceiver(screenReceiver) }
+        screenReceiverRegistered = false
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -209,6 +246,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundPackage = null
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
+        unregisterScreenReceiverIfNeeded()
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
         return super.onUnbind(intent)
@@ -222,6 +260,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundPackage = null
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
+        unregisterScreenReceiverIfNeeded()
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
         super.onDestroy()
