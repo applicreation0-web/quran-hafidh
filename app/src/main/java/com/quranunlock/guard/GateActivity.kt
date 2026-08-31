@@ -35,17 +35,26 @@ class GateActivity : ComponentActivity() {
         private const val MIN_READING_MS = 60_000L
     }
 
+    private var challengeKey: String = ""
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         recreate()
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (challengeKey.isNotBlank() && GuardPrefs.isUnlocked(this, challengeKey)) {
+            finish()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val challengeKey = intent.getStringExtra(EXTRA_TARGET_PACKAGE)
-        if (challengeKey.isNullOrBlank()) {
+        challengeKey = intent.getStringExtra(EXTRA_TARGET_PACKAGE).orEmpty()
+        if (challengeKey.isBlank()) {
             finish()
             return
         }
@@ -119,20 +128,7 @@ class GateActivity : ComponentActivity() {
 
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(
-                                    Intent(
-                                        this@GateActivity,
-                                        MushafReaderActivity::class.java
-                                    ).apply {
-                                        putExtra(MushafReaderActivity.EXTRA_PAGE, page)
-                                        putExtra(
-                                            MushafReaderActivity.EXTRA_CHALLENGE_KEY,
-                                            challengeKey
-                                        )
-                                    }
-                                )
-                            }
+                            onClick = { openReader(page) }
                         ) { Text("Lire la page $page") }
 
                         Spacer(Modifier.height(12.dp))
@@ -189,5 +185,19 @@ class GateActivity : ComponentActivity() {
                 }
             }
         }
+
+        // Open the Quran page immediately. If the reader is closed too early,
+        // this control screen remains behind it with the accumulated progress.
+        window.decorView.post { openReader(page) }
+    }
+
+    private fun openReader(page: Int) {
+        if (isFinishing || challengeKey.isBlank()) return
+        startActivity(
+            Intent(this, MushafReaderActivity::class.java).apply {
+                putExtra(MushafReaderActivity.EXTRA_PAGE, page)
+                putExtra(MushafReaderActivity.EXTRA_CHALLENGE_KEY, challengeKey)
+            }
+        )
     }
 }
