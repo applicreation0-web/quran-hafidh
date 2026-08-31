@@ -1,0 +1,44 @@
+name: Android CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Validate project configuration
+        run: gradle tasks --no-daemon
+
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --stacktrace --no-daemon
+
+      - name: Assemble debug APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
