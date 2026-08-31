@@ -64,7 +64,7 @@ PRIMARY_EDITION=(
     "al-‘Ilmiyya, Beirut, 1426/2005, ed. ‘Asim Ibrahim al-Kayyali"
 )
 PRIMARY_BASE="https://ablibrary.net/book_content/8787/"
-SECONDARY_PDF="https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_themathesontrust.pdf"
+SECONDARY_PDF="https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_000802_al-mostafa.pdf"
 ACADEMIC="https://dspace.univ-ghardaia.edu.dz/jspui/bitstream/123456789/4884/1/408.04.106.pdf"
 
 candidates=[]
@@ -105,8 +105,8 @@ for row in primary["entries"]:
         "translation_status": "pending_verification",
         "translation_sources": [
             "Arabic source text listed in verification_sources",
-            "Paul Nwyia, edition critique et traduction des Hikam, Dar el-Machreq",
-            "Hassan Boutaleb, Sagesses et confidences, Albouraq"
+            "Paul Nwyia, edition critique et traduction des Hikam, Dar el-Machreq — https://www.darelmachreq.com/book/485-ikam-ibn-aa-allah-arabefrancais-a2",
+            "Hassan Boutaleb, Sagesses et confidences, Albouraq — https://catalogue.bnf.fr/ark:/12148/cb47245528k"
         ],
         "translation_method": "editorial_translation_from_verified_arabic",
         "verification_notes": (
