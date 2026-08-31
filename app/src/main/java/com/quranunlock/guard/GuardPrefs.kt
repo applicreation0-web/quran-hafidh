@@ -30,6 +30,9 @@ object GuardPrefs {
     private const val READING_PAGE_PREFIX = "reading_page_"
     private const val READING_ACCUMULATED_PREFIX = "reading_accumulated_"
     private const val READING_STARTED_PREFIX = "reading_started_"
+    private const val READINGS_COMPLETED = "readings_completed"
+    private const val TOTAL_READING_MS = "total_reading_ms"
+    private const val LAST_READING_MS = "last_reading_ms"
 
     // Prevents a simple clock jump from immediately creating a new joker day
     // while the device stays on. Offline-only protection cannot fully defeat a
@@ -341,6 +344,49 @@ object GuardPrefs {
         val now = SystemClock.elapsedRealtime()
         val live = if (now >= started) now - started else 0L
         return accumulated + live
+    }
+
+    @Synchronized
+    fun completeReadingAndUnlock(
+        context: Context,
+        challengeKey: String,
+        page: Int
+    ): Long {
+        val elapsed = readingElapsedMs(context, challengeKey, page)
+        if (elapsed < 60_000L) return elapsed
+
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val completed = prefs.getInt(READINGS_COMPLETED, 0).coerceAtLeast(0)
+        val total = prefs.getLong(TOTAL_READING_MS, 0L).coerceAtLeast(0L)
+
+        prefs.edit()
+            .putInt(READINGS_COMPLETED, completed + 1)
+            .putLong(TOTAL_READING_MS, total + elapsed)
+            .putLong(LAST_READING_MS, elapsed)
+            .commit()
+
+        unlock(context, challengeKey)
+        return elapsed
+    }
+
+    fun readingsCompleted(context: Context): Int =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getInt(READINGS_COMPLETED, 0)
+            .coerceAtLeast(0)
+
+    fun totalReadingMs(context: Context): Long =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getLong(TOTAL_READING_MS, 0L)
+            .coerceAtLeast(0L)
+
+    fun lastReadingMs(context: Context): Long =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getLong(LAST_READING_MS, 0L)
+            .coerceAtLeast(0L)
+
+    fun averageReadingMs(context: Context): Long {
+        val count = readingsCompleted(context)
+        return if (count > 0) totalReadingMs(context) / count else 0L
     }
 
     fun recentChallengePages(context: Context): List<Int> {
