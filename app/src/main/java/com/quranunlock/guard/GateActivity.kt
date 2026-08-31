@@ -176,16 +176,20 @@ class GateActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReadingForSummary(
                                     this@GateActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.isUnlocked(this@GateActivity, challengeKey)) {
-                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                if (GuardPrefs.hasReachedReadingBottom(
+                                        this@GateActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                ) {
                                     GuardDiagnostics.log(
                                         this@GateActivity,
-                                        "READING_UNLOCKED",
+                                        "READING_COMPLETED_PENDING_SUMMARY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
@@ -196,13 +200,13 @@ class GateActivity : ComponentActivity() {
                                             ReadingCompleteActivity::class.java
                                         ).apply {
                                             putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
+                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
                                             putExtra(
                                                 ReadingCompleteActivity.EXTRA_ELAPSED_MS,
                                                 elapsed
                                             )
                                         }
                                     )
-                                    finish()
                                 }
                             }
                         ) {
