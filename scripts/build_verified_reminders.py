@@ -57,22 +57,44 @@ MIN_THEME_COUNTS = {
     "bonnes mœurs": 3,
 }
 
-def get_json(path, params=None, retries=5):
+def get_json(path, params=None, retries=8):
     url = BASE + path
     if params:
         url += "?" + urllib.parse.urlencode(params)
     last = None
+    delays = [2, 4, 6, 8, 12, 16, 20, 24]
+
     for attempt in range(retries):
         try:
             req = urllib.request.Request(
                 url,
-                headers={"User-Agent": "QuranSafeguardReminderBuilder/0.8"}
+                headers={
+                    "User-Agent": "QuranSafeguardReminderBuilder/0.8",
+                    "Accept": "application/json,text/plain;q=0.9,*/*;q=0.1",
+                    "Accept-Language": "fr,en;q=0.5",
+                    "Referer": "https://hadeethenc.com/fr/home",
+                    "Cache-Control": "no-cache",
+                }
             )
-            with urllib.request.urlopen(req, timeout=45) as response:
-                return json.loads(response.read().decode("utf-8"))
+            with urllib.request.urlopen(req, timeout=60) as response:
+                raw = response.read().decode("utf-8-sig", "replace").strip()
+                content_type = response.headers.get("Content-Type", "")
+                if response.status != 200:
+                    raise RuntimeError(
+                        f"HTTP {response.status} content-type={content_type}"
+                    )
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError as exc:
+                    preview = re.sub(r"\\s+", " ", raw[:180])
+                    raise RuntimeError(
+                        f"Non-JSON response content-type={content_type} preview={preview!r}"
+                    ) from exc
         except Exception as exc:
             last = exc
-            time.sleep(0.75 + attempt)
+            if attempt + 1 < retries:
+                time.sleep(delays[min(attempt, len(delays) - 1)])
+
     raise RuntimeError(f"Failed API request {url}: {last}")
 
 def norm(value):
