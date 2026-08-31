@@ -79,9 +79,21 @@ def read_xlsx(data):
     return rows
 
 def records_from_rows(rows):
-    headers = [str(v).strip() for v in rows[0]]
+    header_index = None
+    headers = []
+    for index, row in enumerate(rows[:30]):
+        candidate = [str(v).strip() for v in row]
+        names = set(candidate)
+        if "id" in names and "hadith_text" in names and "grade" in names:
+            header_index = index
+            headers = candidate
+            break
+
+    if header_index is None:
+        raise SystemExit("Unable to locate HadeethEnc header row")
+
     records = []
-    for row in rows[1:]:
+    for row in rows[header_index + 1:]:
         padded = row + [""] * max(0, len(headers) - len(row))
         record = {headers[i]: str(padded[i]).strip() for i in range(len(headers))}
         if record.get("id"):
