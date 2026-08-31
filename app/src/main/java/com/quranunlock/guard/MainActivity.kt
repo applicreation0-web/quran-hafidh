@@ -16,13 +16,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
@@ -37,7 +45,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        BrowserDetector.refresh()
         serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
     }
 
@@ -45,159 +52,203 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    var mode by remember {
-                        mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
-                    }
-                    val selectedJuz = remember {
-                        mutableStateListOf<Int>().apply {
-                            addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
-                        }
-                    }
-                    val selectedHizb = remember {
-                        mutableStateListOf<Int>().apply {
-                            addAll(GuardPrefs.selectedHizb(this@MainActivity).sorted())
-                        }
-                    }
-                    val installedApps = remember {
-                        AppCatalog.launchableApps(this@MainActivity)
-                    }
-                    val protectedPackages = remember {
-                        mutableStateListOf<String>().apply {
-                            addAll(GuardPrefs.protectedPackages(this@MainActivity).sorted())
-                        }
-                    }
-                    var unlockMinutes by remember {
-                        mutableStateOf(GuardPrefs.unlockMinutes(this@MainActivity))
-                    }
-                    var saved by remember { mutableStateOf(false) }
+            QuranSafeguardTheme {
+                var showDisclosure by remember {
+                    mutableStateOf(!GuardPrefs.hasAccessibilityConsent(this@MainActivity))
+                }
 
-                    val currentQuranSelection =
-                        if (mode == QuranSelectionMode.JUZ) selectedJuz else selectedHizb
-                    val maxUnit = if (mode == QuranSelectionMode.JUZ) 30 else 60
-                    val unitLabel = if (mode == QuranSelectionMode.JUZ) "Juz" else "Hizb"
-                    val durationChoices = listOf(1, 5, 10, 15, 30, 60, 120)
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(24.dp)
-                    ) {
-                        Text("Quran Unlock", style = MaterialTheme.typography.headlineLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Réglages de protection")
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            if (serviceEnabledState.value) {
-                                "Protection active ✓"
+                if (showDisclosure) {
+                    AccessibilityDisclosureScreen(
+                        onAccept = {
+                            GuardPrefs.saveAccessibilityConsent(this@MainActivity)
+                            showDisclosure = false
+                            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        },
+                        onLater = { showDisclosure = false }
+                    )
+                } else {
+                    Dashboard(
+                        serviceEnabled = serviceEnabledState.value,
+                        onActivateProtection = {
+                            if (GuardPrefs.hasAccessibilityConsent(this@MainActivity)) {
+                                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                             } else {
-                                "Protection inactive — active le service d’accessibilité"
-                            },
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Le Mushaf de Médine (604 pages, Hafs ‘an ‘Asim) est intégré directement et fonctionne hors ligne. " +
-                                "Aucune application Quran supplémentaire n’est nécessaire."
-                        )
-                        Spacer(Modifier.height(24.dp))
-
-                        Text("1. Pages de lecture", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Choisis la zone du Coran dans laquelle les pages obligatoires seront tirées.")
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            "Rotation anti-triche : les pages récemment attribuées sont évitées autant que possible " +
-                                "(jusqu’aux 30 dernières), avec adaptation automatique pour les petites sélections.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = mode == QuranSelectionMode.JUZ,
-                                onClick = {
-                                    mode = QuranSelectionMode.JUZ
-                                    saved = false
-                                }
-                            )
-                            Text("Par Juz")
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = mode == QuranSelectionMode.HIZB,
-                                onClick = {
-                                    mode = QuranSelectionMode.HIZB
-                                    saved = false
-                                }
-                            )
-                            Text("Par Hizb — sélection plus précise")
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-                        (1..maxUnit).chunked(3).forEach { rowUnits ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                rowUnits.forEach { unit ->
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Checkbox(
-                                            checked = unit in currentQuranSelection,
-                                            onCheckedChange = { checked ->
-                                                saved = false
-                                                if (checked) {
-                                                    if (unit !in currentQuranSelection) currentQuranSelection.add(unit)
-                                                } else if (currentQuranSelection.size > 1) {
-                                                    currentQuranSelection.remove(unit)
-                                                }
-                                            }
-                                        )
-                                        Text("$unitLabel $unit")
-                                    }
-                                }
+                                showDisclosure = true
                             }
                         }
+                    )
+                }
+            }
+        }
+    }
 
-                        Spacer(Modifier.height(24.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(24.dp))
+    @Composable
+    private fun Dashboard(
+        serviceEnabled: Boolean,
+        onActivateProtection: () -> Unit
+    ) {
+        var mode by remember {
+            mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
+        }
+        val selectedJuz = remember {
+            mutableStateListOf<Int>().apply {
+                addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
+            }
+        }
+        val selectedHizb = remember {
+            mutableStateListOf<Int>().apply {
+                addAll(GuardPrefs.selectedHizb(this@MainActivity).sorted())
+            }
+        }
+        val installedApps = remember {
+            AppCatalog.launchableApps(this@MainActivity)
+                .filterNot { it.packageName in BrowserDetector.supportedPackages }
+        }
+        val protectedPackages = remember {
+            mutableStateListOf<String>().apply {
+                addAll(
+                    GuardPrefs.protectedPackages(this@MainActivity)
+                        .filterNot { it in BrowserDetector.supportedPackages }
+                        .sorted()
+                )
+            }
+        }
+        var unlockMinutes by remember {
+            mutableStateOf(GuardPrefs.unlockMinutes(this@MainActivity))
+        }
+        var saved by remember { mutableStateOf(false) }
+        val jokers = GuardPrefs.remainingJokers(this@MainActivity)
 
-                        Text("2. Applications protégées", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "QURAN SAFEGUARD",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Une pause consciente avant l’impulsion.",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Simple, volontaire et privé. Tu gardes toujours le contrôle de ton téléphone.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Text(
-                            "Coche les applications qui devront demander une page. " +
-                                "Paramètres Android reste toujours protégé. Google Play reste toujours autorisé ; le Mushaf est intégré à Quran Unlock."
+                            if (serviceEnabled) "Protection active ✓" else "Protection en pause",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = if (serviceEnabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
                         )
-                        Spacer(Modifier.height(12.dp))
-
-                        Row(
+                        Text(
+                            "8 navigateurs couverts • ${protectedPackages.size} autres applications choisies"
+                        )
+                        Text(
+                            "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles aujourd’hui"
+                        )
+                        Button(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            onClick = onActivateProtection
                         ) {
-                            OutlinedButton(
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    protectedPackages.clear()
-                                    protectedPackages.addAll(installedApps.map { it.packageName })
-                                    saved = false
+                            Text(
+                                if (serviceEnabled) {
+                                    "Vérifier le service"
+                                } else {
+                                    "Activer la protection"
                                 }
-                            ) { Text("Tout protéger") }
-
-                            OutlinedButton(
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    protectedPackages.clear()
-                                    saved = false
-                                }
-                            ) { Text("Tout décocher") }
+                            )
                         }
+                    }
+                }
 
-                        Spacer(Modifier.height(8.dp))
+                SectionTitle("Règles du jeu")
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("• 1 page complète avant de continuer.")
+                        Text("• 60 secondes réelles de lecture au premier plan.")
+                        Text("• 3 jokers maximum par jour.")
+                        Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
+                        Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
+                        Text(
+                            "• Paramètres Android et désinstallation restent accessibles : la règle est stricte tant que tu choisis de jouer.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                SectionTitle("Navigateurs")
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Couverture volontaire fixe", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Chrome • Firefox • Edge • Brave • Opera • Samsung Internet • DuckDuckGo • Vivaldi",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Aucun navigateur inconnu ni WebView d’une autre application n’est bloqué automatiquement.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                SectionTitle("Applications")
+                Text(
+                    "Choisis les autres applications auxquelles appliquer la pause Quran.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            protectedPackages.clear()
+                            protectedPackages.addAll(installedApps.map { it.packageName })
+                            saved = false
+                        }
+                    ) { Text("Tout choisir") }
+
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            protectedPackages.clear()
+                            saved = false
+                        }
+                    ) { Text("Effacer") }
+                }
+
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         installedApps.forEach { app ->
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Checkbox(
@@ -215,24 +266,91 @@ class MainActivity : ComponentActivity() {
                                 )
                                 Column {
                                     Text(app.label)
-                                    Text(app.packageName, style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        app.packageName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
+                    }
+                }
 
-                        Spacer(Modifier.height(24.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(24.dp))
+                SectionTitle("Lecture Quran")
+                Text(
+                    "Le Mushaf de Médine (604 pages, Hafs ‘an ‘Asim) est intégré et fonctionne hors ligne.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-                        Text("3. Récurrence", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Après avoir lu une page, l’application choisie reste accessible pendant cette durée. " +
-                                "À l’expiration, une nouvelle page sera demandée."
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = mode == QuranSelectionMode.JUZ,
+                        onClick = {
+                            mode = QuranSelectionMode.JUZ
+                            saved = false
+                        }
+                    )
+                    Text("Choisir par Juz")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = mode == QuranSelectionMode.HIZB,
+                        onClick = {
+                            mode = QuranSelectionMode.HIZB
+                            saved = false
+                        }
+                    )
+                    Text("Choisir par Hizb")
+                }
 
-                        durationChoices.forEach { minutes ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                val currentSelection =
+                    if (mode == QuranSelectionMode.JUZ) selectedJuz else selectedHizb
+                val maxUnit = if (mode == QuranSelectionMode.JUZ) 30 else 60
+                val unitLabel = if (mode == QuranSelectionMode.JUZ) "Juz" else "Hizb"
+
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        (1..maxUnit).chunked(3).forEach { units ->
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                units.forEach { unit ->
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = unit in currentSelection,
+                                            onCheckedChange = { checked ->
+                                                saved = false
+                                                if (checked) {
+                                                    if (unit !in currentSelection) currentSelection.add(unit)
+                                                } else if (currentSelection.size > 1) {
+                                                    currentSelection.remove(unit)
+                                                }
+                                            }
+                                        )
+                                        Text("$unitLabel $unit")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                SectionTitle("Récurrence")
+                Text(
+                    "Après une lecture, l’application reste accessible pendant la durée choisie. Un joker reste plafonné à ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                val durationChoices = listOf(1, 5, 10, 15, 30, 60, 120)
+                durationChoices.chunked(2).forEach { rowChoices ->
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        rowChoices.forEach { minutes ->
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(
                                     selected = unlockMinutes == minutes,
                                     onClick = {
@@ -242,102 +360,121 @@ class MainActivity : ComponentActivity() {
                                 )
                                 Text(
                                     when (minutes) {
-                                        1 -> "1 minute — très strict"
                                         60 -> "1 heure"
                                         120 -> "2 heures"
-                                        else -> "$minutes minutes"
+                                        else -> "$minutes min"
                                     }
                                 )
                             }
                         }
-
-                        Spacer(Modifier.height(24.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(24.dp))
-
-                        Text("4. Jokers", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "3 jokers sont disponibles chaque jour. Un joker évite la lecture d’une page " +
-                                "et ouvre l’application pour la durée de récurrence choisie. " +
-                                "Jokers restants aujourd’hui : " +
-                                GuardPrefs.remainingJokers(this@MainActivity) +
-                                "/3."
-                        )
-
-                        Spacer(Modifier.height(24.dp))
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                GuardPrefs.saveSelectionMode(this@MainActivity, mode)
-                                when (mode) {
-                                    QuranSelectionMode.JUZ ->
-                                        GuardPrefs.saveSelectedJuz(this@MainActivity, selectedJuz.toSet())
-                                    QuranSelectionMode.HIZB ->
-                                        GuardPrefs.saveSelectedHizb(this@MainActivity, selectedHizb.toSet())
-                                }
-                                GuardPrefs.saveProtectedPackages(
-                                    this@MainActivity,
-                                    protectedPackages.toSet()
-                                )
-                                GuardPrefs.saveUnlockMinutes(this@MainActivity, unlockMinutes)
-                                BrowserDetector.refresh()
-                                saved = true
-                            }
-                        ) {
-                            Text(if (saved) "Réglages enregistrés ✓" else "Enregistrer les réglages")
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                            }
-                        ) {
-                            Text(
-                                if (serviceEnabledState.value) {
-                                    "Vérifier le service d’accessibilité"
-                                } else {
-                                    "Activer la protection"
-                                }
-                            )
-                        }
-                        Spacer(Modifier.height(24.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(24.dp))
-
-                        Text("5. Désinstallation", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "La désinstallation reste libre après une seule page Quran. " +
-                                "Aucun délai de 24 h et aucun joker n’est utilisé."
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(
-                                    Intent(this@MainActivity, GateActivity::class.java).apply {
-                                        putExtra(
-                                            GateActivity.EXTRA_TARGET_PACKAGE,
-                                            GuardPrefs.UNINSTALL_CHALLENGE_KEY
-                                        )
-                                        putExtra(
-                                            GateActivity.EXTRA_PURPOSE,
-                                            GateActivity.PURPOSE_UNINSTALL
-                                        )
-                                    }
-                                )
-                            }
-                        ) {
-                            Text("Lire une page puis désinstaller")
-                        }
-
-                        Spacer(Modifier.height(32.dp))
+                        if (rowChoices.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
+
+                HorizontalDivider()
+
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        GuardPrefs.saveSelectionMode(this@MainActivity, mode)
+                        when (mode) {
+                            QuranSelectionMode.JUZ ->
+                                GuardPrefs.saveSelectedJuz(this@MainActivity, selectedJuz.toSet())
+                            QuranSelectionMode.HIZB ->
+                                GuardPrefs.saveSelectedHizb(this@MainActivity, selectedHizb.toSet())
+                        }
+                        GuardPrefs.saveProtectedPackages(
+                            this@MainActivity,
+                            protectedPackages.toSet()
+                        )
+                        GuardPrefs.saveUnlockMinutes(this@MainActivity, unlockMinutes)
+                        saved = true
+                    }
+                ) {
+                    Text(if (saved) "Réglages enregistrés ✓" else "Enregistrer mes choix")
+                }
+
+                Text(
+                    "Version privée • installation officielle via le canal de distribution autorisé",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(12.dp))
             }
         }
     }
+}
+
+@Composable
+private fun AccessibilityDisclosureScreen(
+    onAccept: () -> Unit,
+    onLater: () -> Unit
+) {
+    Surface(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(28.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "QURAN SAFEGUARD",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Avant d’activer la protection",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Cela permet de reconnaître les applications que tu as choisi d’accompagner avec une pause Quran."
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Le contenu affiché à l’écran n’est pas lu, tes saisies ne sont pas enregistrées et ces informations ne sont pas envoyées ni partagées. Le service peut être désactivé à tout moment dans les Paramètres Android.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onAccept
+            ) { Text("J’accepte et je continue") }
+
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onLater
+            ) { Text("Plus tard") }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.SemiBold
+    )
+}
+
+@Composable
+private fun QuranSafeguardTheme(content: @Composable () -> Unit) {
+    val colors = lightColorScheme(
+        primary = Color(0xFF0B6B4F),
+        onPrimary = Color.White,
+        secondary = Color(0xFF8B6B2B),
+        background = Color(0xFFF8F6EF),
+        surface = Color(0xFFFFFCF5),
+        surfaceVariant = Color(0xFFEDE9DD),
+        onSurface = Color(0xFF1D2622),
+        onSurfaceVariant = Color(0xFF56615B)
+    )
+    MaterialTheme(colorScheme = colors, content = content)
 }
