@@ -568,7 +568,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.weight(1f),
                         onClick = {
                             currentSelection.clear()
-                            currentSelection.addAll(1..maxUnit)
+                            currentSelection.addAll((1..maxUnit).toList())
                             when (mode) {
                                 QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
                                     this@MainActivity,
