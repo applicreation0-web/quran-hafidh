@@ -1,4 +1,4 @@
-package com.quranunlock.guard
+package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
