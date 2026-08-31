@@ -177,16 +177,20 @@ class MushafReaderActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReading(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.isUnlocked(this@MushafReaderActivity, challengeKey)) {
-                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                if (GuardPrefs.hasPendingCompletedReading(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                ) {
                                     GuardDiagnostics.log(
                                         this@MushafReaderActivity,
-                                        "READING_UNLOCKED",
+                                        "READING_COMPLETED_PENDING_SUMMARY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
@@ -199,6 +203,10 @@ class MushafReaderActivity : ComponentActivity() {
                                             putExtra(
                                                 ReadingCompleteActivity.EXTRA_ELAPSED_MS,
                                                 elapsed
+                                            )
+                                            putExtra(
+                                                ReadingCompleteActivity.EXTRA_TARGET_PACKAGE,
+                                                challengeKey
                                             )
                                         }
                                     )
