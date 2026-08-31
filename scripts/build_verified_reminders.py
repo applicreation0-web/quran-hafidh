@@ -33,7 +33,7 @@ TAG_RULES = {
     "apprentissage du Coran": ["appris le coran", "apprendre le coran", "enseigne le coran", "enseigné le coran", "enseigner le coran"],
     "mise en pratique du Coran": ["mettaient en application", "mettre le coran en application", "met le coran en application", "comportement du prophète", "comportement du prophete"],
     "coran": ["coran", "sourate", "verset"],
-    "famille": ["mère", "mere", "père", "pere", "parents", "épouse", "epouse", "époux", "epoux", "enfant", "enfants", "famille", "parenté", "parente"],
+    "famille": ["mère", "mere", "père", "pere", "parents", "épouse", "epouse", "époux", "epoux", "enfant", "enfants", "parenté", "parente"],
     "parents": ["mère", "mere", "père", "pere", "parents"],
     "conjoint": ["épouse", "epouse", "époux", "epoux", "mariage", "conjoint"],
     "enfants": ["enfant", "enfants"],
@@ -41,16 +41,16 @@ TAG_RULES = {
     "voisinage": ["voisin", "voisins"],
     "respect du voisin": ["voisin", "voisins"],
     "entraide": ["aide son frère", "aide son frere", "vient en aide", "soulage", "besoin de son frère", "besoin de son frere", "entraide"],
-    "vie en communauté": ["frère musulman", "frere musulman", "musulman est le frère", "musulman est le frere", "compagnon", "réconcilie", "reconcilie", "salue son frère", "salue son frere"],
+    "vie en communauté": ["frère musulman", "frere musulman", "musulman est le frère", "musulman est le frere", "réconcilie", "reconcilie", "salue son frère", "salue son frere"],
     "propreté": ["purification", "ablution", "ablutions", "siwâk", "siwak", "bouche", "dents", "impureté", "impurete", "laver", "lavage"],
-    "hygiène": ["siwâk", "siwak", "bouche", "dents", "laver", "lavage"],
-    "pureté": ["purification", "pureté", "purete"],
+    "hygiène": ["siwâk", "siwak", "dents", "laver", "lavage", "purification pour la bouche"],
+    "pureté": ["purification", "état de pureté", "etat de purete"],
     "ablutions": ["ablution", "ablutions"],
-    "soin du corps": ["siwâk", "siwak", "bouche", "dents", "cheveux", "ongles", "corps"],
+    "soin du corps": ["siwâk", "siwak", "dents", "cheveux", "ongles", "laver le corps", "lavage du corps"],
     "propreté des vêtements et des lieux": ["vêtement", "vetement", "vêtements", "vetements", "mosquée", "mosquee", "route", "chemin", "impureté", "impurete"],
-    "hygiène bucco-dentaire": ["siwâk", "siwak", "bouche", "dents"],
+    "hygiène bucco-dentaire": ["siwâk", "siwak", "dents", "purification pour la bouche"],
     "respect des espaces communs": ["route", "chemin", "mosquée", "mosquee", "épine", "epine", "nuisance"],
-    "gestion du temps": ["temps", "heure", "matin", "soir", "chaque jour", "jeudi", "avant que"],
+    "gestion du temps": ["temps libre", "deux bienfaits", "matin", "soir", "chaque jour", "jeudi", "temps"],
     "discipline personnelle": ["chaque jour", "habitude", "avait l'habitude", "avait l’habitude", "assidu", "régulier", "regulier", "constance"],
     "bonnes habitudes": ["chaque jour", "habitude", "avait l'habitude", "avait l’habitude", "assidu", "régulier", "regulier", "constance"],
 }
@@ -83,7 +83,7 @@ def contains_phrase(text, phrase):
     normalized_text = norm(text)
     normalized_phrase = norm(phrase)
     return re.search(
-        r"(?<!\\w)" + re.escape(normalized_phrase) + r"(?!\\w)",
+        r"(?<!\w)" + re.escape(normalized_phrase) + r"(?!\w)",
         normalized_text
     ) is not None
 
@@ -222,6 +222,19 @@ EXCLUDED_TONE_KEYWORDS = [
     "guerre",
     "détruits",
     "detruits",
+    "morts",
+    "malheur",
+    "tranché",
+    "tranche",
+    "n'entrera pas au paradis",
+    "n’entrera pas au paradis",
+    "enfants d'israël",
+    "enfants d’israël",
+    "péri",
+    "périrent",
+    "perirent",
+    "chaque époque à venir est pire",
+    "chaque epoque a venir est pire",
 ]
 
 def has_unsuitable_daily_tone(row):
