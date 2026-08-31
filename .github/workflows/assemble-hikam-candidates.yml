@@ -1,0 +1,33 @@
+name: Assemble translated Al-Hikam candidates
+
+on:
+  push:
+    branches:
+      - quran-safeguard-hikam-complete-corpus
+    paths:
+      - ".github/workflows/assemble-hikam-candidates.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Assemble candidates
+        run: python3 scripts/assemble_hikam_candidates.py
+      - name: Commit candidate corpus and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "quran-safeguard-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/assets/hikam/al_hikam_candidates.json
+          git add app/src/main/assets/hikam/pending_verification.json
+          git add app/src/main/assets/hikam/al_hikam_verified.json
+          git rm .github/workflows/assemble-hikam-candidates.yml
+          git commit -m "Assemble 264 translated Al-Hikam candidates"
+          git push origin HEAD:quran-safeguard-hikam-complete-corpus
