@@ -25,11 +25,11 @@ val verifyMushafPages by tasks.registering {
 }
 
 android {
-    namespace = "com.quranunlock.guard"
+    namespace = "com.applicreation0.quransafeguard"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.quranunlock.guard"
+        applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
         versionCode = 2
