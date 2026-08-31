@@ -169,6 +169,7 @@ class MainActivity : ComponentActivity() {
         val serviceAlive = GuardHealth.serviceLooksAlive(this@MainActivity)
         val lastEventAge = GuardHealth.lastProtectedEventAgeMs(this@MainActivity)
         val recentDiagnostics = GuardDiagnostics.recent(this@MainActivity, 5)
+        val recentHistory = GuardPrefs.readingHistory(this@MainActivity, 5)
 
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -286,6 +287,21 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (recentHistory.isNotEmpty()) {
+                            HorizontalDivider()
+                            Text("Historique récent", fontWeight = FontWeight.SemiBold)
+                            recentHistory.forEach { entry ->
+                                Text(
+                                    if (entry.method == "joker") {
+                                        "Joker • page ${entry.page} • ${entry.packageName}"
+                                    } else {
+                                        "Page ${entry.page} • ${formatDashboardDuration(entry.elapsedMs)} • ${entry.packageName}"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -567,7 +583,7 @@ private fun AccessibilityDisclosureScreen(
             )
             Spacer(Modifier.height(18.dp))
             Text(
-                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Lorsqu’une application choisie est détectée, Quran Safeguard quitte son écran, revient à l’accueil Android et affiche la pause Quran."
+                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Lorsqu’une application choisie est détectée, Quran Safeguard affiche immédiatement la pause Quran au-dessus de cette application."
             )
             Spacer(Modifier.height(12.dp))
             Text(
