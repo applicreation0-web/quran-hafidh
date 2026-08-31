@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
 
     private fun openAccessibilitySettings() {
         runCatching {
-            openAccessibilitySettings()
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
     }
 
