@@ -16,6 +16,8 @@ object GuardPrefs {
     private const val UNLOCK_MINUTES = "unlock_minutes"
     private const val JOKER_DAY = "joker_epoch_day"
     private const val JOKERS_USED = "jokers_used"
+    private const val RECENT_CHALLENGE_PAGES = "recent_challenge_pages"
+    private const val MAX_RECENT_CHALLENGE_PAGES = 30
 
     fun unlock(context: Context, packageName: String) {
         val minutes = if (packageName == ProtectedApps.ANDROID_SETTINGS) {
@@ -169,6 +171,7 @@ object GuardPrefs {
             .apply()
     }
 
+    @Synchronized
     fun challengePage(context: Context, packageName: String): Int {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val key = CHALLENGE_PREFIX + packageName
@@ -181,8 +184,41 @@ object GuardPrefs {
             QuranSelectionMode.HIZB -> selectedHizb(context)
         }
 
-        val page = QuranPageSelector.randomPage(mode, selectedUnits)
-        prefs.edit().putInt(key, page).apply()
+        val recentPages = recentChallengePages(context)
+        val page = QuranPageSelector.randomPage(
+            mode = mode,
+            selectedUnits = selectedUnits,
+            recentPagesNewestFirst = recentPages,
+            maxRecentExclusions = MAX_RECENT_CHALLENGE_PAGES
+        )
+
+        prefs.edit().putInt(key, page).commit()
+        recordChallengePage(context, page)
         return page
+    }
+
+    fun recentChallengePages(context: Context): List<Int> {
+        val raw = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getString(RECENT_CHALLENGE_PAGES, "")
+            .orEmpty()
+
+        return raw
+            .split(',')
+            .mapNotNull { it.toIntOrNull() }
+            .filter { it in 1..604 }
+            .distinct()
+            .take(MAX_RECENT_CHALLENGE_PAGES)
+    }
+
+    private fun recordChallengePage(context: Context, page: Int) {
+        val updated = buildList {
+            add(page)
+            addAll(recentChallengePages(context).filterNot { it == page })
+        }.take(MAX_RECENT_CHALLENGE_PAGES)
+
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putString(RECENT_CHALLENGE_PAGES, updated.joinToString(","))
+            .commit()
     }
 }
