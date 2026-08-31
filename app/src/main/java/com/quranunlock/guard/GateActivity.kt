@@ -40,6 +40,12 @@ class GateActivity : ComponentActivity() {
         private const val MIN_READING_SECONDS = 60
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        recreate()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
