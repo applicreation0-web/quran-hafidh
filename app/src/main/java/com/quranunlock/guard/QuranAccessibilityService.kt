@@ -10,8 +10,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
-        if (packageName == applicationContext.packageName) return
-        if (!ProtectedApps.isProtected(packageName)) return
+        if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
 
         val now = System.currentTimeMillis()
