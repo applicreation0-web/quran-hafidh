@@ -333,6 +333,9 @@ object ReminderLibrary {
                             }
                         }
                     }
+                    if (!obj.optBoolean("displayEligible", false)) {
+                        continue
+                    }
                     add(
                         DailyReminder(
                             id = obj.getString("id"),
