@@ -206,15 +206,14 @@ object ReminderNotifications {
 
     fun showDaily(context: Context) {
         ensureChannel(context)
-        val reminder = DailyReminderManager.today(context)
         val summary = GuardPrefs.dailyReadingSummary(context)
-        val body = buildString {
-            if (summary.pages > 0) {
-                append(summary.pages).append(" page(s) aujourd’hui • ")
-                append(formatShort(summary.totalMs)).append(". ")
-            }
-            append(reminder.frenchText)
-        }.take(220)
+        val body = if (summary.pages > 0) {
+            summary.pages.toString() + " page(s) aujourd’hui • " +
+                formatShort(summary.totalMs) +
+                ". Votre rappel bilingue vous attend."
+        } else {
+            "Votre rappel bilingue du jour vous attend dans Quran Safeguard."
+        }
 
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
