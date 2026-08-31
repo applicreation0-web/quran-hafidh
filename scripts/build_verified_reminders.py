@@ -81,6 +81,25 @@ def accepted_grade(details):
 def compact_spaces(value):
     return re.sub(r"\s+", " ", (value or "")).strip()
 
+def collection_from_reference(reference):
+    raw = norm(reference)
+    collections = []
+    mapping = [
+        (["bukhari", "boukhari", "البخاري"], "Sahih al-Bukhari"),
+        (["muslim", "مسلم"], "Sahih Muslim"),
+        (["tirmidhi", "الترمذي"], "Jami’ at-Tirmidhi"),
+        (["nasa", "النسائي"], "Sunan an-Nasa’i"),
+        (["abu dawud", "abou dawud", "أبو داود"], "Sunan Abi Dawud"),
+        (["ibn majah", "ابن ماجه"], "Sunan Ibn Majah"),
+        (["ahmad", "أحمد"], "Musnad Ahmad"),
+        (["darimi", "الدارمي"], "Sunan ad-Darimi"),
+        (["malik", "مالك"], "Al-Muwatta’"),
+    ]
+    for needles, label in mapping:
+        if any(norm(needle) in raw for needle in needles):
+            collections.append(label)
+    return " / ".join(collections) if collections else "Recueil indiqué par HadeethEnc"
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", required=True)
@@ -152,7 +171,7 @@ def main():
                     "arabicText": arabic,
                     "frenchText": french,
                     "author": "Prophète Muhammad ﷺ",
-                    "book": attribution or "Tradition prophétique",
+                    "book": collection_from_reference(reference),
                     "reference": reference,
                     "authenticity": grade,
                     "tags": sorted({theme, "hadith authentifié"}),
@@ -161,6 +180,8 @@ def main():
                     "sourceVersion": TRANSLATION_VERSION,
                     "sourceFetchedAt": FETCHED_AT,
                     "reviewStatus": "VERIFIED_OFFICIAL_SOURCE",
+                    "translationStatus": "SOURCE_TRANSLATION_UNMODIFIED",
+                    "sourceUrl": "https://hadeethenc.com/fr/browse/hadith/" + hid,
                 })
                 time.sleep(0.03)
 
