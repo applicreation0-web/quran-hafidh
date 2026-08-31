@@ -33,7 +33,8 @@ object DailyReminderScheduler {
 
         val next = when {
             now.isBefore(todayAt20) -> todayAt20
-            !DailyReminderManager.wasNotificationShownToday(context) ->
+            canPostNotifications(context) &&
+                !DailyReminderManager.wasNotificationShownToday(context) ->
                 now.plusSeconds(5)
             else -> todayAt20.plusDays(1)
         }
@@ -60,10 +61,7 @@ object DailyReminderScheduler {
     fun showToday(context: Context) {
         if (!DailyReminderManager.notificationsEnabled(context)) return
         if (DailyReminderManager.wasNotificationShownToday(context)) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        if (!canPostNotifications(context)) {
             GuardDiagnostics.log(
                 context,
                 "DAILY_REMINDER_SKIPPED",
@@ -147,6 +145,11 @@ object DailyReminderScheduler {
         DailyReminderManager.markNotificationShown(context)
         GuardDiagnostics.log(context, "DAILY_REMINDER_SHOWN", detail = reminder.id)
     }
+
+    private fun canPostNotifications(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
 
     private fun reminderPendingIntent(context: Context): PendingIntent =
         PendingIntent.getBroadcast(
