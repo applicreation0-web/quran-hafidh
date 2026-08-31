@@ -16,6 +16,7 @@ The tester should only need to:
 4. Tap the Google Play install link.
 5. Install Quran Safeguard from Google Play.
 6. Open the application and complete its normal first-run setup.
+7. Optionally allow notifications and approximate location if the tester wants the 20:00 reminder and locally calculated morning/evening adhkar windows. Approximate location is used on-device for prayer-time calculation and is not uploaded by Quran Safeguard.
 
 No APK download, sideloading, developer mode, USB installation, or external installer should be required.
 
