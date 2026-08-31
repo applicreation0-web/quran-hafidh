@@ -74,25 +74,6 @@ PRIMARY_THEME_PRIORITY = [
     "bonnes mœurs",
 ]
 
-MIN_PRIMARY_THEME_COUNTS = {
-    "coran": 5,
-    "famille": 5,
-    "voisinage": 2,
-    "propreté": 5,
-    "douceur": 5,
-    "patience": 4,
-    "maîtrise de soi": 4,
-    "sincérité": 3,
-    "gratitude": 2,
-    "générosité": 3,
-    "pardon": 2,
-    "entraide": 3,
-    "vie en communauté": 5,
-    "gestion du temps": 2,
-    "discipline personnelle": 3,
-    "bonnes mœurs": 6,
-}
-
 def norm(value):
     value = unicodedata.normalize("NFKD", value or "")
     value = "".join(ch for ch in value if not unicodedata.combining(ch))
@@ -303,24 +284,37 @@ def select_items(candidates, target):
         )
     )
 
-    by_theme = defaultdict(list)
-    for item in ordered:
-        by_theme[item["theme"]].append(item)
-
     selected = []
     selected_ids = set()
 
-    for theme, minimum in MIN_PRIMARY_THEME_COUNTS.items():
-        available = by_theme.get(theme, [])
-        if len(available) < minimum:
+    # Coverage is a hard requirement, but we never pad a theme with weaker content.
+    # Pick the highest-priority verified item that carries every requested tag.
+    for required_tag in TAG_RULES:
+        match = next(
+            (item for item in ordered if required_tag in item["tags"]),
+            None
+        )
+        if match is None:
             raise RuntimeError(
-                f"Theme gate failed: {theme!r} has {len(available)} verified short items, "
-                f"{minimum} required."
+                f"Requested thematic coverage has no verified short item: {required_tag!r}"
             )
-        for item in available[:minimum]:
-            if item["id"] not in selected_ids:
-                selected.append(item)
-                selected_ids.add(item["id"])
+        if match["id"] not in selected_ids:
+            selected.append(match)
+            selected_ids.add(match["id"])
+
+    # Ensure every weekly primary theme also has a dedicated eligible item.
+    for theme in PRIMARY_THEME_PRIORITY:
+        match = next(
+            (item for item in ordered if item["theme"] == theme),
+            None
+        )
+        if match is None:
+            raise RuntimeError(
+                f"Weekly theme has no verified short item: {theme!r}"
+            )
+        if match["id"] not in selected_ids:
+            selected.append(match)
+            selected_ids.add(match["id"])
 
     for item in ordered:
         if len(selected) >= target:
