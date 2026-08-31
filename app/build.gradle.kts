@@ -3,9 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-val generateVerifiedReminderSnapshot by tasks.registering(Exec::class) {
+val verifyFrozenReminderSnapshot by tasks.registering(Exec::class) {
     workingDir = rootProject.projectDir
-    commandLine("python3", "scripts/generate_verified_reminders.py")
+    commandLine("python3", "scripts/verify_frozen_reminders.py")
 }
 
 val verifyMushafPages by tasks.registering {
@@ -47,7 +47,7 @@ android {
 }
 
 tasks.named("preBuild").configure {
-    dependsOn(generateVerifiedReminderSnapshot)
+    dependsOn(verifyFrozenReminderSnapshot)
     dependsOn(verifyMushafPages)
 }
 
