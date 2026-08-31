@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -43,10 +44,12 @@ import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
     private val serviceEnabledState = mutableStateOf(false)
+    private val refreshState = mutableStateOf(0)
 
     override fun onResume() {
         super.onResume()
         serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
+        refreshState.value += 1
     }
 
     private fun openAccessibilitySettings() {
@@ -64,6 +67,26 @@ class MainActivity : ComponentActivity() {
                 )
             )
         }
+    }
+
+    private fun testProtection() {
+        val candidates = buildList {
+            add("com.android.chrome")
+            addAll(BrowserDetector.supportedPackages.filterNot { it == "com.android.chrome" })
+            addAll(GuardPrefs.protectedPackages(this@MainActivity))
+        }.distinct()
+
+        val target = candidates.firstOrNull {
+            packageManager.getLaunchIntentForPackage(it) != null
+        }
+
+        if (target == null) {
+            Toast.makeText(this, "Aucune application protégée testable trouvée.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        GuardDiagnostics.log(this, "MANUAL_TEST_STARTED", target)
+        startActivity(packageManager.getLaunchIntentForPackage(target))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,6 +110,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Dashboard(
                         serviceEnabled = serviceEnabledState.value,
+                        refreshToken = refreshState.value,
                         onActivateProtection = {
                             if (GuardPrefs.hasAccessibilityConsent(this@MainActivity)) {
                                 openAccessibilitySettings()
@@ -103,8 +127,11 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Dashboard(
         serviceEnabled: Boolean,
+        refreshToken: Int,
         onActivateProtection: () -> Unit
     ) {
+        @Suppress("UNUSED_VARIABLE")
+        val refresh = refreshToken
         var mode by remember {
             mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
         }
@@ -134,12 +161,15 @@ class MainActivity : ComponentActivity() {
         var unlockMinutes by remember {
             mutableStateOf(GuardPrefs.unlockMinutes(this@MainActivity))
         }
-        var saved by remember { mutableStateOf(false) }
         val jokers = GuardPrefs.remainingJokers(this@MainActivity)
         val readingsCompleted = GuardPrefs.readingsCompleted(this@MainActivity)
         val totalReadingMs = GuardPrefs.totalReadingMs(this@MainActivity)
         val averageReadingMs = GuardPrefs.averageReadingMs(this@MainActivity)
         val lastReadingMs = GuardPrefs.lastReadingMs(this@MainActivity)
+        val serviceAlive = GuardHealth.serviceLooksAlive(this@MainActivity)
+        val lastEventAge = GuardHealth.lastProtectedEventAgeMs(this@MainActivity)
+        val recentDiagnostics = GuardDiagnostics.recent(this@MainActivity, 5)
+        val recentHistory = GuardPrefs.readingHistory(this@MainActivity, 5)
 
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -181,7 +211,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            if (serviceEnabled) "Protection active ✓" else "Protection en pause",
+                            if (serviceEnabled && serviceAlive) "Protection active ✓" else if (serviceEnabled) "Protection activée • service à confirmer" else "Protection en pause",
                             style = MaterialTheme.typography.titleLarge,
                             color = if (serviceEnabled) {
                                 MaterialTheme.colorScheme.primary
@@ -195,6 +225,15 @@ class MainActivity : ComponentActivity() {
                         Text(
                             "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles aujourd’hui"
                         )
+                        Text(
+                            if (lastEventAge != null) {
+                                "Dernière détection : ${formatAge(lastEventAge)}"
+                            } else {
+                                "Aucune application protégée détectée depuis l’installation."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Button(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onActivateProtection
@@ -206,6 +245,13 @@ class MainActivity : ComponentActivity() {
                                     "Activer la protection"
                                 }
                             )
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { testProtection() },
+                            enabled = serviceEnabled
+                        ) {
+                            Text("Tester la protection")
                         }
                         OutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
@@ -241,6 +287,46 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (recentHistory.isNotEmpty()) {
+                            HorizontalDivider()
+                            Text("Historique récent", fontWeight = FontWeight.SemiBold)
+                            recentHistory.forEach { entry ->
+                                Text(
+                                    if (entry.method == "joker") {
+                                        "Joker • page ${entry.page} • ${entry.packageName}"
+                                    } else {
+                                        "Page ${entry.page} • ${formatDashboardDuration(entry.elapsedMs)} • ${entry.packageName}"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                SectionTitle("Diagnostic")
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            if (serviceAlive) "Service connecté ✓" else "Service non confirmé",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        recentDiagnostics.forEach { entry ->
+                            Text(
+                                "${GuardDiagnostics.formatTime(entry)} • ${entry.code}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        if (recentDiagnostics.isEmpty()) {
+                            Text(
+                                "Le journal local est vide.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
 
@@ -251,7 +337,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text("• 1 page complète avant de continuer.")
-                        Text("• 60 secondes réelles de lecture au premier plan.")
+                        Text("• 60 secondes avec la page Quran affichée au premier plan.")
                         Text("• 3 jokers maximum par jour.")
                         Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
                         Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
@@ -294,7 +380,7 @@ class MainActivity : ComponentActivity() {
                         onClick = {
                             protectedPackages.clear()
                             protectedPackages.addAll(installedApps.map { it.packageName })
-                            saved = false
+                            GuardPrefs.saveProtectedPackages(this@MainActivity, protectedPackages.toSet())
                         }
                     ) { Text("Tout choisir") }
 
@@ -302,7 +388,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.weight(1f),
                         onClick = {
                             protectedPackages.clear()
-                            saved = false
+                            GuardPrefs.saveProtectedPackages(this@MainActivity, emptySet())
                         }
                     ) { Text("Effacer") }
                 }
@@ -319,7 +405,6 @@ class MainActivity : ComponentActivity() {
                                 Checkbox(
                                     checked = app.packageName in protectedPackages,
                                     onCheckedChange = { checked ->
-                                        saved = false
                                         if (checked) {
                                             if (app.packageName !in protectedPackages) {
                                                 protectedPackages.add(app.packageName)
@@ -327,6 +412,10 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             protectedPackages.remove(app.packageName)
                                         }
+                                        GuardPrefs.saveProtectedPackages(
+                                            this@MainActivity,
+                                            protectedPackages.toSet()
+                                        )
                                     }
                                 )
                                 Column {
@@ -353,7 +442,7 @@ class MainActivity : ComponentActivity() {
                         selected = mode == QuranSelectionMode.JUZ,
                         onClick = {
                             mode = QuranSelectionMode.JUZ
-                            saved = false
+                            GuardPrefs.saveSelectionMode(this@MainActivity, mode)
                         }
                     )
                     Text("Choisir par Juz")
@@ -363,7 +452,7 @@ class MainActivity : ComponentActivity() {
                         selected = mode == QuranSelectionMode.HIZB,
                         onClick = {
                             mode = QuranSelectionMode.HIZB
-                            saved = false
+                            GuardPrefs.saveSelectionMode(this@MainActivity, mode)
                         }
                     )
                     Text("Choisir par Hizb")
@@ -386,11 +475,20 @@ class MainActivity : ComponentActivity() {
                                         Checkbox(
                                             checked = unit in currentSelection,
                                             onCheckedChange = { checked ->
-                                                saved = false
                                                 if (checked) {
                                                     if (unit !in currentSelection) currentSelection.add(unit)
                                                 } else if (currentSelection.size > 1) {
                                                     currentSelection.remove(unit)
+                                                }
+                                                when (mode) {
+                                                    QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
+                                                        this@MainActivity,
+                                                        selectedJuz.toSet()
+                                                    )
+                                                    QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(
+                                                        this@MainActivity,
+                                                        selectedHizb.toSet()
+                                                    )
                                                 }
                                             }
                                         )
@@ -420,7 +518,7 @@ class MainActivity : ComponentActivity() {
                                     selected = unlockMinutes == minutes,
                                     onClick = {
                                         unlockMinutes = minutes
-                                        saved = false
+                                        GuardPrefs.saveUnlockMinutes(this@MainActivity, minutes)
                                     }
                                 )
                                 Text(
@@ -438,26 +536,13 @@ class MainActivity : ComponentActivity() {
 
                 HorizontalDivider()
 
-                Button(
+                Text(
+                    "Réglages enregistrés automatiquement ✓",
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        GuardPrefs.saveSelectionMode(this@MainActivity, mode)
-                        when (mode) {
-                            QuranSelectionMode.JUZ ->
-                                GuardPrefs.saveSelectedJuz(this@MainActivity, selectedJuz.toSet())
-                            QuranSelectionMode.HIZB ->
-                                GuardPrefs.saveSelectedHizb(this@MainActivity, selectedHizb.toSet())
-                        }
-                        GuardPrefs.saveProtectedPackages(
-                            this@MainActivity,
-                            protectedPackages.toSet()
-                        )
-                        GuardPrefs.saveUnlockMinutes(this@MainActivity, unlockMinutes)
-                        saved = true
-                    }
-                ) {
-                    Text(if (saved) "Réglages enregistrés ✓" else "Enregistrer mes choix")
-                }
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center
+                )
 
                 Text(
                     "Version privée • installation officielle via le canal de distribution autorisé",
@@ -498,7 +583,7 @@ private fun AccessibilityDisclosureScreen(
             )
             Spacer(Modifier.height(18.dp))
             Text(
-                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Lorsqu’une application choisie est détectée, Quran Safeguard quitte son écran, revient à l’accueil Android et affiche la pause Quran."
+                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Lorsqu’une application choisie est détectée, Quran Safeguard affiche immédiatement la pause Quran au-dessus de cette application."
             )
             Spacer(Modifier.height(12.dp))
             Text(
@@ -554,5 +639,15 @@ private fun formatDashboardDuration(milliseconds: Long): String {
         hours > 0L -> "${hours}h ${minutes}min"
         minutes > 0L -> "${minutes}min ${seconds}s"
         else -> "${seconds}s"
+    }
+}
+
+private fun formatAge(ageMs: Long): String {
+    val seconds = ageMs.coerceAtLeast(0L) / 1000L
+    return when {
+        seconds < 5L -> "à l’instant"
+        seconds < 60L -> "il y a ${seconds}s"
+        seconds < 3600L -> "il y a ${seconds / 60L} min"
+        else -> "il y a ${seconds / 3600L} h"
     }
 }

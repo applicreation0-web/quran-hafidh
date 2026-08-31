@@ -5,6 +5,14 @@ import android.os.SystemClock
 import android.provider.Settings
 import java.time.LocalDate
 
+data class ReadingHistoryEntry(
+    val epochMs: Long,
+    val packageName: String,
+    val page: Int,
+    val elapsedMs: Long,
+    val method: String
+)
+
 object GuardPrefs {
     const val DAILY_JOKERS = 3
     const val JOKER_MAX_UNLOCK_MINUTES = 5
@@ -33,6 +41,8 @@ object GuardPrefs {
     private const val READINGS_COMPLETED = "readings_completed"
     private const val TOTAL_READING_MS = "total_reading_ms"
     private const val LAST_READING_MS = "last_reading_ms"
+    private const val READING_HISTORY = "reading_history"
+    private const val MAX_READING_HISTORY = 100
 
     // Prevents a simple clock jump from immediately creating a new joker day
     // while the device stays on. Offline-only protection cannot fully defeat a
@@ -56,6 +66,14 @@ object GuardPrefs {
 
     fun unlockWithJoker(context: Context, packageName: String) {
         val minutes = minOf(unlockMinutes(context), JOKER_MAX_UNLOCK_MINUTES)
+        val page = challengePage(context, packageName)
+        recordHistory(
+            context = context,
+            packageName = packageName,
+            page = page,
+            elapsedMs = 0L,
+            method = "joker"
+        )
         unlockForMinutes(context, packageName, minutes)
     }
 
@@ -365,6 +383,14 @@ object GuardPrefs {
             .putLong(LAST_READING_MS, elapsed)
             .commit()
 
+        recordHistory(
+            context = context,
+            packageName = challengeKey,
+            page = page,
+            elapsedMs = elapsed,
+            method = "reading"
+        )
+
         unlock(context, challengeKey)
         return elapsed
     }
@@ -387,6 +413,64 @@ object GuardPrefs {
     fun averageReadingMs(context: Context): Long {
         val count = readingsCompleted(context)
         return if (count > 0) totalReadingMs(context) / count else 0L
+    }
+
+    fun readingHistory(
+        context: Context,
+        limit: Int = 20
+    ): List<ReadingHistoryEntry> =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getString(READING_HISTORY, "")
+            .orEmpty()
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .mapNotNull(::parseHistoryEntry)
+            .take(limit.coerceIn(0, MAX_READING_HISTORY))
+            .toList()
+
+    @Synchronized
+    private fun recordHistory(
+        context: Context,
+        packageName: String,
+        page: Int,
+        elapsedMs: Long,
+        method: String
+    ) {
+        val entry = listOf(
+            System.currentTimeMillis().toString(),
+            packageName,
+            page.toString(),
+            elapsedMs.coerceAtLeast(0L).toString(),
+            method
+        ).joinToString("|")
+
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val existing = prefs.getString(READING_HISTORY, "")
+            .orEmpty()
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .toList()
+
+        val updated = buildList {
+            add(entry)
+            addAll(existing)
+        }.take(MAX_READING_HISTORY)
+
+        prefs.edit()
+            .putString(READING_HISTORY, updated.joinToString("\n"))
+            .apply()
+    }
+
+    private fun parseHistoryEntry(raw: String): ReadingHistoryEntry? {
+        val parts = raw.split('|', limit = 5)
+        if (parts.size != 5) return null
+        return ReadingHistoryEntry(
+            epochMs = parts[0].toLongOrNull() ?: return null,
+            packageName = parts[1],
+            page = parts[2].toIntOrNull() ?: return null,
+            elapsedMs = parts[3].toLongOrNull() ?: return null,
+            method = parts[4]
+        )
     }
 
     fun recentChallengePages(context: Context): List<Int> {
