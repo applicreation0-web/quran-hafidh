@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
+import org.json.JSONArray
 import java.time.LocalDate
 
 enum class ReminderType {
@@ -302,7 +303,60 @@ object ReminderLibrary {
         )
     )
 
-    fun byId(id: String): DailyReminder? = items.firstOrNull { it.id == id }
+    private var cachedBundled: List<DailyReminder>? = null
+
+    fun all(context: Context): List<DailyReminder> =
+        items + bundled(context)
+
+    fun byId(context: Context, id: String): DailyReminder? =
+        all(context).firstOrNull { it.id == id }
+
+    fun totalCount(context: Context): Int = all(context).size
+
+    @Synchronized
+    private fun bundled(context: Context): List<DailyReminder> {
+        cachedBundled?.let { return it }
+        val loaded = runCatching {
+            val raw = context.assets.open("reminders/hadeethenc_snapshot.json")
+                .bufferedReader(Charsets.UTF_8).use { it.readText() }
+            val array = JSONArray(raw)
+            buildList {
+                for (index in 0 until array.length()) {
+                    val obj = array.getJSONObject(index)
+                    val tagsJson = obj.optJSONArray("tags")
+                    val tags = buildSet {
+                        if (tagsJson != null) {
+                            for (tagIndex in 0 until tagsJson.length()) {
+                                tagsJson.optString(tagIndex)
+                                    .takeIf { it.isNotBlank() }
+                                    ?.let(::add)
+                            }
+                        }
+                    }
+                    add(
+                        DailyReminder(
+                            id = obj.getString("id"),
+                            type = ReminderType.HADITH,
+                            theme = obj.optString("theme", "bonnes_moeurs"),
+                            arabicText = obj.getString("arabicText"),
+                            frenchText = obj.getString("frenchText"),
+                            author = obj.optString("author", "Prophète Muhammad ﷺ"),
+                            book = obj.optString(
+                                "book",
+                                "Encyclopédie des hadiths traduits (HadeethEnc)"
+                            ),
+                            reference = obj.getString("reference"),
+                            authenticity = obj.optString("authenticity")
+                                .takeIf { it.isNotBlank() },
+                            tags = tags.ifEmpty { setOf("bonnes mœurs") }
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList())
+        cachedBundled = loaded
+        return loaded
+    }
 }
 
 object DailyReminderManager {
@@ -344,7 +398,7 @@ object DailyReminderManager {
         val storedId = prefs.getString(ID_KEY, null)
 
         if (storedDay == epochDay && storedId != null) {
-            ReminderLibrary.byId(storedId)?.let { return it }
+            ReminderLibrary.byId(context, storedId)?.let { return it }
         }
 
         val recent = prefs.getString(RECENT_KEY, "")
@@ -356,6 +410,7 @@ object DailyReminderManager {
         val desiredType = dailyTypeCycle[Math.floorMod(date.dayOfWeek.value - 1, dailyTypeCycle.size)]
 
         val selected = chooseReminder(
+            context = context,
             epochDay = epochDay,
             theme = theme,
             desiredType = desiredType,
@@ -377,19 +432,21 @@ object DailyReminderManager {
     }
 
     private fun chooseReminder(
+        context: Context,
         epochDay: Long,
         theme: String,
         desiredType: ReminderType,
         recentIds: Set<String>
     ): DailyReminder {
-        val all = ReminderLibrary.items
+        val all = ReminderLibrary.all(context)
         val fresh = all.filterNot { it.id in recentIds }
 
         val tiers = listOf(
             fresh.filter { it.type == desiredType && (it.theme == theme || theme in it.tags) },
-            fresh.filter { it.type == desiredType },
             fresh.filter { it.theme == theme || theme in it.tags },
+            fresh.filter { it.type == desiredType },
             fresh,
+            all.filter { it.theme == theme || theme in it.tags },
             all.filter { it.type == desiredType },
             all
         )

@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val verifyFrozenReminderSnapshot by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("python3", "scripts/verify_frozen_reminders.py")
+}
+
 val verifyMushafPages by tasks.registering {
     doLast {
         val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
@@ -32,8 +37,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "0.7.0"
+        versionCode = 10
+        versionName = "0.8.0"
     }
 
     buildFeatures {
@@ -42,6 +47,7 @@ android {
 }
 
 tasks.named("preBuild").configure {
+    dependsOn(verifyFrozenReminderSnapshot)
     dependsOn(verifyMushafPages)
 }
 
@@ -49,11 +55,13 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.08.00")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("org.brotli:dec:0.1.2")
+    implementation("com.batoulapps.adhan:adhan2:0.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
 }

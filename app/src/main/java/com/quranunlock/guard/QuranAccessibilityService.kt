@@ -17,6 +17,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private val pendingLaunches = mutableListOf<Runnable>()
     private var foregroundPackage: String? = null
     private var foregroundUnlockedPackage: String? = null
+    private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
 
     private val screenReceiver = object : BroadcastReceiver() {
@@ -113,7 +114,11 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
-        handleForegroundPackage(packageName)
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        ) {
+            handleForegroundPackage(packageName)
+        }
 
         if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
@@ -139,22 +144,45 @@ class QuranAccessibilityService : AccessibilityService() {
     }
 
     private fun handleForegroundPackage(packageName: String) {
-        if (foregroundPackage == packageName) return
-
-        val previousUnlocked = foregroundUnlockedPackage
-        if (previousUnlocked != null && previousUnlocked != packageName) {
-            GuardPrefs.endUnlockForeground(this, previousUnlocked)
-            foregroundUnlockedPackage = null
+        if (foregroundPackage == packageName) {
+            pendingForegroundPause?.let(mainHandler::removeCallbacks)
+            pendingForegroundPause = null
+            return
         }
-
-        foregroundPackage = packageName
 
         if (ProtectedApps.isProtected(this, packageName) &&
             GuardPrefs.isUnlocked(this, packageName)
         ) {
+            pendingForegroundPause?.let(mainHandler::removeCallbacks)
+            pendingForegroundPause = null
+
+            val previousUnlocked = foregroundUnlockedPackage
+            if (previousUnlocked != null && previousUnlocked != packageName) {
+                GuardPrefs.endUnlockForeground(this, previousUnlocked)
+            }
+
+            foregroundPackage = packageName
             GuardPrefs.beginUnlockForeground(this, packageName)
             foregroundUnlockedPackage = packageName
+            return
         }
+
+        val previousUnlocked = foregroundUnlockedPackage
+        foregroundPackage = packageName
+        if (previousUnlocked == null) return
+
+        pendingForegroundPause?.let(mainHandler::removeCallbacks)
+        val pauseTask = Runnable {
+            if (foregroundUnlockedPackage == previousUnlocked &&
+                foregroundPackage != previousUnlocked
+            ) {
+                GuardPrefs.endUnlockForeground(this, previousUnlocked)
+                foregroundUnlockedPackage = null
+            }
+            pendingForegroundPause = null
+        }
+        pendingForegroundPause = pauseTask
+        mainHandler.postDelayed(pauseTask, 750L)
     }
 
     private fun maybeShowUsageReminder(packageName: String) {
@@ -245,6 +273,8 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundPackage = null
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
+        pendingForegroundPause?.let(mainHandler::removeCallbacks)
+        pendingForegroundPause = null
         unregisterScreenReceiverIfNeeded()
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
@@ -259,6 +289,8 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundPackage = null
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
+        pendingForegroundPause?.let(mainHandler::removeCallbacks)
+        pendingForegroundPause = null
         unregisterScreenReceiverIfNeeded()
         cancelPendingLaunches()
         GuardRuntime.interception.reset()

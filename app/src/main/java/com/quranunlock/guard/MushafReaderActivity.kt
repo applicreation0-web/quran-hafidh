@@ -21,12 +21,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -108,8 +110,23 @@ class MushafReaderActivity : ComponentActivity() {
                         }
                     }
 
-                    val readerViewportHeight =
-                        LocalConfiguration.current.screenWidthDp.dp * 0.82f
+                    var renderedPageHeightPx by remember {
+                        mutableIntStateOf(0)
+                    }
+                    val configuration = LocalConfiguration.current
+                    val density = LocalDensity.current
+                    val fallbackHeight = configuration.screenHeightDp.dp * 0.48f
+                    val measuredHalfHeight = if (renderedPageHeightPx > 0) {
+                        with(density) {
+                            (renderedPageHeightPx.toFloat() / 2f).toDp()
+                        }
+                    } else {
+                        fallbackHeight
+                    }
+                    val readerViewportHeight = measuredHalfHeight.coerceIn(
+                        220.dp,
+                        configuration.screenHeightDp.dp * 0.62f
+                    )
 
                     Column(
                         modifier = Modifier
@@ -152,6 +169,9 @@ class MushafReaderActivity : ComponentActivity() {
                                     .fillMaxWidth()
                                     .height(readerViewportHeight),
                                 onReady = { markPageReady() },
+                                onContentHeightMeasured = { heightPx ->
+                                    if (heightPx > 0) renderedPageHeightPx = heightPx
+                                },
                                 onBottomReached = {
                                     GuardPrefs.markReadingBottomReached(
                                         this@MushafReaderActivity,
@@ -177,16 +197,20 @@ class MushafReaderActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingAndUnlock(
+                                val elapsed = GuardPrefs.completeReadingForSummary(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.isUnlocked(this@MushafReaderActivity, challengeKey)) {
-                                    GuardRuntime.interception.markUnlocked(challengeKey)
+                                if (GuardPrefs.hasReachedReadingBottom(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        page
+                                    )
+                                ) {
                                     GuardDiagnostics.log(
                                         this@MushafReaderActivity,
-                                        "READING_UNLOCKED",
+                                        "READING_COMPLETED_PENDING_SUMMARY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
@@ -196,6 +220,7 @@ class MushafReaderActivity : ComponentActivity() {
                                             ReadingCompleteActivity::class.java
                                         ).apply {
                                             putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
+                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
                                             putExtra(
                                                 ReadingCompleteActivity.EXTRA_ELAPSED_MS,
                                                 elapsed
@@ -293,6 +318,7 @@ private fun MushafPageWebView(
     svgContent: String,
     modifier: Modifier = Modifier,
     onReady: () -> Unit,
+    onContentHeightMeasured: (Int) -> Unit,
     onBottomReached: () -> Unit,
     onFailure: () -> Unit
 ) {
@@ -311,10 +337,15 @@ private fun MushafPageWebView(
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
 
-                setOnScrollChangeListener { view, _, scrollY, _, _ ->
+                setOnScrollChangeListener { view, _, scrollY, _, oldScrollY ->
                     val webView = view as WebView
                     val contentHeightPx = (webView.contentHeight * webView.scale).toInt()
-                    if (contentHeightPx > 0 &&
+                    if (contentHeightPx > 0) {
+                        onContentHeightMeasured(contentHeightPx)
+                    }
+                    val userActuallyScrolled = scrollY > 0 && scrollY != oldScrollY
+                    if (userActuallyScrolled &&
+                        contentHeightPx > webView.height &&
                         scrollY + webView.height >= contentHeightPx - 24
                     ) {
                         onBottomReached()
@@ -333,10 +364,8 @@ private fun MushafPageWebView(
                             webView.post {
                                 val contentHeightPx =
                                     (webView.contentHeight * webView.scale).toInt()
-                                if (contentHeightPx > 0 &&
-                                    webView.scrollY + webView.height >= contentHeightPx - 24
-                                ) {
-                                    onBottomReached()
+                                if (contentHeightPx > 0) {
+                                    onContentHeightMeasured(contentHeightPx)
                                 }
                             }
                         }

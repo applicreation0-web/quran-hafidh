@@ -52,6 +52,7 @@ object GuardPrefs {
     private const val READING_ACCUMULATED_PREFIX = "reading_accumulated_"
     private const val READING_STARTED_PREFIX = "reading_started_"
     private const val READING_BOTTOM_REACHED_PREFIX = "reading_bottom_reached_"
+    private const val READING_COMPLETION_RECORDED_PREFIX = "reading_completion_recorded_"
     private const val READINGS_COMPLETED = "readings_completed"
     private const val TOTAL_READING_MS = "total_reading_ms"
     private const val LAST_READING_MS = "last_reading_ms"
@@ -107,6 +108,7 @@ object GuardPrefs {
             .remove(READING_ACCUMULATED_PREFIX + packageName)
             .remove(READING_STARTED_PREFIX + packageName)
             .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
+            .remove(READING_COMPLETION_RECORDED_PREFIX + packageName)
             .apply()
     }
 
@@ -118,6 +120,7 @@ object GuardPrefs {
             .remove(READING_ACCUMULATED_PREFIX + challengeKey)
             .remove(READING_STARTED_PREFIX + challengeKey)
             .remove(READING_BOTTOM_REACHED_PREFIX + challengeKey)
+            .remove(READING_COMPLETION_RECORDED_PREFIX + challengeKey)
             .apply()
     }
 
@@ -414,6 +417,7 @@ object GuardPrefs {
             .putLong(READING_ACCUMULATED_PREFIX + challengeKey, 0L)
             .remove(READING_STARTED_PREFIX + challengeKey)
             .putBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, false)
+            .remove(READING_COMPLETION_RECORDED_PREFIX + challengeKey)
             .commit()
     }
 
@@ -483,7 +487,7 @@ object GuardPrefs {
     }
 
     @Synchronized
-    fun completeReadingAndUnlock(
+    fun completeReadingForSummary(
         context: Context,
         challengeKey: String,
         page: Int
@@ -491,8 +495,12 @@ object GuardPrefs {
         val elapsed = readingElapsedMs(context, challengeKey, page)
         if (!hasReachedReadingBottom(context, challengeKey, page)) return elapsed
 
-        val atypicalFast = isAtypicallyFast(context, elapsed)
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        if (prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0) == page) {
+            return elapsed
+        }
+
+        val atypicalFast = isAtypicallyFast(context, elapsed)
         val completed = prefs.getInt(READINGS_COMPLETED, 0).coerceAtLeast(0)
         val total = prefs.getLong(TOTAL_READING_MS, 0L).coerceAtLeast(0L)
 
@@ -500,6 +508,7 @@ object GuardPrefs {
             .putInt(READINGS_COMPLETED, completed + 1)
             .putLong(TOTAL_READING_MS, total + elapsed)
             .putLong(LAST_READING_MS, elapsed)
+            .putInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, page)
             .commit()
 
         recordHistory(
@@ -520,7 +529,32 @@ object GuardPrefs {
             )
         }
 
+        return elapsed
+    }
+
+    @Synchronized
+    fun unlockAfterReadingSummary(
+        context: Context,
+        challengeKey: String,
+        page: Int
+    ): Boolean {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0)
+        if (recorded != page || !hasReachedReadingBottom(context, challengeKey, page)) {
+            return false
+        }
         unlock(context, challengeKey)
+        return true
+    }
+
+    @Synchronized
+    fun completeReadingAndUnlock(
+        context: Context,
+        challengeKey: String,
+        page: Int
+    ): Long {
+        val elapsed = completeReadingForSummary(context, challengeKey, page)
+        unlockAfterReadingSummary(context, challengeKey, page)
         return elapsed
     }
 
