@@ -730,7 +730,12 @@ object GuardPrefs {
         page: Int
     ): Long {
         val elapsed = readingElapsedMs(context, challengeKey, page)
-        if (!ReadingValidationPolicy.canValidate(\n                activeReadingMs = elapsed,\n                bottomReached = hasReachedReadingBottom(context, challengeKey, page)\n            )\n        ) return elapsed\n
+        if (!ReadingValidationPolicy.canValidate(
+                activeReadingMs = elapsed,
+                bottomReached = hasReachedReadingBottom(context, challengeKey, page)
+            )
+        ) return elapsed
+
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         if (prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0) == page) {
             return elapsed
@@ -776,7 +781,12 @@ object GuardPrefs {
     ): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0)
-        if (recorded != page ||\n            !ReadingValidationPolicy.canValidate(\n                activeReadingMs = readingElapsedMs(context, challengeKey, page),\n                bottomReached = hasReachedReadingBottom(context, challengeKey, page)\n            )\n        ) {
+        if (recorded != page ||
+            !ReadingValidationPolicy.canValidate(
+                activeReadingMs = readingElapsedMs(context, challengeKey, page),
+                bottomReached = hasReachedReadingBottom(context, challengeKey, page)
+            )
+        ) {
             return false
         }
         unlock(context, challengeKey)
