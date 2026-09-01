@@ -59,7 +59,9 @@ class ReminderLibraryTest {
 
     @Test
     fun requestedCoreThemesAreCovered() {
-        val covered = ReminderLibrary.items.flatMap { item ->
+        val curatedForDisplay =
+            ReminderLibrary.items + HikamRepository.asDailyReminders()
+        val covered = curatedForDisplay.flatMap { item ->
             item.tags + item.theme
         }.toSet()
 
