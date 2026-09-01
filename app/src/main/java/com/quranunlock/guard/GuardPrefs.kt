@@ -317,7 +317,7 @@ object GuardPrefs {
         val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)
         val source = stored?.toSet() ?: ProtectedApps.defaultPackages
         val filtered = source
-            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
 
         // Self-heal legacy selections: once an app becomes permanently excluded,
@@ -333,7 +333,7 @@ object GuardPrefs {
 
     fun saveProtectedPackages(context: Context, packages: Set<String>) {
         val filtered = packages
-            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
 
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
