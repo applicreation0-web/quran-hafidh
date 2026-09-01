@@ -61,7 +61,10 @@ val verifyMushafPages by tasks.registering {
             "fiftyNineSecondsCannotValidateEvenAtBottom",
             "sixtyActiveSecondsAndBottomCanValidate",
             "sixtySecondsWithoutPageProgressCannotValidate",
-            "pausedTimeCannotBeInventedByValidationPolicy"
+            "pausedTimeCannotBeInventedByValidationPolicy",
+            "fullyVisiblePageDoesNotRequireScroll",
+            "minorWebViewRoundingDoesNotCreateFakeScrollRequirement",
+            "overflowingPageRequiresNaturalScroll"
         ).forEach { scenario ->
             check(policyTests.contains("fun " + scenario + "(")) {
                 "Missing release-blocking reading validation test: " + scenario
@@ -192,6 +195,19 @@ val verifyPrivacyBoundary by tasks.registering {
         }
         check(!accessibility.contains("typeViewTextChanged")) {
             "Text-change accessibility events are forbidden."
+        }
+
+        val settingsUi = file(
+            "src/main/java/com/quranunlock/guard/MainActivity.kt"
+        ).readText()
+        val consentAction = settingsUi
+            .substringAfter("onAccept = {")
+            .substringBefore("onLater =")
+        check(!consentAction.contains("openAccessibilitySettings()")) {
+            "Accepting the disclosure must open Safeguard settings, not Android Accessibility."
+        }
+        check(settingsUi.contains("Activer la protection via Android")) {
+            "Android Accessibility must remain a separate, explicit activation action."
         }
     }
 }
@@ -392,6 +408,38 @@ val verifyEditorialBoundary by tasks.registering {
                 !ghazaliUi.contains("translittération", ignoreCase = true)
         ) {
             "Transliteration is reserved for Adhkar and must not appear in Ghazali UI."
+        }
+
+        val spiritualLibraryUi = file(
+            "src/main/java/com/quranunlock/guard/SpiritualLibraryActivity.kt"
+        ).readText()
+        val dailyReminderSource = file(
+            "src/main/java/com/quranunlock/guard/DailyReminder.kt"
+        ).readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+        check(
+            !spiritualLibraryUi.contains("LibrarySection.GHAZALI") &&
+                !spiritualLibraryUi.contains("onOpenGhazali")
+        ) {
+            "The incomplete Ghazali section must remain hidden until a sufficient corpus is verified."
+        }
+        check(!dailyReminderSource.contains("GhazaliRepository.asDailyReminders()")) {
+            "Incomplete Ghazali content must not enter daily reminders."
+        }
+        check(!manifest.contains("android:name=\".GhazaliDetailActivity\"")) {
+            "The incomplete Ghazali detail route must not be packaged."
+        }
+
+        val adhkarUi = file(
+            "src/main/java/com/quranunlock/guard/AdhkarActivity.kt"
+        ).readText()
+        check(
+            adhkarUi.contains("AdhkarPeriod.MORNING") &&
+                adhkarUi.contains("AdhkarPeriod.EVENING") &&
+                adhkarUi.contains("Text(\"Matin\")") &&
+                adhkarUi.contains("Text(\"Soir\")")
+        ) {
+            "Morning and evening Adhkar must both be selectable in-app."
         }
         check(hikam.contains("HikmaCommentary")) {
             "Canonical Hikam data must retain classical commentary metadata."
