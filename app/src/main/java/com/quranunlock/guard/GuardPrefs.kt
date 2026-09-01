@@ -329,9 +329,16 @@ object GuardPrefs {
 
             // Only a same-boot abrupt service recreation can nominate a package
             // for immediate resume. A reboot can never reuse the previous owner.
-            val checkpoint = state.checkpointElapsedMs ?: Long.MIN_VALUE
-            if (state.foregroundBootCount == currentBoot &&
+            val checkpoint = state.checkpointElapsedMs
+            val nowElapsed = SystemClock.elapsedRealtime()
+            if (UnlockBudgetIntegrity.isSafeSameBootRecovery(
+                    storedBootCount = state.foregroundBootCount,
+                    currentBootCount = currentBoot,
+                    checkpointElapsedMs = checkpoint,
+                    nowElapsedMs = nowElapsed
+                ) &&
                 reconciled.remainingMs > 0L &&
+                checkpoint != null &&
                 checkpoint > latestCheckpoint
             ) {
                 resumeCandidate = OrphanedUnlockRecovery(
