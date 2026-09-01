@@ -121,6 +121,17 @@ object UnlockBudgetIntegrity {
     fun shouldFreezeForAudioMode(mode: Int): Boolean =
         mode in 1..6
 
+    fun isKnownWhatsAppCallActivity(
+        packageName: String,
+        className: String?
+    ): Boolean {
+        if (packageName != "com.whatsapp" || className.isNullOrBlank()) return false
+        return className == "com.whatsapp.VoipActivity" ||
+            className == "com.whatsapp.VoipActivityV2" ||
+            className == "com.whatsapp.voipcalling.VoipActivityV2" ||
+            className == "com.whatsapp.voipcalling.VoipActivityV3"
+    }
+
     fun isImePseudoForeground(
         eventPackage: String,
         activeImePackage: String?,
