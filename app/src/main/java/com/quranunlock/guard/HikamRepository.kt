@@ -98,7 +98,7 @@ object HikamRepository {
             ),
             verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب […]",
@@ -114,7 +114,7 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 39. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Extrait arabe retrouvé à la p. 39. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
                 ),
                 isExcerpt = true,
                 textIntegrity = ClassicalTextIntegrity(
@@ -152,7 +152,7 @@ object HikamRepository {
             ),
             verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح […]",
@@ -168,7 +168,7 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 50. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Extrait arabe retrouvé à la p. 50. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
                 ),
                 isExcerpt = true,
                 textIntegrity = ClassicalTextIntegrity(
@@ -206,7 +206,7 @@ object HikamRepository {
             ),
             verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء […]",
@@ -222,7 +222,7 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 58. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Extrait arabe retrouvé à la p. 58. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
                 ),
                 isExcerpt = true,
                 textIntegrity = ClassicalTextIntegrity(
