@@ -614,6 +614,11 @@ class MainActivity : ComponentActivity() {
                     "Choisis les autres applications auxquelles appliquer la pause Quran.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text(
+                    "Banque, paiement, identité, authentification et sécurité sont toujours exclus et ne peuvent pas être liés à Quran Safeguard.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)

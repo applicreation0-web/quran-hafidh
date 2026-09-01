@@ -300,10 +300,22 @@ object GuardPrefs {
     }
 
     fun protectedPackages(context: Context): Set<String> {
-        val stored = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getStringSet(PROTECTED_PACKAGES, null)
-            ?: return ProtectedApps.defaultPackages
-        return stored.toSet()
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)
+        val source = stored?.toSet() ?: ProtectedApps.defaultPackages
+        val filtered = source
+            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .toSet()
+
+        // Self-heal legacy selections: once an app becomes permanently excluded,
+        // it is removed from persisted configuration and can never be re-linked.
+        if (stored != null && filtered != stored.toSet()) {
+            prefs.edit()
+                .putStringSet(PROTECTED_PACKAGES, filtered)
+                .apply()
+        }
+
+        return filtered
     }
 
     fun saveProtectedPackages(context: Context, packages: Set<String>) {
