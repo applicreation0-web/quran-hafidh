@@ -449,6 +449,16 @@ val verifyThoughtOfDayBoundary by tasks.registering {
         check(scheduler.contains("ThoughtOfDayActivity::class.java")) {
             "Thought notification must open its dedicated full card."
         }
+        check(
+            scheduler.contains(
+                "putExtra(ThoughtOfDayActivity.EXTRA_REMINDER_ID, thought.id)"
+            )
+        ) {
+            "Thought notification must carry the exact selected reminder ID."
+        }
+        check(thoughtScreen.contains("ReminderLibrary.byId")) {
+            "Thought full card must resolve the reminder ID carried by notification."
+        }
         check(daily.contains("FULL_CARD_ACTIVITY_SIMPLE_NAME = \"ThoughtOfDayActivity\"")) {
             "Thought-of-day full-card destination contract is missing."
         }
