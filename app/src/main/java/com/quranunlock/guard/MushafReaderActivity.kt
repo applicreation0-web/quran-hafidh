@@ -307,8 +307,12 @@ private fun MushafPageWebView(
                     }
                     val userActuallyScrolled = scrollY > 0 && scrollY != oldScrollY
                     if (userActuallyScrolled &&
-                        contentHeightPx > webView.height &&
-                        scrollY + webView.height >= contentHeightPx - 24
+                        ReadingValidationPolicy.requiresScroll(
+                            contentHeightPx = contentHeightPx,
+                            viewportHeightPx = webView.height
+                        ) &&
+                        scrollY + webView.height >=
+                            contentHeightPx - ReadingValidationPolicy.SCROLL_TOLERANCE_PX
                     ) {
                         onBottomReached()
                     }
@@ -328,6 +332,14 @@ private fun MushafPageWebView(
                                     (webView.contentHeight * webView.scale).toInt()
                                 if (contentHeightPx > 0) {
                                     onContentHeightMeasured(contentHeightPx)
+                                    if (webView.height > 0 &&
+                                        !ReadingValidationPolicy.requiresScroll(
+                                            contentHeightPx = contentHeightPx,
+                                            viewportHeightPx = webView.height
+                                        )
+                                    ) {
+                                        onBottomReached()
+                                    }
                                 }
                             }
                         }
