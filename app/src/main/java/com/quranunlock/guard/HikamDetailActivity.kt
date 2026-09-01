@@ -99,7 +99,12 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
             }
 
             Text(
-                "Authenticité : source et attribution vérifiées",
+                "Authenticité documentaire : source et attribution vérifiées",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Traduction française : interne Quran Safeguard, relue contre l’arabe ; pas de certification éditoriale externe.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
