@@ -104,6 +104,12 @@ val verifyEditorialBoundary by tasks.registering {
 
         val hikam = file("src/main/java/com/quranunlock/guard/HikamRepository.kt").readText()
         val hikamUi = file("src/main/java/com/quranunlock/guard/HikamDetailActivity.kt").readText()
+        check(!hikam.contains("transliteration", ignoreCase = true)) {
+            "Transliteration is reserved for Adhkar and must not exist in Hikam data."
+        }
+        check(!hikamUi.contains("Translittération", ignoreCase = true)) {
+            "Transliteration is reserved for Adhkar and must not appear in Hikam UI."
+        }
         check(hikam.contains("HikmaCommentary")) {
             "Canonical Hikam data must retain classical commentary metadata."
         }
