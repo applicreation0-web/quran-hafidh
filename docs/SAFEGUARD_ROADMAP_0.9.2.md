@@ -32,3 +32,5 @@ Convergence audit -> tests -> adversarial audit -> direct corrections -> re-test
 -> second audit -> exact final APK -> APK device test -> release authorization.
 
 No release is authorized from the first audit.
+
+CI gate: verifyReleaseAudit, unit tests, debug APK and unsigned release APK must all pass on the same commit.
