@@ -19,6 +19,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var foregroundUnlockedPackage: String? = null
     private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
+    private var scopeReceiverRegistered = false
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -29,6 +30,14 @@ class QuranAccessibilityService : AccessibilityService() {
                 foregroundUnlockedPackage = null
                 foregroundPackage = null
                 GuardDiagnostics.log(this@QuranAccessibilityService, "SCREEN_OFF_USAGE_PAUSED")
+            }
+        }
+    }
+
+    private val scopeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AccessibilityScopeManager.ACTION_REFRESH_SCOPE) {
+                refreshAccessibilityScope()
             }
         }
     }
@@ -87,6 +96,8 @@ class QuranAccessibilityService : AccessibilityService() {
         BrowserDetector.refresh()
         GuardRuntime.interception.reset()
         GuardHealth.markConnected(this)
+        registerScopeReceiverIfNeeded()
+        refreshAccessibilityScope()
         GuardDiagnostics.log(this, "SERVICE_CONNECTED")
         registerScreenReceiverIfNeeded()
         mainHandler.removeCallbacks(heartbeat)
@@ -112,8 +123,56 @@ class QuranAccessibilityService : AccessibilityService() {
         screenReceiverRegistered = false
     }
 
+    private fun registerScopeReceiverIfNeeded() {
+        if (scopeReceiverRegistered) return
+        val filter = IntentFilter(AccessibilityScopeManager.ACTION_REFRESH_SCOPE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(scopeReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(scopeReceiver, filter)
+        }
+        scopeReceiverRegistered = true
+    }
+
+    private fun unregisterScopeReceiverIfNeeded() {
+        if (!scopeReceiverRegistered) return
+        runCatching { unregisterReceiver(scopeReceiver) }
+        scopeReceiverRegistered = false
+    }
+
+    private fun refreshAccessibilityScope() {
+        val packages = AccessibilityScopeManager.applyTo(this)
+
+        pendingForegroundPause?.let(mainHandler::removeCallbacks)
+        pendingForegroundPause = null
+
+        foregroundUnlockedPackage?.let { unlockedPackage ->
+            if (unlockedPackage !in packages) {
+                GuardPrefs.endUnlockForeground(this, unlockedPackage)
+                foregroundUnlockedPackage = null
+            }
+        }
+
+        if (foregroundPackage != null && foregroundPackage !in packages) {
+            foregroundPackage = null
+        }
+
+        cancelPendingLaunches()
+        GuardRuntime.interception.reset()
+        GuardDiagnostics.log(
+            this,
+            "ACCESSIBILITY_SCOPE_REFRESHED",
+            detail = "packages=" + packages.size
+        )
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
+
+        // Defense in depth: packages outside the explicit accessibility scope
+        // are ignored before any foreground, budget, diagnostic or gate logic.
+        if (!AccessibilityScopeManager.shouldProcessEvent(this, packageName)) return
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
         ) {
@@ -276,6 +335,7 @@ class QuranAccessibilityService : AccessibilityService() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
         pendingForegroundPause = null
         unregisterScreenReceiverIfNeeded()
+        unregisterScopeReceiverIfNeeded()
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
         return super.onUnbind(intent)
@@ -292,6 +352,7 @@ class QuranAccessibilityService : AccessibilityService() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
         pendingForegroundPause = null
         unregisterScreenReceiverIfNeeded()
+        unregisterScopeReceiverIfNeeded()
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
         super.onDestroy()
