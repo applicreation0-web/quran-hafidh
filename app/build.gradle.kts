@@ -348,6 +348,15 @@ val verifyEditorialBoundary by tasks.registering {
     }
 }
 
+val verifyReleaseAudit by tasks.registering {
+    dependsOn(verifyFrozenReminderSnapshot)
+    dependsOn(verifyMushafPages)
+    dependsOn(verifyPrivacyBoundary)
+    dependsOn(verifyEditorialBoundary)
+    dependsOn(verifyUnlockBudgetIntegrity)
+    dependsOn(verifyUpdateMigrationIntegrity)
+}
+
 android {
     namespace = "com.applicreation0.quransafeguard"
     compileSdk = 37
@@ -392,6 +401,5 @@ dependencies {
 
 tasks.matching { it.name == "assembleRelease" }.configureEach {
     dependsOn("testDebugUnitTest")
-    dependsOn(verifyUnlockBudgetIntegrity)
-    dependsOn(verifyUpdateMigrationIntegrity)
+    dependsOn(verifyReleaseAudit)
 }
