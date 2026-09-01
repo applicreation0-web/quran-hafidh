@@ -35,8 +35,8 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Verify unlock budget integrity
-        run: gradle --no-daemon :app:verifyUnlockBudgetIntegrity
+      - name: Verify total release audit
+        run: gradle --no-daemon :app:verifyReleaseAudit
 
       - name: Run unit tests
         run: gradle --no-daemon :app:testDebugUnitTest
