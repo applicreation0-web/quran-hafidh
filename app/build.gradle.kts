@@ -79,10 +79,15 @@ val verifyEditorialBoundary by tasks.registering {
         }
 
         val hikam = file("src/main/java/com/quranunlock/guard/HikamRepository.kt").readText()
-        check(hikam.contains("Commentaire classique")) {
-            // The UI label lives in HikamDetailActivity; this branch intentionally
-            // validates the data structure below instead.
-            check(hikam.contains("HikmaCommentary"))
+        val hikamUi = file("src/main/java/com/quranunlock/guard/HikamDetailActivity.kt").readText()
+        check(hikam.contains("HikmaCommentary")) {
+            "Canonical Hikam data must retain classical commentary metadata."
+        }
+        check(hikamUi.contains("Approfondir — commentaire classique")) {
+            "Hikma UI must expose the classical commentary explicitly."
+        }
+        check(hikamUi.contains("Texte du commentateur présenté sans reformulation.")) {
+            "Hikma UI must state that the commentator text is not reformulated."
         }
         check(hikam.contains("Ibn ʿAjība")) {
             "Classical commentary must identify Ibn ʿAjība explicitly."
