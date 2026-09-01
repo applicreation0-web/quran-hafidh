@@ -38,6 +38,13 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".ThoughtOfDayActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+
+        <activity
             android:name=".GhazaliDetailActivity"
             android:excludeFromRecents="false"
             android:exported="false"
