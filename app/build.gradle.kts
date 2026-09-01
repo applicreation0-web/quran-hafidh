@@ -160,6 +160,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(service.contains("handleAudioModeChanged")) {
             "Call/VoIP freeze handling is required."
         }
+        check(service.contains("if (packageName == this.packageName)")) {
+            "Safeguard UI must explicitly narrow broad accessibility observation."
+        }
         check(service.contains("pauseForegroundBudget(clearForeground = true)")) {
             "Real app exits and screen-off must pause immediately."
         }
