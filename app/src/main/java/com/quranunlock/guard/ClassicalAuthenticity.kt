@@ -81,5 +81,6 @@ data class ClassicalSource(
                 workTitle.isNotBlank() &&
                 edition.isNotBlank() &&
                 locator.isNotBlank() &&
-                sourceUrl.isNotBlank()
+                sourceUrl.isNotBlank() &&
+                !translator.isNullOrBlank()
 }
