@@ -18,6 +18,9 @@ data class HikmaCommentary(
         get() =
             arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
+                source.author.isNotBlank() &&
+                source.workTitle.isNotBlank() &&
+                source.edition.isNotBlank() &&
                 source.locator.isNotBlank() &&
                 source.sourceUrl.isNotBlank() &&
                 verification.displayEligible
@@ -41,6 +44,9 @@ data class HikmaEntry(
                 sourceNumber > 0 &&
                 arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
+                source.author.isNotBlank() &&
+                source.workTitle.isNotBlank() &&
+                source.edition.isNotBlank() &&
                 source.locator.isNotBlank() &&
                 source.sourceUrl.isNotBlank() &&
                 verification.displayEligible
