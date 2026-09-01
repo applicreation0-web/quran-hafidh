@@ -1,4 +1,4 @@
-# Safeguard 0.9.2 — release contract
+# Safeguard 0.9.3 — device-fix release contract
 
 This branch follows the user-approved 39-point roadmap. Newer decisions in this
 contract supersede older chat notes and legacy implementation details.
