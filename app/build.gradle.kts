@@ -197,6 +197,7 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "normalPhoneCallFreezesBudget",
             "whatsappVoipCallFreezesBudget",
             "rebootPreservesBudgetAndInvalidatesForegroundSession",
+            "unknownBootCountCanNeverBeTreatedAsSameBootRecovery",
             "serviceKillRestartLeavesNoPhantomForeground",
             "oneHundredRapidTransitionsDoNotDrift",
             "jokerUsesTheSameForegroundAccounting",
