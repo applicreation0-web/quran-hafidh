@@ -184,6 +184,12 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(prefs.contains("reconcileOrphanedUnlockForeground")) {
             "Service/reboot orphan cleanup is mandatory."
         }
+        check(engine.contains("MAX_UNCERTAIN_RECOVERY_CHARGE_MS = 1_000L")) {
+            "Unknown service-death downtime must be bounded to one checkpoint interval."
+        }
+        check(prefs.contains("boundedRecoveryChargeMs")) {
+            "Persistence layer must use bounded orphan recovery accounting."
+        }
         check(engine.contains("shouldFreezeForAudioMode")) {
             "Telephony and VoIP call freeze policy is missing."
         }
@@ -208,6 +214,8 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "rebootPreservesBudgetAndInvalidatesForegroundSession",
             "unknownBootCountCanNeverBeTreatedAsSameBootRecovery",
             "serviceKillRestartLeavesNoPhantomForeground",
+            "longServiceDeathGapCanChargeAtMostOneCheckpointInterval",
+            "shortServiceDeathGapChargesOnlyTheObservedTail",
             "oneHundredRapidTransitionsDoNotDrift",
             "jokerUsesTheSameForegroundAccounting",
             "deselectionReselectionStartsWithoutOldBudget",
