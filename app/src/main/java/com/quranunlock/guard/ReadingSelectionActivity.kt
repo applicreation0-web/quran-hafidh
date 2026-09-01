@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
@@ -51,7 +54,10 @@ class ReadingSelectionActivity : ComponentActivity() {
             }
         }
 
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -62,14 +68,22 @@ class ReadingSelectionActivity : ComponentActivity() {
                 Text(
                     "Juz / Hizb",
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
                     "Choisissez les zones du Mushaf éligibles pour les prochaines lectures.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
@@ -111,6 +125,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                 ) {
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp),
                         onClick = {
                             current.clear()
                             current.addAll(1..maxUnit)
@@ -120,6 +135,7 @@ class ReadingSelectionActivity : ComponentActivity() {
 
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(14.dp),
                         onClick = {
                             current.clear()
                             persistReadingSelection(mode, selectedJuz, selectedHizb)
@@ -127,7 +143,14 @@ class ReadingSelectionActivity : ComponentActivity() {
                     ) { Text("Tout désélectionner") }
                 }
 
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                ) {
                     Column(modifier = Modifier.padding(10.dp)) {
                         (1..maxUnit).chunked(3).forEach { rowUnits ->
                             Row(modifier = Modifier.fillMaxWidth()) {
