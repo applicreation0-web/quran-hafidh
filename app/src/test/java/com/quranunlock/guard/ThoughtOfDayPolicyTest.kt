@@ -65,6 +65,14 @@ class ThoughtOfDayPolicyTest {
     }
 
     @Test
+    fun notificationOpensTheDedicatedFullThoughtCard() {
+        assertEquals(
+            "ThoughtOfDayActivity",
+            ThoughtOfDayPolicy.FULL_CARD_ACTIVITY_SIMPLE_NAME
+        )
+    }
+
+    @Test
     fun thoughtNotificationIsScheduledInMorning() {
         assertEquals(8, ThoughtOfDayPolicy.MORNING_HOUR)
         assertEquals(8200, ThoughtOfDayPolicy.NOTIFICATION_ID)

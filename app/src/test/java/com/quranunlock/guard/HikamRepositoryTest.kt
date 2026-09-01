@@ -41,9 +41,9 @@ class HikamRepositoryTest {
     }
 
     @Test
-    fun ibnAjibaIsAlwaysCommentatorNotHikamAuthor() {
+    fun ibnAjibaIsOnlyValidatedWhenACommentaryIsAvailable() {
         HikamRepository.entries.forEach { hikma ->
-            val commentary = hikma.commentary!!
+            val commentary = hikma.commentary ?: return@forEach
             assertEquals("Ibn ʿAjība", commentary.source.author)
             assertTrue(commentary.source.workTitle.contains("Īqāẓ al-Himam"))
             assertTrue(commentary.source.locator.contains("Hikma " + hikma.sourceNumber))
@@ -52,6 +52,16 @@ class HikamRepositoryTest {
             assertTrue(commentary.arabicText.contains("[…]"))
             assertTrue(commentary.displayEligible)
         }
+    }
+
+    @Test
+    fun sourcedHikmaCanDisplayWithoutUnverifiedCommentary() {
+        val model = HikamRepository.entries.first()
+        val withoutCommentary = model.copy(
+            canonicalId = model.canonicalId + "_without_commentary",
+            commentary = null
+        )
+        assertTrue(withoutCommentary.displayEligible)
     }
 
     @Test

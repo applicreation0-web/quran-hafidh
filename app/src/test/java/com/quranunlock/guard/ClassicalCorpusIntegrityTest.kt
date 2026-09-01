@@ -69,6 +69,31 @@ class ClassicalCorpusIntegrityTest {
     }
 
     @Test
+    fun classicalSourceRequiresAuthorWorkAndSourceUrl() {
+        val base = source()
+
+        assertFalse(
+            base.copy(author = "").documentaryComplete
+        )
+        assertFalse(
+            base.copy(workTitle = "").documentaryComplete
+        )
+        assertFalse(
+            base.copy(sourceUrl = "").documentaryComplete
+        )
+        assertFalse(
+            base.copy(locator = "").documentaryComplete
+        )
+        assertTrue(base.documentaryComplete)
+    }
+
+    @Test
+    fun classicalAttributionIsMandatoryEvenWithTranslation() {
+        val missingAttribution = verification.copy(attributionVerified = false)
+        assertFalse(missingAttribution.displayEligible)
+    }
+
+    @Test
     fun internalTranslationCanDisplayWithoutHumanVerification() {
         assertFalse(verification.humanVerified)
         assertTrue(verification.displayEligible)
