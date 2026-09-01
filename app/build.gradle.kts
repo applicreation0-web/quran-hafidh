@@ -193,6 +193,7 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "keyboardDoesNotCountAsExit",
             "screenOffFreezesBudget",
             "normalPhoneCallFreezesBudget",
+            "whatsappCallUiFreezesBeforeAudioMode",
             "whatsappVoipCallFreezesBudget",
             "rebootPreservesBudgetAndInvalidatesForegroundSession",
             "unknownBootCountCanNeverBeTreatedAsSameBootRecovery",
