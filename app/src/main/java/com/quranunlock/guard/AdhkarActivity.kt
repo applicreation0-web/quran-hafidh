@@ -5,17 +5,25 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -42,7 +50,11 @@ class AdhkarActivity : ComponentActivity() {
 
 @Composable
 private fun AdhkarScreen(period: AdhkarPeriod) {
+    val context = LocalContext.current
     val items = AuthenticAdhkarLibrary.forPeriod(period)
+    var showTransliteration by remember {
+        mutableStateOf(ReminderPrefs.adhkarTransliterationEnabled(context))
+    }
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -65,10 +77,27 @@ private fun AdhkarScreen(period: AdhkarPeriod) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                "Uniquement des formules dont la source et le degré ont été vérifiés. Pas de translittération affichée par défaut.",
+                "Uniquement des formules dont la source et le degré ont été vérifiés.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = showTransliteration,
+                    onCheckedChange = { enabled ->
+                        showTransliteration = enabled
+                        ReminderPrefs.setAdhkarTransliterationEnabled(context, enabled)
+                    }
+                )
+                Text(
+                    "Afficher la translittération",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             items.forEach { item ->
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -90,6 +119,13 @@ private fun AdhkarScreen(period: AdhkarPeriod) {
                             ),
                             textAlign = TextAlign.Right
                         )
+                        if (showTransliteration) {
+                            Text(
+                                item.transliteration,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(item.frenchText)
                         Text(
                             item.source + " • " + item.authenticity,
