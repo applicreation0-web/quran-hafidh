@@ -335,11 +335,31 @@ object GuardPrefs {
         val filtered = packages
             .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
-
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
+        val previous = protectedPackages(context)
+        val removed = previous - filtered
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
             .putStringSet(PROTECTED_PACKAGES, filtered)
-            .apply()
+
+        // A deselected target must never retain a usable old unlock/challenge.
+        // If it is selected again later, it starts from a clean protection state.
+        removed.forEach { packageName ->
+            editor
+                .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
+                .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
+                .remove(UNLOCK_REMAINING_MS_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+                .remove(UNLOCK_GRANTED_MS_PREFIX + packageName)
+                .remove(UNLOCK_REMINDER_MASK_PREFIX + packageName)
+                .remove(CHALLENGE_PREFIX + packageName)
+                .remove(READING_PAGE_PREFIX + packageName)
+                .remove(READING_ACCUMULATED_PREFIX + packageName)
+                .remove(READING_STARTED_PREFIX + packageName)
+                .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
+                .remove(READING_COMPLETION_RECORDED_PREFIX + packageName)
+        }
+
+        editor.commit()
     }
 
     fun selectionMode(context: Context): QuranSelectionMode {
