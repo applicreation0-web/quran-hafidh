@@ -19,6 +19,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var foregroundUnlockedPackage: String? = null
     private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
+    private val permanentlyExcludedCache = mutableSetOf<String>()
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -118,7 +119,7 @@ class QuranAccessibilityService : AccessibilityService() {
         // Sensitive / critical apps are a hard trust boundary. We use their
         // foreground event only to stop any previous Safeguard work, then
         // return before protection, diagnostics or challenge logic can run.
-        if (ProtectedApps.isAlwaysAllowed(this, packageName)) {
+        if (isPermanentlyExcluded(packageName)) {
             handlePermanentlyExcludedForeground()
             return
         }
@@ -150,6 +151,13 @@ class QuranAccessibilityService : AccessibilityService() {
         launchGate(packageName, "initial")
         scheduleRetry(packageName, 350L, "retry_1")
         scheduleRetry(packageName, 900L, "retry_2")
+    }
+
+    private fun isPermanentlyExcluded(packageName: String): Boolean {
+        if (packageName in permanentlyExcludedCache) return true
+        val excluded = ProtectedApps.isAlwaysAllowed(this, packageName)
+        if (excluded) permanentlyExcludedCache += packageName
+        return excluded
     }
 
     private fun handlePermanentlyExcludedForeground() {
@@ -249,7 +257,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun launchGate(packageName: String, reason: String) {
         if (GuardPrefs.isUnlocked(this, packageName)) return
-        if (ProtectedApps.isAlwaysAllowed(this, packageName)) return
+        if (isPermanentlyExcluded(packageName)) return
         if (!GuardRuntime.interception.shouldRetry(packageName) && reason != "initial") return
 
         // A delayed retry is valid only while its original target is still
