@@ -30,6 +30,7 @@ data class OrphanedUnlockRecovery(
 object GuardPrefs {
     const val DAILY_JOKERS = 3
     const val JOKER_MAX_UNLOCK_MINUTES = 5
+    const val MIN_READING_MS = 60_000L
     const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
 
     internal const val FILE = "guard_prefs"
@@ -729,7 +730,7 @@ object GuardPrefs {
         page: Int
     ): Long {
         val elapsed = readingElapsedMs(context, challengeKey, page)
-        if (!hasReachedReadingBottom(context, challengeKey, page)) return elapsed
+        if (!hasReachedReadingBottom(context, challengeKey, page) || elapsed < MIN_READING_MS) return elapsed
 
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         if (prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0) == page) {
@@ -776,7 +777,10 @@ object GuardPrefs {
     ): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0)
-        if (recorded != page || !hasReachedReadingBottom(context, challengeKey, page)) {
+        if (recorded != page ||
+            !hasReachedReadingBottom(context, challengeKey, page) ||
+            readingElapsedMs(context, challengeKey, page) < MIN_READING_MS
+        ) {
             return false
         }
         unlock(context, challengeKey)
