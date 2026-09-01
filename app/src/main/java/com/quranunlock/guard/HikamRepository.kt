@@ -88,7 +88,7 @@ object HikamRepository {
                 volume = null,
                 locator = "Hikma 5",
                 sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=5",
-                translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                translator = "Traduction interne Quran Safeguard"
             ),
             verification = pendingHumanVerification(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
@@ -105,7 +105,7 @@ object HikamRepository {
                     volume = null,
                     locator = "Hikma 5 • p. 39",
                     sourceUrl = "https://ablibrary.net/book_content/b/9684/39",
-                    translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                    translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = pendingHumanVerification(
                     "Extrait arabe retrouvé à la p. 39. Traduction interne non validée humainement."
@@ -129,7 +129,7 @@ object HikamRepository {
                 volume = null,
                 locator = "Hikma 10",
                 sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=10",
-                translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                translator = "Traduction interne Quran Safeguard"
             ),
             verification = pendingHumanVerification(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
@@ -146,7 +146,7 @@ object HikamRepository {
                     volume = null,
                     locator = "Hikma 10 • p. 50",
                     sourceUrl = "https://ablibrary.net/book_content/b/9684/50",
-                    translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                    translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = pendingHumanVerification(
                     "Extrait arabe retrouvé à la p. 50. Traduction interne non validée humainement."
@@ -170,7 +170,7 @@ object HikamRepository {
                 volume = null,
                 locator = "Hikma 12",
                 sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=12",
-                translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                translator = "Traduction interne Quran Safeguard"
             ),
             verification = pendingHumanVerification(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
@@ -187,7 +187,7 @@ object HikamRepository {
                     volume = null,
                     locator = "Hikma 12 • p. 58",
                     sourceUrl = "https://ablibrary.net/book_content/b/9684/58",
-                    translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                    translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = pendingHumanVerification(
                     "Extrait arabe retrouvé à la p. 58. Traduction interne non validée humainement."
