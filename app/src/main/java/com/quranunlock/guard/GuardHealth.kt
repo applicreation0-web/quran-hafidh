@@ -33,6 +33,7 @@ object GuardHealth {
     }
 
     fun markProtectedEvent(context: Context, packageName: String) {
+        if (ProtectedApps.shouldNeverPersist(context, packageName)) return
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putLong(LAST_EVENT_WALL, System.currentTimeMillis())
