@@ -781,7 +781,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Text(
-                    "Version privée • installation officielle via le canal de distribution autorisé",
+                    "Version " + BuildConfig.VERSION_NAME + " • installation privée",
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -853,13 +853,13 @@ private fun SectionTitle(text: String) {
 @Composable
 fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
-        primary = Color(0xFF315F4A),
+        primary = Color(0xFF214B3B),
         onPrimary = Color.White,
-        secondary = Color(0xFF9A6A2F),
-        tertiary = Color(0xFF6B4933),
-        background = Color(0xFFFBF8F1),
+        secondary = Color(0xFFB0823F),
+        tertiary = Color(0xFF694936),
+        background = Color(0xFFFBF7EF),
         surface = Color(0xFFFFFDF8),
-        surfaceVariant = Color(0xFFF1E9DA),
+        surfaceVariant = Color(0xFFF0E6D5),
         onSurface = Color(0xFF2A241F),
         onSurfaceVariant = Color(0xFF675B50),
         outline = Color(0xFFB89A68)
