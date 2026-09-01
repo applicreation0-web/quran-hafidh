@@ -157,6 +157,12 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(service.contains("addOnModeChangedListener")) {
             "Android 12+ must react immediately to call/VoIP audio-mode changes."
         }
+        check(service.contains("isKnownWhatsAppCallActivity")) {
+            "WhatsApp call UI fallback must complement AudioManager VoIP detection."
+        }
+        check(service.contains("packageName != \"com.whatsapp\" && whatsappCallUiActive")) {
+            "WhatsApp call UI fallback must clear when another package owns the window."
+        }
         check(service.contains("handleAudioModeChanged")) {
             "Call/VoIP freeze handling is required."
         }
