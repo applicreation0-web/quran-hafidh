@@ -55,6 +55,46 @@ class HikamRepositoryTest {
     }
 
     @Test
+    fun multipleCommentatorsRemainSeparateSourceUnits() {
+        fun commentary(author: String, work: String, locator: String) =
+            HikmaCommentary(
+                arabicText = "نص تعليق موثق […]",
+                frenchText = "Texte de commentaire traduit […].",
+                source = ClassicalSource(
+                    author = author,
+                    workTitle = work,
+                    edition = "édition vérifiée",
+                    editor = "éditeur",
+                    volume = null,
+                    locator = locator,
+                    sourceUrl = "https://example.test/commentary/" + author.hashCode(),
+                    translator = "Traduction interne Quran Safeguard"
+                ),
+                verification = verification,
+                isExcerpt = true,
+                textIntegrity = ClassicalTextIntegrity(
+                    form = ClassicalTextForm.CONTINUOUS_EXCERPT,
+                    reconstructedOrAssembled = false,
+                    hasInternalOmissions = true,
+                    contextChecked = true,
+                    passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+                )
+            )
+
+        val ibnAjiba = commentary("Ibn ʿAjība", "Īqāẓ al-Himam", "Hikma 1 • p. 10")
+        val zarruq = commentary("Aḥmad Zarrūq", "Sharḥ al-Ḥikam", "Hikma 1 • p. 20")
+
+        val model = entry(commentary = ibnAjiba).copy(
+            additionalCommentaries = listOf(zarruq)
+        )
+
+        assertTrue(model.commentaries.size == 2)
+        assertTrue(model.commentaries[0].source.author == "Ibn ʿAjība")
+        assertTrue(model.commentaries[1].source.author == "Aḥmad Zarrūq")
+        assertTrue(model.commentaries.all { it.displayEligible })
+    }
+
+    @Test
     fun translationProvenanceIsMandatory() {
         assertTrue(source().documentaryComplete)
         assertFalse(source(translator = null).documentaryComplete)
