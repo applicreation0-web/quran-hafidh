@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,7 +71,10 @@ private fun SpiritualLibraryScreen(
 ) {
     var section by remember { mutableStateOf(LibrarySection.HADITH) }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -77,12 +82,19 @@ private fun SpiritualLibraryScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Bibliothèque spirituelle",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold
+                "RAPPEL / TEXTES",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
             )
             Text(
-                "Textes arabes, traduction française et source. Aucun résumé intermédiaire.",
+                "Bibliothèque spirituelle",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Texte arabe, traduction française et source, sans interprétation ajoutée.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -100,11 +112,13 @@ private fun SpiritualLibraryScreen(
                     if (candidate == section) {
                         Button(
                             modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
                             onClick = { section = candidate }
                         ) { Text(label) }
                     } else {
                         OutlinedButton(
                             modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
                             onClick = { section = candidate }
                         ) { Text(label) }
                     }
@@ -127,40 +141,54 @@ private fun SpiritualLibraryScreen(
                     val entries = HikamRepository.entries.filter { it.displayEligible }
                     LazyColumn(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(entries, key = { it.canonicalId }) { hikma ->
-                            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.elevatedCardElevation(
+                                    defaultElevation = 1.dp
+                                )
+                            ) {
                                 Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    modifier = Modifier.padding(17.dp),
+                                    verticalArrangement = Arrangement.spacedBy(9.dp)
                                 ) {
                                     Text(
-                                        "Hikma ${hikma.sourceNumber}",
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        "Hikma " + hikma.sourceNumber,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                     Text(
                                         hikma.arabicText,
                                         modifier = Modifier.fillMaxWidth(),
-                                        style = MaterialTheme.typography.titleMedium.copy(
+                                        style = MaterialTheme.typography.titleLarge.copy(
                                             textDirection = TextDirection.Rtl
                                         ),
                                         textAlign = TextAlign.Right
                                     )
-                                    Text(hikma.frenchText)
                                     Text(
-                                        "Ibn ʿAṭāʾ Allāh • ${hikma.source.locator}",
+                                        hikma.frenchText,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        "Ibn ʿAṭāʾ Allāh • " + hikma.source.locator,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Button(
                                         modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
                                         onClick = { onOpenHikma(hikma.canonicalId) }
                                     ) {
                                         Text(
                                             if (hikma.commentary?.displayEligible == true) {
-                                                "Lire et approfondir"
+                                                "Lire • Approfondir"
                                             } else {
                                                 "Lire"
                                             }
@@ -176,28 +204,41 @@ private fun SpiritualLibraryScreen(
                     val entries = GhazaliRepository.entries.filter { it.displayEligible }
                     LazyColumn(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(entries, key = { it.canonicalId }) { entry ->
-                            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(22.dp),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.elevatedCardElevation(
+                                    defaultElevation = 1.dp
+                                )
+                            ) {
                                 Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    modifier = Modifier.padding(17.dp),
+                                    verticalArrangement = Arrangement.spacedBy(9.dp)
                                 ) {
                                     Text(
                                         entry.source.workTitle,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                     Text(
                                         entry.arabicText,
                                         modifier = Modifier.fillMaxWidth(),
-                                        style = MaterialTheme.typography.titleMedium.copy(
+                                        style = MaterialTheme.typography.titleLarge.copy(
                                             textDirection = TextDirection.Rtl
                                         ),
                                         textAlign = TextAlign.Right
                                     )
-                                    Text(entry.frenchText)
+                                    Text(
+                                        entry.frenchText,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Text(
                                         entry.source.locator,
                                         style = MaterialTheme.typography.bodySmall,
@@ -205,11 +246,12 @@ private fun SpiritualLibraryScreen(
                                     )
                                     Button(
                                         modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
                                         onClick = { onOpenGhazali(entry.canonicalId) }
                                     ) {
                                         Text(
                                             if (entry.context?.displayEligible == true) {
-                                                "Lire et voir le contexte"
+                                                "Lire • Voir le contexte"
                                             } else {
                                                 "Lire"
                                             }
