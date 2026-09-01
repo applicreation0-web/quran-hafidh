@@ -7,6 +7,8 @@ import java.util.Locale
 
 object ProtectedApps {
     private val sensitiveDecisionCache = mutableMapOf<String, Boolean>()
+    private var defaultDialerLoaded = false
+    private var cachedDefaultDialer: String? = null
 
     const val PLAY_STORE = "com.android.vending"
     const val ANDROID_SETTINGS = "com.android.settings"
@@ -177,10 +179,16 @@ object ProtectedApps {
     fun isAlwaysAllowed(context: Context, packageName: String): Boolean {
         if (isAlwaysAllowed(packageName)) return true
 
-        val defaultDialer = runCatching {
-            context.getSystemService(TelecomManager::class.java)
-                ?.defaultDialerPackage
-        }.getOrNull()
+        val defaultDialer = synchronized(sensitiveDecisionCache) {
+            if (!defaultDialerLoaded) {
+                cachedDefaultDialer = runCatching {
+                    context.getSystemService(TelecomManager::class.java)
+                        ?.defaultDialerPackage
+                }.getOrNull()
+                defaultDialerLoaded = true
+            }
+            cachedDefaultDialer
+        }
         if (packageName == defaultDialer) return true
 
         return isSensitiveCategory(context, packageName)
@@ -210,6 +218,8 @@ object ProtectedApps {
     fun clearClassificationCache() {
         synchronized(sensitiveDecisionCache) {
             sensitiveDecisionCache.clear()
+            cachedDefaultDialer = null
+            defaultDialerLoaded = false
         }
     }
 
