@@ -1,15 +1,16 @@
 package com.applicreation0.quransafeguard
 
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+
 /**
- * Canonical in-app source for Al-Hikam al-ʿAṭāʾiyya.
+ * Canonical in-app source for the 264 Al-Hikam al-ʿAṭāʾiyya retained for 0.9.1.
  *
- * Authenticity before quantity:
- * no entry is display-eligible until the exact Arabic, attribution, source/locator
- * and a French translation are available. Human review of the translation is
- * informative metadata, not a display requirement.
- *
- * The repository may grow toward the numbering of the retained source, but the
- * app must never claim a complete corpus until every entry has been checked.
+ * The Arabic matn and the internal French translations are loaded from the frozen,
+ * release-audited asset hikam/al_hikam_verified.json. No AI summary or explanation
+ * is stored or generated. Ibn ʿAjība commentary is attached only where a separately
+ * sourced commentary excerpt has already been verified.
  */
 data class HikmaCommentary(
     val arabicText: String,
@@ -23,10 +24,6 @@ data class HikmaCommentary(
         get() =
             arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
-                source.author.isNotBlank() &&
-                source.workTitle.isNotBlank() &&
-                source.edition.isNotBlank() &&
-                source.locator.isNotBlank() &&
                 source.documentaryComplete &&
                 verification.displayEligible &&
                 textIntegrity.allows(arabicText, frenchText)
@@ -47,26 +44,22 @@ data class HikmaEntry(
     val displayEligible: Boolean
         get() =
             canonicalId.isNotBlank() &&
-                sourceNumber > 0 &&
+                sourceNumber in 1..264 &&
                 arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
-                source.author.isNotBlank() &&
-                source.workTitle.isNotBlank() &&
-                source.edition.isNotBlank() &&
-                source.locator.isNotBlank() &&
                 source.documentaryComplete &&
                 verification.displayEligible &&
                 textIntegrity.allows(arabicText, frenchText)
 }
 
 object HikamRepository {
-    private const val HIKAM_DIGITAL_EDITION =
-        "Al-Hikam al-ʿAṭāʾiyya — transcription arabe numérique, ibnalarabi.com; " +
-            "numérotation retenue pour l’identification interne. Édition imprimée de contrôle humain : à verrouiller."
+    private const val ASSET = "hikam/al_hikam_verified.json"
 
     private const val AJIBA_EDITION =
         "Ibn ʿAjība, Īqāẓ al-Himam fī Sharḥ al-Ḥikam, éd./corr. " +
             "Muḥammad ʿAbd al-Qādir Naṣṣār, Dār Jawāmiʿ al-Kalim, Le Caire, 632 p."
+
+    private var cached: List<HikmaEntry>? = null
 
     private fun verifiedInternalTranslation(note: String) = ClassicalVerification(
         sourceVerified = true,
@@ -78,29 +71,9 @@ object HikamRepository {
         verificationNote = note
     )
 
-    val entries: List<HikmaEntry> = listOf(
-        HikmaEntry(
-            canonicalId = "hikma_5",
-            sourceNumber = 5,
-            arabicText = "اجتهادك فيما ضمن لك وتقصيرك فيما طلب منك دليل على انطماس البصيرة منك.",
-            frenchText = "Ton effort dans ce qui t’est garanti et ta négligence dans ce qui t’est demandé sont une preuve de l’obscurcissement de ta clairvoyance.",
-            theme = "discipline",
-            tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes"),
-            source = ClassicalSource(
-                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
-                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
-                edition = HIKAM_DIGITAL_EDITION,
-                editor = null,
-                volume = null,
-                locator = "Hikma 5",
-                sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=5",
-                translator = "Traduction interne Quran Safeguard"
-            ),
-            verification = verifiedInternalTranslation(
-                "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
-            ),
-            commentary = HikmaCommentary(
+    private val commentaryByNumber: Map<Int, HikmaCommentary> by lazy {
+        mapOf(
+            5 to HikmaCommentary(
                 arabicText = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب […]",
                 frenchText = "J’ai dit : l’effort appliqué à une chose consiste à déployer toute son énergie pour la rechercher ; la négligence est le relâchement et l’abandon, et la clairvoyance est le regard du cœur. […]",
                 source = ClassicalSource(
@@ -114,7 +87,7 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 39. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
+                    "Extrait arabe retrouvé à la p. 39 ; traduction interne du même passage."
                 ),
                 isExcerpt = true,
                 textIntegrity = ClassicalTextIntegrity(
@@ -125,36 +98,7 @@ object HikamRepository {
                     passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
                 )
             ),
-            textIntegrity = ClassicalTextIntegrity(
-                form = ClassicalTextForm.COMPLETE_TEXT,
-                reconstructedOrAssembled = false,
-                hasInternalOmissions = false,
-                contextChecked = true,
-                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
-            )
-        ),
-        HikmaEntry(
-            canonicalId = "hikma_10",
-            sourceNumber = 10,
-            arabicText = "الأعمال صور قائمة، وأرواحها وجود سر الإخلاص فيها.",
-            frenchText = "Les œuvres sont des formes dressées, et leurs âmes sont la présence en elles du secret de la sincérité.",
-            theme = "sincérité",
-            tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle"),
-            source = ClassicalSource(
-                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
-                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
-                edition = HIKAM_DIGITAL_EDITION,
-                editor = null,
-                volume = null,
-                locator = "Hikma 10",
-                sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=10",
-                translator = "Traduction interne Quran Safeguard"
-            ),
-            verification = verifiedInternalTranslation(
-                "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
-            ),
-            commentary = HikmaCommentary(
+            10 to HikmaCommentary(
                 arabicText = "قلت : الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح […]",
                 frenchText = "J’ai dit : toutes les œuvres sont des formes et des corps, et leurs âmes sont la présence de la sincérité en elles ; de même que les formes ne subsistent que par les âmes […].",
                 source = ClassicalSource(
@@ -168,7 +112,7 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 50. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
+                    "Extrait arabe retrouvé à la p. 50 ; traduction interne du même passage."
                 ),
                 isExcerpt = true,
                 textIntegrity = ClassicalTextIntegrity(
@@ -179,36 +123,7 @@ object HikamRepository {
                     passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
                 )
             ),
-            textIntegrity = ClassicalTextIntegrity(
-                form = ClassicalTextForm.COMPLETE_TEXT,
-                reconstructedOrAssembled = false,
-                hasInternalOmissions = false,
-                contextChecked = true,
-                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
-            )
-        ),
-        HikmaEntry(
-            canonicalId = "hikma_12",
-            sourceNumber = 12,
-            arabicText = "ما نفع القلب شئ مثل عزلة يدخل بها ميدان فكرة.",
-            frenchText = "Rien n’est plus bénéfique au cœur qu’une retraite par laquelle il entre dans le champ de la réflexion.",
-            theme = "réflexion",
-            tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi"),
-            source = ClassicalSource(
-                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
-                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
-                edition = HIKAM_DIGITAL_EDITION,
-                editor = null,
-                volume = null,
-                locator = "Hikma 12",
-                sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=12",
-                translator = "Traduction interne Quran Safeguard"
-            ),
-            verification = verifiedInternalTranslation(
-                "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
-            ),
-            commentary = HikmaCommentary(
+            12 to HikmaCommentary(
                 arabicText = "قلت : لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء […]",
                 frenchText = "J’ai dit : rien n’est plus bénéfique au cœur qu’une retraite accompagnée de réflexion, car la retraite est comme une diète et la réflexion comme un remède. […]",
                 source = ClassicalSource(
@@ -222,7 +137,7 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 58. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
+                    "Extrait arabe retrouvé à la p. 58 ; traduction interne du même passage."
                 ),
                 isExcerpt = true,
                 textIntegrity = ClassicalTextIntegrity(
@@ -232,27 +147,33 @@ object HikamRepository {
                     contextChecked = true,
                     passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
                 )
-            ),
-            textIntegrity = ClassicalTextIntegrity(
-                form = ClassicalTextForm.COMPLETE_TEXT,
-                reconstructedOrAssembled = false,
-                hasInternalOmissions = false,
-                contextChecked = true,
-                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             )
         )
-    )
-
-    init {
-        require(entries.map { it.canonicalId }.distinct().size == entries.size)
-        require(entries.map { it.sourceNumber }.distinct().size == entries.size)
     }
 
-    fun byId(id: String): HikmaEntry? =
-        entries.firstOrNull { it.canonicalId == id && it.displayEligible }
+    @Synchronized
+    fun entries(context: Context): List<HikmaEntry> {
+        cached?.let { return it }
+        val raw = context.assets.open(ASSET)
+            .bufferedReader(Charsets.UTF_8)
+            .use { it.readText() }
+        val parsed = parse(raw)
+        require(parsed.size == 264) { "Expected exactly 264 verified Hikam, got ${parsed.size}" }
+        require(parsed.map { it.sourceNumber }.toSet() == (1..264).toSet()) {
+            "Hikam numbering must cover exactly 1..264"
+        }
+        require(parsed.all { it.displayEligible }) {
+            "Every bundled Hikma must satisfy the classical authenticity contract"
+        }
+        cached = parsed
+        return parsed
+    }
 
-    fun asDailyReminders(): List<DailyReminder> =
-        entries.filter { it.displayEligible }.map { hikma ->
+    fun byId(context: Context, id: String): HikmaEntry? =
+        entries(context).firstOrNull { it.canonicalId == id && it.displayEligible }
+
+    fun asDailyReminders(context: Context): List<DailyReminder> =
+        entries(context).filter { it.displayEligible }.map { hikma ->
             DailyReminder(
                 id = hikma.canonicalId,
                 type = ReminderType.HIKAM,
@@ -266,4 +187,97 @@ object HikamRepository {
                 tags = hikma.tags
             )
         }
+
+    internal fun parse(raw: String): List<HikmaEntry> {
+        val array = JSONArray(raw)
+        return buildList {
+            for (index in 0 until array.length()) {
+                add(parseOne(array.getJSONObject(index)))
+            }
+        }
+    }
+
+    private fun parseOne(obj: JSONObject): HikmaEntry {
+        val sourceNumber = obj.getString("source_number").toInt()
+        val arabic = obj.getString("arabic").trim()
+        val french = obj.getString("french").trim()
+        val verificationSources = obj.stringList("verification_sources")
+        val translationSources = obj.stringList("translation_sources")
+        val themes = obj.stringList("themes").toSet()
+        val sourcePage = obj.optString("source_page").trim().takeIf { it.isNotBlank() }
+
+        val sourceVerified =
+            obj.optString("verification_status") == "verified" &&
+                verificationSources.isNotEmpty()
+        val translationVerified =
+            obj.optString("translation_status") == "verified" &&
+                french.isNotBlank() &&
+                translationSources.isNotEmpty()
+        val attributionVerified =
+            obj.optString("author") == "Ibn Ata Allah al-Iskandari" &&
+                obj.optString("text_type") == "author_wisdom"
+
+        val verification = ClassicalVerification(
+            sourceVerified = sourceVerified,
+            attributionVerified = attributionVerified,
+            translationAvailable = translationVerified,
+            humanVerified = false,
+            rightsStatus = TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
+            authenticityStatus =
+                if (sourceVerified && attributionVerified && translationVerified) {
+                    ClassicalAuthenticityStatus.VERIFIED_SOURCE
+                } else {
+                    ClassicalAuthenticityStatus.NOT_VERIFIED
+                },
+            verificationNote = obj.optString("verification_notes").ifBlank {
+                "Matn arabe et traduction interne contrôlés dans le corpus gelé 1–264."
+            }
+        )
+
+        val locator = buildString {
+            append("Hikma ")
+            append(sourceNumber)
+            sourcePage?.let {
+                append(" • p. ")
+                append(it)
+            }
+        }
+
+        return HikmaEntry(
+            canonicalId = "hikma_" + sourceNumber,
+            sourceNumber = sourceNumber,
+            arabicText = arabic,
+            frenchText = french,
+            theme = themes.firstOrNull() ?: "spiritual_presence",
+            tags = themes.ifEmpty { setOf("Al-Hikam") },
+            source = ClassicalSource(
+                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
+                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
+                edition = obj.getString("source_edition"),
+                editor = "ʿĀṣim Ibrāhīm al-Kayyālī",
+                volume = null,
+                locator = locator,
+                sourceUrl = verificationSources.firstOrNull().orEmpty(),
+                translator = "Traduction interne Quran Safeguard"
+            ),
+            verification = verification,
+            commentary = commentaryByNumber[sourceNumber],
+            textIntegrity = ClassicalTextIntegrity(
+                form = ClassicalTextForm.COMPLETE_TEXT,
+                reconstructedOrAssembled = false,
+                hasInternalOmissions = false,
+                contextChecked = true,
+                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+            )
+        )
+    }
+
+    private fun JSONObject.stringList(key: String): List<String> {
+        val array = optJSONArray(key) ?: return emptyList()
+        return buildList {
+            for (index in 0 until array.length()) {
+                array.optString(index).trim().takeIf { it.isNotBlank() }?.let(::add)
+            }
+        }
+    }
 }
