@@ -1,11 +1,11 @@
 package com.applicreation0.quransafeguard
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -27,8 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -110,24 +108,6 @@ class MushafReaderActivity : ComponentActivity() {
                         }
                     }
 
-                    var renderedPageHeightPx by remember {
-                        mutableIntStateOf(0)
-                    }
-                    val configuration = LocalConfiguration.current
-                    val density = LocalDensity.current
-                    val fallbackHeight = configuration.screenHeightDp.dp * 0.78f
-                    val measuredVisibleHeight = if (renderedPageHeightPx > 0) {
-                        with(density) {
-                            (renderedPageHeightPx.toFloat() * 0.80f).toDp()
-                        }
-                    } else {
-                        fallbackHeight
-                    }
-                    val readerViewportHeight = measuredVisibleHeight.coerceIn(
-                        320.dp,
-                        configuration.screenHeightDp.dp * 0.80f
-                    )
-
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -159,7 +139,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 svgContent = svgContent,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(readerViewportHeight),
+                                    .weight(1f),
                                 onReady = { markPageReady() },
                                 onContentHeightMeasured = { heightPx ->
                                     if (heightPx > 0) renderedPageHeightPx = heightPx
@@ -187,47 +167,40 @@ class MushafReaderActivity : ComponentActivity() {
                         Spacer(Modifier.height(8.dp))
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = bottomReached,
+                            enabled = bottomReached && readingMs >= GuardPrefs.MIN_READING_MS,
                             onClick = {
-                                val elapsed = GuardPrefs.completeReadingForSummary(
+                                val elapsed = GuardPrefs.completeReadingAndUnlock(
                                     this@MushafReaderActivity,
                                     challengeKey,
                                     page
                                 )
-                                if (GuardPrefs.hasReachedReadingBottom(
+                                if (GuardPrefs.isUnlocked(
                                         this@MushafReaderActivity,
-                                        challengeKey,
-                                        page
+                                        challengeKey
                                     )
                                 ) {
+                                    GuardRuntime.interception.markUnlocked(challengeKey)
                                     GuardDiagnostics.log(
                                         this@MushafReaderActivity,
-                                        "READING_COMPLETED_PENDING_SUMMARY",
+                                        "READING_UNLOCKED_DIRECTLY",
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
-                                    startActivity(
-                                        Intent(
-                                            this@MushafReaderActivity,
-                                            ReadingCompleteActivity::class.java
-                                        ).apply {
-                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
-                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
-                                            putExtra(
-                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
-                                                elapsed
-                                            )
-                                        }
-                                    )
-                                    finish()
+                                    Toast.makeText(
+                                        this@MushafReaderActivity,
+                                        "${GuardPrefs.unlockMinutes(this@MushafReaderActivity)} min disponibles",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    finishAndRemoveTask()
                                 }
                             }
                         ) {
                             Text(
-                                if (bottomReached) {
-                                    "Page lue — continuer"
-                                } else {
-                                    "Faites défiler jusqu’en bas"
+                                when {
+                                    !bottomReached -> "Faites défiler jusqu’en bas"
+                                    readingMs < GuardPrefs.MIN_READING_MS ->
+                                        "Lecture active : ${formatReadingDuration(readingMs)} / 01:00"
+                                    else -> "Débloquer l’application"
                                 }
                             )
                         }
