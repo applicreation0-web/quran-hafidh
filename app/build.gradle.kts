@@ -93,6 +93,31 @@ val verifyPrivacyBoundary by tasks.registering {
         check(accessibility.contains("android:packageNames=")) {
             "Accessibility must start from an explicit social/browser package scope."
         }
+
+        val browserDetector = file(
+            "src/main/java/com/quranunlock/guard/BrowserDetector.kt"
+        ).readText()
+        val requiredBrowsers = listOf(
+            "com.android.chrome",
+            "org.mozilla.firefox",
+            "com.microsoft.emmx",
+            "com.brave.browser",
+            "com.opera.browser",
+            "com.sec.android.app.sbrowser"
+        )
+        requiredBrowsers.forEach { browser ->
+            check(accessibility.contains(browser) && browserDetector.contains(browser)) {
+                "Required browser missing from fixed Safeguard scope: " + browser
+            }
+        }
+        listOf(
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser"
+        ).forEach { browser ->
+            check(!accessibility.contains(browser) && !browserDetector.contains(browser)) {
+                "Browser outside the approved six-browser scope: " + browser
+            }
+        }
         val excludedStaticPackages = listOf(
             "com.barclays",
             "com.revolut",
@@ -198,6 +223,12 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         }
         check(!manifest.contains("android.permission.READ_PHONE_STATE")) {
             "READ_PHONE_STATE is forbidden for this counter implementation."
+        }
+        check(!prefs.contains("legacyRemaining")) {
+            "Boot-unsafe legacy elapsedRealtime windows must never be converted into fresh budget."
+        }
+        check(prefs.contains("putLong(key, 0L)")) {
+            "Legacy unlock state must fail closed and require a fresh Quran reading."
         }
 
         val requiredScenarios = listOf(
