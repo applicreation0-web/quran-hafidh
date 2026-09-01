@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged|typeViewFocused"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged"
+    android:packageNames="com.applicreation0.quransafeguard,com.android.systemui,com.android.chrome,org.mozilla.firefox,com.microsoft.emmx,com.brave.browser,com.opera.browser,com.sec.android.app.sbrowser,com.duckduckgo.mobile.android,com.vivaldi.browser"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="50"
     android:canRetrieveWindowContent="false"
