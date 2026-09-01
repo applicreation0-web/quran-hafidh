@@ -17,6 +17,7 @@ object AppMigrations {
         "guard_prefs",
         "daily_reminders",
         "mindful_reminder_prefs",
+        "hikam_prefs",
         "guard_health",
         "guard_diagnostics"
     )
