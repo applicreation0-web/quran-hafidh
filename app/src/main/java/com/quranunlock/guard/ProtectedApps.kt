@@ -140,7 +140,9 @@ object ProtectedApps {
 
     fun isAlwaysAllowed(packageName: String): Boolean =
         packageName in alwaysAllowed ||
-            sensitivePackagePrefixes.any(packageName.lowercase(Locale.ROOT)::startsWith)
+            sensitivePackagePrefixes.any { prefix ->
+                packageName.lowercase(Locale.ROOT).startsWith(prefix)
+            }
 
     fun isAlwaysAllowed(context: Context, packageName: String): Boolean {
         if (isAlwaysAllowed(packageName)) return true
@@ -156,8 +158,8 @@ object ProtectedApps {
 
     fun isSensitiveCategory(context: Context, packageName: String): Boolean {
         val packageLower = packageName.lowercase(Locale.ROOT)
-        if (sensitivePackagePrefixes.any(packageLower::startsWith)) return true
-        if (sensitivePackageFragments.any(packageLower::contains)) return true
+        if (sensitivePackagePrefixes.any { packageLower.startsWith(it) }) return true
+        if (sensitivePackageFragments.any { packageLower.contains(it) }) return true
 
         val label = runCatching {
             val info = context.packageManager.getApplicationInfo(packageName, 0)
@@ -169,8 +171,8 @@ object ProtectedApps {
 
     internal fun looksSensitive(packageName: String, label: String): Boolean {
         val packageLower = packageName.lowercase(Locale.ROOT)
-        if (sensitivePackagePrefixes.any(packageLower::startsWith)) return true
-        if (sensitivePackageFragments.any(packageLower::contains)) return true
+        if (sensitivePackagePrefixes.any { packageLower.startsWith(it) }) return true
+        if (sensitivePackageFragments.any { packageLower.contains(it) }) return true
 
         val normalizedLabel = normalizeForMatching(label)
         if (normalizedLabel.isBlank()) return false
