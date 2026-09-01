@@ -267,6 +267,13 @@ class QuranAccessibilityService : AccessibilityService() {
         val packageName = event?.packageName?.toString() ?: return
         val eventClassName = event.className?.toString()
 
+        if (packageName != "com.whatsapp" && whatsappCallUiActive) {
+            // The explicit WhatsApp call Activity is no longer the window owner.
+            // If a call is genuinely continuing (PiP/background), AudioManager
+            // remains the authoritative freeze signal.
+            whatsappCallUiActive = false
+        }
+
         if (packageName == "com.whatsapp" &&
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         ) {
