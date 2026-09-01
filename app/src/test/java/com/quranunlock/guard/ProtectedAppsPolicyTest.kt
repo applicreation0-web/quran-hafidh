@@ -87,6 +87,33 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
+    fun AndroidSettingsIsAlwaysSystemProtected() {
+        assertTrue(ProtectedApps.isSystemProtected(ProtectedApps.ANDROID_SETTINGS))
+        assertFalse(ProtectedApps.isSystemProtected(ProtectedApps.PLAY_STORE))
+    }
+
+    @Test
+    fun defaultScopeContainsRequestedBrowsersAndAwarenessApps() {
+        val requested = setOf(
+            "com.android.chrome",
+            "org.mozilla.firefox",
+            "com.microsoft.emmx",
+            "com.brave.browser",
+            "com.opera.browser",
+            "com.sec.android.app.sbrowser",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser",
+            "com.google.android.youtube",
+            "com.whatsapp",
+            "org.telegram.messenger",
+            "com.discord",
+            "com.reddit.frontpage",
+            "com.snapchat.android"
+        )
+        assertTrue(ProtectedApps.defaultPackages.containsAll(requested))
+    }
+
+    @Test
     fun ordinaryAwarenessAppsRemainSelectable() {
         assertFalse(ProtectedApps.looksSensitive("com.whatsapp", "WhatsApp"))
         assertFalse(ProtectedApps.looksSensitive("com.google.android.youtube", "YouTube"))
