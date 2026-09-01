@@ -39,19 +39,7 @@ object ReligiousSourceRegistry {
             "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
             "Ihya’ ‘Ulum ad-Din • Book of conduct and Prophetic character"
         ),
-        "hikma_5" to v(
-            "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=5",
-            "Al-Hikam al-‘Ata’iyya • Hikma 5"
-        ),
-        "hikma_10" to v(
-            "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=10",
-            "Al-Hikam al-‘Ata’iyya • Hikma 10"
-        ),
-        "hikma_12" to v(
-            "https://ablibrary.net/book_content/8865/58",
-            "Al-Hikam al-‘Ata’iyya • Hikma 12, attested in Ibn ‘Ajiba’s commentary"
-        )
-    )
+)
 
     val adhkarSources: Map<String, SourceVerification> = mapOf(
         "ikhlas_3" to v("https://sunnah.com/abudawud:5082", "Sunan Abi Dawud 5082 • Hasan"),

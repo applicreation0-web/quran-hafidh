@@ -265,48 +265,13 @@ object ReminderLibrary {
             authenticity = null,
             tags = setOf("bonnes mœurs", "comportement", "sincérité", "bonnes habitudes")
         ),
-        DailyReminder(
-            id = "hikma_5",
-            type = ReminderType.HIKAM,
-            theme = "discipline",
-            arabicText = "اجْتِهَادُكَ فِيمَا ضُمِنَ لَكَ وَتَقْصِيرُكَ فِيمَا طُلِبَ مِنْكَ دَلِيلٌ عَلَى انْطِمَاسِ الْبَصِيرَةِ مِنْكَ.",
-            frenchText = "T’épuiser pour ce qui t’est garanti tout en négligeant ce qui t’est demandé est un signe d’obscurcissement de la clairvoyance.",
-            author = "Ibn ‘Atâ’ Allâh al-Iskandarî",
-            book = "Al-Hikam al-‘Atâ’iyya",
-            reference = "Hikma 5 (numérotation courante)",
-            authenticity = null,
-            tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes")
-        ),
-        DailyReminder(
-            id = "hikma_10",
-            type = ReminderType.HIKAM,
-            theme = "sincérité",
-            arabicText = "الأَعْمَالُ صُوَرٌ قَائِمَةٌ، وَأَرْوَاحُهَا وُجُودُ سِرِّ الإِخْلَاصِ فِيهَا.",
-            frenchText = "Les œuvres sont des formes dressées ; leur âme est la présence du secret de la sincérité en elles.",
-            author = "Ibn ‘Atâ’ Allâh al-Iskandarî",
-            book = "Al-Hikam al-‘Atâ’iyya",
-            reference = "Hikma 10 (numérotation courante)",
-            authenticity = null,
-            tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle")
-        ),
-        DailyReminder(
-            id = "hikma_12",
-            type = ReminderType.HIKAM,
-            theme = "réflexion",
-            arabicText = "مَا نَفَعَ الْقَلْبَ شَيْءٌ مِثْلُ عُزْلَةٍ يَدْخُلُ بِهَا مَيْدَانَ فِكْرَةٍ.",
-            frenchText = "Rien n’est plus bénéfique au cœur qu’un moment de retrait qui ouvre un espace à la réflexion.",
-            author = "Ibn ‘Atâ’ Allâh al-Iskandarî",
-            book = "Al-Hikam al-‘Atâ’iyya",
-            reference = "Hikma 12 (numérotation courante)",
-            authenticity = null,
-            tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi")
-        )
+
     )
 
     private var cachedBundled: List<DailyReminder>? = null
 
     fun all(context: Context): List<DailyReminder> =
-        items + bundled(context)
+        items + HikamRepository.asDailyReminders() + bundled(context)
 
     fun byId(context: Context, id: String): DailyReminder? =
         all(context).firstOrNull { it.id == id }

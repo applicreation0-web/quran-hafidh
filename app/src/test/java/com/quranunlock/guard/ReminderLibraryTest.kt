@@ -9,7 +9,7 @@ class ReminderLibraryTest {
     @Test
     fun reminderIdsAreUniqueAndRequiredFieldsArePresent() {
         val items = ReminderLibrary.items
-        assertEquals(23, items.size)
+        assertEquals(20, items.size)
         assertEquals(items.size, items.map { it.id }.distinct().size)
 
         items.forEach { item ->
@@ -21,6 +21,11 @@ class ReminderLibraryTest {
             assertTrue(item.reference.isNotBlank())
             assertTrue(item.tags.isNotEmpty())
         }
+    }
+
+    @Test
+    fun hikamAreNeverStoredInGenericCuratedReminders() {
+        assertTrue(ReminderLibrary.items.none { it.type == ReminderType.HIKAM })
     }
 
     @Test
@@ -54,7 +59,9 @@ class ReminderLibraryTest {
 
     @Test
     fun requestedCoreThemesAreCovered() {
-        val covered = ReminderLibrary.items.flatMap { item ->
+        val curatedForDisplay =
+            ReminderLibrary.items + HikamRepository.asDailyReminders()
+        val covered = curatedForDisplay.flatMap { item ->
             item.tags + item.theme
         }.toSet()
 
