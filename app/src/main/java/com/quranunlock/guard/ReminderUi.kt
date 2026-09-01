@@ -112,6 +112,6 @@ fun DailyReminderCard(
 private fun reminderLabel(reminder: DailyReminder): String =
     when (reminder.type) {
         ReminderType.HADITH -> "Rappel du jour • Hadith authentifié"
-        ReminderType.GHAZALI -> "Rappel du jour • Sagesse d’al-Ghazâlî"
+        ReminderType.GHAZALI -> "Rappel du jour • Texte d’al-Ghazâlî"
         ReminderType.HIKAM -> "Rappel du jour • Al-Hikam"
     }
