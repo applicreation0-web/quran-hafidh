@@ -84,6 +84,12 @@ class ClassicalCorpusIntegrityTest {
         assertFalse(
             base.copy(locator = "").documentaryComplete
         )
+        assertFalse(
+            base.copy(translator = null).documentaryComplete
+        )
+        assertFalse(
+            base.copy(translator = "").documentaryComplete
+        )
         assertTrue(base.documentaryComplete)
     }
 
