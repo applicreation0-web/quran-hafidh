@@ -377,7 +377,7 @@ object GuardPrefs {
 
     fun unlockMinutes(context: Context): Int =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getInt(UNLOCK_MINUTES, 10)
+            .getInt(UNLOCK_MINUTES, 20)
             .coerceIn(1, 20)
 
     fun saveUnlockMinutes(context: Context, minutes: Int) {
