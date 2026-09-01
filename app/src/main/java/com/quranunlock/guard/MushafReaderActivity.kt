@@ -115,7 +115,7 @@ class MushafReaderActivity : ComponentActivity() {
                     }
                     val configuration = LocalConfiguration.current
                     val density = LocalDensity.current
-                    val fallbackHeight = configuration.screenHeightDp.dp * 0.72f
+                    val fallbackHeight = configuration.screenHeightDp.dp * 0.78f
                     val measuredVisibleHeight = if (renderedPageHeightPx > 0) {
                         with(density) {
                             (renderedPageHeightPx.toFloat() * 0.80f).toDp()
@@ -135,32 +135,24 @@ class MushafReaderActivity : ComponentActivity() {
                     ) {
                         Text(
                             "Mushaf de Médine • Page $page",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             if (bottomReached) {
-                                "Bas de page atteint • ${formatReadingDuration(readingMs)} de lecture"
+                                "Page parcourue • ${formatReadingDuration(readingMs)}"
                             } else {
-                                "Lecture en cours • ${formatReadingDuration(readingMs)}"
+                                "Lecture • ${formatReadingDuration(readingMs)}"
                             },
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = if (bottomReached) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.secondary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )
-                        Text(
-                            if (bottomReached) {
-                                "Prenez le temps de terminer sereinement avant de continuer."
-                            } else {
-                                "Environ 80 % de la page est visible à la fois ; faites défiler naturellement les dernières lignes."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(3.dp))
 
                         if (!svgContent.isNullOrBlank() && !loadFailed) {
                             MushafPageWebView(
