@@ -103,18 +103,6 @@
             android:exported="false" />
 
         <receiver
-            android:name=".PackageChangeReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED" />
-                <action android:name="android.intent.action.PACKAGE_REMOVED" />
-                <action android:name="android.intent.action.PACKAGE_REPLACED" />
-                <data android:scheme="package" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
             android:name=".ReminderRescheduleReceiver"
             android:enabled="true"
             android:exported="false">
