@@ -4,39 +4,43 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Abstract protective arch -->
+    <!-- Protective arch -->
     <path
         android:fillColor="#315F4A"
-        android:pathData="M54,13 C34,13 20,29 20,51 C20,72 34,89 54,98 C74,89 88,72 88,51 C88,29 74,13 54,13 Z" />
+        android:pathData="M54,12 C34,12 19,29 19,51 C19,73 34,90 54,99 C74,90 89,73 89,51 C89,29 74,12 54,12 Z" />
 
-    <!-- Gold inner portal / light -->
+    <!-- Gold halo / mihrab line -->
     <path
         android:fillColor="#B58A45"
-        android:pathData="M54,23 C42,23 33,34 33,48 L39,48 C39,37 45,30 54,30 C63,30 69,37 69,48 L75,48 C75,34 66,23 54,23 Z" />
+        android:pathData="M54,21 C41,21 31,33 31,49 L37,49 C37,38 44,29 54,29 C64,29 71,38 71,49 L77,49 C77,33 67,21 54,21 Z" />
 
-    <!-- Open Quran, deliberately geometric -->
+    <!-- Open Quran -->
     <path
         android:fillColor="#FFF9ED"
-        android:pathData="M29,45 C39,42 47,45 54,51 L54,72 C47,67 39,65 29,67 Z" />
+        android:pathData="M27,43 C38,40 47,44 54,51 L54,70 C47,65 38,63 27,66 Z" />
     <path
         android:fillColor="#FFF9ED"
-        android:pathData="M79,45 C69,42 61,45 54,51 L54,72 C61,67 69,65 79,67 Z" />
-
-    <!-- Gold spine -->
-    <path
-        android:fillColor="#B58A45"
-        android:pathData="M52.5,50 L55.5,50 L55.5,73 L52.5,73 Z" />
-
-    <!-- Abstract wooden rehal -->
-    <path
-        android:fillColor="#6B4933"
-        android:pathData="M33,82 L48,68 L54,72 L42,86 Z" />
-    <path
-        android:fillColor="#6B4933"
-        android:pathData="M75,82 L60,68 L54,72 L66,86 Z" />
-
-    <!-- Minimal gold mark -->
+        android:pathData="M81,43 C70,40 61,44 54,51 L54,70 C61,65 70,63 81,66 Z" />
     <path
         android:fillColor="#D4B36D"
-        android:pathData="M54,18 L58,22 L54,26 L50,22 Z" />
+        android:pathData="M52.5,50 L55.5,50 L55.5,71 L52.5,71 Z" />
+
+    <!-- Rehal / book stand: larger and more legible -->
+    <path
+        android:fillColor="#6B4933"
+        android:pathData="M26,82 L47,62 L54,69 L37,88 Z" />
+    <path
+        android:fillColor="#6B4933"
+        android:pathData="M82,82 L61,62 L54,69 L71,88 Z" />
+    <path
+        android:fillColor="#B58A45"
+        android:pathData="M34,82 L49,68 L54,73 L42,87 Z" />
+    <path
+        android:fillColor="#B58A45"
+        android:pathData="M74,82 L59,68 L54,73 L66,87 Z" />
+
+    <!-- Small central gold mark -->
+    <path
+        android:fillColor="#D4B36D"
+        android:pathData="M54,17 L58,21 L54,25 L50,21 Z" />
 </vector>
