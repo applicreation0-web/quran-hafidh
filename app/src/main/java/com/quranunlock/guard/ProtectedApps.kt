@@ -38,6 +38,8 @@ object ProtectedApps {
     fun isAlwaysAllowed(packageName: String): Boolean =
         packageName in alwaysAllowed
 
+    fun staticAlwaysAllowedPackages(): Set<String> = alwaysAllowed
+
     fun isAlwaysAllowed(context: Context, packageName: String): Boolean {
         if (isAlwaysAllowed(packageName)) return true
 
