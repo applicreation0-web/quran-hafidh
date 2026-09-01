@@ -1,14 +1,17 @@
 package com.applicreation0.quransafeguard
 
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -19,6 +22,9 @@ fun DailyReminderCard(
     reminder: DailyReminder,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val depthEntry = ClassicalDepthRepository.displayEntry(reminder.id)
+
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -65,6 +71,23 @@ fun DailyReminderCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (depthEntry != null) {
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, ClassicalDepthActivity::class.java)
+                                .putExtra(
+                                    ClassicalDepthActivity.EXTRA_REMINDER_ID,
+                                    reminder.id
+                                )
+                        )
+                    }
+                ) {
+                    Text(depthEntry.buttonLabel)
+                }
+            }
         }
     }
 }

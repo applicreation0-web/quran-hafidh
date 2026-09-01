@@ -27,6 +27,12 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".ClassicalDepthActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".ReadingCompleteActivity"
             android:excludeFromRecents="true"
             android:exported="false"
