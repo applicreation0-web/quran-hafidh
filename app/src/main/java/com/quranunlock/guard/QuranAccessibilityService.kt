@@ -378,10 +378,14 @@ class QuranAccessibilityService : AccessibilityService() {
         }
 
         if (foregroundPackage == packageName) {
-            if (!callFreezeActive &&
-                foregroundUnlockedPackage == null &&
-                ProtectedApps.isProtected(this, packageName) &&
-                GuardPrefs.isUnlocked(this, packageName)
+            if (UnlockBudgetIntegrity.shouldStartBudgetOnForegroundEvent(
+                    eventPackage = packageName,
+                    trackedForegroundPackage = foregroundPackage,
+                    runningBudgetPackage = foregroundUnlockedPackage,
+                    isProtected = ProtectedApps.isProtected(this, packageName),
+                    isUnlocked = GuardPrefs.isUnlocked(this, packageName),
+                    callFrozen = callFreezeActive
+                )
             ) {
                 GuardPrefs.beginUnlockForeground(this, packageName)
                 foregroundUnlockedPackage = packageName
