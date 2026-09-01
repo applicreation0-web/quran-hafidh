@@ -96,7 +96,8 @@ object ReminderPrefs {
         epochDay: Long = LocalDate.now().toEpochDay()
     ): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getLong(LAST_THOUGHT_NOTIFICATION_DAY, Long.MIN_VALUE) == epochDay) {
+        val lastDay = prefs.getLong(LAST_THOUGHT_NOTIFICATION_DAY, Long.MIN_VALUE)
+        if (!ThoughtOfDayPolicy.shouldNotify(lastDay, epochDay)) {
             return false
         }
         return prefs.edit()
@@ -168,7 +169,9 @@ object MindfulReminderScheduler {
 
     fun scheduleDaily(context: Context) {
         val now = ZonedDateTime.now()
-        var next = now.toLocalDate().atTime(8, 0).atZone(now.zone)
+        var next = now.toLocalDate()
+            .atTime(ThoughtOfDayPolicy.MORNING_HOUR, 0)
+            .atZone(now.zone)
         if (!next.isAfter(now)) next = next.plusDays(1)
         schedule(context, ACTION_DAILY, REQUEST_DAILY, next.toInstant().toEpochMilli())
     }
@@ -252,7 +255,7 @@ object ReminderNotifications {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         show(
             context = context,
-            id = 8200,
+            id = ThoughtOfDayPolicy.NOTIFICATION_ID,
             title = "Pensée du jour 🌿",
             text = thought.frenchText,
             contentIntent = intent
