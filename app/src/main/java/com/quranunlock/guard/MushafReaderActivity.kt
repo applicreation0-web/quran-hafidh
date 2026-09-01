@@ -21,7 +21,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -141,9 +140,7 @@ class MushafReaderActivity : ComponentActivity() {
                                     .fillMaxWidth()
                                     .weight(1f),
                                 onReady = { markPageReady() },
-                                onContentHeightMeasured = { heightPx ->
-                                    if (heightPx > 0) renderedPageHeightPx = heightPx
-                                },
+                                onContentHeightMeasured = { },
                                 onBottomReached = {
                                     GuardPrefs.markReadingBottomReached(
                                         this@MushafReaderActivity,
