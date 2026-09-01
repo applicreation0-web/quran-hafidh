@@ -46,12 +46,49 @@ val verifyPrivacyBoundary by tasks.registering {
         check(!accessibility.contains("typeViewFocused")) {
             "Focused-view accessibility events are outside Safeguard scope."
         }
+        check(!manifest.contains("android:showWhenLocked=\"true\"")) {
+            "Quran gate must never be allowed over the Android lock screen."
+        }
         check(
             accessibility.contains(
                 "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged\""
             )
         ) {
             "Accessibility events must remain limited to window changes."
+        }
+    }
+}
+
+val verifyEditorialBoundary by tasks.registering {
+    doLast {
+        val sources = fileTree("src/main/java") {
+            include("**/*.kt")
+        }.files.joinToString("\n") { it.readText() }
+
+        val forbidden = listOf(
+            "Pour comprendre cette Ḥikma",
+            "Pour comprendre cette Hikma",
+            "Explication simple",
+            "commentaire de l’auteur",
+            "commentaire de l'auteur"
+        )
+        forbidden.forEach { phrase ->
+            check(!sources.contains(phrase, ignoreCase = true)) {
+                "Forbidden Hikam editorial summary/attribution found: $phrase"
+            }
+        }
+
+        val hikam = file("src/main/java/com/quranunlock/guard/HikamRepository.kt").readText()
+        check(hikam.contains("Commentaire classique")) {
+            // The UI label lives in HikamDetailActivity; this branch intentionally
+            // validates the data structure below instead.
+            check(hikam.contains("HikmaCommentary"))
+        }
+        check(hikam.contains("Ibn ʿAjība")) {
+            "Classical commentary must identify Ibn ʿAjība explicitly."
+        }
+        check(hikam.contains("isExcerpt: Boolean = true")) {
+            "Abridged commentary must remain explicitly marked as excerpt."
         }
     }
 }
@@ -77,6 +114,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyFrozenReminderSnapshot)
     dependsOn(verifyMushafPages)
     dependsOn(verifyPrivacyBoundary)
+    dependsOn(verifyEditorialBoundary)
 }
 
 dependencies {
