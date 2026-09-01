@@ -195,6 +195,7 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "normalPhoneCallFreezesBudget",
             "whatsappCallUiFreezesBeforeAudioMode",
             "whatsappVoipCallFreezesBudget",
+            "legacy09ForegroundMarkerIsInvalidatedWithoutReusingTimestamp",
             "rebootPreservesBudgetAndInvalidatesForegroundSession",
             "unknownBootCountCanNeverBeTreatedAsSameBootRecovery",
             "serviceKillRestartLeavesNoPhantomForeground",
