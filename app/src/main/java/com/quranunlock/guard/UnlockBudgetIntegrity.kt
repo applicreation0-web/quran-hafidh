@@ -124,11 +124,27 @@ object UnlockBudgetIntegrity {
     fun isImePseudoForeground(
         eventPackage: String,
         activeImePackage: String?,
-        currentProtectedPackage: String?
-    ): Boolean =
-        currentProtectedPackage != null &&
-            !activeImePackage.isNullOrBlank() &&
-            eventPackage == activeImePackage
+        currentProtectedPackage: String?,
+        eventType: Int,
+        className: String?
+    ): Boolean {
+        if (currentProtectedPackage == null ||
+            activeImePackage.isNullOrBlank() ||
+            eventPackage != activeImePackage
+        ) {
+            return false
+        }
+
+        // AccessibilityEvent constants kept numeric here so the accounting core
+        // remains plain Kotlin/JVM testable:
+        // VIEW_CLICKED=1, WINDOW_STATE_CHANGED=32, VIEW_SCROLLED=4096,
+        // WINDOWS_CHANGED=4194304.
+        return when (eventType) {
+            1, 4096, 4194304 -> true
+            32 -> className?.contains("Activity", ignoreCase = true) != true
+            else -> false
+        }
+    }
 
     fun shouldGateOnExpiration(
         remainingMs: Long,
