@@ -225,6 +225,30 @@ class UnlockBudgetIntegrityTest {
     }
 
     @Test
+    fun returnFromGateStartsBudgetEvenWhenForegroundPackageAlreadyMatches() {
+        assertTrue(
+            UnlockBudgetIntegrity.shouldStartBudgetOnForegroundEvent(
+                eventPackage = "com.whatsapp",
+                trackedForegroundPackage = "com.whatsapp",
+                runningBudgetPackage = null,
+                isProtected = true,
+                isUnlocked = true,
+                callFrozen = false
+            )
+        )
+        assertFalse(
+            UnlockBudgetIntegrity.shouldStartBudgetOnForegroundEvent(
+                eventPackage = "com.whatsapp",
+                trackedForegroundPackage = "com.whatsapp",
+                runningBudgetPackage = "com.whatsapp",
+                isProtected = true,
+                isUnlocked = true,
+                callFrozen = false
+            )
+        )
+    }
+
+    @Test
     fun expirationIsExactZeroAndRequiresGateWhenStillForeground() {
         var state = UnlockBudgetIntegrity.grant(1 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
