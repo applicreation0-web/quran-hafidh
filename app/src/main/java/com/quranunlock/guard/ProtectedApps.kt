@@ -15,7 +15,6 @@ object ProtectedApps {
 
     private val alwaysAllowed = setOf(
         PLAY_STORE,
-        ANDROID_SETTINGS,
         // Calling/emergency infrastructure must never be intercepted.
         "com.android.server.telecom",
         "com.android.phone",
@@ -268,6 +267,7 @@ object ProtectedApps {
 
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
+        if (packageName == ANDROID_SETTINGS) return true
         if (isAlwaysAllowed(context, packageName)) return false
 
         // Web coverage is deliberately limited to the eight supported browsers.
