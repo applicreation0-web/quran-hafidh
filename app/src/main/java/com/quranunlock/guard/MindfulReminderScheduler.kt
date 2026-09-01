@@ -1,5 +1,6 @@
 package com.applicreation0.quransafeguard
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,8 +8,10 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.batoulapps.adhan2.CalculationMethod
 import com.batoulapps.adhan2.Coordinates
 import com.batoulapps.adhan2.Madhab
@@ -54,6 +57,13 @@ object ReminderPrefs {
     }
 
     fun location(context: Context): Pair<Double, Double>? {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return null
+        }
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val lat = prefs.getString(LAT, null)?.toDoubleOrNull() ?: return null
         val lon = prefs.getString(LON, null)?.toDoubleOrNull() ?: return null
