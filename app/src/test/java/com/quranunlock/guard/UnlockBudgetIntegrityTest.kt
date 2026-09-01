@@ -169,6 +169,34 @@ class UnlockBudgetIntegrityTest {
     }
 
     @Test
+    fun unknownBootCountCanNeverBeTreatedAsSameBootRecovery() {
+        assertFalse(
+            UnlockBudgetIntegrity.isSafeSameBootRecovery(
+                storedBootCount = -1,
+                currentBootCount = -1,
+                checkpointElapsedMs = 10_000L,
+                nowElapsedMs = 20_000L
+            )
+        )
+        assertFalse(
+            UnlockBudgetIntegrity.isSafeSameBootRecovery(
+                storedBootCount = 4,
+                currentBootCount = 4,
+                checkpointElapsedMs = 20_000L,
+                nowElapsedMs = 5_000L
+            )
+        )
+        assertTrue(
+            UnlockBudgetIntegrity.isSafeSameBootRecovery(
+                storedBootCount = 4,
+                currentBootCount = 4,
+                checkpointElapsedMs = 10_000L,
+                nowElapsedMs = 20_000L
+            )
+        )
+    }
+
+    @Test
     fun serviceKillRestartLeavesNoPhantomForeground() {
         var state = UnlockBudgetIntegrity.grant(20 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 9)
