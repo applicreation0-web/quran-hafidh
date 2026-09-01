@@ -7,13 +7,14 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - Voluntary discipline: normal uninstall remains available to the device owner; Android Settings is intentionally protected while Safeguard is active to prevent trivial bypass of the AccessibilityService.
 - Medina Mushaf, 604 canonical pages, Hafs ‘an ‘Asim, available offline.
 - The original 15-line page format is preserved.
-- A reading session shows roughly half a rendered page at once and requires a natural scroll to the bottom.
+- A reading session shows roughly 80% of the rendered Mushaf page at once, at maximum practical width, while preserving the canonical page ratio and requiring a short natural scroll to the bottom.
 - Reading time is measured for personal progress without a fixed minimum reading speed.
 - Each normal unlock grants up to 20 minutes to the relevant app, counted only while that app is actually in the foreground.
 - Gentle usage reminders appear at 10, 5 and 1 minute remaining.
 - Three daily jokers remain available, each capped to a maximum of five minutes.
-- Eight explicit browsers only: Chrome, Firefox, Edge, Brave, Opera, Samsung Internet, DuckDuckGo and Vivaldi.
-- Phone and emergency calling infrastructure is never intercepted.
+- Product scope is fixed to selected social/communication targets plus exactly eight browsers: Chrome, Firefox, Edge, Brave, Opera, Samsung Internet, DuckDuckGo and Vivaldi.
+- Banking, payment, identity, authentication, password/security, calls and alarms are not selectable Safeguard targets.
+- Accessibility starts from an explicit package scope and temporarily broadens only while a protected target is active, solely to detect the first transition away and pause foreground time; unrelated packages are not classified, logged or associated with Safeguard.
 - Accessibility window content retrieval is disabled.
 
 ## Spiritual reminders
@@ -23,13 +24,13 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - Arabic is shown first, followed by French and an identifiable source.
 - Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
 - Hadith, al-Ghazali texts and al-Hikam are explicitly distinguished.
-- **AUTHENTICITÉ AVANT QUANTITÉ**: classical texts are never displayed unless source, attribution, translation, human review and translation-rights checks are separately complete.
+- **AUTHENTICITÉ AVANT QUANTITÉ**: classical texts require verified source and attribution plus a reviewed French translation with compatible rights. External editorial/human certification remains a separate disclosed metadata field and is not falsely implied.
 - Quran Safeguard never interprets, summarizes, reconstructs or speaks in the voice of Ibn ʿAṭāʾ Allāh, Ibn ʿAjība or al-Ghazālī.
 - Ibn ʿAṭāʾ Allāh is identified as the author of Al-Hikam; Ibn ʿAjība is identified only as a commentator. Al-Ghazālī “Approfondir” content must come from al-Ghazālī’s own continuous text, not an app-generated explanation.
 - Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
 - Adhkar can optionally show a discreet transliteration layer (off by default).
 - Daily/adhkar reminders use a small heads-up banner with one short vibration and no sound.
-- Banking, payment, identity, authentication, password-manager and security apps are permanently outside Safeguard scope and are rejected from persistence/logging.
+- Banking, payment, identity, authentication, password-manager and security apps are outside the fixed selectable scope and are rejected from Safeguard persistence/logging.
 - No transliteration is shown by default.
 - A gentle daily notification targets 20:00 local time.
 - Authenticated morning adhkar are offered between Fajr and sunrise.

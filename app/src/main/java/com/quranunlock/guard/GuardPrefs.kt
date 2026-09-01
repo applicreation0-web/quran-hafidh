@@ -27,7 +27,7 @@ object GuardPrefs {
     const val JOKER_MAX_UNLOCK_MINUTES = 5
     const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
 
-    private const val FILE = "guard_prefs"
+    internal const val FILE = "guard_prefs"
     private const val LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX = "unlock_elapsed_until_"
     private const val LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX = "unlock_elapsed_started_"
     private const val UNLOCK_REMAINING_MS_PREFIX = "unlock_remaining_ms_"
@@ -38,7 +38,7 @@ object GuardPrefs {
     private const val SELECTED_JUZ = "selected_juz"
     private const val SELECTED_HIZB = "selected_hizb"
     private const val SELECTION_MODE = "selection_mode"
-    private const val PROTECTED_PACKAGES = "protected_packages"
+    internal const val PROTECTED_PACKAGES = "protected_packages"
     private const val UNLOCK_MINUTES = "unlock_minutes"
     private const val JOKER_DAY = "joker_epoch_day"
     private const val JOKERS_USED = "jokers_used"
@@ -317,7 +317,7 @@ object GuardPrefs {
         val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)
         val source = stored?.toSet() ?: ProtectedApps.defaultPackages
         val filtered = source
-            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
 
         // Self-heal legacy selections: once an app becomes permanently excluded,
@@ -333,13 +333,33 @@ object GuardPrefs {
 
     fun saveProtectedPackages(context: Context, packages: Set<String>) {
         val filtered = packages
-            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
-
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
+        val previous = protectedPackages(context)
+        val removed = previous - filtered
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
             .putStringSet(PROTECTED_PACKAGES, filtered)
-            .apply()
+
+        // A deselected target must never retain a usable old unlock/challenge.
+        // If it is selected again later, it starts from a clean protection state.
+        removed.forEach { packageName ->
+            editor
+                .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
+                .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
+                .remove(UNLOCK_REMAINING_MS_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+                .remove(UNLOCK_GRANTED_MS_PREFIX + packageName)
+                .remove(UNLOCK_REMINDER_MASK_PREFIX + packageName)
+                .remove(CHALLENGE_PREFIX + packageName)
+                .remove(READING_PAGE_PREFIX + packageName)
+                .remove(READING_ACCUMULATED_PREFIX + packageName)
+                .remove(READING_STARTED_PREFIX + packageName)
+                .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
+                .remove(READING_COMPLETION_RECORDED_PREFIX + packageName)
+        }
+
+        editor.commit()
     }
 
     fun selectionMode(context: Context): QuranSelectionMode {

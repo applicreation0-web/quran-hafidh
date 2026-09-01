@@ -6,6 +6,17 @@ import android.telecom.TelecomManager
 import java.text.Normalizer
 import java.util.Locale
 
+enum class SafeguardTargetCategory {
+    SOCIAL,
+    BROWSER
+}
+
+data class SafeguardTarget(
+    val label: String,
+    val packageName: String,
+    val category: SafeguardTargetCategory
+)
+
 object ProtectedApps {
     private val sensitiveDecisionCache = mutableMapOf<String, Boolean>()
     private var defaultDialerLoaded = false
@@ -167,21 +178,33 @@ object ProtectedApps {
         "otp"
     )
 
-    private val defaultAwarenessApps = setOf(
-        "com.google.android.youtube",
-        "com.whatsapp",
-        "org.telegram.messenger",
-        "com.discord",
-        "com.reddit.frontpage",
-        "com.snapchat.android",
-        "com.instagram.android",
-        "com.facebook.katana",
-        "com.twitter.android",
-        "com.zhiliaoapp.musically"
+    val socialTargets: List<SafeguardTarget> = listOf(
+        SafeguardTarget("YouTube", "com.google.android.youtube", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("WhatsApp", "com.whatsapp", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("Telegram", "org.telegram.messenger", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("Discord", "com.discord", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("Reddit", "com.reddit.frontpage", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("Snapchat", "com.snapchat.android", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("Instagram", "com.instagram.android", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("Facebook", "com.facebook.katana", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("X", "com.twitter.android", SafeguardTargetCategory.SOCIAL),
+        SafeguardTarget("TikTok", "com.zhiliaoapp.musically", SafeguardTargetCategory.SOCIAL)
     )
 
-    val defaultPackages: Set<String> =
-        defaultAwarenessApps + BrowserDetector.supportedPackages
+    val browserTargets: List<SafeguardTarget> = listOf(
+        SafeguardTarget("Chrome", "com.android.chrome", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Firefox", "org.mozilla.firefox", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Microsoft Edge", "com.microsoft.emmx", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Brave", "com.brave.browser", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Opera", "com.opera.browser", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Samsung Internet", "com.sec.android.app.sbrowser", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("DuckDuckGo", "com.duckduckgo.mobile.android", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Vivaldi", "com.vivaldi.browser", SafeguardTargetCategory.BROWSER)
+    )
+
+    val selectableTargets: List<SafeguardTarget> = socialTargets + browserTargets
+    val selectableScopePackages: Set<String> = selectableTargets.map { it.packageName }.toSet()
+    val defaultPackages: Set<String> = selectableScopePackages
 
     fun isAlwaysAllowed(packageName: String): Boolean =
         packageName in alwaysAllowed ||
@@ -277,20 +300,30 @@ object ProtectedApps {
      * Defense-in-depth boundary for any persistence/logging layer.
      * Out-of-scope packages must not be associated with Safeguard state.
      */
-    fun shouldNeverPersist(context: Context, packageName: String): Boolean =
-        isAlwaysAllowed(context, packageName)
-
     fun isSystemProtected(packageName: String): Boolean =
         packageName == ANDROID_SETTINGS
+
+    fun isSelectableTarget(packageName: String): Boolean =
+        packageName in selectableScopePackages
+
+    /**
+     * Fixed application scope: social/communication targets + the eight supported browsers.
+     * Anything else must never acquire Safeguard session/history state.
+     */
+    fun shouldNeverPersist(context: Context, packageName: String): Boolean =
+        packageName != context.packageName &&
+            !isSystemProtected(packageName) &&
+            !isSelectableTarget(packageName)
+
+    fun eventScopePackages(context: Context): Set<String> =
+        GuardPrefs.protectedPackages(context) + ANDROID_SETTINGS + context.packageName
+
+    fun isEventScopePackage(context: Context, packageName: String): Boolean =
+        packageName in eventScopePackages(context)
 
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
         if (isSystemProtected(packageName)) return true
-        if (isAlwaysAllowed(context, packageName)) return false
-
-        // Web coverage is deliberately limited to the eight supported browsers.
-        if (BrowserDetector.isBrowser(context, packageName)) return true
-
         return packageName in GuardPrefs.protectedPackages(context)
     }
 }

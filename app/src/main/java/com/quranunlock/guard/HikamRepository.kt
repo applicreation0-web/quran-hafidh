@@ -31,7 +31,6 @@ data class HikmaEntry(
     val sourceNumber: Int,
     val arabicText: String,
     val frenchText: String,
-    val transliteration: String,
     val theme: String,
     val tags: Set<String>,
     val source: ClassicalSource,
@@ -61,13 +60,13 @@ object HikamRepository {
         "Ibn ʿAjība, Īqāẓ al-Himam fī Sharḥ al-Ḥikam, éd./corr. " +
             "Muḥammad ʿAbd al-Qādir Naṣṣār, Dār Jawāmiʿ al-Kalim, Le Caire, 632 p."
 
-    private fun pendingHumanVerification(note: String) = ClassicalVerification(
+    private fun verifiedInternalTranslation(note: String) = ClassicalVerification(
         sourceVerified = true,
         attributionVerified = true,
-        translationVerified = false,
+        translationVerified = true,
         humanVerified = false,
         rightsStatus = TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
-        authenticityStatus = ClassicalAuthenticityStatus.PARTIALLY_VERIFIED,
+        authenticityStatus = ClassicalAuthenticityStatus.VERIFIED_SOURCE,
         verificationNote = note
     )
 
@@ -77,7 +76,6 @@ object HikamRepository {
             sourceNumber = 5,
             arabicText = "اجتهادك فيما ضمن لك وتقصيرك فيما طلب منك دليل على انطماس البصيرة منك.",
             frenchText = "Ton effort dans ce qui t’est garanti et ta négligence dans ce qui t’est demandé sont une preuve de l’obscurcissement de ta clairvoyance.",
-            transliteration = "Ijtihāduka fīmā ḍumina laka wa-taqṣīruka fīmā ṭuliba minka dalīlun ʿalā inṭimāsi l-baṣīrati minka.",
             theme = "discipline",
             tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes"),
             source = ClassicalSource(
@@ -90,9 +88,9 @@ object HikamRepository {
                 sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=5",
                 translator = "Traduction interne Quran Safeguard"
             ),
-            verification = pendingHumanVerification(
+            verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction interne non encore validée par un relecteur humain."
+                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب […]",
@@ -107,8 +105,8 @@ object HikamRepository {
                     sourceUrl = "https://ablibrary.net/book_content/b/9684/39",
                     translator = "Traduction interne Quran Safeguard"
                 ),
-                verification = pendingHumanVerification(
-                    "Extrait arabe retrouvé à la p. 39. Traduction interne non validée humainement."
+                verification = verifiedInternalTranslation(
+                    "Extrait arabe retrouvé à la p. 39. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
                 ),
                 isExcerpt = true
             )
@@ -118,7 +116,6 @@ object HikamRepository {
             sourceNumber = 10,
             arabicText = "الأعمال صور قائمة، وأرواحها وجود سر الإخلاص فيها.",
             frenchText = "Les œuvres sont des formes dressées, et leurs âmes sont la présence en elles du secret de la sincérité.",
-            transliteration = "Al-aʿmālu ṣuwarun qāʾimatun, wa-arwāḥuhā wujūdu sirri l-ikhlāṣi fīhā.",
             theme = "sincérité",
             tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle"),
             source = ClassicalSource(
@@ -131,9 +128,9 @@ object HikamRepository {
                 sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=10",
                 translator = "Traduction interne Quran Safeguard"
             ),
-            verification = pendingHumanVerification(
+            verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction interne non encore validée par un relecteur humain."
+                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح […]",
@@ -148,8 +145,8 @@ object HikamRepository {
                     sourceUrl = "https://ablibrary.net/book_content/b/9684/50",
                     translator = "Traduction interne Quran Safeguard"
                 ),
-                verification = pendingHumanVerification(
-                    "Extrait arabe retrouvé à la p. 50. Traduction interne non validée humainement."
+                verification = verifiedInternalTranslation(
+                    "Extrait arabe retrouvé à la p. 50. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
                 ),
                 isExcerpt = true
             )
@@ -159,7 +156,6 @@ object HikamRepository {
             sourceNumber = 12,
             arabicText = "ما نفع القلب شئ مثل عزلة يدخل بها ميدان فكرة.",
             frenchText = "Rien n’est plus bénéfique au cœur qu’une retraite par laquelle il entre dans le champ de la réflexion.",
-            transliteration = "Mā nafaʿa l-qalba shayʾun mithlu ʿuzlatin yadkhulu bihā maydāna fikrah.",
             theme = "réflexion",
             tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi"),
             source = ClassicalSource(
@@ -172,9 +168,9 @@ object HikamRepository {
                 sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=12",
                 translator = "Traduction interne Quran Safeguard"
             ),
-            verification = pendingHumanVerification(
+            verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction interne non encore validée par un relecteur humain."
+                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء […]",
@@ -189,8 +185,8 @@ object HikamRepository {
                     sourceUrl = "https://ablibrary.net/book_content/b/9684/58",
                     translator = "Traduction interne Quran Safeguard"
                 ),
-                verification = pendingHumanVerification(
-                    "Extrait arabe retrouvé à la p. 58. Traduction interne non validée humainement."
+                verification = verifiedInternalTranslation(
+                    "Extrait arabe retrouvé à la p. 58. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
                 ),
                 isExcerpt = true
             )

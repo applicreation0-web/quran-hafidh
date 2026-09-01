@@ -23,12 +23,12 @@ class ClassicalAuthenticityTest {
     )
 
     @Test
-    fun allSixCriticalChecksAreRequired() {
+    fun documentaryAuthenticityAndReviewedTranslationAreRequired() {
         assertTrue(verification().displayEligible)
         assertFalse(verification(source = false).displayEligible)
         assertFalse(verification(attribution = false).displayEligible)
         assertFalse(verification(translation = false).displayEligible)
-        assertFalse(verification(human = false).displayEligible)
+        assertTrue(verification(human = false).displayEligible)
         assertFalse(
             verification(rights = TranslationRightsStatus.UNRESOLVED).displayEligible
         )

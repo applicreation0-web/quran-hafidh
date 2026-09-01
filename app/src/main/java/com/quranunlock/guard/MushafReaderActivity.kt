@@ -115,52 +115,44 @@ class MushafReaderActivity : ComponentActivity() {
                     }
                     val configuration = LocalConfiguration.current
                     val density = LocalDensity.current
-                    val fallbackHeight = configuration.screenHeightDp.dp * 0.48f
-                    val measuredHalfHeight = if (renderedPageHeightPx > 0) {
+                    val fallbackHeight = configuration.screenHeightDp.dp * 0.78f
+                    val measuredVisibleHeight = if (renderedPageHeightPx > 0) {
                         with(density) {
-                            (renderedPageHeightPx.toFloat() / 2f).toDp()
+                            (renderedPageHeightPx.toFloat() * 0.80f).toDp()
                         }
                     } else {
                         fallbackHeight
                     }
-                    val readerViewportHeight = measuredHalfHeight.coerceIn(
-                        220.dp,
-                        configuration.screenHeightDp.dp * 0.62f
+                    val readerViewportHeight = measuredVisibleHeight.coerceIn(
+                        320.dp,
+                        configuration.screenHeightDp.dp * 0.80f
                     )
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .padding(horizontal = 0.dp, vertical = 4.dp)
                     ) {
                         Text(
                             "Mushaf de Médine • Page $page",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
                             if (bottomReached) {
-                                "Bas de page atteint • ${formatReadingDuration(readingMs)} de lecture"
+                                "Page parcourue • ${formatReadingDuration(readingMs)}"
                             } else {
-                                "Lecture en cours • ${formatReadingDuration(readingMs)}"
+                                "Lecture • ${formatReadingDuration(readingMs)}"
                             },
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = if (bottomReached) {
-                                MaterialTheme.colorScheme.primary
+                                MaterialTheme.colorScheme.secondary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )
-                        Text(
-                            if (bottomReached) {
-                                "Prenez le temps de terminer sereinement avant de continuer."
-                            } else {
-                                "Faites défiler naturellement la page jusqu’en bas, à votre rythme."
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(3.dp))
 
                         if (!svgContent.isNullOrBlank() && !loadFailed) {
                             MushafPageWebView(

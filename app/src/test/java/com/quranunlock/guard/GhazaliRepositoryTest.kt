@@ -7,7 +7,7 @@ import org.junit.Test
 
 class GhazaliRepositoryTest {
     @Test
-    fun ghazaliEntriesHaveDocumentaryMetadataButRemainHiddenPendingHumanReview() {
+    fun ghazaliEntriesAreVisibleWithReviewedInternalTranslations() {
         assertEquals(3, GhazaliRepository.entries.size)
         assertEquals(
             GhazaliRepository.entries.size,
@@ -23,12 +23,12 @@ class GhazaliRepositoryTest {
             assertTrue(entry.source.sourceUrl.startsWith("https://"))
             assertTrue(entry.verification.sourceVerified)
             assertTrue(entry.verification.attributionVerified)
-            assertFalse(entry.verification.translationVerified)
+            assertTrue(entry.verification.translationVerified)
             assertFalse(entry.verification.humanVerified)
-            assertFalse(entry.displayEligible)
+            assertTrue(entry.displayEligible)
         }
 
-        assertTrue(GhazaliRepository.asDailyReminders().isEmpty())
+        assertEquals(3, GhazaliRepository.asDailyReminders().size)
     }
 
     @Test
@@ -50,7 +50,7 @@ class GhazaliRepositoryTest {
             assertTrue(context.arabicText.isNotBlank())
             assertTrue(context.frenchText.isNotBlank())
             assertTrue(context.isExcerpt)
-            assertFalse(context.displayEligible)
+            assertTrue(context.displayEligible)
         }
     }
 }

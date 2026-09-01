@@ -46,6 +46,16 @@ val verifyPrivacyBoundary by tasks.registering {
         check(!accessibility.contains("typeViewFocused")) {
             "Focused-view accessibility events are outside Safeguard scope."
         }
+        check(accessibility.contains("android:packageNames=")) {
+            "Accessibility must start from an explicit social/browser package scope."
+        }
+        check(!accessibility.contains("com.barclays") &&
+            !accessibility.contains("com.revolut") &&
+            !accessibility.contains("bitwarden") &&
+            !accessibility.contains("authenticator2")
+        ) {
+            "Sensitive app families must never appear in the static accessibility scope."
+        }
         check(!manifest.contains("android:showWhenLocked=\"true\"")) {
             "Quran gate must never be allowed over the Android lock screen."
         }
@@ -94,6 +104,24 @@ val verifyEditorialBoundary by tasks.registering {
 
         val hikam = file("src/main/java/com/quranunlock/guard/HikamRepository.kt").readText()
         val hikamUi = file("src/main/java/com/quranunlock/guard/HikamDetailActivity.kt").readText()
+        check(!hikam.contains("transliteration", ignoreCase = true)) {
+            "Transliteration is reserved for Adhkar and must not exist in Hikam data."
+        }
+        check(
+            !hikamUi.contains("transliteration", ignoreCase = true) &&
+                !hikamUi.contains("translittération", ignoreCase = true)
+        ) {
+            "Transliteration is reserved for Adhkar and must not appear in Hikam UI."
+        }
+        val ghazaliUi = file(
+            "src/main/java/com/quranunlock/guard/GhazaliDetailActivity.kt"
+        ).readText()
+        check(
+            !ghazaliUi.contains("transliteration", ignoreCase = true) &&
+                !ghazaliUi.contains("translittération", ignoreCase = true)
+        ) {
+            "Transliteration is reserved for Adhkar and must not appear in Ghazali UI."
+        }
         check(hikam.contains("HikmaCommentary")) {
             "Canonical Hikam data must retain classical commentary metadata."
         }
@@ -123,7 +151,7 @@ val verifyEditorialBoundary by tasks.registering {
             "Classical content must track translation verification separately."
         }
         check(authenticity.contains("humanVerified")) {
-            "Classical content must require explicit human verification."
+            "Classical content must keep external human-review status distinct."
         }
         check(authenticity.contains("rightsStatus")) {
             "Classical content must track translation rights."
@@ -147,8 +175,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.9.0"
+        versionCode = 15
+        versionName = "0.9.1"
     }
 
     buildFeatures {

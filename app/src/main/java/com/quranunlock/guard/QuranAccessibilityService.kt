@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -19,7 +20,15 @@ class QuranAccessibilityService : AccessibilityService() {
     private var foregroundUnlockedPackage: String? = null
     private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
-    private val permanentlyExcludedCache = mutableMapOf<String, Boolean>()
+    private var broadExitDetection = false
+    private var guardPrefs: SharedPreferences? = null
+
+    private val scopePreferenceListener =
+        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == GuardPrefs.PROTECTED_PACKAGES && !broadExitDetection) {
+                applyEventPackageScope(broad = false)
+            }
+        }
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -35,6 +44,7 @@ class QuranAccessibilityService : AccessibilityService() {
                 if (!snapshot.guardVisible) {
                     GuardRuntime.interception.reset()
                 }
+                applyEventPackageScope(broad = false)
                 GuardDiagnostics.log(this@QuranAccessibilityService, "SCREEN_OFF_USAGE_PAUSED")
             }
         }
@@ -95,6 +105,10 @@ class QuranAccessibilityService : AccessibilityService() {
         GuardRuntime.interception.reset()
         GuardHealth.markConnected(this)
         GuardDiagnostics.log(this, "SERVICE_CONNECTED")
+        guardPrefs = getSharedPreferences(GuardPrefs.FILE, Context.MODE_PRIVATE).also {
+            it.registerOnSharedPreferenceChangeListener(scopePreferenceListener)
+        }
+        applyEventPackageScope(broad = false)
         registerScreenReceiverIfNeeded()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.post(heartbeat)
@@ -122,11 +136,11 @@ class QuranAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
 
-        // Sensitive / critical apps are a hard trust boundary. We use their
-        // foreground event only to stop any previous Safeguard work, then
-        // return before protection, diagnostics or challenge logic can run.
-        if (isPermanentlyExcluded(packageName)) {
-            handlePermanentlyExcludedForeground()
+        // Fixed-scope model: anything outside selected social/browser targets,
+        // Settings and Safeguard itself is treated identically. No label lookup,
+        // category lookup, diagnostic entry or sensitive-app association occurs.
+        if (!ProtectedApps.isEventScopePackage(this, packageName)) {
+            handleOutsideScopeForeground()
             return
         }
 
@@ -140,6 +154,11 @@ class QuranAccessibilityService : AccessibilityService() {
         }
 
         if (!isProtectedPackage) return
+
+        // A protected target is active. Broaden only temporarily so a transition
+        // to ANY other app can pause actual-foreground time and cancel gate races.
+        applyEventPackageScope(broad = true)
+
         if (GuardPrefs.isUnlocked(this, packageName)) return
 
         val now = SystemClock.elapsedRealtime()
@@ -162,12 +181,7 @@ class QuranAccessibilityService : AccessibilityService() {
         scheduleRetry(packageName, 900L, "retry_2")
     }
 
-    private fun isPermanentlyExcluded(packageName: String): Boolean =
-        permanentlyExcludedCache.getOrPut(packageName) {
-            ProtectedApps.isAlwaysAllowed(this, packageName)
-        }
-
-    private fun handlePermanentlyExcludedForeground() {
+    private fun handleOutsideScopeForeground() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
         pendingForegroundPause = null
 
@@ -178,13 +192,27 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundPackage = null
         GuardRuntime.resetForeground()
 
-        // Most importantly, retries created for a previous protected app must
-        // never spill over on top of banking, identity or security apps.
         cancelPendingLaunches()
         val snapshot = GuardRuntime.interception.snapshot()
         if (!snapshot.guardVisible) {
             GuardRuntime.interception.reset()
         }
+
+        // Once the transition away from a protected target is known, stop
+        // receiving events from unrelated apps again.
+        applyEventPackageScope(broad = false)
+    }
+
+    private fun applyEventPackageScope(broad: Boolean) {
+        if (broadExitDetection == broad && broad) return
+        val info = serviceInfo ?: return
+        info.packageNames = if (broad) {
+            null
+        } else {
+            ProtectedApps.eventScopePackages(this).toTypedArray()
+        }
+        setServiceInfo(info)
+        broadExitDetection = broad
     }
 
     private fun handleForegroundPackage(packageName: String) {
@@ -266,7 +294,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun launchGate(packageName: String, reason: String) {
         if (GuardPrefs.isUnlocked(this, packageName)) return
-        if (isPermanentlyExcluded(packageName)) return
+        if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardRuntime.externalForegroundPackage() != packageName) return
         if (!GuardRuntime.interception.shouldRetry(packageName) && reason != "initial") return
 
@@ -341,6 +369,8 @@ class QuranAccessibilityService : AccessibilityService() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
         pendingForegroundPause = null
         unregisterScreenReceiverIfNeeded()
+        guardPrefs?.unregisterOnSharedPreferenceChangeListener(scopePreferenceListener)
+        guardPrefs = null
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
         return super.onUnbind(intent)
@@ -358,6 +388,8 @@ class QuranAccessibilityService : AccessibilityService() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
         pendingForegroundPause = null
         unregisterScreenReceiverIfNeeded()
+        guardPrefs?.unregisterOnSharedPreferenceChangeListener(scopePreferenceListener)
+        guardPrefs = null
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
         super.onDestroy()

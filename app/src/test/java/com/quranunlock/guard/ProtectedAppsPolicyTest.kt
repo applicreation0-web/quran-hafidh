@@ -116,6 +116,22 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
+    fun selectableScopeIsOnlyDeclaredSocialTargetsAndEightBrowsers() {
+        val expected = (
+            ProtectedApps.socialTargets + ProtectedApps.browserTargets
+        ).map { it.packageName }.toSet()
+
+        assertTrue(ProtectedApps.selectableScopePackages == expected)
+        assertTrue(ProtectedApps.isSelectableTarget("com.instagram.android"))
+        assertTrue(ProtectedApps.isSelectableTarget("com.android.chrome"))
+        assertFalse(ProtectedApps.isSelectableTarget("com.barclays.android.barclaysmobilebanking"))
+        assertFalse(ProtectedApps.isSelectableTarget("com.revolut.revolut"))
+        assertFalse(ProtectedApps.isSelectableTarget("com.x8bit.bitwarden"))
+        assertFalse(ProtectedApps.isSelectableTarget("com.google.android.apps.authenticator2"))
+        assertFalse(ProtectedApps.isSelectableTarget("com.example.random"))
+    }
+
+    @Test
     fun ordinaryAwarenessAppsRemainSelectable() {
         assertFalse(ProtectedApps.looksSensitive("com.whatsapp", "WhatsApp"))
         assertFalse(ProtectedApps.looksSensitive("com.google.android.youtube", "YouTube"))
