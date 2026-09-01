@@ -136,6 +136,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(service.contains("pauseForegroundBudget(clearForeground = true)")) {
             "Real app exits and screen-off must pause immediately."
         }
+        check(prefs.contains("getInt(UNLOCK_MINUTES, 20)")) {
+            "The default per-app unlock budget must remain 20 minutes."
+        }
         check(prefs.contains("UNLOCK_FOREGROUND_BOOT_PREFIX")) {
             "Foreground unlock state must be tied to a boot identity."
         }
