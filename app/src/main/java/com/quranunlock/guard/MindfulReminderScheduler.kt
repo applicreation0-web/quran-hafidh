@@ -170,7 +170,7 @@ object MindfulReminderScheduler {
     fun scheduleDaily(context: Context) {
         val now = ZonedDateTime.now()
         var next = now.toLocalDate()
-            .atTime(ThoughtOfDayPolicy.MORNING_HOUR, 0)
+            .atTime(ThoughtOfDayPolicy.REMINDER_HOUR, 0)
             .atZone(now.zone)
         if (!next.isAfter(now)) next = next.plusDays(1)
         schedule(context, ACTION_DAILY, REQUEST_DAILY, next.toInstant().toEpochMilli())
@@ -329,7 +329,7 @@ object ReminderNotifications {
             "Rappels bienveillants",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Pensée du jour le matin et adhkâr matin/soir"
+            description = "Pensée du jour à 20:00 et adhkâr matin/soir"
             enableVibration(true)
             vibrationPattern = SINGLE_GENTLE_VIBRATION
             setSound(null, null)
