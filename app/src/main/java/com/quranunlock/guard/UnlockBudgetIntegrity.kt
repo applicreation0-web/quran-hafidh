@@ -157,6 +157,17 @@ object UnlockBudgetIntegrity {
         }
     }
 
+    const val MAX_UNCERTAIN_RECOVERY_CHARGE_MS = 1_000L
+
+    fun boundedRecoveryChargeMs(
+        checkpointElapsedMs: Long,
+        nowElapsedMs: Long
+    ): Long {
+        if (checkpointElapsedMs < 0L || nowElapsedMs < checkpointElapsedMs) return 0L
+        return (nowElapsedMs - checkpointElapsedMs)
+            .coerceAtMost(MAX_UNCERTAIN_RECOVERY_CHARGE_MS)
+    }
+
     fun isSafeSameBootRecovery(
         storedBootCount: Int?,
         currentBootCount: Int,
