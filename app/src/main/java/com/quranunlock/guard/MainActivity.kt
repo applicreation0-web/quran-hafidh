@@ -740,24 +740,22 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SectionTitle("Installation & invitation")
+                SectionTitle("Installation & mise à jour")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            "Une installation simple, étape par étape 🌿",
+                            "APK privée signée",
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Text("1. Ouvrir le lien privé Google Play avec le compte invité.")
-                        Text("2. Rejoindre le test puis installer Quran Safeguard depuis Google Play.")
-                        Text("3. Activer calmement la protection dans les réglages d’accessibilité.")
-                        Text("4. Autoriser les rappels et, si souhaité, les horaires locaux des adhkâr.")
-                        Text("5. Choisir les applications et les Juz/Hizb souhaités.")
-                        Text("6. Tester la protection pour confirmer que tout fonctionne.")
                         Text(
-                            "Le guide peut être partagé avec une invitation afin que la personne sache exactement quoi faire.",
+                            "Une mise à jour signée avec le même certificat s’installe directement par-dessus la version actuelle : inutile de désinstaller l’application."
+                        )
+                        Text(
+                            "Quran Safeguard reste volontairement hors ligne et ne vérifie pas les nouvelles versions sur Internet. La disponibilité d’une nouvelle APK doit donc être communiquée séparément.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
