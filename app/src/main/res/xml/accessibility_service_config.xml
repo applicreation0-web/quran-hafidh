@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged|typeViewClicked|typeViewScrolled"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:notificationTimeout="50"
+    android:notificationTimeout="0"
     android:canRetrieveWindowContent="false"
     android:packageNames="com.applicreation0.quransafeguard,com.android.settings,com.android.chrome,org.mozilla.firefox,com.microsoft.emmx,com.brave.browser,com.opera.browser,com.sec.android.app.sbrowser,com.duckduckgo.mobile.android,com.vivaldi.browser,com.google.android.youtube,com.whatsapp,org.telegram.messenger,com.discord,com.reddit.frontpage,com.snapchat.android,com.instagram.android,com.facebook.katana,com.twitter.android,com.zhiliaoapp.musically"
     android:isAccessibilityTool="false"
