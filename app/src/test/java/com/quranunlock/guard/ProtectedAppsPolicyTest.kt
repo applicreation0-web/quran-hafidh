@@ -44,10 +44,12 @@ class ProtectedAppsPolicyTest {
     @Test
     fun criticalStaticPackagesAreAlwaysAllowed() {
         assertTrue(ProtectedApps.isAlwaysAllowed(ProtectedApps.PLAY_STORE))
-        assertTrue(ProtectedApps.isAlwaysAllowed(ProtectedApps.ANDROID_SETTINGS))
+        assertFalse(ProtectedApps.isAlwaysAllowed(ProtectedApps.ANDROID_SETTINGS))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.android.phone"))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.dialer"))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.gms"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.deskclock"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.apps.safetyhub"))
     }
 
     @Test
