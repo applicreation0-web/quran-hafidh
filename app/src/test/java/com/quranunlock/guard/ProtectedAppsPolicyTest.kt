@@ -50,6 +50,8 @@ class ProtectedAppsPolicyTest {
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.gms"))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.deskclock"))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.apps.safetyhub"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.inputmethod.latin"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.samsung.android.honeyboard"))
     }
 
     @Test
