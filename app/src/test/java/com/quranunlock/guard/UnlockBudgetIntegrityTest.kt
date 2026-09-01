@@ -131,6 +131,34 @@ class UnlockBudgetIntegrityTest {
     }
 
     @Test
+    fun whatsappCallUiFreezesBeforeAudioMode() {
+        assertTrue(
+            UnlockBudgetIntegrity.isKnownWhatsAppCallActivity(
+                "com.whatsapp",
+                "com.whatsapp.voipcalling.VoipActivityV2"
+            )
+        )
+        assertTrue(
+            UnlockBudgetIntegrity.isKnownWhatsAppCallActivity(
+                "com.whatsapp",
+                "com.whatsapp.voipcalling.VoipActivityV3"
+            )
+        )
+        assertFalse(
+            UnlockBudgetIntegrity.isKnownWhatsAppCallActivity(
+                "com.whatsapp",
+                "com.whatsapp.calling.callhistory.CallLogActivity"
+            )
+        )
+        assertFalse(
+            UnlockBudgetIntegrity.isKnownWhatsAppCallActivity(
+                "com.instagram.android",
+                "com.whatsapp.voipcalling.VoipActivityV2"
+            )
+        )
+    }
+
+    @Test
     fun whatsappVoipCallFreezesBudget() {
         assertTrue(
             UnlockBudgetIntegrity.shouldFreezeForAudioMode(3)
