@@ -27,18 +27,6 @@ object ReligiousSourceRegistry {
         "hadith_muslim_223_quran" to v("https://sunnah.com/muslim:223", "Sahih Muslim 223"),
         "hadith_tirmidhi_1956_common_space" to v("https://sunnah.com/tirmidhi:1956", "Jami’ at-Tirmidhi 1956 • Hasan"),
         "hadith_muslim_2699_help" to v("https://sunnah.com/muslim:2699a", "Sahih Muslim 2699a"),
-        "ghazali_bidaya_religion_two_halves" to v(
-            "https://islamweb.net/ar/library/content/60/4822/",
-            "Attributed in Siyar A‘lam an-Nubala’ to Abu Hamid al-Ghazali; also present in Bidayat al-Hidaya"
-        ),
-        "ghazali_bidaya_limb_guardianship" to v(
-            "https://baheth.ieasybooks.com/ar/media/شرح-بداية-الهداية-للإمام-الغزالي-رحمه-الله-تعالى-15",
-            "Bidayat al-Hidaya • section on avoiding disobedience"
-        ),
-        "ghazali_ihya_outer_inner_adab" to v(
-            "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
-            "Ihya’ ‘Ulum ad-Din • Book of conduct and Prophetic character"
-        ),
 )
 
     val adhkarSources: Map<String, SourceVerification> = mapOf(
