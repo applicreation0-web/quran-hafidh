@@ -39,7 +39,7 @@ EDITION = (
     "Dār Jawāmiʿ al-Kalim, Cairo, 632 p."
 )
 BASE = f"https://ablibrary.net/book_content/b/{BOOK_ID}/{{page}}"
-PAGES = range(20, 633)
+PAGES = range(20, 510)
 BLOCK_TAGS = {
     "p", "div", "section", "article", "main", "h1", "h2", "h3", "h4",
     "li", "br", "tr", "td"
@@ -192,7 +192,7 @@ def fallback_candidate(n, expected_raw, page_texts, min_page, max_page):
         return None
     prefix = expected[: min(55, len(expected))]
     best = None
-    for page in range(min_page, min(max_page, 632) + 1):
+    for page in range(min_page, min(max_page, 509) + 1):
         body = page_texts.get(page, "")
         for line_index, line in enumerate(body.splitlines()):
             observed = norm_ar(line)
@@ -254,7 +254,7 @@ def choose_monotone(matn_by_num, page_texts, by_number):
                 matn_by_num[n],
                 page_texts,
                 previous_page,
-                min(previous_page + 35, 632),
+                min(previous_page + 35, 509),
             )
             if fallback is not None:
                 if candidate is None or fallback["page"] <= candidate["page"] or fallback["score"] > candidate["score"]:
@@ -340,7 +340,7 @@ def main():
             else:
                 page_texts[page] = text
 
-    if len(page_texts) < 500:
+    if len(page_texts) < 450:
         raise SystemExit(f"Too many source-page failures: {len(failures)}")
 
     raw = explicit_candidates(page_texts, matn_by_num)
@@ -377,7 +377,7 @@ def main():
 
         full = clean_segment(commentary)
         short = excerpt(commentary)
-        end_page = located[idx + 1][3]["page"] if idx + 1 < len(located) else 632
+        end_page = located[idx + 1][3]["page"] if idx + 1 < len(located) else 509
         candidates.append({
             "hikma_number": n,
             "commentator": COMMENTATOR,
