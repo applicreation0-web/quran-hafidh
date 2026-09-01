@@ -114,6 +114,15 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
+
+        // Sensitive / critical apps are a hard trust boundary. We use their
+        // foreground event only to stop any previous Safeguard work, then
+        // return before protection, diagnostics or challenge logic can run.
+        if (ProtectedApps.isAlwaysAllowed(this, packageName)) {
+            handlePermanentlyExcludedForeground()
+            return
+        }
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
         ) {
@@ -143,7 +152,36 @@ class QuranAccessibilityService : AccessibilityService() {
         scheduleRetry(packageName, 900L, "retry_2")
     }
 
+    private fun handlePermanentlyExcludedForeground() {
+        pendingForegroundPause?.let(mainHandler::removeCallbacks)
+        pendingForegroundPause = null
+
+        foregroundUnlockedPackage?.let {
+            GuardPrefs.endUnlockForeground(this, it)
+        }
+        foregroundUnlockedPackage = null
+        foregroundPackage = null
+
+        // Most importantly, retries created for a previous protected app must
+        // never spill over on top of banking, identity or security apps.
+        cancelPendingLaunches()
+        val snapshot = GuardRuntime.interception.snapshot()
+        if (!snapshot.guardVisible) {
+            GuardRuntime.interception.reset()
+        }
+    }
+
     private fun handleForegroundPackage(packageName: String) {
+        if (packageName != this.packageName) {
+            val snapshot = GuardRuntime.interception.snapshot()
+            if (snapshot.targetPackage != null &&
+                snapshot.targetPackage != packageName &&
+                !snapshot.guardVisible
+            ) {
+                cancelPendingLaunches()
+                GuardRuntime.interception.reset()
+            }
+        }
         if (foregroundPackage == packageName) {
             pendingForegroundPause?.let(mainHandler::removeCallbacks)
             pendingForegroundPause = null
@@ -211,7 +249,15 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun launchGate(packageName: String, reason: String) {
         if (GuardPrefs.isUnlocked(this, packageName)) return
+        if (ProtectedApps.isAlwaysAllowed(this, packageName)) return
         if (!GuardRuntime.interception.shouldRetry(packageName) && reason != "initial") return
+
+        // A delayed retry is valid only while its original target is still
+        // foreground. This prevents a gate from appearing over the next app.
+        if (reason != "initial" && foregroundPackage != packageName) {
+            GuardDiagnostics.log(this, "GATE_RETRY_SKIPPED", packageName, "target_not_foreground")
+            return
+        }
 
         GuardRuntime.interception.markGateRequested(packageName)
         GuardDiagnostics.log(this, "GATE_REQUESTED", packageName, reason)
