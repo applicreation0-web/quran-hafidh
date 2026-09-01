@@ -50,22 +50,30 @@ class MainTextParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.main_depth = 0
+        self.ignore_depth = 0
         self.parts: list[str] = []
 
     def handle_starttag(self, tag, attrs):
+        if tag in {"script", "style", "noscript"}:
+            self.ignore_depth += 1
+            return
         if tag == "main":
             self.main_depth += 1
-        if self.main_depth and tag in BLOCK_TAGS:
+        if self.main_depth and not self.ignore_depth and tag in BLOCK_TAGS:
             self.parts.append("\n")
 
     def handle_endtag(self, tag):
-        if self.main_depth and tag in BLOCK_TAGS:
+        if tag in {"script", "style", "noscript"}:
+            if self.ignore_depth:
+                self.ignore_depth -= 1
+            return
+        if self.main_depth and not self.ignore_depth and tag in BLOCK_TAGS:
             self.parts.append("\n")
         if tag == "main" and self.main_depth:
             self.main_depth -= 1
 
     def handle_data(self, data):
-        if self.main_depth:
+        if self.main_depth and not self.ignore_depth:
             self.parts.append(data)
 
     def text(self) -> str:
