@@ -1,6 +1,5 @@
 package com.applicreation0.quransafeguard
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -187,52 +186,15 @@ class GateActivity : ComponentActivity() {
                         )
 
                         Spacer(Modifier.height(12.dp))
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = bottomReached,
-                            onClick = {
-                                val elapsed = GuardPrefs.completeReadingForSummary(
-                                    this@GateActivity,
-                                    challengeKey,
-                                    page
-                                )
-                                if (GuardPrefs.hasReachedReadingBottom(
-                                        this@GateActivity,
-                                        challengeKey,
-                                        page
-                                    )
-                                ) {
-                                    GuardDiagnostics.log(
-                                        this@GateActivity,
-                                        "READING_COMPLETED_PENDING_SUMMARY",
-                                        challengeKey,
-                                        "page=$page elapsedMs=$elapsed"
-                                    )
-                                    setResult(Activity.RESULT_OK)
-                                    startActivity(
-                                        Intent(
-                                            this@GateActivity,
-                                            ReadingCompleteActivity::class.java
-                                        ).apply {
-                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
-                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
-                                            putExtra(
-                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
-                                                elapsed
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        ) {
-                            Text(
-                                if (bottomReached) {
-                                    "Page lue — continuer"
-                                } else {
-                                    "Faites défiler la page jusqu’en bas"
-                                }
-                            )
-                        }
+                        Text(
+                            if (bottomReached && readingMs >= GuardPrefs.MIN_READING_MS) {
+                                "La validation se fait directement dans la page du Mushaf."
+                            } else {
+                                "Parcourez la page et lisez-la activement pendant au moins 60 secondes."
+                            },
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall
+                        )
 
                         Spacer(Modifier.height(20.dp))
                         OutlinedButton(
