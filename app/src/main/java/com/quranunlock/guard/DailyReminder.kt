@@ -229,49 +229,17 @@ object ReminderLibrary {
             authenticity = "Sahih",
             tags = setOf("entraide", "vie en communauté", "générosité", "liens de parenté")
         ),
-        DailyReminder(
-            id = "ghazali_bidaya_religion_two_halves",
-            type = ReminderType.GHAZALI,
-            theme = "discipline",
-            arabicText = "اعْلَمْ أَنَّ الدِّينَ شَطْرَانِ: أَحَدُهُمَا تَرْكُ الْمَنَاهِي، وَالْآخَرُ فِعْلُ الطَّاعَاتِ.",
-            frenchText = "Sache que la religion comporte deux volets : délaisser les interdits et accomplir les actes d’obéissance.",
-            author = "Abû Hâmid al-Ghazâlî",
-            book = "Bidâyat al-Hidâya",
-            reference = "Section : éviter les désobéissances",
-            authenticity = null,
-            tags = setOf("discipline personnelle", "bonnes habitudes", "maîtrise de soi")
-        ),
-        DailyReminder(
-            id = "ghazali_bidaya_limb_guardianship",
-            type = ReminderType.GHAZALI,
-            theme = "discipline",
-            arabicText = "فَأَعْضَاؤُكَ رَعَايَاكَ، فَانْظُرْ كَيْفَ تَرْعَاهَا.",
-            frenchText = "Tes membres sont sous ta responsabilité : veille donc à la manière dont tu en prends soin.",
-            author = "Abû Hâmid al-Ghazâlî",
-            book = "Bidâyat al-Hidâya",
-            reference = "Section : éviter les désobéissances",
-            authenticity = null,
-            tags = setOf("soin du corps", "discipline personnelle", "bonnes habitudes", "comportement")
-        ),
-        DailyReminder(
-            id = "ghazali_ihya_outer_inner_adab",
-            type = ReminderType.GHAZALI,
-            theme = "comportement",
-            arabicText = "آدَابُ الظَّوَاهِرِ عُنْوَانُ آدَابِ الْبَوَاطِنِ، وَحَرَكَاتُ الْجَوَارِحِ ثَمَرَاتُ الْخَوَاطِرِ.",
-            frenchText = "Les bonnes manières extérieures révèlent celles de l’intérieur, et les gestes du corps sont les fruits des pensées.",
-            author = "Abû Hâmid al-Ghazâlî",
-            book = "Ihyâ’ ‘Ulûm ad-Dîn",
-            reference = "Livre des règles de vie et des caractères prophétiques",
-            authenticity = null,
-            tags = setOf("bonnes mœurs", "comportement", "sincérité", "bonnes habitudes")
-        ),
+
 
     )
 
     private var cachedBundled: List<DailyReminder>? = null
 
     fun all(context: Context): List<DailyReminder> =
-        items + HikamRepository.asDailyReminders() + bundled(context)
+        items +
+            HikamRepository.asDailyReminders() +
+            GhazaliRepository.asDailyReminders() +
+            bundled(context)
 
     fun byId(context: Context, id: String): DailyReminder? =
         all(context).firstOrNull { it.id == id }
