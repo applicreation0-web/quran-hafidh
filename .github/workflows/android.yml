@@ -38,13 +38,22 @@ jobs:
       - name: Verify total release audit
         run: gradle --no-daemon :app:verifyReleaseAudit
 
-      - name: Run unit tests\n        shell: bash\n        run: |\n          set -o pipefail\n          gradle --no-daemon :app:testDebugUnitTest 2>&1 | tee unit-test.log\n
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon :app:testDebugUnitTest 2>&1 | tee unit-test.log
+
       - name: Upload unit-test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-reports
-          path: |\n            unit-test.log\n            app/build/reports/tests\n            app/build/test-results\n          if-no-files-found: warn
+          path: |
+            unit-test.log
+            app/build/reports/tests
+            app/build/test-results
+          if-no-files-found: warn
 
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
