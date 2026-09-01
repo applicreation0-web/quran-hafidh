@@ -9,7 +9,7 @@ class ReminderLibraryTest {
     @Test
     fun reminderIdsAreUniqueAndRequiredFieldsArePresent() {
         val items = ReminderLibrary.items
-        assertEquals(20, items.size)
+        assertEquals(17, items.size)
         assertEquals(items.size, items.map { it.id }.distinct().size)
 
         items.forEach { item ->
@@ -24,8 +24,12 @@ class ReminderLibraryTest {
     }
 
     @Test
-    fun hikamAreNeverStoredInGenericCuratedReminders() {
-        assertTrue(ReminderLibrary.items.none { it.type == ReminderType.HIKAM })
+    fun classicalScholarTextsAreNeverStoredInGenericCuratedReminders() {
+        assertTrue(
+            ReminderLibrary.items.none {
+                it.type == ReminderType.HIKAM || it.type == ReminderType.GHAZALI
+            }
+        )
     }
 
     @Test
@@ -45,7 +49,7 @@ class ReminderLibraryTest {
         val hadiths = ReminderLibrary.items.filter { it.type == ReminderType.HADITH }
         val scholarWisdom = ReminderLibrary.items.filter { it.type != ReminderType.HADITH }
 
-        assertTrue(hadiths.size > scholarWisdom.size)
+        assertTrue(scholarWisdom.isEmpty())
         hadiths.forEach { item ->
             assertTrue(item.author.contains("Prophète"))
             assertFalse(item.authenticity.isNullOrBlank())
@@ -59,8 +63,7 @@ class ReminderLibraryTest {
 
     @Test
     fun requestedCoreThemesAreCovered() {
-        val curatedForDisplay =
-            ReminderLibrary.items + HikamRepository.asDailyReminders()
+        val curatedForDisplay = ReminderLibrary.items
         val covered = curatedForDisplay.flatMap { item ->
             item.tags + item.theme
         }.toSet()
