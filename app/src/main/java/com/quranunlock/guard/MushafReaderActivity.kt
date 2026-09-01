@@ -115,23 +115,23 @@ class MushafReaderActivity : ComponentActivity() {
                     }
                     val configuration = LocalConfiguration.current
                     val density = LocalDensity.current
-                    val fallbackHeight = configuration.screenHeightDp.dp * 0.48f
-                    val measuredHalfHeight = if (renderedPageHeightPx > 0) {
+                    val fallbackHeight = configuration.screenHeightDp.dp * 0.72f
+                    val measuredVisibleHeight = if (renderedPageHeightPx > 0) {
                         with(density) {
-                            (renderedPageHeightPx.toFloat() / 2f).toDp()
+                            (renderedPageHeightPx.toFloat() * 0.80f).toDp()
                         }
                     } else {
                         fallbackHeight
                     }
-                    val readerViewportHeight = measuredHalfHeight.coerceIn(
-                        220.dp,
-                        configuration.screenHeightDp.dp * 0.62f
+                    val readerViewportHeight = measuredVisibleHeight.coerceIn(
+                        320.dp,
+                        configuration.screenHeightDp.dp * 0.80f
                     )
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .padding(horizontal = 0.dp, vertical = 4.dp)
                     ) {
                         Text(
                             "Mushaf de Médine • Page $page",
@@ -155,12 +155,12 @@ class MushafReaderActivity : ComponentActivity() {
                             if (bottomReached) {
                                 "Prenez le temps de terminer sereinement avant de continuer."
                             } else {
-                                "Faites défiler naturellement la page jusqu’en bas, à votre rythme."
+                                "Environ 80 % de la page est visible à la fois ; faites défiler naturellement les dernières lignes."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(4.dp))
 
                         if (!svgContent.isNullOrBlank() && !loadFailed) {
                             MushafPageWebView(
