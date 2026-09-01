@@ -15,7 +15,6 @@ object ProtectedApps {
 
     private val alwaysAllowed = setOf(
         PLAY_STORE,
-        ANDROID_SETTINGS,
         // Calling/emergency infrastructure must never be intercepted.
         "com.android.server.telecom",
         "com.android.phone",
@@ -23,6 +22,13 @@ object ProtectedApps {
         "com.android.dialer",
         "com.samsung.android.dialer",
         "com.samsung.android.incallui",
+        // Clock, alarm and emergency/safety surfaces must remain immediately accessible.
+        "com.google.android.deskclock",
+        "com.android.deskclock",
+        "com.sec.android.app.clockpackage",
+        "com.google.android.apps.safetyhub",
+        "com.android.emergency",
+        "com.android.safetycenter.resources",
         // Credential / security infrastructure must never be intercepted.
         "com.google.android.gms",
         "com.samsung.android.samsungpass",
@@ -259,8 +265,12 @@ object ProtectedApps {
     fun shouldNeverPersist(context: Context, packageName: String): Boolean =
         isAlwaysAllowed(context, packageName)
 
+    fun isSystemProtected(packageName: String): Boolean =
+        packageName == ANDROID_SETTINGS
+
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
+        if (isSystemProtected(packageName)) return true
         if (isAlwaysAllowed(context, packageName)) return false
 
         // Web coverage is deliberately limited to the eight supported browsers.
