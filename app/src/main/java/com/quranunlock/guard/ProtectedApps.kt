@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
+import android.provider.Settings
 import android.telecom.TelecomManager
 import java.text.Normalizer
 import java.util.Locale
@@ -29,6 +30,12 @@ object ProtectedApps {
         "com.google.android.apps.safetyhub",
         "com.android.emergency",
         "com.android.safetycenter.resources",
+        // System input methods are transient windows, never awareness targets.
+        "com.google.android.inputmethod.latin",
+        "com.samsung.android.honeyboard",
+        "com.android.inputmethod.latin",
+        "com.touchtype.swiftkey",
+        "com.microsoft.swiftkey",
         // Credential / security infrastructure must never be intercepted.
         "com.google.android.gms",
         "com.samsung.android.samsungpass",
@@ -196,6 +203,14 @@ object ProtectedApps {
             cachedDefaultDialer
         }
         if (packageName == defaultDialer) return true
+
+        val defaultInputMethodPackage = runCatching {
+            Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.DEFAULT_INPUT_METHOD
+            )?.substringBefore('/')
+        }.getOrNull()
+        if (packageName == defaultInputMethodPackage) return true
 
         return isSensitiveCategory(context, packageName)
     }
