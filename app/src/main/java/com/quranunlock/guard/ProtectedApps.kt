@@ -6,6 +6,8 @@ import java.text.Normalizer
 import java.util.Locale
 
 object ProtectedApps {
+    private val sensitiveDecisionCache = mutableMapOf<String, Boolean>()
+
     const val PLAY_STORE = "com.android.vending"
     const val ANDROID_SETTINGS = "com.android.settings"
 
@@ -189,12 +191,26 @@ object ProtectedApps {
         if (sensitivePackagePrefixes.any { packageLower.startsWith(it) }) return true
         if (sensitivePackageFragments.any { packageLower.contains(it) }) return true
 
+        synchronized(sensitiveDecisionCache) {
+            sensitiveDecisionCache[packageName]?.let { return it }
+        }
+
         val label = runCatching {
             val info = context.packageManager.getApplicationInfo(packageName, 0)
             context.packageManager.getApplicationLabel(info).toString()
         }.getOrDefault("")
 
-        return looksSensitive(packageName, label)
+        val sensitive = looksSensitive(packageName, label)
+        synchronized(sensitiveDecisionCache) {
+            sensitiveDecisionCache[packageName] = sensitive
+        }
+        return sensitive
+    }
+
+    fun clearClassificationCache() {
+        synchronized(sensitiveDecisionCache) {
+            sensitiveDecisionCache.clear()
+        }
     }
 
     internal fun looksSensitive(packageName: String, label: String): Boolean {
