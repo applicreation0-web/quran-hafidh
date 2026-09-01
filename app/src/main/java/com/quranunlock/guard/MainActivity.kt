@@ -662,7 +662,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "Banque, paiement, identité, authentification et sécurité sont toujours exclus et ne peuvent pas être liés à Quran Safeguard.",
+                    "Appels, alarmes/urgence, banque, paiement, identité, authentification et sécurité sont toujours exclus. Paramètres Android reste protégé pour éviter un contournement involontaire.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
