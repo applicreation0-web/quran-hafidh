@@ -1,0 +1,24 @@
+name: Hikam Commentary Research
+
+on:
+  push:
+    branches:
+      - "research/hikam-commentaries-264"
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Ibn Ajiba commentary candidates
+        run: python3 scripts/research_extract_ibn_ajiba_commentaries.py
+
+      - name: Upload commentary research
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hikam-commentary-research
+          path: build/research/hikam_commentary
+          if-no-files-found: error
