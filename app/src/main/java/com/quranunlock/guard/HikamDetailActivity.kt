@@ -183,10 +183,8 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                             )
                             Text(
                                 commentary.commentator + " • " +
-                                    commentary.workTitle + "
-" +
-                                    commentary.edition + "
-" +
+                                    commentary.workTitle + "\n" +
+                                    commentary.edition + "\n" +
                                     commentary.locator,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
