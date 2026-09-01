@@ -146,6 +146,20 @@ object UnlockBudgetIntegrity {
         }
     }
 
+    fun shouldStartBudgetOnForegroundEvent(
+        eventPackage: String,
+        trackedForegroundPackage: String?,
+        runningBudgetPackage: String?,
+        isProtected: Boolean,
+        isUnlocked: Boolean,
+        callFrozen: Boolean
+    ): Boolean =
+        eventPackage == trackedForegroundPackage &&
+            runningBudgetPackage == null &&
+            isProtected &&
+            isUnlocked &&
+            !callFrozen
+
     fun shouldGateOnExpiration(
         remainingMs: Long,
         targetPackage: String,
