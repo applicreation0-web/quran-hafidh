@@ -212,6 +212,44 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
     }
 }
 
+val verifyUpdateMigrationIntegrity by tasks.registering {
+    doLast {
+        val buildFile = file("build.gradle.kts").readText()
+        val migrations = file(
+            "src/main/java/com/quranunlock/guard/AppMigrations.kt"
+        ).readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+
+        check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
+            "Application ID must remain unchanged for in-place update."
+        }
+        check(buildFile.contains("versionCode = 15")) {
+            "0.9.1 must keep versionCode 15, above installed 0.9.0 code 14."
+        }
+        check(buildFile.contains("versionName = \"0.9.1\"")) {
+            "Expected release versionName 0.9.1."
+        }
+        check(migrations.contains("CURRENT_SCHEMA = 7")) {
+            "0.9.1 must migrate installed schema 6 to schema 7."
+        }
+        check(migrations.contains("migrateToSchema7(context)")) {
+            "Schema 7 migration must be wired into AppMigrations.run."
+        }
+        check(migrations.contains("migrateToSchema6(context)")) {
+            "Schema 7 must reapply the fixed-scope purge to legacy state."
+        }
+        check(migrations.contains("\"hikam_prefs\"")) {
+            "Obsolete Hikam transliteration preference must be purged."
+        }
+        check(migrations.contains("reconcileOrphanedUnlockForeground(context)")) {
+            "Schema 7 must invalidate/reconcile stale foreground unlock state."
+        }
+        check(manifest.contains("android:allowBackup=\"false\"")) {
+            "Private app state must not be restored from Android backup into stale budget state."
+        }
+    }
+}
+
 val verifyEditorialBoundary by tasks.registering {
     doLast {
         val sources = fileTree("src/main/java") {
@@ -333,6 +371,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyPrivacyBoundary)
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
+    dependsOn(verifyUpdateMigrationIntegrity)
 }
 
 dependencies {
@@ -354,4 +393,5 @@ dependencies {
 tasks.matching { it.name == "assembleRelease" }.configureEach {
     dependsOn("testDebugUnitTest")
     dependsOn(verifyUnlockBudgetIntegrity)
+    dependsOn(verifyUpdateMigrationIntegrity)
 }
