@@ -238,7 +238,6 @@ object ReminderLibrary {
     fun all(context: Context): List<DailyReminder> =
         items +
             HikamRepository.asDailyReminders(context) +
-            GhazaliRepository.asDailyReminders() +
             bundled(context)
 
     fun byId(context: Context, id: String): DailyReminder? =
@@ -324,13 +323,13 @@ object DailyReminderManager {
         "liens de parenté"
     )
 
-    // Hadith remains the main source. Ghazali/Hikam slots are used only when
-    // authenticity-gated classical entries are display-eligible; otherwise
-    // the selection tiers fall back to verified available content.
+    // Hadith remains the main source. Hikam slots are used only when
+    // authenticity-gated entries are display-eligible; otherwise the
+    // selection tiers fall back to verified available content.
     private val dailyTypeCycle = listOf(
         ReminderType.HADITH,
         ReminderType.HADITH,
-        ReminderType.GHAZALI,
+        ReminderType.HIKAM,
         ReminderType.HADITH,
         ReminderType.HIKAM,
         ReminderType.HADITH,
