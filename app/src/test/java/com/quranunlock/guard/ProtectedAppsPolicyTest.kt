@@ -55,16 +55,14 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
-    fun browserCoverageIsExactlyTheDeclaredEightAndNotSensitive() {
+    fun browserCoverageIsExactlyTheDeclaredSixAndNotSensitive() {
         val expected = setOf(
             "com.android.chrome",
             "org.mozilla.firefox",
             "com.microsoft.emmx",
             "com.brave.browser",
             "com.opera.browser",
-            "com.sec.android.app.sbrowser",
-            "com.duckduckgo.mobile.android",
-            "com.vivaldi.browser"
+            "com.sec.android.app.sbrowser"
         )
         assertTrue(BrowserDetector.supportedPackages == expected)
 
@@ -74,9 +72,7 @@ class ProtectedAppsPolicyTest {
             "com.microsoft.emmx" to "Microsoft Edge",
             "com.brave.browser" to "Brave",
             "com.opera.browser" to "Opera",
-            "com.sec.android.app.sbrowser" to "Samsung Internet",
-            "com.duckduckgo.mobile.android" to "DuckDuckGo",
-            "com.vivaldi.browser" to "Vivaldi"
+            "com.sec.android.app.sbrowser" to "Samsung Internet"
         )
         expected.forEach { packageName ->
             assertFalse(
@@ -116,7 +112,7 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
-    fun selectableScopeIsOnlyDeclaredSocialTargetsAndEightBrowsers() {
+    fun selectableScopeIsOnlyDeclaredSocialTargetsAndSixBrowsers() {
         val expected = (
             ProtectedApps.socialTargets + ProtectedApps.browserTargets
         ).map { it.packageName }.toSet()
