@@ -24,7 +24,7 @@ object AppMigrations {
     private const val LAST_APP_VERSION_KEY = "last_app_version_code"
     private const val LAST_BACKUP_SCHEMA_KEY = "last_backup_schema"
 
-    const val CURRENT_SCHEMA = 5
+    const val CURRENT_SCHEMA = 6
 
     @Synchronized
     fun run(context: Context): MigrationResult {
@@ -79,6 +79,12 @@ object AppMigrations {
                 migrateToSchema5(context)
                 validateCriticalPreferences(context)
                 schema = 5
+                state.edit().putInt(SCHEMA_KEY, schema).commit()
+            }
+            if (schema < 6) {
+                migrateToSchema6(context)
+                validateCriticalPreferences(context)
+                schema = 6
                 state.edit().putInt(SCHEMA_KEY, schema).commit()
             }
 
@@ -202,6 +208,78 @@ object AppMigrations {
                     .commit()
             ) { "Unable to purge permanently excluded apps" }
         }
+    }
+
+    private fun migrateToSchema6(context: Context) {
+        val guardPrefs = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
+        val editor = guardPrefs.edit()
+
+        normalizeStringSet(guardPrefs.all["protected_packages"])?.let { stored ->
+            val filtered = stored
+                .filterNot { ProtectedApps.shouldNeverPersist(context, it) }
+                .toSet()
+            editor.putStringSet("protected_packages", filtered)
+        }
+
+        val packageScopedPrefixes = listOf(
+            "unlock_elapsed_until_",
+            "unlock_elapsed_started_",
+            "unlock_remaining_ms_",
+            "unlock_foreground_started_",
+            "unlock_granted_ms_",
+            "unlock_reminder_mask_",
+            "challenge_page_",
+            "reading_page_",
+            "reading_accumulated_",
+            "reading_started_",
+            "reading_bottom_reached_",
+            "reading_completion_recorded_"
+        )
+
+        guardPrefs.all.keys.forEach { key ->
+            val prefix = packageScopedPrefixes.firstOrNull { key.startsWith(it) }
+                ?: return@forEach
+            val packageName = key.removePrefix(prefix)
+            if (packageName.isNotBlank() &&
+                packageName != GuardPrefs.UNINSTALL_CHALLENGE_KEY &&
+                ProtectedApps.shouldNeverPersist(context, packageName)
+            ) {
+                editor.remove(key)
+            }
+        }
+
+        val cleanHistory = guardPrefs.getString("reading_history", "")
+            .orEmpty()
+            .lineSequence()
+            .filter { line ->
+                val packageName = line.split('|', limit = 3).getOrNull(1)
+                packageName.isNullOrBlank() ||
+                    !ProtectedApps.shouldNeverPersist(context, packageName)
+            }
+            .joinToString("\n")
+        editor.putString("reading_history", cleanHistory)
+        check(editor.commit()) { "Unable to purge out-of-scope guard state" }
+
+        val health = context.getSharedPreferences("guard_health", Context.MODE_PRIVATE)
+        health.getString("last_protected_package", null)?.let { packageName ->
+            if (ProtectedApps.shouldNeverPersist(context, packageName)) {
+                health.edit().remove("last_protected_package").commit()
+            }
+        }
+
+        val diagnostics = context.getSharedPreferences("guard_diagnostics", Context.MODE_PRIVATE)
+        val cleanLog = diagnostics.getString("log", "")
+            .orEmpty()
+            .lineSequence()
+            .filter { line ->
+                val packageName = line.split('\t', limit = 4).getOrNull(2)
+                packageName.isNullOrBlank() ||
+                    !ProtectedApps.shouldNeverPersist(context, packageName)
+            }
+            .joinToString("\n")
+        check(
+            diagnostics.edit().putString("log", cleanLog).commit()
+        ) { "Unable to purge out-of-scope diagnostics" }
     }
 
     private fun validateCriticalPreferences(context: Context) {
