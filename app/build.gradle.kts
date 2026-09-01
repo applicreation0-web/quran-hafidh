@@ -374,6 +374,30 @@ val verifyEditorialBoundary by tasks.registering {
             "Classical excerpts must track internal omissions explicitly."
         }
 
+        val classicalIntegrityTests = file(
+            "src/test/java/com/quranunlock/guard/ClassicalCorpusIntegrityTest.kt"
+        ).readText()
+        listOf(
+            "classicalTextCannotDisplayWithoutArabic",
+            "classicalTextCannotDisplayWithoutLocator",
+            "classicalSourceRequiresAuthorWorkAndSourceUrl",
+            "classicalAttributionIsMandatoryEvenWithTranslation",
+            "internalTranslationCanDisplayWithoutHumanVerification",
+            "unmarkedInternalOmissionIsRejected",
+            "reconstructedClassicalPassageIsRejected"
+        ).forEach { scenario ->
+            check(classicalIntegrityTests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking classical integrity test: " + scenario
+            }
+        }
+
+        val hikamTests = file(
+            "src/test/java/com/quranunlock/guard/HikamRepositoryTest.kt"
+        ).readText()
+        check(hikamTests.contains("fun sourcedHikmaCanDisplayWithoutUnverifiedCommentary(")) {
+            "A sourced Hikma must remain displayable without an unverified commentary."
+        }
+
         val classicalFiles = listOf(hikam, ghazali)
         listOf("simpleExplanation", "aiSummary", "meaning").forEach { forbiddenField ->
             classicalFiles.forEach { source ->
@@ -417,6 +441,9 @@ val verifyThoughtOfDayBoundary by tasks.registering {
         check(scheduler.contains("ThoughtOfDayActivity::class.java")) {
             "Thought notification must open its dedicated full card."
         }
+        check(daily.contains("FULL_CARD_ACTIVITY_SIMPLE_NAME = \"ThoughtOfDayActivity\"")) {
+            "Thought-of-day full-card destination contract is missing."
+        }
         check(manifest.contains("android:name=\".ThoughtOfDayActivity\"")) {
             "ThoughtOfDayActivity must be registered."
         }
@@ -442,6 +469,7 @@ val verifyThoughtOfDayBoundary by tasks.registering {
         listOf(
             "thoughtIsStableForSameDateAndSameCorpus",
             "onlyOneThoughtNotificationIsAllowedPerEpochDay",
+            "notificationOpensTheDedicatedFullThoughtCard",
             "thoughtNotificationIsScheduledInMorning"
         ).forEach { scenario ->
             check(tests.contains("fun " + scenario + "(")) {
