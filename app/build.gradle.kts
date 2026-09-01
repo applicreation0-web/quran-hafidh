@@ -155,6 +155,7 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "oneHundredRapidTransitionsDoNotDrift",
             "jokerUsesTheSameForegroundAccounting",
             "deselectionReselectionStartsWithoutOldBudget",
+            "returnFromGateStartsBudgetEvenWhenForegroundPackageAlreadyMatches",
             "expirationIsExactZeroAndRequiresGateWhenStillForeground",
             "pipAndSplitScreenNeverRequireTwoConcurrentBudgets"
         )
