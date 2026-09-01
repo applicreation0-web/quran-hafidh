@@ -38,7 +38,6 @@ class ReadingCompleteActivity : ComponentActivity() {
             finish()
             return
         }
-        val reminder = DailyReminderManager.today(this)
         val today = GuardPrefs.dailyReadingSummary(this)
 
         setContent {
@@ -47,7 +46,6 @@ class ReadingCompleteActivity : ComponentActivity() {
                     page = page,
                     elapsedMs = elapsedMs,
                     today = today,
-                    reminder = reminder,
                     onContinue = {
                         if (GuardPrefs.unlockAfterReadingSummary(this, challengeKey, page)) {
                             GuardRuntime.interception.markUnlocked(challengeKey)
@@ -71,7 +69,6 @@ private fun ReadingCompleteScreen(
     page: Int,
     elapsedMs: Long,
     today: DailyReadingSummary,
-    reminder: DailyReminder,
     onContinue: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -111,7 +108,6 @@ private fun ReadingCompleteScreen(
                 )
             }
 
-            DailyReminderCard(reminder = reminder)
 
             Spacer(Modifier.height(2.dp))
             Button(
@@ -122,7 +118,7 @@ private fun ReadingCompleteScreen(
             }
 
             Text(
-                "Un seul rappel principal est conservé pour toute la journée.",
+                "Le déverrouillage dépend uniquement de la lecture du Coran validée.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
