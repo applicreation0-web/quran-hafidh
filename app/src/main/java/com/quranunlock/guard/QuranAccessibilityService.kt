@@ -20,6 +20,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
     private var scopeReceiverRegistered = false
+    private var activeAccessibilityScope: Set<String> = emptySet()
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -142,6 +143,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun refreshAccessibilityScope() {
         val packages = AccessibilityScopeManager.applyTo(this)
+        activeAccessibilityScope = packages
 
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
         pendingForegroundPause = null
@@ -171,7 +173,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
         // Defense in depth: packages outside the explicit accessibility scope
         // are ignored before any foreground, budget, diagnostic or gate logic.
-        if (!AccessibilityScopeManager.shouldProcessEvent(this, packageName)) return
+        if (packageName !in activeAccessibilityScope) return
 
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
@@ -330,6 +332,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundUnlockedPackage?.let { GuardPrefs.endUnlockForeground(this, it) }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        activeAccessibilityScope = emptySet()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
@@ -347,6 +350,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundUnlockedPackage?.let { GuardPrefs.endUnlockForeground(this, it) }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        activeAccessibilityScope = emptySet()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
