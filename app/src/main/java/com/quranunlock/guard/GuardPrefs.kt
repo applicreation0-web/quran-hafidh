@@ -221,18 +221,17 @@ object GuardPrefs {
         val key = UNLOCK_REMAINING_MS_PREFIX + packageName
 
         if (!prefs.contains(key)) {
-            val now = SystemClock.elapsedRealtime()
-            val legacyUntil = prefs.getLong(
-                LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName,
-                -1L
-            )
-            val legacyRemaining = if (legacyUntil > now) legacyUntil - now else 0L
-            if (legacyUntil >= 0L) {
+            val legacyUntilKey = LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName
+            val legacyStartedKey = LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName
+            if (prefs.contains(legacyUntilKey) || prefs.contains(legacyStartedKey)) {
+                // Legacy elapsedRealtime values have no boot identity. Converting
+                // them after reboot can create a phantom credit, so fail closed:
+                // invalidate the old session and require one fresh Quran reading.
                 prefs.edit()
-                    .putLong(key, legacyRemaining)
-                    .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, legacyRemaining)
-                    .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
-                    .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
+                    .putLong(key, 0L)
+                    .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, 0L)
+                    .remove(legacyStartedKey)
+                    .remove(legacyUntilKey)
                     .commit()
             }
         }
