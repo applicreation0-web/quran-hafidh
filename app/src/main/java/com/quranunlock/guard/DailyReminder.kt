@@ -315,7 +315,9 @@ object DailyReminderManager {
         "liens de parenté"
     )
 
-    // Hadith remains the main source while Ghazali and Hikam appear regularly.
+    // Hadith remains the main source. Ghazali/Hikam slots are used only when
+    // authenticity-gated classical entries are display-eligible; otherwise
+    // the selection tiers fall back to verified available content.
     private val dailyTypeCycle = listOf(
         ReminderType.HADITH,
         ReminderType.HADITH,
