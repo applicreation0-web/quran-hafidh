@@ -19,9 +19,28 @@ class HikamRepositoryTest {
             assertTrue(hikma.sourceNumber > 0)
             assertTrue(hikma.arabicText.isNotBlank())
             assertTrue(hikma.frenchText.isNotBlank())
+            assertTrue(hikma.transliteration.isNotBlank())
             assertTrue(hikma.sourceUrl.startsWith("https://"))
             assertTrue(hikma.verificationDate.isNotBlank())
             assertTrue(hikma.sourceNote.isNotBlank())
+        }
+    }
+
+    @Test
+    fun classicalCommentariesAreExplicitlyAttributedAndTraceable() {
+        HikamRepository.entries.forEach { hikma ->
+            val commentary = hikma.commentary
+            assertTrue(commentary != null)
+            commentary!!
+            assertEquals("Ibn ʿAjība", commentary.commentator)
+            assertTrue(commentary.workTitle.contains("Īqāẓ al-Himam"))
+            assertTrue(commentary.arabicExcerpt.isNotBlank())
+            assertTrue(commentary.frenchTranslation.isNotBlank())
+            assertTrue(commentary.edition.contains("1913"))
+            assertTrue(commentary.locator.contains("Ḥikma " + hikma.sourceNumber))
+            assertTrue(commentary.sourceUrl.startsWith("https://"))
+            assertTrue(commentary.isExcerpt)
+            assertTrue(commentary.arabicExcerpt.contains("…") || commentary.arabicExcerpt.contains("[…]"))
         }
     }
 
