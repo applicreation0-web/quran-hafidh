@@ -36,7 +36,7 @@ class HikamRepositoryTest {
             assertTrue(commentary.workTitle.contains("Īqāẓ al-Himam"))
             assertTrue(commentary.arabicExcerpt.isNotBlank())
             assertTrue(commentary.frenchTranslation.isNotBlank())
-            assertTrue(commentary.edition.contains("1913"))
+            assertTrue(commentary.edition.contains("Dār Jawāmiʿ al-Kalim"))
             assertTrue(commentary.locator.contains("Ḥikma " + hikma.sourceNumber))
             assertTrue(commentary.sourceUrl.startsWith("https://"))
             assertTrue(commentary.isExcerpt)
