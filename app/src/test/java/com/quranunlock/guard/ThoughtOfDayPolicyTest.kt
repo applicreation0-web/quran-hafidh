@@ -73,8 +73,8 @@ class ThoughtOfDayPolicyTest {
     }
 
     @Test
-    fun thoughtNotificationIsScheduledInMorning() {
-        assertEquals(8, ThoughtOfDayPolicy.MORNING_HOUR)
+    fun thoughtNotificationIsScheduledAtTwentyLocal() {
+        assertEquals(20, ThoughtOfDayPolicy.REMINDER_HOUR)
         assertEquals(8200, ThoughtOfDayPolicy.NOTIFICATION_ID)
     }
 }
