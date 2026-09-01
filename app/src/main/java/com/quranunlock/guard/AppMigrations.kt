@@ -25,7 +25,7 @@ object AppMigrations {
     private const val LAST_APP_VERSION_KEY = "last_app_version_code"
     private const val LAST_BACKUP_SCHEMA_KEY = "last_backup_schema"
 
-    const val CURRENT_SCHEMA = 6
+    const val CURRENT_SCHEMA = 7
 
     @Synchronized
     fun run(context: Context): MigrationResult {
@@ -86,6 +86,12 @@ object AppMigrations {
                 migrateToSchema6(context)
                 validateCriticalPreferences(context)
                 schema = 6
+                state.edit().putInt(SCHEMA_KEY, schema).commit()
+            }
+            if (schema < 7) {
+                migrateToSchema7(context)
+                validateCriticalPreferences(context)
+                schema = 7
                 state.edit().putInt(SCHEMA_KEY, schema).commit()
             }
 
@@ -281,6 +287,13 @@ object AppMigrations {
         check(
             diagnostics.edit().putString("log", cleanLog).commit()
         ) { "Unable to purge out-of-scope diagnostics" }
+    }
+
+    private fun migrateToSchema7(context: Context) {
+        // 0.9.1 narrows the product scope to known social targets and eight
+        // browsers. Reuse the defensive purge with the new fixed-scope policy
+        // so legacy selections/session/history for arbitrary apps disappear.
+        migrateToSchema6(context)
     }
 
     private fun validateCriticalPreferences(context: Context) {
