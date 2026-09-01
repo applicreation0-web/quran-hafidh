@@ -31,7 +31,6 @@ data class HikmaEntry(
     val sourceNumber: Int,
     val arabicText: String,
     val frenchText: String,
-    val transliteration: String,
     val theme: String,
     val tags: Set<String>,
     val source: ClassicalSource,
@@ -77,7 +76,6 @@ object HikamRepository {
             sourceNumber = 5,
             arabicText = "اجتهادك فيما ضمن لك وتقصيرك فيما طلب منك دليل على انطماس البصيرة منك.",
             frenchText = "Ton effort dans ce qui t’est garanti et ta négligence dans ce qui t’est demandé sont une preuve de l’obscurcissement de ta clairvoyance.",
-            transliteration = "Ijtihāduka fīmā ḍumina laka wa-taqṣīruka fīmā ṭuliba minka dalīlun ʿalā inṭimāsi l-baṣīrati minka.",
             theme = "discipline",
             tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes"),
             source = ClassicalSource(
@@ -118,7 +116,6 @@ object HikamRepository {
             sourceNumber = 10,
             arabicText = "الأعمال صور قائمة، وأرواحها وجود سر الإخلاص فيها.",
             frenchText = "Les œuvres sont des formes dressées, et leurs âmes sont la présence en elles du secret de la sincérité.",
-            transliteration = "Al-aʿmālu ṣuwarun qāʾimatun, wa-arwāḥuhā wujūdu sirri l-ikhlāṣi fīhā.",
             theme = "sincérité",
             tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle"),
             source = ClassicalSource(
@@ -159,7 +156,6 @@ object HikamRepository {
             sourceNumber = 12,
             arabicText = "ما نفع القلب شئ مثل عزلة يدخل بها ميدان فكرة.",
             frenchText = "Rien n’est plus bénéfique au cœur qu’une retraite par laquelle il entre dans le champ de la réflexion.",
-            transliteration = "Mā nafaʿa l-qalba shayʾun mithlu ʿuzlatin yadkhulu bihā maydāna fikrah.",
             theme = "réflexion",
             tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi"),
             source = ClassicalSource(
