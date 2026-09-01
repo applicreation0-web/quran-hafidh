@@ -17,7 +17,6 @@ object AppMigrations {
         "guard_prefs",
         "daily_reminders",
         "mindful_reminder_prefs",
-        "hikam_prefs",
         "guard_health",
         "guard_diagnostics"
     )
@@ -294,6 +293,15 @@ object AppMigrations {
         // browsers. Reuse the defensive purge with the new fixed-scope policy
         // so legacy selections/session/history for arbitrary apps disappear.
         migrateToSchema6(context)
+
+        // Transliteration is now Adhkar-only. Remove the obsolete Hikam
+        // preference left by 0.9.0 installations.
+        check(
+            context.getSharedPreferences("hikam_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .clear()
+                .commit()
+        ) { "Unable to clear obsolete Hikam transliteration preference" }
     }
 
     private fun validateCriticalPreferences(context: Context) {
