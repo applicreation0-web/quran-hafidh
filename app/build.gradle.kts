@@ -52,12 +52,24 @@ val verifyPrivacyBoundary by tasks.registering {
         check(accessibility.contains("android:packageNames=")) {
             "Accessibility must start from an explicit social/browser package scope."
         }
-        check(!accessibility.contains("com.barclays") &&
-            !accessibility.contains("com.revolut") &&
-            !accessibility.contains("bitwarden") &&
-            !accessibility.contains("authenticator2")
-        ) {
-            "Sensitive app families must never appear in the static accessibility scope."
+        val excludedStaticPackages = listOf(
+            "com.barclays",
+            "com.revolut",
+            "bitwarden",
+            "authenticator2",
+            "com.android.phone",
+            "com.google.android.dialer",
+            "com.android.dialer",
+            "com.samsung.android.incallui",
+            "com.google.android.deskclock",
+            "com.sec.android.app.clockpackage",
+            "com.google.android.apps.wallet",
+            "com.google.android.gms"
+        )
+        excludedStaticPackages.forEach { excluded ->
+            check(!accessibility.contains(excluded)) {
+                "Excluded package must never appear in Accessibility static scope: " + excluded
+            }
         }
         check(!manifest.contains("android:showWhenLocked=\"true\"")) {
             "Quran gate must never be allowed over the Android lock screen."
