@@ -265,9 +265,12 @@ object ProtectedApps {
     fun shouldNeverPersist(context: Context, packageName: String): Boolean =
         isAlwaysAllowed(context, packageName)
 
+    fun isSystemProtected(packageName: String): Boolean =
+        packageName == ANDROID_SETTINGS
+
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
-        if (packageName == ANDROID_SETTINGS) return true
+        if (isSystemProtected(packageName)) return true
         if (isAlwaysAllowed(context, packageName)) return false
 
         // Web coverage is deliberately limited to the eight supported browsers.
