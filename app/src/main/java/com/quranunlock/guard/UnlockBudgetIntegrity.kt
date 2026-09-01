@@ -146,6 +146,20 @@ object UnlockBudgetIntegrity {
         }
     }
 
+    fun isSafeSameBootRecovery(
+        storedBootCount: Int?,
+        currentBootCount: Int,
+        checkpointElapsedMs: Long?,
+        nowElapsedMs: Long
+    ): Boolean =
+        storedBootCount != null &&
+            storedBootCount >= 0 &&
+            currentBootCount >= 0 &&
+            storedBootCount == currentBootCount &&
+            checkpointElapsedMs != null &&
+            checkpointElapsedMs >= 0L &&
+            nowElapsedMs >= checkpointElapsedMs
+
     fun shouldStartBudgetOnForegroundEvent(
         eventPackage: String,
         trackedForegroundPackage: String?,
