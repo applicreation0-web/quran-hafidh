@@ -361,14 +361,23 @@ val verifyEditorialBoundary by tasks.registering {
         check(hikam.contains("HikmaCommentary")) {
             "Canonical Hikam data must retain classical commentary metadata."
         }
+        check(hikam.contains("additionalCommentaries") && hikam.contains("val commentaries: List<HikmaCommentary>")) {
+            "Hikam must support multiple commentators as separate source units."
+        }
         check(hikamUi.contains("Approfondir — commentaire classique")) {
             "Hikma UI must expose the classical commentary explicitly."
         }
         check(hikamUi.contains("Texte du commentateur présenté sans reformulation.")) {
             "Hikma UI must state that the commentator text is not reformulated."
         }
+        check(hikamUi.contains("commentary.source.author") && hikamUi.contains("commentary.source.workTitle")) {
+            "Each commentary card must display its own author and work."
+        }
+        check(hikamUi.contains("Aucune synthèse entre commentateurs.")) {
+            "Cross-commentator synthesis must be explicitly forbidden in the UI contract."
+        }
         check(hikam.contains("Ibn ʿAjība")) {
-            "Classical commentary must identify Ibn ʿAjība explicitly."
+            "Existing verified Ibn ʿAjība commentary must remain identified explicitly."
         }
         check(hikam.contains("isExcerpt: Boolean")) {
             "Abridged commentary must retain an explicit excerpt flag."
@@ -440,6 +449,9 @@ val verifyEditorialBoundary by tasks.registering {
         ).readText()
         check(hikamTests.contains("fun sourcedHikmaCanDisplayWithoutUnverifiedCommentary(")) {
             "A sourced Hikma must remain displayable without an unverified commentary."
+        }
+        check(hikamTests.contains("fun multipleCommentatorsRemainSeparateSourceUnits(")) {
+            "Different commentators must remain separate, independently sourced units."
         }
 
         val classicalFiles = listOf(hikam, ghazali)
