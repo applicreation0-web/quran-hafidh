@@ -5,23 +5,34 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 class HikamDetailActivity : ComponentActivity() {
     companion object { const val EXTRA_HIKMA_ID = "hikma_id" }
@@ -39,16 +50,18 @@ class HikamDetailActivity : ComponentActivity() {
 
 @Composable
 private fun HikmaDetailScreen(hikma: HikmaEntry) {
-    var showCommentary by androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf(false)
-    }
+    var showCommentary by remember { mutableStateOf(false) }
+    var commentaryArabic by remember { mutableStateOf(true) }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 22.dp),
+                .padding(horizontal = 18.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
@@ -60,7 +73,8 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
             Text(
                 "Hikma " + hikma.sourceNumber,
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 "Ibn ʿAṭāʾ Allāh al-Iskandarī",
@@ -68,44 +82,53 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+            ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    modifier = Modifier.padding(horizontal = 19.dp, vertical = 22.dp),
+                    verticalArrangement = Arrangement.spacedBy(17.dp)
                 ) {
                     Text(
                         hikma.arabicText,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.headlineSmall.copy(
-                            textDirection = TextDirection.Rtl
+                            textDirection = TextDirection.Rtl,
+                            lineHeight = 39.sp
                         ),
-                        textAlign = TextAlign.Right
+                        textAlign = TextAlign.Right,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    HorizontalDivider()
                     Text(
                         hikma.frenchText,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        lineHeight = 25.sp
                     )
                 }
             }
 
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp)
+            ) {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        "Source vérifiée",
+                        "Source et attribution vérifiées",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.secondary,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Authenticité documentaire : texte et attribution vérifiés.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        "Traduction française : interne Quran Safeguard, relue contre l’arabe ; pas de certification éditoriale externe.",
+                        hikma.source.locator + " • traduction interne Quran Safeguard",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -115,7 +138,10 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
             val commentary = hikma.commentary
             if (commentary != null && commentary.displayEligible) {
                 Button(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 54.dp),
+                    shape = RoundedCornerShape(16.dp),
                     onClick = { showCommentary = !showCommentary }
                 ) {
                     Text(
@@ -125,39 +151,83 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 }
 
                 if (showCommentary) {
-                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                    ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                "Commentaire classique — Ibn ʿAjība",
-                                style = MaterialTheme.typography.titleLarge,
+                                "Commentaire classique",
+                                style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Ibn ʿAjība",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
                                 "Texte du commentateur présenté sans reformulation.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Text(
-                                "Commentaire arabe",
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                commentary.arabicText,
+
+                            Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Rtl),
-                                textAlign = TextAlign.Right
-                            )
-                            Text(
-                                "Traduction française",
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(commentary.frenchText)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (commentaryArabic) {
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        onClick = { commentaryArabic = true }
+                                    ) { Text("Arabe") }
+                                    OutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        onClick = { commentaryArabic = false }
+                                    ) { Text("Français") }
+                                } else {
+                                    OutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        onClick = { commentaryArabic = true }
+                                    ) { Text("Arabe") }
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(14.dp),
+                                        onClick = { commentaryArabic = false }
+                                    ) { Text("Français") }
+                                }
+                            }
+
+                            if (commentaryArabic) {
+                                Text(
+                                    commentary.arabicText,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        textDirection = TextDirection.Rtl,
+                                        lineHeight = 30.sp
+                                    ),
+                                    textAlign = TextAlign.Right
+                                )
+                            } else {
+                                Text(
+                                    commentary.frenchText,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    lineHeight = 25.sp
+                                )
+                            }
+
                             if (commentary.isExcerpt) {
                                 Text(
                                     "Extrait — suite dans la source",
@@ -178,21 +248,35 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
 
 @Composable
 private fun HikamSourceBlock(source: ClassicalSource) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp)
+    ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Text("SOURCE", fontWeight = FontWeight.SemiBold)
-            Text(source.author + " • " + source.workTitle)
+            Text(
+                "SOURCE",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                source.author + " • " + source.workTitle,
+                fontWeight = FontWeight.SemiBold
+            )
             source.volume?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             Text(source.edition, style = MaterialTheme.typography.bodySmall)
             source.editor?.let {
-                Text("Éditeur/établissement du texte : $it", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Éditeur/établissement du texte : " + it,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
             Text(source.locator, style = MaterialTheme.typography.bodySmall)
             source.translator?.let {
-                Text("Traducteur : $it", style = MaterialTheme.typography.bodySmall)
+                Text("Traducteur : " + it, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
