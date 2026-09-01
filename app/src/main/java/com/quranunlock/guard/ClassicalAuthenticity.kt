@@ -27,7 +27,6 @@ data class ClassicalVerification(
             sourceVerified &&
                 attributionVerified &&
                 translationVerified &&
-                humanVerified &&
                 rightsStatus != TranslationRightsStatus.UNRESOLVED &&
                 authenticityStatus == ClassicalAuthenticityStatus.VERIFIED_SOURCE
 }
