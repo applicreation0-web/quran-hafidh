@@ -138,7 +138,7 @@ private fun SpiritualLibraryScreen(
                 }
 
                 LibrarySection.HIKAM -> {
-                    val entries = HikamRepository.entries.filter { it.displayEligible }
+                    val entries = HikamRepository.entries(this@SpiritualLibraryActivity).filter { it.displayEligible }
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
