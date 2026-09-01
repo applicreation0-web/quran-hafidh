@@ -107,8 +107,20 @@ val verifyEditorialBoundary by tasks.registering {
         check(!hikam.contains("transliteration", ignoreCase = true)) {
             "Transliteration is reserved for Adhkar and must not exist in Hikam data."
         }
-        check(!hikamUi.contains("Translittération", ignoreCase = true)) {
+        check(
+            !hikamUi.contains("transliteration", ignoreCase = true) &&
+                !hikamUi.contains("translittération", ignoreCase = true)
+        ) {
             "Transliteration is reserved for Adhkar and must not appear in Hikam UI."
+        }
+        val ghazaliUi = file(
+            "src/main/java/com/quranunlock/guard/GhazaliDetailActivity.kt"
+        ).readText()
+        check(
+            !ghazaliUi.contains("transliteration", ignoreCase = true) &&
+                !ghazaliUi.contains("translittération", ignoreCase = true)
+        ) {
+            "Transliteration is reserved for Adhkar and must not appear in Ghazali UI."
         }
         check(hikam.contains("HikmaCommentary")) {
             "Canonical Hikam data must retain classical commentary metadata."
