@@ -4,11 +4,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import android.content.Intent
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -19,6 +22,7 @@ fun DailyReminderCard(
     reminder: DailyReminder,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -57,6 +61,20 @@ fun DailyReminderCard(
                 if (!reminder.authenticity.isNullOrBlank()) {
                     append(" • ")
                     append(reminder.authenticity)
+                }
+            }
+
+            if (reminder.type == ReminderType.HIKAM) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, HikamDetailActivity::class.java)
+                                .putExtra(HikamDetailActivity.EXTRA_HIKMA_ID, reminder.id)
+                        )
+                    }
+                ) {
+                    Text("Voir la Hikma")
                 }
             }
 
