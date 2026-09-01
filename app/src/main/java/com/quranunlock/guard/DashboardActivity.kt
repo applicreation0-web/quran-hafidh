@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,14 +12,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -34,25 +41,75 @@ class DashboardActivity : ComponentActivity() {
 
     @Composable
     private fun DashboardScreen() {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        val serviceEnabled = AccessibilityStatus.isEnabled(this@DashboardActivity)
+        val protectedCount = GuardPrefs.protectedPackages(this@DashboardActivity).size
+        val totalReadingMs = GuardPrefs.totalReadingMs(this@DashboardActivity)
+        val today = GuardPrefs.dailyReadingSummary(this@DashboardActivity)
+
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = true,
+                        onClick = {},
+                        icon = { Text("⌂") },
+                        label = { Text("Accueil") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            startActivity(
+                                Intent(
+                                    this@DashboardActivity,
+                                    ReadingHistoryActivity::class.java
+                                )
+                            )
+                        },
+                        icon = { Text("▥") },
+                        label = { Text("Statistiques") }
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            startActivity(
+                                Intent(
+                                    this@DashboardActivity,
+                                    ReadingSelectionActivity::class.java
+                                )
+                            )
+                        },
+                        icon = { Text("▤") },
+                        label = { Text("Lecture") }
+                    )
+                }
+            }
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 18.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 18.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    "QURAN SAFEGUARD",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Un espace simple pour protéger votre attention.",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = null,
+                        modifier = Modifier.size(46.dp)
+                    )
+                    Text(
+                        "Quran Safeguard",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -60,48 +117,68 @@ class DashboardActivity : ComponentActivity() {
                             startActivity(
                                 Intent(this@DashboardActivity, MainActivity::class.java)
                             )
-                        }
+                        },
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
-                                "Protection active ✓"
-                            } else {
-                                "Protection à activer"
-                            },
-                            color = if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
+                            if (serviceEnabled) "Protection active ✓"
+                            else "Protection à activer",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = if (serviceEnabled) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.error
                             },
-                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
-                                "Les réglages se font dans Safeguard. Android Accessibility reste simplement activé en arrière-plan."
+                            if (serviceEnabled) {
+                                "Le service fonctionne. Tous les réglages se font ensuite directement dans Quran Safeguard."
                             } else {
-                                "Ouvrir les paramètres Safeguard pour effectuer l’activation Android une seule fois."
+                                "Une activation Android est nécessaire une seule fois pour démarrer la protection."
                             },
-                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    DashboardStatCard(
+                        modifier = Modifier.weight(1f),
+                        value = protectedCount.toString(),
+                        label = "Applications"
+                    )
+                    DashboardStatCard(
+                        modifier = Modifier.weight(1f),
+                        value = compactDuration(totalReadingMs),
+                        label = "Lecture"
+                    )
+                    DashboardStatCard(
+                        modifier = Modifier.weight(1f),
+                        value = today.pages.toString(),
+                        label = "Pages aujourd’hui"
+                    )
+                }
+
                 DashboardRow(
                     leftTitle = "Applications",
-                    leftSubtitle = "Réseaux sociaux & navigateurs",
+                    leftSubtitle = "Gérer les cibles et la protection",
                     leftAction = {
                         startActivity(
                             Intent(this@DashboardActivity, ApplicationsActivity::class.java)
                         )
                     },
                     rightTitle = "Juz / Hizb",
-                    rightSubtitle = "Choix de lecture",
+                    rightSubtitle = "Choisir les zones de lecture",
                     rightAction = {
                         startActivity(
                             Intent(this@DashboardActivity, ReadingSelectionActivity::class.java)
@@ -109,7 +186,7 @@ class DashboardActivity : ComponentActivity() {
                     }
                 )
                 DashboardRow(
-                    leftTitle = "Bibliothèque",
+                    leftTitle = "Rappel / Textes",
                     leftSubtitle = "Hadiths • Al-Hikam • Al-Ghazâlî",
                     leftAction = {
                         startActivity(
@@ -117,7 +194,7 @@ class DashboardActivity : ComponentActivity() {
                         )
                     },
                     rightTitle = "Adhkâr",
-                    rightSubtitle = "Matin • soir • favoris",
+                    rightSubtitle = "Matin, soir et favoris",
                     rightAction = {
                         startActivity(
                             Intent(this@DashboardActivity, AdhkarActivity::class.java)
@@ -126,14 +203,14 @@ class DashboardActivity : ComponentActivity() {
                 )
                 DashboardRow(
                     leftTitle = "Historique",
-                    leftSubtitle = "Pages, temps, tendances",
+                    leftSubtitle = "Activité et statistiques",
                     leftAction = {
                         startActivity(
                             Intent(this@DashboardActivity, ReadingHistoryActivity::class.java)
                         )
                     },
                     rightTitle = "Paramètres",
-                    rightSubtitle = "Protection & rappels",
+                    rightSubtitle = "Protection et rappels",
                     rightAction = {
                         startActivity(
                             Intent(this@DashboardActivity, MainActivity::class.java)
@@ -141,16 +218,56 @@ class DashboardActivity : ComponentActivity() {
                     }
                 )
 
-                Text(
-                    "Rappel du jour",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                DailyReminderCard(
-                    DailyReminderManager.today(this@DashboardActivity)
-                )
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            "Applications sensibles toujours exclues",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Banque, paiement, identité, authentification, mots de passe, sécurité, appels et alarmes ne sont jamais des cibles Safeguard.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun DashboardStatCard(
+    modifier: Modifier,
+    value: String,
+    label: String
+) {
+    ElevatedCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                value,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -209,5 +326,15 @@ private fun DashboardCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+private fun compactDuration(milliseconds: Long): String {
+    val minutes = (milliseconds / 60_000L).coerceAtLeast(0L)
+    val hours = minutes / 60L
+    val rest = minutes % 60L
+    return when {
+        hours > 0L -> "${hours}h${rest.toString().padStart(2, '0')}"
+        else -> "${minutes}m"
     }
 }
