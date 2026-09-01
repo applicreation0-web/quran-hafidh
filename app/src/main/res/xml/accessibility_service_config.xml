@@ -4,6 +4,7 @@
     android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="50"
     android:canRetrieveWindowContent="false"
+    android:packageNames="com.applicreation0.quransafeguard,com.android.settings,com.android.chrome,org.mozilla.firefox,com.microsoft.emmx,com.brave.browser,com.opera.browser,com.sec.android.app.sbrowser,com.duckduckgo.mobile.android,com.vivaldi.browser,com.google.android.youtube,com.whatsapp,org.telegram.messenger,com.discord,com.reddit.frontpage,com.snapchat.android,com.instagram.android,com.facebook.katana,com.twitter.android,com.zhiliaoapp.musically"
     android:isAccessibilityTool="false"
     android:settingsActivity="com.applicreation0.quransafeguard.MainActivity"
     android:description="@string/accessibility_description" />
