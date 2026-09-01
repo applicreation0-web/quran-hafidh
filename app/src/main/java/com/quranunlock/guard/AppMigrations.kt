@@ -232,6 +232,8 @@ object AppMigrations {
             "unlock_elapsed_started_",
             "unlock_remaining_ms_",
             "unlock_foreground_started_",
+            "unlock_foreground_boot_",
+            "unlock_foreground_checkpoint_",
             "unlock_granted_ms_",
             "unlock_reminder_mask_",
             "challenge_page_",
@@ -302,6 +304,11 @@ object AppMigrations {
                 .clear()
                 .commit()
         ) { "Unable to clear obsolete Hikam transliteration preference" }
+
+        // An update/reboot/service recreation must never reuse elapsedRealtime
+        // from an older foreground session. Reconcile only through the last
+        // persisted proof-of-life checkpoint, then clear active markers.
+        GuardPrefs.reconcileOrphanedUnlockForeground(context)
     }
 
     private fun validateCriticalPreferences(context: Context) {
