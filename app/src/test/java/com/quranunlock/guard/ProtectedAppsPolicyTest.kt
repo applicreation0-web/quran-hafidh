@@ -131,6 +131,34 @@ class ProtectedAppsPolicyTest {
         assertFalse(ProtectedApps.isSelectableTarget("com.example.random"))
     }
 
+
+    @Test
+    fun excludedAppsCanNeverBecomeBudgetOwners() {
+        val excluded = setOf(
+            "com.android.phone",
+            "com.google.android.dialer",
+            "com.android.dialer",
+            "com.samsung.android.incallui",
+            "com.google.android.deskclock",
+            "com.sec.android.app.clockpackage",
+            "com.google.android.apps.walletnfcrel",
+            "com.google.android.apps.authenticator2",
+            "com.x8bit.bitwarden",
+            "com.barclays.android.barclaysmobilebanking",
+            "com.revolut.revolut",
+            "com.google.android.gms",
+            "com.example.privatebank",
+            "com.example.security"
+        )
+
+        excluded.forEach { packageName ->
+            assertFalse(
+                "Excluded package became selectable: " + packageName,
+                ProtectedApps.isSelectableTarget(packageName)
+            )
+        }
+    }
+
     @Test
     fun ordinaryAwarenessAppsRemainSelectable() {
         assertFalse(ProtectedApps.looksSensitive("com.whatsapp", "WhatsApp"))
