@@ -54,6 +54,20 @@ object ProtectedApps {
         "de.number26.",
         "com.n26.",
         "com.paypal.",
+        "com.transferwise.",
+        "com.wise.",
+        "com.klarna.",
+        "com.coinbase.",
+        "com.binance.",
+        "com.crypto.",
+        "com.americanexpress.",
+        "com.capitalone.",
+        "com.santander.",
+        "uk.co.tsb.",
+        "com.firstdirect.",
+        "com.bunq.",
+        "com.sumup.",
+        "com.stripe.",
         "com.google.android.apps.wallet",
         "com.samsung.android.spay",
         // Authentication / password / identity protection
@@ -98,6 +112,16 @@ object ProtectedApps {
         "credit card",
         "finance",
         "financial",
+        "fintech",
+        "investment",
+        "investments",
+        "trading",
+        "broker",
+        "mortgage",
+        "insurance",
+        "assurance",
+        "crypto",
+        "cryptocurrency",
         "wallet",
         "payment",
         "payments",
@@ -107,7 +131,11 @@ object ProtectedApps {
         "authentication",
         "password manager",
         "passwords",
+        "passkey",
+        "passkeys",
         "identity",
+        "identity verification",
+        "verify identity",
         "identite",
         "id check",
         "digital id",
@@ -197,6 +225,13 @@ object ProtectedApps {
         if (needle.isBlank()) return false
         return (" $haystack ").contains(" $needle ")
     }
+
+    /**
+     * Defense-in-depth boundary for any persistence/logging layer.
+     * Out-of-scope packages must not be associated with Safeguard state.
+     */
+    fun shouldNeverPersist(context: Context, packageName: String): Boolean =
+        isAlwaysAllowed(context, packageName)
 
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
