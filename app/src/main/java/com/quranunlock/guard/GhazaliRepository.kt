@@ -75,7 +75,7 @@ object GhazaliRepository {
                 volume = null,
                 locator = "Section II — القول في اجتناب المعاصي — transcription Wikisource, ligne 207",
                 sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
-                translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                translator = "Traduction interne Quran Safeguard"
             ),
             verification = pendingHumanVerification(
                 "La version précédente avait une variante non exacte (« الدين شطران »). " +
@@ -92,7 +92,7 @@ object GhazaliRepository {
                     volume = null,
                     locator = "Section II — Wikisource, ligne 207",
                     sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
-                    translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                    translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = pendingHumanVerification(
                     "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction interne non validée humainement."
@@ -114,7 +114,7 @@ object GhazaliRepository {
                 volume = null,
                 locator = "Section II — القول في اجتناب المعاصي — transcription Wikisource, ligne 208",
                 sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
-                translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                translator = "Traduction interne Quran Safeguard"
             ),
             verification = pendingHumanVerification(
                 "Texte arabe et attribution retrouvés dans le passage continu de Bidāyat al-Hidāya."
@@ -130,7 +130,7 @@ object GhazaliRepository {
                     volume = null,
                     locator = "Section II — Wikisource, ligne 208",
                     sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
-                    translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                    translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = pendingHumanVerification(
                     "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction interne non validée humainement."
@@ -152,7 +152,7 @@ object GhazaliRepository {
                 volume = "Rubʿ al-ʿĀdāt, livre 10",
                 locator = "Kitāb Ādāb al-Maʿīsha wa-Akhlāq al-Nubuwwa — transcription Wikisource, ligne 97",
                 sourceUrl = "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
-                translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                translator = "Traduction interne Quran Safeguard"
             ),
             verification = pendingHumanVerification(
                 "Texte arabe et attribution retrouvés dans l’ouverture du livre indiqué."
@@ -168,7 +168,7 @@ object GhazaliRepository {
                     volume = "Rubʿ al-ʿĀdāt, livre 10",
                     locator = "Kitāb Ādāb al-Maʿīsha wa-Akhlāq al-Nubuwwa — Wikisource, lignes 97-98",
                     sourceUrl = "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
-                    translator = "Traduction interne Quran Safeguard — validation humaine requise"
+                    translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = pendingHumanVerification(
                     "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction interne non validée humainement."
