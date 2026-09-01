@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -61,17 +62,41 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
+                "AL-HIKAM AL-ʿAṬĀʾIYYA",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
                 "Hikma " + hikma.sourceNumber,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                hikma.arabicText,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.headlineSmall.copy(textDirection = TextDirection.Rtl),
-                textAlign = TextAlign.Right
+                "Ibn ʿAṭāʾ Allāh al-Iskandarī",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(hikma.frenchText, style = MaterialTheme.typography.bodyLarge)
+
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        hikma.arabicText,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            textDirection = TextDirection.Rtl
+                        ),
+                        textAlign = TextAlign.Right
+                    )
+                    Text(
+                        hikma.frenchText,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -98,16 +123,29 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 )
             }
 
-            Text(
-                "Authenticité documentaire : source et attribution vérifiées",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                "Traduction française : interne Quran Safeguard, relue contre l’arabe ; pas de certification éditoriale externe.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        "Source vérifiée",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        "Authenticité documentaire : texte et attribution vérifiés.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Traduction française : interne Quran Safeguard, relue contre l’arabe ; pas de certification éditoriale externe.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
             val commentary = hikma.commentary
             if (commentary != null && commentary.displayEligible) {
@@ -128,8 +166,9 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                "COMMENTAIRE CLASSIQUE — IBN ʿAJĪBA",
-                                style = MaterialTheme.typography.titleMedium,
+                                "Commentaire classique — Ibn ʿAjība",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.secondary,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
@@ -137,14 +176,22 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Text("COMMENTAIRE ARABE", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Commentaire arabe",
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                             Text(
                                 commentary.arabicText,
                                 modifier = Modifier.fillMaxWidth(),
                                 style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Rtl),
                                 textAlign = TextAlign.Right
                             )
-                            Text("TRADUCTION FRANÇAISE", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Traduction française",
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                             Text(commentary.frenchText)
                             if (commentary.isExcerpt) {
                                 Text(
