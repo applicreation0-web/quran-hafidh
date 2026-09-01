@@ -23,6 +23,13 @@ object ProtectedApps {
         "com.android.dialer",
         "com.samsung.android.dialer",
         "com.samsung.android.incallui",
+        // Clock, alarm and emergency/safety surfaces must remain immediately accessible.
+        "com.google.android.deskclock",
+        "com.android.deskclock",
+        "com.sec.android.app.clockpackage",
+        "com.google.android.apps.safetyhub",
+        "com.android.emergency",
+        "com.android.safetycenter.resources",
         // Credential / security infrastructure must never be intercepted.
         "com.google.android.gms",
         "com.samsung.android.samsungpass",
