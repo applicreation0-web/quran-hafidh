@@ -9,7 +9,9 @@ contract supersede older chat notes and legacy implementation details.
   internal French translation and documentary metadata.
 - Classical commentary remains optional and source-isolated:
   one commentator, one work and one locator per commentary unit; no AI synthesis.
-- Al-Ghazali short-reminder scope is limited to Ayyuha al-Walad.
+  The first verified continuous Ibn ʿAjība tranche covers Hikam 1 through 12.
+- Al-Ghazali is temporarily absent from the UI and daily reminders until a
+  sufficient Ayyuha al-Walad corpus is verified.
 - Canonical Medina Mushaf page uses the full remaining reader viewport.
 - Validation requires at least 60 seconds of active foreground reading and real
   page progress to the bottom when scrolling is required.
