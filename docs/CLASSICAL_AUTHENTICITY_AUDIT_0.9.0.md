@@ -34,6 +34,12 @@ validation humaine de correspondance n’est pas enregistrée.
 Aucune mise en page moderne, note éditoriale moderne ou traduction commerciale
 n’est reproduite comme contenu utilisateur.
 
+Référence juridique de prudence (Royaume-Uni) :
+https://www.gov.uk/government/publications/copyright-notice-duration-of-copyright-term/copyright-notice-duration-of-copyright-term
+La guidance de l’IPO rappelle notamment qu’une traduction peut attirer sa propre
+protection, même lorsque l’œuvre sous-jacente est hors copyright, et qu’une
+nouvelle disposition typographique dispose d’une protection distincte.
+
 ## 1 — Al-Ḥikam
 
 | ID | N° | Arabe retrouvé | Traduction vérifiée | Source | Commentaire Ibn ʿAjība | Traduction commentaire | Droits traduction | Validation humaine | Authenticité | Affiché |
