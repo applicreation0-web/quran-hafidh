@@ -76,10 +76,16 @@ val verifyPrivacyBoundary by tasks.registering {
         }
         check(
             accessibility.contains(
-                "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged\""
+                "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged|typeViewClicked|typeViewScrolled\""
             )
         ) {
-            "Accessibility events must remain limited to window changes."
+            "Accessibility events must remain limited to window ownership plus click/scroll interaction."
+        }
+        check(accessibility.contains("android:notificationTimeout=\"0\"")) {
+            "Unlock accounting requires immediate accessibility transitions; debounce is forbidden."
+        }
+        check(!accessibility.contains("typeViewTextChanged")) {
+            "Text-change accessibility events are forbidden."
         }
     }
 }
