@@ -252,6 +252,7 @@ object ReminderNotifications {
 
         val thought = DailyReminderManager.today(context)
         val intent = Intent(context, ThoughtOfDayActivity::class.java)
+            .putExtra(ThoughtOfDayActivity.EXTRA_REMINDER_ID, thought.id)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         show(
             context = context,
