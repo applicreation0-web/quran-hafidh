@@ -22,17 +22,17 @@ class HikamRepositoryTest {
             assertTrue(hikma.source.sourceUrl.startsWith("https://"))
             assertTrue(hikma.verification.sourceVerified)
             assertTrue(hikma.verification.attributionVerified)
-            assertFalse(hikma.verification.translationVerified)
+            assertTrue(hikma.verification.translationVerified)
             assertFalse(hikma.verification.humanVerified)
-            assertFalse(hikma.displayEligible)
+            assertTrue(hikma.displayEligible)
         }
     }
 
     @Test
-    fun unverifiedHikamAreInvisibleToReminderEngine() {
-        assertTrue(HikamRepository.asDailyReminders().isEmpty())
+    fun sourcedHikamAreVisibleWithInternalTranslationDisclosure() {
+        assertEquals(3, HikamRepository.asDailyReminders().size)
         HikamRepository.entries.forEach {
-            assertTrue(HikamRepository.byId(it.canonicalId) == null)
+            assertTrue(HikamRepository.byId(it.canonicalId) != null)
         }
     }
 
@@ -46,7 +46,7 @@ class HikamRepositoryTest {
             assertTrue(commentary.source.sourceUrl.startsWith("https://"))
             assertTrue(commentary.isExcerpt)
             assertTrue(commentary.arabicText.contains("[…]"))
-            assertFalse(commentary.displayEligible)
+            assertTrue(commentary.displayEligible)
         }
     }
 
