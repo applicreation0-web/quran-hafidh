@@ -171,7 +171,7 @@ class DashboardActivity : ComponentActivity() {
                             if (serviceEnabled) {
                                 "Safeguard est actif. Touchez ici pour les réglages."
                             } else {
-                                "Touchez ici pour activer la protection Android."
+                                "Configurez Safeguard ici. L’activation Android est une étape séparée et unique."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (serviceEnabled) {
@@ -262,7 +262,7 @@ class DashboardActivity : ComponentActivity() {
                 )
                 DashboardRow(
                     leftTitle = "Rappel / Textes",
-                    leftSubtitle = "Hadiths • Hikam • Ghazâlî",
+                    leftSubtitle = "Hadiths • Hikam",
                     leftAction = {
                         startActivity(
                             Intent(this@DashboardActivity, SpiritualLibraryActivity::class.java)
