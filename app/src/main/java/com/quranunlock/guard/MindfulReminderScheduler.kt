@@ -276,6 +276,14 @@ object ReminderNotifications {
         text: String,
         contentIntent: Intent
     ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val pending = PendingIntent.getActivity(
             context,
@@ -296,7 +304,7 @@ object ReminderNotifications {
             .setVibrate(SINGLE_GENTLE_VIBRATION)
             .setOnlyAlertOnce(true)
             .build()
-        manager.notify(id, notification)
+        runCatching { manager.notify(id, notification) }
     }
 
     private fun ensureChannel(context: Context) {
