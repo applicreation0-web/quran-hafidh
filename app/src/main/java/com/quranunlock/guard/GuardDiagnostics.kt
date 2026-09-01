@@ -25,11 +25,17 @@ object GuardDiagnostics {
         packageName: String? = null,
         detail: String = ""
     ) {
+        val excluded = packageName?.let {
+            ProtectedApps.shouldNeverPersist(context, it)
+        } == true
+        val safePackageName = if (excluded) "" else packageName.orEmpty()
+        val safeDetail = if (excluded) "" else detail
+
         val entry = listOf(
             System.currentTimeMillis().toString(),
             sanitize(code),
-            sanitize(packageName.orEmpty()),
-            sanitize(detail)
+            sanitize(safePackageName),
+            sanitize(safeDetail)
         ).joinToString("\t")
 
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
