@@ -25,6 +25,7 @@ object ReminderPrefs {
     private const val LAT = "latitude"
     private const val LON = "longitude"
     private const val HANAFI_ASR = "hanafi_asr"
+    private const val ADHKAR_TRANSLITERATION = "adhkar_transliteration"
 
     fun dailyEnabled(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -67,6 +68,15 @@ object ReminderPrefs {
     fun setHanafiAsr(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit().putBoolean(HANAFI_ASR, enabled).apply()
+    }
+
+    fun adhkarTransliterationEnabled(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(ADHKAR_TRANSLITERATION, false)
+
+    fun setAdhkarTransliterationEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit().putBoolean(ADHKAR_TRANSLITERATION, enabled).apply()
     }
 }
 
@@ -202,7 +212,10 @@ class ReminderRescheduleReceiver : BroadcastReceiver() {
 }
 
 object ReminderNotifications {
-    private const val CHANNEL = "mindful_reminders"
+    // Separate channel so Android does not keep the old low-importance/silent
+    // channel configuration after an app update.
+    private const val CHANNEL = "mindful_reminders_banner_v2"
+    private val SINGLE_GENTLE_VIBRATION = longArrayOf(0L, 55L)
 
     fun showDaily(context: Context) {
         ensureChannel(context)
@@ -267,8 +280,11 @@ object ReminderNotifications {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(pending)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setSound(null)
+            .setVibrate(SINGLE_GENTLE_VIBRATION)
+            .setOnlyAlertOnce(true)
             .build()
         manager.notify(id, notification)
     }
@@ -279,10 +295,11 @@ object ReminderNotifications {
         val channel = NotificationChannel(
             CHANNEL,
             "Rappels bienveillants",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Rappel quotidien et adhkâr matin/soir"
-            enableVibration(false)
+            description = "Petite bannière pour le rappel quotidien et les adhkâr matin/soir"
+            enableVibration(true)
+            vibrationPattern = SINGLE_GENTLE_VIBRATION
             setSound(null, null)
         }
         manager.createNotificationChannel(channel)

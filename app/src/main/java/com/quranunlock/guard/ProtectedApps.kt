@@ -6,6 +6,10 @@ import java.text.Normalizer
 import java.util.Locale
 
 object ProtectedApps {
+    private val sensitiveDecisionCache = mutableMapOf<String, Boolean>()
+    private var defaultDialerLoaded = false
+    private var cachedDefaultDialer: String? = null
+
     const val PLAY_STORE = "com.android.vending"
     const val ANDROID_SETTINGS = "com.android.settings"
 
@@ -54,6 +58,20 @@ object ProtectedApps {
         "de.number26.",
         "com.n26.",
         "com.paypal.",
+        "com.transferwise.",
+        "com.wise.",
+        "com.klarna.",
+        "com.coinbase.",
+        "com.binance.",
+        "com.crypto.",
+        "com.americanexpress.",
+        "com.capitalone.",
+        "com.santander.",
+        "uk.co.tsb.",
+        "com.firstdirect.",
+        "com.bunq.",
+        "com.sumup.",
+        "com.stripe.",
         "com.google.android.apps.wallet",
         "com.samsung.android.spay",
         // Authentication / password / identity protection
@@ -98,6 +116,16 @@ object ProtectedApps {
         "credit card",
         "finance",
         "financial",
+        "fintech",
+        "investment",
+        "investments",
+        "trading",
+        "broker",
+        "mortgage",
+        "insurance",
+        "assurance",
+        "crypto",
+        "cryptocurrency",
         "wallet",
         "payment",
         "payments",
@@ -107,7 +135,11 @@ object ProtectedApps {
         "authentication",
         "password manager",
         "passwords",
+        "passkey",
+        "passkeys",
         "identity",
+        "identity verification",
+        "verify identity",
         "identite",
         "id check",
         "digital id",
@@ -147,10 +179,16 @@ object ProtectedApps {
     fun isAlwaysAllowed(context: Context, packageName: String): Boolean {
         if (isAlwaysAllowed(packageName)) return true
 
-        val defaultDialer = runCatching {
-            context.getSystemService(TelecomManager::class.java)
-                ?.defaultDialerPackage
-        }.getOrNull()
+        val defaultDialer = synchronized(sensitiveDecisionCache) {
+            if (!defaultDialerLoaded) {
+                cachedDefaultDialer = runCatching {
+                    context.getSystemService(TelecomManager::class.java)
+                        ?.defaultDialerPackage
+                }.getOrNull()
+                defaultDialerLoaded = true
+            }
+            cachedDefaultDialer
+        }
         if (packageName == defaultDialer) return true
 
         return isSensitiveCategory(context, packageName)
@@ -161,12 +199,28 @@ object ProtectedApps {
         if (sensitivePackagePrefixes.any { packageLower.startsWith(it) }) return true
         if (sensitivePackageFragments.any { packageLower.contains(it) }) return true
 
+        synchronized(sensitiveDecisionCache) {
+            sensitiveDecisionCache[packageName]?.let { return it }
+        }
+
         val label = runCatching {
             val info = context.packageManager.getApplicationInfo(packageName, 0)
             context.packageManager.getApplicationLabel(info).toString()
         }.getOrDefault("")
 
-        return looksSensitive(packageName, label)
+        val sensitive = looksSensitive(packageName, label)
+        synchronized(sensitiveDecisionCache) {
+            sensitiveDecisionCache[packageName] = sensitive
+        }
+        return sensitive
+    }
+
+    fun clearClassificationCache() {
+        synchronized(sensitiveDecisionCache) {
+            sensitiveDecisionCache.clear()
+            cachedDefaultDialer = null
+            defaultDialerLoaded = false
+        }
     }
 
     internal fun looksSensitive(packageName: String, label: String): Boolean {
@@ -197,6 +251,13 @@ object ProtectedApps {
         if (needle.isBlank()) return false
         return (" $haystack ").contains(" $needle ")
     }
+
+    /**
+     * Defense-in-depth boundary for any persistence/logging layer.
+     * Out-of-scope packages must not be associated with Safeguard state.
+     */
+    fun shouldNeverPersist(context: Context, packageName: String): Boolean =
+        isAlwaysAllowed(context, packageName)
 
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false

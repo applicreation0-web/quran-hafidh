@@ -50,6 +50,7 @@ class MigrationAndAdhkarTest {
 
         AuthenticAdhkarLibrary.items.forEach { item ->
             assertTrue(item.arabicText.isNotBlank())
+            assertTrue(item.transliteration.isNotBlank())
             assertTrue(item.frenchText.isNotBlank())
             assertTrue(item.source.isNotBlank())
             assertTrue(item.authenticity.isNotBlank())

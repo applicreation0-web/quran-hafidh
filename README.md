@@ -24,6 +24,9 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
 - Hadith, al-Ghazali quotations and al-Hikam are explicitly distinguished.
 - Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
+- Adhkar can optionally show a discreet transliteration layer (off by default).
+- Daily/adhkar reminders use a small heads-up banner with one short vibration and no sound.
+- Banking, payment, identity, authentication, password-manager and security apps are permanently outside Safeguard scope and are rejected from persistence/logging.
 - No transliteration is shown by default.
 - A gentle daily notification targets 20:00 local time.
 - Authenticated morning adhkar are offered between Fajr and sunrise.

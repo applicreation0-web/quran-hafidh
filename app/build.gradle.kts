@@ -29,6 +29,33 @@ val verifyMushafPages by tasks.registering {
     }
 }
 
+val verifyPrivacyBoundary by tasks.registering {
+    doLast {
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+        val accessibility = file("src/main/res/xml/accessibility_service_config.xml").readText()
+
+        check(!manifest.contains("android.permission.INTERNET")) {
+            "Quran Safeguard must remain offline: INTERNET permission is forbidden."
+        }
+        check(!manifest.contains("android.permission.QUERY_ALL_PACKAGES")) {
+            "Broad package visibility is forbidden; keep launcher-scoped queries only."
+        }
+        check(accessibility.contains("android:canRetrieveWindowContent=\"false\"")) {
+            "Accessibility window content retrieval must remain disabled."
+        }
+        check(!accessibility.contains("typeViewFocused")) {
+            "Focused-view accessibility events are outside Safeguard scope."
+        }
+        check(
+            accessibility.contains(
+                "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged\""
+            )
+        ) {
+            "Accessibility events must remain limited to window changes."
+        }
+    }
+}
+
 android {
     namespace = "com.applicreation0.quransafeguard"
     compileSdk = 37
@@ -37,8 +64,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.8.3"
+        versionCode = 14
+        versionName = "0.9.0"
     }
 
     buildFeatures {
@@ -49,6 +76,7 @@ android {
 tasks.named("preBuild").configure {
     dependsOn(verifyFrozenReminderSnapshot)
     dependsOn(verifyMushafPages)
+    dependsOn(verifyPrivacyBoundary)
 }
 
 dependencies {
