@@ -10,11 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +46,10 @@ class ApplicationsActivity : ComponentActivity() {
             }
         }
 
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -52,43 +58,51 @@ class ApplicationsActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    "Applications protégées",
+                    "Applications",
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Safeguard est volontairement limité aux réseaux sociaux et aux huit navigateurs pris en charge.",
+                    "Choisissez les réseaux sociaux et navigateurs où Quran Safeguard intervient.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                selected.size.toString(),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "applications sélectionnées",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Text(
-                            "Hors scope",
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            "Banque, paiement, identité, authentification, mots de passe, sécurité, appels et alarmes ne sont jamais des cibles Safeguard.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            "Paramètres Android reste protégé uniquement contre le contournement du service.",
+                            (ProtectedApps.selectableScopePackages.size - selected.size)
+                                .coerceAtLeast(0)
+                                .toString() + " non sélectionnées",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-
-                Text(
-                    "${selected.size} applications sélectionnées",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -96,11 +110,10 @@ class ApplicationsActivity : ComponentActivity() {
                 ) {
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
                         onClick = {
                             selected.clear()
-                            selected.addAll(
-                                ProtectedApps.selectableScopePackages.sorted()
-                            )
+                            selected.addAll(ProtectedApps.selectableScopePackages.sorted())
                             GuardPrefs.saveProtectedPackages(
                                 this@ApplicationsActivity,
                                 selected.toSet()
@@ -110,6 +123,7 @@ class ApplicationsActivity : ComponentActivity() {
 
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
                         onClick = {
                             selected.clear()
                             GuardPrefs.saveProtectedPackages(
@@ -122,6 +136,7 @@ class ApplicationsActivity : ComponentActivity() {
 
                 TargetGroup(
                     title = "Réseaux sociaux",
+                    subtitle = "Applications sociales et messageries retenues",
                     targets = ProtectedApps.socialTargets,
                     selected = selected,
                     onSave = {
@@ -134,6 +149,7 @@ class ApplicationsActivity : ComponentActivity() {
 
                 TargetGroup(
                     title = "Navigateurs",
+                    subtitle = "Les huit navigateurs pris en charge",
                     targets = ProtectedApps.browserTargets,
                     selected = selected,
                     onSave = {
@@ -151,32 +167,47 @@ class ApplicationsActivity : ComponentActivity() {
 @Composable
 private fun TargetGroup(
     title: String,
+    subtitle: String,
     targets: List<SafeguardTarget>,
     selected: MutableList<String>,
     onSave: () -> Unit
 ) {
-    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            targets.forEach { target ->
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            targets.forEachIndexed { index, target ->
+                if (index == 0) {
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 2.dp),
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             target.label,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             if (target.category == SafeguardTargetCategory.BROWSER) {
@@ -201,6 +232,9 @@ private fun TargetGroup(
                             onSave()
                         }
                     )
+                }
+                if (index < targets.lastIndex) {
+                    HorizontalDivider()
                 }
             }
         }
