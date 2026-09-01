@@ -274,7 +274,9 @@ class QuranAccessibilityService : AccessibilityService() {
         if (UnlockBudgetIntegrity.isImePseudoForeground(
                 eventPackage = packageName,
                 activeImePackage = activeInputMethodPackage(),
-                currentProtectedPackage = protectedForeground
+                currentProtectedPackage = protectedForeground,
+                eventType = event.eventType,
+                className = event.className?.toString()
             )
         ) {
             return
@@ -292,7 +294,10 @@ class QuranAccessibilityService : AccessibilityService() {
 
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED &&
-                (isProtectedPackage || packageName == this.packageName))
+                (isProtectedPackage || packageName == this.packageName)) ||
+            ((event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
+                event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) &&
+                isProtectedPackage)
         ) {
             handleForegroundPackage(packageName)
         }
