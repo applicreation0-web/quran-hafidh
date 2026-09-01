@@ -4,12 +4,14 @@ import android.accessibilityservice.AccessibilityService
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.app.KeyguardManager
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
@@ -121,7 +123,8 @@ class QuranAccessibilityService : AccessibilityService() {
 
         // Must happen before any new foreground interval is started. This cleans
         // reboot/service-death markers using the last persisted checkpoint.
-        GuardPrefs.reconcileOrphanedUnlockForeground(this)
+        val orphanedForegroundPackage =
+            GuardPrefs.reconcileOrphanedUnlockForeground(this)
 
         BrowserDetector.refresh()
         GuardRuntime.interception.reset()
@@ -140,6 +143,28 @@ class QuranAccessibilityService : AccessibilityService() {
 
         applyEventPackageScope(broad = false)
         registerScreenReceiverIfNeeded()
+
+        if (orphanedForegroundPackage != null &&
+            !callFreezeActive &&
+            isScreenInteractiveAndUnlocked() &&
+            ProtectedApps.isProtected(this, orphanedForegroundPackage) &&
+            GuardPrefs.isUnlocked(this, orphanedForegroundPackage)
+        ) {
+            foregroundPackage = orphanedForegroundPackage
+            GuardRuntime.markExternalForeground(orphanedForegroundPackage)
+            GuardPrefs.beginUnlockForeground(this, orphanedForegroundPackage)
+            foregroundUnlockedPackage = orphanedForegroundPackage
+            lastCheckpointElapsedMs = SystemClock.elapsedRealtime()
+
+            // Temporarily observe the first true transition away so a service
+            // restart over an excluded/currently different app self-corrects.
+            applyEventPackageScope(broad = true)
+            GuardDiagnostics.log(
+                this,
+                "SERVICE_FOREGROUND_RESUMED",
+                orphanedForegroundPackage
+            )
+        }
 
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.post(heartbeat)
@@ -221,6 +246,12 @@ class QuranAccessibilityService : AccessibilityService() {
             )
             resumeCurrentProtectedPackageIfEligible()
         }
+    }
+
+    private fun isScreenInteractiveAndUnlocked(): Boolean {
+        val power = getSystemService(PowerManager::class.java)
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        return power?.isInteractive == true && keyguard?.isKeyguardLocked != true
     }
 
     private fun activeInputMethodPackage(): String? =
