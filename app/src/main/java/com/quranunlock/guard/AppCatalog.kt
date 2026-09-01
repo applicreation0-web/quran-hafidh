@@ -1,7 +1,6 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
-import android.content.Intent
 
 data class InstalledApp(
     val label: String,
@@ -9,26 +8,26 @@ data class InstalledApp(
 )
 
 object AppCatalog {
-    fun launchableApps(context: Context): List<InstalledApp> {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    /**
+     * Deliberately does not enumerate the user's full installed-app catalogue.
+     * Only the fixed social/browser scope is queried.
+     */
+    fun launchableApps(context: Context): List<InstalledApp> =
+        ProtectedApps.selectablePackages
+            .mapNotNull { packageName ->
+                if (context.packageManager.getLaunchIntentForPackage(packageName) == null) {
+                    return@mapNotNull null
+                }
 
-        return context.packageManager
-            .queryIntentActivities(intent, 0)
-            .mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
-                if (packageName == context.packageName) return@mapNotNull null
-                if (ProtectedApps.isAlwaysAllowed(context, packageName)) return@mapNotNull null
-                if (packageName == ProtectedApps.ANDROID_SETTINGS) return@mapNotNull null
+                val label = runCatching {
+                    val info = context.packageManager.getApplicationInfo(packageName, 0)
+                    context.packageManager.getApplicationLabel(info).toString().trim()
+                }.getOrDefault(packageName)
 
-                val label = resolveInfo.loadLabel(context.packageManager)
-                    ?.toString()
-                    ?.trim()
-                    .orEmpty()
-                    .ifBlank { packageName }
-
-                InstalledApp(label = label, packageName = packageName)
+                InstalledApp(
+                    label = label.ifBlank { packageName },
+                    packageName = packageName
+                )
             }
-            .distinctBy { it.packageName }
             .sortedBy { it.label.lowercase() }
-    }
 }
