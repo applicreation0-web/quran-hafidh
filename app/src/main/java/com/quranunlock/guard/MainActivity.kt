@@ -159,7 +159,6 @@ class MainActivity : ComponentActivity() {
                         onAccept = {
                             GuardPrefs.saveAccessibilityConsent(this@MainActivity)
                             showDisclosure = false
-                            openAccessibilitySettings()
                         },
                         onLater = { showDisclosure = false }
                     )
