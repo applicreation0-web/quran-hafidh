@@ -31,25 +31,16 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 
 class HikamDetailActivity : ComponentActivity() {
-    companion object {
-        const val EXTRA_HIKMA_ID = "hikma_id"
-    }
+    companion object { const val EXTRA_HIKMA_ID = "hikma_id" }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val hikma = HikamRepository.byId(
-            intent.getStringExtra(EXTRA_HIKMA_ID).orEmpty()
-        )
+        val hikma = HikamRepository.byId(intent.getStringExtra(EXTRA_HIKMA_ID).orEmpty())
         if (hikma == null) {
             finish()
             return
         }
-
-        setContent {
-            QuranSafeguardTheme {
-                HikmaDetailScreen(hikma)
-            }
-        }
+        setContent { QuranSafeguardTheme { HikmaDetailScreen(hikma) } }
     }
 }
 
@@ -74,20 +65,13 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold
             )
-
             Text(
                 hikma.arabicText,
                 modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    textDirection = TextDirection.Rtl
-                ),
+                style = MaterialTheme.typography.headlineSmall.copy(textDirection = TextDirection.Rtl),
                 textAlign = TextAlign.Right
             )
-
-            Text(
-                hikma.frenchText,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text(hikma.frenchText, style = MaterialTheme.typography.bodyLarge)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -106,7 +90,6 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
             if (showTransliteration) {
                 Text(
                     hikma.transliteration,
@@ -115,17 +98,21 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 )
             }
 
-            hikma.commentary?.let { commentary ->
+            Text(
+                "Authenticité : source et attribution vérifiées",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            val commentary = hikma.commentary
+            if (commentary != null && commentary.displayEligible) {
                 Button(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { showCommentary = !showCommentary }
                 ) {
                     Text(
-                        if (showCommentary) {
-                            "Masquer le commentaire classique"
-                        } else {
-                            "Approfondir — commentaire classique"
-                        }
+                        if (showCommentary) "Masquer le commentaire classique"
+                        else "Approfondir — commentaire classique"
                     )
                 }
 
@@ -136,9 +123,8 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                "Commentaire classique — " + commentary.commentator,
+                                "COMMENTAIRE CLASSIQUE — IBN ʿAJĪBA",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
@@ -146,28 +132,15 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-
+                            Text("COMMENTAIRE ARABE", fontWeight = FontWeight.SemiBold)
                             Text(
-                                "COMMENTAIRE ARABE",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                commentary.arabicExcerpt,
+                                commentary.arabicText,
                                 modifier = Modifier.fillMaxWidth(),
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    textDirection = TextDirection.Rtl
-                                ),
+                                style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Rtl),
                                 textAlign = TextAlign.Right
                             )
-
-                            Text(
-                                "TRADUCTION FRANÇAISE",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(commentary.frenchTranslation)
-
+                            Text("TRADUCTION FRANÇAISE", fontWeight = FontWeight.SemiBold)
+                            Text(commentary.frenchText)
                             if (commentary.isExcerpt) {
                                 Text(
                                     "Extrait — suite dans la source",
@@ -175,51 +148,34 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-
-                            Text(
-                                "SOURCE COMPLÈTE",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                commentary.commentator + " • " +
-                                    commentary.workTitle + "\n" +
-                                    commentary.edition + "\n" +
-                                    commentary.locator,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "Traduction française produite pour Quran Safeguard ; aucune traduction française commerciale moderne n’est reproduite.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            HikamSourceBlock(commentary.source)
                         }
                     }
                 }
             }
 
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        "Source de la Hikma",
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        "Ibn ʿAṭāʾ Allāh al-Iskandarī • Al-Hikam al-ʿAṭāʾiyya • " +
-                            "Hikma " + hikma.sourceNumber,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        hikma.sourceNote,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            HikamSourceBlock(hikma.source)
+        }
+    }
+}
+
+@Composable
+private fun HikamSourceBlock(source: ClassicalSource) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text("SOURCE", fontWeight = FontWeight.SemiBold)
+            Text(source.author + " • " + source.workTitle)
+            source.volume?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            Text(source.edition, style = MaterialTheme.typography.bodySmall)
+            source.editor?.let {
+                Text("Éditeur/établissement du texte : $it", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(source.locator, style = MaterialTheme.typography.bodySmall)
+            source.translator?.let {
+                Text("Traducteur : $it", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
