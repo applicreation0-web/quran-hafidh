@@ -67,14 +67,36 @@ class UnlockBudgetIntegrityTest {
             UnlockBudgetIntegrity.isImePseudoForeground(
                 eventPackage = "com.google.android.inputmethod.latin",
                 activeImePackage = "com.google.android.inputmethod.latin",
-                currentProtectedPackage = "com.whatsapp"
+                currentProtectedPackage = "com.whatsapp",
+                eventType = 32,
+                className = "android.inputmethodservice.SoftInputWindow"
+            )
+        )
+        assertTrue(
+            UnlockBudgetIntegrity.isImePseudoForeground(
+                eventPackage = "com.google.android.inputmethod.latin",
+                activeImePackage = "com.google.android.inputmethod.latin",
+                currentProtectedPackage = "com.whatsapp",
+                eventType = 1,
+                className = "android.widget.TextView"
+            )
+        )
+        assertFalse(
+            UnlockBudgetIntegrity.isImePseudoForeground(
+                eventPackage = "com.google.android.inputmethod.latin",
+                activeImePackage = "com.google.android.inputmethod.latin",
+                currentProtectedPackage = "com.whatsapp",
+                eventType = 32,
+                className = "com.google.android.inputmethod.latin.settings.SettingsActivity"
             )
         )
         assertFalse(
             UnlockBudgetIntegrity.isImePseudoForeground(
                 eventPackage = "com.android.launcher3",
                 activeImePackage = "com.google.android.inputmethod.latin",
-                currentProtectedPackage = "com.whatsapp"
+                currentProtectedPackage = "com.whatsapp",
+                eventType = 32,
+                className = "com.android.launcher3.Launcher"
             )
         )
     }
