@@ -363,13 +363,12 @@ object GuardPrefs {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val state = readUnlockBudgetState(prefs, packageName)
         val now = SystemClock.elapsedRealtime()
-        val gap = if (now >= recovery.checkpointElapsedMs) {
-            now - recovery.checkpointElapsedMs
-        } else {
-            0L
-        }
+        val boundedCharge = UnlockBudgetIntegrity.boundedRecoveryChargeMs(
+            checkpointElapsedMs = recovery.checkpointElapsedMs,
+            nowElapsedMs = now
+        )
         val updated = UnlockBudgetState(
-            remainingMs = (state.remainingMs - gap).coerceAtLeast(0L)
+            remainingMs = (state.remainingMs - boundedCharge).coerceAtLeast(0L)
         )
         writeUnlockBudgetState(prefs, packageName, updated, synchronous = true)
         return updated.remainingMs
