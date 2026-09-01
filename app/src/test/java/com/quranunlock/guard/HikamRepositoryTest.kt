@@ -22,7 +22,7 @@ class HikamRepositoryTest {
             assertTrue(hikma.source.sourceUrl.startsWith("https://"))
             assertTrue(hikma.verification.sourceVerified)
             assertTrue(hikma.verification.attributionVerified)
-            assertTrue(hikma.verification.translationVerified)
+            assertTrue(hikma.verification.translationAvailable)
             assertFalse(hikma.verification.humanVerified)
             assertTrue(hikma.displayEligible)
         }
