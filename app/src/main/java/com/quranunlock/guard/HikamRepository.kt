@@ -39,8 +39,16 @@ data class HikmaEntry(
     val source: ClassicalSource,
     val verification: ClassicalVerification,
     val commentary: HikmaCommentary?,
+    val additionalCommentaries: List<HikmaCommentary> = emptyList(),
     val textIntegrity: ClassicalTextIntegrity
 ) {
+    /**
+     * Classical commentaries are intentionally kept as independent source units.
+     * Never merge, synthesize or paraphrase multiple commentators into one text.
+     */
+    val commentaries: List<HikmaCommentary>
+        get() = listOfNotNull(commentary) + additionalCommentaries
+
     val displayEligible: Boolean
         get() =
             canonicalId.isNotBlank() &&
