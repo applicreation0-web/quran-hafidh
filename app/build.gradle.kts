@@ -48,6 +48,35 @@ val verifyPrivacyBoundary by tasks.registering {
             "Data migrations must run before activities/services use persisted state."
         }
 
+        val requiredManifestComponents = mapOf(
+            ".QuranSafeguardApp" to "src/main/java/com/quranunlock/guard/QuranSafeguardApp.kt",
+            ".QuranAccessibilityService" to "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt",
+            ".DashboardActivity" to "src/main/java/com/quranunlock/guard/DashboardActivity.kt",
+            ".MainActivity" to "src/main/java/com/quranunlock/guard/MainActivity.kt",
+            ".GateActivity" to "src/main/java/com/quranunlock/guard/GateActivity.kt",
+            ".MushafReaderActivity" to "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt",
+            ".ReadingCompleteActivity" to "src/main/java/com/quranunlock/guard/ReadingCompleteActivity.kt"
+        )
+        requiredManifestComponents.forEach { (component, source) ->
+            check(manifest.contains("android:name=\"" + component + "\"")) {
+                "Required Android component missing from manifest: " + component
+            }
+            check(file(source).isFile) {
+                "Manifest component has no source file: " + component
+            }
+        }
+        val reminderSource = file(
+            "src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt"
+        ).readText()
+        listOf("MindfulReminderReceiver", "ReminderRescheduleReceiver").forEach { receiver ->
+            check(manifest.contains("android:name=\"." + receiver + "\"")) {
+                "Reminder receiver missing from manifest: " + receiver
+            }
+            check(reminderSource.contains("class " + receiver + " ")) {
+                "Manifest receiver class missing from source: " + receiver
+            }
+        }
+
         check(!manifest.contains("android.permission.INTERNET")) {
             "Quran Safeguard must remain offline: INTERNET permission is forbidden."
         }
