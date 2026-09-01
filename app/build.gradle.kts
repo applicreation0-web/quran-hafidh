@@ -8,6 +8,11 @@ val verifyFrozenReminderSnapshot by tasks.registering(Exec::class) {
     commandLine("python3", "scripts/verify_frozen_reminders.py")
 }
 
+val verifyHikam264 by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("python3", "scripts/verify_hikam_264.py")
+}
+
 val verifyMushafPages by tasks.registering {
     doLast {
         val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
@@ -530,6 +535,7 @@ val verifyThoughtOfDayBoundary by tasks.registering {
 
 val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyFrozenReminderSnapshot)
+    dependsOn(verifyHikam264)
     dependsOn(verifyMushafPages)
     dependsOn(verifyPrivacyBoundary)
     dependsOn(verifyEditorialBoundary)
@@ -557,6 +563,7 @@ android {
 
 tasks.named("preBuild").configure {
     dependsOn(verifyFrozenReminderSnapshot)
+    dependsOn(verifyHikam264)
     dependsOn(verifyMushafPages)
     dependsOn(verifyPrivacyBoundary)
     dependsOn(verifyEditorialBoundary)
