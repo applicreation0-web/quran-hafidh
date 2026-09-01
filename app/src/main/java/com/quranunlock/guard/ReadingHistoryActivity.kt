@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -37,7 +39,10 @@ class ReadingHistoryActivity : ComponentActivity() {
         val history = GuardPrefs.readingHistory(this@ReadingHistoryActivity, 50)
             .filter { it.method == "reading" }
 
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -45,28 +50,48 @@ class ReadingHistoryActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    "Historique",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
+                    "HISTORIQUE",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Lecture réelle mesurée pendant l’affichage du Mushaf.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    "Lecture & progression",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
                 )
 
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.padding(17.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
                             "Aujourd’hui",
                             color = MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
-                        Text("${today.pages} page(s) • ${formatHistoryDuration(today.totalMs)}")
                         Text(
-                            "Moyenne 7 jours : ${formatHistoryDuration(sevenDays)} • 30 jours : ${formatHistoryDuration(thirtyDays)}",
+                            today.pages.toString() + " page(s)",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            formatHistoryDuration(today.totalMs) + " de lecture",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Moyenne 7 jours : " + formatHistoryDuration(sevenDays) +
+                                " • 30 jours : " + formatHistoryDuration(thirtyDays),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -74,10 +99,14 @@ class ReadingHistoryActivity : ComponentActivity() {
                 }
 
                 if (history.isEmpty()) {
-                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
                         Text(
                             "Aucune lecture terminée pour le moment.",
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else {
@@ -86,21 +115,33 @@ class ReadingHistoryActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(history) { entry ->
-                            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.elevatedCardElevation(
+                                    defaultElevation = 1.dp
+                                )
+                            ) {
                                 Column(
                                     modifier = Modifier.padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    verticalArrangement = Arrangement.spacedBy(3.dp)
                                 ) {
                                     Text(
-                                        "Page ${entry.page}",
-                                        fontWeight = FontWeight.SemiBold,
+                                        "Page " + entry.page,
+                                        fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(formatHistoryDate(entry.epochMs))
+                                    Text(
+                                        formatHistoryDate(entry.epochMs),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                     Text(
                                         formatHistoryDuration(entry.elapsedMs),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.secondary
                                     )
                                 }
                             }
@@ -116,7 +157,8 @@ private fun formatHistoryDuration(milliseconds: Long): String {
     val totalSeconds = (milliseconds / 1000L).coerceAtLeast(0L)
     val minutes = totalSeconds / 60L
     val seconds = totalSeconds % 60L
-    return if (minutes > 0L) "${minutes}min ${seconds}s" else "${seconds}s"
+    return if (minutes > 0L) minutes.toString() + "min " + seconds + "s"
+    else seconds.toString() + "s"
 }
 
 private fun formatHistoryDate(epochMs: Long): String =
