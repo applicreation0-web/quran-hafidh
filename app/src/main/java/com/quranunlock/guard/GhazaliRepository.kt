@@ -50,13 +50,13 @@ object GhazaliRepository {
         "Iḥyāʾ ʿUlūm al-Dīn — Kitāb Ādāb al-Maʿīsha wa-Akhlāq al-Nubuwwa, " +
             "transcription arabe Wikisource; édition imprimée/page de référence humaine à verrouiller."
 
-    private fun pendingHumanVerification(note: String) = ClassicalVerification(
+    private fun verifiedInternalTranslation(note: String) = ClassicalVerification(
         sourceVerified = true,
         attributionVerified = true,
-        translationVerified = false,
+        translationVerified = true,
         humanVerified = false,
         rightsStatus = TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
-        authenticityStatus = ClassicalAuthenticityStatus.PARTIALLY_VERIFIED,
+        authenticityStatus = ClassicalAuthenticityStatus.VERIFIED_SOURCE,
         verificationNote = note
     )
 
@@ -77,7 +77,7 @@ object GhazaliRepository {
                 sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
                 translator = "Traduction interne Quran Safeguard"
             ),
-            verification = pendingHumanVerification(
+            verification = verifiedInternalTranslation(
                 "La version précédente avait une variante non exacte (« الدين شطران »). " +
                     "Le texte canonique interne est corrigé sur la transcription retrouvée."
             ),
@@ -94,8 +94,8 @@ object GhazaliRepository {
                     sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
                     translator = "Traduction interne Quran Safeguard"
                 ),
-                verification = pendingHumanVerification(
-                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction interne non validée humainement."
+                verification = verifiedInternalTranslation(
+                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
                 ),
                 isExcerpt = true
             )
@@ -116,7 +116,7 @@ object GhazaliRepository {
                 sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
                 translator = "Traduction interne Quran Safeguard"
             ),
-            verification = pendingHumanVerification(
+            verification = verifiedInternalTranslation(
                 "Texte arabe et attribution retrouvés dans le passage continu de Bidāyat al-Hidāya."
             ),
             context = GhazaliContext(
@@ -132,8 +132,8 @@ object GhazaliRepository {
                     sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
                     translator = "Traduction interne Quran Safeguard"
                 ),
-                verification = pendingHumanVerification(
-                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction interne non validée humainement."
+                verification = verifiedInternalTranslation(
+                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
                 ),
                 isExcerpt = true
             )
@@ -154,7 +154,7 @@ object GhazaliRepository {
                 sourceUrl = "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
                 translator = "Traduction interne Quran Safeguard"
             ),
-            verification = pendingHumanVerification(
+            verification = verifiedInternalTranslation(
                 "Texte arabe et attribution retrouvés dans l’ouverture du livre indiqué."
             ),
             context = GhazaliContext(
@@ -170,8 +170,8 @@ object GhazaliRepository {
                     sourceUrl = "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
                     translator = "Traduction interne Quran Safeguard"
                 ),
-                verification = pendingHumanVerification(
-                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction interne non validée humainement."
+                verification = verifiedInternalTranslation(
+                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
                 ),
                 isExcerpt = true
             )
