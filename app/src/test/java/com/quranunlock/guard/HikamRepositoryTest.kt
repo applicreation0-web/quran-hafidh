@@ -7,50 +7,62 @@ import org.junit.Test
 
 class HikamRepositoryTest {
     @Test
-    fun canonicalEntriesAreUniqueAndCompleteForDisplay() {
+    fun canonicalEntriesHaveDocumentaryMetadata() {
         val entries = HikamRepository.entries
-
-        assertTrue(entries.isNotEmpty())
+        assertEquals(3, entries.size)
         assertEquals(entries.size, entries.map { it.canonicalId }.distinct().size)
         assertEquals(entries.size, entries.map { it.sourceNumber }.distinct().size)
 
         entries.forEach { hikma ->
-            assertTrue(hikma.canonicalId.startsWith("hikma_"))
-            assertTrue(hikma.sourceNumber > 0)
             assertTrue(hikma.arabicText.isNotBlank())
             assertTrue(hikma.frenchText.isNotBlank())
-            assertTrue(hikma.transliteration.isNotBlank())
-            assertTrue(hikma.sourceUrl.startsWith("https://"))
-            assertTrue(hikma.verificationDate.isNotBlank())
-            assertTrue(hikma.sourceNote.isNotBlank())
+            assertTrue(hikma.source.author.contains("Ibn ʿAṭāʾ Allāh"))
+            assertTrue(hikma.source.workTitle.contains("Hikam"))
+            assertTrue(hikma.source.locator.isNotBlank())
+            assertTrue(hikma.source.sourceUrl.startsWith("https://"))
+            assertTrue(hikma.verification.sourceVerified)
+            assertTrue(hikma.verification.attributionVerified)
+            assertFalse(hikma.verification.translationVerified)
+            assertFalse(hikma.verification.humanVerified)
+            assertFalse(hikma.displayEligible)
         }
     }
 
     @Test
-    fun classicalCommentariesAreExplicitlyAttributedAndTraceable() {
+    fun unverifiedHikamAreInvisibleToReminderEngine() {
+        assertTrue(HikamRepository.asDailyReminders().isEmpty())
+        HikamRepository.entries.forEach {
+            assertTrue(HikamRepository.byId(it.canonicalId) == null)
+        }
+    }
+
+    @Test
+    fun ibnAjibaIsAlwaysCommentatorNotHikamAuthor() {
         HikamRepository.entries.forEach { hikma ->
-            val commentary = hikma.commentary
-            assertTrue(commentary != null)
-            commentary!!
-            assertEquals("Ibn ʿAjība", commentary.commentator)
-            assertTrue(commentary.workTitle.contains("Īqāẓ al-Himam"))
-            assertTrue(commentary.arabicExcerpt.isNotBlank())
-            assertTrue(commentary.frenchTranslation.isNotBlank())
-            assertTrue(commentary.edition.contains("Dār Jawāmiʿ al-Kalim"))
-            assertTrue(commentary.locator.contains("Ḥikma " + hikma.sourceNumber))
-            assertTrue(commentary.sourceUrl.startsWith("https://"))
+            val commentary = hikma.commentary!!
+            assertEquals("Ibn ʿAjība", commentary.source.author)
+            assertTrue(commentary.source.workTitle.contains("Īqāẓ al-Himam"))
+            assertTrue(commentary.source.locator.contains("Hikma " + hikma.sourceNumber))
+            assertTrue(commentary.source.sourceUrl.startsWith("https://"))
             assertTrue(commentary.isExcerpt)
-            assertTrue(commentary.arabicExcerpt.contains("…") || commentary.arabicExcerpt.contains("[…]"))
+            assertTrue(commentary.arabicText.contains("[…]"))
+            assertFalse(commentary.displayEligible)
         }
     }
 
     @Test
-    fun dailyReminderViewIsDerivedFromCanonicalHikamOnly() {
-        val canonicalIds = HikamRepository.entries.map { it.canonicalId }.toSet()
-        val reminderIds = HikamRepository.asDailyReminders().map { it.id }.toSet()
-
-        assertEquals(canonicalIds, reminderIds)
-        assertTrue(HikamRepository.asDailyReminders().all { it.type == ReminderType.HIKAM })
-        assertFalse(ReminderLibrary.items.any { it.id in canonicalIds })
+    fun sourceNumberingAndArabicStayLockedToRetainedSource() {
+        assertEquals(
+            "اجتهادك فيما ضمن لك وتقصيرك فيما طلب منك دليل على انطماس البصيرة منك.",
+            HikamRepository.entries.first { it.sourceNumber == 5 }.arabicText
+        )
+        assertEquals(
+            "الأعمال صور قائمة، وأرواحها وجود سر الإخلاص فيها.",
+            HikamRepository.entries.first { it.sourceNumber == 10 }.arabicText
+        )
+        assertEquals(
+            "ما نفع القلب شئ مثل عزلة يدخل بها ميدان فكرة.",
+            HikamRepository.entries.first { it.sourceNumber == 12 }.arabicText
+        )
     }
 }
