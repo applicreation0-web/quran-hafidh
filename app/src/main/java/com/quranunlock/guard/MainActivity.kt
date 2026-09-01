@@ -81,15 +81,14 @@ class MainActivity : ComponentActivity() {
             Quran Safeguard 🌿
 
             Installation simple :
-            1. Ouvre le lien privé Google Play Quran Safeguard qui t’a été envoyé.
-            2. Utilise le compte Google autorisé et rejoins le test si Google Play le demande.
-            3. Installe Quran Safeguard depuis Google Play puis ouvre l’application.
-            4. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
-            5. Autorise les rappels et, si tu le souhaites, la localisation approximative utilisée uniquement sur le téléphone pour calculer Fajr, le lever du soleil, ‘Asr et Maghrib.
-            6. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
-            7. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
+            1. Utilise uniquement l’APK signé de la version candidate Quran Safeguard qui t’a été fourni avec son contrôle SHA-256.
+            2. Installe l’APK puis ouvre Quran Safeguard.
+            3. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
+            4. Autorise les rappels et, si tu le souhaites, la localisation approximative utilisée uniquement sur le téléphone pour calculer Fajr, le lever du soleil, ‘Asr et Maghrib.
+            5. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
+            6. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
 
-            N’installe pas d’APK reçu par message ou par email. En cas de doute, reviens simplement dans Quran Safeguard.
+            N’installe pas une autre APK portant le même nom depuis une source différente. En cas de doute, vérifie le SHA-256 ou le certificat de signature de la version fournie.
             Bonne installation 🌿
         """.trimIndent()
 
