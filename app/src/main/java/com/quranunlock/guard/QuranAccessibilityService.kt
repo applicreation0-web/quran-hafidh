@@ -19,7 +19,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var foregroundUnlockedPackage: String? = null
     private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
-    private val permanentlyExcludedCache = mutableSetOf<String>()
+    private val permanentlyExcludedCache = mutableMapOf<String, Boolean>()
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -124,13 +124,16 @@ class QuranAccessibilityService : AccessibilityService() {
             return
         }
 
+        val isProtectedPackage = ProtectedApps.isProtected(this, packageName)
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+            (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED &&
+                (isProtectedPackage || packageName == this.packageName))
         ) {
             handleForegroundPackage(packageName)
         }
 
-        if (!ProtectedApps.isProtected(this, packageName)) return
+        if (!isProtectedPackage) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
 
         val now = SystemClock.elapsedRealtime()
@@ -153,12 +156,10 @@ class QuranAccessibilityService : AccessibilityService() {
         scheduleRetry(packageName, 900L, "retry_2")
     }
 
-    private fun isPermanentlyExcluded(packageName: String): Boolean {
-        if (packageName in permanentlyExcludedCache) return true
-        val excluded = ProtectedApps.isAlwaysAllowed(this, packageName)
-        if (excluded) permanentlyExcludedCache += packageName
-        return excluded
-    }
+    private fun isPermanentlyExcluded(packageName: String): Boolean =
+        permanentlyExcludedCache.getOrPut(packageName) {
+            ProtectedApps.isAlwaysAllowed(this, packageName)
+        }
 
     private fun handlePermanentlyExcludedForeground() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
