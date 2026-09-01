@@ -15,7 +15,7 @@ class ClassicalAuthenticityTest {
     ) = ClassicalVerification(
         sourceVerified = source,
         attributionVerified = attribution,
-        translationVerified = translation,
+        translationAvailable = translation,
         humanVerified = human,
         rightsStatus = rights,
         authenticityStatus = status,
@@ -23,7 +23,7 @@ class ClassicalAuthenticityTest {
     )
 
     @Test
-    fun documentaryAuthenticityAndReviewedTranslationAreRequired() {
+    fun documentaryAuthenticityRequiresTranslationButNotHumanReview() {
         assertTrue(verification().displayEligible)
         assertFalse(verification(source = false).displayEligible)
         assertFalse(verification(attribution = false).displayEligible)

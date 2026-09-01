@@ -4,15 +4,20 @@ package com.applicreation0.quransafeguard
  * Canonical in-app source for Al-Hikam al-ʿAṭāʾiyya.
  *
  * Authenticity before quantity:
- * no entry is display-eligible until the exact Arabic, attribution, translation,
- * source, rights and HUMAN editorial validation have all been recorded.
+ * no entry is display-eligible until the exact Arabic, attribution, source/locator
+ * and a French translation are available. Human review of the translation is
+ * informative metadata, not a display requirement.
+ *
+ * The repository may grow toward the numbering of the retained source, but the
+ * app must never claim a complete corpus until every entry has been checked.
  */
 data class HikmaCommentary(
     val arabicText: String,
     val frenchText: String,
     val source: ClassicalSource,
     val verification: ClassicalVerification,
-    val isExcerpt: Boolean
+    val isExcerpt: Boolean,
+    val textIntegrity: ClassicalTextIntegrity
 ) {
     val displayEligible: Boolean
         get() =
@@ -22,8 +27,9 @@ data class HikmaCommentary(
                 source.workTitle.isNotBlank() &&
                 source.edition.isNotBlank() &&
                 source.locator.isNotBlank() &&
-                source.sourceUrl.isNotBlank() &&
-                verification.displayEligible
+                source.documentaryComplete &&
+                verification.displayEligible &&
+                textIntegrity.allows(arabicText, frenchText)
 }
 
 data class HikmaEntry(
@@ -35,7 +41,8 @@ data class HikmaEntry(
     val tags: Set<String>,
     val source: ClassicalSource,
     val verification: ClassicalVerification,
-    val commentary: HikmaCommentary?
+    val commentary: HikmaCommentary?,
+    val textIntegrity: ClassicalTextIntegrity
 ) {
     val displayEligible: Boolean
         get() =
@@ -47,8 +54,9 @@ data class HikmaEntry(
                 source.workTitle.isNotBlank() &&
                 source.edition.isNotBlank() &&
                 source.locator.isNotBlank() &&
-                source.sourceUrl.isNotBlank() &&
-                verification.displayEligible
+                source.documentaryComplete &&
+                verification.displayEligible &&
+                textIntegrity.allows(arabicText, frenchText)
 }
 
 object HikamRepository {
@@ -63,7 +71,7 @@ object HikamRepository {
     private fun verifiedInternalTranslation(note: String) = ClassicalVerification(
         sourceVerified = true,
         attributionVerified = true,
-        translationVerified = true,
+        translationAvailable = true,
         humanVerified = false,
         rightsStatus = TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
         authenticityStatus = ClassicalAuthenticityStatus.VERIFIED_SOURCE,
@@ -90,7 +98,7 @@ object HikamRepository {
             ),
             verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب […]",
@@ -106,9 +114,23 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 39. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Extrait arabe retrouvé à la p. 39. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
                 ),
-                isExcerpt = true
+                isExcerpt = true,
+                textIntegrity = ClassicalTextIntegrity(
+                    form = ClassicalTextForm.CONTINUOUS_EXCERPT,
+                    reconstructedOrAssembled = false,
+                    hasInternalOmissions = true,
+                    contextChecked = true,
+                    passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+                )
+            ),
+            textIntegrity = ClassicalTextIntegrity(
+                form = ClassicalTextForm.COMPLETE_TEXT,
+                reconstructedOrAssembled = false,
+                hasInternalOmissions = false,
+                contextChecked = true,
+                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             )
         ),
         HikmaEntry(
@@ -130,7 +152,7 @@ object HikamRepository {
             ),
             verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح […]",
@@ -146,9 +168,23 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 50. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Extrait arabe retrouvé à la p. 50. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
                 ),
-                isExcerpt = true
+                isExcerpt = true,
+                textIntegrity = ClassicalTextIntegrity(
+                    form = ClassicalTextForm.CONTINUOUS_EXCERPT,
+                    reconstructedOrAssembled = false,
+                    hasInternalOmissions = true,
+                    contextChecked = true,
+                    passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+                )
+            ),
+            textIntegrity = ClassicalTextIntegrity(
+                form = ClassicalTextForm.COMPLETE_TEXT,
+                reconstructedOrAssembled = false,
+                hasInternalOmissions = false,
+                contextChecked = true,
+                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             )
         ),
         HikmaEntry(
@@ -170,7 +206,7 @@ object HikamRepository {
             ),
             verification = verifiedInternalTranslation(
                 "Arabe et attribution retrouvés dans la source numérique retenue. " +
-                    "Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
             ),
             commentary = HikmaCommentary(
                 arabicText = "قلت : لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء […]",
@@ -186,9 +222,23 @@ object HikamRepository {
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Extrait arabe retrouvé à la p. 58. Traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Extrait arabe retrouvé à la p. 58. Traduction française interne produite à partir du passage arabe; pas de certification humaine externe."
                 ),
-                isExcerpt = true
+                isExcerpt = true,
+                textIntegrity = ClassicalTextIntegrity(
+                    form = ClassicalTextForm.CONTINUOUS_EXCERPT,
+                    reconstructedOrAssembled = false,
+                    hasInternalOmissions = true,
+                    contextChecked = true,
+                    passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+                )
+            ),
+            textIntegrity = ClassicalTextIntegrity(
+                form = ClassicalTextForm.COMPLETE_TEXT,
+                reconstructedOrAssembled = false,
+                hasInternalOmissions = false,
+                contextChecked = true,
+                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             )
         )
     )
