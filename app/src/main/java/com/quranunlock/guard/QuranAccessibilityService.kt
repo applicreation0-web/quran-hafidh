@@ -265,28 +265,42 @@ class QuranAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
 
-        pendingOrphanRecovery?.let { recovery ->
-            if (packageName == recovery.packageName) {
-                GuardPrefs.chargeRecoveredForegroundGap(this, recovery)
-            }
-            // Any first real post-restart event settles the ambiguity. If it is
-            // another package, no protected budget is charged for downtime.
-            pendingOrphanRecovery = null
-        }
-
         // The active keyboard belongs to another package but is not an app exit.
         // Keep the protected app as the sole budget owner while typing.
         val protectedForeground = foregroundPackage
             ?.takeIf { ProtectedApps.isProtected(this, it) }
-        if (UnlockBudgetIntegrity.isImePseudoForeground(
-                eventPackage = packageName,
-                activeImePackage = activeInputMethodPackage(),
-                currentProtectedPackage = protectedForeground,
-                eventType = event.eventType,
-                className = event.className?.toString()
-            )
-        ) {
+        val imePseudoForeground = UnlockBudgetIntegrity.isImePseudoForeground(
+            eventPackage = packageName,
+            activeImePackage = activeInputMethodPackage(),
+            currentProtectedPackage = protectedForeground,
+            eventType = event.eventType,
+            className = event.className?.toString()
+        )
+
+        if (imePseudoForeground) {
+            pendingOrphanRecovery?.let { recovery ->
+                if (recovery.packageName == protectedForeground) {
+                    GuardPrefs.chargeRecoveredForegroundGap(this, recovery)
+                    if (GuardPrefs.isUnlocked(this, recovery.packageName) &&
+                        !callFreezeActive
+                    ) {
+                        GuardPrefs.beginUnlockForeground(this, recovery.packageName)
+                        foregroundUnlockedPackage = recovery.packageName
+                        lastCheckpointElapsedMs = SystemClock.elapsedRealtime()
+                    }
+                    pendingOrphanRecovery = null
+                }
+            }
             return
+        }
+
+        pendingOrphanRecovery?.let { recovery ->
+            if (packageName == recovery.packageName) {
+                GuardPrefs.chargeRecoveredForegroundGap(this, recovery)
+            }
+            // Any first real non-IME event settles the ambiguity. If it is
+            // another package, no protected budget is charged for downtime.
+            pendingOrphanRecovery = null
         }
 
         // Fixed-scope model: anything outside selected social/browser targets,
