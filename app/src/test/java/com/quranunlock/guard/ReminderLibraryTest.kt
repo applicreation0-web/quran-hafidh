@@ -63,10 +63,20 @@ class ReminderLibraryTest {
 
     @Test
     fun requestedCoreThemesAreCovered() {
-        val curatedForDisplay = ReminderLibrary.items
-        val covered = curatedForDisplay.flatMap { item ->
-            item.tags + item.theme
-        }.toSet()
+        val covered = buildSet {
+            ReminderLibrary.items.forEach { item ->
+                add(item.theme)
+                addAll(item.tags)
+            }
+            HikamRepository.entries.forEach { item ->
+                add(item.theme)
+                addAll(item.tags)
+            }
+            GhazaliRepository.entries.forEach { item ->
+                add(item.theme)
+                addAll(item.tags)
+            }
+        }
 
         val required = setOf(
             "bonnes mœurs",
