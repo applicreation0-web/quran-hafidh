@@ -31,6 +31,42 @@ val verifyMushafPages by tasks.registering {
         }?.size == 604) {
             "The embedded Hafs/KFQC Mushaf must contain exactly 604 canonical pages."
         }
+
+        val reader = file(
+            "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
+        ).readText()
+        val prefs = file(
+            "src/main/java/com/quranunlock/guard/GuardPrefs.kt"
+        ).readText()
+        val policy = file(
+            "src/main/java/com/quranunlock/guard/ReadingValidationPolicy.kt"
+        ).readText()
+        val policyTests = file(
+            "src/test/java/com/quranunlock/guard/ReadingValidationPolicyTest.kt"
+        ).readText()
+
+        check(!reader.contains("0.80f") && !reader.contains("0.78f")) {
+            "Legacy 80% Mushaf viewport logic must never return."
+        }
+        check(reader.contains(".weight(1f)")) {
+            "The canonical Mushaf page must occupy the full remaining reader viewport."
+        }
+        check(policy.contains("MIN_ACTIVE_READING_MS = 60_000L")) {
+            "A page requires at least 60 active seconds."
+        }
+        check(prefs.contains("ReadingValidationPolicy.canValidate")) {
+            "Persistence must enforce the shared 60-second plus progress policy."
+        }
+        listOf(
+            "fiftyNineSecondsCannotValidateEvenAtBottom",
+            "sixtyActiveSecondsAndBottomCanValidate",
+            "sixtySecondsWithoutPageProgressCannotValidate",
+            "pausedTimeCannotBeInventedByValidationPolicy"
+        ).forEach { scenario ->
+            check(policyTests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking reading validation test: " + scenario
+            }
+        }
     }
 }
 
@@ -57,8 +93,7 @@ val verifyPrivacyBoundary by tasks.registering {
             ".DashboardActivity" to "src/main/java/com/quranunlock/guard/DashboardActivity.kt",
             ".MainActivity" to "src/main/java/com/quranunlock/guard/MainActivity.kt",
             ".GateActivity" to "src/main/java/com/quranunlock/guard/GateActivity.kt",
-            ".MushafReaderActivity" to "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt",
-            ".ReadingCompleteActivity" to "src/main/java/com/quranunlock/guard/ReadingCompleteActivity.kt"
+            ".MushafReaderActivity" to "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
         )
         requiredManifestComponents.forEach { (component, source) ->
             check(manifest.contains("android:name=\"" + component + "\"")) {
@@ -474,8 +509,8 @@ val verifyThoughtOfDayBoundary by tasks.registering {
         val daily = file(
             "src/main/java/com/quranunlock/guard/DailyReminder.kt"
         ).readText()
-        val completion = file(
-            "src/main/java/com/quranunlock/guard/ReadingCompleteActivity.kt"
+        val reader = file(
+            "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
         ).readText()
         val dashboard = file(
             "src/main/java/com/quranunlock/guard/DashboardActivity.kt"
@@ -522,14 +557,16 @@ val verifyThoughtOfDayBoundary by tasks.registering {
         check(dashboard.contains("ThoughtOfDayActivity::class.java")) {
             "Dashboard thought must open the full card."
         }
-        check(!completion.contains("DailyReminderCard")) {
-            "ReadingCompleteActivity must not render the thought of the day."
+        check(!reader.contains("DailyReminderCard") &&
+            !reader.contains("DailyReminderManager.today")
+        ) {
+            "Quran unlock must remain independent of spiritual reminder selection."
         }
-        check(!completion.contains("DailyReminderManager.today")) {
-            "Quran unlock completion must be independent of spiritual reminder selection."
+        check(reader.contains("completeReadingAndUnlock")) {
+            "Validated Quran reading must grant credit directly from the reader."
         }
-        check(completion.contains("unlockAfterReadingSummary")) {
-            "Quran unlock must continue directly from validated Quran reading."
+        check(!reader.contains("ReadingCompleteActivity")) {
+            "The obsolete post-reading summary screen must never return."
         }
 
         listOf(
