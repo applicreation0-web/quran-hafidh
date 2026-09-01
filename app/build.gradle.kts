@@ -40,6 +40,9 @@ val verifyPrivacyBoundary by tasks.registering {
         check(!manifest.contains("android.permission.QUERY_ALL_PACKAGES")) {
             "Broad package visibility is forbidden; keep launcher-scoped queries only."
         }
+        check(!manifest.contains("android.permission.READ_PHONE_STATE")) {
+            "Unlock-call freeze must use AudioManager mode, not sensitive phone-state access."
+        }
         check(accessibility.contains("android:canRetrieveWindowContent=\"false\"")) {
             "Accessibility window content retrieval must remain disabled."
         }
@@ -65,6 +68,82 @@ val verifyPrivacyBoundary by tasks.registering {
             )
         ) {
             "Accessibility events must remain limited to window changes."
+        }
+    }
+}
+
+
+val verifyUnlockBudgetIntegrity by tasks.registering {
+    doLast {
+        val service = file(
+            "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt"
+        ).readText()
+        val prefs = file(
+            "src/main/java/com/quranunlock/guard/GuardPrefs.kt"
+        ).readText()
+        val engine = file(
+            "src/main/java/com/quranunlock/guard/UnlockBudgetIntegrity.kt"
+        ).readText()
+        val tests = file(
+            "src/test/java/com/quranunlock/guard/UnlockBudgetIntegrityTest.kt"
+        ).readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+
+        check(!service.contains("750L")) {
+            "The old 750 ms foreground-exit grace period must never return."
+        }
+        check(service.contains("Settings.Secure.DEFAULT_INPUT_METHOD")) {
+            "The active IME must be identified explicitly so typing does not pause the app budget."
+        }
+        check(service.contains("addOnModeChangedListener")) {
+            "Android 12+ must react immediately to call/VoIP audio-mode changes."
+        }
+        check(service.contains("handleAudioModeChanged")) {
+            "Call/VoIP freeze handling is required."
+        }
+        check(service.contains("pauseForegroundBudget(clearForeground = true)")) {
+            "Real app exits and screen-off must pause immediately."
+        }
+        check(prefs.contains("UNLOCK_FOREGROUND_BOOT_PREFIX")) {
+            "Foreground unlock state must be tied to a boot identity."
+        }
+        check(prefs.contains("UNLOCK_FOREGROUND_CHECKPOINT_PREFIX")) {
+            "Foreground unlock state needs a persisted proof-of-life checkpoint."
+        }
+        check(prefs.contains("reconcileOrphanedUnlockForeground")) {
+            "Service/reboot orphan cleanup is mandatory."
+        }
+        check(engine.contains("shouldFreezeForAudioMode")) {
+            "Telephony and VoIP call freeze policy is missing."
+        }
+        check(engine.contains("shouldGateOnExpiration")) {
+            "Exact-zero expiration gate policy is missing."
+        }
+        check(!manifest.contains("android.permission.READ_PHONE_STATE")) {
+            "READ_PHONE_STATE is forbidden for this counter implementation."
+        }
+
+        val requiredScenarios = listOf(
+            "twentyMinutesFiveUsedLeavesFifteen",
+            "twoHoursOutsideAppConsumesNothing",
+            "intermittentThreePlusTwoPlusFourConsumesExactlyNine",
+            "twoApplicationsHaveIndependentBudgets",
+            "keyboardDoesNotCountAsExit",
+            "screenOffFreezesBudget",
+            "normalPhoneCallFreezesBudget",
+            "whatsappVoipCallFreezesBudget",
+            "rebootPreservesBudgetAndInvalidatesForegroundSession",
+            "serviceKillRestartLeavesNoPhantomForeground",
+            "oneHundredRapidTransitionsDoNotDrift",
+            "jokerUsesTheSameForegroundAccounting",
+            "deselectionReselectionStartsWithoutOldBudget",
+            "expirationIsExactZeroAndRequiresGateWhenStillForeground",
+            "pipAndSplitScreenNeverRequireTwoConcurrentBudgets"
+        )
+        requiredScenarios.forEach { scenario ->
+            check(tests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking unlock-budget test: " + scenario
+            }
         }
     }
 }
@@ -189,6 +268,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyMushafPages)
     dependsOn(verifyPrivacyBoundary)
     dependsOn(verifyEditorialBoundary)
+    dependsOn(verifyUnlockBudgetIntegrity)
 }
 
 dependencies {
@@ -204,4 +284,10 @@ dependencies {
     implementation("com.batoulapps.adhan:adhan2:0.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+}
+
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    dependsOn("testDebugUnitTest")
+    dependsOn(verifyUnlockBudgetIntegrity)
 }
