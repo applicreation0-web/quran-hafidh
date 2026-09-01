@@ -45,12 +45,6 @@
 
 
         <activity
-            android:name=".GhazaliDetailActivity"
-            android:excludeFromRecents="false"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-
-        <activity
             android:name=".HikamDetailActivity"
             android:excludeFromRecents="false"
             android:exported="false"
