@@ -63,7 +63,7 @@ object GhazaliRepository {
             "La traduction française affichée est interne à Quran Safeguard."
 
     private const val AYYUHA_URL =
-        "https://ar.wikisource.org/wiki/أيها_الولد"
+        "https://ar.wikisource.org/w/index.php?title=أيها_الولد&oldid=426675"
 
     private fun verifiedInternalTranslation(note: String) = ClassicalVerification(
         sourceVerified = true,
@@ -105,8 +105,8 @@ object GhazaliRepository {
                 editor = null,
                 volume = null,
                 locator =
-                    "Section « أيها الولد » — paragraphe commençant « لا تكن من الأعمال مفلسا »; " +
-                        "Wikisource, lignes 111-112 de la transcription contrôlée",
+                    "Section « أيها الولد » — paragraphe commençant " +
+                        "« لا تكن من الأعمال مفلسا، ولا من الأحوال خاليا »",
                 sourceUrl = AYYUHA_URL,
                 translator = "Traduction interne Quran Safeguard"
             ),
@@ -117,9 +117,11 @@ object GhazaliRepository {
             ),
             contextControl = GhazaliContextControl(
                 beforeLocator =
-                    "Wikisource lignes 107-109 : discussion sur la science sans mise en pratique",
+                    "Passage immédiatement précédent : discussion de la science sans mise en pratique, " +
+                        "puis récit rapporté concernant al-Junayd",
                 afterLocator =
-                    "Wikisource lignes 112-119 : exemple des armes puis prolongement sur science et action",
+                    "Suite immédiate du même paragraphe : exemple des armes et du lion, puis " +
+                        "« فكذا لو قرأ رجل مائة ألف مسألة علمية… »",
                 passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS,
                 continuityChecked = true,
                 nuanceRiskChecked = true
@@ -155,7 +157,8 @@ object GhazaliRepository {
                     editor = null,
                     volume = null,
                     locator =
-                        "Section « أيها الولد » — passage continu; Wikisource ligne 112",
+                        "Section « أيها الولد » — passage continu commençant " +
+                            "« لا تكن من الأعمال مفلسا » et poursuivi par l’exemple des armes et du lion",
                     sourceUrl = AYYUHA_URL,
                     translator = "Traduction interne Quran Safeguard"
                 ),
