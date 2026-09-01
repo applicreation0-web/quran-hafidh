@@ -201,17 +201,9 @@ class MainActivity : ComponentActivity() {
                 addAll(GuardPrefs.selectedHizb(this@MainActivity).sorted())
             }
         }
-        val installedApps = remember {
-            AppCatalog.launchableApps(this@MainActivity)
-                .filterNot { it.packageName in BrowserDetector.supportedPackages }
-        }
         val protectedPackages = remember {
             mutableStateListOf<String>().apply {
-                addAll(
-                    GuardPrefs.protectedPackages(this@MainActivity)
-                        .filterNot { it in BrowserDetector.supportedPackages }
-                        .sorted()
-                )
+                addAll(GuardPrefs.protectedPackages(this@MainActivity).sorted())
             }
         }
         var unlockMinutes by remember {
@@ -315,7 +307,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         Text(
-                            "8 navigateurs couverts • ${protectedPackages.size} autres applications choisies"
+                            "${protectedPackages.size}/${ProtectedApps.selectableTargets.size} cibles actives • réseaux sociaux et navigateurs uniquement"
                         )
                         Text(
                             "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles aujourd’hui"
@@ -329,16 +321,18 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = onActivateProtection
-                        ) {
+                        if (!serviceEnabled) {
+                            Button(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onActivateProtection
+                            ) {
+                                Text("Activer la protection via Android")
+                            }
+                        } else {
                             Text(
-                                if (serviceEnabled) {
-                                    "Ouvrir les réglages de protection"
-                                } else {
-                                    "Activer la protection"
-                                }
+                                "Tous les réglages Safeguard se modifient directement dans cette application. Accessibilité ne sert qu’à activer ou désactiver le service.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         OutlinedButton(
@@ -353,6 +347,37 @@ class MainActivity : ComponentActivity() {
                             onClick = { openAppSystemSettings() }
                         ) {
                             Text("Infos et autorisations Android")
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            SpiritualLibraryActivity::class.java
+                                        )
+                                    )
+                                }
+                            ) {
+                                Text("Bibliothèque")
+                            }
+                            OutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            AdhkarActivity::class.java
+                                        )
+                                    )
+                                }
+                            ) {
+                                Text("Adhkâr")
+                            }
                         }
                     }
                 }
@@ -632,40 +657,23 @@ class MainActivity : ComponentActivity() {
                         Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
                         Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
                         Text(
-                            "• Paramètres Android et désinstallation restent accessibles : la règle est stricte tant que tu choisis de jouer.",
+                            "• Paramètres Android est protégé pendant l’usage de Safeguard pour éviter un contournement trivial ; la désinstallation reste sous le contrôle du propriétaire du téléphone.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                SectionTitle("Navigateurs")
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text("Couverture volontaire fixe", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Chrome • Firefox • Edge • Brave • Opera • Samsung Internet • DuckDuckGo • Vivaldi",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "Aucun navigateur inconnu ni WebView d’une autre application n’est bloqué automatiquement.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-
-                SectionTitle("Applications")
+                SectionTitle("Applications protégées")
                 Text(
-                    "Choisis les autres applications auxquelles appliquer la pause Quran.",
+                    "Tout se règle ici. Safeguard est volontairement limité aux réseaux sociaux, messageries sociales et huit navigateurs connus.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "Appels, alarmes/urgence, banque, paiement, identité, authentification et sécurité sont toujours exclus. Paramètres Android reste protégé pour éviter un contournement involontaire.",
+                    "Banque, paiement, identité, authentification, mots de passe, sécurité, appels et alarmes ne sont jamais des cibles Safeguard. Paramètres Android reste protégé contre le contournement.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -674,52 +682,65 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.weight(1f),
                         onClick = {
                             protectedPackages.clear()
-                            protectedPackages.addAll(installedApps.map { it.packageName })
-                            GuardPrefs.saveProtectedPackages(this@MainActivity, protectedPackages.toSet())
+                            protectedPackages.addAll(
+                                ProtectedApps.selectableScopePackages.sorted()
+                            )
+                            GuardPrefs.saveProtectedPackages(
+                                this@MainActivity,
+                                protectedPackages.toSet()
+                            )
                         }
-                    ) { Text("Tout sélectionner") }
+                    ) { Text("Tout activer") }
 
                     OutlinedButton(
                         modifier = Modifier.weight(1f),
                         onClick = {
                             protectedPackages.clear()
-                            GuardPrefs.saveProtectedPackages(this@MainActivity, emptySet())
+                            GuardPrefs.saveProtectedPackages(
+                                this@MainActivity,
+                                emptySet()
+                            )
                         }
-                    ) { Text("Tout désélectionner") }
+                    ) { Text("Tout désactiver") }
                 }
 
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                        installedApps.forEach { app ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = app.packageName in protectedPackages,
-                                    onCheckedChange = { checked ->
-                                        if (checked) {
-                                            if (app.packageName !in protectedPackages) {
-                                                protectedPackages.add(app.packageName)
+                listOf(
+                    "Réseaux sociaux" to ProtectedApps.socialTargets,
+                    "Navigateurs" to ProtectedApps.browserTargets
+                ).forEach { (groupTitle, targets) ->
+                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                groupTitle,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            targets.forEach { target ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = target.packageName in protectedPackages,
+                                        onCheckedChange = { checked ->
+                                            if (checked) {
+                                                if (target.packageName !in protectedPackages) {
+                                                    protectedPackages.add(target.packageName)
+                                                }
+                                            } else {
+                                                protectedPackages.remove(target.packageName)
                                             }
-                                        } else {
-                                            protectedPackages.remove(app.packageName)
+                                            GuardPrefs.saveProtectedPackages(
+                                                this@MainActivity,
+                                                protectedPackages.toSet()
+                                            )
                                         }
-                                        GuardPrefs.saveProtectedPackages(
-                                            this@MainActivity,
-                                            protectedPackages.toSet()
-                                        )
-                                    }
-                                )
-                                Column {
-                                    Text(app.label)
-                                    Text(
-                                        app.packageName,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    Text(target.label)
                                 }
                             }
                         }
@@ -990,14 +1011,16 @@ private fun SectionTitle(text: String) {
 @Composable
 fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
-        primary = Color(0xFF0B6B4F),
+        primary = Color(0xFF315F4A),
         onPrimary = Color.White,
-        secondary = Color(0xFF2F7D63),
-        background = Color(0xFFF7FBF8),
-        surface = Color(0xFFFFFFFF),
-        surfaceVariant = Color(0xFFE8F3ED),
-        onSurface = Color(0xFF17231E),
-        onSurfaceVariant = Color(0xFF52635B)
+        secondary = Color(0xFF9A6A2F),
+        tertiary = Color(0xFF6B4933),
+        background = Color(0xFFFBF8F1),
+        surface = Color(0xFFFFFDF8),
+        surfaceVariant = Color(0xFFF1E9DA),
+        onSurface = Color(0xFF2A241F),
+        onSurfaceVariant = Color(0xFF675B50),
+        outline = Color(0xFFB89A68)
     )
     MaterialTheme(colorScheme = colors, content = content)
 }
