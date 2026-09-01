@@ -45,6 +45,8 @@ class SpiritualLibraryActivity : ComponentActivity() {
                 SpiritualLibraryScreen(
                     hadiths = ReminderLibrary.all(this)
                         .filter { it.type == ReminderType.HADITH },
+                    hikamEntries = HikamRepository.entries(this)
+                        .filter { it.displayEligible },
                     onOpenHikma = { id ->
                         startActivity(
                             Intent(this, HikamDetailActivity::class.java)
@@ -66,6 +68,7 @@ class SpiritualLibraryActivity : ComponentActivity() {
 @Composable
 private fun SpiritualLibraryScreen(
     hadiths: List<DailyReminder>,
+    hikamEntries: List<HikmaEntry>,
     onOpenHikma: (String) -> Unit,
     onOpenGhazali: (String) -> Unit
 ) {
@@ -138,7 +141,7 @@ private fun SpiritualLibraryScreen(
                 }
 
                 LibrarySection.HIKAM -> {
-                    val entries = HikamRepository.entries.filter { it.displayEligible }
+                    val entries = hikamEntries
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)

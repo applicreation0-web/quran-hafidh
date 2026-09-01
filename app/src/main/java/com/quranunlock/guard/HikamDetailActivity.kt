@@ -39,7 +39,7 @@ class HikamDetailActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val hikma = HikamRepository.byId(intent.getStringExtra(EXTRA_HIKMA_ID).orEmpty())
+        val hikma = HikamRepository.byId(this, intent.getStringExtra(EXTRA_HIKMA_ID).orEmpty())
         if (hikma == null) {
             finish()
             return
@@ -135,8 +135,8 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 }
             }
 
-            val commentary = hikma.commentary
-            if (commentary != null && commentary.displayEligible) {
+            val commentaries = hikma.commentaries.filter { it.displayEligible }
+            if (commentaries.isNotEmpty()) {
                 Button(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -145,97 +145,115 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                     onClick = { showCommentary = !showCommentary }
                 ) {
                     Text(
-                        if (showCommentary) "Masquer le commentaire classique"
-                        else "Approfondir — commentaire classique"
+                        if (showCommentary) {
+                            if (commentaries.size == 1) "Masquer le commentaire classique"
+                            else "Masquer les commentaires classiques"
+                        } else {
+                            if (commentaries.size == 1) "Approfondir — commentaire classique"
+                            else "Approfondir — commentaires classiques"
+                        }
                     )
                 }
 
                 if (showCommentary) {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Text(
+                        "Chaque commentaire est affiché séparément, avec son auteur et sa source. Aucune synthèse entre commentateurs.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    commentaries.forEach { commentary ->
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(22.dp),
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                         ) {
-                            Text(
-                                "Commentaire classique",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Ibn ʿAjība",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Texte du commentateur présenté sans reformulation.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                if (commentaryArabic) {
-                                    Button(
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(14.dp),
-                                        onClick = { commentaryArabic = true }
-                                    ) { Text("Arabe") }
-                                    OutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(14.dp),
-                                        onClick = { commentaryArabic = false }
-                                    ) { Text("Français") }
-                                } else {
-                                    OutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(14.dp),
-                                        onClick = { commentaryArabic = true }
-                                    ) { Text("Arabe") }
-                                    Button(
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(14.dp),
-                                        onClick = { commentaryArabic = false }
-                                    ) { Text("Français") }
-                                }
-                            }
-
-                            if (commentaryArabic) {
                                 Text(
-                                    commentary.arabicText,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        textDirection = TextDirection.Rtl,
-                                        lineHeight = 30.sp
-                                    ),
-                                    textAlign = TextAlign.Right
+                                    "Commentaire classique",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            } else {
                                 Text(
-                                    commentary.frenchText,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    lineHeight = 25.sp
+                                    commentary.source.author,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            }
-
-                            if (commentary.isExcerpt) {
                                 Text(
-                                    "Extrait — suite dans la source",
+                                    commentary.source.workTitle,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Texte du commentateur présenté sans reformulation.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (commentaryArabic) {
+                                        Button(
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(14.dp),
+                                            onClick = { commentaryArabic = true }
+                                        ) { Text("Arabe") }
+                                        OutlinedButton(
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(14.dp),
+                                            onClick = { commentaryArabic = false }
+                                        ) { Text("Français") }
+                                    } else {
+                                        OutlinedButton(
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(14.dp),
+                                            onClick = { commentaryArabic = true }
+                                        ) { Text("Arabe") }
+                                        Button(
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(14.dp),
+                                            onClick = { commentaryArabic = false }
+                                        ) { Text("Français") }
+                                    }
+                                }
+
+                                if (commentaryArabic) {
+                                    Text(
+                                        commentary.arabicText,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            textDirection = TextDirection.Rtl,
+                                            lineHeight = 30.sp
+                                        ),
+                                        textAlign = TextAlign.Right
+                                    )
+                                } else {
+                                    Text(
+                                        commentary.frenchText,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        lineHeight = 25.sp
+                                    )
+                                }
+
+                                if (commentary.isExcerpt) {
+                                    Text(
+                                        "Extrait — suite dans la source",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                HikamSourceBlock(commentary.source)
                             }
-                            HikamSourceBlock(commentary.source)
                         }
                     }
                 }

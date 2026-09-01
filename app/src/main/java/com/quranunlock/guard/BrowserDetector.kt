@@ -6,7 +6,7 @@ import android.content.Context
  * Intentional, transparent browser coverage.
  *
  * Quran Safeguard is an awareness tool, not a general-purpose web firewall.
- * Only these eight mainstream browsers are part of the web rule.
+ * Only these six mainstream browsers are part of the web rule.
  */
 object BrowserDetector {
     val supportedPackages: Set<String> = setOf(
@@ -15,9 +15,7 @@ object BrowserDetector {
         "com.microsoft.emmx",                // Microsoft Edge
         "com.brave.browser",                 // Brave
         "com.opera.browser",                 // Opera
-        "com.sec.android.app.sbrowser",      // Samsung Internet
-        "com.duckduckgo.mobile.android",     // DuckDuckGo
-        "com.vivaldi.browser"                // Vivaldi
+        "com.sec.android.app.sbrowser"       // Samsung Internet
     )
 
     fun isBrowser(context: Context, packageName: String): Boolean {

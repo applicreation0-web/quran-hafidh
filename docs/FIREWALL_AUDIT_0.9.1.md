@@ -6,7 +6,7 @@ Date: 2026-09-01
 
 Selectable targets are deliberately restricted to:
 - social/communication targets declared in ProtectedApps.socialTargets;
-- exactly eight browsers declared in ProtectedApps.browserTargets.
+- exactly six browsers declared in ProtectedApps.browserTargets.
 
 Android Settings is a fixed anti-bypass protected target and is not user-selectable.
 

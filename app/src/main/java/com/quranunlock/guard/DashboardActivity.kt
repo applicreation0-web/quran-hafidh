@@ -48,6 +48,7 @@ class DashboardActivity : ComponentActivity() {
         val protectedCount = GuardPrefs.protectedPackages(this@DashboardActivity).size
         val totalReadingMs = GuardPrefs.totalReadingMs(this@DashboardActivity)
         val today = GuardPrefs.dailyReadingSummary(this@DashboardActivity)
+        val thought = DailyReminderManager.today(this@DashboardActivity)
 
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -201,6 +202,46 @@ class DashboardActivity : ComponentActivity() {
                         value = today.pages.toString(),
                         label = "Pages"
                     )
+                }
+
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            startActivity(
+                                Intent(
+                                    this@DashboardActivity,
+                                    ThoughtOfDayActivity::class.java
+                                )
+                            )
+                        },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 17.dp, vertical = 15.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "PENSÉE DU JOUR",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            thought.frenchText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            thought.author + " • " + thought.book,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 DashboardRow(

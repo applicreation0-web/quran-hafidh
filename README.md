@@ -1,6 +1,6 @@
 # Quran Safeguard
 
-Quran Safeguard is a private Android digital-wellbeing application that creates a deliberate Quran reading pause before selected apps and eight mainstream browsers.
+Quran Safeguard is a private Android digital-wellbeing application that creates a deliberate Quran reading pause before selected apps and six mainstream browsers.
 
 ## Product principles
 
@@ -12,7 +12,7 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - Each normal unlock grants up to 20 minutes to the relevant app, counted only while that app is actually in the foreground.
 - Gentle usage reminders appear at 10, 5 and 1 minute remaining.
 - Three daily jokers remain available, each capped to a maximum of five minutes.
-- Product scope is fixed to selected social/communication targets plus exactly eight browsers: Chrome, Firefox, Edge, Brave, Opera, Samsung Internet, DuckDuckGo and Vivaldi.
+- Product scope is fixed to selected social/communication targets plus exactly six browsers: Chrome, Firefox, Edge, Brave, Opera and Samsung Internet.
 - Banking, payment, identity, authentication, password/security, calls and alarms are not selectable Safeguard targets.
 - Accessibility starts from an explicit package scope and temporarily broadens only while a protected target is active, solely to detect the first transition away and pause foreground time; unrelated packages are not classified, logged or associated with Safeguard.
 - Accessibility window content retrieval is disabled.
