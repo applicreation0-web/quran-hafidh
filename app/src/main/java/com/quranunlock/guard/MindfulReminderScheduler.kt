@@ -25,6 +25,7 @@ object ReminderPrefs {
     private const val LAT = "latitude"
     private const val LON = "longitude"
     private const val HANAFI_ASR = "hanafi_asr"
+    private const val ADHKAR_TRANSLITERATION = "adhkar_transliteration"
 
     fun dailyEnabled(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -67,6 +68,15 @@ object ReminderPrefs {
     fun setHanafiAsr(context: Context, enabled: Boolean) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit().putBoolean(HANAFI_ASR, enabled).apply()
+    }
+
+    fun adhkarTransliterationEnabled(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getBoolean(ADHKAR_TRANSLITERATION, false)
+
+    fun setAdhkarTransliterationEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit().putBoolean(ADHKAR_TRANSLITERATION, enabled).apply()
     }
 }
 
