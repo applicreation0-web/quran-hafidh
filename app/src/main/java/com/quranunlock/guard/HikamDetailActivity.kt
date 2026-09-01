@@ -39,7 +39,7 @@ class HikamDetailActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val hikma = HikamRepository.byId(intent.getStringExtra(EXTRA_HIKMA_ID).orEmpty())
+        val hikma = HikamRepository.byId(this, intent.getStringExtra(EXTRA_HIKMA_ID).orEmpty())
         if (hikma == null) {
             finish()
             return
