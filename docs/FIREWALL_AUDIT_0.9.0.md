@@ -40,6 +40,7 @@ Always outside scope:
 - The current default dialer, dynamically resolved.
 - Google / AOSP / Samsung clock and alarm surfaces.
 - Android / Google emergency and safety surfaces.
+- The current system keyboard/input method (plus common Gboard/Samsung/AOSP/SwiftKey packages), because IME windows are transient overlays and must never be treated as a new foreground awareness target.
 - Google Play Services and known credential/security frameworks.
 - Known banking, finance, payment and fintech package families.
 - Known authenticator, password-manager and identity-protection families.
