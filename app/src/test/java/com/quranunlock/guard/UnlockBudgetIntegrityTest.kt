@@ -181,6 +181,22 @@ class UnlockBudgetIntegrityTest {
     }
 
     @Test
+    fun legacy09ForegroundMarkerIsInvalidatedWithoutReusingTimestamp() {
+        val legacy = UnlockBudgetState(
+            remainingMs = 15 * minute,
+            foregroundStartedElapsedMs = 9_999_999L,
+            foregroundBootCount = null,
+            checkpointElapsedMs = null
+        )
+
+        val migrated = UnlockBudgetIntegrity.reconcileOrphan(legacy)
+        assertEquals(15 * minute, migrated.remainingMs)
+        assertEquals(null, migrated.foregroundStartedElapsedMs)
+        assertEquals(null, migrated.foregroundBootCount)
+        assertEquals(null, migrated.checkpointElapsedMs)
+    }
+
+    @Test
     fun rebootPreservesBudgetAndInvalidatesForegroundSession() {
         var state = UnlockBudgetIntegrity.grant(20 * minute)
         state = UnlockBudgetIntegrity.start(state, 100L, 41)
