@@ -34,6 +34,20 @@ val verifyPrivacyBoundary by tasks.registering {
         val manifest = file("src/main/AndroidManifest.xml").readText()
         val accessibility = file("src/main/res/xml/accessibility_service_config.xml").readText()
 
+        val appBootstrap = file(
+            "src/main/java/com/quranunlock/guard/QuranSafeguardApp.kt"
+        )
+        check(appBootstrap.isFile) {
+            "Manifest declares QuranSafeguardApp but its Application class is missing."
+        }
+        val appBootstrapText = appBootstrap.readText()
+        check(manifest.contains("android:name=\".QuranSafeguardApp\"")) {
+            "QuranSafeguardApp must remain the process bootstrap."
+        }
+        check(appBootstrapText.contains("AppMigrations.run(this)")) {
+            "Data migrations must run before activities/services use persisted state."
+        }
+
         check(!manifest.contains("android.permission.INTERNET")) {
             "Quran Safeguard must remain offline: INTERNET permission is forbidden."
         }
