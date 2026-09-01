@@ -258,6 +258,28 @@ class UnlockBudgetIntegrityTest {
     }
 
     @Test
+    fun longServiceDeathGapCanChargeAtMostOneCheckpointInterval() {
+        assertEquals(
+            1_000L,
+            UnlockBudgetIntegrity.boundedRecoveryChargeMs(
+                checkpointElapsedMs = 10_000L,
+                nowElapsedMs = 10L * minute
+            )
+        )
+    }
+
+    @Test
+    fun shortServiceDeathGapChargesOnlyTheObservedTail() {
+        assertEquals(
+            450L,
+            UnlockBudgetIntegrity.boundedRecoveryChargeMs(
+                checkpointElapsedMs = 10_000L,
+                nowElapsedMs = 10_450L
+            )
+        )
+    }
+
+    @Test
     fun oneHundredRapidTransitionsDoNotDrift() {
         var state = UnlockBudgetIntegrity.grant(20 * minute)
         var now = 0L
