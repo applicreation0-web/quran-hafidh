@@ -36,9 +36,9 @@ object GhazaliRepository {
             tags = setOf("discipline personnelle", "bonnes habitudes", "maîtrise de soi"),
             book = "Bidâyat al-Hidâya",
             reference = "Section : éviter les désobéissances",
-            sourceUrl = "https://islamweb.net/ar/library/content/60/4822/",
+            sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
             verificationDate = VERIFIED_ON,
-            sourceNote = "Attributed in Siyar A‘lam an-Nubala’ to Abu Hamid al-Ghazali; also present in Bidayat al-Hidaya"
+            sourceNote = "Bidayat al-Hidaya • section on avoiding disobedience • direct Arabic text"
         ),
         GhazaliEntry(
             canonicalId = "ghazali_bidaya_limb_guardianship",
@@ -48,9 +48,9 @@ object GhazaliRepository {
             tags = setOf("soin du corps", "discipline personnelle", "bonnes habitudes", "comportement"),
             book = "Bidâyat al-Hidâya",
             reference = "Section : éviter les désobéissances",
-            sourceUrl = "https://baheth.ieasybooks.com/ar/media/شرح-بداية-الهداية-للإمام-الغزالي-رحمه-الله-تعالى-15",
+            sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
             verificationDate = VERIFIED_ON,
-            sourceNote = "Bidayat al-Hidaya • section on avoiding disobedience"
+            sourceNote = "Bidayat al-Hidaya • section on avoiding disobedience • direct Arabic text"
         ),
         GhazaliEntry(
             canonicalId = "ghazali_ihya_outer_inner_adab",
