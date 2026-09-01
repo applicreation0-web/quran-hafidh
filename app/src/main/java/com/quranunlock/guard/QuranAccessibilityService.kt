@@ -19,7 +19,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var foregroundUnlockedPackage: String? = null
     private var pendingForegroundPause: Runnable? = null
     private var screenReceiverRegistered = false
-    private val permanentlyExcludedCache = mutableSetOf<String>()
+    private val permanentlyExcludedCache = mutableMapOf<String, Boolean>()
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -29,6 +29,12 @@ class QuranAccessibilityService : AccessibilityService() {
                 }
                 foregroundUnlockedPackage = null
                 foregroundPackage = null
+                GuardRuntime.resetForeground()
+                cancelPendingLaunches()
+                val snapshot = GuardRuntime.interception.snapshot()
+                if (!snapshot.guardVisible) {
+                    GuardRuntime.interception.reset()
+                }
                 GuardDiagnostics.log(this@QuranAccessibilityService, "SCREEN_OFF_USAGE_PAUSED")
             }
         }
@@ -124,13 +130,16 @@ class QuranAccessibilityService : AccessibilityService() {
             return
         }
 
+        val isProtectedPackage = ProtectedApps.isProtected(this, packageName)
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+            (event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED &&
+                (isProtectedPackage || packageName == this.packageName))
         ) {
             handleForegroundPackage(packageName)
         }
 
-        if (!ProtectedApps.isProtected(this, packageName)) return
+        if (!isProtectedPackage) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
 
         val now = SystemClock.elapsedRealtime()
@@ -153,12 +162,10 @@ class QuranAccessibilityService : AccessibilityService() {
         scheduleRetry(packageName, 900L, "retry_2")
     }
 
-    private fun isPermanentlyExcluded(packageName: String): Boolean {
-        if (packageName in permanentlyExcludedCache) return true
-        val excluded = ProtectedApps.isAlwaysAllowed(this, packageName)
-        if (excluded) permanentlyExcludedCache += packageName
-        return excluded
-    }
+    private fun isPermanentlyExcluded(packageName: String): Boolean =
+        permanentlyExcludedCache.getOrPut(packageName) {
+            ProtectedApps.isAlwaysAllowed(this, packageName)
+        }
 
     private fun handlePermanentlyExcludedForeground() {
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
@@ -169,6 +176,7 @@ class QuranAccessibilityService : AccessibilityService() {
         }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        GuardRuntime.resetForeground()
 
         // Most importantly, retries created for a previous protected app must
         // never spill over on top of banking, identity or security apps.
@@ -181,6 +189,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun handleForegroundPackage(packageName: String) {
         if (packageName != this.packageName) {
+            GuardRuntime.markExternalForeground(packageName)
             val snapshot = GuardRuntime.interception.snapshot()
             if (snapshot.targetPackage != null &&
                 snapshot.targetPackage != packageName &&
@@ -258,6 +267,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private fun launchGate(packageName: String, reason: String) {
         if (GuardPrefs.isUnlocked(this, packageName)) return
         if (isPermanentlyExcluded(packageName)) return
+        if (GuardRuntime.externalForegroundPackage() != packageName) return
         if (!GuardRuntime.interception.shouldRetry(packageName) && reason != "initial") return
 
         // A delayed retry is valid only while its original target is still
@@ -325,6 +335,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundUnlockedPackage?.let { GuardPrefs.endUnlockForeground(this, it) }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        GuardRuntime.resetForeground()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
@@ -341,6 +352,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundUnlockedPackage?.let { GuardPrefs.endUnlockForeground(this, it) }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        GuardRuntime.resetForeground()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         pendingForegroundPause?.let(mainHandler::removeCallbacks)

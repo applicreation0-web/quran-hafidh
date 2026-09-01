@@ -21,6 +21,18 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <activity
+            android:name=".GhazaliDetailActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".HikamDetailActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".AdhkarActivity"
             android:excludeFromRecents="false"
             android:exported="false"
@@ -45,7 +57,7 @@
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
-            android:showWhenLocked="true" />
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".MainActivity"
@@ -75,7 +87,7 @@
         <receiver
             android:name=".ReminderRescheduleReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />

@@ -1,86 +1,223 @@
 package com.applicreation0.quransafeguard
 
 /**
- * Canonical in-app source for Al-Hikam al-'Ata'iyya.
+ * Canonical in-app source for Al-Hikam al-ʿAṭāʾiyya.
  *
- * Hikam must never be duplicated in ReminderLibrary or in another content store.
- * Any feature that wants to display a Hikma reads from this repository.
- *
- * The corpus is intentionally partial for now. Only entries whose Arabic text
- * and French translation have both been verified are admitted here.
+ * Authenticity before quantity:
+ * no entry is display-eligible until the exact Arabic, attribution, translation,
+ * source, rights and HUMAN editorial validation have all been recorded.
  */
+data class HikmaCommentary(
+    val arabicText: String,
+    val frenchText: String,
+    val source: ClassicalSource,
+    val verification: ClassicalVerification,
+    val isExcerpt: Boolean
+) {
+    val displayEligible: Boolean
+        get() =
+            arabicText.isNotBlank() &&
+                frenchText.isNotBlank() &&
+                source.author.isNotBlank() &&
+                source.workTitle.isNotBlank() &&
+                source.edition.isNotBlank() &&
+                source.locator.isNotBlank() &&
+                source.sourceUrl.isNotBlank() &&
+                verification.displayEligible
+}
+
 data class HikmaEntry(
     val canonicalId: String,
     val sourceNumber: Int,
     val arabicText: String,
     val frenchText: String,
+    val transliteration: String,
     val theme: String,
     val tags: Set<String>,
-    val sourceUrl: String,
-    val verificationDate: String,
-    val sourceNote: String
-)
+    val source: ClassicalSource,
+    val verification: ClassicalVerification,
+    val commentary: HikmaCommentary?
+) {
+    val displayEligible: Boolean
+        get() =
+            canonicalId.isNotBlank() &&
+                sourceNumber > 0 &&
+                arabicText.isNotBlank() &&
+                frenchText.isNotBlank() &&
+                source.author.isNotBlank() &&
+                source.workTitle.isNotBlank() &&
+                source.edition.isNotBlank() &&
+                source.locator.isNotBlank() &&
+                source.sourceUrl.isNotBlank() &&
+                verification.displayEligible
+}
 
 object HikamRepository {
-    private const val VERIFIED_ON = "2026-08-31"
+    private const val HIKAM_DIGITAL_EDITION =
+        "Al-Hikam al-ʿAṭāʾiyya — transcription arabe numérique, ibnalarabi.com; " +
+            "numérotation retenue pour l’identification interne. Édition imprimée de contrôle humain : à verrouiller."
+
+    private const val AJIBA_EDITION =
+        "Ibn ʿAjība, Īqāẓ al-Himam fī Sharḥ al-Ḥikam, éd./corr. " +
+            "Muḥammad ʿAbd al-Qādir Naṣṣār, Dār Jawāmiʿ al-Kalim, Le Caire, 632 p."
+
+    private fun pendingHumanVerification(note: String) = ClassicalVerification(
+        sourceVerified = true,
+        attributionVerified = true,
+        translationVerified = false,
+        humanVerified = false,
+        rightsStatus = TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
+        authenticityStatus = ClassicalAuthenticityStatus.PARTIALLY_VERIFIED,
+        verificationNote = note
+    )
 
     val entries: List<HikmaEntry> = listOf(
         HikmaEntry(
             canonicalId = "hikma_5",
             sourceNumber = 5,
-            arabicText = "اجْتِهَادُكَ فِيمَا ضُمِنَ لَكَ وَتَقْصِيرُكَ فِيمَا طُلِبَ مِنْكَ دَلِيلٌ عَلَى انْطِمَاسِ الْبَصِيرَةِ مِنْكَ.",
-            frenchText = "T’épuiser pour ce qui t’est garanti tout en négligeant ce qui t’est demandé est un signe d’obscurcissement de la clairvoyance.",
+            arabicText = "اجتهادك فيما ضمن لك وتقصيرك فيما طلب منك دليل على انطماس البصيرة منك.",
+            frenchText = "Ton effort dans ce qui t’est garanti et ta négligence dans ce qui t’est demandé sont une preuve de l’obscurcissement de ta clairvoyance.",
+            transliteration = "Ijtihāduka fīmā ḍumina laka wa-taqṣīruka fīmā ṭuliba minka dalīlun ʿalā inṭimāsi l-baṣīrati minka.",
             theme = "discipline",
             tags = setOf("gestion du temps", "discipline personnelle", "priorités", "bonnes habitudes"),
-            sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=5",
-            verificationDate = VERIFIED_ON,
-            sourceNote = "Al-Hikam al-‘Ata’iyya • Hikma 5"
+            source = ClassicalSource(
+                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
+                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
+                edition = HIKAM_DIGITAL_EDITION,
+                editor = null,
+                volume = null,
+                locator = "Hikma 5",
+                sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=5",
+                translator = "Traduction interne Quran Safeguard"
+            ),
+            verification = pendingHumanVerification(
+                "Arabe et attribution retrouvés dans la source numérique retenue. " +
+                    "Traduction interne non encore validée par un relecteur humain."
+            ),
+            commentary = HikmaCommentary(
+                arabicText = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب […]",
+                frenchText = "J’ai dit : l’effort appliqué à une chose consiste à déployer toute son énergie pour la rechercher ; la négligence est le relâchement et l’abandon, et la clairvoyance est le regard du cœur. […]",
+                source = ClassicalSource(
+                    author = "Ibn ʿAjība",
+                    workTitle = "Īqāẓ al-Himam fī Sharḥ al-Ḥikam",
+                    edition = AJIBA_EDITION,
+                    editor = "Muḥammad ʿAbd al-Qādir Naṣṣār",
+                    volume = null,
+                    locator = "Hikma 5 • p. 39",
+                    sourceUrl = "https://ablibrary.net/book_content/b/9684/39",
+                    translator = "Traduction interne Quran Safeguard"
+                ),
+                verification = pendingHumanVerification(
+                    "Extrait arabe retrouvé à la p. 39. Traduction interne non validée humainement."
+                ),
+                isExcerpt = true
+            )
         ),
         HikmaEntry(
             canonicalId = "hikma_10",
             sourceNumber = 10,
-            arabicText = "الأَعْمَالُ صُوَرٌ قَائِمَةٌ، وَأَرْوَاحُهَا وُجُودُ سِرِّ الإِخْلَاصِ فِيهَا.",
-            frenchText = "Les œuvres sont des formes dressées ; leur âme est la présence du secret de la sincérité en elles.",
+            arabicText = "الأعمال صور قائمة، وأرواحها وجود سر الإخلاص فيها.",
+            frenchText = "Les œuvres sont des formes dressées, et leurs âmes sont la présence en elles du secret de la sincérité.",
+            transliteration = "Al-aʿmālu ṣuwarun qāʾimatun, wa-arwāḥuhā wujūdu sirri l-ikhlāṣi fīhā.",
             theme = "sincérité",
             tags = setOf("sincérité", "intention", "bonnes habitudes", "discipline personnelle"),
-            sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=10",
-            verificationDate = VERIFIED_ON,
-            sourceNote = "Al-Hikam al-‘Ata’iyya • Hikma 10"
+            source = ClassicalSource(
+                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
+                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
+                edition = HIKAM_DIGITAL_EDITION,
+                editor = null,
+                volume = null,
+                locator = "Hikma 10",
+                sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=10",
+                translator = "Traduction interne Quran Safeguard"
+            ),
+            verification = pendingHumanVerification(
+                "Arabe et attribution retrouvés dans la source numérique retenue. " +
+                    "Traduction interne non encore validée par un relecteur humain."
+            ),
+            commentary = HikmaCommentary(
+                arabicText = "قلت : الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح […]",
+                frenchText = "J’ai dit : toutes les œuvres sont des formes et des corps, et leurs âmes sont la présence de la sincérité en elles ; de même que les formes ne subsistent que par les âmes […].",
+                source = ClassicalSource(
+                    author = "Ibn ʿAjība",
+                    workTitle = "Īqāẓ al-Himam fī Sharḥ al-Ḥikam",
+                    edition = AJIBA_EDITION,
+                    editor = "Muḥammad ʿAbd al-Qādir Naṣṣār",
+                    volume = null,
+                    locator = "Hikma 10 • p. 50",
+                    sourceUrl = "https://ablibrary.net/book_content/b/9684/50",
+                    translator = "Traduction interne Quran Safeguard"
+                ),
+                verification = pendingHumanVerification(
+                    "Extrait arabe retrouvé à la p. 50. Traduction interne non validée humainement."
+                ),
+                isExcerpt = true
+            )
         ),
         HikmaEntry(
             canonicalId = "hikma_12",
             sourceNumber = 12,
-            arabicText = "مَا نَفَعَ الْقَلْبَ شَيْءٌ مِثْلُ عُزْلَةٍ يَدْخُلُ بِهَا مَيْدَانَ فِكْرَةٍ.",
-            frenchText = "Rien n’est plus bénéfique au cœur qu’un moment de retrait qui ouvre un espace à la réflexion.",
+            arabicText = "ما نفع القلب شئ مثل عزلة يدخل بها ميدان فكرة.",
+            frenchText = "Rien n’est plus bénéfique au cœur qu’une retraite par laquelle il entre dans le champ de la réflexion.",
+            transliteration = "Mā nafaʿa l-qalba shayʾun mithlu ʿuzlatin yadkhulu bihā maydāna fikrah.",
             theme = "réflexion",
             tags = setOf("réflexion", "gestion du temps", "discipline personnelle", "maîtrise de soi"),
-            sourceUrl = "https://ablibrary.net/book_content/8865/58",
-            verificationDate = VERIFIED_ON,
-            sourceNote = "Al-Hikam al-‘Ata’iyya • Hikma 12, attested in Ibn ‘Ajiba’s commentary"
+            source = ClassicalSource(
+                author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
+                workTitle = "Al-Hikam al-ʿAṭāʾiyya",
+                edition = HIKAM_DIGITAL_EDITION,
+                editor = null,
+                volume = null,
+                locator = "Hikma 12",
+                sourceUrl = "https://www.ibnalarabi.com/books/hikam-ataiya.php?id=12",
+                translator = "Traduction interne Quran Safeguard"
+            ),
+            verification = pendingHumanVerification(
+                "Arabe et attribution retrouvés dans la source numérique retenue. " +
+                    "Traduction interne non encore validée par un relecteur humain."
+            ),
+            commentary = HikmaCommentary(
+                arabicText = "قلت : لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء […]",
+                frenchText = "J’ai dit : rien n’est plus bénéfique au cœur qu’une retraite accompagnée de réflexion, car la retraite est comme une diète et la réflexion comme un remède. […]",
+                source = ClassicalSource(
+                    author = "Ibn ʿAjība",
+                    workTitle = "Īqāẓ al-Himam fī Sharḥ al-Ḥikam",
+                    edition = AJIBA_EDITION,
+                    editor = "Muḥammad ʿAbd al-Qādir Naṣṣār",
+                    volume = null,
+                    locator = "Hikma 12 • p. 58",
+                    sourceUrl = "https://ablibrary.net/book_content/b/9684/58",
+                    translator = "Traduction interne Quran Safeguard"
+                ),
+                verification = pendingHumanVerification(
+                    "Extrait arabe retrouvé à la p. 58. Traduction interne non validée humainement."
+                ),
+                isExcerpt = true
+            )
         )
     )
 
     init {
-        require(entries.map { it.canonicalId }.distinct().size == entries.size) {
-            "Duplicate Hikam canonical IDs"
-        }
-        require(entries.map { it.sourceNumber }.distinct().size == entries.size) {
-            "Duplicate Hikam source numbers"
-        }
+        require(entries.map { it.canonicalId }.distinct().size == entries.size)
+        require(entries.map { it.sourceNumber }.distinct().size == entries.size)
     }
 
-    fun asDailyReminders(): List<DailyReminder> = entries.map { hikma ->
-        DailyReminder(
-            id = hikma.canonicalId,
-            type = ReminderType.HIKAM,
-            theme = hikma.theme,
-            arabicText = hikma.arabicText,
-            frenchText = hikma.frenchText,
-            author = "Ibn ‘Atâ’ Allâh al-Iskandarî",
-            book = "Al-Hikam al-‘Atâ’iyya",
-            reference = "Hikma " + hikma.sourceNumber + " (numérotation de la source retenue)",
-            authenticity = null,
-            tags = hikma.tags
-        )
-    }
+    fun byId(id: String): HikmaEntry? =
+        entries.firstOrNull { it.canonicalId == id && it.displayEligible }
+
+    fun asDailyReminders(): List<DailyReminder> =
+        entries.filter { it.displayEligible }.map { hikma ->
+            DailyReminder(
+                id = hikma.canonicalId,
+                type = ReminderType.HIKAM,
+                theme = hikma.theme,
+                arabicText = hikma.arabicText,
+                frenchText = hikma.frenchText,
+                author = hikma.source.author,
+                book = hikma.source.workTitle,
+                reference = hikma.source.locator,
+                authenticity = null,
+                tags = hikma.tags
+            )
+        }
 }

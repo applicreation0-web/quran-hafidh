@@ -46,12 +46,95 @@ val verifyPrivacyBoundary by tasks.registering {
         check(!accessibility.contains("typeViewFocused")) {
             "Focused-view accessibility events are outside Safeguard scope."
         }
+        check(!manifest.contains("android:showWhenLocked=\"true\"")) {
+            "Quran gate must never be allowed over the Android lock screen."
+        }
         check(
             accessibility.contains(
                 "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged\""
             )
         ) {
             "Accessibility events must remain limited to window changes."
+        }
+    }
+}
+
+val verifyEditorialBoundary by tasks.registering {
+    doLast {
+        val sources = fileTree("src/main/java") {
+            include("**/*.kt")
+        }.files.joinToString("\n") { it.readText() }
+
+        val forbidden = listOf(
+            "Pour comprendre cette Ḥikma",
+            "Pour comprendre cette Hikma",
+            "Explication simple",
+            "commentaire de l’auteur",
+            "commentaire de l'auteur",
+            "Ibn ʿAṭāʾ Allāh veut dire",
+            "Ibn 'Ata' Allah veut dire",
+            "Al-Ghazâlî nous enseigne ici",
+            "Al-Ghazali nous enseigne ici",
+            "ce que l’auteur veut dire",
+            "ce que l'auteur veut dire",
+            "en d’autres termes",
+            "en d'autres termes",
+            "Explication de la pensée",
+            "Résumé IA",
+            "Toutes les Ḥikam",
+            "Toutes les Hikam",
+            "264 Ḥikam",
+            "264 Hikam"
+        )
+        forbidden.forEach { phrase ->
+            check(!sources.contains(phrase, ignoreCase = true)) {
+                "Forbidden Hikam editorial summary/attribution found: $phrase"
+            }
+        }
+
+        val hikam = file("src/main/java/com/quranunlock/guard/HikamRepository.kt").readText()
+        val hikamUi = file("src/main/java/com/quranunlock/guard/HikamDetailActivity.kt").readText()
+        check(hikam.contains("HikmaCommentary")) {
+            "Canonical Hikam data must retain classical commentary metadata."
+        }
+        check(hikamUi.contains("Approfondir — commentaire classique")) {
+            "Hikma UI must expose the classical commentary explicitly."
+        }
+        check(hikamUi.contains("Texte du commentateur présenté sans reformulation.")) {
+            "Hikma UI must state that the commentator text is not reformulated."
+        }
+        check(hikam.contains("Ibn ʿAjība")) {
+            "Classical commentary must identify Ibn ʿAjība explicitly."
+        }
+        check(hikam.contains("isExcerpt: Boolean")) {
+            "Abridged commentary must retain an explicit excerpt flag."
+        }
+
+        val authenticity = file(
+            "src/main/java/com/quranunlock/guard/ClassicalAuthenticity.kt"
+        ).readText()
+        check(authenticity.contains("sourceVerified")) {
+            "Classical content must track source verification separately."
+        }
+        check(authenticity.contains("attributionVerified")) {
+            "Classical content must track attribution verification separately."
+        }
+        check(authenticity.contains("translationVerified")) {
+            "Classical content must track translation verification separately."
+        }
+        check(authenticity.contains("humanVerified")) {
+            "Classical content must require explicit human verification."
+        }
+        check(authenticity.contains("rightsStatus")) {
+            "Classical content must track translation rights."
+        }
+
+        val ghazali = file("src/main/java/com/quranunlock/guard/GhazaliRepository.kt").readText()
+        check(ghazali.contains("اعلم أن للدين شطرين")) {
+            "The corrected exact Bidayat al-Hidaya wording must remain locked."
+        }
+        check(ghazali.contains("Approfondir — contexte dans l’œuvre").not()) {
+            "UI wording belongs in GhazaliDetailActivity, not classical source data."
         }
     }
 }
@@ -77,6 +160,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyFrozenReminderSnapshot)
     dependsOn(verifyMushafPages)
     dependsOn(verifyPrivacyBoundary)
+    dependsOn(verifyEditorialBoundary)
 }
 
 dependencies {

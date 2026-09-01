@@ -44,10 +44,14 @@ class ProtectedAppsPolicyTest {
     @Test
     fun criticalStaticPackagesAreAlwaysAllowed() {
         assertTrue(ProtectedApps.isAlwaysAllowed(ProtectedApps.PLAY_STORE))
-        assertTrue(ProtectedApps.isAlwaysAllowed(ProtectedApps.ANDROID_SETTINGS))
+        assertFalse(ProtectedApps.isAlwaysAllowed(ProtectedApps.ANDROID_SETTINGS))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.android.phone"))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.dialer"))
         assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.gms"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.deskclock"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.apps.safetyhub"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.google.android.inputmethod.latin"))
+        assertTrue(ProtectedApps.isAlwaysAllowed("com.samsung.android.honeyboard"))
     }
 
     @Test
@@ -82,6 +86,33 @@ class ProtectedAppsPolicyTest {
                 )
             )
         }
+    }
+
+    @Test
+    fun AndroidSettingsIsAlwaysSystemProtected() {
+        assertTrue(ProtectedApps.isSystemProtected(ProtectedApps.ANDROID_SETTINGS))
+        assertFalse(ProtectedApps.isSystemProtected(ProtectedApps.PLAY_STORE))
+    }
+
+    @Test
+    fun defaultScopeContainsRequestedBrowsersAndAwarenessApps() {
+        val requested = setOf(
+            "com.android.chrome",
+            "org.mozilla.firefox",
+            "com.microsoft.emmx",
+            "com.brave.browser",
+            "com.opera.browser",
+            "com.sec.android.app.sbrowser",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser",
+            "com.google.android.youtube",
+            "com.whatsapp",
+            "org.telegram.messenger",
+            "com.discord",
+            "com.reddit.frontpage",
+            "com.snapchat.android"
+        )
+        assertTrue(ProtectedApps.defaultPackages.containsAll(requested))
     }
 
     @Test

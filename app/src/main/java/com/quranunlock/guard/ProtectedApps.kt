@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
+import android.provider.Settings
 import android.telecom.TelecomManager
 import java.text.Normalizer
 import java.util.Locale
@@ -15,7 +16,6 @@ object ProtectedApps {
 
     private val alwaysAllowed = setOf(
         PLAY_STORE,
-        ANDROID_SETTINGS,
         // Calling/emergency infrastructure must never be intercepted.
         "com.android.server.telecom",
         "com.android.phone",
@@ -23,6 +23,19 @@ object ProtectedApps {
         "com.android.dialer",
         "com.samsung.android.dialer",
         "com.samsung.android.incallui",
+        // Clock, alarm and emergency/safety surfaces must remain immediately accessible.
+        "com.google.android.deskclock",
+        "com.android.deskclock",
+        "com.sec.android.app.clockpackage",
+        "com.google.android.apps.safetyhub",
+        "com.android.emergency",
+        "com.android.safetycenter.resources",
+        // System input methods are transient windows, never awareness targets.
+        "com.google.android.inputmethod.latin",
+        "com.samsung.android.honeyboard",
+        "com.android.inputmethod.latin",
+        "com.touchtype.swiftkey",
+        "com.microsoft.swiftkey",
         // Credential / security infrastructure must never be intercepted.
         "com.google.android.gms",
         "com.samsung.android.samsungpass",
@@ -191,6 +204,14 @@ object ProtectedApps {
         }
         if (packageName == defaultDialer) return true
 
+        val defaultInputMethodPackage = runCatching {
+            Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.DEFAULT_INPUT_METHOD
+            )?.substringBefore('/')
+        }.getOrNull()
+        if (packageName == defaultInputMethodPackage) return true
+
         return isSensitiveCategory(context, packageName)
     }
 
@@ -259,8 +280,12 @@ object ProtectedApps {
     fun shouldNeverPersist(context: Context, packageName: String): Boolean =
         isAlwaysAllowed(context, packageName)
 
+    fun isSystemProtected(packageName: String): Boolean =
+        packageName == ANDROID_SETTINGS
+
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
+        if (isSystemProtected(packageName)) return true
         if (isAlwaysAllowed(context, packageName)) return false
 
         // Web coverage is deliberately limited to the eight supported browsers.
