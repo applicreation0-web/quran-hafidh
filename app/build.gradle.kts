@@ -339,8 +339,8 @@ val verifyEditorialBoundary by tasks.registering {
         check(authenticity.contains("attributionVerified")) {
             "Classical content must track attribution verification separately."
         }
-        check(authenticity.contains("translationVerified")) {
-            "Classical content must track translation verification separately."
+        check(authenticity.contains("translationAvailable")) {
+            "Classical content must record that a French translation is available."
         }
         check(authenticity.contains("humanVerified")) {
             "Classical content must keep external human-review status distinct."
@@ -350,11 +350,103 @@ val verifyEditorialBoundary by tasks.registering {
         }
 
         val ghazali = file("src/main/java/com/quranunlock/guard/GhazaliRepository.kt").readText()
-        check(ghazali.contains("اعلم أن للدين شطرين")) {
-            "The corrected exact Bidayat al-Hidaya wording must remain locked."
+        check(ghazali.contains("Ayyuhā al-Walad")) {
+            "Issue #31 limits short al-Ghazali reminders to Ayyuha al-Walad."
+        }
+        check(!ghazali.contains("Bidāyat al-Hidāya") && !ghazali.contains("Iḥyāʾ ʿUlūm al-Dīn")) {
+            "Legacy Bidaya/Ihya short-reminder scope must not return before explicit review."
+        }
+        check(ghazali.contains("GhazaliContextControl")) {
+            "Ayyuha excerpts require immediate before/after context-control metadata."
+        }
+        check(ghazali.contains("continuityChecked = true") &&
+            ghazali.contains("nuanceRiskChecked = true")
+        ) {
+            "Ayyuha excerpts must be checked for continuity and contextual nuance risk."
         }
         check(ghazali.contains("Approfondir — contexte dans l’œuvre").not()) {
             "UI wording belongs in GhazaliDetailActivity, not classical source data."
+        }
+        check(authenticity.contains("reconstructedOrAssembled")) {
+            "Classical text integrity must reject reconstructed/assembled passages."
+        }
+        check(authenticity.contains("hasInternalOmissions")) {
+            "Classical excerpts must track internal omissions explicitly."
+        }
+
+        val classicalFiles = listOf(hikam, ghazali)
+        listOf("simpleExplanation", "aiSummary", "meaning").forEach { forbiddenField ->
+            classicalFiles.forEach { source ->
+                check(!source.contains(forbiddenField, ignoreCase = true)) {
+                    "Forbidden AI interpretation field in classical corpus: " + forbiddenField
+                }
+            }
+        }
+    }
+}
+
+
+val verifyThoughtOfDayBoundary by tasks.registering {
+    doLast {
+        val scheduler = file(
+            "src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt"
+        ).readText()
+        val daily = file(
+            "src/main/java/com/quranunlock/guard/DailyReminder.kt"
+        ).readText()
+        val completion = file(
+            "src/main/java/com/quranunlock/guard/ReadingCompleteActivity.kt"
+        ).readText()
+        val dashboard = file(
+            "src/main/java/com/quranunlock/guard/DashboardActivity.kt"
+        ).readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+        val thoughtScreen = file(
+            "src/main/java/com/quranunlock/guard/ThoughtOfDayActivity.kt"
+        ).readText()
+        val tests = file(
+            "src/test/java/com/quranunlock/guard/ThoughtOfDayPolicyTest.kt"
+        ).readText()
+
+        check(daily.contains("MORNING_HOUR = 8")) {
+            "Thought of the day must be scheduled in the morning."
+        }
+        check(scheduler.contains("markThoughtNotificationIfNeeded")) {
+            "Thought notification must be deduplicated per epoch day."
+        }
+        check(scheduler.contains("ThoughtOfDayActivity::class.java")) {
+            "Thought notification must open its dedicated full card."
+        }
+        check(manifest.contains("android:name=\".ThoughtOfDayActivity\"")) {
+            "ThoughtOfDayActivity must be registered."
+        }
+        check(thoughtScreen.contains("DailyReminderManager.today")) {
+            "Thought screen must display the persisted thought selected for the day."
+        }
+        check(dashboard.contains("DailyReminderManager.today")) {
+            "Dashboard must show the same thought all day."
+        }
+        check(dashboard.contains("ThoughtOfDayActivity::class.java")) {
+            "Dashboard thought must open the full card."
+        }
+        check(!completion.contains("DailyReminderCard")) {
+            "ReadingCompleteActivity must not render the thought of the day."
+        }
+        check(!completion.contains("DailyReminderManager.today")) {
+            "Quran unlock completion must be independent of spiritual reminder selection."
+        }
+        check(completion.contains("unlockAfterReadingSummary")) {
+            "Quran unlock must continue directly from validated Quran reading."
+        }
+
+        listOf(
+            "thoughtIsStableForSameDateAndSameCorpus",
+            "onlyOneThoughtNotificationIsAllowedPerEpochDay",
+            "thoughtNotificationIsScheduledInMorning"
+        ).forEach { scenario ->
+            check(tests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking thought-of-day test: " + scenario
+            }
         }
     }
 }
@@ -366,6 +458,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
     dependsOn(verifyUpdateMigrationIntegrity)
+    dependsOn(verifyThoughtOfDayBoundary)
 }
 
 android {
@@ -392,6 +485,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
     dependsOn(verifyUpdateMigrationIntegrity)
+    dependsOn(verifyThoughtOfDayBoundary)
 }
 
 dependencies {
