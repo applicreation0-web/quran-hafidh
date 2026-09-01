@@ -329,11 +329,11 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 16")) {
-            "0.9.2 must keep versionCode 16, above installed 0.9.0/0.9.1."
+        check(buildFile.contains("versionCode = 17")) {
+            "0.9.3 must keep versionCode 17, above the installed 0.9.2 device-test build."
         }
-        check(buildFile.contains("versionName = \"0.9.2\"")) {
-            "Expected release versionName 0.9.2."
+        check(buildFile.contains("versionName = \"0.9.3\"")) {
+            "Expected device-fix versionName 0.9.3."
         }
         check(migrations.contains("CURRENT_SCHEMA = 7")) {
             "0.9.1 must migrate installed schema 6 to schema 7."
@@ -657,8 +657,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "0.9.2"
+        versionCode = 17
+        versionName = "0.9.3"
     }
 
     buildFeatures {
