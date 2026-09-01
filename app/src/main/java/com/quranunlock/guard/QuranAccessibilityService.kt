@@ -150,18 +150,16 @@ class QuranAccessibilityService : AccessibilityService() {
             ProtectedApps.isProtected(this, orphanedForegroundPackage) &&
             GuardPrefs.isUnlocked(this, orphanedForegroundPackage)
         ) {
+            // Arm the same-boot candidate, but DO NOT debit it yet. The first
+            // real window/click/scroll event from that protected app starts the
+            // budget. If another app is actually foreground, its first event
+            // clears this candidate without consuming any protected budget.
             foregroundPackage = orphanedForegroundPackage
             GuardRuntime.markExternalForeground(orphanedForegroundPackage)
-            GuardPrefs.beginUnlockForeground(this, orphanedForegroundPackage)
-            foregroundUnlockedPackage = orphanedForegroundPackage
-            lastCheckpointElapsedMs = SystemClock.elapsedRealtime()
-
-            // Temporarily observe the first true transition away so a service
-            // restart over an excluded/currently different app self-corrects.
             applyEventPackageScope(broad = true)
             GuardDiagnostics.log(
                 this,
-                "SERVICE_FOREGROUND_RESUMED",
+                "SERVICE_FOREGROUND_RECOVERY_ARMED",
                 orphanedForegroundPackage
             )
         }
