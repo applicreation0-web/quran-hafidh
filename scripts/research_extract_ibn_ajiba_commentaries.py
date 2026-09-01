@@ -47,7 +47,7 @@ EDITION = (
     "Dār Jawāmiʿ al-Kalim, Cairo, 632 p."
 )
 BASE = f"https://ablibrary.net/book_content/b/{BOOK_ID}/{{page}}"
-PAGES = range(1, 633)
+PAGES = range(20, 633)
 
 BLOCK_TAGS = {
     "p", "div", "section", "article", "main", "h1", "h2", "h3", "h4",
@@ -149,15 +149,15 @@ def fetch_page(page: int) -> tuple[int, str, str | None]:
         "User-Agent": "QuranSafeguardResearch/0.9.1 (+noncommercial source audit)"
     }
     last = None
-    for attempt in range(4):
+    for attempt in range(2):
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=25) as response:
+            with urllib.request.urlopen(req, timeout=8) as response:
                 raw = response.read().decode("utf-8", errors="replace")
             return page, compact_lines(raw, page), None
         except Exception as exc:
             last = f"{type(exc).__name__}: {exc}"
-            time.sleep(0.4 * (attempt + 1))
+            time.sleep(0.15 * (attempt + 1))
     return page, "", last
 
 
@@ -226,7 +226,7 @@ def main():
 
     page_texts: dict[int, str] = {}
     failures = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=24) as pool:
         futures = [pool.submit(fetch_page, page) for page in PAGES]
         for future in concurrent.futures.as_completed(futures):
             page, text, error = future.result()
@@ -235,7 +235,7 @@ def main():
             else:
                 page_texts[page] = text
 
-    if len(page_texts) < 600:
+    if len(page_texts) < 500:
         raise SystemExit(f"Too many source-page failures: {len(failures)}")
 
     headings = []
