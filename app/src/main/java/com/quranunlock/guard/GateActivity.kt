@@ -45,8 +45,12 @@ class GateActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (challengeKey.isNotBlank() && GuardPrefs.isUnlocked(this, challengeKey)) {
-            finish()
+        if (challengeKey.isNotBlank() &&
+            (!ProtectedApps.isProtected(this, challengeKey) ||
+                GuardPrefs.isUnlocked(this, challengeKey))
+        ) {
+            GuardRuntime.interception.reset()
+            finishAndRemoveTask()
         }
     }
 
@@ -56,6 +60,14 @@ class GateActivity : ComponentActivity() {
         challengeKey = intent.getStringExtra(EXTRA_TARGET_PACKAGE).orEmpty()
         if (challengeKey.isBlank()) {
             finish()
+            return
+        }
+
+        // Never render a gate for a target that is now permanently excluded,
+        // including stale intents/configuration left by an older app version.
+        if (!ProtectedApps.isProtected(this, challengeKey)) {
+            GuardRuntime.interception.reset()
+            finishAndRemoveTask()
             return
         }
 
