@@ -5,27 +5,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -47,11 +39,9 @@ class HikamDetailActivity : ComponentActivity() {
 
 @Composable
 private fun HikmaDetailScreen(hikma: HikmaEntry) {
-    val context = LocalContext.current
-    var showTransliteration by remember {
-        mutableStateOf(HikamPrefs.transliterationEnabled(context))
+    var showCommentary by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
     }
-    var showCommentary by remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -96,31 +86,6 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = showTransliteration,
-                    onCheckedChange = { enabled ->
-                        showTransliteration = enabled
-                        HikamPrefs.setTransliterationEnabled(context, enabled)
-                    }
-                )
-                Text(
-                    "Translittération",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (showTransliteration) {
-                Text(
-                    hikma.transliteration,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
 
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
