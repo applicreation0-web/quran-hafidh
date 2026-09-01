@@ -291,7 +291,7 @@ object AppMigrations {
     }
 
     private fun migrateToSchema7(context: Context) {
-        // 0.9.1 narrows the product scope to known social targets and eight
+        // 0.9.1 narrows the product scope to known social targets and six
         // browsers. Reuse the defensive purge with the new fixed-scope policy
         // so legacy selections/session/history for arbitrary apps disappear.
         migrateToSchema6(context)
@@ -304,6 +304,22 @@ object AppMigrations {
                 .clear()
                 .commit()
         ) { "Unable to clear obsolete Hikam transliteration preference" }
+
+        // Legacy absolute elapsedRealtime unlock windows have no boot identity.
+        // They are therefore invalid across reboot/update and must never be
+        // converted into a fresh budget. Invalidating them forces one clean
+        // Quran gate instead of risking a phantom/unbounded legacy credit.
+        val guardPrefs = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
+        val legacyEditor = guardPrefs.edit()
+        guardPrefs.all.keys
+            .filter {
+                it.startsWith("unlock_elapsed_until_") ||
+                    it.startsWith("unlock_elapsed_started_")
+            }
+            .forEach(legacyEditor::remove)
+        check(legacyEditor.commit()) {
+            "Unable to invalidate legacy elapsedRealtime unlock windows"
+        }
 
         // An update/reboot/service recreation must never reuse elapsedRealtime
         // from an older foreground session. Reconcile only through the last
