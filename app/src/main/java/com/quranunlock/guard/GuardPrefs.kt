@@ -292,8 +292,12 @@ object GuardPrefs {
     }
 
     @Synchronized
-    fun reconcileOrphanedUnlockForeground(context: Context) {
+    fun reconcileOrphanedUnlockForeground(context: Context): String? {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val currentBoot = currentBootCount(context)
+        var resumeCandidate: String? = null
+        var latestCheckpoint = Long.MIN_VALUE
+
         val packages = buildSet {
             addAll(ProtectedApps.selectableScopePackages)
             add(ProtectedApps.ANDROID_SETTINGS)
@@ -317,7 +321,20 @@ object GuardPrefs {
 
             val reconciled = UnlockBudgetIntegrity.reconcileOrphan(state)
             writeUnlockBudgetState(prefs, packageName, reconciled, synchronous = true)
+
+            // Only a same-boot abrupt service recreation can nominate a package
+            // for immediate resume. A reboot can never reuse the previous owner.
+            val checkpoint = state.checkpointElapsedMs ?: Long.MIN_VALUE
+            if (state.foregroundBootCount == currentBoot &&
+                reconciled.remainingMs > 0L &&
+                checkpoint > latestCheckpoint
+            ) {
+                resumeCandidate = packageName
+                latestCheckpoint = checkpoint
+            }
         }
+
+        return resumeCandidate
     }
 
     @Synchronized
