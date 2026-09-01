@@ -4,7 +4,7 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 
 ## Product principles
 
-- Voluntary discipline: Android Settings and normal uninstall remain accessible to the device owner.
+- Voluntary discipline: normal uninstall remains available to the device owner; Android Settings is intentionally protected while Safeguard is active to prevent trivial bypass of the AccessibilityService.
 - Medina Mushaf, 604 canonical pages, Hafs ‘an ‘Asim, available offline.
 - The original 15-line page format is preserved.
 - A reading session shows roughly half a rendered page at once and requires a natural scroll to the bottom.
@@ -22,7 +22,10 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - The bundled library has no numerical quota: only texts that pass authenticity, provenance and suitability checks are enabled.
 - Arabic is shown first, followed by French and an identifiable source.
 - Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
-- Hadith, al-Ghazali quotations and al-Hikam are explicitly distinguished.
+- Hadith, al-Ghazali texts and al-Hikam are explicitly distinguished.
+- **AUTHENTICITÉ AVANT QUANTITÉ**: classical texts are never displayed unless source, attribution, translation, human review and translation-rights checks are separately complete.
+- Quran Safeguard never interprets, summarizes, reconstructs or speaks in the voice of Ibn ʿAṭāʾ Allāh, Ibn ʿAjība or al-Ghazālī.
+- Ibn ʿAṭāʾ Allāh is identified as the author of Al-Hikam; Ibn ʿAjība is identified only as a commentator. Al-Ghazālī “Approfondir” content must come from al-Ghazālī’s own continuous text, not an app-generated explanation.
 - Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
 - Adhkar can optionally show a discreet transliteration layer (off by default).
 - Daily/adhkar reminders use a small heads-up banner with one short vibration and no sound.
