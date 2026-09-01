@@ -298,6 +298,7 @@ object ReminderLibrary {
 object ThoughtOfDayPolicy {
     const val MORNING_HOUR = 8
     const val NOTIFICATION_ID = 8200
+    const val FULL_CARD_ACTIVITY_SIMPLE_NAME = "ThoughtOfDayActivity"
 
     fun shouldNotify(lastEpochDay: Long, currentEpochDay: Long): Boolean =
         lastEpochDay != currentEpochDay
