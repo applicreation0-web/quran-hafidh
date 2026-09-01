@@ -75,11 +75,17 @@ object GuardPrefs {
             .apply()
     }
 
+    private fun outOfScope(context: Context, packageName: String): Boolean =
+        packageName != UNINSTALL_CHALLENGE_KEY &&
+            ProtectedApps.shouldNeverPersist(context, packageName)
+
     fun unlock(context: Context, packageName: String) {
+        if (outOfScope(context, packageName)) return
         unlockForMinutes(context, packageName, unlockMinutes(context))
     }
 
     fun unlockWithJoker(context: Context, packageName: String) {
+        if (outOfScope(context, packageName)) return
         val minutes = minOf(unlockMinutes(context), JOKER_MAX_UNLOCK_MINUTES)
         val page = challengePage(context, packageName)
         recordHistory(
@@ -93,6 +99,7 @@ object GuardPrefs {
     }
 
     private fun unlockForMinutes(context: Context, packageName: String, minutes: Int) {
+        if (outOfScope(context, packageName)) return
         val grantedMs = minutes.coerceIn(1, 20) * 60_000L
 
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -113,6 +120,7 @@ object GuardPrefs {
     }
 
     fun completeChallengeWithoutUnlock(context: Context, challengeKey: String) {
+        if (outOfScope(context, challengeKey)) return
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .remove(CHALLENGE_PREFIX + challengeKey)
@@ -125,10 +133,11 @@ object GuardPrefs {
     }
 
     fun isUnlocked(context: Context, packageName: String): Boolean =
-        remainingUnlockMs(context, packageName) > 0L
+        !outOfScope(context, packageName) && remainingUnlockMs(context, packageName) > 0L
 
     @Synchronized
     fun remainingUnlockMs(context: Context, packageName: String): Long {
+        if (outOfScope(context, packageName)) return 0L
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val key = UNLOCK_REMAINING_MS_PREFIX + packageName
 
@@ -157,6 +166,7 @@ object GuardPrefs {
 
     @Synchronized
     fun beginUnlockForeground(context: Context, packageName: String) {
+        if (outOfScope(context, packageName)) return
         if (remainingUnlockMs(context, packageName) <= 0L) return
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         if (prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L) >= 0L) return
@@ -167,6 +177,7 @@ object GuardPrefs {
 
     @Synchronized
     fun endUnlockForeground(context: Context, packageName: String): Long {
+        if (outOfScope(context, packageName)) return 0L
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val remaining = remainingUnlockMs(context, packageName)
         prefs.edit()
@@ -178,6 +189,7 @@ object GuardPrefs {
 
     @Synchronized
     fun expireUnlock(context: Context, packageName: String) {
+        if (outOfScope(context, packageName)) return
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, 0L)
@@ -191,6 +203,7 @@ object GuardPrefs {
         packageName: String,
         thresholdMinutes: Int
     ): Boolean {
+        if (outOfScope(context, packageName)) return false
         val bit = when (thresholdMinutes) {
             10 -> 1
             5 -> 2
@@ -384,6 +397,9 @@ object GuardPrefs {
 
     @Synchronized
     fun challengePage(context: Context, packageName: String): Int {
+        require(!outOfScope(context, packageName)) {
+            "Out-of-scope applications cannot create Quran Safeguard challenges."
+        }
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val key = CHALLENGE_PREFIX + packageName
         val existing = prefs.getInt(key, 0)
@@ -612,6 +628,7 @@ object GuardPrefs {
         method: String,
         atypicalFast: Boolean = false
     ) {
+        if (outOfScope(context, packageName)) return
         val entry = listOf(
             System.currentTimeMillis().toString(),
             packageName,
