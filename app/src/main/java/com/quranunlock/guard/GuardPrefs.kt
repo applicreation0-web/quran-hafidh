@@ -22,6 +22,11 @@ data class DailyReadingSummary(
     val averageMs: Long
 )
 
+data class OrphanedUnlockRecovery(
+    val packageName: String,
+    val checkpointElapsedMs: Long
+)
+
 object GuardPrefs {
     const val DAILY_JOKERS = 3
     const val JOKER_MAX_UNLOCK_MINUTES = 5
@@ -292,10 +297,10 @@ object GuardPrefs {
     }
 
     @Synchronized
-    fun reconcileOrphanedUnlockForeground(context: Context): String? {
+    fun reconcileOrphanedUnlockForeground(context: Context): OrphanedUnlockRecovery? {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val currentBoot = currentBootCount(context)
-        var resumeCandidate: String? = null
+        var resumeCandidate: OrphanedUnlockRecovery? = null
         var latestCheckpoint = Long.MIN_VALUE
 
         val packages = buildSet {
@@ -329,12 +334,38 @@ object GuardPrefs {
                 reconciled.remainingMs > 0L &&
                 checkpoint > latestCheckpoint
             ) {
-                resumeCandidate = packageName
+                resumeCandidate = OrphanedUnlockRecovery(
+                    packageName = packageName,
+                    checkpointElapsedMs = checkpoint
+                )
                 latestCheckpoint = checkpoint
             }
         }
 
         return resumeCandidate
+    }
+
+    @Synchronized
+    fun chargeRecoveredForegroundGap(
+        context: Context,
+        recovery: OrphanedUnlockRecovery
+    ): Long {
+        val packageName = recovery.packageName
+        if (outOfScope(context, packageName)) return 0L
+
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val state = readUnlockBudgetState(prefs, packageName)
+        val now = SystemClock.elapsedRealtime()
+        val gap = if (now >= recovery.checkpointElapsedMs) {
+            now - recovery.checkpointElapsedMs
+        } else {
+            0L
+        }
+        val updated = UnlockBudgetState(
+            remainingMs = (state.remainingMs - gap).coerceAtLeast(0L)
+        )
+        writeUnlockBudgetState(prefs, packageName, updated, synchronous = true)
+        return updated.remainingMs
     }
 
     @Synchronized
