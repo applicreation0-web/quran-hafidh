@@ -66,17 +66,24 @@ and terminological controls and are not copied wholesale into the application.
 
 The UI identifies the translation as internal Quran Safeguard translation.
 
-### Ibn ʿAjība
+### Classical commentaries
 
 The 264 Hikam themselves do not depend on commentary availability.
+
+Commentaries follow a strict source-isolation rule:
+- one commentary unit = one identified commentator + one identified work/source;
+- different commentators are never merged into a synthetic explanation;
+- no AI synthesis, reconciliation or paraphrase is produced from several commentaries;
+- when several verified commentaries exist for one Hikma, the UI shows them as
+  separate cards, each with its own author, work, locator, source and translation provenance.
 
 The current separately verified Ibn ʿAjība excerpts remain attached only to
 Hikam 5, 10 and 12. Their cuts are explicit with […] and their source locators
 remain p.39, p.50 and p.58.
 
-For the other Hikam, no commentary is synthesized. Absence of a verified
-commentary means absence of the “Approfondir” commentary content, not exclusion
-of the Hikma.
+Future verified commentaries may come from other classical commentators without
+changing the Hikma text itself. Absence of a verified commentary means absence
+of “Approfondir” content, not exclusion of the Hikma.
 
 ## Al-Ghazālī
 
