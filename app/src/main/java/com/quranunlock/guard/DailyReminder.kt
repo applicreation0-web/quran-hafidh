@@ -296,7 +296,7 @@ object ReminderLibrary {
 }
 
 object ThoughtOfDayPolicy {
-    const val MORNING_HOUR = 8
+    const val REMINDER_HOUR = 20
     const val NOTIFICATION_ID = 8200
     const val FULL_CARD_ACTIVITY_SIMPLE_NAME = "ThoughtOfDayActivity"
 
