@@ -779,7 +779,11 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Text(
-                    "Version " + BuildConfig.VERSION_NAME + " • installation privée",
+                    "Version " + (
+                        runCatching {
+                            packageManager.getPackageInfo(packageName, 0).versionName
+                        }.getOrNull() ?: "—"
+                    ) + " • installation privée",
                     modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
