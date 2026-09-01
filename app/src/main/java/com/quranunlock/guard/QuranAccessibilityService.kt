@@ -29,6 +29,12 @@ class QuranAccessibilityService : AccessibilityService() {
                 }
                 foregroundUnlockedPackage = null
                 foregroundPackage = null
+                GuardRuntime.resetForeground()
+                cancelPendingLaunches()
+                val snapshot = GuardRuntime.interception.snapshot()
+                if (!snapshot.guardVisible) {
+                    GuardRuntime.interception.reset()
+                }
                 GuardDiagnostics.log(this@QuranAccessibilityService, "SCREEN_OFF_USAGE_PAUSED")
             }
         }
@@ -170,6 +176,7 @@ class QuranAccessibilityService : AccessibilityService() {
         }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        GuardRuntime.resetForeground()
 
         // Most importantly, retries created for a previous protected app must
         // never spill over on top of banking, identity or security apps.
@@ -182,6 +189,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun handleForegroundPackage(packageName: String) {
         if (packageName != this.packageName) {
+            GuardRuntime.markExternalForeground(packageName)
             val snapshot = GuardRuntime.interception.snapshot()
             if (snapshot.targetPackage != null &&
                 snapshot.targetPackage != packageName &&
@@ -259,6 +267,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private fun launchGate(packageName: String, reason: String) {
         if (GuardPrefs.isUnlocked(this, packageName)) return
         if (isPermanentlyExcluded(packageName)) return
+        if (GuardRuntime.externalForegroundPackage() != packageName) return
         if (!GuardRuntime.interception.shouldRetry(packageName) && reason != "initial") return
 
         // A delayed retry is valid only while its original target is still
@@ -326,6 +335,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundUnlockedPackage?.let { GuardPrefs.endUnlockForeground(this, it) }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        GuardRuntime.resetForeground()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
@@ -342,6 +352,7 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundUnlockedPackage?.let { GuardPrefs.endUnlockForeground(this, it) }
         foregroundUnlockedPackage = null
         foregroundPackage = null
+        GuardRuntime.resetForeground()
         mainHandler.removeCallbacks(heartbeat)
         mainHandler.removeCallbacks(usageTicker)
         pendingForegroundPause?.let(mainHandler::removeCallbacks)
