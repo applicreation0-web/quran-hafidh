@@ -373,7 +373,15 @@ class QuranAccessibilityService : AccessibilityService() {
             handleForegroundPackage(packageName)
         }
 
-        if (!isProtectedPackage) return
+        if (!isProtectedPackage) {
+            // Safeguard itself is the only non-protected package in the narrow
+            // event scope. Once our UI owns the window (Gate/Dashboard/etc.),
+            // broad exit observation is no longer necessary.
+            if (packageName == this.packageName) {
+                applyEventPackageScope(broad = false)
+            }
+            return
+        }
 
         // While a protected target is active, broaden only long enough to see
         // the first real transition away. IME windows are ignored above.
