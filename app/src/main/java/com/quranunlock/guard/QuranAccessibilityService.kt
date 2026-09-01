@@ -36,6 +36,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var audioManager: AudioManager? = null
     private var audioModeListener31: Any? = null
     private var callFreezeActive = false
+    private var whatsappCallUiActive = false
     private var lastCheckpointElapsedMs = 0L
     private var pendingOrphanRecovery: OrphanedUnlockRecovery? = null
 
@@ -264,6 +265,48 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
+        val eventClassName = event.className?.toString()
+
+        if (packageName == "com.whatsapp" &&
+            event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        ) {
+            val isCallUi = UnlockBudgetIntegrity.isKnownWhatsAppCallActivity(
+                packageName,
+                eventClassName
+            )
+            if (isCallUi) {
+                whatsappCallUiActive = true
+                pauseForegroundBudget(clearForeground = false)
+                foregroundPackage = packageName
+                GuardRuntime.markExternalForeground(packageName)
+                applyEventPackageScope(broad = true)
+                GuardDiagnostics.log(
+                    this,
+                    "WHATSAPP_CALL_UI_FREEZE_STARTED",
+                    packageName,
+                    eventClassName.orEmpty()
+                )
+                return
+            }
+
+            // A new non-call WhatsApp Activity proves the VoIP UI has gone.
+            if (whatsappCallUiActive &&
+                eventClassName?.contains("Activity") == true
+            ) {
+                whatsappCallUiActive = false
+                GuardDiagnostics.log(
+                    this,
+                    "WHATSAPP_CALL_UI_FREEZE_ENDED",
+                    packageName
+                )
+            }
+        }
+
+        // Click/scroll events from inside the call Activity must not restart the
+        // WhatsApp budget while the audio mode is still transitioning.
+        if (whatsappCallUiActive && packageName == "com.whatsapp") {
+            return
+        }
 
         // The active keyboard belongs to another package but is not an app exit.
         // Keep the protected app as the sole budget owner while typing.
@@ -407,7 +450,7 @@ class QuranAccessibilityService : AccessibilityService() {
                     runningBudgetPackage = foregroundUnlockedPackage,
                     isProtected = ProtectedApps.isProtected(this, packageName),
                     isUnlocked = GuardPrefs.isUnlocked(this, packageName),
-                    callFrozen = callFreezeActive
+                    callFrozen = callFreezeActive || whatsappCallUiActive
                 )
             ) {
                 GuardPrefs.beginUnlockForeground(this, packageName)
@@ -445,6 +488,7 @@ class QuranAccessibilityService : AccessibilityService() {
     }
 
     private fun resumeCurrentProtectedPackageIfEligible() {
+        if (whatsappCallUiActive) return
         val packageName = foregroundPackage ?: return
         if (!ProtectedApps.isProtected(this, packageName)) return
 
@@ -464,7 +508,7 @@ class QuranAccessibilityService : AccessibilityService() {
                 targetPackage = packageName,
                 foregroundPackage = foregroundPackage,
                 isProtected = ProtectedApps.isProtected(this, packageName),
-                callFrozen = callFreezeActive
+                callFrozen = callFreezeActive || whatsappCallUiActive
             )
         ) {
             return
@@ -512,7 +556,7 @@ class QuranAccessibilityService : AccessibilityService() {
     }
 
     private fun launchGate(packageName: String, reason: String) {
-        if (callFreezeActive) return
+        if (callFreezeActive || whatsappCallUiActive) return
         if (GuardPrefs.isUnlocked(this, packageName)) return
         if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardRuntime.externalForegroundPackage() != packageName) return
@@ -601,6 +645,7 @@ class QuranAccessibilityService : AccessibilityService() {
         guardPrefs = null
         audioManager = null
         pendingOrphanRecovery = null
+        whatsappCallUiActive = false
 
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
