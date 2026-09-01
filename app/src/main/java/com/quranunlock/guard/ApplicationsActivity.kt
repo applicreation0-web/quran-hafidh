@@ -83,6 +83,13 @@ class ApplicationsActivity : ComponentActivity() {
                     }
                 }
 
+                Text(
+                    "${selected.size} applications sélectionnées",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -161,9 +168,26 @@ private fun TargetGroup(
             )
             targets.forEach { target ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            target.label,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            if (target.category == SafeguardTargetCategory.BROWSER) {
+                                "Navigateur"
+                            } else {
+                                "Réseau / messagerie"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Checkbox(
                         checked = target.packageName in selected,
                         onCheckedChange = { checked ->
@@ -177,14 +201,6 @@ private fun TargetGroup(
                             onSave()
                         }
                     )
-                    Column {
-                        Text(target.label)
-                        Text(
-                            target.packageName,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
         }
