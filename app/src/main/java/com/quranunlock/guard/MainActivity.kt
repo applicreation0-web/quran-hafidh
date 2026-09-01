@@ -614,6 +614,11 @@ class MainActivity : ComponentActivity() {
                     "Choisis les autres applications auxquelles appliquer la pause Quran.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Text(
+                    "Une application non cochée reste hors du périmètre d’accessibilité de Quran Safeguard. Pour les apps bancaires, paiement, identité ou santé, laisse-les décochées sauf besoin explicite.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -622,10 +627,17 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.weight(1f),
                         onClick = {
                             protectedPackages.clear()
-                            protectedPackages.addAll(installedApps.map { it.packageName })
-                            GuardPrefs.saveProtectedPackages(this@MainActivity, protectedPackages.toSet())
+                            protectedPackages.addAll(
+                                installedApps
+                                    .map { it.packageName }
+                                    .filter { it in ProtectedApps.defaultPackages }
+                            )
+                            GuardPrefs.saveProtectedPackages(
+                                this@MainActivity,
+                                protectedPackages.toSet()
+                            )
                         }
-                    ) { Text("Tout sélectionner") }
+                    ) { Text("Sélection suggérée") }
 
                     OutlinedButton(
                         modifier = Modifier.weight(1f),

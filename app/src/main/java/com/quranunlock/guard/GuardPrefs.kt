@@ -314,7 +314,9 @@ object GuardPrefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putStringSet(PROTECTED_PACKAGES, filtered)
-            .apply()
+            .commit()
+
+        AccessibilityScopeManager.requestRefresh(context)
     }
 
     fun selectionMode(context: Context): QuranSelectionMode {
