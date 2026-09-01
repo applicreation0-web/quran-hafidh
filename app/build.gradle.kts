@@ -462,6 +462,14 @@ val verifyEditorialBoundary by tasks.registering {
         check(hikam.contains("Ibn ʿAjība")) {
             "Existing verified Ibn ʿAjība commentary must remain identified explicitly."
         }
+        (1..12).forEach { sourceNumber ->
+            check(hikam.contains(sourceNumber.toString() + " to ajibaCommentary(")) {
+                "Verified Ibn ʿAjība commentary missing for initial Hikma " + sourceNumber
+            }
+        }
+        check(!hikam.contains("[…]") && !hikam.contains("hasInternalOmissions = true")) {
+            "Production Hikam commentaries must be continuous and free of internal cuts."
+        }
         check(hikam.contains("isExcerpt: Boolean")) {
             "Abridged commentary must retain an explicit excerpt flag."
         }
