@@ -422,6 +422,11 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
+                            "Alerte : petite bannière + une vibration courte, sans son et sans ouverture forcée.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
                             "Les horaires sont calculés sur ce téléphone. La localisation approximative n’est ni envoyée ni partagée.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -433,6 +438,49 @@ class MainActivity : ComponentActivity() {
                                 (if (locationSaved) "configurés ✓" else "à configurer"),
                             style = MaterialTheme.typography.bodySmall
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = ReminderPrefs.dailyEnabled(this@MainActivity),
+                                onCheckedChange = { enabled ->
+                                    ReminderPrefs.setDailyEnabled(this@MainActivity, enabled)
+                                    MindfulReminderScheduler.scheduleAll(this@MainActivity)
+                                    refreshState.value += 1
+                                }
+                            )
+                            Column {
+                                Text("Rappel du jour à 20:00")
+                                Text(
+                                    if (ReminderPrefs.dailyEnabled(this@MainActivity)) "Activé" else "Désactivé",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = ReminderPrefs.adhkarEnabled(this@MainActivity),
+                                onCheckedChange = { enabled ->
+                                    ReminderPrefs.setAdhkarEnabled(this@MainActivity, enabled)
+                                    MindfulReminderScheduler.scheduleAll(this@MainActivity)
+                                    refreshState.value += 1
+                                }
+                            )
+                            Column {
+                                Text("Rappels adhkâr matin / soir")
+                                Text(
+                                    if (ReminderPrefs.adhkarEnabled(this@MainActivity)) "Activés" else "Désactivés",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
