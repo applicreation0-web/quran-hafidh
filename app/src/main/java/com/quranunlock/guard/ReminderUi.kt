@@ -78,6 +78,28 @@ fun DailyReminderCard(
                 }
             }
 
+            if (reminder.type == ReminderType.GHAZALI) {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, GhazaliDetailActivity::class.java)
+                                .putExtra(GhazaliDetailActivity.EXTRA_ID, reminder.id)
+                        )
+                    }
+                ) {
+                    Text("Voir le texte")
+                }
+            }
+
+            if (reminder.type != ReminderType.HADITH) {
+                Text(
+                    "Authenticité : source et attribution vérifiées",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             Text(
                 source,
                 style = MaterialTheme.typography.bodySmall,
