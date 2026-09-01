@@ -23,10 +23,10 @@ Quran Safeguard is a private Android digital-wellbeing application that creates 
 - The bundled library has no numerical quota: only texts that pass authenticity, provenance and suitability checks are enabled.
 - Arabic is shown first, followed by French and an identifiable source.
 - Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
-- Hadith, al-Ghazali texts and al-Hikam are explicitly distinguished.
+- Hadith and al-Hikam are explicitly distinguished; the incomplete al-Ghazali section is temporarily hidden.
 - **AUTHENTICITÉ AVANT QUANTITÉ**: classical texts require verified source and attribution plus a reviewed French translation with compatible rights. External editorial/human certification remains a separate disclosed metadata field and is not falsely implied.
 - Quran Safeguard never interprets, summarizes, reconstructs or speaks in the voice of Ibn ʿAṭāʾ Allāh, Ibn ʿAjība or al-Ghazālī.
-- Ibn ʿAṭāʾ Allāh is identified as the author of Al-Hikam; Ibn ʿAjība is identified only as a commentator. Al-Ghazālī “Approfondir” content must come from al-Ghazālī’s own continuous text, not an app-generated explanation.
+- Ibn ʿAṭāʾ Allāh is identified as the author of Al-Hikam; Ibn ʿAjība is identified only as a commentator. The first sourced Ibn ʿAjība tranche covers Hikam 1 through 12 with continuous passages and exact locators.
 - Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
 - Adhkar can optionally show a discreet transliteration layer (off by default).
 - Daily/adhkar reminders use a small heads-up banner with one short vibration and no sound.
