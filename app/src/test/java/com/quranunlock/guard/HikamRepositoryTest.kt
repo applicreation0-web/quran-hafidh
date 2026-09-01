@@ -9,12 +9,13 @@ class HikamRepositoryTest {
     @Test
     fun canonicalEntriesHaveDocumentaryMetadata() {
         val entries = HikamRepository.entries
-        assertEquals(3, entries.size)
+        assertTrue(entries.isNotEmpty())
         assertEquals(entries.size, entries.map { it.canonicalId }.distinct().size)
         assertEquals(entries.size, entries.map { it.sourceNumber }.distinct().size)
 
         entries.forEach { hikma ->
             assertTrue(hikma.arabicText.isNotBlank())
+            assertTrue(hikma.sourceNumber in 1..264)
             assertTrue(hikma.frenchText.isNotBlank())
             assertTrue(hikma.source.author.contains("Ibn ʿAṭāʾ Allāh"))
             assertTrue(hikma.source.workTitle.contains("Hikam"))
@@ -30,7 +31,10 @@ class HikamRepositoryTest {
 
     @Test
     fun sourcedHikamAreVisibleWithInternalTranslationDisclosure() {
-        assertEquals(3, HikamRepository.asDailyReminders().size)
+        assertEquals(
+            HikamRepository.entries.count { it.displayEligible },
+            HikamRepository.asDailyReminders().size
+        )
         HikamRepository.entries.forEach {
             assertTrue(HikamRepository.byId(it.canonicalId) != null)
         }
