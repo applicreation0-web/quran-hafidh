@@ -30,7 +30,7 @@ data class OrphanedUnlockRecovery(
 object GuardPrefs {
     const val DAILY_JOKERS = 3
     const val JOKER_MAX_UNLOCK_MINUTES = 5
-    const val MIN_READING_MS = 60_000L
+    const val MIN_READING_MS = ReadingValidationPolicy.MIN_ACTIVE_READING_MS
     const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
 
     internal const val FILE = "guard_prefs"
@@ -730,8 +730,7 @@ object GuardPrefs {
         page: Int
     ): Long {
         val elapsed = readingElapsedMs(context, challengeKey, page)
-        if (!hasReachedReadingBottom(context, challengeKey, page) || elapsed < MIN_READING_MS) return elapsed
-
+        if (!ReadingValidationPolicy.canValidate(\n                activeReadingMs = elapsed,\n                bottomReached = hasReachedReadingBottom(context, challengeKey, page)\n            )\n        ) return elapsed\n
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         if (prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0) == page) {
             return elapsed
@@ -777,10 +776,7 @@ object GuardPrefs {
     ): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0)
-        if (recorded != page ||
-            !hasReachedReadingBottom(context, challengeKey, page) ||
-            readingElapsedMs(context, challengeKey, page) < MIN_READING_MS
-        ) {
+        if (recorded != page ||\n            !ReadingValidationPolicy.canValidate(\n                activeReadingMs = readingElapsedMs(context, challengeKey, page),\n                bottomReached = hasReachedReadingBottom(context, challengeKey, page)\n            )\n        ) {
             return false
         }
         unlock(context, challengeKey)
