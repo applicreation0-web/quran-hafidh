@@ -109,6 +109,11 @@ l’application.
    Corrigé : les textes al-Ghazālī ont leur dépôt canonique dédié et ne sont
    plus stockés comme simples `DailyReminder`.
 
+6. **Numérotation Al-Ḥikam potentiellement divergente selon les éditions**  
+   Corrigé dans le modèle : le numéro est explicitement celui de la source
+   retenue. Le build interdit les affirmations « Toutes les Ḥikam » et un total
+   figé de 264 présenté comme corpus complet.
+
 ## Non-interprétation
 
 Le build recherche et interdit dans le code utilisateur des formulations telles
