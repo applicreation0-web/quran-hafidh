@@ -70,7 +70,17 @@ val verifyEditorialBoundary by tasks.registering {
             "Pour comprendre cette Hikma",
             "Explication simple",
             "commentaire de l’auteur",
-            "commentaire de l'auteur"
+            "commentaire de l'auteur",
+            "Ibn ʿAṭāʾ Allāh veut dire",
+            "Ibn 'Ata' Allah veut dire",
+            "Al-Ghazâlî nous enseigne ici",
+            "Al-Ghazali nous enseigne ici",
+            "ce que l’auteur veut dire",
+            "ce que l'auteur veut dire",
+            "en d’autres termes",
+            "en d'autres termes",
+            "Explication de la pensée",
+            "Résumé IA"
         )
         forbidden.forEach { phrase ->
             check(!sources.contains(phrase, ignoreCase = true)) {
@@ -92,8 +102,35 @@ val verifyEditorialBoundary by tasks.registering {
         check(hikam.contains("Ibn ʿAjība")) {
             "Classical commentary must identify Ibn ʿAjība explicitly."
         }
-        check(hikam.contains("isExcerpt: Boolean = true")) {
-            "Abridged commentary must remain explicitly marked as excerpt."
+        check(hikam.contains("isExcerpt: Boolean")) {
+            "Abridged commentary must retain an explicit excerpt flag."
+        }
+
+        val authenticity = file(
+            "src/main/java/com/quranunlock/guard/ClassicalAuthenticity.kt"
+        ).readText()
+        check(authenticity.contains("sourceVerified")) {
+            "Classical content must track source verification separately."
+        }
+        check(authenticity.contains("attributionVerified")) {
+            "Classical content must track attribution verification separately."
+        }
+        check(authenticity.contains("translationVerified")) {
+            "Classical content must track translation verification separately."
+        }
+        check(authenticity.contains("humanVerified")) {
+            "Classical content must require explicit human verification."
+        }
+        check(authenticity.contains("rightsStatus")) {
+            "Classical content must track translation rights."
+        }
+
+        val ghazali = file("src/main/java/com/quranunlock/guard/GhazaliRepository.kt").readText()
+        check(ghazali.contains("اعلم أن للدين شطرين")) {
+            "The corrected exact Bidayat al-Hidaya wording must remain locked."
+        }
+        check(ghazali.contains("Approfondir — contexte dans l’œuvre").not()) {
+            "UI wording belongs in GhazaliDetailActivity, not classical source data."
         }
     }
 }
