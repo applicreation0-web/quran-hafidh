@@ -197,7 +197,7 @@ class MushafReaderActivity : ComponentActivity() {
                                     !bottomReached -> "Faites défiler jusqu’en bas"
                                     readingMs < GuardPrefs.MIN_READING_MS ->
                                         "Lecture active : ${formatReadingDuration(readingMs)} / 01:00"
-                                    else -> "Débloquer l’application"
+                                    else -> "Valider la lecture"
                                 }
                             )
                         }
@@ -206,7 +206,7 @@ class MushafReaderActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { finish() }
                         ) {
-                            Text("Retour au contrôle")
+                            Text("Quitter sans valider")
                         }
                         Text(
                             "Si tu quittes cet écran, le compteur se met en pause.",
