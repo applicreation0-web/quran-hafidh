@@ -650,9 +650,9 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("• 1 page complète avant de continuer.")
+                        Text("• 1 page complète et au moins 60 secondes de lecture active avant de continuer.")
                         Text("• La page conserve son format 15 lignes et se parcourt naturellement jusqu’en bas.")
-                        Text("• Le chrono mesure votre rythme réel sans imposer une vitesse de lecture.")
+                        Text("• Le chrono avance uniquement lorsque la page est réellement visible ; aucune vitesse artificielle n’est imposée.")
                         Text("• 3 jokers maximum par jour.")
                         Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
                         Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
