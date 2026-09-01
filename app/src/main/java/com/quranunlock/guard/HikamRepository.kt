@@ -35,9 +35,9 @@ data class HikmaEntry(
 
 object HikamRepository {
     private const val VERIFIED_ON = "2026-09-01"
-    private const val HISTORICAL_EDITION =
-        "Ibn ʿAjība, Īqāẓ al-Himam fī Sharḥ al-Ḥikam, 2e éd., " +
-            "al-Maṭbaʿa al-Jamāliyya, Le Caire, 1331 H / 1913"
+    private const val COMMENTARY_EDITION =
+        "Ibn ʿAjība, Īqāẓ al-Himam fī Sharḥ al-Ḥikam, éd./corr. " +
+            "Muḥammad ʿAbd al-Qādir Naṣṣār, Dār Jawāmiʿ al-Kalim, Le Caire, 632 p."
 
     val entries: List<HikmaEntry> = listOf(
         HikmaEntry(
@@ -54,11 +54,11 @@ object HikamRepository {
             commentary = HikmaCommentary(
                 commentator = "Ibn ʿAjība",
                 workTitle = "Īqāẓ al-Himam fī Sharḥ al-Ḥikam",
-                arabicExcerpt = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب كما أن البصر ناظر القالب […]",
-                frenchTranslation = "J’ai dit : l’effort appliqué à une chose consiste à déployer toute son énergie pour la rechercher ; la négligence est le relâchement et l’abandon. La clairvoyance est le regard du cœur, comme la vue est le regard du corps. […]",
-                edition = HISTORICAL_EDITION,
-                locator = "Ḥikma 5 • transcription numérique Damas/Nur, PDF p. 13",
-                sourceUrl = "https://data.nur.nu/Kutub/Arabic/Ibn3Ajiba_Writings/Ibn3Ajiba_Iqazh-alHimam/Ibn3Ajiba_Iqazh-alHimam_text.pdf"
+                arabicExcerpt = "قلت : الاجتهاد في الشيء استفراغ الجهد والطاقة في طلبه ، والتقصير هو التفريط والتضييع والبصيرة ناظر القلب […]",
+                frenchTranslation = "J’ai dit : l’effort appliqué à une chose consiste à déployer toute son énergie pour la rechercher ; la négligence est le relâchement et l’abandon. La clairvoyance est le regard du cœur. […]",
+                edition = COMMENTARY_EDITION,
+                locator = "Ḥikma 5 • p. 39",
+                sourceUrl = "https://ablibrary.net/book_content/b/9684/39"
             )
         ),
         HikmaEntry(
@@ -75,11 +75,11 @@ object HikamRepository {
             commentary = HikmaCommentary(
                 commentator = "Ibn ʿAjība",
                 workTitle = "Īqāẓ al-Himam fī Sharḥ al-Ḥikam",
-                arabicExcerpt = "قلت الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح وإلا كانت ميتة ساقطة كذلك لا قيام للأعمال البدنية والقلبية إلا بوجود الإخلاص فيها وإلا كانت صوراً قائمة وأشباحاً خاوية لا عبرة بها […]",
-                frenchTranslation = "J’ai dit : toutes les œuvres sont comme des formes et des corps, et leur âme est la présence de la sincérité. De même que les formes ne subsistent que par les âmes, sans quoi elles seraient mortes et sans vie, les œuvres du corps et du cœur ne subsistent que par la sincérité ; autrement, elles ne sont que des formes dressées et des silhouettes vides dont il n’est pas tenu compte. […]",
-                edition = HISTORICAL_EDITION,
-                locator = "Ḥikma 10 • transcription numérique Damas/Nur, PDF p. 18",
-                sourceUrl = "https://data.nur.nu/Kutub/Arabic/Ibn3Ajiba_Writings/Ibn3Ajiba_Iqazh-alHimam/Ibn3Ajiba_Iqazh-alHimam_text.pdf"
+                arabicExcerpt = "قلت : الأعمال كلها أشباح وأجساد وأرواحها وجود الإخلاص فيها فكما لا قيام للأشباح إلا بالأرواح […]",
+                frenchTranslation = "J’ai dit : toutes les œuvres sont comme des formes et des corps, et leur âme est la présence de la sincérité. De même que les formes ne subsistent que par les âmes […].",
+                edition = COMMENTARY_EDITION,
+                locator = "Ḥikma 10 • p. 50",
+                sourceUrl = "https://ablibrary.net/book_content/b/9684/50"
             )
         ),
         HikmaEntry(
@@ -96,11 +96,11 @@ object HikamRepository {
             commentary = HikmaCommentary(
                 commentator = "Ibn ʿAjība",
                 workTitle = "Īqāẓ al-Himam fī Sharḥ al-Ḥikam",
-                arabicExcerpt = "قلت لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء فلا ينفع الدواء من غير حمية ولا فائدة في الحمية من غير دواء […]",
-                frenchTranslation = "J’ai dit : rien n’est plus bénéfique au cœur qu’un retrait accompagné de réflexion, car le retrait est comme une diète et la réflexion comme un remède. Le remède ne profite pas sans diète, et la diète n’a pas d’utilité sans remède. […]",
-                edition = HISTORICAL_EDITION,
-                locator = "Ḥikma 12 • transcription numérique Damas/Nur, PDF p. 22",
-                sourceUrl = "https://data.nur.nu/Kutub/Arabic/Ibn3Ajiba_Writings/Ibn3Ajiba_Iqazh-alHimam/Ibn3Ajiba_Iqazh-alHimam_text.pdf"
+                arabicExcerpt = "قلت : لا شيء أنفع للقلب من عزلة مصحوبة بفكرة لأن العزلة كالحمية والفكرة كالدواء […]",
+                frenchTranslation = "J’ai dit : rien n’est plus bénéfique au cœur qu’un retrait accompagné de réflexion, car le retrait est comme une diète et la réflexion comme un remède. […]",
+                edition = COMMENTARY_EDITION,
+                locator = "Ḥikma 12 • p. 58",
+                sourceUrl = "https://ablibrary.net/book_content/b/9684/58"
             )
         )
     )
