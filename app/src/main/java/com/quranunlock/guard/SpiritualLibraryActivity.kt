@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -114,6 +115,7 @@ private fun SpiritualLibraryScreen(
             when (section) {
                 LibrarySection.HADITH -> {
                     LazyColumn(
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(hadiths, key = { it.id }) { reminder ->
@@ -125,6 +127,7 @@ private fun SpiritualLibraryScreen(
                 LibrarySection.HIKAM -> {
                     val entries = HikamRepository.entries.filter { it.displayEligible }
                     LazyColumn(
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(entries, key = { it.canonicalId }) { hikma ->
@@ -173,6 +176,7 @@ private fun SpiritualLibraryScreen(
                 LibrarySection.GHAZALI -> {
                     val entries = GhazaliRepository.entries.filter { it.displayEligible }
                     LazyColumn(
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(entries, key = { it.canonicalId }) { entry ->
