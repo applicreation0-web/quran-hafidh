@@ -237,7 +237,7 @@ object ReminderLibrary {
 
     fun all(context: Context): List<DailyReminder> =
         items +
-            HikamRepository.asDailyReminders() +
+            HikamRepository.asDailyReminders(context) +
             GhazaliRepository.asDailyReminders() +
             bundled(context)
 
