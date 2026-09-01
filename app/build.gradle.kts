@@ -523,9 +523,7 @@ val verifyThoughtOfDayBoundary by tasks.registering {
             "src/test/java/com/quranunlock/guard/ThoughtOfDayPolicyTest.kt"
         ).readText()
 
-        check(daily.contains("MORNING_HOUR = 8")) {
-            "Thought of the day must be scheduled in the morning."
-        }
+        check(daily.contains("REMINDER_HOUR = 20")) {\n            "Thought of the day must be scheduled at 20:00 local."\n        }
         check(scheduler.contains("markThoughtNotificationIfNeeded")) {
             "Thought notification must be deduplicated per epoch day."
         }
@@ -573,7 +571,7 @@ val verifyThoughtOfDayBoundary by tasks.registering {
             "thoughtIsStableForSameDateAndSameCorpus",
             "onlyOneThoughtNotificationIsAllowedPerEpochDay",
             "notificationOpensTheDedicatedFullThoughtCard",
-            "thoughtNotificationIsScheduledInMorning"
+            "thoughtNotificationIsScheduledAtTwentyLocal"
         ).forEach { scenario ->
             check(tests.contains("fun " + scenario + "(")) {
                 "Missing release-blocking thought-of-day test: " + scenario
