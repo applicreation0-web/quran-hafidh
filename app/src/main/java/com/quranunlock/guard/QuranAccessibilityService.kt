@@ -37,6 +37,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var audioModeListener31: Any? = null
     private var callFreezeActive = false
     private var lastCheckpointElapsedMs = 0L
+    private var pendingOrphanRecovery: OrphanedUnlockRecovery? = null
 
     private val scopePreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -123,7 +124,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
         // Must happen before any new foreground interval is started. This cleans
         // reboot/service-death markers using the last persisted checkpoint.
-        val orphanedForegroundPackage =
+        val orphanedRecovery =
             GuardPrefs.reconcileOrphanedUnlockForeground(this)
 
         BrowserDetector.refresh()
@@ -144,23 +145,22 @@ class QuranAccessibilityService : AccessibilityService() {
         applyEventPackageScope(broad = false)
         registerScreenReceiverIfNeeded()
 
-        if (orphanedForegroundPackage != null &&
+        if (orphanedRecovery != null &&
             !callFreezeActive &&
             isScreenInteractiveAndUnlocked() &&
-            ProtectedApps.isProtected(this, orphanedForegroundPackage) &&
-            GuardPrefs.isUnlocked(this, orphanedForegroundPackage)
+            ProtectedApps.isProtected(this, orphanedRecovery.packageName) &&
+            GuardPrefs.isUnlocked(this, orphanedRecovery.packageName)
         ) {
-            // Arm the same-boot candidate, but DO NOT debit it yet. The first
-            // real window/click/scroll event from that protected app starts the
-            // budget. If another app is actually foreground, its first event
-            // clears this candidate without consuming any protected budget.
-            foregroundPackage = orphanedForegroundPackage
-            GuardRuntime.markExternalForeground(orphanedForegroundPackage)
+            // Arm recovery but do not charge downtime until a real event proves
+            // that the same protected app is still the interaction owner.
+            pendingOrphanRecovery = orphanedRecovery
+            foregroundPackage = orphanedRecovery.packageName
+            GuardRuntime.markExternalForeground(orphanedRecovery.packageName)
             applyEventPackageScope(broad = true)
             GuardDiagnostics.log(
                 this,
                 "SERVICE_FOREGROUND_RECOVERY_ARMED",
-                orphanedForegroundPackage
+                orphanedRecovery.packageName
             )
         }
 
@@ -264,6 +264,15 @@ class QuranAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
+
+        pendingOrphanRecovery?.let { recovery ->
+            if (packageName == recovery.packageName) {
+                GuardPrefs.chargeRecoveredForegroundGap(this, recovery)
+            }
+            // Any first real post-restart event settles the ambiguity. If it is
+            // another package, no protected budget is charged for downtime.
+            pendingOrphanRecovery = null
+        }
 
         // The active keyboard belongs to another package but is not an app exit.
         // Keep the protected app as the sole budget owner while typing.
@@ -577,6 +586,7 @@ class QuranAccessibilityService : AccessibilityService() {
         guardPrefs?.unregisterOnSharedPreferenceChangeListener(scopePreferenceListener)
         guardPrefs = null
         audioManager = null
+        pendingOrphanRecovery = null
 
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
