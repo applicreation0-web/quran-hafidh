@@ -99,8 +99,6 @@ class ProtectedAppsPolicyTest {
             "com.brave.browser",
             "com.opera.browser",
             "com.sec.android.app.sbrowser",
-            "com.duckduckgo.mobile.android",
-            "com.vivaldi.browser",
             "com.google.android.youtube",
             "com.whatsapp",
             "org.telegram.messenger",
@@ -144,7 +142,9 @@ class ProtectedAppsPolicyTest {
             "com.revolut.revolut",
             "com.google.android.gms",
             "com.example.privatebank",
-            "com.example.security"
+            "com.example.security",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser"
         )
 
         excluded.forEach { packageName ->
