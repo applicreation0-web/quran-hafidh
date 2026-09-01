@@ -32,6 +32,8 @@ object GuardPrefs {
     private const val LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX = "unlock_elapsed_started_"
     private const val UNLOCK_REMAINING_MS_PREFIX = "unlock_remaining_ms_"
     private const val UNLOCK_FOREGROUND_STARTED_PREFIX = "unlock_foreground_started_"
+    private const val UNLOCK_FOREGROUND_BOOT_PREFIX = "unlock_foreground_boot_"
+    private const val UNLOCK_FOREGROUND_CHECKPOINT_PREFIX = "unlock_foreground_checkpoint_"
     private const val UNLOCK_GRANTED_MS_PREFIX = "unlock_granted_ms_"
     private const val UNLOCK_REMINDER_MASK_PREFIX = "unlock_reminder_mask_"
     private const val CHALLENGE_PREFIX = "challenge_page_"
@@ -108,6 +110,8 @@ object GuardPrefs {
             .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, grantedMs)
             .putInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, 0)
             .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+            .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
+            .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
             .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
             .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
             .remove(CHALLENGE_PREFIX + packageName)
@@ -135,6 +139,76 @@ object GuardPrefs {
     fun isUnlocked(context: Context, packageName: String): Boolean =
         !outOfScope(context, packageName) && remainingUnlockMs(context, packageName) > 0L
 
+    private fun currentBootCount(context: Context): Int =
+        runCatching {
+            Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
+        }.getOrDefault(-1)
+
+    private fun readUnlockBudgetState(
+        prefs: android.content.SharedPreferences,
+        packageName: String
+    ): UnlockBudgetState {
+        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L)
+            .takeIf { it >= 0L }
+        val boot = prefs.getInt(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName, Int.MIN_VALUE)
+            .takeIf { it != Int.MIN_VALUE }
+        val checkpoint = prefs.getLong(
+            UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName,
+            -1L
+        ).takeIf { it >= 0L }
+
+        return UnlockBudgetState(
+            remainingMs = prefs.getLong(
+                UNLOCK_REMAINING_MS_PREFIX + packageName,
+                0L
+            ).coerceAtLeast(0L),
+            foregroundStartedElapsedMs = started,
+            foregroundBootCount = boot,
+            checkpointElapsedMs = checkpoint
+        )
+    }
+
+    private fun writeUnlockBudgetState(
+        prefs: android.content.SharedPreferences,
+        packageName: String,
+        state: UnlockBudgetState,
+        synchronous: Boolean
+    ) {
+        val editor = prefs.edit()
+            .putLong(
+                UNLOCK_REMAINING_MS_PREFIX + packageName,
+                state.remainingMs.coerceAtLeast(0L)
+            )
+
+        val started = state.foregroundStartedElapsedMs
+        val boot = state.foregroundBootCount
+        val checkpoint = state.checkpointElapsedMs
+
+        if (started == null) {
+            editor
+                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
+        } else {
+            editor.putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, started)
+            if (boot != null) {
+                editor.putInt(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName, boot)
+            } else {
+                editor.remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
+            }
+            if (checkpoint != null) {
+                editor.putLong(
+                    UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName,
+                    checkpoint
+                )
+            } else {
+                editor.remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
+            }
+        }
+
+        if (synchronous) editor.commit() else editor.apply()
+    }
+
     @Synchronized
     fun remainingUnlockMs(context: Context, packageName: String): Long {
         if (outOfScope(context, packageName)) return 0L
@@ -143,7 +217,10 @@ object GuardPrefs {
 
         if (!prefs.contains(key)) {
             val now = SystemClock.elapsedRealtime()
-            val legacyUntil = prefs.getLong(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName, -1L)
+            val legacyUntil = prefs.getLong(
+                LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName,
+                -1L
+            )
             val legacyRemaining = if (legacyUntil > now) legacyUntil - now else 0L
             if (legacyUntil >= 0L) {
                 prefs.edit()
@@ -155,46 +232,102 @@ object GuardPrefs {
             }
         }
 
-        val stored = prefs.getLong(key, 0L).coerceAtLeast(0L)
-        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L)
-        if (started < 0L) return stored
-
+        val state = readUnlockBudgetState(prefs, packageName)
         val now = SystemClock.elapsedRealtime()
-        val live = if (now >= started) now - started else 0L
-        return (stored - live).coerceAtLeast(0L)
+        val boot = currentBootCount(context)
+
+        if (state.foregroundStartedElapsedMs != null &&
+            (state.foregroundBootCount != boot ||
+                now < state.foregroundStartedElapsedMs)
+        ) {
+            val reconciled = UnlockBudgetIntegrity.reconcileOrphan(state)
+            writeUnlockBudgetState(prefs, packageName, reconciled, synchronous = true)
+            return reconciled.remainingMs
+        }
+
+        return UnlockBudgetIntegrity.remaining(state, now, boot)
     }
 
     @Synchronized
     fun beginUnlockForeground(context: Context, packageName: String) {
         if (outOfScope(context, packageName)) return
         if (remainingUnlockMs(context, packageName) <= 0L) return
+
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L) >= 0L) return
-        prefs.edit()
-            .putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, SystemClock.elapsedRealtime())
-            .commit()
+        val state = readUnlockBudgetState(prefs, packageName)
+        val started = UnlockBudgetIntegrity.start(
+            state = state,
+            nowElapsedMs = SystemClock.elapsedRealtime(),
+            currentBootCount = currentBootCount(context)
+        )
+        writeUnlockBudgetState(prefs, packageName, started, synchronous = true)
+    }
+
+    @Synchronized
+    fun checkpointUnlockForeground(context: Context, packageName: String) {
+        if (outOfScope(context, packageName)) return
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val state = readUnlockBudgetState(prefs, packageName)
+        if (state.foregroundStartedElapsedMs == null) return
+
+        val checkpointed = UnlockBudgetIntegrity.checkpoint(
+            state = state,
+            nowElapsedMs = SystemClock.elapsedRealtime(),
+            currentBootCount = currentBootCount(context)
+        )
+        writeUnlockBudgetState(prefs, packageName, checkpointed, synchronous = false)
     }
 
     @Synchronized
     fun endUnlockForeground(context: Context, packageName: String): Long {
         if (outOfScope(context, packageName)) return 0L
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val remaining = remainingUnlockMs(context, packageName)
-        prefs.edit()
-            .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, remaining)
-            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
-            .commit()
-        return remaining
+        val paused = UnlockBudgetIntegrity.pause(
+            state = readUnlockBudgetState(prefs, packageName),
+            nowElapsedMs = SystemClock.elapsedRealtime(),
+            currentBootCount = currentBootCount(context)
+        )
+        writeUnlockBudgetState(prefs, packageName, paused, synchronous = true)
+        return paused.remainingMs
+    }
+
+    @Synchronized
+    fun reconcileOrphanedUnlockForeground(context: Context) {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val packages = buildSet {
+            addAll(ProtectedApps.selectableScopePackages)
+            add(ProtectedApps.ANDROID_SETTINGS)
+            prefs.all.keys
+                .filter { it.startsWith(UNLOCK_FOREGROUND_STARTED_PREFIX) }
+                .mapTo(this) { it.removePrefix(UNLOCK_FOREGROUND_STARTED_PREFIX) }
+        }
+
+        packages.filter(String::isNotBlank).forEach { packageName ->
+            val state = readUnlockBudgetState(prefs, packageName)
+            if (state.foregroundStartedElapsedMs == null) return@forEach
+
+            if (outOfScope(context, packageName)) {
+                prefs.edit()
+                    .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+                    .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
+                    .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
+                    .commit()
+                return@forEach
+            }
+
+            val reconciled = UnlockBudgetIntegrity.reconcileOrphan(state)
+            writeUnlockBudgetState(prefs, packageName, reconciled, synchronous = true)
+        }
     }
 
     @Synchronized
     fun expireUnlock(context: Context, packageName: String) {
         if (outOfScope(context, packageName)) return
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, 0L)
-            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
-            .apply()
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val expired = UnlockBudgetIntegrity.expire(
+            readUnlockBudgetState(prefs, packageName)
+        )
+        writeUnlockBudgetState(prefs, packageName, expired, synchronous = true)
     }
 
     @Synchronized
@@ -349,6 +482,8 @@ object GuardPrefs {
                 .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
                 .remove(UNLOCK_REMAINING_MS_PREFIX + packageName)
                 .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
                 .remove(UNLOCK_GRANTED_MS_PREFIX + packageName)
                 .remove(UNLOCK_REMINDER_MASK_PREFIX + packageName)
                 .remove(CHALLENGE_PREFIX + packageName)
