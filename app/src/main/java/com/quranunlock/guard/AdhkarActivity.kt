@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -49,9 +50,10 @@ class AdhkarActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AdhkarScreen(period: AdhkarPeriod) {
+private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
     val context = LocalContext.current
-    val items = AuthenticAdhkarLibrary.forPeriod(period)
+    var activePeriod by remember(initialPeriod) { mutableStateOf(initialPeriod) }
+    val items = AuthenticAdhkarLibrary.forPeriod(activePeriod)
     var showTransliteration by remember {
         mutableStateOf(ReminderPrefs.adhkarTransliterationEnabled(context))
     }
@@ -64,12 +66,29 @@ private fun AdhkarScreen(period: AdhkarPeriod) {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                if (period == AdhkarPeriod.MORNING) "Adhkâr du matin 🌿" else "Adhkâr du soir 🌿",
+                if (activePeriod == AdhkarPeriod.MORNING) "Adhkâr du matin 🌿" else "Adhkâr du soir 🌿",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                FilterChip(
+                    modifier = Modifier.weight(1f),
+                    selected = activePeriod == AdhkarPeriod.MORNING,
+                    onClick = { activePeriod = AdhkarPeriod.MORNING },
+                    label = { Text("Matin") }
+                )
+                FilterChip(
+                    modifier = Modifier.weight(1f),
+                    selected = activePeriod == AdhkarPeriod.EVENING,
+                    onClick = { activePeriod = AdhkarPeriod.EVENING },
+                    label = { Text("Soir") }
+                )
+            }
             Text(
-                if (period == AdhkarPeriod.MORNING) {
+                if (activePeriod == AdhkarPeriod.MORNING) {
                     "Fenêtre recommandée : de Fajr au lever du soleil."
                 } else {
                     "Fenêtre recommandée : de ‘Asr à Maghrib."
