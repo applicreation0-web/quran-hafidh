@@ -34,22 +34,20 @@ val verifyPrivacyBoundary by tasks.registering {
         val manifest = file("src/main/AndroidManifest.xml").readText()
         val accessibility = file("src/main/res/xml/accessibility_service_config.xml").readText()
 
-        val appBootstrap = file(
-            "src/main/java/com/quranunlock/guard/QuranSafeguardApp.kt"
-        )
-        check(appBootstrap.isFile) {
-            "Manifest declares QuranSafeguardApp but its Application class is missing."
-        }
-        val appBootstrapText = appBootstrap.readText()
+        val migrationSource = file(
+            "src/main/java/com/quranunlock/guard/AppMigrations.kt"
+        ).readText()
         check(manifest.contains("android:name=\".QuranSafeguardApp\"")) {
             "QuranSafeguardApp must remain the process bootstrap."
         }
-        check(appBootstrapText.contains("AppMigrations.run(this)")) {
+        check(migrationSource.contains("class QuranSafeguardApp")) {
+            "Manifest declares QuranSafeguardApp but the Application class is missing."
+        }
+        check(migrationSource.contains("AppMigrations.run(this)")) {
             "Data migrations must run before activities/services use persisted state."
         }
 
         val requiredManifestComponents = mapOf(
-            ".QuranSafeguardApp" to "src/main/java/com/quranunlock/guard/QuranSafeguardApp.kt",
             ".QuranAccessibilityService" to "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt",
             ".DashboardActivity" to "src/main/java/com/quranunlock/guard/DashboardActivity.kt",
             ".MainActivity" to "src/main/java/com/quranunlock/guard/MainActivity.kt",
