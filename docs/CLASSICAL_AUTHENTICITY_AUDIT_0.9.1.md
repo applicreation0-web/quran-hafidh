@@ -4,51 +4,77 @@ Date: 2026-09-01
 
 ## Principle
 
-AUTHENTICITÉ AVANT QUANTITÉ.
+AUTHENTICITY BEFORE QUANTITY.
 
-Quran Safeguard does not summarize, interpret or reconstruct Ibn ʿAṭāʾ Allāh,
-Ibn ʿAjība or al-Ghazālī.
+Quran Safeguard does not summarize, interpret, reconstruct or speak in the
+authorial voice of Ibn ʿAṭāʾ Allāh, Ibn ʿAjība or al-Ghazālī.
 
-For display eligibility the application requires:
-- sourceVerified=true
-- attributionVerified=true
-- translationVerified=true
-- rightsStatus != UNRESOLVED
-- authenticityStatus=VERIFIED_SOURCE
+For classical display eligibility the application requires:
+- exact Arabic text present;
+- sourceVerified=true;
+- attributionVerified=true;
+- translationAvailable=true;
+- rightsStatus != UNRESOLVED;
+- authenticityStatus=VERIFIED_SOURCE;
+- complete documentary source metadata: author, work, edition/source,
+  locator, source URL and explicit translation provenance.
 
-The separate humanVerified field is retained and displayed/documented as a
-distinct external editorial-review status. 0.9.1 does not falsely claim an
-external certification when none exists.
+`humanVerified` is separate, informative metadata. It is not a display
+requirement. An internal Quran Safeguard French translation may be displayed
+when the documentary requirements above are satisfied, and it is explicitly
+identified as internal in the UI.
 
-French text used here is an internal Quran Safeguard translation reviewed
-against the retained Arabic passage. It is explicitly labeled as internal and
-does not reproduce a modern commercial French translation.
+## Al-Hikam al-ʿAṭāʾiyya
 
-## Al-Hikam
+Current display-eligible entries: Hikma 5, 10 and 12 from the retained
+numbering source.
 
-Displayed entries: Hikma 5, 10, 12 from the retained numbering source.
+This release does **not** claim “264/264”, “all Hikam” or a complete corpus.
+The repository may grow toward the retained source numbering only as entries
+are individually sourced and translated.
 
-For each:
+For each current Hikma:
 - Arabic source and attribution to Ibn ʿAṭāʾ Allāh are documented;
-- French translation is internal Quran Safeguard;
+- a precise Hikma locator and source URL are retained;
+- the French translation is internal Quran Safeguard;
 - Ibn ʿAjība is identified only as COMMENTATOR;
-- available Īqāẓ al-Himam commentary excerpts use explicit […] cuts;
-- commentary locators remain p.39, p.50 and p.58 in the retained source;
-- the UI label is “Approfondir — commentaire classique”.
+- the available Īqāẓ al-Himam commentary excerpts use explicit […] cuts;
+- commentary locators are p.39, p.50 and p.58 in the retained source;
+- “Approfondir — commentaire classique” exposes the sourced commentator text,
+  not an AI explanation.
 
-No “simple explanation”, AI summary or author-voice paraphrase is shown.
+A sourced Hikma remains displayable without “Approfondir” when no reliable
+commentary is available.
 
-## Al-Ghazali
+## Al-Ghazālī
 
-Displayed canonical entries remain sourced to Bidāyat al-Hidāya / Iḥyāʾ ʿUlūm al-Dīn.
-The corrected wording “اعلم أن للدين شطرين…” remains locked by test.
+The short-reminder scope is limited to **Ayyuhā al-Walad** for 0.9.1.
 
-“Approfondir — contexte dans l’œuvre” opens only al-Ghazālī’s own continuous
-Arabic text and the internal French translation of that same passage.
+Current display-eligible entry: one continuous passage beginning
+“لا تكن من الأعمال مفلسا...” with the immediately following weapons/lion
+context available in the detail layer.
 
-## User disclosure
+The entry retains:
+- the Arabic Wikisource revision URL and precise locator;
+- immediate before/after context-control metadata;
+- passage role = author’s own words;
+- continuity and nuance-risk checks;
+- internal French translation of the same continuous passage.
 
-Classical detail screens explicitly state:
-- documentary authenticity: source and attribution verified;
-- French translation: internal Quran Safeguard, reviewed against Arabic;
-- no external editorial certification is implied.
+Bidāyat al-Hidāya and Iḥyāʾ ʿUlūm al-Dīn are not part of the 0.9.1
+short-reminder corpus.
+
+## Thought of the day / unlock boundary
+
+Eligible classical texts may participate in the Thought-of-the-day rotation.
+The card explicitly separates documentary authenticity from internal French
+translation provenance.
+
+Thought of the day is independent from Quran unlock. The unlock path remains:
+protected app → Quran reading → validated reading summary → access.
+
+## Release statement
+
+Current classical scope is deliberately limited: 3 Hikam + 1 Ayyuhā al-Walad
+entry. Authenticity gates are release-blocking; corpus completeness is not
+claimed.
