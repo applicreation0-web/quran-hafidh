@@ -24,7 +24,7 @@ object AppMigrations {
     private const val LAST_APP_VERSION_KEY = "last_app_version_code"
     private const val LAST_BACKUP_SCHEMA_KEY = "last_backup_schema"
 
-    const val CURRENT_SCHEMA = 4
+    const val CURRENT_SCHEMA = 5
 
     @Synchronized
     fun run(context: Context): MigrationResult {
@@ -73,6 +73,12 @@ object AppMigrations {
                 migrateToSchema4(context)
                 validateCriticalPreferences(context)
                 schema = 4
+                state.edit().putInt(SCHEMA_KEY, schema).commit()
+            }
+            if (schema < 5) {
+                migrateToSchema5(context)
+                validateCriticalPreferences(context)
+                schema = 5
                 state.edit().putInt(SCHEMA_KEY, schema).commit()
             }
 
@@ -180,6 +186,22 @@ object AppMigrations {
         context.getSharedPreferences("mindful_reminder_prefs", Context.MODE_PRIVATE)
             .edit()
             .commit()
+    }
+
+    private fun migrateToSchema5(context: Context) {
+        val prefs = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
+        val stored = normalizeStringSet(prefs.all["protected_packages"]) ?: return
+        val filtered = stored
+            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .toSet()
+
+        if (filtered != stored) {
+            check(
+                prefs.edit()
+                    .putStringSet("protected_packages", filtered)
+                    .commit()
+            ) { "Unable to purge permanently excluded apps" }
+        }
     }
 
     private fun validateCriticalPreferences(context: Context) {
