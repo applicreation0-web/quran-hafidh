@@ -77,9 +77,10 @@ Commentaries follow a strict source-isolation rule:
 - when several verified commentaries exist for one Hikma, the UI shows them as
   separate cards, each with its own author, work, locator, source and translation provenance.
 
-The current separately verified Ibn ʿAjība excerpts remain attached only to
-Hikam 5, 10 and 12. Their cuts are explicit with […] and their source locators
-remain p.39, p.50 and p.58.
+The current separately verified Ibn ʿAjība tranche is attached to Hikam 1
+through 12. Every passage is a continuous excerpt with no internal cut; each
+entry retains its exact Hikma number, edition page, source URL and separate
+internal French translation.
 
 Future verified commentaries may come from other classical commentators without
 changing the Hikma text itself. Absence of a verified commentary means absence
@@ -87,13 +88,12 @@ of “Approfondir” content, not exclusion of the Hikma.
 
 ## Al-Ghazālī
 
-The short-reminder scope remains limited to **Ayyuhā al-Walad** for 0.9.1.
+Al-Ghazālī is temporarily absent from the application UI and from daily
+reminders because the single verified Ayyuhā al-Walad passage is not a
+sufficient user-facing corpus. The dormant source record remains restricted to
+Ayyuhā al-Walad for future editorial work.
 
-The current entry is a continuous passage beginning “لا تكن من الأعمال مفلسا...”
-with its immediate weapons/lion context available in the detail layer.
-
-Bidāyat al-Hidāya and Iḥyāʾ ʿUlūm al-Dīn are not part of the 0.9.1
-short-reminder corpus.
+Bidāyat al-Hidāya and Iḥyāʾ ʿUlūm al-Dīn remain outside this corpus.
 
 ## Thought of the day / unlock boundary
 
@@ -101,7 +101,7 @@ The 264 eligible Hikam may participate in the Thought-of-the-day rotation.
 Thought of the day remains independent from Quran unlock.
 
 Unlock path remains:
-protected app → Quran reading → validated reading summary → access.
+protected app → Quran reading → validation → immediate return to the protected app.
 
 ## Release statement
 
