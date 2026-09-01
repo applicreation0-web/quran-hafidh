@@ -663,208 +663,50 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SectionTitle("Applications protégées")
-                Text(
-                    "Tout se règle ici. Safeguard est volontairement limité aux réseaux sociaux, messageries sociales et huit navigateurs connus.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Banque, paiement, identité, authentification, mots de passe, sécurité, appels et alarmes ne sont jamais des cibles Safeguard. Paramètres Android reste protégé contre le contournement.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            protectedPackages.clear()
-                            protectedPackages.addAll(
-                                ProtectedApps.selectableScopePackages.sorted()
-                            )
-                            GuardPrefs.saveProtectedPackages(
-                                this@MainActivity,
-                                protectedPackages.toSet()
-                            )
-                        }
-                    ) { Text("Tout activer") }
-
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            protectedPackages.clear()
-                            GuardPrefs.saveProtectedPackages(
-                                this@MainActivity,
-                                emptySet()
-                            )
-                        }
-                    ) { Text("Tout désactiver") }
-                }
-
-                listOf(
-                    "Réseaux sociaux" to ProtectedApps.socialTargets,
-                    "Navigateurs" to ProtectedApps.browserTargets
-                ).forEach { (groupTitle, targets) ->
-                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                groupTitle,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            targets.forEach { target ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = target.packageName in protectedPackages,
-                                        onCheckedChange = { checked ->
-                                            if (checked) {
-                                                if (target.packageName !in protectedPackages) {
-                                                    protectedPackages.add(target.packageName)
-                                                }
-                                            } else {
-                                                protectedPackages.remove(target.packageName)
-                                            }
-                                            GuardPrefs.saveProtectedPackages(
-                                                this@MainActivity,
-                                                protectedPackages.toSet()
-                                            )
-                                        }
-                                    )
-                                    Text(target.label)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                SectionTitle("Lecture Quran")
-                Text(
-                    "Le Mushaf de Médine (604 pages, Hafs ‘an ‘Asim) est intégré et fonctionne hors ligne.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = mode == QuranSelectionMode.JUZ,
-                        onClick = {
-                            mode = QuranSelectionMode.JUZ
-                            GuardPrefs.saveSelectionMode(this@MainActivity, mode)
-                        }
-                    )
-                    Text("Choisir par Juz")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = mode == QuranSelectionMode.HIZB,
-                        onClick = {
-                            mode = QuranSelectionMode.HIZB
-                            GuardPrefs.saveSelectionMode(this@MainActivity, mode)
-                        }
-                    )
-                    Text("Choisir par Hizb")
-                }
-
-                val currentSelection =
-                    if (mode == QuranSelectionMode.JUZ) selectedJuz else selectedHizb
-                val maxUnit = if (mode == QuranSelectionMode.JUZ) 30 else 60
-                val unitLabel = if (mode == QuranSelectionMode.JUZ) "Juz" else "Hizb"
-
-                Text(
-                    currentSelection.size.toString() + " " + unitLabel +
-                        if (currentSelection.size > 1) " sélectionnés" else " sélectionné",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            currentSelection.clear()
-                            currentSelection.addAll((1..maxUnit).toList())
-                            when (mode) {
-                                QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
-                                    this@MainActivity,
-                                    selectedJuz.toSet()
-                                )
-                                QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(
-                                    this@MainActivity,
-                                    selectedHizb.toSet()
-                                )
-                            }
-                        }
-                    ) { Text("Tout sélectionner") }
-
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            currentSelection.clear()
-                            when (mode) {
-                                QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
-                                    this@MainActivity,
-                                    emptySet()
-                                )
-                                QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(
-                                    this@MainActivity,
-                                    emptySet()
-                                )
-                            }
-                        }
-                    ) { Text("Tout désélectionner") }
-                }
-                if (currentSelection.isEmpty()) {
-                    Text(
-                        "Aucun filtre actif : l’ensemble du Quran reste éligible jusqu’à votre prochaine sélection.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
+                SectionTitle("Accès rapides")
                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        (1..maxUnit).chunked(3).forEach { units ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                units.forEach { unit ->
-                                    Row(
-                                        modifier = Modifier.weight(1f),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = unit in currentSelection,
-                                            onCheckedChange = { checked ->
-                                                if (checked) {
-                                                    if (unit !in currentSelection) currentSelection.add(unit)
-                                                } else {
-                                                    currentSelection.remove(unit)
-                                                }
-                                                when (mode) {
-                                                    QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(
-                                                        this@MainActivity,
-                                                        selectedJuz.toSet()
-                                                    )
-                                                    QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(
-                                                        this@MainActivity,
-                                                        selectedHizb.toSet()
-                                                    )
-                                                }
-                                            }
-                                        )
-                                        Text("$unitLabel $unit")
-                                    }
-                                }
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        ApplicationsActivity::class.java
+                                    )
+                                )
                             }
+                        ) {
+                            Text("Applications protégées")
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        ReadingSelectionActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Choix Juz / Hizb")
+                        }
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@MainActivity,
+                                        SpiritualLibraryActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Bibliothèque spirituelle")
                         }
                     }
                 }
