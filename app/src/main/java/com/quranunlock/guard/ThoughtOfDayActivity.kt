@@ -17,11 +17,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 class ThoughtOfDayActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_REMINDER_ID = "thought_reminder_id"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             QuranSafeguardTheme {
-                val thought = DailyReminderManager.today(this@ThoughtOfDayActivity)
+                val requestedId = intent.getStringExtra(EXTRA_REMINDER_ID)
+                val thought = requestedId
+                    ?.let { ReminderLibrary.byId(this@ThoughtOfDayActivity, it) }
+                    ?: DailyReminderManager.today(this@ThoughtOfDayActivity)
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
