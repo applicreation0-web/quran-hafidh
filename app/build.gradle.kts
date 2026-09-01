@@ -80,7 +80,11 @@ val verifyEditorialBoundary by tasks.registering {
             "en d’autres termes",
             "en d'autres termes",
             "Explication de la pensée",
-            "Résumé IA"
+            "Résumé IA",
+            "Toutes les Ḥikam",
+            "Toutes les Hikam",
+            "264 Ḥikam",
+            "264 Hikam"
         )
         forbidden.forEach { phrase ->
             check(!sources.contains(phrase, ignoreCase = true)) {
