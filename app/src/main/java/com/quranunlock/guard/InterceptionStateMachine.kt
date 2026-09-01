@@ -120,4 +120,17 @@ class InterceptionStateMachine {
 
 object GuardRuntime {
     val interception = InterceptionStateMachine()
+
+    @Volatile
+    private var externalForegroundPackage: String? = null
+
+    fun markExternalForeground(packageName: String?) {
+        externalForegroundPackage = packageName
+    }
+
+    fun externalForegroundPackage(): String? = externalForegroundPackage
+
+    fun resetForeground() {
+        externalForegroundPackage = null
+    }
 }
