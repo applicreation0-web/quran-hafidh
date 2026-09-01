@@ -50,19 +50,44 @@ class DashboardActivity : ComponentActivity() {
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
-                    if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
-                        "Protection active"
-                    } else {
-                        "Protection à activer"
-                    },
-                    color = if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
-                    fontWeight = FontWeight.SemiBold
-                )
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            startActivity(
+                                Intent(this@DashboardActivity, MainActivity::class.java)
+                            )
+                        }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
+                                "Protection active ✓"
+                            } else {
+                                "Protection à activer"
+                            },
+                            color = if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            if (AccessibilityStatus.isEnabled(this@DashboardActivity)) {
+                                "Les réglages se font dans Safeguard. Android Accessibility reste simplement activé en arrière-plan."
+                            } else {
+                                "Ouvrir les paramètres Safeguard pour effectuer l’activation Android une seule fois."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
                 DashboardRow(
                     leftTitle = "Applications",
@@ -111,6 +136,16 @@ class DashboardActivity : ComponentActivity() {
                             Intent(this@DashboardActivity, MainActivity::class.java)
                         )
                     }
+                )
+
+                Text(
+                    "Rappel du jour",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                DailyReminderCard(
+                    DailyReminderManager.today(this@DashboardActivity)
                 )
             }
         }
