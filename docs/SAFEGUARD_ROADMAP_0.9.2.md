@@ -1,4 +1,4 @@
-# Safeguard 0.9.3 — device-fix release contract
+# Safeguard 0.9.4 — pre-release contract
 
 This branch follows the user-approved 39-point roadmap. Newer decisions in this
 contract supersede older chat notes and legacy implementation details.
@@ -36,3 +36,23 @@ Convergence audit -> tests -> adversarial audit -> direct corrections -> re-test
 No release is authorized from the first audit.
 
 CI gate: verifyReleaseAudit, unit tests, debug APK and unsigned release APK must all pass on the same commit.
+
+
+## Reserved improvement — protected-only observation
+
+Status: **pending; not yet implemented**.
+
+The permanent Accessibility scope should contain only Quran Safeguard and the
+applications explicitly selected for protection. Banking, payment, identity and
+security applications must not be classified, monitored or retained.
+
+Exact foreground accounting still needs one transition signal when a protected
+application loses the foreground. The intended design is to consume only that
+first exit signal, pause the protected package budget, discard the destination
+identity immediately and return to the narrow protected-only scope.
+
+Trusted authentication/payment Custom Tabs should be temporarily allowed from
+their window class without creating a persistent association with the
+originating sensitive application. This change requires its own adversarial
+audit because it trades a small Custom Tab bypass surface for stricter
+non-interaction with sensitive applications.

@@ -88,3 +88,41 @@ jobs:
           name: android-signing-tools-36
           path: ${{ env.ANDROID_HOME }}/build-tools/36.0.0
           if-no-files-found: error
+
+
+  screenshots:
+    name: Capture real Android UI
+    needs: build
+    if: github.event_name == 'pull_request' && github.head_ref == 'fix/0.9.2-roadmap-final-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Download compiled debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-unlock-debug
+          path: build/screenshots/apk
+
+      - name: Capture authentic application screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/capture_app_screenshots.sh build/screenshots/apk/app-debug.apk build/screenshots/ui
+
+      - name: Upload authentic UI screenshots
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-ui-screenshots-0.9.4
+          path: build/screenshots/ui
+          if-no-files-found: error
