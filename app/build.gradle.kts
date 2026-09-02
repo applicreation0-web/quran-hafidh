@@ -387,7 +387,7 @@ val verifySensitiveAppBoundary by tasks.registering {
             "Accessibility activation must remain didactic and lightweight."
         }
         check(
-            setupUi.contains("Settings.ACTION_ACCESSIBILITY_DETAILS_SETTINGS") &&
+            setupUi.contains("\"android.settings.ACCESSIBILITY_DETAILS_SETTINGS\"") &&
                 setupUi.contains("Intent.EXTRA_COMPONENT_NAME")
         ) {
             "Guided activation must open Safeguard's Accessibility detail page directly."
