@@ -65,7 +65,7 @@ fun DailyReminderCard(
             }
 
             if (reminder.type == ReminderType.HIKAM) {
-                Button(
+                SafeguardButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         context.startActivity(
@@ -79,7 +79,7 @@ fun DailyReminderCard(
             }
 
             if (reminder.type == ReminderType.GHAZALI) {
-                Button(
+                SafeguardButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         context.startActivity(
