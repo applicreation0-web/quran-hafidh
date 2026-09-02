@@ -162,7 +162,7 @@ class MushafReaderActivity : ComponentActivity() {
                         }
 
                         Spacer(Modifier.height(8.dp))
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = bottomReached && readingMs >= GuardPrefs.MIN_READING_MS,
                             onClick = {
@@ -202,7 +202,7 @@ class MushafReaderActivity : ComponentActivity() {
                             )
                         }
                         Spacer(Modifier.height(6.dp))
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { finish() }
                         ) {
