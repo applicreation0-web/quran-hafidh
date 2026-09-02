@@ -319,7 +319,7 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (!serviceEnabled) {
-                            SafeguardSafeguardButton(
+                            SafeguardButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = onActivateProtection
                             ) {
@@ -726,7 +726,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.weight(1f),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioSafeguardButton(
+                                RadioButton(
                                     selected = unlockMinutes == minutes,
                                     onClick = {
                                         unlockMinutes = minutes
