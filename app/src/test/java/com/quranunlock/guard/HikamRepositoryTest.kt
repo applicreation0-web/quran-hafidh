@@ -1,5 +1,6 @@
 package com.applicreation0.quransafeguard
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,6 +93,26 @@ class HikamRepositoryTest {
         assertTrue(model.commentaries[0].source.author == "Ibn ʿAjība")
         assertTrue(model.commentaries[1].source.author == "Aḥmad Zarrūq")
         assertTrue(model.commentaries.all { it.displayEligible })
+    }
+
+    @Test
+    fun productionCommentariesAreExactlyTheReviewedSourceUnits() {
+        val expected = ((1..15) + (17..20)).toSet()
+        assertEquals(expected, HikamRepository.commentaryByNumber.keys)
+
+        HikamRepository.commentaryByNumber.forEach { (sourceNumber, commentary) ->
+            assertTrue(commentary.displayEligible)
+            assertTrue(commentary.isExcerpt)
+            assertEquals("Ibn ʿAjība", commentary.source.author)
+            assertEquals("Īqāẓ al-Himam fī Sharḥ al-Ḥikam", commentary.source.workTitle)
+            assertTrue(commentary.source.locator.startsWith("Hikma " + sourceNumber + " • p. "))
+            assertTrue(commentary.source.sourceUrl.endsWith("/" + commentary.source.locator.substringAfter("p. ")))
+            assertTrue(commentary.source.translator == "Traduction interne Quran Safeguard")
+            assertFalse(commentary.arabicText.contains("auto_stories"))
+            assertFalse(commentary.arabicText.contains("chevron_right"))
+            assertFalse(commentary.arabicText.contains("الرئيسية/"))
+            assertFalse(commentary.arabicText.contains("[…]"))
+        }
     }
 
     @Test
