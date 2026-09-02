@@ -110,7 +110,7 @@ object HikamRepository {
         )
     )
 
-    private val commentaryByNumber: Map<Int, HikmaCommentary> by lazy {
+    internal val commentaryByNumber: Map<Int, HikmaCommentary> by lazy {
         mapOf(
             1 to ajibaCommentary(
                 sourceNumber = 1,
