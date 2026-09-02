@@ -1,0 +1,1796 @@
+{
+  "collection": "al_hikam_source_diacritics_candidates",
+  "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+  "entries": [
+    {
+      "source_number": 2,
+      "source_declared_number": 2,
+      "source_order": 2,
+      "arabic_vocalized": "إرادَتُكَ التَّجْريدَ مَعَ إقامَةِ اللهِ إيّاكَ في الأسْبابِ مِنَ الشَّهْوَةِ الخَفيَّةِ، وإرادَتُكَ الأَسْبابَ مَعَ إقامَةِ اللهِ إيّاكَ فِي التَّجْريدِ انْحِطاطٌ عَنِ الهِمَّةِ العَلِيَّةِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 3,
+      "source_declared_number": 3,
+      "source_order": 3,
+      "arabic_vocalized": "سَوَابِقُ الهِمَمِ لا تَخْرِقُ أَسْوارَ الأَقْدارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 4,
+      "source_declared_number": 4,
+      "source_order": 4,
+      "arabic_vocalized": "أَرِحْ نَفْسَكَ مِنَ التَّدْبيرِ. فَما قامَ بِهِ غَيرُكَ عَنْكَ لا تَقُمْ بهِ لِنَفْسِكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 5,
+      "source_declared_number": 5,
+      "source_order": 5,
+      "arabic_vocalized": "اجْتِهادُكَ فيما ضُمِنَ لَكَ وَتَقصيرُكَ فيما طُلِبَ مِنْكَ دَليلٌ عَلى انْطِماسِ البَصيرَةِ مِنْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 6,
+      "source_declared_number": 6,
+      "source_order": 6,
+      "arabic_vocalized": "لا يَكُنْ تأَخُّرُ أَمَدِ العَطاءِ مَعَ الإلْحاحِ في الدُّعاءِ مُوْجِباً لِيأْسِكَ. فَهُوَ ضَمِنَ لَكَ الإِجابةَ فيما يَخْتارُهُ لَكَ لا فيما تَخْتارُهُ لِنَفْسِكَ. وَفي الوَقْتِ الَّذي يُريدُ لا فِي الوَقْتِ الَّذي تُريدُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 8,
+      "source_declared_number": 8,
+      "source_order": 8,
+      "arabic_vocalized": "إذا فَتَحَ لَكَ وِجْهَةً مِنَ التَّعَرُّفِ فَلا تُبْالِ مَعَها إنْ قَلَّ عَمَلُكَ. فإِنّهُ ما فَتَحَها لَكَ إلا وَهُوَ يُريدُ أَنْ يَتَعَرَّفَ إِليْكَ؛ أَلَمْ تَعْلَمْ أَنَّ التَّعَرُّفَ هُوَ مُوْرِدُهُ عَلَيْكَ والأَعْمالَ أَنْتَ مُهديها إلَيهِ. وَأَينَ ما تُهْديهَ إلَيهَ مِمَّا هُوُ مُوِرُدهُ عَلَيْكَ ؟!",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 9,
+      "source_declared_number": 9,
+      "source_order": 9,
+      "arabic_vocalized": "تَنَوَّعَتْ أَجْناسُ الأَعْمالِ لَتَنَوُّعِ وارِداتِ الأَحْوالِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 10,
+      "source_declared_number": 10,
+      "source_order": 10,
+      "arabic_vocalized": "الأَعْمالُ صُوَرٌ قَائَمةٌ، وَأَرْواحُها وُجودُ سِرِّ الإِخْلاصِ فِيها.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 11,
+      "source_declared_number": 11,
+      "source_order": 11,
+      "arabic_vocalized": "ادْفِنْ وُجودَكَ في أَرْضَ الخُمولِ ، فَما نَبَتَ مِمّا لََمْ يُدْفَنْ لاَ يَتِمُّ نِتَاجُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 13,
+      "source_declared_number": 13,
+      "source_order": 13,
+      "arabic_vocalized": "كَيْفَ يُشْرِقُ قَلْبٌ صُوَرُ الأَكْوَانِ مُنْطَبِعَةٌ فِى مِرْآَتِهِ ؟ أَمْ كَيْفَ يَرْحَلُ إِلَى اللهِ وَهُوَ مُكَبَّلٌ بِشَهَوَاتِهِ ؟ أَمْ كَيْفَ يَطْمَعُ أَنْ يَدْخُلَ حَضْرَةَ اللهِ وَهُوَ لَمْ يَتَطَهَّرْ مِنْ جَنَابَةِ غَفَلاَتِهِ ؟أَمْ كَيْفَ يَرْجُو أَنْ يَفْهَمَ دَقَائِقَ الأَسْرَارِ وَهُوَ لَمْ يَتُبْ مِنْ هَفَوَاتِهِ ؟",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 14,
+      "source_declared_number": 14,
+      "source_order": 14,
+      "arabic_vocalized": "الْكَوْنُ كُلُّهُ ظُلْمَةٌ ، وَإِنَّمَا أَنَارَهُ ظُهُورُ الْحَقِّ فِيهِ ، فَمَنْ رَأَى الْكَوْنَ وَلَمْ يَشْهَدْهُ فِيهِ أَوْ عِنْدَهُ أَوْ قَبْلَهُ أَوْ بَعْدَهُ فَقَدْ أَعْوَزَهُ وُجُودُ الأَنْوَارِ ، وَحُجِبَتْ عَنْهُ شُمُوسُ الْمَعَارِفِ بِسُحُبِ الآَثَارِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 15,
+      "source_declared_number": 15,
+      "source_order": 15,
+      "arabic_vocalized": "مِمَّا يَدُلُّكَ عَلَى وُجُودِ قَهْرِهِ سُبْحَانَهُ أَنْ حَجَبَكَ عَنْهُ بِمَا لَيْسَ بِمَوْجُودٍ مَعَهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 17,
+      "source_declared_number": 17,
+      "source_order": 17,
+      "arabic_vocalized": "ما تَرَكَ مِنَ الجَهْلِ شَيْئاً مَنْ أَرادَ أَنْ يَحْدُثَ في الوَقْتِ غَيْرُ ما أَظْهَرَهُ اللهُ فيِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 18,
+      "source_declared_number": 18,
+      "source_order": 18,
+      "arabic_vocalized": "إِحالَتُكَ الأَعْمالَ عَلَى وٌجودِ الفَراغِ مِنْ رُعُوناتِ النَفْسِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 21,
+      "source_declared_number": 21,
+      "source_order": 21,
+      "arabic_vocalized": "طَـلَـبُكَ مِنْهُ اتِّهامٌ لَـهُ. وَطَـلَـبُـكَ لَـهُ غَـيْبَةٌ مِـنْـك عَـنْهُ وَطَـلَـبُـكَ لِغَـيْرِهِ لِـقِـلَّـةِ حَـيائِـكَ مِنْهُ وَطَـلَـبُـكَ مِنْ غَـيْرِهِ لِـوُجـودِ بُـعْـدِكَ عَـنْهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 22,
+      "source_declared_number": 22,
+      "source_order": 22,
+      "arabic_vocalized": "مَا مِنْ نَفَسٍ تُبْدِيهِ إِلاَّ وَلهُ قَدَرٌ فِيكَ يُمْضِيهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 24,
+      "source_declared_number": 24,
+      "source_order": 24,
+      "arabic_vocalized": "لا تَسْتَغْرِبْ وُقُوعَ الأَكْدَارِ، مَا دُمْتَ فِي هَذِهِ الدَّارَ، فَإِنَّهَا مَا أَبْرَزَتْ إِلا مَا هُوَ مُسْتَحَقُّ وَصْفِهَا وَوَاجِبُ نَعْتِهَا.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 25,
+      "source_declared_number": 25,
+      "source_order": 25,
+      "arabic_vocalized": "ماَ تَوَقَّفَ مَطْلَبٌ أَنْتَ طَالِبُهُ بِرَبِّكَ وَلَا تَيَسَّرَ مَطْلَبٌ أَنْتَ طَالِبُهُ بِنَفْسِكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 27,
+      "source_declared_number": 27,
+      "source_order": 27,
+      "arabic_vocalized": "مَنْ أَشْرَقَتْ بِدايَتُهُ أَشْرَقَتْ نِهايَتُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 28,
+      "source_declared_number": 28,
+      "source_order": 28,
+      "arabic_vocalized": "مَا اسْتُودِعَ في غَيْبِ السَّرائِرِ ظَهَرَ في شَهادةِ الظَّواهِرِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 29,
+      "source_declared_number": 39,
+      "source_order": 29,
+      "arabic_vocalized": "شَتَّانَ بَينَ مَنْ يَسْتَدِلُّ بِهِ أَوْ يَسْتَدِلُّ عَلَيِهِ. المُسْتَدِلُّ بِهِ عَرَفَ الحَقَّ لأَهْلِهِ، فأَثْبَتَ الأَمْرَ مِنْ وُجودِ أَصْلِهِ. وَالاسْتِدْلالُ عَلَيْهِ مِنْ عَدَمِ الوُصولِ إليَهِ. وَإلّا فَمَتى غابَ حَتّى يُسْتَدَلَّ عَلَيْهِ؟! وَمَتى بَعُدَ حَتّى تَكونَ الآثارُ هِيَ الَّتي تُوْصِلُ إلَيْهِ؟!",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 34,
+      "source_declared_number": 34,
+      "source_order": 34,
+      "arabic_vocalized": "اخْرُجْ مِنْ أَوْصَافِ بَشَرِيَّتِكَ عَنْ كُلِّ وَصْفٍ مُنَاقِضٍ لِعُبُودِيَّتِكَ لِتَكُونَ لِنِدَاءِ الْحَقِّ مُجِيبًا وَمِنْ حَضْرَتِهِ قَرِيبًا.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 35,
+      "source_declared_number": 35,
+      "source_order": 35,
+      "arabic_vocalized": "أصْلُ كُلَّ مَعْصِيَةٍ وَغَفْلَةٍ وَشَهْوَةٍ الرَّضَا عَنِ النَّفْس، وأصْلُ كُلَّ طَاعِةٍ وَيَقَظَةٍ وَعِفَّةٍ عَدَمُ الرَّضَا مِنْكَ عَنْها. ولأنْ تَصْحَبَ جَاهِلاً لا يَرْضَى عَن نفسِه خيرٌ لكَ مِن أنْ تَصْحَبَ عَالِماً يرضى عَنْ نَفْسِه. فأيُّ عِلْمٍ لعَالِمٍ يَرْضَى عَنْ نفسِه؟! وَأيُّ جَهْلٍ لجَاهِلٍ لا يَرْضَى عَنْ نَفْسِه؟!.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 37,
+      "source_declared_number": 37,
+      "source_order": 37,
+      "arabic_vocalized": "كَانَ اللَّهُ وَلَا شَيْءَ مَعَهُ، وَهُوَ الْآنَ عَلَى مَا عَلَيْهِ كَانَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 38,
+      "source_declared_number": 38,
+      "source_order": 38,
+      "arabic_vocalized": "لا تَتَعَدَّ نية هِمَّتُكَ إلى غَيْرِه، فالكريم لا تَتَخطاَّهُ الآمال.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 43,
+      "source_declared_number": 43,
+      "source_order": 43,
+      "arabic_vocalized": "لا تَصْحَبْ مَنْ لا يُنْهِضُكَ حالُهُ وَلا يَدُلُّكَ عَلَى اللهِ مَقالُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 45,
+      "source_declared_number": 45,
+      "source_order": 45,
+      "arabic_vocalized": "مَا قَلَّ عَمَلٌ بَرَزَ مِنْ قَلْبٍ زَاهِدٍ ، وَلاَ كَثُرَ عَمَلٌ بَرَزَ مِنْ قَلْبٍ رَاغِبٍ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 46,
+      "source_declared_number": 46,
+      "source_order": 46,
+      "arabic_vocalized": "حُسْنُ الأَعْمَالِ نَتَائِجُ حُسْنِ الأَحْوَالِ، وَحُسْنُ الأَحْوَالِ مِنَ التَّحَقُّقِ فِى مَقَامَاتِ الإِنْزَالِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 50,
+      "source_declared_number": 50,
+      "source_order": 50,
+      "arabic_vocalized": "لاَ صَغِيرَةً إذَا قَابَلَكَ عَدْلُهُ ، وَلَا كَبِيرَةً إِذَا وَاجَهَكَ فَضْلُهُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 52,
+      "source_declared_number": 52,
+      "source_order": 52,
+      "arabic_vocalized": "إِنَّمَا أَوْرَدَ عَلَيْكَ الْوَارِدَ لِتَكُونَ بِهِ عَلَيْهِ وَارِدًا.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 53,
+      "source_declared_number": 53,
+      "source_order": 53,
+      "arabic_vocalized": "أَوْرَدَ عَلَيْكَ الْوَارِدَ لِيَتَسَلَّمَكَ مِنْ يَدِ الأَغْيَارِ ، وَلِيُحَرِّرَكَ مِنْ رِقِّ الآَثَارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 54,
+      "source_declared_number": 54,
+      "source_order": 54,
+      "arabic_vocalized": "أَوْرَدَ عَلَيْكَ الْوَارِدَ لِيُخْرِجَكَ مِنْ سِجْنِ وُجُودِكَ إِلَى فَضَاءِ شُهُودِكَ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 55,
+      "source_declared_number": 55,
+      "source_order": 55,
+      "arabic_vocalized": "الأنْوارُ مَطايا القُلوبِ وَالأَسْرارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 56,
+      "source_declared_number": 56,
+      "source_order": 56,
+      "arabic_vocalized": "النُّورُ جُنْدُ الْقَلْبِ كَمَا أَنَّ الظُّلْمَةَ جُنْدُ النَّفْسِ ، فَإِذَا أَرَادَ اللهُ أَنْ يَنْصُرَ عَبْدَهُ أَمَدَّهُ بِجُنُودِ الأَنْوَارِ ، وَقَطَعَ عَنْهُ مَدَدَ الظُّلَمِ وَالأَغْيَارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 57,
+      "source_declared_number": 57,
+      "source_order": 57,
+      "arabic_vocalized": "النُّورُ لَهُ الْكَشْفُ ، وَالْبَصِيرَةُ لَهَا الْحُكْمُ ، وَالْقَلْبُ لَهُ الإِقْبَالُ وَالإِدْبَارُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 59,
+      "source_declared_number": 59,
+      "source_order": 59,
+      "arabic_vocalized": "قَطَعَ السَّائِرِينَ لَهُ وَالْوَاصِلِينَ إِلَيْهِ عَنْ رُؤْيَةِ أَعْمَالِهِمْ وَشُهُودِ أَحْوَالِهِمْ ، أَمَّا السَّائِرُونَ فَلأَِنَّهُمْ لَمْ يَتَحَقَّقُوا الصِّدْقَ مَعَ اللهِ فِيهَا ، وَأَمَّا الْوَاصِلُونَ فَلأَِنَّهُ غَيَّبَهُمْ بِشُهُودِهِ عَنْهَا.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 60,
+      "source_declared_number": 60,
+      "source_order": 60,
+      "arabic_vocalized": "ما بَسَقَتْ أَغْصانُ ذُلٍّ إلّا عَلى بَذْرِ طَمَعٍ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 61,
+      "source_declared_number": 61,
+      "source_order": 61,
+      "arabic_vocalized": "مَا قَادَكَ شَيْءٌ مِثْلُ الْوَهْمِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 62,
+      "source_declared_number": 62,
+      "source_order": 62,
+      "arabic_vocalized": "أنْتَ حُرٌّ مِمَّا أنْتَ عَنْهُ آيِسٌ، وَعَبْدٌ لِمَا أنْتَ لَهُ طَامِعٌ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 63,
+      "source_declared_number": 63,
+      "source_order": 63,
+      "arabic_vocalized": "مَنْ لَمْ يُقْبِلْ عَلى اللهِ بِمُلاطَفاتِ الإحْسانِ قِيدَ إلَيْهِ بِسَلاسِلِ الامْتِحانِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 64,
+      "source_declared_number": 64,
+      "source_order": 64,
+      "arabic_vocalized": "مَنْ لَمْ يَشْكُرِ النِّعَمَ فَقَدْ تَعَرَّضَ لِزَوالِها، وَمَنْ شَكَرَها فَقَدْ قَيَّدَها بِعِقالِها.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 66,
+      "source_declared_number": 66,
+      "source_order": 66,
+      "arabic_vocalized": "مِنْ جَهْلِ الْمُرِيدِ أَنْ يُسِىءَ الْأَدَبَ فَتُؤَخَّرُ الْعُقُوْبةُ عَنْهُ، فَيَقُوْلُ: لَوْ كَانَ هَذَا سُوَءُ أَدَبٍ لَقَطَعَ الإمْدَادَ ، وَأَوْجَبَ الإِبْعَادَ ، فَقَدْ يَقْطَعَ المَدَدَ عَنْهُ مِنْ حَيْثُ لَايَشْعُرُ ، وَلَوْ لَمْ يَكُنْ إِلَّا مَنْعَ المَزِيدِ ، وَقَدْ يُقَامُ مَقامَ البُعدِْ وَهُوَ لَا يَدْرِي ، وَلَوْ لَمْ يَكُنْ إِلَّا أَنْ يُخَلِّيَكَ وَمَا تُرِيدُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 67,
+      "source_declared_number": 67,
+      "source_order": 67,
+      "arabic_vocalized": "إِذَا رَأَيْتَ عَبْدًا أَقَامَهُ اللهُ تَعَالَى بِوُجُودِ الأَوْرَادِ ، وَأَدَامَهُ عَلَيْهَا مَعَ طُولِ الإِمْدَادِ فَلاَ تَسْتَحْقِرَنَّ مَا مَنَحَهُ مَوْلاَهُ ؛ لأَنَّكَ لَمْ تَرَ عَلَيْهِ سِيمَا الْعَارِفِينَ ، وَلاَ بَهْجَةَ الْمُحِبِّينَ ، فَلَوْلاَ وَارِدٌ مَا كَانَ وِرْدٌ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 70,
+      "source_declared_number": 70,
+      "source_order": 70,
+      "arabic_vocalized": "مَنْ رَأَيْتَهُ مُجِيبًا عَنْ كُلِّ مَا سُئِلَ ، وَمُعَبِّرًا عَنْ كُلِّ مَا شَهِدَ ، وَذَاكِرًا كُلَّ مَا عَلِمَ ، فَاسْتَدِلَّ بِذَلِكَ عَلَى وُجُودِ جَهْلِهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 71,
+      "source_declared_number": 71,
+      "source_order": 71,
+      "arabic_vocalized": "إِنَّمَا جَعَلَ الدَّارَ الآَخِرَةَ مَحَلاًّ لِجَزَاءِ عِبَادِهِ الْمُؤْمِنِينَ ؛ لأَنَّ هَذِهِ الدَّارَ لاَ تَسَعُ مَا يُرِيدُ أَنْ يُعْطِيَهُمْ ، وَلأَنَّهُ أَجَلَّ أَقْدَارَهُمْ عَنْ أَنْ يُجَازِيَهُمْ فِى دَارٍ لاَ بَقَاءَ لَهَا.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 72,
+      "source_declared_number": 72,
+      "source_order": 72,
+      "arabic_vocalized": "مَنْ وَجَدَ ثَمْرَةَ عَمَلِهِ عَاِجلاً فَهُوَ دَلِيلٌ عَلَى وُجُودِ القَبُولِ آجِلاً .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 73,
+      "source_declared_number": 73,
+      "source_order": 73,
+      "arabic_vocalized": "إِذَا أَرَدْتَ أَنْ تَعْرِفَ قَدْرَكَ عِنْدَهُ فَانْظُرْ فِى مَاذَا يُقِيمُكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 74,
+      "source_declared_number": 74,
+      "source_order": 74,
+      "arabic_vocalized": "مَتَى رَزَقََك الطَّاعةََ والغِنَى بِهِ عَنْهاَ، فَاعْلَمْ أَنَّهُ قَد أَسْبَغَ علَيكَ نِعَمَهُ ظاهِرةً وباطِنةً.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 75,
+      "source_declared_number": 75,
+      "source_order": 75,
+      "arabic_vocalized": "خَيْرُ مَاتَطْلُبُهُ مِنْهُ مَا هُوَ طَالِبُهُ مِنْكَ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 76,
+      "source_declared_number": 76,
+      "source_order": 76,
+      "arabic_vocalized": "الحُزْنُ عَلى فُقْدانِ الطّاعةِ مَعَ عَدَمِ النُّهوضِ إلَيْها مِنْ عَلاماتِ الاغْتِرارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 77,
+      "source_declared_number": 77,
+      "source_order": 77,
+      "arabic_vocalized": "مَا الْعَارِفُ مَنْ إِذَا أَشَارَ وَجَدَ الْحَقَّ أَقْرَبَ إِلَيْهِ مِنْ إِشَارَتِهِ ، بِلِ الْعَارِفُ مَنْ لاَ إِشَارَةَ لَهُ لِفَنَائِهِ فِي وُجُودِهِ وَانْطِوَائِهِ فِي شُهُودِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 81,
+      "source_declared_number": 81,
+      "source_order": 80,
+      "arabic_vocalized": "الْعَارِفُونَ إِذَا بُسِطُوا أَخْوَفُ مِنْهُمْ إِذَا قُبِضُوا ، وَلاَ يَقِفُ عَلَى حُدُودِ الأَدَبِ فِى الْبَسْطِ إِلاَّ قَلِيلٌ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 82,
+      "source_declared_number": 82,
+      "source_order": 81,
+      "arabic_vocalized": "الْبَسْطُ تَأْخُذُ النَّفْسُ مِنْهُ حَظَّهَا بِوُجُودِ الْفَرَحِ ، وَالْقَبْضُ لاَ حَظَّ لِلنَّفْسِ فِيهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 83,
+      "source_declared_number": 83,
+      "source_order": 82,
+      "arabic_vocalized": "رُبَّمَا أَعْطَاكَ فَمَنَعَكَ، وَ رُبَّمَا مَنَعَكَ فَأَعْطَاَكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 84,
+      "source_declared_number": 84,
+      "source_order": 83,
+      "arabic_vocalized": "مَتَى فَتَحَ لَكَ بابَ الفَهْمِ في الَمْنعِ، عَادَ الَمْنعُ عَينَ العَطَاء.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 85,
+      "source_declared_number": 85,
+      "source_order": 84,
+      "arabic_vocalized": "الأَكْوَانُ ظَاهِرًهَا غِرَّةٌ وَبَاطِنُهَا عِبْرَةٌ ، فَالنَّفْسُ تَنْظُرُ إِلَى ظَاهِرِ غِرَّتِهَا ، وَالقَلْبُ يَنْظُرُ إِلَى بَاطِنِ عِبْرَتِهَا.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 87,
+      "source_declared_number": 87,
+      "source_order": 86,
+      "arabic_vocalized": "الطَّيُّ الحَقيقيُّ أَنْ تَطْويَ مَسافَةَ الدُّنْيا عَنكَ حَتى تَرى الآخِرَةَ أَقْرَبَ إِليْكَ مِنْك.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 88,
+      "source_declared_number": 88,
+      "source_order": 87,
+      "arabic_vocalized": "الْعَطَاءُ مِنَ الْخَلْقِ حِرْمَانٌ ، وَالْمَنْعُ مِنَ اللهِ إِحْسَانٌ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 89,
+      "source_declared_number": 89,
+      "source_order": 88,
+      "arabic_vocalized": "جَلَّ رَبُّنَا أَنْ يُعَامِلَهُ الْعَبْدُ نَقْدًا فَيُجَازِيهِ نَسِيئَةً.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 90,
+      "source_declared_number": 90,
+      "source_order": 89,
+      "arabic_vocalized": "كَفَى مِنْ جَزَائِهِ إِيَّاكَ عَلَى الطَّاعَةِ أَنْ رَضِيَكَ لَهَا أَهْلًا .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 91,
+      "source_declared_number": 91,
+      "source_order": 90,
+      "arabic_vocalized": "كَفَى الْعَامِلِينَ جَزَاءً مَا هُوَ فَاتِحُهُ عَلَى قُلُوبِهِمْ فِى طَاعَتِهِ ، وَمَا هُوَ مُورِدُهُ عَلَيْهِمْ مِنْ وُجُودِ مُؤانَسَتِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 92,
+      "source_declared_number": 92,
+      "source_order": 91,
+      "arabic_vocalized": "مَنْ عَبَدَهُ لِشَىْءٍ يَرْجُوهُ مِنْهُ ، أَوْ لِيَدْفَعَ بِطَاعَتِهِ وُرُودَ الْعُقُوبَةِ عَنْهُ فَمَا قَامَ بِحَقِّ أَوْصَافِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 93,
+      "source_declared_number": 93,
+      "source_order": 92,
+      "arabic_vocalized": "مَتَى أَعْطَاكَ أَشْهَدَكَ بِرَّهُ ، وَمَتَى مَنَعَكَ أَشْهَدَكَ قَهْرَهُ ، فَهُوَ فِى كُلِّ ذَلِكَ مُتَعَرِّفٌ إِلَيْكَ ، وَمُقْبِلٌ بِوُجُودِ لُطْفِهِ عَلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 94,
+      "source_declared_number": 94,
+      "source_order": 93,
+      "arabic_vocalized": "إنَّما يُؤلِمُكَ المَنْعُ لِعَدَمِ فَهْمِكَ عَنِ اللهِ فيهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 95,
+      "source_declared_number": 95,
+      "source_order": 94,
+      "arabic_vocalized": "رُبَّما فَتَحَ لَكَ بابَ الطّاعَةِ وَما فَتَحَ لَكَ بابَ القَبولِ، وَرُبَّما قَضى عَلَيْكَ بِالذَّنْبِ فَكانَ سَبَبَاً في الوُصولِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 96,
+      "source_declared_number": 96,
+      "source_order": 95,
+      "arabic_vocalized": "مَعْصِيَةٌ أَورَثَتْ ذُلاً وافْتِقاراً خَيرٌ مِنْ طاعَةٍ أوْرَثَتْ عِزّاً وَاسْتِكْباراً.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 97,
+      "source_declared_number": 97,
+      "source_order": 96,
+      "arabic_vocalized": "نِعْمَتانِ ما خَرَجَ مَوْجودٌ عَنْهُما ، وَلا بُدَّ لِكُلِّ مُكَوَّنٍ مِنْهُما : نِعْمَةُ الإيجادِ ، وَنِعْمَةُ الإِمْدادِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 98,
+      "source_declared_number": 98,
+      "source_order": 97,
+      "arabic_vocalized": "أَنْعَمَ عَلَيْكَ أوَّلاً بِالإيجَادِ ، وَثَانِيَا بِتَوَالِي الْإِمْدَادِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 100,
+      "source_declared_number": 100,
+      "source_order": 99,
+      "arabic_vocalized": "خَيْرُ أَوْقَاتِكَ وَقْتٌ تَشْهَدُ فِيهِ وُجُودَ فَاقَتِكَ ، وَتُرَدُّ فِيهِ إِلَى وُجُودِ ذِلَّتِكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 101,
+      "source_declared_number": 101,
+      "source_order": 100,
+      "arabic_vocalized": "مَتى أَوْحَشَكَ مِنْ خَلْقِهِ فَاعْلَمْ أَنَّهُ يُريدُ أَنْ يَفْتَحَ لَكَ بابَ الأُنْسِ بهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 102,
+      "source_declared_number": 102,
+      "source_order": 101,
+      "arabic_vocalized": "متى أطْلَقَ لسانَكَ بالطَّلبِ؛ فاعْلَمْ أنَّه يُريدُ أنْ يُعطيَكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 103,
+      "source_declared_number": 103,
+      "source_order": 102,
+      "arabic_vocalized": "العَارِفُ لا يَزُولُ اضْطِرَارُهُ وَلاَ يَكُونُ مَعَ غَيْرِ اللّهِ قَرَارُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 104,
+      "source_declared_number": 104,
+      "source_order": 103,
+      "arabic_vocalized": "أَنَارَ الظَّوَاهِرَ بِأَنْوَارِ آَثَارِهِ ، وَأَنَارَ السَّرَائِرَ بِأَنْوَارِ أَوْصَافِهِ؛ لِأَجْلِ ذَلِكَ أفَلَتْ أَنْوَارُ الظَّوَاهِرِ ، وَلَمْ تَأْفَلْ أَنْوَارُ القُلُوبِ وَالسَّرَائِرِ ؛ وَلِذَلِكَ قِيلَ : إِنَّ شَمْسَ النَّهَارِ تَغْرُبُ باللَّيْلِ وَشَمسُ القُلُوبِ لَيْسَتْ تَغِيبُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 106,
+      "source_declared_number": 106,
+      "source_order": 105,
+      "arabic_vocalized": "مَنْ ظَنَّ انْفِكاكَ لُطْفِهِ عَنْ قَدَرِهِ فَذلِكَ لِقُصورِ نَظَرِهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 107,
+      "source_declared_number": 107,
+      "source_order": 106,
+      "arabic_vocalized": "لا يُخَافُ عَلَيْكَ أنْ تَلْتَبِسَ الطُّرُقُ عَلَيْكَ؛ وَإنَّمَا يُخَافُ عَلَيْكَ مِنْ غَلَبَةِ الهَوَى عَلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 108,
+      "source_declared_number": 108,
+      "source_order": 107,
+      "arabic_vocalized": "سُبْحانَ مَنْ سَتَرَ سِرَّ الخُصوصِيَّةِ بِظُهورِ البَشَرِيَّةِ، وَظَهَرَ بِعَظَمَةِ الرُّبوبِيَّةِ في إظْهارِ العُبُودِيَّةِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 109,
+      "source_declared_number": 109,
+      "source_order": 108,
+      "arabic_vocalized": "لا تُطَالِبْ رَبَّكَ بِتَأَخُّرِ مَطْلَبِكَ وَلكِنْ طَالِبْ نَفْسَكَ بِتَأَخُّرِ أَدَبكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 110,
+      "source_declared_number": 110,
+      "source_order": 109,
+      "arabic_vocalized": "مَتَى جَعَلَكَ فِي الظّاهِرِمٌمْتَثِلًا لِاَمْرِهِ وَرَزَقَكَ فِي البَاطِنِ الْاِسْتِسْلَامَ لِقَهْرِهِ فَقَد اَعْظَمَ المِنَةُ عَلَيكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 111,
+      "source_declared_number": 111,
+      "source_order": 110,
+      "arabic_vocalized": "لَيْسَ كُلُّ مَنْ ثَبَتَ تَخْصيصُهُ كَمُلَ تَخْليصُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 112,
+      "source_declared_number": 112,
+      "source_order": 111,
+      "arabic_vocalized": "لا يَسْتَحْقِرُ الوِرْدَ إلا جَهولٌ. الوارِدُ يُوْجَدُ في الدّارِ الآخِرَةِ، وَالوِرْدُ يَنطَوي بانْطِواءِ هذِهِ الدّارِ. وأَوْلى ما يُعْتَنى بِهِ: ما لا يُخْلَفُ وُجودُه. الوِرْدُ هُوَ طالِبُهُ مِنْكَ، وَالوارِدُ أنْتَ تَطْلُبُهُ مِنْهُ. وَأيْنَ ما هُوَ طالِبُهُ مِنْكَ مِمّا هُوَ مَطْلَبُكَ مِنْهُ؟!.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 114,
+      "source_declared_number": 114,
+      "source_order": 113,
+      "arabic_vocalized": "الغافِلُ إذا أَصْبَحَ يَنْظُرُ ماذا يَفْعَلُ، وَالعاقِلُ يَنْظُرُ ماذا يَفْعَلُ اللهُ بِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 115,
+      "source_declared_number": 115,
+      "source_order": 114,
+      "arabic_vocalized": "إِنَّمَا اسْتَوْحَشَ العُبَّادُ وَالزُّهَّادُ مِنْ كُلِّ شَيْءٍ لِغَيْبَتِهِمْ عَنِ اللهِ فِي كُلِّ شَيْءٍ ، فلَوْ شَهِدُوهُ فِي كُلِّ شَيْءٍ لَمْ يَسْتَوْحِشُوا مِنْ شِيْءٍ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 116,
+      "source_declared_number": 116,
+      "source_order": 115,
+      "arabic_vocalized": "أَمَرَكَ في هذِهِ الدّارِ بِالنَّظَرِ في مُكَوَّناتِهِ، وَسَيَكْشِفْ لَكَ في تِلَكَ الدّارِ عَنْ كَمالِ ذاتِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 117,
+      "source_declared_number": 117,
+      "source_order": 116,
+      "arabic_vocalized": "عَلِمَ مِنكَ أَنَّكَ لاَ تَصْبِرُ عَنْهُ، فَأَشهَدَكَ مَا بَرَزَ مِنهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 118,
+      "source_declared_number": 118,
+      "source_order": 117,
+      "arabic_vocalized": "لمّا علم الحق منك وجود الملل، لون لَكَ الطّاعاتِ. وًعَلِمَ ما فيكَ مِنْ وُجودِ الشَّرَهِ فَحَجَرَها عَلَيْكَ في بَعْضِ الأوْقات، لِيكونَ هَمك إقامةَ الصلاة لا وُجودَ الصَّلاةِ، فَما كُلُّ مُصَلٍّ مُقيم.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 119,
+      "source_declared_number": 119,
+      "source_order": 118,
+      "arabic_vocalized": "الصَّلاَةُ طُهْرَةٌ لِلْقُلُوبِ مِنْ أَدْنَاسِ الذُّنُوبِ، واستفتاحٌ لِبَابِ الغُيوب.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 120,
+      "source_declared_number": 120,
+      "source_order": 119,
+      "arabic_vocalized": "الصَّلاةُ مَحَلُّ المُناجاةِ ومَعْدِنُ المُصافاةِ؛ تَتَّسِعُ فيها مَيادينُ الأسْرارِ، وَتُشْرِقُ فيها شَوارِقُ الأنْوارِ. عَلِمَ وُجودَ الضَّعْفِ مِنْكَ فَقَلَّلَ أعْدادَها. وَعَلِمَ احْتِياجَكَ إلى فَضْلِهِ فَكَثَّرَ أَمْدَادَهَا .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 121,
+      "source_declared_number": 121,
+      "source_order": 120,
+      "arabic_vocalized": "مَتى طَلَبْتَ عِوَضاً عن عَمَلٍ ، طُولِبْتَ بِوُجُودِ الصِّدقِ فِيهِ وَيَكْفي المُرِيبَ وِجْدَانُ السَّلامَةِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 122,
+      "source_declared_number": 122,
+      "source_order": 121,
+      "arabic_vocalized": "لا تَطْلُبْ عِوَضاً عَلَى عَمَلٍ لَسْتَ لَهُ فَاعِلاً ، يَكْفِي مِنَ الجَزَاءِ لَكَ عَلى العَمَلِ أَنْ كَانَ لَهُ قَابِلاً.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 123,
+      "source_declared_number": 123,
+      "source_order": 122,
+      "arabic_vocalized": "إِذَا أَرَادَ أَنْ يُظْهِرَ فَضْلَهُ عَلَيْكَ خَلَقَ وَنَسَبَ إِلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 124,
+      "source_declared_number": 124,
+      "source_order": 123,
+      "arabic_vocalized": "لا نِهَايَةَ لِمَذَامِّكَ إِنْ أَرْجَعَكَ إِلَيكَ ، وَلا تَفْرُغُ مدَائِحُكَ إِنْ أَظْهَرَ جُودَهُ عَلَيكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 125,
+      "source_declared_number": 125,
+      "source_order": 124,
+      "arabic_vocalized": "كُنْ بِأَوْصَافِ رُبُوْبِيَّتِهِ مُتَعَلِّقَاً، وَبِأَوْصَافِ عُبُوْدِيَّتِكَ مُتَحَقِّقَا",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 126,
+      "source_declared_number": 126,
+      "source_order": 125,
+      "arabic_vocalized": "مَنَعَكَ أَنْ تَدَّعِىَ مَا لَيْسَ لَكَ مِمَّا لِلْمَخْلُوقِينَ ، أَفَيُبِيحُ لَكَ أَنْ تَدَّعِىَ وَصْفَهُ وَهُوَ رَبُّ الْعَالَمِينَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 127,
+      "source_declared_number": 127,
+      "source_order": 126,
+      "arabic_vocalized": "كَيْفَ تُخْرَقُ لَكَ العَوائِدُ وَأنْتَ لَمْ تَخْرِقْ مِنْ نَفْسِكَ العَوائِدَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 128,
+      "source_declared_number": 128,
+      "source_order": 127,
+      "arabic_vocalized": "مَا الشَّأْنُ وُجُودُ الطَّلَبِ ، إِنَّمَا الشَّأْنُ أَنْ تُرْزَقَ حُسْنَ الأَدَبِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 129,
+      "source_declared_number": 129,
+      "source_order": 128,
+      "arabic_vocalized": "ما طَلَبَ لكَ شَيْءٌ مِثْلُ الاضْطِرارِ، وَلا أَسْرَعَ بِالمَواهِبِ إلَيْكَ مِثْلُ الذِّلَّةِ والافْتِقارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 131,
+      "source_declared_number": 131,
+      "source_order": 130,
+      "arabic_vocalized": "لولا جَميلُ سَترِهِ لَمْ يَكُنْ عَمَلٌ أهْلاً لْلْقَبولِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 132,
+      "source_declared_number": 132,
+      "source_order": 131,
+      "arabic_vocalized": "أنْتَ إلى حِلْمِهِ إذا أَطَعْتَهُ أَحْوَجُ مِنْكَ إلى حِلْمِهِ إذا عَصَيْتَهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 138,
+      "source_declared_number": 138,
+      "source_order": 137,
+      "arabic_vocalized": "لَوْلا ظُهورُهُ في المُكَوَّناتِ ما وَقَعَ عَلَيْها وُجودُ إبصارٍ. وَلَوْ ظَهَرَتْ صِفاتُهُ اضْمَحَلَّتْ مُكَوَّناتُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 139,
+      "source_declared_number": 139,
+      "source_order": 138,
+      "arabic_vocalized": "أظْهَرَ كُلَّ شَيْءٍ لِأنَّهُ الباطِنُ، وَطوى وُجودَ كُلِّ شَيْءٍ لِأنَّهُ الظّاهِرُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 141,
+      "source_declared_number": 141,
+      "source_order": 140,
+      "arabic_vocalized": "الأَكْوَانُ ثَابِتَةٌ بِإِثْبَاتِهِ ، وَمَمْحُوَّةٌ بِأَحَدِيَّةِ ذَاِتِه .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 142,
+      "source_declared_number": 142,
+      "source_order": 141,
+      "arabic_vocalized": "النّاسُ يَمْدَحونَكَ لِما يَظُنُّونَهُ فيكَ، فَكُنْ أنْتَ ذاماً لنَفسِكَ لِما تَعْلَمُهُ مِنها.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 144,
+      "source_declared_number": 144,
+      "source_order": 143,
+      "arabic_vocalized": "أجْهَلُ النّاسِ مَنْ تَرَكَ يَقينَ ما عِنْدَهُ لِظَنِّ ما عِنْدَ النّاسِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 145,
+      "source_declared_number": 145,
+      "source_order": 144,
+      "arabic_vocalized": "إِذَا أَطْلَقَ الثَّنَاءَ عَلَيْكَ وَلَسْتَ بِأَهْلٍ فَأَثْنِ عَلَيْهِ بِمَا هُوَ أَهْلُهُ",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 146,
+      "source_declared_number": 146,
+      "source_order": 145,
+      "arabic_vocalized": "الزُّهَّادُ إِذَا مُدِحُوا انْقَبَضُوا لِشُهُودِهِمُ الثنَاءَ مِنَ الخَلْقِ ، وَالْعَارِفُونَ إِذَا مُدِحُوا انْبَسَطُوا لِشُهُودِهِمْ ذَلِكَ مِنَ المَلِكِ الحَق.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 147,
+      "source_declared_number": 147,
+      "source_order": 146,
+      "arabic_vocalized": "مَتَى كُنْتَ إِذَا أُعْطِيْتَ بَسَطَكَ الْعَطَاءُ، وَإِذَا مُنِعْتَ قَبَضَكَ الْمَنْعُ، فَاسْتَدِلَّ بِذَلِكَ عَلَىَ ثُبُوْتِ طُفُوُلِيَّتِكَ، وَعَدَمِ صِدْقِكَ فِيْ عُبُوْدِيَّتِكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 148,
+      "source_declared_number": 148,
+      "source_order": 147,
+      "arabic_vocalized": "إِذَا وَقَعَ مِنْكَ ذَنْبٌ فَلاَ يَكُنْ سَبَبًا لِيَأْسِكَ مِنْ حُصُولِ الاسْتِقَامَةِ مَعَ رَبِّكَ ، فَقَدْ يَكُونُ ذَلِكَ آَخِرَ ذَنْبٍ قُدِّرَ عَلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 149,
+      "source_declared_number": 149,
+      "source_order": 148,
+      "arabic_vocalized": "إِذَا أَرَدْتَ أَنْ يَفْتَحَ لَكَ بَابَ الرَّجَاءِ فَاشْهَدْ مَا مِنْهُ إِلَيْكَ ، وَإِذَا أَرَدْتَ أَنْ يَفْتَحَ لَكَ بَابَ الْخَوْفِ فَاشْهَدْ مَا مِنْكَ إِلَيْهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 151,
+      "source_declared_number": 151,
+      "source_order": 150,
+      "arabic_vocalized": "مَطَالِعُ الأَنَوَارِ - القُلُوبُ وَالأَسْرَارُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 152,
+      "source_declared_number": 152,
+      "source_order": 151,
+      "arabic_vocalized": "نُورٌ مُسْتَوْدَعٌ فِي القُلُوبِ مَدَدُهُ مِنْ النُّورِ الوَارِدِ مِنْ خَزَائِنِ الغُيُوبِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 153,
+      "source_declared_number": 153,
+      "source_order": 152,
+      "arabic_vocalized": "نُورٌ يَكْشِفُ لَكَ بِهِ عَنْ آثَارِهِ ، وَنُورٌ يَكْشِفُ لَكَ بِهِ عَنْ أَوْصَافِهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 154,
+      "source_declared_number": 154,
+      "source_order": 153,
+      "arabic_vocalized": "رُبَّمَا وَقَفَتِ الْقُلُوبُ مَعَ الأَنْوَارِ كَمَا حُجِبَتِ النُّفُوسُ بِكَثَائِفِ الأَغْيَارِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 155,
+      "source_declared_number": 155,
+      "source_order": 154,
+      "arabic_vocalized": "سَتَرَ أَنْوَارَ السَّرَائِرِ بِكَثَائِفِ الظَّوَاهِرِ؛ إِجْلاَلاً لَهَا أَنْ تُبْتَذَلَ بِوُجُودِ الإِظْهَارِ وَأَنْ يُنَادَى عَلَيْهَا بِلِسَانِ الاشْتِهَارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 157,
+      "source_declared_number": 157,
+      "source_order": 156,
+      "arabic_vocalized": "رُبَّمَا أَطْلَعَكَ عَلَى غَيْبِ مَلَكُوِتِه ، وَحَجَبَ عَنْكَ الاسْتِشْرَافَ عَلَى أَسْرَارِ العِبَادِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 158,
+      "source_declared_number": 158,
+      "source_order": 157,
+      "arabic_vocalized": "مَنِ اطَّلَعَ عَلَى أَسْرَارِ العِبَادِ ، وَلَمْ يَتَخَلَّقْ بِالرَّحْمَةِ الإِلَهِيَّةِ كَانَ اطلاعه فتنة عليه ، وسببا لجر الوبال إليه .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 159,
+      "source_declared_number": 159,
+      "source_order": 158,
+      "arabic_vocalized": "حَظُّ النَّفْسِ فِى الْمَعْصِيَةِ ظَاهِرٌ جَلِىٌّ ، وَحَظُّهَا فِى الطَّاعَةِ بَاطِنٌ خَفِىٌّ ، وَمُدَاوَاةُ مَا يَخْفَى صَعْبٌ عِلاَجُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 160,
+      "source_declared_number": 160,
+      "source_order": 159,
+      "arabic_vocalized": "رُبَّما دَخَلَ الرِّياءُ عَلَيْكَ مِنْ حَيْثُ لا يَنْظُرُ الخَلْقُ إلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 161,
+      "source_declared_number": 161,
+      "source_order": 160,
+      "arabic_vocalized": "اسْتِشْرَافُكَ أَنْ يَعْلَمَ الْخَلْقُ بِخُصُوصِيَّتِكَ دَلِيلٌ عَلَى عَدَمِ صِدْقِكَ فِى عُبُودِيَّتِكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 162,
+      "source_declared_number": 162,
+      "source_order": 161,
+      "arabic_vocalized": "غَيِّبْ نَظَرَ الْخَلْقِ إِلَيْكَ بِنَظَرِ اللهِ إِلَيْكَ ، وَغِبْ عَنْ إِقْبَالِهِمْ عَلَيْكَ بِشُهُودِ إِقْبَالِهِ عَلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 163,
+      "source_declared_number": 163,
+      "source_order": 162,
+      "arabic_vocalized": "مَنْ عَرَفَ الحَقَّ شَهِدَهُ فِي كُلِّ شَيْءٍ ، وَمَنْ فَنِيَ بِهِ غَابَ عَنْ كُلِّ شَيْءٍ ، وَمَنْ أَحَبَّهُ لَمْ يُؤْثِرْ عَلَيْهِ شَيْئاً.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 164,
+      "source_declared_number": 164,
+      "source_order": 163,
+      "arabic_vocalized": "إِنَّمَا حَجَبَ الْحَقَّ عَنْكَ شِدَّةُ قُرْبِهِ مِنْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 165,
+      "source_declared_number": 165,
+      "source_order": 164,
+      "arabic_vocalized": "إِنَّمَا احْتَجَبَ لِشِدَّةِ ظُهُورِهِ ، وَخَفِىَ عَنِ الأَبْصَارِ لِعِظَمِ نُورِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 166,
+      "source_declared_number": 166,
+      "source_order": 165,
+      "arabic_vocalized": "لاَ يَكُنْ طَلَبُكَ تَسَبُّبًا إِلَى الْعَطَاءِ مِنْهُ فَيَقِلَّ فَهْمُكَ عَنْهُ ، وَلْيَكُنْ طَلَبُكَ لِإِظْهَارِ العُبُودِيَّةِ وَقِيَاماً بِحُقُوقِ الرُّبُوِبِيَّةِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 167,
+      "source_declared_number": 167,
+      "source_order": 166,
+      "arabic_vocalized": "كَيْفَ يَكُونُ طَلَبُكَ اللاَّحِقُ سَبَبًا فِى عَطَائِهِ السَّابِقِ ؟",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 168,
+      "source_declared_number": 168,
+      "source_order": 167,
+      "arabic_vocalized": "جَلَّ حُكْمُ الأَزَلِ أَنْ يَنْضَافَ إِلَى الْعِلَلِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 169,
+      "source_declared_number": 169,
+      "source_order": 168,
+      "arabic_vocalized": "عِنَايَتُهُ فِيكَ لاَ لِشَىْءٍ مِنْكَ وَأَيْنَ كُنْتَ حِينَ وَاجَهَتْكَ عِنَايَتُهُ وَقَابَلَتْكَ رِعَايَتُهُ ؛ لَمْ يَكُنْ فِى أَزَلِهِ إِخْلاَصُ أَعْمَالٍ وَلاَ وُجُودُ أَحْوَالٍ ، بَلْ لَمْ يَكُنْ هُنَاكَ إِلاَّ مَحْضَ الإِفْضَالِ وَعَظِيمَ النَّوالِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 171,
+      "source_declared_number": 171,
+      "source_order": 170,
+      "arabic_vocalized": "إِلَى المَشِيئةِ يَسْتَنِدُ كُلَّ شَيْءٍ وَلَاتَسْتَنِدُ هِيَ إِلَى شَيْءٍ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 172,
+      "source_declared_number": 172,
+      "source_order": 171,
+      "arabic_vocalized": "رُبَّمَا دَلَّهُمُ الأَدَبُ عَلَى تَرْكِ الطَّلَبِ اعْتِمَادًا عَلَى قِسْمَتِهِ وَاشْتِغَالاً بِذِكْرِهِ عَنْ مَسْأَلَتِهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 173,
+      "source_declared_number": 173,
+      "source_order": 172,
+      "arabic_vocalized": "إِنَّمَا يُذَكَّرُ مَنْ يَجُوزُ عَلَيْهِ الإِغْفَالُ ، وَإِنَّمَا يُنَبَّهُ مَنْ يُمْكِنُ مِنْهُ الإِهْمَالُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 174,
+      "source_declared_number": 174,
+      "source_order": 173,
+      "arabic_vocalized": "وُرُودُ الفَاقَاتِ أَعيَادُ المُرِيدِينَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 175,
+      "source_declared_number": 175,
+      "source_order": 174,
+      "arabic_vocalized": "رُبَّمَا وَجَدْتَ مِنَ الْمَزِيدِ فِى الْفَاقَاتِ مَا لاَ تَجِدُهُ فِى الصَّوْمِ وَالصَّلاَةِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 176,
+      "source_declared_number": 176,
+      "source_order": 175,
+      "arabic_vocalized": "الْفَاقَاتُ بُسُطُ الْمَوَاهِبِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 179,
+      "source_declared_number": 179,
+      "source_order": 178,
+      "arabic_vocalized": "رُبَّمَا رُزِقَ الْكَرَامَةَ مَنْ لَمْ تَكْمُلْ لَهُ الاسْتِقَامَةُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 181,
+      "source_declared_number": 181,
+      "source_order": 180,
+      "arabic_vocalized": "مَنَ عَبَّرَ مِنْ بِسَاطِ إِحْسَانِهِ أَصْمَتَتْهُ الإِسَاءَةُ ، وَمَنْ عَبَّرَ مِنْ بِسَاطِ إِحْسَانِ اللهِ إِلَيْهِ لَمْ يَصْمُتْ إِذَا أَسَاءَ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 182,
+      "source_declared_number": 182,
+      "source_order": 181,
+      "arabic_vocalized": "تَسْبِقُ أَنْوَارُ الْحُكَمَاءِ أَقْوَالَهُمْ ، فَحَيْثُ صَارَ التَّنْوِيرُ وَصَلَ التَّعْبِيرُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 183,
+      "source_declared_number": 183,
+      "source_order": 182,
+      "arabic_vocalized": "كُلُّ كَلاَمٍ يَبْرُزُ وَعَلَيْهِ كِسْوَةُ الْقَلْبِ الَّذِى مِنْهُ بَرَزَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 184,
+      "source_declared_number": 184,
+      "source_order": 183,
+      "arabic_vocalized": "مَنْ أُذِنَ لهُ في التَّعْبيرِ فُهِمَتْ في مَسامِعِ الخَلْقِ عِبارَتُهُ، وَجُلِّيَتْ إلَيْهِمْ إشارَتُهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 185,
+      "source_declared_number": 185,
+      "source_order": 184,
+      "arabic_vocalized": "ربما برزت الحقائق مكسوفة الأنوار ، إذا لم يؤذن لك فيها بالإظهار .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 186,
+      "source_declared_number": 186,
+      "source_order": 185,
+      "arabic_vocalized": "عِبَارَاتُهُمْ إِمَّا لِفَيَضَانِ وَجْدٍ ، أَوْ لِقَصْدِ هِدَايَةِ مُرِيدٍ ، فَالأَوَّلُ حَالُ السَّالِكِينَ ، وَالثَّانِى حَالُ أَرْبَابِ الْمُكْنَةِ وَالْمُحَقِّقِينَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 187,
+      "source_declared_number": 187,
+      "source_order": 186,
+      "arabic_vocalized": "الْعِبَارَاتُ قُوتٌ لِعَائِلَةِ الْمُسْتَمِعِينَ وَلَيْسَ لَكَ إِلاَّ مَا أَنْتَ لَهُ آَكِلٌ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 188,
+      "source_declared_number": 188,
+      "source_order": 187,
+      "arabic_vocalized": "رُبَّمَا عَبَّرَ عَنِ الْمَقَامِ مَنِ اسْتَشْرَفَ عَلَيْهِ ، وَرُبَّمَا عَبَّرَ عَنْهُ مَنْ وَصَلَ إِلَيْهِ وَذَلِكَ مُلْتَبَِسٌ إِلاَّ عَلَى صَاحِبِ بَصِيرَةٍ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 189,
+      "source_declared_number": 189,
+      "source_order": 188,
+      "arabic_vocalized": "لا يَنْبَغي لِلسّالِكِ أنْ يُعَبِّرَ عَنْ وارِداتِهِ؛ فإنَّ ذلِكَ يُقِلَّ عَمَلَها في قَلبِهِ وَيَمْنَعْهُ وُجودَ الصِّدْقِ مَعَ رَبِّهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 193,
+      "source_declared_number": 193,
+      "source_order": 192,
+      "arabic_vocalized": "مِنْ عَلاَمَاتِ اتِّبَاعِ الْهَوَى الْمُسَارَعَةُ إِلَى نَوَافِلِ الْخَيْرَاتِ ، وَالتَّكَاسُلُ عَنِ الْقِيَامِ بِالْوَاجِبَاتِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 198,
+      "source_declared_number": 198,
+      "source_order": 197,
+      "arabic_vocalized": "رُبَّمَا وَرَدَتْ الظُّلَم عَلَيْكَ لِيُعَرِّفَكَ قَدْرَ مَا مَنّ بِهِ عَلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 199,
+      "source_declared_number": 199,
+      "source_order": 198,
+      "arabic_vocalized": "مَنْ لَمْ يَعْرِفْ قَدْرَ النِّعَمِ بِوِجْدَانِهَا عَرَفَهَا بِوُجُودِ فِقْدَانهَا .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 200,
+      "source_declared_number": 200,
+      "source_order": 199,
+      "arabic_vocalized": "لا تُدْهِشْكَ وَارِدَاتُ النِّعَمِ عَنِ القِيَامِ بِحُقُوقِ شُكْرِكَ ، فَإِنَّ ذَلِكَ مِمَّا يَحُطُّ مِنْ وُجُودِ قَدْرِكَ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 201,
+      "source_declared_number": 201,
+      "source_order": 200,
+      "arabic_vocalized": "تَمَكُّنُ حَلاَوَةِ الهَوَى مِنَ القَلْبِ هُوَ الدَّاءُ العُضَالُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 202,
+      "source_declared_number": 202,
+      "source_order": 201,
+      "arabic_vocalized": "لا يُخْرِجُ الشَّهْوَةِ مِنَ القَلْبِ إِلاَّ خَوفٌ مُزْعِجٌ أَوْ شَوْقٌ مُقْلِقٌ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 204,
+      "source_declared_number": 204,
+      "source_order": 203,
+      "arabic_vocalized": "أَنْوَارٌ أُذِنَ لَها فِي الوُصُولِ ، وَأَنْوَارٌ أٌذِنَ لَهَا فِي الدُّخُولِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 206,
+      "source_declared_number": 206,
+      "source_order": 205,
+      "arabic_vocalized": "فَرِّغْ قَلْبَكَ مِنَ الأَغْيَارِ يمْلأْهُ بِالمَعَارِفِ وَالأَسْرَارِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 208,
+      "source_declared_number": 208,
+      "source_order": 207,
+      "arabic_vocalized": "حُقُوقٌ فِي الأَوْقَاتِ يُمْكِنُ قَضَاؤُهَا ، وَحُقُوقُ الأَوْقَاتِ لا يُمْكِنُ قَضَاؤُهَا، إِذْ مَا مِنْ وَقْتٍ يَرِدُ إِلاَّ وَللهِ عَلَيْكَ فِيهِ حَقٌّ جَدِيدٌ ، وَ أَمْرٌ أَكِيْدٌ ، فَكَيْفَ تَقْضِي فِيْهِ حَقَّ غَيْرِهِ وَأَنْتَ لمْ تَقْضِ حَقَّ اللهِ فِيهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 209,
+      "source_declared_number": 209,
+      "source_order": 208,
+      "arabic_vocalized": "مَا فَاتَ مِنْ عُمُرِكَ لا عِوَضَ لَهُ ، وَمَا حَصَلَ لَكَ مِنْهُ لا قِيْمَةَ لَهُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 210,
+      "source_declared_number": 210,
+      "source_order": 209,
+      "arabic_vocalized": "مَا أَحْبَبْتَ شَيْئاً إلا كُنْتَ لَهُ عَبْداً ، وَهُوَ لا يحِبُّ أَنْ تَكُونَ لِغَيْرِهِ عَبْداً.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 212,
+      "source_declared_number": 212,
+      "source_order": 211,
+      "arabic_vocalized": "لا يَزِيدُ فِي عِزِّهِ إِقْبَالُ مَنْ أَقْبَلَ عَلَيْهِ ، وَلا يَنْقُصُ مِنْ عِزِّهِ إِدْبَارُ مَنْ أَدْبَرَ عَنْهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 214,
+      "source_declared_number": 214,
+      "source_order": 213,
+      "arabic_vocalized": "قُرْبُكَ مِنْهُ أَنْ تَكُونَ مُشَاهِداً لِقُرْبِهِ ، وَإِلا فَمِنْ أَيْنَ أَنْتَ وَوُجُودُ قُرْبِهِ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 218,
+      "source_declared_number": 218,
+      "source_order": 217,
+      "arabic_vocalized": "كَيْفَ يَحْتَجِبُ الحَقُّ بِشَيْءٍ ، وَالَّذِي يَحْتَجِبُ بِهِ هُوَ فِيهِ ظَاهِرٌ وَمَوْجُودٌ حَاضِرٌ",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 221,
+      "source_declared_number": 221,
+      "source_order": 220,
+      "arabic_vocalized": "لا تَطْلُبَنَّ بَقَاءَ الوَارِداتِ بَعْدَ أَنْ بَسَطَتْ أَنْوَارَهَا وَأَوْدَعَتْ أَسْرَارَهَا , فَلَكَ فِي اللهِ غِنىً عَنْ كُلِّ شَيْءٍ , وَلَيْسَ يُغْنِيكَ عَنْهُ شَيْءٌ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 225,
+      "source_declared_number": 225,
+      "source_order": 224,
+      "arabic_vocalized": "مِنْ تمَامِ النِّعْمَةِ عَلَيْكَ أَنْ يَرْزُقَكَ مَا يَكْفِيكَ وَيَمْنَعَكَ مَا يُطْغِيكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 226,
+      "source_declared_number": 226,
+      "source_order": 225,
+      "arabic_vocalized": "لِيَقِلَّ مَا تَفْرَحُ بِهِ يَقِلُّ مَا تَحْزَنُ عَلَيْهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 227,
+      "source_declared_number": 227,
+      "source_order": 226,
+      "arabic_vocalized": "إِنْ أَرَدْتَ أَنْ لا تُعْزَلَ فَلاَ تَتَوَلَّ وِلاَيةً لا تَدُومُ لَكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 228,
+      "source_declared_number": 228,
+      "source_order": 227,
+      "arabic_vocalized": "إِنْ رَغَّبَتْكَ البِدَايَاتُ زَهَّدَتْكَ النِّهَايَاتُ , إِنْ دَعَاكَ إِلَيْهَا ظَاهِرٌ نَهَاكَ عَنْهَا بَاطِنٌ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 232,
+      "source_declared_number": 232,
+      "source_order": 231,
+      "arabic_vocalized": "خَيْرُ العِلْمِ مَا كَانَتِ الخَشْيَةُ مَعَهُ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 233,
+      "source_declared_number": 233,
+      "source_order": 232,
+      "arabic_vocalized": "العِلْمُ إِنْ قَارَنَتهُ الخَشْيَةُ فَلَكَ ، وَإِلاَّ فَعَلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 235,
+      "source_declared_number": 235,
+      "source_order": 234,
+      "arabic_vocalized": "إِنَّمَا أَجْرَى الأَذَى عَلَى أَيْدِيهِمْ كَيْ لا تَكُونَ سَاكِناً إِلَيْهِم ، أَرَادَ أَنْ يُزْعِجَكَ عَنْ كُلِّ شَيْءٍ حَتَّى لا يَشْغَلَكَ عَنْهَ شَيْءٌ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 236,
+      "source_declared_number": 236,
+      "source_order": 235,
+      "arabic_vocalized": "إِذَا عَلِمْتَ أَنَّ الشَّيْطَانَ لا يَغْفُلُ عَنْكَ ، فَلاَ تَغْفُلْ أَنْتَ عَمَّنْ نَاصِيَتُكَ بِيَدِهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 237,
+      "source_declared_number": 237,
+      "source_order": 236,
+      "arabic_vocalized": "جَعَلَهُ لَكَ عَدُوَّاً لِيَحُوشَكَ بِهِ إِلَيْهِ ، وَحَرَّكَ عَلَيْكَ النَّفْسَ لِيَدُومَ إِقْبَالُكَ عَلَيْهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 239,
+      "source_declared_number": 239,
+      "source_order": 238,
+      "arabic_vocalized": "لَيْسَ المُتَوَاضِعُ الَّذِي إِذَا تَوَاضَعَ رَأَى أَنَّهُ فَوْقَ مَا صَنَعَ ، وَلَكِنَّ المُتَوَاضِعَ الَّذِي إِذَا تَوَاضَعَ رَأَى أَنَّهُ دُونَ مَا صَنَعَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 240,
+      "source_declared_number": 240,
+      "source_order": 239,
+      "arabic_vocalized": "اَلتَّوَاضُعُ الحَقِيقِيُّ هُوَ مَا كَانَ نَاشِئاً عَنْ شُهُودِ عَظَمَتِهِ وَتَجَلِّي صِفَتِهِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 241,
+      "source_declared_number": 241,
+      "source_order": 240,
+      "arabic_vocalized": "لا يُخْرِجُكَ عَنِ الوَصْفِ إِلاَّ شُهُودُ الوَصْفِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 242,
+      "source_declared_number": 242,
+      "source_order": 241,
+      "arabic_vocalized": "المُؤْمِنُ يَشْغَلُهُ الثَّناءُ عَلَى اللهِ عَنْ أَنْ يَكُونَ لِنَفْسِهِ شَاكِراً ، وَتَشْغَلُهُ حُقُوقُ اللهِ عَنْ أَنْ يَكُونَ لِحُظُوظِهِ ذَاكِراً .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 248,
+      "source_declared_number": 248,
+      "source_order": 247,
+      "arabic_vocalized": "أَنْتَ مَعَ الأَكْوَانِ مَا لَمْ تَشْهَدِ المُكَوِّنَ ، فَإِذَا شَهِدْتَهُ كَانَتِ الأَكْوَانُ مَعَكَ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 251,
+      "source_declared_number": 251,
+      "source_order": 250,
+      "arabic_vocalized": "لا يُعْلَمُ قَدْرُ أَنْوَارِ القُلُوبِ وَالأَسْرَارِ إِلاَّ فِي غَيْبِ المَلَكُوتِ ، كَمَا لا تَظْهَرُ أَنْوَارُ السَّمَاءِ إِلاَّ فِي شَهَادَةِ المُلْكِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 253,
+      "source_declared_number": 253,
+      "source_order": 252,
+      "arabic_vocalized": "كَيْفَ تَطْلُبُ العِوَضَ عَلَى عَمَلٍ هُوَ مُتَصَدِّقٌ بِهِ عَلَيْكَ ؟ أَمْ كَيْفَ تَطْلُبُ الجَزَاءَ عَلَى صِدْقٍ هُوَ مُهْدِيهِ إِلَيْكَ.",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 255,
+      "source_declared_number": 255,
+      "source_order": 254,
+      "arabic_vocalized": "ذَاكِرٌ ذَكَرَ لِيَسْتَنِيرَ بِهِ قَلْبُهُ فَكَانَ ذَاكِرًا ، وَذَاكِرٌ اسْتَنَارَ قَلْبُهُ فَكَانَ ذَاكِرًا ، وَالَّذِى اسْتَوَتْ أَذْكَارُهُ وَأَنْوَارُهُ فَبِذِكْرِهِ يُهْتَدَى ، وَبِنُورِهِ يُقْتَدَى .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 259,
+      "source_declared_number": 259,
+      "source_order": 257,
+      "arabic_vocalized": "رُبَّ عُمُرٍ اتَّسَعَتْ آمَادُهُ وَقَلَّتْ أَمْدَادُهُ ، وَرُبَّ عُمُرٍ قَلِيَلةٌ آمَادُهُ كَثِيرَةٌ أَمْدَادُهُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 260,
+      "source_declared_number": 260,
+      "source_order": 258,
+      "arabic_vocalized": "مَنْ بُورِكَ لَهُ فِي عُمُرِهِ أَدْرَكَ فِي يَسِيرٍ مِنَ الزَّمَنِ مِنْ مِنَنِ اللهِ تَعَالَى مَا لا يَدْخُلُ تَحْتَ دَوَائِرِ العِبَارَةِ ، وَلاَ تَلْحَقُهُ الإِشَارَةُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 261,
+      "source_declared_number": 261,
+      "source_order": 259,
+      "arabic_vocalized": "الخِذْلاَنُ كُلُّ الخِذْلاَنِ أَنْ تَتَفَرَّغَ مِنَ الشَّوَاغِلِ ، ثَمَّ لا تَتَوَجَّهَ إِلَيْهِ ، وَتَقِلَّ عَوَائِقُكَ ، ثُمَّ لا تَرْحَلَ إِلَيْهِ",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 262,
+      "source_declared_number": 262,
+      "source_order": 260,
+      "arabic_vocalized": "الفِكْرَةُ سَيْرُ القَلْبِ فِي مَيَادِينِ الأَغْيَارِ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    },
+    {
+      "source_number": 263,
+      "source_declared_number": 263,
+      "source_order": 261,
+      "arabic_vocalized": "الفِكْرَةُ سِرَاجُ القَلْبِ ، فَإِذَا ذَهَبَتْ فَلا إِضَاءَةَ لَهُ .",
+      "source_url": "https://www.nafahat-tarik.com/2015/08/sufism22.html",
+      "base_letter_skeleton_match": "exact",
+      "status": "candidate_needs_manual_boundary_and_source_review",
+      "automatic_diacritic_generation": false
+    }
+  ]
+}
