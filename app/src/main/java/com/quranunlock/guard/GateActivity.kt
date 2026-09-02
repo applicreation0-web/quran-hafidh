@@ -175,7 +175,7 @@ class GateActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(24.dp))
 
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { openReader(page) }
                         ) { Text("Lire la page $page") }
@@ -198,7 +198,7 @@ class GateActivity : ComponentActivity() {
                         )
 
                         Spacer(Modifier.height(20.dp))
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = jokersRemaining > 0,
                             onClick = {
