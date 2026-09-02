@@ -35,6 +35,10 @@ object SensitiveHandoffPolicy {
             "credential",
             "permission",
             "security",
+            // AOSP and several OEM biometric/credential flows use a generic
+            // SubSettings host. It is allowed only inside the short, bank-origin
+            // lease; explicit Accessibility screens are rejected above.
+            "subsettings",
             "lockscreen",
             "nfc",
             "identity"
