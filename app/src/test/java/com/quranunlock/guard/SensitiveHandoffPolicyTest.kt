@@ -25,7 +25,7 @@ class SensitiveHandoffPolicyTest {
                 validUntilElapsedMs = 121_000L,
                 nowElapsedMs = 2_000L,
                 eventPackage = ProtectedApps.ANDROID_SETTINGS,
-                eventClassName = "com.android.settings.Settings$BiometricEnrollActivity"
+                eventClassName = "com.android.settings.Settings\$BiometricEnrollActivity"
             )
         )
     }
@@ -38,7 +38,7 @@ class SensitiveHandoffPolicyTest {
                 validUntilElapsedMs = 121_000L,
                 nowElapsedMs = 2_000L,
                 eventPackage = ProtectedApps.ANDROID_SETTINGS,
-                eventClassName = "com.android.settings.Settings$AccessibilityDetailsSettingsActivity"
+                eventClassName = "com.android.settings.Settings\$AccessibilityDetailsSettingsActivity"
             )
         )
         assertFalse(
@@ -86,7 +86,7 @@ class SensitiveHandoffPolicyTest {
                 validUntilElapsedMs = 121_000L,
                 nowElapsedMs = 121_001L,
                 eventPackage = ProtectedApps.ANDROID_SETTINGS,
-                eventClassName = "com.android.settings.Settings$BiometricEnrollActivity"
+                eventClassName = "com.android.settings.Settings\$BiometricEnrollActivity"
             )
         )
         assertFalse(
@@ -108,7 +108,7 @@ class SensitiveHandoffPolicyTest {
                 validUntilElapsedMs = 0L,
                 nowElapsedMs = 1L,
                 eventPackage = ProtectedApps.ANDROID_SETTINGS,
-                eventClassName = "com.android.settings.Settings$BiometricEnrollActivity"
+                eventClassName = "com.android.settings.Settings\$BiometricEnrollActivity"
             )
         )
         assertFalse(
