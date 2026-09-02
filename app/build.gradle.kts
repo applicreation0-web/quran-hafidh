@@ -544,7 +544,7 @@ val verifyEditorialBoundary by tasks.registering {
         check(hikam.contains("Ibn ʿAjība")) {
             "Existing verified Ibn ʿAjība commentary must remain identified explicitly."
         }
-        (1..12).forEach { sourceNumber ->
+        (1..13).forEach { sourceNumber ->
             check(hikam.contains(sourceNumber.toString() + " to ajibaCommentary(")) {
                 "Verified Ibn ʿAjība commentary missing for initial Hikma " + sourceNumber
             }
