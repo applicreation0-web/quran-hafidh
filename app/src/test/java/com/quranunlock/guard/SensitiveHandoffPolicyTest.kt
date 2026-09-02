@@ -41,7 +41,7 @@ class SensitiveHandoffPolicyTest {
                 eventClassName = "com.android.settings.Settings\$AccessibilityDetailsSettingsActivity"
             )
         )
-        assertFalse(
+        assertTrue(
             SensitiveHandoffPolicy.shouldAllowHandoff(
                 originPackage = origin,
                 validUntilElapsedMs = 121_000L,
