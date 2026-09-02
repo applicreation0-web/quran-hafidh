@@ -318,6 +318,82 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
     }
 }
 
+
+val verifySensitiveAppBoundary by tasks.registering {
+    doLast {
+        val protectedApps = file(
+            "src/main/java/com/quranunlock/guard/ProtectedApps.kt"
+        ).readText()
+        val service = file(
+            "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt"
+        ).readText()
+        val policy = file(
+            "src/main/java/com/quranunlock/guard/SensitiveHandoffPolicy.kt"
+        ).readText()
+        val sensitiveUi = file(
+            "src/main/java/com/quranunlock/guard/SensitiveAppsActivity.kt"
+        ).readText()
+        val setupUi = file(
+            "src/main/java/com/quranunlock/guard/ProtectionSetupActivity.kt"
+        ).readText()
+        val mainUi = file(
+            "src/main/java/com/quranunlock/guard/MainActivity.kt"
+        ).readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+        val tests = file(
+            "src/test/java/com/quranunlock/guard/SensitiveHandoffPolicyTest.kt"
+        ).readText()
+
+        check(protectedApps.contains("if (isAlwaysAllowed(context, packageName)) return false")) {
+            "Always-accessible banking/identity apps must fail open before any protection decision."
+        }
+        check(protectedApps.contains("userAlwaysAllowedPackages(context)")) {
+            "Unknown local banks require an explicit always-accessible fallback."
+        }
+        check(service.contains("ProtectedApps.isSensitiveFlowOrigin")) {
+            "Sensitive app origins must be recognized before normal gate handling."
+        }
+        check(service.contains("SensitiveHandoffPolicy.shouldAllowHandoff")) {
+            "Bank authentication/settings handoff policy is not wired into accessibility events."
+        }
+        check(policy.contains("HANDOFF_WINDOW_MS = 120_000L")) {
+            "Sensitive handoff must remain time-bounded."
+        }
+        check(policy.contains("customtab") && policy.contains("webauthn")) {
+            "Browser authentication windows must be recognized without exempting ordinary browsing."
+        }
+        check(sensitiveUi.contains("Banques, paiements et identité")) {
+            "The visible banking exclusion control is missing."
+        }
+        check(manifest.contains("android:name=\".SensitiveAppsActivity\"")) {
+            "SensitiveAppsActivity must be packaged."
+        }
+        check(manifest.contains("<queries>") && manifest.contains("android.intent.category.LAUNCHER")) {
+            "Package visibility is required to show installed banks for manual exclusion."
+        }
+        check(manifest.contains("android:name=\".ProtectionSetupActivity\"")) {
+            "Guided accessibility activation must be packaged."
+        }
+        check(setupUi.contains("Activer en trois étapes")) {
+            "Accessibility activation must remain didactic and lightweight."
+        }
+        check(!mainUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS")) {
+            "Main settings must not jump directly into Android accessibility settings."
+        }
+        listOf(
+            "bankingOriginAndAndroidSettingsAreAllowedDuringLease",
+            "chromeAuthenticationCustomTabIsAllowedDuringLease",
+            "ordinaryBrowserWindowIsNeverExempted",
+            "expiredLeaseCannotExemptSettingsOrAuthentication",
+            "unrelatedAppCannotCreateOrReuseTheException"
+        ).forEach { scenario ->
+            check(tests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking sensitive handoff test: " + scenario
+            }
+        }
+    }
+}
+
 val verifyUpdateMigrationIntegrity by tasks.registering {
     doLast {
         val buildFile = file("build.gradle.kts").readText()
@@ -329,11 +405,11 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 17")) {
-            "0.9.3 must keep versionCode 17, above the installed 0.9.2 device-test build."
+        check(buildFile.contains("versionCode = 18")) {
+            "0.9.4 must keep versionCode 18, above the installed 0.9.3 candidate."
         }
         check(buildFile.contains("versionName = \"0.9.3\"")) {
-            "Expected device-fix versionName 0.9.3."
+            "Expected banking/UX candidate versionName 0.9.4."
         }
         check(migrations.contains("CURRENT_SCHEMA = 7")) {
             "0.9.1 must migrate installed schema 6 to schema 7."
@@ -646,6 +722,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
     dependsOn(verifyUpdateMigrationIntegrity)
+    dependsOn(verifySensitiveAppBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
 }
 
@@ -657,8 +734,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "0.9.3"
+        versionCode = 18
+        versionName = "0.9.4"
     }
 
     buildFeatures {
@@ -674,6 +751,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
     dependsOn(verifyUpdateMigrationIntegrity)
+    dependsOn(verifySensitiveAppBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
 }
 
