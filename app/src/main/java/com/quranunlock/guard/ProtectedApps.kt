@@ -208,7 +208,9 @@ object ProtectedApps {
         SafeguardTarget("Microsoft Edge", "com.microsoft.emmx", SafeguardTargetCategory.BROWSER),
         SafeguardTarget("Brave", "com.brave.browser", SafeguardTargetCategory.BROWSER),
         SafeguardTarget("Opera", "com.opera.browser", SafeguardTargetCategory.BROWSER),
-        SafeguardTarget("Samsung Internet", "com.sec.android.app.sbrowser", SafeguardTargetCategory.BROWSER)
+        SafeguardTarget("Samsung Internet", "com.sec.android.app.sbrowser", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("DuckDuckGo", "com.duckduckgo.mobile.android", SafeguardTargetCategory.BROWSER),
+        SafeguardTarget("Vivaldi", "com.vivaldi.browser", SafeguardTargetCategory.BROWSER)
     )
 
     val selectableTargets: List<SafeguardTarget> = socialTargets + browserTargets
@@ -387,7 +389,7 @@ object ProtectedApps {
         packageName in selectableScopePackages
 
     /**
-     * Fixed application scope: social/communication targets + the six supported browsers.
+     * Fixed application scope: social/communication targets + the eight supported browsers.
      * Anything else must never acquire Safeguard session/history state.
      */
     fun shouldNeverPersist(context: Context, packageName: String): Boolean =
