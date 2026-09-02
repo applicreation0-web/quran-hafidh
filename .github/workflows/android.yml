@@ -92,7 +92,6 @@ jobs:
 
   screenshots:
     name: Capture real Android UI
-    needs: build
     if: github.event_name == 'pull_request' && github.head_ref == 'fix/0.9.2-roadmap-final-audit'
     runs-on: ubuntu-latest
     timeout-minutes: 35
