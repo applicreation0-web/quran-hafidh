@@ -104,13 +104,13 @@ private fun SpiritualLibraryScreen(
                         LibrarySection.HIKAM -> "Al-Hikam"
                     }
                     if (candidate == section) {
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             onClick = { section = candidate }
                         ) { Text(label) }
                     } else {
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             onClick = { section = candidate }
@@ -182,7 +182,7 @@ private fun SpiritualLibraryScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Button(
+                                    SafeguardButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { onOpenHikma(hikma.canonicalId) }
