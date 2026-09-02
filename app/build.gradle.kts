@@ -52,6 +52,22 @@ val verifyMushafPages by tasks.registering {
             "The canonical Mushaf page must occupy the full remaining reader viewport."
         }
         check(
+            reader.contains("MushafPageWebView(") &&
+                reader.contains("onSwipePrevious") &&
+                reader.contains("onSwipeNext") &&
+                reader.contains("AnimatedContent(") &&
+                reader.contains("SafeguardCyclePrefs.currentPlan")
+        ) {
+            "The reading challenge must support calm swipe navigation across its in-memory plan."
+        }
+        check(
+            reader.contains("index > activeIndex") &&
+                reader.contains("displayedIndex < activeIndex") &&
+                reader.contains("ReadingValidationPolicy.canValidate")
+        ) {
+            "Only validated pages may be revisited and forward progress must remain gated."
+        }
+        check(
             reader.contains("override fun onTopResumedActivityChanged") &&
                 reader.contains("mayCountActiveReading()")
         ) {
@@ -185,13 +201,22 @@ val verifyPrivacyBoundary by tasks.registering {
         check(!service.contains("SensitiveHandoffPolicy"))
         check(!service.contains("isSensitiveFlowOrigin"))
         check(!applicationsUi.contains("Vérifier les exclusions"))
-        check(applicationsUi.contains("sans liste d’exclusion à maintenir"))
+        check(applicationsUi.contains("Une application ajoutée est protégée immédiatement."))
+        check(applicationsUi.contains("retrait est confirmé puis appliqué le lendemain"))
+        check(applicationsUi.contains("Retrait prévu demain"))
 
-        check(service.contains("info.packageNames = if (broad)"))
-        check(service.contains("null"))
+        check(!service.contains("info.packageNames = null")) {
+            "Accessibility must never subscribe to every installed application."
+        }
+        check(service.contains("ProtectedApps.eventScopePackages(this).toTypedArray()")) {
+            "Runtime accessibility scope must remain explicit and target-only."
+        }
         check(service.contains("handleOutsideScopeForeground()"))
         check(service.contains("applyEventPackageScope(broad = false)"))
-        check(protectedApps.contains("GuardPrefs.protectedPackages(context) + context.packageName"))
+        check(protectedApps.contains("transitionSignalPackages"))
+        check(protectedApps.contains("SYSTEM_UI_PACKAGE"))
+        check(protectedApps.contains("resolveCurrentLauncherPackage"))
+        check(protectedApps.contains("GuardPrefs.protectedPackages(context)"))
         check(protectedApps.contains("!isSelectableTarget(packageName)"))
     }
 }
@@ -252,7 +277,8 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(cyclePrefs.contains("hizbCount = 2"))
         check(gate.contains("Filtre matinal • 20 pages"))
         check(gate.contains("Palier de 90 minutes • 10 pages"))
-        check(reader.contains("Valider et passer à la page suivante"))
+        check(reader.contains("Valider et avancer"))
+        check(reader.contains("Balayez vers la gauche pour avancer"))
         check(mainUi.contains("Intervalle fixe : 15 minutes"))
         check(!mainUi.contains("durationChoices"))
 
@@ -345,9 +371,15 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(service.contains("applyEventPackageScope(broad = true)"))
         check(service.contains("handleOutsideScopeForeground()"))
         check(service.contains("applyEventPackageScope(broad = false)"))
+        check(!service.contains("info.packageNames = null"))
+        check(protectedApps.contains("eventScopePackages"))
+        check(protectedApps.contains("transitionSignalPackages"))
         check(appCatalog.contains("ProtectedApps.selectableTargets.mapNotNull"))
         check(appCatalog.contains("cachedLaunchableTargets"))
         check(applicationsUi.contains("AppCatalog.refresh()"))
+        check(applicationsUi.contains("Confirmer pour demain"))
+        check(applicationsUi.contains("cochez pour annuler"))
+        check(prefs.contains("ProtectedSelectionPolicy.reconcile"))
         check(prefs.contains("it in installedTargets"))
         check(!prefs.contains("UNINSTALL_CHALLENGE_KEY"))
         check(dashboard.contains("joker(s) utilisé(s) aujourd’hui"))
@@ -522,9 +554,6 @@ val verifyEditorialBoundary by tasks.registering {
         check(adhkarUi.contains("Crossfade(")) {
             "Morning/evening changes require a calm in-app transition."
         }
-        check(hikamUi.contains("AnimatedVisibility(")) {
-            "Classical commentary expansion requires a calm in-app transition."
-        }
         val safeguardDesign = file(
             "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
         ).readText()
@@ -543,40 +572,30 @@ val verifyEditorialBoundary by tasks.registering {
                 "Launcher icon lost a required green/gold/cream brand color: " + brandColor
             }
         }
-        check(hikam.contains("HikmaCommentary")) {
-            "Canonical Hikam data must retain classical commentary metadata."
-        }
-        check(hikam.contains("additionalCommentaries") && hikam.contains("val commentaries: List<HikmaCommentary>")) {
-            "Hikam must support multiple commentators as separate source units."
-        }
-        check(hikamUi.contains("Approfondir — commentaire classique")) {
-            "Hikma UI must expose the classical commentary explicitly."
-        }
-        check(hikamUi.contains("Texte du commentateur présenté sans reformulation.")) {
-            "Hikma UI must state that the commentator text is not reformulated."
-        }
-        check(hikamUi.contains("commentary.source.author") && hikamUi.contains("commentary.source.workTitle")) {
-            "Each commentary card must display its own author and work."
-        }
-        check(hikamUi.contains("Aucune synthèse entre commentateurs.")) {
-            "Cross-commentator synthesis must be explicitly forbidden in the UI contract."
-        }
-        check(hikam.contains("Ibn ʿAjība")) {
-            "Existing verified Ibn ʿAjība commentary must remain identified explicitly."
-        }
-        ((1..15) + (17..20)).forEach { sourceNumber ->
-            check(hikam.contains(sourceNumber.toString() + " to ajibaCommentary(")) {
-                "Verified Ibn ʿAjība commentary missing for Hikma " + sourceNumber
+        listOf(
+            "HikmaCommentary",
+            "additionalCommentaries",
+            "commentaryByNumber",
+            "Approfondir — commentaire classique",
+            "Commentaire classique",
+            "Ibn ʿAjība"
+        ).forEach { removedCommentarySignal ->
+            check(!hikam.contains(removedCommentarySignal) &&
+                !hikamUi.contains(removedCommentarySignal)
+            ) {
+                "Hikam must expose only the Hikma, never a commentary: " +
+                    removedCommentarySignal
             }
         }
-        check(!hikam.contains("16 to ajibaCommentary(")) {
-            "Hikma 16 commentary must remain withheld until its source boundary is resolved."
-        }
-        check(!hikam.contains("[…]") && !hikam.contains("hasInternalOmissions = true")) {
-            "Production Hikam commentaries must be continuous and free of internal cuts."
-        }
-        check(hikam.contains("isExcerpt: Boolean")) {
-            "Abridged commentary must retain an explicit excerpt flag."
+        check(hikam.contains("arabic_vocalized"))
+        check(hikam.contains("vocalization_status"))
+        check(hikam.contains("source_aligned_no_automatic_generation"))
+        check(hikam.contains("vocalizationSourceUrl"))
+        val hikamAsset = file("src/main/assets/classical/al_hikam_verified.json").readText()
+        check(hikamAsset.contains("\"arabic_vocalized\""))
+        check(hikamAsset.contains("\"vocalization_status\": \"source_aligned_no_automatic_generation\""))
+        check(!hikamAsset.contains("\"commentary\"")) {
+            "Bundled Hikam JSON must contain no commentary field."
         }
 
         val authenticity = file(
@@ -643,11 +662,13 @@ val verifyEditorialBoundary by tasks.registering {
         val hikamTests = file(
             "src/test/java/com/quranunlock/guard/HikamRepositoryTest.kt"
         ).readText()
-        check(hikamTests.contains("fun sourcedHikmaCanDisplayWithoutUnverifiedCommentary(")) {
-            "A sourced Hikma must remain displayable without an unverified commentary."
+        check(hikamTests.contains("fun verifiedVocalizedHikmaCanDisplay(")) {
+            "A verified, vocalized Hikma must remain displayable."
         }
-        check(hikamTests.contains("fun multipleCommentatorsRemainSeparateSourceUnits(")) {
-            "Different commentators must remain separate, independently sourced units."
+        check(!hikamTests.contains("Commentary") &&
+            !hikamTests.contains("commentator", ignoreCase = true)
+        ) {
+            "Hikam tests must no longer encode a commentary subsystem."
         }
 
         val classicalFiles = listOf(hikam, ghazali)
