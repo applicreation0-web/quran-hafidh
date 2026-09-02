@@ -149,7 +149,7 @@ class ApplicationsActivity : ComponentActivity() {
 
                 TargetGroup(
                     title = "Navigateurs",
-                    subtitle = "Les huit navigateurs pris en charge",
+                    subtitle = "Les six navigateurs pris en charge",
                     targets = ProtectedApps.browserTargets,
                     selected = selected,
                     onSave = {

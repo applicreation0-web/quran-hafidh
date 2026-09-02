@@ -428,7 +428,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SectionTitle("Rappel du jour")
+                SectionTitle("Pensée du jour")
                 DailyReminderCard(reminder = todayReminder)
 
                 SectionTitle("Rappels bienveillants")
@@ -438,7 +438,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            "20:00 • rappel du jour et petit bilan 🌿",
+                            "08:00 • Pensée du jour 🌿",
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
@@ -475,7 +475,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                             Column {
-                                Text("Rappel du jour à 20:00")
+                                Text("Pensée du jour à 08:00")
                                 Text(
                                     if (ReminderPrefs.dailyEnabled(this@MainActivity)) "Activé" else "Désactivé",
                                     style = MaterialTheme.typography.bodySmall,

@@ -55,16 +55,14 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
-    fun browserCoverageIsExactlyTheDeclaredEightAndNotSensitive() {
+    fun browserCoverageIsExactlyTheDeclaredSixAndNotSensitive() {
         val expected = setOf(
             "com.android.chrome",
             "org.mozilla.firefox",
             "com.microsoft.emmx",
             "com.brave.browser",
             "com.opera.browser",
-            "com.sec.android.app.sbrowser",
-            "com.duckduckgo.mobile.android",
-            "com.vivaldi.browser"
+            "com.sec.android.app.sbrowser"
         )
         assertTrue(BrowserDetector.supportedPackages == expected)
 
@@ -74,9 +72,7 @@ class ProtectedAppsPolicyTest {
             "com.microsoft.emmx" to "Microsoft Edge",
             "com.brave.browser" to "Brave",
             "com.opera.browser" to "Opera",
-            "com.sec.android.app.sbrowser" to "Samsung Internet",
-            "com.duckduckgo.mobile.android" to "DuckDuckGo",
-            "com.vivaldi.browser" to "Vivaldi"
+            "com.sec.android.app.sbrowser" to "Samsung Internet"
         )
         expected.forEach { packageName ->
             assertFalse(
@@ -103,8 +99,6 @@ class ProtectedAppsPolicyTest {
             "com.brave.browser",
             "com.opera.browser",
             "com.sec.android.app.sbrowser",
-            "com.duckduckgo.mobile.android",
-            "com.vivaldi.browser",
             "com.google.android.youtube",
             "com.whatsapp",
             "org.telegram.messenger",
@@ -116,7 +110,7 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
-    fun selectableScopeIsOnlyDeclaredSocialTargetsAndEightBrowsers() {
+    fun selectableScopeIsOnlyDeclaredSocialTargetsAndSixBrowsers() {
         val expected = (
             ProtectedApps.socialTargets + ProtectedApps.browserTargets
         ).map { it.packageName }.toSet()
@@ -129,6 +123,36 @@ class ProtectedAppsPolicyTest {
         assertFalse(ProtectedApps.isSelectableTarget("com.x8bit.bitwarden"))
         assertFalse(ProtectedApps.isSelectableTarget("com.google.android.apps.authenticator2"))
         assertFalse(ProtectedApps.isSelectableTarget("com.example.random"))
+    }
+
+
+    @Test
+    fun excludedAppsCanNeverBecomeBudgetOwners() {
+        val excluded = setOf(
+            "com.android.phone",
+            "com.google.android.dialer",
+            "com.android.dialer",
+            "com.samsung.android.incallui",
+            "com.google.android.deskclock",
+            "com.sec.android.app.clockpackage",
+            "com.google.android.apps.walletnfcrel",
+            "com.google.android.apps.authenticator2",
+            "com.x8bit.bitwarden",
+            "com.barclays.android.barclaysmobilebanking",
+            "com.revolut.revolut",
+            "com.google.android.gms",
+            "com.example.privatebank",
+            "com.example.security",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser"
+        )
+
+        excluded.forEach { packageName ->
+            assertFalse(
+                "Excluded package became selectable: " + packageName,
+                ProtectedApps.isSelectableTarget(packageName)
+            )
+        }
     }
 
     @Test

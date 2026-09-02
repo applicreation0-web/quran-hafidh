@@ -1,0 +1,157 @@
+name: Hikam Commentary PDF Research
+
+on:
+  push:
+    branches:
+      - "research/hikam-commentaries-264"
+
+jobs:
+  extract-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PDF text tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils mupdf-tools
+
+      - name: Download Ibn Ajiba Arabic PDF
+        run: |
+          mkdir -p build/research/hikam_commentary_pdf
+          curl -L --fail --retry 3 --connect-timeout 10 --max-time 240 \
+            "https://data.nur.nu/Kutub/Arabic/Ibn3Ajiba_Writings/Ibn3Ajiba_Iqazh-alHimam/Ibn3Ajiba_Iqazh-alHimam_DarMa3arif.pdf" \
+            -o build/research/hikam_commentary_pdf/ibn_ajiba.pdf
+          pdftotext -layout -enc UTF-8 \
+            build/research/hikam_commentary_pdf/ibn_ajiba.pdf \
+            build/research/hikam_commentary_pdf/ibn_ajiba.txt
+
+      - name: Download vocalized Al-Hikam matn PDF
+        run: |
+          curl -L --fail --retry 3 --connect-timeout 10 --max-time 240 \
+            "https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_themathesontrust.pdf" \
+            -o build/research/hikam_commentary_pdf/hikam_vocalized.pdf
+          pdftotext -raw -enc UTF-8 \
+            build/research/hikam_commentary_pdf/hikam_vocalized.pdf \
+            build/research/hikam_commentary_pdf/hikam_vocalized_raw.txt
+          pdftotext -layout -enc UTF-8 \
+            build/research/hikam_commentary_pdf/hikam_vocalized.pdf \
+            build/research/hikam_commentary_pdf/hikam_vocalized_layout.txt
+          mutool draw -F txt \
+            -o build/research/hikam_commentary_pdf/hikam_vocalized_mutool.txt \
+            build/research/hikam_commentary_pdf/hikam_vocalized.pdf
+
+      - name: Audit frozen matn matches in PDF text
+        run: |
+          python3 - <<'PY'
+          import json, re, unicodedata
+          from pathlib import Path
+
+          root=Path("build/research/hikam_commentary_pdf")
+          text=(root/"ibn_ajiba.txt").read_text(encoding="utf-8", errors="replace")
+          corpus=json.loads(Path("app/src/main/assets/hikam/al_hikam_verified.json").read_text(encoding="utf-8"))
+
+          marks=re.compile("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]")
+          non=re.compile(r"[^\\u0621-\\u063A\\u0641-\\u064A0-9]+")
+          def norm(s):
+              s=unicodedata.normalize("NFKC",s)
+              s=marks.sub("",s)
+              for a,b in [("أ","ا"),("إ","ا"),("آ","ا"),("ى","ي"),("ؤ","و"),("ئ","ي"),("ة","ه")]:
+                  s=s.replace(a,b)
+              return " ".join(non.sub(" ",s).split())
+
+          normalized=norm(text)
+          matched=[]
+          missing=[]
+          for item in corpus:
+              n=int(item["source_number"])
+              m=norm(item["arabic"])
+              # exact normalized phrase or robust long prefix
+              if m and (m in normalized or (len(m)>50 and m[:50] in normalized)):
+                  matched.append(n)
+              else:
+                  missing.append(n)
+
+          report={
+              "pdf_bytes": (root/"ibn_ajiba.pdf").stat().st_size,
+              "text_chars": len(text),
+              "matched_hikam": len(matched),
+              "missing_count": len(missing),
+              "missing_numbers": missing,
+              "note": "Match audit only; no runtime promotion."
+          }
+          (root/"pdf_match_report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          print(json.dumps(report,ensure_ascii=False))
+          PY
+
+      - name: Audit source-based diacritic alignment
+        run: |
+          python3 - <<'PY'
+          import json, re, unicodedata
+          from pathlib import Path
+
+          root=Path("build/research/hikam_commentary_pdf")
+          corpus=json.loads(Path("app/src/main/assets/hikam/al_hikam_verified.json").read_text(encoding="utf-8"))
+          variants={
+              "pdftotext_raw": root/"hikam_vocalized_raw.txt",
+              "pdftotext_layout": root/"hikam_vocalized_layout.txt",
+              "mutool": root/"hikam_vocalized_mutool.txt",
+          }
+          marks=re.compile("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED\\u0640]")
+          letters=re.compile("[^\\u0621-\\u063A\\u0641-\\u064A]+")
+
+          def skeleton(s):
+              s=unicodedata.normalize("NFKC",s)
+              s=marks.sub("",s)
+              for a,b in [("أ","ا"),("إ","ا"),("آ","ا"),("ى","ي"),("ؤ","و"),("ئ","ي"),("ة","ه")]:
+                  s=s.replace(a,b)
+              return letters.sub("",s)
+
+          report={"source_url":"https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_themathesontrust.pdf","variants":{}}
+          best=set()
+          for name,path in variants.items():
+              text=path.read_text(encoding="utf-8",errors="replace")
+              hay=skeleton(text)
+              matched=[]
+              for item in corpus:
+                  needle=skeleton(item["arabic"])
+                  if needle and (needle in hay or (len(needle)>=80 and needle[:80] in hay)):
+                      matched.append(int(item["source_number"]))
+              report["variants"][name]={
+                  "text_chars":len(text),
+                  "skeleton_chars":len(hay),
+                  "matched_count":len(matched),
+                  "matched_numbers":matched,
+              }
+              if len(matched)>len(best):
+                  best=set(matched)
+          report["best_matched_count"]=len(best)
+          report["missing_numbers"]=[n for n in range(1,265) if n not in best]
+          report["suitable_for_automatic_promotion"]=len(best)>=240
+          report["promotion_policy"]={
+              "automatic_diacritic_generation_forbidden":True,
+              "base_letter_skeleton_must_match":True,
+              "manual_boundary_review_required":True,
+              "source_locator_required":True,
+          }
+          (root/"hikam_diacritics_report.json").write_text(
+              json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"
+          )
+          print(json.dumps(report,ensure_ascii=False))
+          PY
+
+      - name: Upload PDF research
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hikam-commentary-pdf-research
+          path: |
+            build/research/hikam_commentary_pdf/ibn_ajiba.txt
+            build/research/hikam_commentary_pdf/pdf_match_report.json
+            build/research/hikam_commentary_pdf/hikam_vocalized_raw.txt
+            build/research/hikam_commentary_pdf/hikam_vocalized_layout.txt
+            build/research/hikam_commentary_pdf/hikam_vocalized_mutool.txt
+            build/research/hikam_commentary_pdf/hikam_diacritics_report.json
+          if-no-files-found: error
