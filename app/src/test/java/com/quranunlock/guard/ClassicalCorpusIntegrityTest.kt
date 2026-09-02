@@ -45,7 +45,6 @@ class ClassicalCorpusIntegrityTest {
             tags = setOf("test"),
             source = source(),
             verification = verification,
-            commentary = null,
             textIntegrity = integrity
         )
         assertFalse(entry.displayEligible)
@@ -62,7 +61,6 @@ class ClassicalCorpusIntegrityTest {
             tags = setOf("test"),
             source = source(locator = ""),
             verification = verification,
-            commentary = null,
             textIntegrity = integrity
         )
         assertFalse(entry.displayEligible)
