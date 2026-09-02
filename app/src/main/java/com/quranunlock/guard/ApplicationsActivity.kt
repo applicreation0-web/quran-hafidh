@@ -109,7 +109,7 @@ class ApplicationsActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedButton(
+                    SafeguardOutlinedButton(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(16.dp),
                         onClick = {
@@ -122,7 +122,7 @@ class ApplicationsActivity : ComponentActivity() {
                         }
                     ) { Text("Tout activer") }
 
-                    OutlinedButton(
+                    SafeguardOutlinedButton(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(16.dp),
                         onClick = {
