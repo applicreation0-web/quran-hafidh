@@ -14,6 +14,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -70,14 +71,20 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private val heartbeat = object : Runnable {
         override fun run() {
-            GuardHealth.heartbeat(this@QuranAccessibilityService)
-            mainHandler.postDelayed(this, 30_000L)
+            try {
+                GuardHealth.heartbeat(this@QuranAccessibilityService)
+            } catch (error: Exception) {
+                reportNonFatal("HEARTBEAT_FAILED", error)
+            } finally {
+                mainHandler.postDelayed(this, 30_000L)
+            }
         }
     }
 
     private val usageTicker = object : Runnable {
         override fun run() {
-            // Fallback on all Android versions and safety net for listener delivery.
+            try {
+                // Fallback on all Android versions and safety net for listener delivery.
             val currentMode = audioManager?.mode ?: AudioManager.MODE_NORMAL
             handleAudioModeChanged(currentMode)
 
@@ -110,55 +117,83 @@ class QuranAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // 250 ms bounds call-state fallback and expiration reaction without
-            // writing SharedPreferences on every tick (checkpoints remain 1 s).
-            mainHandler.postDelayed(this, 250L)
+            } catch (error: Exception) {
+                reportNonFatal("USAGE_TICK_FAILED", error)
+            } finally {
+                // 250 ms bounds call-state fallback and expiration reaction without
+                // writing SharedPreferences on every tick (checkpoints remain 1 s).
+                mainHandler.postDelayed(this, 250L)
+            }
         }
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
 
-        // Must happen before any new foreground interval is started. This cleans
-        // reboot/service-death markers using the last persisted checkpoint.
-        val orphanedRecovery =
+        // Every vendor hook is isolated: a non-essential OEM failure must never
+        // make Android disable the whole accessibility service after activation.
+        val orphanedRecovery = try {
             GuardPrefs.reconcileOrphanedUnlockForeground(this)
-
-        BrowserDetector.refresh()
-        GuardRuntime.interception.reset()
-        GuardHealth.markConnected(this)
-        GuardDiagnostics.log(this, "SERVICE_CONNECTED")
-
-        guardPrefs = getSharedPreferences(GuardPrefs.FILE, Context.MODE_PRIVATE).also {
-            it.registerOnSharedPreferenceChangeListener(scopePreferenceListener)
+        } catch (error: Exception) {
+            reportNonFatal("FOREGROUND_RECOVERY_INIT_FAILED", error)
+            null
         }
 
-        audioManager = getSystemService(AudioManager::class.java)
-        callFreezeActive = UnlockBudgetIntegrity.shouldFreezeForAudioMode(
-            audioManager?.mode ?: AudioManager.MODE_NORMAL
-        )
+        startupStep("BROWSER_SCOPE_INIT_FAILED") { BrowserDetector.refresh() }
+        startupStep("RUNTIME_INIT_FAILED") { GuardRuntime.interception.reset() }
+        startupStep("HEALTH_INIT_FAILED") { GuardHealth.markConnected(this) }
+        startupStep("DIAGNOSTIC_INIT_FAILED") {
+            GuardDiagnostics.log(this, "SERVICE_CONNECTED")
+        }
+
+        guardPrefs = try {
+            getSharedPreferences(GuardPrefs.FILE, Context.MODE_PRIVATE).also {
+                it.registerOnSharedPreferenceChangeListener(scopePreferenceListener)
+            }
+        } catch (error: Exception) {
+            reportNonFatal("PREFERENCE_LISTENER_INIT_FAILED", error)
+            null
+        }
+
+        audioManager = try {
+            getSystemService(AudioManager::class.java)
+        } catch (error: Exception) {
+            reportNonFatal("AUDIO_SERVICE_INIT_FAILED", error)
+            null
+        }
+        callFreezeActive = try {
+            UnlockBudgetIntegrity.shouldFreezeForAudioMode(
+                audioManager?.mode ?: AudioManager.MODE_NORMAL
+            )
+        } catch (error: Exception) {
+            reportNonFatal("AUDIO_MODE_INIT_FAILED", error)
+            false
+        }
         registerAudioModeListenerIfSupported()
 
         applyEventPackageScope(broad = false)
         registerScreenReceiverIfNeeded()
 
-        if (orphanedRecovery != null &&
-            !callFreezeActive &&
-            isScreenInteractiveAndUnlocked() &&
-            ProtectedApps.isProtected(this, orphanedRecovery.packageName) &&
-            GuardPrefs.isUnlocked(this, orphanedRecovery.packageName)
-        ) {
-            // Arm recovery but do not charge downtime until a real event proves
-            // that the same protected app is still the interaction owner.
-            pendingOrphanRecovery = orphanedRecovery
-            foregroundPackage = orphanedRecovery.packageName
-            GuardRuntime.markExternalForeground(orphanedRecovery.packageName)
-            applyEventPackageScope(broad = true)
-            GuardDiagnostics.log(
-                this,
-                "SERVICE_FOREGROUND_RECOVERY_ARMED",
-                orphanedRecovery.packageName
-            )
+        if (orphanedRecovery != null) {
+            startupStep("FOREGROUND_RECOVERY_ARM_FAILED") {
+                if (!callFreezeActive &&
+                    isScreenInteractiveAndUnlocked() &&
+                    ProtectedApps.isProtected(this, orphanedRecovery.packageName) &&
+                    GuardPrefs.isUnlocked(this, orphanedRecovery.packageName)
+                ) {
+                    // Arm recovery but do not charge downtime until a real event proves
+                    // that the same protected app is still the interaction owner.
+                    pendingOrphanRecovery = orphanedRecovery
+                    foregroundPackage = orphanedRecovery.packageName
+                    GuardRuntime.markExternalForeground(orphanedRecovery.packageName)
+                    applyEventPackageScope(broad = true)
+                    GuardDiagnostics.log(
+                        this,
+                        "SERVICE_FOREGROUND_RECOVERY_ARMED",
+                        orphanedRecovery.packageName
+                    )
+                }
+            }
         }
 
         mainHandler.removeCallbacks(heartbeat)
@@ -169,13 +204,17 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun registerScreenReceiverIfNeeded() {
         if (screenReceiverRegistered) return
-        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(screenReceiver, filter)
+        try {
+            val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(screenReceiver, filter)
+            }
+            screenReceiverRegistered = true
+        } catch (error: Exception) {
+            reportNonFatal("SCREEN_RECEIVER_INIT_FAILED", error)
         }
-        screenReceiverRegistered = true
     }
 
     private fun unregisterScreenReceiverIfNeeded() {
@@ -197,8 +236,12 @@ class QuranAccessibilityService : AccessibilityService() {
         val listener = AudioManager.OnModeChangedListener { mode ->
             handleAudioModeChanged(mode)
         }
-        manager.addOnModeChangedListener(mainExecutor, listener)
-        audioModeListener31 = listener
+        try {
+            manager.addOnModeChangedListener(mainExecutor, listener)
+            audioModeListener31 = listener
+        } catch (error: Exception) {
+            reportNonFatal("AUDIO_LISTENER_INIT_FAILED", error)
+        }
     }
 
     private fun unregisterAudioModeListenerIfNeeded() {
@@ -260,6 +303,14 @@ class QuranAccessibilityService : AccessibilityService() {
             ?.takeIf(String::isNotBlank)
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        try {
+            processAccessibilityEvent(event)
+        } catch (error: Exception) {
+            reportNonFatal("ACCESSIBILITY_EVENT_FAILED", error)
+        }
+    }
+
+    private fun processAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
         val eventClassName = event.className?.toString()
 
@@ -427,14 +478,18 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun applyEventPackageScope(broad: Boolean) {
         if (broadExitDetection == broad && broad) return
-        val info = serviceInfo ?: return
-        info.packageNames = if (broad) {
-            null
-        } else {
-            ProtectedApps.eventScopePackages(this).toTypedArray()
+        try {
+            val info = serviceInfo ?: return
+            info.packageNames = if (broad) {
+                null
+            } else {
+                ProtectedApps.eventScopePackages(this).toTypedArray()
+            }
+            setServiceInfo(info)
+            broadExitDetection = broad
+        } catch (error: Exception) {
+            reportNonFatal("EVENT_SCOPE_UPDATE_FAILED", error)
         }
-        setServiceInfo(info)
-        broadExitDetection = broad
     }
 
     /**
@@ -636,6 +691,25 @@ class QuranAccessibilityService : AccessibilityService() {
         pendingLaunches.clear()
     }
 
+    private fun startupStep(code: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (error: Exception) {
+            reportNonFatal(code, error)
+        }
+    }
+
+    private fun reportNonFatal(code: String, error: Exception) {
+        Log.e(TAG, "$code: ${error.javaClass.simpleName}", error)
+        runCatching {
+            GuardDiagnostics.log(
+                this,
+                code,
+                detail = error.javaClass.simpleName
+            )
+        }
+    }
+
     override fun onInterrupt() {
         // Not relied upon for correctness, but if Android does call it we freeze
         // immediately and wait for the next real protected foreground event.
@@ -674,5 +748,9 @@ class QuranAccessibilityService : AccessibilityService() {
         GuardDiagnostics.log(this, "SERVICE_DESTROYED")
         shutdownRuntime()
         super.onDestroy()
+    }
+
+    private companion object {
+        const val TAG = "QuranSafeguardService"
     }
 }
