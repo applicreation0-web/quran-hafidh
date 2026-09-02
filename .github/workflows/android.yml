@@ -121,16 +121,18 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Build and capture authentic application screens
+      - name: Build debug APK before starting the emulator
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Capture authentic application screens
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            gradle --no-daemon :app:assembleDebug
-            bash scripts/capture_app_screenshots.sh app/build/outputs/apk/debug/app-debug.apk build/screenshots/ui
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: bash scripts/capture_app_screenshots.sh app/build/outputs/apk/debug/app-debug.apk build/screenshots/ui
 
       - name: Emit screenshots for quota-independent retrieval
         shell: bash
