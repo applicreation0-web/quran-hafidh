@@ -100,29 +100,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Fetch Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Download compiled debug APK
-        uses: actions/download-artifact@v4
-        with:
-          name: quran-unlock-debug
-          path: build/screenshots/apk
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
 
-      - name: Capture authentic application screens
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Build and capture authentic application screens
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: bash scripts/capture_app_screenshots.sh build/screenshots/apk/app-debug.apk build/screenshots/ui
+          script: |
+            gradle --no-daemon :app:assembleDebug
+            bash scripts/capture_app_screenshots.sh app/build/outputs/apk/debug/app-debug.apk build/screenshots/ui
 
-      - name: Upload authentic UI screenshots
-        continue-on-error: true
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: real-ui-screenshots-0.9.4
-          path: build/screenshots/ui
-          if-no-files-found: error
+      - name: Emit screenshots for quota-independent retrieval
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          from pathlib import Path
+          for path in sorted(Path("build/screenshots/ui").glob("*.png")):
+              encoded=base64.b64encode(path.read_bytes()).decode("ascii")
+              print("SCREENSHOT_BEGIN:" + path.name)
+              for offset in range(0, len(encoded), 32000):
+                  print(encoded[offset:offset + 32000])
+              print("SCREENSHOT_END:" + path.name)
+          PY
