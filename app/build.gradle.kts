@@ -414,7 +414,7 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("versionCode = 18")) {
             "0.9.4 must keep versionCode 18, above the installed 0.9.3 candidate."
         }
-        check(buildFile.contains("versionName = \"0.9.3\"")) {
+        check(buildFile.contains("versionName = \"0.9.4\"")) {
             "Expected banking/UX candidate versionName 0.9.4."
         }
         check(migrations.contains("CURRENT_SCHEMA = 7")) {
