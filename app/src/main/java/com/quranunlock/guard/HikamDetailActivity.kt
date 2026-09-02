@@ -137,7 +137,7 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
 
             val commentaries = hikma.commentaries.filter { it.displayEligible }
             if (commentaries.isNotEmpty()) {
-                Button(
+                SafeguardButton(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 54.dp),
@@ -203,23 +203,23 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     if (commentaryArabic) {
-                                        Button(
+                                        SafeguardButton(
                                             modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(14.dp),
                                             onClick = { commentaryArabic = true }
                                         ) { Text("Arabe") }
-                                        OutlinedButton(
+                                        SafeguardOutlinedButton(
                                             modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(14.dp),
                                             onClick = { commentaryArabic = false }
                                         ) { Text("Français") }
                                     } else {
-                                        OutlinedButton(
+                                        SafeguardOutlinedButton(
                                             modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(14.dp),
                                             onClick = { commentaryArabic = true }
                                         ) { Text("Arabe") }
-                                        Button(
+                                        SafeguardButton(
                                             modifier = Modifier.weight(1f),
                                             shape = RoundedCornerShape(14.dp),
                                             onClick = { commentaryArabic = false }
