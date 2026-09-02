@@ -45,3 +45,31 @@ For each future promotion:
 
 The current partial diacritics remain untouched until this entry-by-entry
 process succeeds. Automatic Arabic vocalization is forbidden.
+
+
+## Exact vocalized HTML control
+
+A second reproducible extractor checks the fully vocalized numbered
+transcription at:
+
+- https://www.nafahat-tarik.com/2015/08/sufism22.html
+
+The extractor in `scripts/research_extract_hikam_diacritics.py` emits a
+candidate only when the complete Arabic base-letter skeleton is identical to
+one frozen production Hikma. Fuzzy similarity is diagnostic only and can never
+be promoted.
+
+Android CI run #469 measured:
+
+| Measure | Result |
+| --- | ---: |
+| Numbered source segments | 262 |
+| Exact full-skeleton candidates | 179/264 |
+| Missing/divergent production numbers | 85 |
+| Ambiguous exact candidates | 0 |
+| Suitable for automatic promotion | **No** |
+
+The exact candidates remain research-only because a source-boundary and
+locator review is still required, and this web transcription is not silently
+treated as authority over the retained edition. The result strengthens the
+entry-by-entry workflow; it does not relax it.
