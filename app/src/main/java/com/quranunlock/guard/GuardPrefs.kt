@@ -47,6 +47,7 @@ object GuardPrefs {
     private const val SELECTED_HIZB = "selected_hizb"
     private const val SELECTION_MODE = "selection_mode"
     internal const val PROTECTED_PACKAGES = "protected_packages"
+    internal const val USER_ALWAYS_ALLOWED_PACKAGES = "user_always_allowed_packages"
     private const val UNLOCK_MINUTES = "unlock_minutes"
     private const val JOKER_DAY = "joker_epoch_day"
     private const val JOKERS_USED = "jokers_used"
@@ -497,6 +498,34 @@ object GuardPrefs {
                 .putInt(JOKER_REFILL_BOOT, bootCount)
                 .commit()
         }
+    }
+
+    fun userAlwaysAllowedPackages(context: Context): Set<String> =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getStringSet(USER_ALWAYS_ALLOWED_PACKAGES, emptySet())
+            .orEmpty()
+            .filter { packageName ->
+                packageName.isNotBlank() &&
+                    packageName != context.packageName &&
+                    !ProtectedApps.isSelectableTarget(packageName) &&
+                    !ProtectedApps.isSystemProtected(packageName)
+            }
+            .toSet()
+
+    fun saveUserAlwaysAllowedPackages(context: Context, packages: Set<String>) {
+        val filtered = packages
+            .filter { packageName ->
+                packageName.isNotBlank() &&
+                    packageName != context.packageName &&
+                    !ProtectedApps.isSelectableTarget(packageName) &&
+                    !ProtectedApps.isSystemProtected(packageName)
+            }
+            .toSet()
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
+            .putStringSet(USER_ALWAYS_ALLOWED_PACKAGES, filtered)
+            .commit()
+        ProtectedApps.clearClassificationCache()
     }
 
     fun protectedPackages(context: Context): Set<String> {
