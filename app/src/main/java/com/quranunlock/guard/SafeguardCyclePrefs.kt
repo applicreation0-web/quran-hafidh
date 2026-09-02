@@ -111,6 +111,19 @@ object SafeguardCyclePrefs {
     }
 
     @Synchronized
+    fun currentPlan(context: Context): Pair<List<Int>, Int> {
+        ensurePlan(context)
+        val prefs = context.getSharedPreferences(
+            GuardPrefs.FILE,
+            Context.MODE_PRIVATE
+        )
+        val pages = readPlan(prefs)
+        val index = prefs.getInt(PLAN_INDEX, 0)
+            .coerceIn(0, pages.lastIndex)
+        return pages.toList() to index
+    }
+
+    @Synchronized
     fun completePage(
         context: Context,
         page: Int,
