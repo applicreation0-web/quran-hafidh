@@ -1,0 +1,63 @@
+name: Hikam Diacritics HTML Research
+
+on:
+  push:
+    branches:
+      - "research/hikam-commentaries-264"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  align-html:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract exact source diacritic candidates
+        id: extract
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/research_extract_hikam_diacritics.py
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          test -f build/research/hikam_diacritics/hikam_diacritics_report.json
+
+      - name: Record research-only evidence
+        shell: bash
+        run: |
+          mkdir -p research/hikam-diacritics
+          cp build/research/hikam_diacritics/hikam_diacritics_candidates.json research/hikam-diacritics/
+          cp build/research/hikam_diacritics/hikam_diacritics_report.json research/hikam-diacritics/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/hikam-diacritics
+          if ! git diff --cached --quiet; then
+            git commit -m "Research: record exact source diacritics [skip ci]"
+            git push
+          fi
+
+      - name: Report promotion decision
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report=json.loads(Path("research/hikam-diacritics/hikam_diacritics_report.json").read_text(encoding="utf-8"))
+          count=int(report["exact_skeleton_candidates"])
+          print(f"Exact full-skeleton candidates: {count}/264")
+          print("Automatic production promotion: forbidden")
+          print("Manual source-boundary review: required")
+          PY
+
+      - name: Upload research evidence
+        continue-on-error: true
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hikam-diacritics-html-research
+          path: research/hikam-diacritics
+          if-no-files-found: error
