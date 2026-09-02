@@ -34,6 +34,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 class ProtectionSetupActivity : ComponentActivity() {
+    companion object {
+        // Public action value exists on recent AOSP Settings builds but is not
+        // exposed as a compile-time SDK constant on every supported toolchain.
+        private const val ACTION_ACCESSIBILITY_DETAILS_SETTINGS =
+            "android.settings.ACCESSIBILITY_DETAILS_SETTINGS"
+    }
     private val serviceEnabledState = mutableStateOf(false)
     private var systemSettingsOpened = false
     private var returnHandled = false
@@ -80,7 +86,7 @@ class ProtectionSetupActivity : ComponentActivity() {
             this,
             QuranAccessibilityService::class.java
         )
-        val directIntent = Intent(Settings.ACTION_ACCESSIBILITY_DETAILS_SETTINGS)
+        val directIntent = Intent(ACTION_ACCESSIBILITY_DETAILS_SETTINGS)
             .putExtra(Intent.EXTRA_COMPONENT_NAME, serviceComponent.flattenToString())
         val fallbackIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         val intent = when {
