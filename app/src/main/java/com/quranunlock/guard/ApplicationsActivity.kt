@@ -1,5 +1,6 @@
 package com.applicreation0.quransafeguard
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -132,6 +133,44 @@ class ApplicationsActivity : ComponentActivity() {
                             )
                         }
                     ) { Text("Tout désactiver") }
+                }
+
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = SafeguardShapes.large,
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Banques, paiements et identité",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Toujours accessibles. Vérifiez ici qu’une banque locale non reconnue est bien exclue.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        SafeguardOutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@ApplicationsActivity,
+                                        SensitiveAppsActivity::class.java
+                                    )
+                                )
+                            }
+                        ) {
+                            Text("Vérifier les exclusions sensibles")
+                        }
+                    }
                 }
 
                 TargetGroup(
