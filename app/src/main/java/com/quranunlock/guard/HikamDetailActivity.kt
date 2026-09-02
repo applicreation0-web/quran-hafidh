@@ -2,6 +2,7 @@ package com.applicreation0.quransafeguard
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.AnimatedVisibility
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -160,8 +161,11 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                     )
                 }
 
-                if (showCommentary) {
-                    Text(
+                AnimatedVisibility(visible = showCommentary) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
                         "Chaque commentaire est affiché séparément, avec son auteur et sa source. Aucune synthèse entre commentateurs.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -260,6 +264,7 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                                 HikamSourceBlock(commentary.source)
                             }
                         }
+                    }
                     }
                 }
             }
