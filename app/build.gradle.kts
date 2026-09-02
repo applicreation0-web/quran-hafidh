@@ -358,11 +358,25 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(setupUi.contains("Activer en trois étapes")) {
             "Accessibility activation must remain didactic and lightweight."
         }
+        val accessibilityServiceDeclaration = Regex(
+            """(?s)<service\\b[^>]*android:name="\\.QuranAccessibilityService"[^>]*>"""
+        ).find(manifest)?.value.orEmpty()
         check(
-            setupUi.contains("\"android.settings.ACCESSIBILITY_DETAILS_SETTINGS\"") &&
-                setupUi.contains("Intent.EXTRA_COMPONENT_NAME")
+            accessibilityServiceDeclaration.contains("android:exported=\"true\"") &&
+                accessibilityServiceDeclaration.contains(
+                    "android.permission.BIND_ACCESSIBILITY_SERVICE"
+                )
         ) {
-            "Guided activation must open Safeguard's own Accessibility detail page."
+            "Android must be able to discover and bind the protected Accessibility service."
+        }
+        check(
+            setupUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS") &&
+                setupUi.contains("Settings.ACTION_APPLICATION_DETAILS_SETTINGS") &&
+                setupUi.contains("Paramètre restreint") &&
+                !setupUi.contains("android.settings.ACCESSIBILITY_DETAILS_SETTINGS") &&
+                !setupUi.contains("Intent.EXTRA_COMPONENT_NAME")
+        ) {
+            "Guided activation must use portable Android Settings routes and explain restricted settings."
         }
         check(!mainUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS"))
         check(!mainUi.contains("Settings.ACTION_APPLICATION_DETAILS_SETTINGS"))
