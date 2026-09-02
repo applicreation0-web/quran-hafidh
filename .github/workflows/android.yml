@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ "main" ]
 
-permissions:
-  contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -91,54 +88,3 @@ jobs:
           name: android-signing-tools-36
           path: ${{ env.ANDROID_HOME }}/build-tools/36.0.0
           if-no-files-found: error
-
-      - name: Transfer release payload for local signing
-        if: success()
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-
-          transfer_file() {
-            local label="$1"
-            local source_path="$2"
-            local part_prefix="$3"
-            local transfer_dir
-            transfer_dir="$(mktemp -d)"
-            local file_size file_sha part_count
-            file_size="$(stat -c %s "$source_path")"
-            file_sha="$(sha256sum "$source_path" | cut -d ' ' -f 1)"
-            split -b 4m -d -a 3 "$source_path" "$transfer_dir/$part_prefix."
-            part_count="$(find "$transfer_dir" -maxdepth 1 -type f -name "$part_prefix.*" | wc -l)"
-            echo "::notice::TRANSFER|$label|$file_size|$file_sha|$part_count"
-
-            local index=0
-            for part_path in "$transfer_dir"/"$part_prefix".*; do
-              local payload_path response_path blob_sha part_size
-              payload_path="$transfer_dir/payload.json"
-              response_path="$transfer_dir/response.json"
-              base64 -w0 "$part_path" | jq -Rs '{content: ., encoding: "utf-8"}' > "$payload_path"
-              curl --fail-with-body --silent --show-error \
-                --request POST \
-                --header "Accept: application/vnd.github+json" \
-                --header "Authorization: Bearer $GH_TOKEN" \
-                --header "X-GitHub-Api-Version: 2022-11-28" \
-                --data-binary "@$payload_path" \
-                "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/git/blobs" > "$response_path"
-              blob_sha="$(jq -er '.sha' "$response_path")"
-              part_size="$(stat -c %s "$part_path")"
-              printf '::notice::BLOB|%s|%03d|%s|%s\n' "$label" "$index" "$blob_sha" "$part_size"
-              index=$((index + 1))
-            done
-            rm -rf "$transfer_dir"
-          }
-
-          transfer_file \
-            "APK" \
-            "app/build/outputs/apk/release/app-release-unsigned.apk" \
-            "apk-part"
-          transfer_file \
-            "APKSIGNER" \
-            "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" \
-            "apksigner-part"
