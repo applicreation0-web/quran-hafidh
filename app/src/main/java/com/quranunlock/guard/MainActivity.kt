@@ -616,7 +616,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                if (BuildConfig.DEBUG) {
+                if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
                     SectionTitle("Diagnostic")
                     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                         Column(
