@@ -118,7 +118,7 @@ jobs:
               local payload_path response_path blob_sha part_size
               payload_path="$transfer_dir/payload.json"
               response_path="$transfer_dir/response.json"
-              base64 -w0 "$part_path" | jq -Rs '{content: ., encoding: "base64"}' > "$payload_path"
+              base64 -w0 "$part_path" | jq -Rs '{content: ., encoding: "utf-8"}' > "$payload_path"
               curl --fail-with-body --silent --show-error \
                 --request POST \
                 --header "Accept: application/vnd.github+json" \
