@@ -2,6 +2,7 @@ package com.applicreation0.quransafeguard
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.compose.animation.Crossfade
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,11 +66,16 @@ private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
                 .padding(horizontal = 18.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                if (activePeriod == AdhkarPeriod.MORNING) "Adhkâr du matin 🌿" else "Adhkâr du soir 🌿",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Crossfade(
+                targetState = activePeriod,
+                label = "adhkar-period-title"
+            ) { period ->
+                Text(
+                    if (period == AdhkarPeriod.MORNING) "Adhkâr du matin 🌿" else "Adhkâr du soir 🌿",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
