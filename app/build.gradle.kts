@@ -362,6 +362,11 @@ val verifySensitiveAppBoundary by tasks.registering {
         check(policy.contains("customtab") && policy.contains("webauthn")) {
             "Browser authentication windows must be recognized without exempting ordinary browsing."
         }
+        check(policy.contains("isTrustedSensitiveSettingsWindow") &&
+            policy.contains("normalized.contains(\"accessibility\")")
+        ) {
+            "Banking handoff must never exempt Android accessibility settings."
+        }
         check(sensitiveUi.contains("Banques, paiements et identité")) {
             "The visible banking exclusion control is missing."
         }
@@ -382,6 +387,7 @@ val verifySensitiveAppBoundary by tasks.registering {
         }
         listOf(
             "bankingOriginAndAndroidSettingsAreAllowedDuringLease",
+            "accessibilitySettingsRemainProtectedDuringBankingLease",
             "chromeAuthenticationCustomTabIsAllowedDuringLease",
             "ordinaryBrowserWindowIsNeverExempted",
             "expiredLeaseCannotExemptSettingsOrAuthentication",
