@@ -39,6 +39,7 @@ class ProtectionSetupActivity : ComponentActivity() {
         // exposed as a compile-time SDK constant on every supported toolchain.
         private const val ACTION_ACCESSIBILITY_DETAILS_SETTINGS =
             "android.settings.ACCESSIBILITY_DETAILS_SETTINGS"
+        private const val KEY_SETTINGS_OPENED = "settings_opened"
     }
     private val serviceEnabledState = mutableStateOf(false)
     private var systemSettingsOpened = false
@@ -105,9 +106,6 @@ class ProtectionSetupActivity : ComponentActivity() {
         }
     }
 
-    companion object {
-        private const val KEY_SETTINGS_OPENED = "settings_opened"
-    }
 }
 
 @androidx.compose.runtime.Composable
