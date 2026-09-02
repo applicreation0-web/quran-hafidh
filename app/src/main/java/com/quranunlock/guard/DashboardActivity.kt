@@ -149,7 +149,9 @@ class DashboardActivity : ComponentActivity() {
                             startActivity(
                                 Intent(
                                     this@DashboardActivity,
-                                    if (serviceEnabled) {
+                                    if (serviceEnabled ||
+                                        !GuardPrefs.hasAccessibilityConsent(this@DashboardActivity)
+                                    ) {
                                         MainActivity::class.java
                                     } else {
                                         ProtectionSetupActivity::class.java
