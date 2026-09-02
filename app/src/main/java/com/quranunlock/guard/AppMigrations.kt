@@ -291,7 +291,7 @@ object AppMigrations {
     }
 
     private fun migrateToSchema7(context: Context) {
-        // 0.9.1 narrows the product scope to known social targets and six
+        // 0.9.1 narrows the product scope to known social targets and eight
         // browsers. Reuse the defensive purge with the new fixed-scope policy
         // so legacy selections/session/history for arbitrary apps disappear.
         migrateToSchema6(context)
