@@ -117,6 +117,86 @@ object GuardPrefs {
     }
 
 
+    fun isUnlocked(context: Context, packageName: String): Boolean {
+        if (outOfScope(context, packageName)) return false
+        val progress = SafeguardCyclePrefs.progress(context)
+        return progress.morningCompleted &&
+            progress.pendingLevel == null &&
+            remainingUnlockMs(context, packageName) > 0L
+    }
+
+    private fun currentBootCount(context: Context): Int =
+        runCatching {
+            Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
+        }.getOrDefault(-1)
+
+    private fun readUnlockBudgetState(
+        prefs: android.content.SharedPreferences,
+        packageName: String
+    ): UnlockBudgetState {
+        val key = budgetKey(packageName)
+        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + key, -1L)
+            .takeIf { it >= 0L }
+        val boot = prefs.getInt(UNLOCK_FOREGROUND_BOOT_PREFIX + key, Int.MIN_VALUE)
+            .takeIf { it != Int.MIN_VALUE }
+        val checkpoint = prefs.getLong(
+            UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key,
+            -1L
+        ).takeIf { it >= 0L }
+
+        return UnlockBudgetState(
+            remainingMs = prefs.getLong(
+                UNLOCK_REMAINING_MS_PREFIX + key,
+                0L
+            ).coerceAtLeast(0L),
+            foregroundStartedElapsedMs = started,
+            foregroundBootCount = boot,
+            checkpointElapsedMs = checkpoint
+        )
+    }
+
+    private fun writeUnlockBudgetState(
+        prefs: android.content.SharedPreferences,
+        packageName: String,
+        state: UnlockBudgetState,
+        synchronous: Boolean
+    ) {
+        val key = budgetKey(packageName)
+        val editor = prefs.edit()
+            .putLong(
+                UNLOCK_REMAINING_MS_PREFIX + key,
+                state.remainingMs.coerceAtLeast(0L)
+            )
+
+        val started = state.foregroundStartedElapsedMs
+        val boot = state.foregroundBootCount
+        val checkpoint = state.checkpointElapsedMs
+
+        if (started == null) {
+            editor
+                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + key)
+                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
+                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
+        } else {
+            editor.putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + key, started)
+            if (boot != null) {
+                editor.putInt(UNLOCK_FOREGROUND_BOOT_PREFIX + key, boot)
+            } else {
+                editor.remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
+            }
+            if (checkpoint != null) {
+                editor.putLong(
+                    UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key,
+                    checkpoint
+                )
+            } else {
+                editor.remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
+            }
+        }
+
+        if (synchronous) editor.commit() else editor.apply()
+    }
+
     @Synchronized
     fun remainingUnlockMs(context: Context, packageName: String): Long {
         if (outOfScope(context, packageName)) return 0L
