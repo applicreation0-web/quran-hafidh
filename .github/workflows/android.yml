@@ -13,6 +13,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Research exact source diacritics
+        if: github.head_ref == 'research/hikam-commentaries-264' || github.ref_name == 'research/hikam-commentaries-264'
+        run: python3 scripts/research_extract_hikam_diacritics.py
+
       - name: Fetch Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
 
