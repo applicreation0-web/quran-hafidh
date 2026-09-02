@@ -1,7 +1,7 @@
 # Audit contradictoire — Quran Safeguard 0.10.0
 
 Date : 2026-09-02  
-Base auditée : implémentation des points 1 et 2, commit `ec38c931a3698e887b0c53e6a8794fce472ae377`.
+Base auditée : implémentation des points 1 et 2 au commit `ec38c931a3698e887b0c53e6a8794fce472ae377`, puis corrections contradictoires jusqu’au commit `93aea44cb93c5f72f9b73105548ad71623ea847b`.
 
 ## Méthode
 
@@ -42,6 +42,14 @@ L’audit cherche volontairement à invalider le produit sur cinq axes : périm�
 3. Le minimum de 60 secondes prouve une présence active sur chaque page, pas la compréhension spirituelle.
 4. Un nouvel identifiant régional ou « Lite » d’une application n’est pas ajouté automatiquement : le périmètre reste strict par conception.
 
-## Verdict avant second build
+## Verdict final — non publié
 
-Aucun contournement logiciel certain n’est resté ouvert dans le modèle testé. Les corrections ci-dessus doivent encore passer le second audit Gradle, l’ensemble des tests, les deux assemblages APK et le contrôle de signature. Aucune publication n’est autorisée.
+Aucun contournement logiciel certain n’est resté ouvert dans le modèle testé.
+
+- Exécution CI n° 480 : audit Gradle, tests unitaires, APK debug et APK release non signée réussis.
+- Exécution CI n° 482 : mêmes contrôles réussis une seconde fois ; APK release non signée de 71 863 822 octets, SHA-256 `c4fcdf7cf3933b3e4d8aab4a0a6660db9011a6bab0f7d9e776959da9170452c9`.
+- APK finale signée localement avec la lignée historique : un signataire, schémas v2 et v3 valides, certificat SHA-256 `6C:70:6F:4E:A4:4E:F6:67:D0:B9:69:8C:07:A3:9E:92:9B:1E:28:6D:23:97:66:55:04:41:1D:ED:B3:74:57:AC`.
+- APK signée : 71 931 797 octets, SHA-256 `146f8787f28437d7a725d8b5f0b624b0656fc6a34a4d9f9a0577c03b6bb5b98c`; archive ZIP intègre.
+- Le transfert de build temporaire n’a modifié aucun octet du code applicatif et a été retiré après récupération.
+
+La branche et la pull request restent ouvertes et non fusionnées. Aucune release, aucun tag et aucune publication n’ont été créés.
