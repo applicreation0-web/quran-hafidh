@@ -39,10 +39,15 @@ class QuranAccessibilityService : AccessibilityService() {
     private var whatsappCallUiActive = false
     private var lastCheckpointElapsedMs = 0L
     private var pendingOrphanRecovery: OrphanedUnlockRecovery? = null
+    private var sensitiveFlowOriginPackage: String? = null
+    private var sensitiveFlowUntilElapsedMs: Long = 0L
 
     private val scopePreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == GuardPrefs.PROTECTED_PACKAGES && !broadExitDetection) {
+            if ((key == GuardPrefs.PROTECTED_PACKAGES ||
+                    key == GuardPrefs.USER_ALWAYS_ALLOWED_PACKAGES) &&
+                !broadExitDetection
+            ) {
                 applyEventPackageScope(broad = false)
             }
         }
@@ -53,6 +58,7 @@ class QuranAccessibilityService : AccessibilityService() {
                 pauseForegroundBudget(clearForeground = true)
                 GuardRuntime.resetForeground()
                 cancelPendingLaunches()
+                clearSensitiveHandoff()
 
                 val snapshot = GuardRuntime.interception.snapshot()
                 if (!snapshot.guardVisible) {
@@ -266,6 +272,42 @@ class QuranAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
         val eventClassName = event.className?.toString()
+        val nowElapsed = SystemClock.elapsedRealtime()
+
+        if (ProtectedApps.isSensitiveFlowOrigin(this, packageName)) {
+            sensitiveFlowOriginPackage = packageName
+            sensitiveFlowUntilElapsedMs =
+                nowElapsed + SensitiveHandoffPolicy.HANDOFF_WINDOW_MS
+            handleOutsideScopeForeground()
+            GuardDiagnostics.log(this, "SENSITIVE_FLOW_ALLOWED")
+            return
+        }
+
+        if (SensitiveHandoffPolicy.shouldAllowHandoff(
+                originPackage = sensitiveFlowOriginPackage,
+                validUntilElapsedMs = sensitiveFlowUntilElapsedMs,
+                nowElapsedMs = nowElapsed,
+                eventPackage = packageName,
+                eventClassName = eventClassName
+            )
+        ) {
+            sensitiveFlowUntilElapsedMs =
+                nowElapsed + SensitiveHandoffPolicy.HANDOFF_WINDOW_MS
+            handleOutsideScopeForeground()
+            GuardDiagnostics.log(this, "SENSITIVE_HANDOFF_ALLOWED")
+            return
+        }
+
+        if (ProtectedApps.isAlwaysAllowed(this, packageName)) {
+            handleOutsideScopeForeground()
+            return
+        }
+
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            packageName != this.packageName
+        ) {
+            clearSensitiveHandoff()
+        }
 
         if (packageName != "com.whatsapp" && whatsappCallUiActive) {
             // The explicit WhatsApp call Activity is no longer the window owner.
@@ -410,6 +452,11 @@ class QuranAccessibilityService : AccessibilityService() {
         launchGate(packageName, "initial")
         scheduleRetry(packageName, 350L, "retry_1")
         scheduleRetry(packageName, 900L, "retry_2")
+    }
+
+    private fun clearSensitiveHandoff() {
+        sensitiveFlowOriginPackage = null
+        sensitiveFlowUntilElapsedMs = 0L
     }
 
     /**
