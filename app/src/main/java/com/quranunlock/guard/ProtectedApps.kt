@@ -1,6 +1,9 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import android.telecom.TelecomManager
 import java.text.Normalizer
@@ -17,10 +20,18 @@ data class SafeguardTarget(
     val category: SafeguardTargetCategory
 )
 
+data class LaunchableApp(
+    val label: String,
+    val packageName: String,
+    val automaticallySensitive: Boolean
+)
+
 object ProtectedApps {
     private val sensitiveDecisionCache = mutableMapOf<String, Boolean>()
     private var defaultDialerLoaded = false
     private var cachedDefaultDialer: String? = null
+    private var launchableAppCache: List<LaunchableApp>? = null
+    private var automaticSensitiveCache: Set<String>? = null
 
     const val PLAY_STORE = "com.android.vending"
     const val ANDROID_SETTINGS = "com.android.settings"
@@ -212,6 +223,7 @@ object ProtectedApps {
 
     fun isAlwaysAllowed(context: Context, packageName: String): Boolean {
         if (isAlwaysAllowed(packageName)) return true
+        if (packageName in GuardPrefs.userAlwaysAllowedPackages(context)) return true
 
         val defaultDialer = synchronized(sensitiveDecisionCache) {
             if (!defaultDialerLoaded) {
@@ -262,6 +274,8 @@ object ProtectedApps {
             sensitiveDecisionCache.clear()
             cachedDefaultDialer = null
             defaultDialerLoaded = false
+            launchableAppCache = null
+            automaticSensitiveCache = null
         }
     }
 
@@ -294,6 +308,74 @@ object ProtectedApps {
         return (" $haystack ").contains(" $needle ")
     }
 
+    fun launchableApps(context: Context): List<LaunchableApp> {
+        synchronized(sensitiveDecisionCache) {
+            launchableAppCache?.let { return it }
+        }
+
+        val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val resolved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.queryIntentActivities(
+                launcherIntent,
+                PackageManager.ResolveInfoFlags.of(0L)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.queryIntentActivities(launcherIntent, 0)
+        }
+
+        val apps = resolved
+            .mapNotNull { resolveInfo ->
+                val packageName = resolveInfo.activityInfo?.packageName
+                    ?.takeIf(String::isNotBlank)
+                    ?: return@mapNotNull null
+                if (packageName == context.packageName || isSelectableTarget(packageName)) {
+                    return@mapNotNull null
+                }
+                val label = runCatching {
+                    resolveInfo.loadLabel(context.packageManager).toString()
+                }.getOrDefault(packageName)
+                LaunchableApp(
+                    label = label,
+                    packageName = packageName,
+                    automaticallySensitive = looksSensitive(packageName, label)
+                )
+            }
+            .distinctBy { it.packageName }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.label })
+
+        synchronized(sensitiveDecisionCache) {
+            launchableAppCache = apps
+        }
+        return apps
+    }
+
+    fun automaticallySensitivePackages(context: Context): Set<String> {
+        synchronized(sensitiveDecisionCache) {
+            automaticSensitiveCache?.let { return it }
+        }
+        val detected = launchableApps(context)
+            .asSequence()
+            .filter { it.automaticallySensitive }
+            .map { it.packageName }
+            .toSet()
+        synchronized(sensitiveDecisionCache) {
+            automaticSensitiveCache = detected
+        }
+        return detected
+    }
+
+    fun sensitiveEventScopePackages(context: Context): Set<String> =
+        automaticallySensitivePackages(context) +
+            GuardPrefs.userAlwaysAllowedPackages(context)
+
+    fun isSensitiveFlowOrigin(context: Context, packageName: String): Boolean =
+        packageName in GuardPrefs.userAlwaysAllowedPackages(context) ||
+            packageName in automaticallySensitivePackages(context) ||
+            isSensitiveCategory(context, packageName)
+
     /**
      * Defense-in-depth boundary for any persistence/logging layer.
      * Out-of-scope packages must not be associated with Safeguard state.
@@ -314,13 +396,17 @@ object ProtectedApps {
             !isSelectableTarget(packageName)
 
     fun eventScopePackages(context: Context): Set<String> =
-        GuardPrefs.protectedPackages(context) + ANDROID_SETTINGS + context.packageName
+        GuardPrefs.protectedPackages(context) +
+            sensitiveEventScopePackages(context) +
+            ANDROID_SETTINGS +
+            context.packageName
 
     fun isEventScopePackage(context: Context, packageName: String): Boolean =
         packageName in eventScopePackages(context)
 
     fun isProtected(context: Context, packageName: String): Boolean {
         if (packageName == context.packageName) return false
+        if (isAlwaysAllowed(context, packageName)) return false
         if (isSystemProtected(packageName)) return true
         return packageName in GuardPrefs.protectedPackages(context)
     }
