@@ -61,7 +61,7 @@ class ReadingSelectionActivity : ComponentActivity() {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 Surface(shadowElevation = 8.dp) {
-                    Button(
+                    SafeguardButton(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 18.dp, vertical = 12.dp),
@@ -139,7 +139,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedButton(
+                    SafeguardOutlinedButton(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp),
                         onClick = {
@@ -149,7 +149,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                         }
                     ) { Text("Tout sélectionner") }
 
-                    OutlinedButton(
+                    SafeguardOutlinedButton(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp),
                         onClick = {
