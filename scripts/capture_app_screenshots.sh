@@ -7,25 +7,84 @@ package_name="com.applicreation0.quransafeguard"
 launcher="${package_name}/.ScreenshotLauncherActivity"
 
 mkdir -p "${output_dir}"
+
+wait_for_android() {
+    adb wait-for-device
+    for _ in $(seq 1 60); do
+        if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]]; then
+            return 0
+        fi
+        sleep 2
+    done
+    echo "Android did not finish booting" >&2
+    exit 1
+}
+
+dismiss_system_ui_anr() {
+    local dump
+    local bounds
+
+    for _ in $(seq 1 4); do
+        adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+        dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
+
+        if ! grep -Eq 'android:id/aerr_wait|System UI isn.t responding' <<< "${dump}"; then
+            return 0
+        fi
+
+        bounds="$(grep -oE '<node[^>]*(resource-id="android:id/aerr_wait"|text="Wait")[^>]*bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' <<< "${dump}"             | grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"'             | head -n 1 || true)"
+
+        if [[ "${bounds}" =~ \[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\] ]]; then
+            adb shell input tap "$(( (BASH_REMATCH[1] + BASH_REMATCH[3]) / 2 ))" "$(( (BASH_REMATCH[2] + BASH_REMATCH[4]) / 2 ))"
+        else
+            adb shell input keyevent KEYCODE_DPAD_DOWN
+            adb shell input keyevent KEYCODE_ENTER
+        fi
+        sleep 4
+    done
+
+    adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+    dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
+    if grep -Eq 'android:id/aerr_wait|System UI isn.t responding' <<< "${dump}"; then
+        echo "System UI ANR dialog could not be dismissed" >&2
+        exit 1
+    fi
+}
+
+wait_for_android
+adb shell input keyevent KEYCODE_WAKEUP || true
+adb shell wm dismiss-keyguard || true
+sleep 8
+dismiss_system_ui_anr
+
 adb install -r "${apk_path}"
 
 adb shell settings put global window_animation_scale 0
 adb shell settings put global transition_animation_scale 0
 adb shell settings put global animator_duration_scale 0
 adb shell settings put system font_scale 1.0
-adb shell wm dismiss-keyguard || true
 adb shell pm grant "${package_name}" android.permission.POST_NOTIFICATIONS || true
 adb shell pm grant "${package_name}" android.permission.ACCESS_COARSE_LOCATION || true
 
 capture_screen() {
     local screen="$1"
     local filename="$2"
+    local dump
 
     adb shell am force-stop "${package_name}"
     adb shell am start -W -n "${launcher}" --es screenshot_screen "${screen}"
     sleep 3
+    dismiss_system_ui_anr
+    sleep 2
 
-    if ! adb shell dumpsys window windows | grep -q "${package_name}"; then
+    adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+    dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
+    if grep -Eq 'android:id/aerr_wait|System UI isn.t responding' <<< "${dump}"; then
+        echo "System UI error dialog is still visible for screen: ${screen}" >&2
+        exit 1
+    fi
+
+    if ! adb shell dumpsys activity activities | grep -q "mResumedActivity.*${package_name}"; then
         adb shell dumpsys activity activities
         echo "Quran Safeguard did not become visible for screen: ${screen}" >&2
         exit 1
