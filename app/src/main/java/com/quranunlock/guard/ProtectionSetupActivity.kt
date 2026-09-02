@@ -1,5 +1,6 @@
 package com.applicreation0.quransafeguard
 
+import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -75,8 +76,19 @@ class ProtectionSetupActivity : ComponentActivity() {
 
     private fun openAndroidAccessibility() {
         systemSettingsOpened = true
-        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        if (intent.resolveActivity(packageManager) != null) {
+        val serviceComponent = ComponentName(
+            this,
+            QuranAccessibilityService::class.java
+        )
+        val directIntent = Intent(Settings.ACTION_ACCESSIBILITY_DETAILS_SETTINGS)
+            .putExtra(Intent.EXTRA_COMPONENT_NAME, serviceComponent.flattenToString())
+        val fallbackIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        val intent = when {
+            directIntent.resolveActivity(packageManager) != null -> directIntent
+            fallbackIntent.resolveActivity(packageManager) != null -> fallbackIntent
+            else -> null
+        }
+        if (intent != null) {
             startActivity(intent)
         } else {
             Toast.makeText(
