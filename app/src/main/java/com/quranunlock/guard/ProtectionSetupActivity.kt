@@ -1,7 +1,8 @@
 package com.applicreation0.quransafeguard
 
-import android.content.ComponentName
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -35,24 +36,26 @@ import androidx.compose.ui.unit.dp
 
 class ProtectionSetupActivity : ComponentActivity() {
     companion object {
-        // Public action value exists on recent AOSP Settings builds but is not
-        // exposed as a compile-time SDK constant on every supported toolchain.
-        private const val ACTION_ACCESSIBILITY_DETAILS_SETTINGS =
-            "android.settings.ACCESSIBILITY_DETAILS_SETTINGS"
         private const val KEY_SETTINGS_OPENED = "settings_opened"
+        private const val KEY_RESTRICTED_HELP = "restricted_help"
     }
     private val serviceEnabledState = mutableStateOf(false)
+    private val restrictedHelpState = mutableStateOf(false)
     private var systemSettingsOpened = false
     private var returnHandled = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         systemSettingsOpened = savedInstanceState?.getBoolean(KEY_SETTINGS_OPENED) ?: false
+        restrictedHelpState.value =
+            savedInstanceState?.getBoolean(KEY_RESTRICTED_HELP) ?: false
         setContent {
             QuranSafeguardTheme {
                 ProtectionSetupScreen(
                     serviceEnabled = serviceEnabledState.value,
+                    showRestrictedHelp = restrictedHelpState.value,
                     onOpenAndroid = ::openAndroidAccessibility,
+                    onOpenAppDetails = ::openAppDetails,
                     onClose = { finish() }
                 )
             }
@@ -64,7 +67,12 @@ class ProtectionSetupActivity : ComponentActivity() {
         val enabled = AccessibilityStatus.isEnabled(this)
         serviceEnabledState.value = enabled
 
+        if (systemSettingsOpened && !enabled) {
+            restrictedHelpState.value = true
+        }
+
         if (systemSettingsOpened && enabled && !returnHandled) {
+            restrictedHelpState.value = false
             returnHandled = true
             Toast.makeText(this, "Protection activée", Toast.LENGTH_SHORT).show()
             window.decorView.postDelayed(
@@ -78,31 +86,37 @@ class ProtectionSetupActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(KEY_SETTINGS_OPENED, systemSettingsOpened)
+        outState.putBoolean(KEY_RESTRICTED_HELP, restrictedHelpState.value)
         super.onSaveInstanceState(outState)
     }
 
     private fun openAndroidAccessibility() {
         systemSettingsOpened = true
-        val serviceComponent = ComponentName(
-            this,
-            QuranAccessibilityService::class.java
+        restrictedHelpState.value = false
+        openSystemScreen(
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+            "Android ne permet pas d’ouvrir les réglages d’accessibilité sur ce téléphone."
         )
-        val directIntent = Intent(ACTION_ACCESSIBILITY_DETAILS_SETTINGS)
-            .putExtra(Intent.EXTRA_COMPONENT_NAME, serviceComponent.flattenToString())
-        val fallbackIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        val intent = when {
-            directIntent.resolveActivity(packageManager) != null -> directIntent
-            fallbackIntent.resolveActivity(packageManager) != null -> fallbackIntent
-            else -> null
-        }
-        if (intent != null) {
+    }
+
+    private fun openAppDetails() {
+        restrictedHelpState.value = true
+        openSystemScreen(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$packageName")
+            ),
+            "Android ne permet pas d’ouvrir les informations de l’application."
+        )
+    }
+
+    private fun openSystemScreen(intent: Intent, failureMessage: String) {
+        try {
             startActivity(intent)
-        } else {
-            Toast.makeText(
-                this,
-                "Android ne permet pas d’ouvrir cet écran sur ce téléphone.",
-                Toast.LENGTH_LONG
-            ).show()
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, failureMessage, Toast.LENGTH_LONG).show()
+        } catch (_: SecurityException) {
+            Toast.makeText(this, failureMessage, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -111,7 +125,9 @@ class ProtectionSetupActivity : ComponentActivity() {
 @androidx.compose.runtime.Composable
 private fun ProtectionSetupScreen(
     serviceEnabled: Boolean,
+    showRestrictedHelp: Boolean,
     onOpenAndroid: () -> Unit,
+    onOpenAppDetails: () -> Unit,
     onClose: () -> Unit
 ) {
     Surface(modifier = Modifier.fillMaxSize()) {
@@ -187,6 +203,39 @@ private fun ProtectionSetupScreen(
                     title = "Revenez avec la flèche Retour",
                     detail = "Safeguard vérifiera l’activation et vous ramènera automatiquement dans l’application."
                 )
+            }
+
+            if (!serviceEnabled && showRestrictedHelp) {
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = SafeguardShapes.medium,
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Android a bloqué l’activation ?",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "Si « Paramètre restreint » apparaît, ouvrez les informations de l’application, touchez le menu ⋮, puis « Autoriser les paramètres restreints ». Revenez ensuite ici.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        SafeguardOutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onOpenAppDetails
+                        ) {
+                            Text("Ouvrir les informations de l’application")
+                        }
+                    }
+                }
             }
 
             Spacer(Modifier.height(2.dp))
