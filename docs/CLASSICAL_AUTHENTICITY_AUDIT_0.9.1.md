@@ -77,10 +77,11 @@ Commentaries follow a strict source-isolation rule:
 - when several verified commentaries exist for one Hikma, the UI shows them as
   separate cards, each with its own author, work, locator, source and translation provenance.
 
-The current separately verified Ibn ʿAjība tranche is attached to Hikam 1
-through 12. Every passage is a continuous excerpt with no internal cut; each
-entry retains its exact Hikma number, edition page, source URL and separate
-internal French translation.
+Separately verified Ibn ʿAjība excerpts are attached to Hikam 1–15 and 17–20.
+Every production passage is continuous and free of internal cuts; each entry
+retains its exact Hikma number, edition page, source URL and separate internal
+French translation. Hikma 16 remains withheld because the collected source
+boundary is not yet reliable enough for production.
 
 Future verified commentaries may come from other classical commentators without
 changing the Hikma text itself. Absence of a verified commentary means absence
