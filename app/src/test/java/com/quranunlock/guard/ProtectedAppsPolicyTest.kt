@@ -55,14 +55,16 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
-    fun browserCoverageIsExactlyTheDeclaredSixAndNotSensitive() {
+    fun browserCoverageIsExactlyTheDeclaredEightAndNotSensitive() {
         val expected = setOf(
             "com.android.chrome",
             "org.mozilla.firefox",
             "com.microsoft.emmx",
             "com.brave.browser",
             "com.opera.browser",
-            "com.sec.android.app.sbrowser"
+            "com.sec.android.app.sbrowser",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser"
         )
         assertTrue(BrowserDetector.supportedPackages == expected)
 
@@ -72,7 +74,9 @@ class ProtectedAppsPolicyTest {
             "com.microsoft.emmx" to "Microsoft Edge",
             "com.brave.browser" to "Brave",
             "com.opera.browser" to "Opera",
-            "com.sec.android.app.sbrowser" to "Samsung Internet"
+            "com.sec.android.app.sbrowser" to "Samsung Internet",
+            "com.duckduckgo.mobile.android" to "DuckDuckGo",
+            "com.vivaldi.browser" to "Vivaldi"
         )
         expected.forEach { packageName ->
             assertFalse(
@@ -110,7 +114,7 @@ class ProtectedAppsPolicyTest {
     }
 
     @Test
-    fun selectableScopeIsOnlyDeclaredSocialTargetsAndSixBrowsers() {
+    fun selectableScopeIsOnlyDeclaredSocialTargetsAndEightBrowsers() {
         val expected = (
             ProtectedApps.socialTargets + ProtectedApps.browserTargets
         ).map { it.packageName }.toSet()
@@ -118,6 +122,8 @@ class ProtectedAppsPolicyTest {
         assertTrue(ProtectedApps.selectableScopePackages == expected)
         assertTrue(ProtectedApps.isSelectableTarget("com.instagram.android"))
         assertTrue(ProtectedApps.isSelectableTarget("com.android.chrome"))
+        assertTrue(ProtectedApps.isSelectableTarget("com.duckduckgo.mobile.android"))
+        assertTrue(ProtectedApps.isSelectableTarget("com.vivaldi.browser"))
         assertFalse(ProtectedApps.isSelectableTarget("com.barclays.android.barclaysmobilebanking"))
         assertFalse(ProtectedApps.isSelectableTarget("com.revolut.revolut"))
         assertFalse(ProtectedApps.isSelectableTarget("com.x8bit.bitwarden"))
@@ -142,9 +148,7 @@ class ProtectedAppsPolicyTest {
             "com.revolut.revolut",
             "com.google.android.gms",
             "com.example.privatebank",
-            "com.example.security",
-            "com.duckduckgo.mobile.android",
-            "com.vivaldi.browser"
+            "com.example.security"
         )
 
         excluded.forEach { packageName ->
