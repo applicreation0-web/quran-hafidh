@@ -21,6 +21,26 @@ object SensitiveHandoffPolicy {
         ).any(normalized::contains)
     }
 
+    fun isTrustedSensitiveSettingsWindow(className: String?): Boolean {
+        val normalized = className.orEmpty().lowercase()
+        if (normalized.contains("accessibility") ||
+            normalized.contains("installedservice")
+        ) {
+            return false
+        }
+        return listOf(
+            "biometric",
+            "fingerprint",
+            "face",
+            "credential",
+            "permission",
+            "security",
+            "lockscreen",
+            "nfc",
+            "identity"
+        ).any(normalized::contains)
+    }
+
     fun shouldAllowHandoff(
         originPackage: String?,
         validUntilElapsedMs: Long,
@@ -31,7 +51,9 @@ object SensitiveHandoffPolicy {
         if (originPackage.isNullOrBlank()) return false
         if (nowElapsedMs > validUntilElapsedMs) return false
         if (eventPackage == originPackage) return true
-        if (eventPackage == ProtectedApps.ANDROID_SETTINGS) return true
+        if (eventPackage == ProtectedApps.ANDROID_SETTINGS) {
+            return isTrustedSensitiveSettingsWindow(eventClassName)
+        }
         return isTrustedBrowserAuthenticationWindow(eventPackage, eventClassName)
     }
 }
