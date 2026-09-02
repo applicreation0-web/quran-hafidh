@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -183,11 +182,6 @@ class MushafReaderActivity : ComponentActivity() {
                                         challengeKey,
                                         "page=$page elapsedMs=$elapsed"
                                     )
-                                    Toast.makeText(
-                                        this@MushafReaderActivity,
-                                        "${GuardPrefs.unlockMinutes(this@MushafReaderActivity)} min disponibles",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
                                     finishAndRemoveTask()
                                 }
                             }
