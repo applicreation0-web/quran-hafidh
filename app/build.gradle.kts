@@ -533,6 +533,30 @@ val verifyEditorialBoundary by tasks.registering {
         ) {
             "Morning and evening Adhkar must both be selectable in-app."
         }
+        check(adhkarUi.contains("Crossfade(")) {
+            "Morning/evening changes require a calm in-app transition."
+        }
+        check(hikamUi.contains("AnimatedVisibility(")) {
+            "Classical commentary expansion requires a calm in-app transition."
+        }
+        val safeguardDesign = file(
+            "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
+        ).readText()
+        check(
+            safeguardDesign.contains("sahelianButtonOrnament") &&
+                safeguardDesign.contains("drawDiamond") &&
+                safeguardDesign.contains("chevron")
+        ) {
+            "Safeguard buttons must retain their Sahelian/oriental contour."
+        }
+        val launcherIcon = file(
+            "src/main/res/drawable/ic_launcher_foreground.xml"
+        ).readText()
+        listOf("#214B3B", "#B9873E", "#FFFDF5").forEach { brandColor ->
+            check(launcherIcon.contains(brandColor)) {
+                "Launcher icon lost a required green/gold/cream brand color: " + brandColor
+            }
+        }
         check(hikam.contains("HikmaCommentary")) {
             "Canonical Hikam data must retain classical commentary metadata."
         }
@@ -778,6 +802,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
+    implementation("androidx.compose.animation:animation")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("org.brotli:dec:0.1.2")
