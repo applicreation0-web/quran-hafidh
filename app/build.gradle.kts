@@ -140,25 +140,29 @@ val verifyPrivacyBoundary by tasks.registering {
         val browserDetector = file(
             "src/main/java/com/quranunlock/guard/BrowserDetector.kt"
         ).readText()
+        val protectedAppsSource = file(
+            "src/main/java/com/quranunlock/guard/ProtectedApps.kt"
+        ).readText()
         val requiredBrowsers = listOf(
             "com.android.chrome",
             "org.mozilla.firefox",
             "com.microsoft.emmx",
             "com.brave.browser",
             "com.opera.browser",
-            "com.sec.android.app.sbrowser"
-        )
-        requiredBrowsers.forEach { browser ->
-            check(accessibility.contains(browser) && browserDetector.contains(browser)) {
-                "Required browser missing from fixed Safeguard scope: " + browser
-            }
-        }
-        listOf(
+            "com.sec.android.app.sbrowser",
             "com.duckduckgo.mobile.android",
             "com.vivaldi.browser"
-        ).forEach { browser ->
-            check(!accessibility.contains(browser) && !browserDetector.contains(browser)) {
-                "Browser outside the approved six-browser scope: " + browser
+        )
+        check(requiredBrowsers.size == 8 && requiredBrowsers.toSet().size == 8) {
+            "Safeguard must keep exactly eight declared browsers."
+        }
+        requiredBrowsers.forEach { browser ->
+            check(
+                accessibility.contains(browser) &&
+                    browserDetector.contains(browser) &&
+                    protectedAppsSource.contains(browser)
+            ) {
+                "Required browser missing from fixed Safeguard scope: " + browser
             }
         }
         val excludedStaticPackages = listOf(
@@ -381,6 +385,12 @@ val verifySensitiveAppBoundary by tasks.registering {
         }
         check(setupUi.contains("Activer en trois étapes")) {
             "Accessibility activation must remain didactic and lightweight."
+        }
+        check(
+            setupUi.contains("Settings.ACTION_ACCESSIBILITY_DETAILS_SETTINGS") &&
+                setupUi.contains("Intent.EXTRA_COMPONENT_NAME")
+        ) {
+            "Guided activation must open Safeguard's Accessibility detail page directly."
         }
         check(!mainUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS")) {
             "Main settings must not jump directly into Android accessibility settings."
