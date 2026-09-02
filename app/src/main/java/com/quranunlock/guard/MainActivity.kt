@@ -59,10 +59,8 @@ class MainActivity : ComponentActivity() {
         refreshState.value += 1
     }
 
-    private fun openAccessibilitySettings() {
-        runCatching {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
+    private fun openProtectionSetup() {
+        startActivity(Intent(this, ProtectionSetupActivity::class.java))
     }
 
     private fun openAppSystemSettings() {
@@ -168,7 +166,7 @@ class MainActivity : ComponentActivity() {
                         refreshToken = refreshState.value,
                         onActivateProtection = {
                             if (GuardPrefs.hasAccessibilityConsent(this@MainActivity)) {
-                                openAccessibilitySettings()
+                                openProtectionSetup()
                             } else {
                                 showDisclosure = true
                             }
@@ -321,7 +319,7 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (!serviceEnabled) {
-                            Button(
+                            SafeguardSafeguardButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = onActivateProtection
                             ) {
@@ -334,14 +332,14 @@ class MainActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { testProtection() },
                             enabled = serviceEnabled
                         ) {
                             Text("Tester la protection")
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { openAppSystemSettings() }
                         ) {
@@ -351,7 +349,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            OutlinedButton(
+                            SafeguardOutlinedButton(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     startActivity(
@@ -364,7 +362,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Text("Bibliothèque")
                             }
-                            OutlinedButton(
+                            SafeguardOutlinedButton(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     startActivity(
@@ -530,7 +528,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 val requested = buildList {
@@ -550,7 +548,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -618,30 +616,33 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SectionTitle("Diagnostic")
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Text(
-                            if (serviceAlive) "Service connecté ✓" else "Service non confirmé",
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        recentDiagnostics.forEach { entry ->
+                if (BuildConfig.DEBUG) {
+                    SectionTitle("Diagnostic")
+                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
                             Text(
-                                "${GuardDiagnostics.formatTime(entry)} • ${entry.code}",
-                                style = MaterialTheme.typography.bodySmall
+                                if (serviceAlive) "Service connecté ✓" else "Service non confirmé",
+                                fontWeight = FontWeight.SemiBold
                             )
-                        }
-                        if (recentDiagnostics.isEmpty()) {
-                            Text(
-                                "Le journal local est vide.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            recentDiagnostics.forEach { entry ->
+                                Text(
+                                    "${GuardDiagnostics.formatTime(entry)} • ${entry.code}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            if (recentDiagnostics.isEmpty()) {
+                                Text(
+                                    "Le journal local est vide.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
-                }
+    
+                    }
 
                 SectionTitle("Règles du jeu")
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -668,7 +669,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -681,7 +682,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("Applications protégées")
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -694,7 +695,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("Choix Juz / Hizb")
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -725,7 +726,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.weight(1f),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
+                                RadioSafeguardButton(
                                     selected = unlockMinutes == minutes,
                                     onClick = {
                                         unlockMinutes = minutes
@@ -758,7 +759,7 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { shareInstallationGuide() }
                         ) {
@@ -828,13 +829,13 @@ private fun AccessibilityDisclosureScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(24.dp))
-            Button(
+            SafeguardButton(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onAccept
             ) { Text("J’accepte et je continue") }
 
             Spacer(Modifier.height(10.dp))
-            OutlinedButton(
+            SafeguardOutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onLater
             ) { Text("Plus tard") }
@@ -865,7 +866,12 @@ fun QuranSafeguardTheme(content: @Composable () -> Unit) {
         onSurfaceVariant = Color(0xFF675B50),
         outline = Color(0xFFB89A68)
     )
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(
+        colorScheme = colors,
+        shapes = SafeguardShapes,
+        typography = SafeguardTypography,
+        content = content
+    )
 }
 
 private fun dailyReadingMessage(summary: DailyReadingSummary): String =
