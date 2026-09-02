@@ -132,6 +132,11 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        "Diacritiques reproduits seulement lorsqu’ils figurent dans l’édition vérifiée ; aucun ajout automatique.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -233,7 +238,7 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                                         modifier = Modifier.fillMaxWidth(),
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             textDirection = TextDirection.Rtl,
-                                            lineHeight = 30.sp
+                                            lineHeight = 34.sp
                                         ),
                                         textAlign = TextAlign.Right
                                     )
