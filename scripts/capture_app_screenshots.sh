@@ -25,9 +25,14 @@ dismiss_system_ui_anr() {
     local bounds
 
     for _ in $(seq 1 4); do
-        adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
-        dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
+        if ! timeout 12s adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1; then
+            adb shell input keyevent KEYCODE_DPAD_DOWN || true
+            adb shell input keyevent KEYCODE_ENTER || true
+            sleep 4
+            continue
+        fi
 
+        dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
         if ! grep -Eq 'android:id/aerr_wait|System UI isn.t responding' <<< "${dump}"; then
             return 0
         fi
@@ -37,13 +42,17 @@ dismiss_system_ui_anr() {
         if [[ "${bounds}" =~ \[([0-9]+),([0-9]+)\]\[([0-9]+),([0-9]+)\] ]]; then
             adb shell input tap "$(( (BASH_REMATCH[1] + BASH_REMATCH[3]) / 2 ))" "$(( (BASH_REMATCH[2] + BASH_REMATCH[4]) / 2 ))"
         else
-            adb shell input keyevent KEYCODE_DPAD_DOWN
-            adb shell input keyevent KEYCODE_ENTER
+            adb shell input keyevent KEYCODE_DPAD_DOWN || true
+            adb shell input keyevent KEYCODE_ENTER || true
         fi
         sleep 4
     done
 
-    adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+    if ! timeout 12s adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1; then
+        echo "Android UI could not be inspected after dismiss attempts" >&2
+        exit 1
+    fi
+
     dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
     if grep -Eq 'android:id/aerr_wait|System UI isn.t responding' <<< "${dump}"; then
         echo "System UI ANR dialog could not be dismissed" >&2
@@ -77,7 +86,11 @@ capture_screen() {
     dismiss_system_ui_anr
     sleep 2
 
-    adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
+    if ! timeout 12s adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1; then
+        echo "Android UI could not be inspected for screen: ${screen}" >&2
+        exit 1
+    fi
+
     dump="$(adb shell cat /sdcard/window.xml 2>/dev/null || true)"
     if grep -Eq 'android:id/aerr_wait|System UI isn.t responding' <<< "${dump}"; then
         echo "System UI error dialog is still visible for screen: ${screen}" >&2
