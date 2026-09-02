@@ -47,6 +47,8 @@ object GuardPrefs {
     private const val SELECTED_HIZB = "selected_hizb"
     private const val SELECTION_MODE = "selection_mode"
     internal const val PROTECTED_PACKAGES = "protected_packages"
+    private const val PENDING_PROTECTED_REMOVALS = "pending_protected_removals"
+    private const val PENDING_PROTECTED_REMOVAL_DAY = "pending_protected_removal_epoch_day"
     private const val JOKER_DAY = "joker_epoch_day"
     private const val JOKERS_USED = "jokers_used"
     private const val JOKER_REFILL_WALL = "joker_refill_wall"
@@ -520,44 +522,106 @@ object GuardPrefs {
         }
     }
 
+    @Synchronized
     fun protectedPackages(context: Context): Set<String> {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)
-        val source = stored?.toSet() ?: AppCatalog.launchableApps(context)
-            .map(InstalledApp::packageName)
-            .toSet()
-            .also { installedDefaults ->
-                // Resolve installed targets once. New installations remain opt-in
-                // from the Applications screen and never broaden observation silently.
-                prefs.edit()
-                    .putStringSet(PROTECTED_PACKAGES, installedDefaults)
-                    .commit()
-            }
         val installedTargets = AppCatalog.launchableApps(context)
             .map(InstalledApp::packageName)
+            .filter(ProtectedApps::isSelectableTarget)
             .toSet()
-        val filtered = source
-            .filter { ProtectedApps.isSelectableTarget(it) && it in installedTargets }
-            .toSet()
+        val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)?.toSet()
+        var active = (stored ?: installedTargets)
+            .filterTo(mutableSetOf()) { it in installedTargets }
 
-        // Self-heal legacy selections so persistence contains target packages only.
-        if (stored != null && filtered != stored.toSet()) {
-            prefs.edit()
-                .putStringSet(PROTECTED_PACKAGES, filtered)
-                .apply()
+        var pending = prefs.getStringSet(PENDING_PROTECTED_REMOVALS, emptySet())
+            .orEmpty()
+            .filterTo(mutableSetOf()) { it in active }
+        val today = LocalDate.now().toEpochDay()
+        val effectiveDay = prefs.getLong(
+            PENDING_PROTECTED_REMOVAL_DAY,
+            Long.MAX_VALUE
+        )
+
+        // A scheduled removal remains protected for the whole current local day
+        // and is applied atomically on the first access after the next day starts.
+        if (pending.isNotEmpty() && today >= effectiveDay) {
+            active.removeAll(pending)
+            pending = mutableSetOf()
         }
 
-        return filtered
+        val activeChanged = stored == null || active != stored
+        val storedPending = prefs.getStringSet(
+            PENDING_PROTECTED_REMOVALS,
+            emptySet()
+        ).orEmpty().toSet()
+        val pendingChanged = pending != storedPending
+
+        if (activeChanged || pendingChanged) {
+            prefs.edit()
+                .putStringSet(PROTECTED_PACKAGES, active)
+                .putStringSet(PENDING_PROTECTED_REMOVALS, pending)
+                .apply {
+                    if (pending.isEmpty()) {
+                        remove(PENDING_PROTECTED_REMOVAL_DAY)
+                    }
+                }
+                .commit()
+        }
+
+        return active
     }
 
-    fun saveProtectedPackages(context: Context, packages: Set<String>) {
-        val filtered = packages
-            .filter { ProtectedApps.isSelectableTarget(it) }
+    @Synchronized
+    fun pendingProtectedRemovals(context: Context): Set<String> {
+        val active = protectedPackages(context)
+        return context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .getStringSet(PENDING_PROTECTED_REMOVALS, emptySet())
+            .orEmpty()
+            .filter { it in active }
             .toSet()
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
-            .putStringSet(PROTECTED_PACKAGES, filtered)
-            .commit()
+    }
+
+    /**
+     * Additions and cancellations are immediate. Removing a target only creates
+     * a reversible request, effective when the next local day begins.
+     */
+    @Synchronized
+    fun saveProtectedPackages(context: Context, packages: Set<String>) {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val installedTargets = AppCatalog.launchableApps(context)
+            .map(InstalledApp::packageName)
+            .filter(ProtectedApps::isSelectableTarget)
+            .toSet()
+        val requested = packages.intersect(installedTargets)
+        val active = protectedPackages(context)
+        val previousPending = pendingProtectedRemovals(context)
+
+        val updatedActive = active + requested
+        val updatedPending = previousPending.toMutableSet().apply {
+            // Re-selecting a target cancels its pending removal immediately.
+            removeAll(requested)
+            // Active targets absent from the requested set are removed tomorrow.
+            addAll(active - requested)
+            retainAll(updatedActive)
+        }
+
+        val editor = prefs.edit()
+            .putStringSet(PROTECTED_PACKAGES, updatedActive)
+            .putStringSet(PENDING_PROTECTED_REMOVALS, updatedPending)
+
+        if (updatedPending.isEmpty()) {
+            editor.remove(PENDING_PROTECTED_REMOVAL_DAY)
+        } else {
+            val today = LocalDate.now().toEpochDay()
+            val existingDay = prefs.getLong(
+                PENDING_PROTECTED_REMOVAL_DAY,
+                Long.MIN_VALUE
+            )
+            val effectiveDay = existingDay.takeIf { it > today } ?: (today + 1L)
+            editor.putLong(PENDING_PROTECTED_REMOVAL_DAY, effectiveDay)
+        }
+
+        editor.commit()
     }
 
     fun selectionMode(context: Context): QuranSelectionMode {
