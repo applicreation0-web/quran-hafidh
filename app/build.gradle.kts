@@ -51,6 +51,12 @@ val verifyMushafPages by tasks.registering {
         check(reader.contains(".weight(1f)")) {
             "The canonical Mushaf page must occupy the full remaining reader viewport."
         }
+        check(
+            reader.contains("override fun onTopResumedActivityChanged") &&
+                reader.contains("mayCountActiveReading()")
+        ) {
+            "Android 10+ multi-window must pause reading unless the reader is top-resumed."
+        }
         check(policy.contains("MIN_ACTIVE_READING_MS = 60_000L")) {
             "A page requires at least 60 active seconds."
         }
@@ -388,6 +394,12 @@ val verifySensitiveAppBoundary by tasks.registering {
         check(service.contains("SensitiveHandoffPolicy.shouldAllowHandoff")) {
             "Bank authentication/settings handoff policy is not wired into accessibility events."
         }
+        val allowedHandoffBranch = service
+            .substringAfter("if (SensitiveHandoffPolicy.shouldAllowHandoff(")
+            .substringBefore("if (ProtectedApps.isAlwaysAllowed")
+        check(!allowedHandoffBranch.contains("sensitiveFlowUntilElapsedMs =")) {
+            "Only a real sensitive-app event may renew the absolute handoff lease."
+        }
         check(policy.contains("HANDOFF_WINDOW_MS = 120_000L")) {
             "Sensitive handoff must remain time-bounded."
         }
@@ -422,6 +434,12 @@ val verifySensitiveAppBoundary by tasks.registering {
         }
         check(!mainUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS")) {
             "Main settings must not jump directly into Android accessibility settings."
+        }
+        check(
+            !mainUi.contains("Settings.ACTION_APPLICATION_DETAILS_SETTINGS") &&
+                !mainUi.contains("Infos et autorisations Android")
+        ) {
+            "Accessibility activation must remain the only Safeguard action opening Android Settings."
         }
         listOf(
             "bankingOriginAndAndroidSettingsAreAllowedDuringLease",

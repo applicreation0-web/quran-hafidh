@@ -4,10 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -61,17 +59,6 @@ class MainActivity : ComponentActivity() {
 
     private fun openProtectionSetup() {
         startActivity(Intent(this, ProtectionSetupActivity::class.java))
-    }
-
-    private fun openAppSystemSettings() {
-        runCatching {
-            startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:$packageName")
-                )
-            )
-        }
     }
 
     private fun shareInstallationGuide() {
@@ -339,12 +326,6 @@ class MainActivity : ComponentActivity() {
                             enabled = serviceEnabled
                         ) {
                             Text("Tester la protection")
-                        }
-                        SafeguardOutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { openAppSystemSettings() }
-                        ) {
-                            Text("Infos et autorisations Android")
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),

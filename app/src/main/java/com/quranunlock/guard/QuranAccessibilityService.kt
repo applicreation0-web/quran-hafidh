@@ -291,8 +291,9 @@ class QuranAccessibilityService : AccessibilityService() {
                 eventClassName = eventClassName
             )
         ) {
-            sensitiveFlowUntilElapsedMs =
-                nowElapsed + SensitiveHandoffPolicy.HANDOFF_WINDOW_MS
+            // The lease is anchored to the last real sensitive-app event.
+            // Browser/Settings handoff events must never slide the expiry and
+            // silently exempt later ordinary browsing.
             handleOutsideScopeForeground()
             GuardDiagnostics.log(this, "SENSITIVE_HANDOFF_ALLOWED")
             return

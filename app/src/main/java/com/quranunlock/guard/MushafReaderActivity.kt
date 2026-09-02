@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -41,6 +42,11 @@ class MushafReaderActivity : ComponentActivity() {
     private var challengeKey: String = ""
     private var pageReady = false
     private var activityResumed = false
+    private var activityTopResumed = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
+    private fun mayCountActiveReading(): Boolean =
+        activityResumed &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || activityTopResumed)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -230,23 +236,46 @@ class MushafReaderActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
-        if (pageReady) {
+        if (pageReady && Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             GuardPrefs.beginReadingForeground(this, challengeKey, page)
         }
     }
 
+    override fun onTopResumedActivityChanged(isTopResumedActivity: Boolean) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            activityTopResumed == isTopResumedActivity
+        ) {
+            return
+        }
+
+        activityTopResumed = isTopResumedActivity
+        if (!pageReady) return
+
+        if (mayCountActiveReading()) {
+            GuardPrefs.beginReadingForeground(this, challengeKey, page)
+        } else {
+            GuardPrefs.endReadingForeground(this, challengeKey, page)
+        }
+    }
+
     override fun onPause() {
-        if (pageReady) {
+        if (pageReady &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || activityTopResumed)
+        ) {
             GuardPrefs.endReadingForeground(this, challengeKey, page)
         }
         activityResumed = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            activityTopResumed = false
+        }
         super.onPause()
     }
 
     private fun markPageReady() {
         if (pageReady) return
         pageReady = true
-        if (activityResumed) {
+        if (mayCountActiveReading()) {
             GuardPrefs.beginReadingForeground(this, challengeKey, page)
         }
     }
