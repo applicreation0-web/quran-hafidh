@@ -31,7 +31,6 @@ class QuranAccessibilityService : AccessibilityService() {
     private var foregroundUnlockedPackage: String? = null
 
     private var screenReceiverRegistered = false
-    private var broadExitDetection = false
     private var guardPrefs: SharedPreferences? = null
 
     private var audioManager: AudioManager? = null
@@ -43,7 +42,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private val scopePreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == GuardPrefs.PROTECTED_PACKAGES && !broadExitDetection) {
+            if (key == GuardPrefs.PROTECTED_PACKAGES) {
                 applyEventPackageScope(broad = false)
             }
         }
@@ -421,17 +420,16 @@ class QuranAccessibilityService : AccessibilityService() {
         }
 
         if (!isProtectedPackage) {
-            // Safeguard itself is the only non-protected package in the narrow
-            // event scope. Once our UI owns the window (Gate/Dashboard/etc.),
-            // broad exit observation is no longer necessary.
+            // Safeguard and Android transition signals are the only non-target
+            // packages admitted to the strict event scope.
             if (packageName == this.packageName) {
                 applyEventPackageScope(broad = false)
             }
             return
         }
 
-        // While a protected target is active, broaden only long enough to see
-        // the first real transition away. IME windows are ignored above.
+        // The event scope remains narrow even while a target is active:
+        // selected targets + Safeguard + System UI/current launcher only.
         applyEventPackageScope(broad = true)
 
         // Never display the Quran gate on top of an ongoing/ringing call.
@@ -476,17 +474,15 @@ class QuranAccessibilityService : AccessibilityService() {
         applyEventPackageScope(broad = false)
     }
 
-    private fun applyEventPackageScope(broad: Boolean) {
-        if (broadExitDetection == broad && broad) return
+    private fun applyEventPackageScope(
+        @Suppress("UNUSED_PARAMETER") broad: Boolean
+    ) {
         try {
             val info = serviceInfo ?: return
-            info.packageNames = if (broad) {
-                null
-            } else {
-                ProtectedApps.eventScopePackages(this).toTypedArray()
-            }
+            // Never set packageNames to null: that would subscribe to every app
+            // and can interfere with sensitive banking/security applications.
+            info.packageNames = ProtectedApps.eventScopePackages(this).toTypedArray()
             setServiceInfo(info)
-            broadExitDetection = broad
         } catch (error: Exception) {
             reportNonFatal("EVENT_SCOPE_UPDATE_FAILED", error)
         }
