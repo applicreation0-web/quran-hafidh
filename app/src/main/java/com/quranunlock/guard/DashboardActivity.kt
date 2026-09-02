@@ -57,6 +57,9 @@ class DashboardActivity : ComponentActivity() {
         val totalReadingMs = GuardPrefs.totalReadingMs(this@DashboardActivity)
         val today = GuardPrefs.dailyReadingSummary(this@DashboardActivity)
         val thought = DailyReminderManager.today(this@DashboardActivity)
+        val usageProgress = SafeguardCyclePrefs.progress(this@DashboardActivity)
+        val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@DashboardActivity)
+        val jokers = GuardPrefs.remainingJokers(this@DashboardActivity)
 
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -219,6 +222,47 @@ class DashboardActivity : ComponentActivity() {
                         value = today.pages.toString(),
                         label = "Pages"
                     )
+                }
+
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 17.dp, vertical = 15.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            "PROGRESSION DU JOUR",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (usageProgress.morningCompleted) {
+                                "Filtre matinal terminé ✓"
+                            } else {
+                                "Filtre matinal : 20 pages à lire"
+                            },
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Usage cible effectif : " + compactDuration(targetUsageMs) +
+                                " • cycle " +
+                                (usageProgress.completedIntervals * UsageCyclePolicy.INTERVAL_MINUTES) +
+                                "/90 min"
+                        )
+                        Text(
+                            "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles • suivi sans jugement",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 ElevatedCard(

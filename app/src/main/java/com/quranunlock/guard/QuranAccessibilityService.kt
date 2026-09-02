@@ -23,7 +23,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private val pendingLaunches = mutableListOf<Runnable>()
 
     /**
-     * Exactly one protected package may consume an unlock budget at a time.
+     * Exactly one protected package may advance the shared target-only usage cycle.
      * foregroundPackage is the latest actual app/window owner; an IME never replaces it.
      */
     private var foregroundPackage: String? = null
@@ -39,15 +39,10 @@ class QuranAccessibilityService : AccessibilityService() {
     private var whatsappCallUiActive = false
     private var lastCheckpointElapsedMs = 0L
     private var pendingOrphanRecovery: OrphanedUnlockRecovery? = null
-    private var sensitiveFlowOriginPackage: String? = null
-    private var sensitiveFlowUntilElapsedMs: Long = 0L
 
     private val scopePreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if ((key == GuardPrefs.PROTECTED_PACKAGES ||
-                    key == GuardPrefs.USER_ALWAYS_ALLOWED_PACKAGES) &&
-                !broadExitDetection
-            ) {
+            if (key == GuardPrefs.PROTECTED_PACKAGES && !broadExitDetection) {
                 applyEventPackageScope(broad = false)
             }
         }
@@ -58,7 +53,6 @@ class QuranAccessibilityService : AccessibilityService() {
                 pauseForegroundBudget(clearForeground = true)
                 GuardRuntime.resetForeground()
                 cancelPendingLaunches()
-                clearSensitiveHandoff()
 
                 val snapshot = GuardRuntime.interception.snapshot()
                 if (!snapshot.guardVisible) {
@@ -105,10 +99,6 @@ class QuranAccessibilityService : AccessibilityService() {
                     )
 
                     if (remaining <= 0L) {
-                        GuardPrefs.expireUnlock(
-                            this@QuranAccessibilityService,
-                            packageName
-                        )
                         foregroundUnlockedPackage = null
                         showGentleMessage(
                             "Cette session est terminée. Une nouvelle lecture vous permettra de continuer."
@@ -272,43 +262,6 @@ class QuranAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val packageName = event?.packageName?.toString() ?: return
         val eventClassName = event.className?.toString()
-        val nowElapsed = SystemClock.elapsedRealtime()
-
-        if (ProtectedApps.isSensitiveFlowOrigin(this, packageName)) {
-            sensitiveFlowOriginPackage = packageName
-            sensitiveFlowUntilElapsedMs =
-                nowElapsed + SensitiveHandoffPolicy.HANDOFF_WINDOW_MS
-            handleOutsideScopeForeground()
-            GuardDiagnostics.log(this, "SENSITIVE_FLOW_ALLOWED")
-            return
-        }
-
-        if (SensitiveHandoffPolicy.shouldAllowHandoff(
-                originPackage = sensitiveFlowOriginPackage,
-                validUntilElapsedMs = sensitiveFlowUntilElapsedMs,
-                nowElapsedMs = nowElapsed,
-                eventPackage = packageName,
-                eventClassName = eventClassName
-            )
-        ) {
-            // The lease is anchored to the last real sensitive-app event.
-            // Browser/Settings handoff events must never slide the expiry and
-            // silently exempt later ordinary browsing.
-            handleOutsideScopeForeground()
-            GuardDiagnostics.log(this, "SENSITIVE_HANDOFF_ALLOWED")
-            return
-        }
-
-        if (ProtectedApps.isAlwaysAllowed(this, packageName)) {
-            handleOutsideScopeForeground()
-            return
-        }
-
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            packageName != this.packageName
-        ) {
-            clearSensitiveHandoff()
-        }
 
         if (packageName != "com.whatsapp" && whatsappCallUiActive) {
             // The explicit WhatsApp call Activity is no longer the window owner.
@@ -396,9 +349,9 @@ class QuranAccessibilityService : AccessibilityService() {
             pendingOrphanRecovery = null
         }
 
-        // Fixed-scope model: anything outside selected social/browser targets,
-        // Settings and Safeguard itself is treated identically. No label lookup,
-        // category lookup, diagnostic package entry or sensitive-app association.
+        // Fixed-scope model: anything outside selected social/browser targets
+        // and Safeguard itself is a one-shot anonymous exit signal. No label lookup,
+        // category lookup, diagnostic package entry or persistent association.
         if (!ProtectedApps.isEventScopePackage(this, packageName)) {
             handleOutsideScopeForeground()
             return
@@ -453,11 +406,6 @@ class QuranAccessibilityService : AccessibilityService() {
         launchGate(packageName, "initial")
         scheduleRetry(packageName, 350L, "retry_1")
         scheduleRetry(packageName, 900L, "retry_2")
-    }
-
-    private fun clearSensitiveHandoff() {
-        sensitiveFlowOriginPackage = null
-        sensitiveFlowUntilElapsedMs = 0L
     }
 
     /**

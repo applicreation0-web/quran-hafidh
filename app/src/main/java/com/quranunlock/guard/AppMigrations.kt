@@ -24,7 +24,7 @@ object AppMigrations {
     private const val LAST_APP_VERSION_KEY = "last_app_version_code"
     private const val LAST_BACKUP_SCHEMA_KEY = "last_backup_schema"
 
-    const val CURRENT_SCHEMA = 7
+    const val CURRENT_SCHEMA = 8
 
     @Synchronized
     fun run(context: Context): MigrationResult {
@@ -91,6 +91,12 @@ object AppMigrations {
                 migrateToSchema7(context)
                 validateCriticalPreferences(context)
                 schema = 7
+                state.edit().putInt(SCHEMA_KEY, schema).commit()
+            }
+            if (schema < 8) {
+                migrateToSchema8(context)
+                validateCriticalPreferences(context)
+                schema = 8
                 state.edit().putInt(SCHEMA_KEY, schema).commit()
             }
 
@@ -204,7 +210,7 @@ object AppMigrations {
         val prefs = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
         val stored = normalizeStringSet(prefs.all["protected_packages"]) ?: return
         val filtered = stored
-            .filterNot { ProtectedApps.isAlwaysAllowed(context, it) }
+            .filterNot { ProtectedApps.shouldNeverPersist(context, it) }
             .toSet()
 
         if (filtered != stored) {
@@ -327,6 +333,45 @@ object AppMigrations {
         GuardPrefs.reconcileOrphanedUnlockForeground(context)
     }
 
+    private fun migrateToSchema8(context: Context) {
+        // 0.10.0 replaces package-scoped credits and exclusion classifications
+        // with one global target-only 15/90-minute cycle. Old sessions cannot be
+        // translated safely, so they are invalidated and the next target access
+        // starts with the daily morning filter.
+        migrateToSchema6(context)
+
+        val prefs = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE)
+        val runtimePrefixes = listOf(
+            "unlock_elapsed_until_",
+            "unlock_elapsed_started_",
+            "unlock_remaining_ms_",
+            "unlock_foreground_started_",
+            "unlock_foreground_boot_",
+            "unlock_foreground_checkpoint_",
+            "unlock_granted_ms_",
+            "unlock_reminder_mask_",
+            "challenge_page_",
+            "reading_page_",
+            "reading_accumulated_",
+            "reading_started_",
+            "reading_bottom_reached_",
+            "reading_completion_recorded_",
+            "usage_"
+        )
+        val editor = prefs.edit()
+            .remove("unlock_minutes")
+            .remove("user_always_allowed_packages")
+            .remove("unlock_global_active_target")
+
+        prefs.all.keys
+            .filter { key -> runtimePrefixes.any { prefix -> key.startsWith(prefix) } }
+            .forEach(editor::remove)
+
+        check(editor.commit()) {
+            "Unable to initialize protected-only global usage cycle"
+        }
+    }
+
     private fun validateCriticalPreferences(context: Context) {
         val all = context.getSharedPreferences(GUARD_PREFS, Context.MODE_PRIVATE).all
 
@@ -334,7 +379,6 @@ object AppMigrations {
         check(all["selected_juz"] == null || all["selected_juz"] is Set<*>)
         check(all["selected_hizb"] == null || all["selected_hizb"] is Set<*>)
         check(all["selection_mode"] == null || all["selection_mode"] is String)
-        check(all["unlock_minutes"] == null || all["unlock_minutes"] is Int)
         check(all["readings_completed"] == null || all["readings_completed"] is Int)
         check(all["total_reading_ms"] == null || all["total_reading_ms"] is Long)
         check(all["last_reading_ms"] == null || all["last_reading_ms"] is Long)

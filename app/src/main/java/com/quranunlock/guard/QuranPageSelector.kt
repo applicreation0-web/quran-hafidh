@@ -7,6 +7,12 @@ enum class QuranSelectionMode {
     HIZB
 }
 
+data class HizbPagePlan(
+    val pages: List<Int>,
+    val hizbNumbers: List<Int>,
+    val nextCursor: Int
+)
+
 object QuranPageSelector {
     private val secureRandom = SecureRandom()
 
@@ -56,9 +62,39 @@ object QuranPageSelector {
     private val pagesByHizb: Map<Int, IntRange> =
         (1..60).associateWith { hizb ->
             val start = hizbStartPages[hizb - 1]
-            val end = if (hizb == 60) 604 else hizbStartPages[hizb]
+            val end = if (hizb == 60) 604 else hizbStartPages[hizb] - 1
             start..end
         }
+
+    fun tenPageBlockForHizb(hizb: Int): List<Int> {
+        require(hizb in 1..60) { "Hizb must be between 1 and 60." }
+        val start = hizbStartPages[hizb - 1]
+        return (start until (start + UsageCyclePolicy.HIZB_PAGE_COUNT))
+            .filter { it in 1..604 }
+            .take(UsageCyclePolicy.HIZB_PAGE_COUNT)
+    }
+
+    fun sequentialHizbPages(
+        selectedHizb: Set<Int>,
+        cursor: Int,
+        hizbCount: Int
+    ): HizbPagePlan {
+        require(hizbCount > 0)
+        val pool = selectedHizb.filter { it in 1..60 }
+            .distinct()
+            .sorted()
+            .ifEmpty { (1..60).toList() }
+        val startIndex = Math.floorMod(cursor, pool.size)
+        val selected = (0 until hizbCount).map { offset ->
+            pool[(startIndex + offset) % pool.size]
+        }
+        val pages = selected.flatMap(::tenPageBlockForHizb)
+        return HizbPagePlan(
+            pages = pages,
+            hizbNumbers = selected,
+            nextCursor = if (pool.size == 1) 0 else (startIndex + hizbCount) % pool.size
+        )
+    }
 
     fun availablePages(
         mode: QuranSelectionMode,

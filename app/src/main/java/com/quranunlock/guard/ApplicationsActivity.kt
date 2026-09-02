@@ -1,6 +1,5 @@
 package com.applicreation0.quransafeguard
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +40,14 @@ class ApplicationsActivity : ComponentActivity() {
 
     @Composable
     private fun ApplicationsScreen() {
+        val installedPackages = remember {
+            AppCatalog.launchableApps(this@ApplicationsActivity)
+                .map(InstalledApp::packageName)
+                .toSet()
+        }
+        val installedTargets = remember(installedPackages) {
+            ProtectedApps.selectableTargets.filter { it.packageName in installedPackages }
+        }
         val selected = remember {
             mutableStateListOf<String>().apply {
                 addAll(GuardPrefs.protectedPackages(this@ApplicationsActivity).sorted())
@@ -65,7 +72,7 @@ class ApplicationsActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez les réseaux sociaux et navigateurs où Quran Safeguard intervient.",
+                    "Choisissez uniquement les réseaux sociaux et navigateurs où Quran Safeguard intervient.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -96,7 +103,7 @@ class ApplicationsActivity : ComponentActivity() {
                             )
                         }
                         Text(
-                            (ProtectedApps.selectableScopePackages.size - selected.size)
+                            (installedTargets.size - selected.size)
                                 .coerceAtLeast(0)
                                 .toString() + " non sélectionnées",
                             style = MaterialTheme.typography.bodySmall,
@@ -114,7 +121,7 @@ class ApplicationsActivity : ComponentActivity() {
                         shape = RoundedCornerShape(16.dp),
                         onClick = {
                             selected.clear()
-                            selected.addAll(ProtectedApps.selectableScopePackages.sorted())
+                            selected.addAll(installedTargets.map(SafeguardTarget::packageName).sorted())
                             GuardPrefs.saveProtectedPackages(
                                 this@ApplicationsActivity,
                                 selected.toSet()
@@ -143,40 +150,20 @@ class ApplicationsActivity : ComponentActivity() {
                     ),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
                 ) {
-                    Column(
+                    Text(
+                        "Seules les applications cochées ci-dessous sont observées. Toutes les autres restent hors de Safeguard, sans liste d’exclusion à maintenir.",
                         modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            "Banques, paiements et identité",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Toujours accessibles. Vérifiez ici qu’une banque locale non reconnue est bien exclue.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        SafeguardOutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(
-                                    Intent(
-                                        this@ApplicationsActivity,
-                                        SensitiveAppsActivity::class.java
-                                    )
-                                )
-                            }
-                        ) {
-                            Text("Vérifier les exclusions sensibles")
-                        }
-                    }
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 TargetGroup(
                     title = "Réseaux sociaux",
-                    subtitle = "Applications sociales et messageries retenues",
-                    targets = ProtectedApps.socialTargets,
+                    subtitle = "WhatsApp texte, X, Instagram, Facebook, YouTube et TikTok",
+                    targets = installedTargets.filter {
+                        it.category == SafeguardTargetCategory.SOCIAL
+                    },
                     selected = selected,
                     onSave = {
                         GuardPrefs.saveProtectedPackages(
@@ -189,7 +176,9 @@ class ApplicationsActivity : ComponentActivity() {
                 TargetGroup(
                     title = "Navigateurs",
                     subtitle = "Les huit navigateurs pris en charge",
-                    targets = ProtectedApps.browserTargets,
+                    targets = installedTargets.filter {
+                        it.category == SafeguardTargetCategory.BROWSER
+                    },
                     selected = selected,
                     onSave = {
                         GuardPrefs.saveProtectedPackages(
@@ -231,6 +220,15 @@ private fun TargetGroup(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            if (targets.isEmpty()) {
+                Text(
+                    "Aucune application installée dans cette catégorie.",
+                    modifier = Modifier.padding(top = 10.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             targets.forEachIndexed { index, target ->
                 if (index == 0) {

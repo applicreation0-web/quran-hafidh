@@ -29,7 +29,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
@@ -191,9 +190,9 @@ class MainActivity : ComponentActivity() {
                 addAll(GuardPrefs.protectedPackages(this@MainActivity).sorted())
             }
         }
-        var unlockMinutes by remember {
-            mutableStateOf(GuardPrefs.unlockMinutes(this@MainActivity))
-        }
+        val usageProgress = SafeguardCyclePrefs.progress(this@MainActivity)
+        val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@MainActivity)
+        val remainingIntervalMs = GuardPrefs.globalRemainingUnlockMs(this@MainActivity)
         val jokers = GuardPrefs.remainingJokers(this@MainActivity)
         val readingsCompleted = GuardPrefs.readingsCompleted(this@MainActivity)
         val totalReadingMs = GuardPrefs.totalReadingMs(this@MainActivity)
@@ -292,7 +291,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         Text(
-                            "${protectedPackages.size}/${ProtectedApps.selectableTargets.size} cibles actives • réseaux sociaux et navigateurs uniquement"
+                            "${protectedPackages.size} cible(s) installée(s) active(s) • réseaux sociaux et navigateurs uniquement"
                         )
                         Text(
                             "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles aujourd’hui"
@@ -372,6 +371,29 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
+                        Text(
+                            if (usageProgress.morningCompleted) {
+                                "Filtre matinal terminé ✓"
+                            } else {
+                                "Filtre matinal à accomplir • 20 pages"
+                            },
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Usage des applications cibles : " +
+                                formatDashboardDuration(targetUsageMs) +
+                                " aujourd’hui"
+                        )
+                        Text(
+                            "Cycle courant : " +
+                                (usageProgress.completedIntervals * UsageCyclePolicy.INTERVAL_MINUTES) +
+                                "/90 min • " +
+                                usageProgress.completedNinetyMinuteCycles +
+                                " cycle(s) de 90 min terminé(s)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         if (todaySummary.pages > 0) {
                             Text(
                                 todaySummary.pages.toString() + " page(s) • " +
@@ -417,7 +439,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            "08:00 • Pensée du jour 🌿",
+                            "20:00 • Pensée du jour 🌿",
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
@@ -454,7 +476,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                             Column {
-                                Text("Pensée du jour à 08:00")
+                                Text("Pensée du jour à 20:00")
                                 Text(
                                     if (ReminderPrefs.dailyEnabled(this@MainActivity)) "Activé" else "Désactivé",
                                     style = MaterialTheme.typography.bodySmall,
@@ -582,7 +604,7 @@ class MainActivity : ComponentActivity() {
                             Text("Historique récent", fontWeight = FontWeight.SemiBold)
                             recentHistory.forEach { entry ->
                                 Text(
-                                    if (entry.method == "joker") {
+                                    if (entry.method.startsWith("joker")) {
                                         "Joker • page ${entry.page} • ${entry.packageName}"
                                     } else {
                                         "Page " + entry.page + " • " +
@@ -632,14 +654,15 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("• 1 page complète et au moins 60 secondes de lecture active avant de continuer.")
-                        Text("• La page conserve son format 15 lignes et se parcourt naturellement jusqu’en bas.")
-                        Text("• Le chrono avance uniquement lorsque la page est réellement visible ; aucune vitesse artificielle n’est imposée.")
-                        Text("• 3 jokers maximum par jour.")
-                        Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
+                        Text("• Premier accès quotidien : 20 pages, au moins 60 secondes actives par page.")
+                        Text("• Ensuite : une page après chaque tranche de 15 minutes d’usage cible effectif.")
+                        Text("• À 90 minutes, un Hizb de 10 pages remplace la pause simple et relance le cycle.")
+                        Text("• Le compteur est commun aux applications cibles et s’arrête dès qu’on les quitte.")
+                        Text("• Les appels classiques et WhatsApp audio/vidéo ne sont jamais décomptés.")
+                        Text("• 3 jokers maximum par jour, utilisables à chacun des trois niveaux.")
                         Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
                         Text(
-                            "• Paramètres Android est protégé pendant l’usage de Safeguard pour éviter un contournement trivial ; la désinstallation reste sous le contrôle du propriétaire du téléphone.",
+                            "• Toutes les applications non ciblées restent hors de Safeguard ; aucune liste d’exclusion n’est nécessaire.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -694,31 +717,35 @@ class MainActivity : ComponentActivity() {
                 }
 
                 SectionTitle("Récurrence")
-                Text(
-                    "Après une lecture, chaque application dispose de son propre budget. Le compteur avance uniquement lorsqu’elle est réellement au premier plan, avec un maximum de 20 minutes. Un joker reste plafonné à " +
-                        GuardPrefs.JOKER_MAX_UNLOCK_MINUTES + " minutes.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                val durationChoices = listOf(1, 5, 10, 15, 20)
-                durationChoices.chunked(2).forEach { rowChoices ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        rowChoices.forEach { minutes ->
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = unlockMinutes == minutes,
-                                    onClick = {
-                                        unlockMinutes = minutes
-                                        GuardPrefs.saveUnlockMinutes(this@MainActivity, minutes)
-                                    }
-                                )
-                                Text(minutes.toString() + " min")
-                            }
-                        }
-                        if (rowChoices.size == 1) Spacer(Modifier.weight(1f))
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Intervalle fixe : 15 minutes",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Un seul compteur additionne uniquement l’usage réel des applications cibles. Changer d’application cible ne crée pas une nouvelle dette de lecture."
+                        )
+                        Text(
+                            "Toutes les 15 minutes : 1 page • Toutes les 90 minutes : 10 pages à la place de la sixième pause."
+                        )
+                        Text(
+                            if (remainingIntervalMs > 0L) {
+                                "Prochaine pause dans " + formatDashboardDuration(remainingIntervalMs)
+                            } else {
+                                when (usageProgress.pendingLevel) {
+                                    ChallengeLevel.MORNING -> "Filtre matinal en attente"
+                                    ChallengeLevel.MICRO -> "Lecture d’une page en attente"
+                                    ChallengeLevel.HIZB -> "Lecture du Hizb en attente"
+                                    null -> "Cycle prêt"
+                                }
+                            },
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 

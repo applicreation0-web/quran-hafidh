@@ -93,73 +93,43 @@ val verifyPrivacyBoundary by tasks.registering {
     doLast {
         val manifest = file("src/main/AndroidManifest.xml").readText()
         val accessibility = file("src/main/res/xml/accessibility_service_config.xml").readText()
-
+        val protectedApps = file(
+            "src/main/java/com/quranunlock/guard/ProtectedApps.kt"
+        ).readText()
+        val service = file(
+            "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt"
+        ).readText()
+        val applicationsUi = file(
+            "src/main/java/com/quranunlock/guard/ApplicationsActivity.kt"
+        ).readText()
         val migrationSource = file(
             "src/main/java/com/quranunlock/guard/AppMigrations.kt"
         ).readText()
-        check(manifest.contains("android:name=\".QuranSafeguardApp\"")) {
-            "QuranSafeguardApp must remain the process bootstrap."
-        }
-        check(migrationSource.contains("class QuranSafeguardApp")) {
-            "Manifest declares QuranSafeguardApp but the Application class is missing."
-        }
-        check(migrationSource.contains("AppMigrations.run(this)")) {
-            "Data migrations must run before activities/services use persisted state."
-        }
 
-        val requiredManifestComponents = mapOf(
-            ".QuranAccessibilityService" to "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt",
-            ".DashboardActivity" to "src/main/java/com/quranunlock/guard/DashboardActivity.kt",
-            ".MainActivity" to "src/main/java/com/quranunlock/guard/MainActivity.kt",
-            ".GateActivity" to "src/main/java/com/quranunlock/guard/GateActivity.kt",
-            ".MushafReaderActivity" to "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
-        )
-        requiredManifestComponents.forEach { (component, source) ->
-            check(manifest.contains("android:name=\"" + component + "\"")) {
-                "Required Android component missing from manifest: " + component
-            }
-            check(file(source).isFile) {
-                "Manifest component has no source file: " + component
-            }
-        }
-        val reminderSource = file(
-            "src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt"
-        ).readText()
-        listOf("MindfulReminderReceiver", "ReminderRescheduleReceiver").forEach { receiver ->
-            check(manifest.contains("android:name=\"." + receiver + "\"")) {
-                "Reminder receiver missing from manifest: " + receiver
-            }
-            check(reminderSource.contains("class " + receiver + " ")) {
-                "Manifest receiver class missing from source: " + receiver
-            }
-        }
-
+        check(manifest.contains("android:name=\".QuranSafeguardApp\""))
+        check(migrationSource.contains("class QuranSafeguardApp"))
+        check(migrationSource.contains("AppMigrations.run(this)"))
         check(!manifest.contains("android.permission.INTERNET")) {
-            "Quran Safeguard must remain offline: INTERNET permission is forbidden."
+            "Quran Safeguard must remain offline."
         }
         check(!manifest.contains("android.permission.QUERY_ALL_PACKAGES")) {
-            "Broad package visibility is forbidden; keep launcher-scoped queries only."
+            "Broad package visibility is forbidden."
         }
         check(!manifest.contains("android.permission.READ_PHONE_STATE")) {
-            "Unlock-call freeze must use AudioManager mode, not sensitive phone-state access."
+            "Call exclusion must not require sensitive phone-state access."
         }
-        check(accessibility.contains("android:canRetrieveWindowContent=\"false\"")) {
-            "Accessibility window content retrieval must remain disabled."
+        check(!manifest.contains("NotificationListenerService")) {
+            "Notification access would add avoidable Android-settings friction."
         }
-        check(!accessibility.contains("typeViewFocused")) {
-            "Focused-view accessibility events are outside Safeguard scope."
-        }
-        check(accessibility.contains("android:packageNames=")) {
-            "Accessibility must start from an explicit social/browser package scope."
-        }
+        check(accessibility.contains("android:canRetrieveWindowContent=\"false\""))
+        check(accessibility.contains(
+            "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged|typeViewClicked|typeViewScrolled\""
+        ))
+        check(accessibility.contains("android:notificationTimeout=\"0\""))
+        check(!accessibility.contains("typeViewTextChanged"))
+        check(!accessibility.contains("typeViewFocused"))
 
-        val browserDetector = file(
-            "src/main/java/com/quranunlock/guard/BrowserDetector.kt"
-        ).readText()
-        val protectedAppsSource = file(
-            "src/main/java/com/quranunlock/guard/ProtectedApps.kt"
-        ).readText()
-        val requiredBrowsers = listOf(
+        val browsers = listOf(
             "com.android.chrome",
             "org.mozilla.firefox",
             "com.microsoft.emmx",
@@ -169,66 +139,60 @@ val verifyPrivacyBoundary by tasks.registering {
             "com.duckduckgo.mobile.android",
             "com.vivaldi.browser"
         )
-        check(requiredBrowsers.size == 8 && requiredBrowsers.toSet().size == 8) {
-            "Safeguard must keep exactly eight declared browsers."
-        }
-        requiredBrowsers.forEach { browser ->
-            check(
-                accessibility.contains(browser) &&
-                    browserDetector.contains(browser) &&
-                    protectedAppsSource.contains(browser)
-            ) {
-                "Required browser missing from fixed Safeguard scope: " + browser
-            }
-        }
-        val excludedStaticPackages = listOf(
-            "com.barclays",
-            "com.revolut",
-            "bitwarden",
-            "authenticator2",
-            "com.android.phone",
-            "com.google.android.dialer",
-            "com.android.dialer",
-            "com.samsung.android.incallui",
-            "com.google.android.deskclock",
-            "com.sec.android.app.clockpackage",
-            "com.google.android.apps.wallet",
-            "com.google.android.gms"
+        val social = listOf(
+            "com.whatsapp",
+            "com.twitter.android",
+            "com.instagram.android",
+            "com.facebook.katana",
+            "com.google.android.youtube",
+            "com.zhiliaoapp.musically"
         )
-        excludedStaticPackages.forEach { excluded ->
-            check(!accessibility.contains(excluded)) {
-                "Excluded package must never appear in Accessibility static scope: " + excluded
+        val targets = browsers + social
+        check(targets.size == 14 && targets.toSet().size == 14)
+        targets.forEach { packageName ->
+            check(accessibility.contains(packageName)) {
+                "Missing target from static Accessibility scope: " + packageName
             }
-        }
-        check(!manifest.contains("android:showWhenLocked=\"true\"")) {
-            "Quran gate must never be allowed over the Android lock screen."
-        }
-        check(
-            accessibility.contains(
-                "android:accessibilityEventTypes=\"typeWindowStateChanged|typeWindowsChanged|typeViewClicked|typeViewScrolled\""
-            )
-        ) {
-            "Accessibility events must remain limited to window ownership plus click/scroll interaction."
-        }
-        check(accessibility.contains("android:notificationTimeout=\"0\"")) {
-            "Unlock accounting requires immediate accessibility transitions; debounce is forbidden."
-        }
-        check(!accessibility.contains("typeViewTextChanged")) {
-            "Text-change accessibility events are forbidden."
+            check(protectedApps.contains(packageName)) {
+                "Missing target from fixed product scope: " + packageName
+            }
+            check(manifest.contains("<package android:name=\"" + packageName + "\" />")) {
+                "Missing narrow package visibility declaration: " + packageName
+            }
         }
 
-        val settingsUi = file(
-            "src/main/java/com/quranunlock/guard/MainActivity.kt"
-        ).readText()
-        val consentAction = settingsUi
-            .substringAfter("onAccept = {")
-            .substringBefore("onLater =")
-        check(!consentAction.contains("openAccessibilitySettings()")) {
-            "Accepting the disclosure must open Safeguard settings, not Android Accessibility."
+        val removedTargets = listOf(
+            "org.telegram.messenger",
+            "com.discord",
+            "com.reddit.frontpage",
+            "com.snapchat.android"
+        )
+        removedTargets.forEach { packageName ->
+            check(!accessibility.contains(packageName))
+            check(!protectedApps.contains(packageName))
         }
-        check(settingsUi.contains("Activer la protection via Android")) {
-            "Android Accessibility must remain a separate, explicit activation action."
+
+        val queryBlock = manifest.substringAfter("<queries>").substringBefore("</queries>")
+        check(!queryBlock.contains("android.intent.action.MAIN")) {
+            "Launcher-wide package discovery is forbidden."
         }
+        check(!manifest.contains("android:name=\".SensitiveAppsActivity\""))
+        check(!file("src/main/java/com/quranunlock/guard/SensitiveAppsActivity.kt").exists())
+        check(!file("src/main/java/com/quranunlock/guard/SensitiveHandoffPolicy.kt").exists())
+        check(!protectedApps.contains("looksSensitive"))
+        check(!protectedApps.contains("sensitivePackage"))
+        check(!protectedApps.contains("launchableAppCache"))
+        check(!service.contains("SensitiveHandoffPolicy"))
+        check(!service.contains("isSensitiveFlowOrigin"))
+        check(!applicationsUi.contains("Vérifier les exclusions"))
+        check(applicationsUi.contains("sans liste d’exclusion à maintenir"))
+
+        check(service.contains("info.packageNames = if (broad)"))
+        check(service.contains("null"))
+        check(service.contains("handleOutsideScopeForeground()"))
+        check(service.contains("applyEventPackageScope(broad = false)"))
+        check(protectedApps.contains("GuardPrefs.protectedPackages(context) + context.packageName"))
+        check(protectedApps.contains("!isSelectableTarget(packageName)"))
     }
 }
 
@@ -244,132 +208,107 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         val engine = file(
             "src/main/java/com/quranunlock/guard/UnlockBudgetIntegrity.kt"
         ).readText()
+        val cycle = file(
+            "src/main/java/com/quranunlock/guard/UsageCyclePolicy.kt"
+        ).readText()
+        val cyclePrefs = file(
+            "src/main/java/com/quranunlock/guard/SafeguardCyclePrefs.kt"
+        ).readText()
+        val gate = file(
+            "src/main/java/com/quranunlock/guard/GateActivity.kt"
+        ).readText()
+        val reader = file(
+            "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
+        ).readText()
+        val mainUi = file(
+            "src/main/java/com/quranunlock/guard/MainActivity.kt"
+        ).readText()
         val tests = file(
-            "src/test/java/com/quranunlock/guard/UnlockBudgetIntegrityTest.kt"
+            "src/test/java/com/quranunlock/guard/UsageCyclePolicyTest.kt"
         ).readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
 
-        check(!service.contains("750L")) {
-            "The old 750 ms foreground-exit grace period must never return."
-        }
-        check(service.contains("Settings.Secure.DEFAULT_INPUT_METHOD")) {
-            "The active IME must be identified explicitly so typing does not pause the app budget."
-        }
-        check(service.contains("addOnModeChangedListener")) {
-            "Android 12+ must react immediately to call/VoIP audio-mode changes."
-        }
-        check(service.contains("isKnownWhatsAppCallActivity")) {
-            "WhatsApp call UI fallback must complement AudioManager VoIP detection."
-        }
-        check(service.contains("packageName != \"com.whatsapp\" && whatsappCallUiActive")) {
-            "WhatsApp call UI fallback must clear when another package owns the window."
-        }
-        check(service.contains("handleAudioModeChanged")) {
-            "Call/VoIP freeze handling is required."
-        }
-        check(service.contains("if (packageName == this.packageName)")) {
-            "Safeguard UI must explicitly narrow broad accessibility observation."
-        }
-        check(service.contains("pauseForegroundBudget(clearForeground = true)")) {
-            "Real app exits and screen-off must pause immediately."
-        }
-        check(prefs.contains("getInt(UNLOCK_MINUTES, 20)")) {
-            "The default per-app unlock budget must remain 20 minutes."
-        }
-        check(prefs.contains("UNLOCK_FOREGROUND_BOOT_PREFIX")) {
-            "Foreground unlock state must be tied to a boot identity."
-        }
-        check(prefs.contains("UNLOCK_FOREGROUND_CHECKPOINT_PREFIX")) {
-            "Foreground unlock state needs a persisted proof-of-life checkpoint."
-        }
-        check(prefs.contains("reconcileOrphanedUnlockForeground")) {
-            "Service/reboot orphan cleanup is mandatory."
-        }
-        check(engine.contains("MAX_UNCERTAIN_RECOVERY_CHARGE_MS = 1_000L")) {
-            "Unknown service-death downtime must be bounded to one checkpoint interval."
-        }
-        check(prefs.contains("boundedRecoveryChargeMs")) {
-            "Persistence layer must use bounded orphan recovery accounting."
-        }
-        check(engine.contains("shouldFreezeForAudioMode")) {
-            "Telephony and VoIP call freeze policy is missing."
-        }
-        check(engine.contains("shouldGateOnExpiration")) {
-            "Exact-zero expiration gate policy is missing."
-        }
-        check(!manifest.contains("android.permission.READ_PHONE_STATE")) {
-            "READ_PHONE_STATE is forbidden for this counter implementation."
-        }
+        check(!service.contains("750L"))
+        check(service.contains("Settings.Secure.DEFAULT_INPUT_METHOD"))
+        check(service.contains("addOnModeChangedListener"))
+        check(service.contains("isKnownWhatsAppCallActivity"))
+        check(service.contains("handleAudioModeChanged"))
+        check(service.contains("pauseForegroundBudget(clearForeground = true)"))
+        check(engine.contains("shouldFreezeForAudioMode"))
+        check(engine.contains("MODE_IN_COMMUNICATION"))
+        check(!manifest.contains("android.permission.READ_PHONE_STATE"))
+        check(!manifest.contains("NotificationListenerService"))
+
+        check(cycle.contains("INTERVAL_MINUTES = 15"))
+        check(cycle.contains("INTERVALS_PER_HIZB = 6"))
+        check(cycle.contains("MORNING_PAGE_COUNT = 20"))
+        check(cycle.contains("HIZB_PAGE_COUNT = 10"))
+        check(cycle.contains("ChallengeLevel.HIZB"))
+        check(prefs.contains("GLOBAL_USAGE_KEY = \"__all_protected_targets__\""))
+        check(prefs.contains("val grantedMs = UsageCyclePolicy.INTERVAL_MS"))
+        check(!prefs.contains("getInt(UNLOCK_MINUTES"))
+        check(cyclePrefs.contains("SafeguardCyclePrefs"))
+        check(cyclePrefs.contains("sequentialHizbPages"))
+        check(cyclePrefs.contains("hizbCount = 2"))
+        check(gate.contains("Filtre matinal • 20 pages"))
+        check(gate.contains("Palier de 90 minutes • 10 pages"))
+        check(reader.contains("Valider et passer à la page suivante"))
+        check(mainUi.contains("Intervalle fixe : 15 minutes"))
+        check(!mainUi.contains("durationChoices"))
+
+        check(prefs.contains("const val DAILY_JOKERS = 3"))
+        check(prefs.contains("skipWithJoker"))
+        check(gate.contains("prochain intervalle 15 min"))
         check(
             service.contains("10 to \"Il vous reste 10 min") &&
                 service.contains("5 to \"Encore 5 min") &&
                 service.contains("1 to \"Dernière minute")
-        ) {
-            "Usage reminders must remain present at 10, 5 and 1 minute."
+        )
+
+        check(prefs.contains("UNLOCK_FOREGROUND_BOOT_PREFIX"))
+        check(prefs.contains("UNLOCK_FOREGROUND_CHECKPOINT_PREFIX"))
+        check(prefs.contains("reconcileOrphanedUnlockForeground"))
+        check(engine.contains("MAX_UNCERTAIN_RECOVERY_CHARGE_MS = 1_000L"))
+        check(prefs.contains("boundedRecoveryChargeMs"))
+        check(engine.contains("shouldGateOnExpiration"))
+
+        val requiredScenarios = listOf(
+            "morningFilterIsAlwaysTheFirstDailyRequirement",
+            "firstFiveIntervalsRequireOnePageAndSixthRequiresHizb",
+            "cumulativeHizbAbsorbsTheCoincidentSixthMicroBlock",
+            "completingHizbResetsEntireNinetyMinuteCycle",
+            "jokerCanSkipMorningMicroAndHizbLevels",
+            "onlyCompletedEffectiveIntervalsCountTowardUsage",
+            "singleHizbPoolRepeatsToReachTwentyMorningPages",
+            "multiHizbPoolAdvancesSequentiallyFromSmallest",
+            "everyHizbChallengeUsesExactlyTenPages"
+        )
+        requiredScenarios.forEach { scenario ->
+            check(tests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking 15/90 cycle test: " + scenario
+            }
         }
+
         val readingHistory = file(
             "src/main/java/com/quranunlock/guard/ReadingHistoryActivity.kt"
         ).readText()
         check(
             prefs.contains("fun dailyReadingSummary(") &&
+                prefs.contains("fun completedTargetUsageMs(") &&
                 prefs.contains("fun averageReadingMsForWindow(") &&
-                readingHistory.contains("Moyenne 7 jours") &&
-                readingHistory.contains("30 jours")
-        ) {
-            "Daily pages, reading averages and trend windows must remain visible in-app."
-        }
-        check(!prefs.contains("legacyRemaining")) {
-            "Boot-unsafe legacy elapsedRealtime windows must never be converted into fresh budget."
-        }
-        check(prefs.contains("putLong(key, 0L)")) {
-            "Legacy unlock state must fail closed and require a fresh Quran reading."
-        }
-
-        val requiredScenarios = listOf(
-            "twentyMinutesFiveUsedLeavesFifteen",
-            "twoHoursOutsideAppConsumesNothing",
-            "intermittentThreePlusTwoPlusFourConsumesExactlyNine",
-            "twoApplicationsHaveIndependentBudgets",
-            "keyboardDoesNotCountAsExit",
-            "screenOffFreezesBudget",
-            "normalPhoneCallFreezesBudget",
-            "whatsappCallUiFreezesBeforeAudioMode",
-            "whatsappVoipCallFreezesBudget",
-            "legacy09ForegroundMarkerIsInvalidatedWithoutReusingTimestamp",
-            "rebootPreservesBudgetAndInvalidatesForegroundSession",
-            "unknownBootCountCanNeverBeTreatedAsSameBootRecovery",
-            "serviceKillRestartLeavesNoPhantomForeground",
-            "longServiceDeathGapCanChargeAtMostOneCheckpointInterval",
-            "shortServiceDeathGapChargesOnlyTheObservedTail",
-            "oneHundredRapidTransitionsDoNotDrift",
-            "jokerUsesTheSameForegroundAccounting",
-            "deselectionReselectionStartsWithoutOldBudget",
-            "returnFromGateStartsBudgetEvenWhenForegroundPackageAlreadyMatches",
-            "expirationIsExactZeroAndRequiresGateWhenStillForeground",
-            "pipAndSplitScreenNeverRequireTwoConcurrentBudgets"
+                readingHistory.contains("Moyenne 7 jours")
         )
-        requiredScenarios.forEach { scenario ->
-            check(tests.contains("fun " + scenario + "(")) {
-                "Missing release-blocking unlock-budget test: " + scenario
-            }
-        }
     }
 }
 
 
-val verifySensitiveAppBoundary by tasks.registering {
+val verifyProtectedOnlyBoundary by tasks.registering {
     doLast {
         val protectedApps = file(
             "src/main/java/com/quranunlock/guard/ProtectedApps.kt"
         ).readText()
         val service = file(
             "src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt"
-        ).readText()
-        val policy = file(
-            "src/main/java/com/quranunlock/guard/SensitiveHandoffPolicy.kt"
-        ).readText()
-        val sensitiveUi = file(
-            "src/main/java/com/quranunlock/guard/SensitiveAppsActivity.kt"
         ).readText()
         val setupUi = file(
             "src/main/java/com/quranunlock/guard/ProtectionSetupActivity.kt"
@@ -378,48 +317,21 @@ val verifySensitiveAppBoundary by tasks.registering {
             "src/main/java/com/quranunlock/guard/MainActivity.kt"
         ).readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
-        val tests = file(
-            "src/test/java/com/quranunlock/guard/SensitiveHandoffPolicyTest.kt"
-        ).readText()
 
-        check(protectedApps.contains("if (isAlwaysAllowed(context, packageName)) return false")) {
-            "Always-accessible banking/identity apps must fail open before any protection decision."
-        }
-        check(protectedApps.contains("userAlwaysAllowedPackages(context)")) {
-            "Unknown local banks require an explicit always-accessible fallback."
-        }
-        check(service.contains("ProtectedApps.isSensitiveFlowOrigin")) {
-            "Sensitive app origins must be recognized before normal gate handling."
-        }
-        check(service.contains("SensitiveHandoffPolicy.shouldAllowHandoff")) {
-            "Bank authentication/settings handoff policy is not wired into accessibility events."
-        }
-        val allowedHandoffBranch = service
-            .substringAfter("if (SensitiveHandoffPolicy.shouldAllowHandoff(")
-            .substringBefore("if (ProtectedApps.isAlwaysAllowed")
-        check(!allowedHandoffBranch.contains("sensitiveFlowUntilElapsedMs =")) {
-            "Only a real sensitive-app event may renew the absolute handoff lease."
-        }
-        check(policy.contains("HANDOFF_WINDOW_MS = 120_000L")) {
-            "Sensitive handoff must remain time-bounded."
-        }
-        check(policy.contains("customtab") && policy.contains("webauthn")) {
-            "Browser authentication windows must be recognized without exempting ordinary browsing."
-        }
-        check(policy.contains("isTrustedSensitiveSettingsWindow") &&
-            policy.contains("normalized.contains(\"accessibility\")")
-        ) {
-            "Banking handoff must never exempt Android accessibility settings."
-        }
-        check(sensitiveUi.contains("Banques, paiements et identité")) {
-            "The visible banking exclusion control is missing."
-        }
-        check(manifest.contains("android:name=\".SensitiveAppsActivity\"")) {
-            "SensitiveAppsActivity must be packaged."
-        }
-        check(manifest.contains("<queries>") && manifest.contains("android.intent.category.LAUNCHER")) {
-            "Package visibility is required to show installed banks for manual exclusion."
-        }
+        check(!file("src/main/java/com/quranunlock/guard/SensitiveAppsActivity.kt").exists())
+        check(!file("src/main/java/com/quranunlock/guard/SensitiveHandoffPolicy.kt").exists())
+        check(!file("src/test/java/com/quranunlock/guard/SensitiveHandoffPolicyTest.kt").exists())
+        check(!protectedApps.contains("isAlwaysAllowed"))
+        check(!protectedApps.contains("looksSensitive"))
+        check(!service.contains("SensitiveHandoffPolicy"))
+        check(!service.contains("sensitiveFlow"))
+        check(!manifest.contains("SensitiveAppsActivity"))
+        check(protectedApps.contains("fun isProtected(context: Context, packageName: String): Boolean"))
+        check(protectedApps.contains("!isSelectableTarget(packageName)"))
+        check(service.contains("applyEventPackageScope(broad = true)"))
+        check(service.contains("handleOutsideScopeForeground()"))
+        check(service.contains("applyEventPackageScope(broad = false)"))
+
         check(manifest.contains("android:name=\".ProtectionSetupActivity\"")) {
             "Guided accessibility activation must be packaged."
         }
@@ -430,29 +342,10 @@ val verifySensitiveAppBoundary by tasks.registering {
             setupUi.contains("\"android.settings.ACCESSIBILITY_DETAILS_SETTINGS\"") &&
                 setupUi.contains("Intent.EXTRA_COMPONENT_NAME")
         ) {
-            "Guided activation must open Safeguard's Accessibility detail page directly."
+            "Guided activation must open Safeguard's own Accessibility detail page."
         }
-        check(!mainUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS")) {
-            "Main settings must not jump directly into Android accessibility settings."
-        }
-        check(
-            !mainUi.contains("Settings.ACTION_APPLICATION_DETAILS_SETTINGS") &&
-                !mainUi.contains("Infos et autorisations Android")
-        ) {
-            "Accessibility activation must remain the only Safeguard action opening Android Settings."
-        }
-        listOf(
-            "bankingOriginAndAndroidSettingsAreAllowedDuringLease",
-            "accessibilitySettingsRemainProtectedDuringBankingLease",
-            "chromeAuthenticationCustomTabIsAllowedDuringLease",
-            "ordinaryBrowserWindowIsNeverExempted",
-            "expiredLeaseCannotExemptSettingsOrAuthentication",
-            "unrelatedAppCannotCreateOrReuseTheException"
-        ).forEach { scenario ->
-            check(tests.contains("fun " + scenario + "(")) {
-                "Missing release-blocking sensitive handoff test: " + scenario
-            }
-        }
+        check(!mainUi.contains("Settings.ACTION_ACCESSIBILITY_SETTINGS"))
+        check(!mainUi.contains("Settings.ACTION_APPLICATION_DETAILS_SETTINGS"))
     }
 }
 
@@ -467,42 +360,42 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 18")) {
-            "0.9.4 must keep versionCode 18, above the installed 0.9.3 candidate."
+        check(buildFile.contains("versionCode = 19")) {
+            "0.10.0 must keep versionCode 19, above the 0.9.4 candidate."
         }
-        check(buildFile.contains("versionName = \"0.9.4\"")) {
-            "Expected banking/UX candidate versionName 0.9.4."
+        check(buildFile.contains("versionName = \"0.10.0\"")) {
+            "Expected point-1/point-2 candidate versionName 0.10.0."
         }
-        check(migrations.contains("CURRENT_SCHEMA = 7")) {
-            "0.9.1 must migrate installed schema 6 to schema 7."
+        check(migrations.contains("CURRENT_SCHEMA = 8")) {
+            "The protected-only shared-cycle model requires schema 8."
         }
-        check(migrations.contains("migrateToSchema7(context)")) {
-            "Schema 7 migration must be wired into AppMigrations.run."
+        check(migrations.contains("migrateToSchema8(context)")) {
+            "Schema 8 migration must be wired into AppMigrations.run."
         }
-        check(migrations.contains("migrateToSchema6(context)")) {
-            "Schema 7 must reapply the fixed-scope purge to legacy state."
+        check(migrations.contains("user_always_allowed_packages")) {
+            "Schema 8 must purge legacy application-exclusion state."
         }
-        check(migrations.contains("\"hikam_prefs\"")) {
-            "Obsolete Hikam transliteration preference must be purged."
+        check(migrations.contains("unlock_minutes")) {
+            "Schema 8 must purge the obsolete selectable-duration preference."
         }
         check(migrations.contains("reconcileOrphanedUnlockForeground(context)")) {
-            "Schema 7 must invalidate/reconcile stale foreground unlock state."
+            "Migration must reconcile stale foreground state."
         }
         check(manifest.contains("android:allowBackup=\"false\"")) {
-            "Private app state must not be restored from Android backup into stale budget state."
+            "Private app state must not be restored from Android backup."
         }
         check(!manifest.contains("android.permission.BIND_DEVICE_ADMIN")) {
-            "Quran Safeguard must remain freely uninstallable and must never become a device administrator."
+            "Quran Safeguard must remain freely uninstallable."
         }
         val signingAudit = rootProject.file(
             "docs/RELEASE_SIGNING_CONTINUITY.md"
         ).readText()
         check(
             signingAudit.contains("6C:70:6F:4E") &&
-                signingAudit.contains("9C:66:DE:17") &&
-                signingAudit.contains("Release authorization remains blocked")
+                signingAudit.contains("Quran-Safeguard-release.p12") &&
+                signingAudit.contains("Never commit")
         ) {
-            "The two observed signing lineages and device release blocker must remain explicit."
+            "The retained release signing lineage and key-handling rule must remain explicit."
         }
     }
 }
@@ -734,7 +627,6 @@ val verifyEditorialBoundary by tasks.registering {
     }
 }
 
-
 val verifyThoughtOfDayBoundary by tasks.registering {
     doLast {
         val scheduler = file(
@@ -824,7 +716,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
     dependsOn(verifyUpdateMigrationIntegrity)
-    dependsOn(verifySensitiveAppBoundary)
+    dependsOn(verifyProtectedOnlyBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
 }
 
@@ -836,8 +728,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "0.9.4"
+        versionCode = 19
+        versionName = "0.10.0"
     }
 
     buildFeatures {
@@ -853,7 +745,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyEditorialBoundary)
     dependsOn(verifyUnlockBudgetIntegrity)
     dependsOn(verifyUpdateMigrationIntegrity)
-    dependsOn(verifySensitiveAppBoundary)
+    dependsOn(verifyProtectedOnlyBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
 }
 

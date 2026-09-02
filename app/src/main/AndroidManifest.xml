@@ -5,10 +5,20 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
-        <intent>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.android.chrome" />
+        <package android:name="org.mozilla.firefox" />
+        <package android:name="com.microsoft.emmx" />
+        <package android:name="com.brave.browser" />
+        <package android:name="com.opera.browser" />
+        <package android:name="com.sec.android.app.sbrowser" />
+        <package android:name="com.duckduckgo.mobile.android" />
+        <package android:name="com.vivaldi.browser" />
     </queries>
 
     <application
@@ -22,12 +32,6 @@
 
         <activity
             android:name=".ProtectionSetupActivity"
-            android:excludeFromRecents="false"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".SensitiveAppsActivity"
             android:excludeFromRecents="false"
             android:exported="false"
             android:screenOrientation="portrait" />

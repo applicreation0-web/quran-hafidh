@@ -69,7 +69,14 @@ class MushafReaderActivity : ComponentActivity() {
         }.getOrNull()
 
         GuardRuntime.interception.markReaderVisible(challengeKey)
-        GuardDiagnostics.log(this, "READER_VISIBLE", challengeKey, "page=$page")
+        val level = GuardPrefs.challengeLevel(this)
+        val (pagePosition, totalPages) = GuardPrefs.challengePagePosition(this)
+        GuardDiagnostics.log(
+            this,
+            "READER_VISIBLE",
+            challengeKey,
+            "level=${level.name} page=$page progress=$pagePosition/$totalPages"
+        )
 
         setContent {
             QuranSafeguardTheme {
@@ -122,6 +129,16 @@ class MushafReaderActivity : ComponentActivity() {
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            when (level) {
+                                ChallengeLevel.MORNING -> "Filtre matinal • page $pagePosition/$totalPages"
+                                ChallengeLevel.MICRO -> "Pause 15 minutes • page 1/1"
+                                ChallengeLevel.HIZB -> "Palier 90 minutes • page $pagePosition/$totalPages"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
                             if (bottomReached) {
@@ -189,6 +206,29 @@ class MushafReaderActivity : ComponentActivity() {
                                         "page=$page elapsedMs=$elapsed"
                                     )
                                     finishAndRemoveTask()
+                                } else {
+                                    val nextPage = GuardPrefs.challengePage(
+                                        this@MushafReaderActivity,
+                                        challengeKey
+                                    )
+                                    if (nextPage != page) {
+                                        GuardDiagnostics.log(
+                                            this@MushafReaderActivity,
+                                            "READING_NEXT_PAGE",
+                                            challengeKey,
+                                            "page=$page next=$nextPage"
+                                        )
+                                        startActivity(
+                                            android.content.Intent(
+                                                this@MushafReaderActivity,
+                                                MushafReaderActivity::class.java
+                                            ).apply {
+                                                putExtra(EXTRA_PAGE, nextPage)
+                                                putExtra(EXTRA_CHALLENGE_KEY, challengeKey)
+                                            }
+                                        )
+                                        finish()
+                                    }
                                 }
                             }
                         ) {
@@ -197,7 +237,8 @@ class MushafReaderActivity : ComponentActivity() {
                                     !bottomReached -> "Faites défiler jusqu’en bas"
                                     readingMs < GuardPrefs.MIN_READING_MS ->
                                         "Lecture active : ${formatReadingDuration(readingMs)} / 01:00"
-                                    else -> "Valider la lecture"
+                                    pagePosition < totalPages -> "Valider et passer à la page suivante"
+                                    else -> "Valider le palier"
                                 }
                             )
                         }

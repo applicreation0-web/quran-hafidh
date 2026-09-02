@@ -9,30 +9,30 @@ class UnlockBudgetIntegrityTest {
     private val minute = 60_000L
 
     @Test
-    fun twentyMinutesFiveUsedLeavesFifteen() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+    fun fifteenMinutesFiveUsedLeavesTen() {
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
         state = UnlockBudgetIntegrity.pause(state, 5 * minute, 1)
-        assertEquals(15 * minute, state.remainingMs)
+        assertEquals(10 * minute, state.remainingMs)
     }
 
     @Test
     fun twoHoursOutsideAppConsumesNothing() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
         state = UnlockBudgetIntegrity.pause(state, 5 * minute, 1)
-        assertEquals(15 * minute, state.remainingMs)
+        assertEquals(10 * minute, state.remainingMs)
 
         // Two hours pass while the app is not foreground: no start marker exists.
         assertEquals(
-            15 * minute,
+            10 * minute,
             UnlockBudgetIntegrity.remaining(state, 125 * minute, 1)
         )
     }
 
     @Test
     fun intermittentThreePlusTwoPlusFourConsumesExactlyNine() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
 
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
         state = UnlockBudgetIntegrity.pause(state, 3 * minute, 1)
@@ -43,22 +43,19 @@ class UnlockBudgetIntegrityTest {
         state = UnlockBudgetIntegrity.start(state, 90 * minute, 1)
         state = UnlockBudgetIntegrity.pause(state, 94 * minute, 1)
 
-        assertEquals(11 * minute, state.remainingMs)
+        assertEquals(6 * minute, state.remainingMs)
     }
 
     @Test
-    fun twoApplicationsHaveIndependentBudgets() {
-        var whatsapp = UnlockBudgetIntegrity.grant(20 * minute)
-        var youtube = UnlockBudgetIntegrity.grant(20 * minute)
+    fun oneGlobalBudgetFollowsSwitchesBetweenTargets() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
 
-        whatsapp = UnlockBudgetIntegrity.start(whatsapp, 0L, 1)
-        whatsapp = UnlockBudgetIntegrity.pause(whatsapp, 5 * minute, 1)
+        shared = UnlockBudgetIntegrity.start(shared, 0L, 1)
+        shared = UnlockBudgetIntegrity.pause(shared, 5 * minute, 1)
+        shared = UnlockBudgetIntegrity.start(shared, 10 * minute, 1)
+        shared = UnlockBudgetIntegrity.pause(shared, 12 * minute, 1)
 
-        youtube = UnlockBudgetIntegrity.start(youtube, 10 * minute, 1)
-        youtube = UnlockBudgetIntegrity.pause(youtube, 12 * minute, 1)
-
-        assertEquals(15 * minute, whatsapp.remainingMs)
-        assertEquals(18 * minute, youtube.remainingMs)
+        assertEquals(8 * minute, shared.remainingMs)
     }
 
     @Test
@@ -103,13 +100,13 @@ class UnlockBudgetIntegrityTest {
 
     @Test
     fun screenOffFreezesBudget() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
         state = UnlockBudgetIntegrity.pause(state, 8 * minute, 1)
-        assertEquals(12 * minute, state.remainingMs)
+        assertEquals(7 * minute, state.remainingMs)
 
         assertEquals(
-            12 * minute,
+            7 * minute,
             UnlockBudgetIntegrity.remaining(state, 70 * minute, 1)
         )
     }
@@ -118,16 +115,25 @@ class UnlockBudgetIntegrityTest {
     fun normalPhoneCallFreezesBudget() {
         assertTrue(UnlockBudgetIntegrity.shouldFreezeForAudioMode(2)) // MODE_IN_CALL
 
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
         state = UnlockBudgetIntegrity.pause(state, 8 * minute, 1)
-        assertEquals(12 * minute, state.remainingMs)
+        assertEquals(7 * minute, state.remainingMs)
 
         // A 25-minute phone call passes while paused.
         assertEquals(
-            12 * minute,
+            7 * minute,
             UnlockBudgetIntegrity.remaining(state, 33 * minute, 1)
         )
+    }
+
+    @Test
+    fun everyAndroidCallModeFreezesAndNormalModeDoesNot() {
+        (1..6).forEach { mode ->
+            assertTrue(UnlockBudgetIntegrity.shouldFreezeForAudioMode(mode))
+        }
+        assertFalse(UnlockBudgetIntegrity.shouldFreezeForAudioMode(0))
+        assertFalse(UnlockBudgetIntegrity.shouldFreezeForAudioMode(7))
     }
 
     @Test
@@ -164,20 +170,20 @@ class UnlockBudgetIntegrityTest {
             UnlockBudgetIntegrity.shouldFreezeForAudioMode(3)
         ) // MODE_IN_COMMUNICATION
 
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 1)
         state = UnlockBudgetIntegrity.pause(state, 8 * minute, 1)
-        assertEquals(12 * minute, state.remainingMs)
+        assertEquals(7 * minute, state.remainingMs)
 
         // Same com.whatsapp package can remain foreground for the entire VoIP call.
         assertEquals(
-            12 * minute,
+            7 * minute,
             UnlockBudgetIntegrity.remaining(state, 33 * minute, 1)
         )
 
         state = UnlockBudgetIntegrity.start(state, 33 * minute, 1)
         state = UnlockBudgetIntegrity.pause(state, 37 * minute, 1)
-        assertEquals(8 * minute, state.remainingMs)
+        assertEquals(3 * minute, state.remainingMs)
     }
 
     @Test
@@ -198,16 +204,16 @@ class UnlockBudgetIntegrityTest {
 
     @Test
     fun rebootPreservesBudgetAndInvalidatesForegroundSession() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 100L, 41)
         state = UnlockBudgetIntegrity.checkpoint(state, 5 * minute + 100L, 41)
 
         // Boot changes; previous elapsedRealtime must never be compared to new boot time.
         val reconciled = UnlockBudgetIntegrity.reconcileOrphan(state)
-        assertEquals(15 * minute, reconciled.remainingMs)
+        assertEquals(10 * minute, reconciled.remainingMs)
         assertEquals(null, reconciled.foregroundStartedElapsedMs)
         assertEquals(
-            15 * minute,
+            10 * minute,
             UnlockBudgetIntegrity.remaining(reconciled, 2 * minute, 42)
         )
     }
@@ -242,17 +248,17 @@ class UnlockBudgetIntegrityTest {
 
     @Test
     fun serviceKillRestartLeavesNoPhantomForeground() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         state = UnlockBudgetIntegrity.start(state, 0L, 9)
         state = UnlockBudgetIntegrity.checkpoint(state, 7 * minute, 9)
 
         val recovered = UnlockBudgetIntegrity.reconcileOrphan(state)
-        assertEquals(13 * minute, recovered.remainingMs)
+        assertEquals(8 * minute, recovered.remainingMs)
         assertEquals(null, recovered.foregroundStartedElapsedMs)
 
         val resumed = UnlockBudgetIntegrity.start(recovered, 20 * minute, 9)
         assertEquals(
-            12 * minute,
+            7 * minute,
             UnlockBudgetIntegrity.remaining(resumed, 21 * minute, 9)
         )
     }
@@ -281,7 +287,7 @@ class UnlockBudgetIntegrityTest {
 
     @Test
     fun oneHundredRapidTransitionsDoNotDrift() {
-        var state = UnlockBudgetIntegrity.grant(20 * minute)
+        var state = UnlockBudgetIntegrity.grant(15 * minute)
         var now = 0L
         repeat(100) {
             state = UnlockBudgetIntegrity.start(state, now, 1)
@@ -290,32 +296,30 @@ class UnlockBudgetIntegrityTest {
             now += 100L // outside app
         }
 
-        assertEquals(20 * minute - 10_000L, state.remainingMs)
+        assertEquals(15 * minute - 10_000L, state.remainingMs)
     }
 
     @Test
-    fun jokerUsesTheSameForegroundAccounting() {
-        var joker = UnlockBudgetIntegrity.grant(5 * minute)
+    fun jokerGrantsTheNextNormalFifteenMinuteInterval() {
+        var joker = UnlockBudgetIntegrity.grant(15 * minute)
         joker = UnlockBudgetIntegrity.start(joker, 0L, 1)
         joker = UnlockBudgetIntegrity.pause(joker, 2 * minute, 1)
-        assertEquals(3 * minute, joker.remainingMs)
+        assertEquals(13 * minute, joker.remainingMs)
 
         assertEquals(
-            3 * minute,
+            13 * minute,
             UnlockBudgetIntegrity.remaining(joker, 62 * minute, 1)
         )
     }
 
     @Test
-    fun deselectionReselectionStartsWithoutOldBudget() {
-        var old = UnlockBudgetIntegrity.grant(20 * minute)
-        old = UnlockBudgetIntegrity.start(old, 0L, 1)
-        old = UnlockBudgetIntegrity.pause(old, 5 * minute, 1)
-        assertEquals(15 * minute, old.remainingMs)
+    fun removingOneTargetDoesNotInventAnotherPackageBudget() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+        shared = UnlockBudgetIntegrity.start(shared, 0L, 1)
+        shared = UnlockBudgetIntegrity.pause(shared, 5 * minute, 1)
 
-        // Production clears the package-scoped record when deselected.
-        val afterDeselection = UnlockBudgetIntegrity.grant(0L)
-        assertEquals(0L, afterDeselection.remainingMs)
+        // Selection changes never create per-package credits.
+        assertEquals(10 * minute, shared.remainingMs)
     }
 
     @Test
@@ -371,16 +375,13 @@ class UnlockBudgetIntegrityTest {
     }
 
     @Test
-    fun pipAndSplitScreenNeverRequireTwoConcurrentBudgets() {
-        var whatsapp = UnlockBudgetIntegrity.grant(20 * minute)
-        var youtube = UnlockBudgetIntegrity.grant(20 * minute)
+    fun pipAndSplitScreenStillUseOneGlobalBudget() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+        shared = UnlockBudgetIntegrity.start(shared, 0L, 1)
+        shared = UnlockBudgetIntegrity.pause(shared, 1 * minute, 1)
+        shared = UnlockBudgetIntegrity.start(shared, 1 * minute, 1)
+        shared = UnlockBudgetIntegrity.pause(shared, 3 * minute, 1)
 
-        whatsapp = UnlockBudgetIntegrity.start(whatsapp, 0L, 1)
-        whatsapp = UnlockBudgetIntegrity.pause(whatsapp, 1 * minute, 1)
-        youtube = UnlockBudgetIntegrity.start(youtube, 1 * minute, 1)
-        youtube = UnlockBudgetIntegrity.pause(youtube, 3 * minute, 1)
-
-        assertEquals(19 * minute, whatsapp.remainingMs)
-        assertEquals(18 * minute, youtube.remainingMs)
+        assertEquals(12 * minute, shared.remainingMs)
     }
 }

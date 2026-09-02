@@ -88,7 +88,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez les zones du Mushaf éligibles pour les prochaines lectures.",
+                    "La pause d’une page suit le mode choisi. Les filtres de 20 et 10 pages utilisent toujours le pool de Hizb enregistré.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -127,6 +127,12 @@ class ReadingSelectionActivity : ComponentActivity() {
                             )
                             Text("Choisir par Hizb")
                         }
+                        Text(
+                            "Un seul Hizb sera répété pour les 20 pages du matin. Plusieurs Hizb avancent dans l’ordre, du plus petit au plus grand.",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 

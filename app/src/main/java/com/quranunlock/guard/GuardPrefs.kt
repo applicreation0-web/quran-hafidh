@@ -29,7 +29,7 @@ data class OrphanedUnlockRecovery(
 
 object GuardPrefs {
     const val DAILY_JOKERS = 3
-    const val JOKER_MAX_UNLOCK_MINUTES = 5
+    const val USAGE_INTERVAL_MINUTES = UsageCyclePolicy.INTERVAL_MINUTES
     const val MIN_READING_MS = ReadingValidationPolicy.MIN_ACTIVE_READING_MS
     const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
 
@@ -42,13 +42,13 @@ object GuardPrefs {
     private const val UNLOCK_FOREGROUND_CHECKPOINT_PREFIX = "unlock_foreground_checkpoint_"
     private const val UNLOCK_GRANTED_MS_PREFIX = "unlock_granted_ms_"
     private const val UNLOCK_REMINDER_MASK_PREFIX = "unlock_reminder_mask_"
+    private const val GLOBAL_USAGE_KEY = "__all_protected_targets__"
+    private const val GLOBAL_ACTIVE_TARGET = "unlock_global_active_target"
     private const val CHALLENGE_PREFIX = "challenge_page_"
     private const val SELECTED_JUZ = "selected_juz"
     private const val SELECTED_HIZB = "selected_hizb"
     private const val SELECTION_MODE = "selection_mode"
     internal const val PROTECTED_PACKAGES = "protected_packages"
-    internal const val USER_ALWAYS_ALLOWED_PACKAGES = "user_always_allowed_packages"
-    private const val UNLOCK_MINUTES = "unlock_minutes"
     private const val JOKER_DAY = "joker_epoch_day"
     private const val JOKERS_USED = "jokers_used"
     private const val JOKER_REFILL_WALL = "joker_refill_wall"
@@ -88,63 +88,70 @@ object GuardPrefs {
         packageName != UNINSTALL_CHALLENGE_KEY &&
             ProtectedApps.shouldNeverPersist(context, packageName)
 
+    private fun budgetKey(packageName: String): String =
+        if (ProtectedApps.isSelectableTarget(packageName)) GLOBAL_USAGE_KEY else packageName
+
+    private fun readingKey(challengeKey: String): String =
+        if (ProtectedApps.isSelectableTarget(challengeKey)) GLOBAL_USAGE_KEY else challengeKey
+
     fun unlock(context: Context, packageName: String) {
         if (outOfScope(context, packageName)) return
-        unlockForMinutes(context, packageName, unlockMinutes(context))
+        grantUsageInterval(context, packageName)
     }
 
-    fun unlockWithJoker(context: Context, packageName: String) {
-        if (outOfScope(context, packageName)) return
-        val minutes = minOf(unlockMinutes(context), JOKER_MAX_UNLOCK_MINUTES)
-        val page = challengePage(context, packageName)
-        recordHistory(
-            context = context,
-            packageName = packageName,
-            page = page,
-            elapsedMs = 0L,
-            method = "joker"
-        )
-        unlockForMinutes(context, packageName, minutes)
+    private fun appendUsageIntervalGrant(
+        editor: android.content.SharedPreferences.Editor,
+        packageName: String
+    ) {
+        val key = budgetKey(packageName)
+        val reading = readingKey(packageName)
+        val grantedMs = UsageCyclePolicy.INTERVAL_MS
+        editor
+            .putLong(UNLOCK_REMAINING_MS_PREFIX + key, grantedMs)
+            .putLong(UNLOCK_GRANTED_MS_PREFIX + key, grantedMs)
+            .putInt(UNLOCK_REMINDER_MASK_PREFIX + key, 0)
+            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + key)
+            .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
+            .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
+            .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + key)
+            .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + key)
+            .remove(GLOBAL_ACTIVE_TARGET)
+            .remove(CHALLENGE_PREFIX + reading)
+            .remove(READING_PAGE_PREFIX + reading)
+            .remove(READING_ACCUMULATED_PREFIX + reading)
+            .remove(READING_STARTED_PREFIX + reading)
+            .remove(READING_BOTTOM_REACHED_PREFIX + reading)
+            .remove(READING_COMPLETION_RECORDED_PREFIX + reading)
     }
 
-    private fun unlockForMinutes(context: Context, packageName: String, minutes: Int) {
+    private fun grantUsageInterval(context: Context, packageName: String) {
         if (outOfScope(context, packageName)) return
-        val grantedMs = minutes.coerceIn(1, 20) * 60_000L
-
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(UNLOCK_REMAINING_MS_PREFIX + packageName, grantedMs)
-            .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, grantedMs)
-            .putInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, 0)
-            .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
-            .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
-            .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
-            .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
-            .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
-            .remove(CHALLENGE_PREFIX + packageName)
-            .remove(READING_PAGE_PREFIX + packageName)
-            .remove(READING_ACCUMULATED_PREFIX + packageName)
-            .remove(READING_STARTED_PREFIX + packageName)
-            .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
-            .remove(READING_COMPLETION_RECORDED_PREFIX + packageName)
-            .apply()
+        val editor = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+        appendUsageIntervalGrant(editor, packageName)
+        check(editor.commit())
     }
 
     fun completeChallengeWithoutUnlock(context: Context, challengeKey: String) {
         if (outOfScope(context, challengeKey)) return
+        val key = readingKey(challengeKey)
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
-            .remove(CHALLENGE_PREFIX + challengeKey)
-            .remove(READING_PAGE_PREFIX + challengeKey)
-            .remove(READING_ACCUMULATED_PREFIX + challengeKey)
-            .remove(READING_STARTED_PREFIX + challengeKey)
-            .remove(READING_BOTTOM_REACHED_PREFIX + challengeKey)
-            .remove(READING_COMPLETION_RECORDED_PREFIX + challengeKey)
+            .remove(CHALLENGE_PREFIX + key)
+            .remove(READING_PAGE_PREFIX + key)
+            .remove(READING_ACCUMULATED_PREFIX + key)
+            .remove(READING_STARTED_PREFIX + key)
+            .remove(READING_BOTTOM_REACHED_PREFIX + key)
+            .remove(READING_COMPLETION_RECORDED_PREFIX + key)
             .apply()
     }
 
-    fun isUnlocked(context: Context, packageName: String): Boolean =
-        !outOfScope(context, packageName) && remainingUnlockMs(context, packageName) > 0L
+    fun isUnlocked(context: Context, packageName: String): Boolean {
+        if (outOfScope(context, packageName)) return false
+        val progress = SafeguardCyclePrefs.progress(context)
+        return progress.morningCompleted &&
+            progress.pendingLevel == null &&
+            remainingUnlockMs(context, packageName) > 0L
+    }
 
     private fun currentBootCount(context: Context): Int =
         runCatching {
@@ -155,18 +162,19 @@ object GuardPrefs {
         prefs: android.content.SharedPreferences,
         packageName: String
     ): UnlockBudgetState {
-        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, -1L)
+        val key = budgetKey(packageName)
+        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + key, -1L)
             .takeIf { it >= 0L }
-        val boot = prefs.getInt(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName, Int.MIN_VALUE)
+        val boot = prefs.getInt(UNLOCK_FOREGROUND_BOOT_PREFIX + key, Int.MIN_VALUE)
             .takeIf { it != Int.MIN_VALUE }
         val checkpoint = prefs.getLong(
-            UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName,
+            UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key,
             -1L
         ).takeIf { it >= 0L }
 
         return UnlockBudgetState(
             remainingMs = prefs.getLong(
-                UNLOCK_REMAINING_MS_PREFIX + packageName,
+                UNLOCK_REMAINING_MS_PREFIX + key,
                 0L
             ).coerceAtLeast(0L),
             foregroundStartedElapsedMs = started,
@@ -181,9 +189,10 @@ object GuardPrefs {
         state: UnlockBudgetState,
         synchronous: Boolean
     ) {
+        val key = budgetKey(packageName)
         val editor = prefs.edit()
             .putLong(
-                UNLOCK_REMAINING_MS_PREFIX + packageName,
+                UNLOCK_REMAINING_MS_PREFIX + key,
                 state.remainingMs.coerceAtLeast(0L)
             )
 
@@ -193,23 +202,23 @@ object GuardPrefs {
 
         if (started == null) {
             editor
-                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
-                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
-                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
+                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + key)
+                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
+                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
         } else {
-            editor.putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName, started)
+            editor.putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + key, started)
             if (boot != null) {
-                editor.putInt(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName, boot)
+                editor.putInt(UNLOCK_FOREGROUND_BOOT_PREFIX + key, boot)
             } else {
-                editor.remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
+                editor.remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
             }
             if (checkpoint != null) {
                 editor.putLong(
-                    UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName,
+                    UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key,
                     checkpoint
                 )
             } else {
-                editor.remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
+                editor.remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
             }
         }
 
@@ -219,19 +228,22 @@ object GuardPrefs {
     @Synchronized
     fun remainingUnlockMs(context: Context, packageName: String): Long {
         if (outOfScope(context, packageName)) return 0L
+        SafeguardCyclePrefs.ensureDailyState(context)
+        if (!SafeguardCyclePrefs.isMorningCompleted(context)) return 0L
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val key = UNLOCK_REMAINING_MS_PREFIX + packageName
+        val budget = budgetKey(packageName)
+        val key = UNLOCK_REMAINING_MS_PREFIX + budget
 
         if (!prefs.contains(key)) {
-            val legacyUntilKey = LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName
-            val legacyStartedKey = LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName
+            val legacyUntilKey = LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + budget
+            val legacyStartedKey = LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + budget
             if (prefs.contains(legacyUntilKey) || prefs.contains(legacyStartedKey)) {
                 // Legacy elapsedRealtime values have no boot identity. Converting
                 // them after reboot can create a phantom credit, so fail closed:
                 // invalidate the old session and require one fresh Quran reading.
                 prefs.edit()
                     .putLong(key, 0L)
-                    .putLong(UNLOCK_GRANTED_MS_PREFIX + packageName, 0L)
+                    .putLong(UNLOCK_GRANTED_MS_PREFIX + budget, 0L)
                     .remove(legacyStartedKey)
                     .remove(legacyUntilKey)
                     .commit()
@@ -267,6 +279,7 @@ object GuardPrefs {
             currentBootCount = currentBootCount(context)
         )
         writeUnlockBudgetState(prefs, packageName, started, synchronous = true)
+        prefs.edit().putString(GLOBAL_ACTIVE_TARGET, packageName).commit()
     }
 
     @Synchronized
@@ -294,63 +307,51 @@ object GuardPrefs {
             currentBootCount = currentBootCount(context)
         )
         writeUnlockBudgetState(prefs, packageName, paused, synchronous = true)
+        if (prefs.getString(GLOBAL_ACTIVE_TARGET, null) == packageName) {
+            prefs.edit().remove(GLOBAL_ACTIVE_TARGET).commit()
+        }
         return paused.remainingMs
     }
 
     @Synchronized
     fun reconcileOrphanedUnlockForeground(context: Context): OrphanedUnlockRecovery? {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val currentBoot = currentBootCount(context)
-        var resumeCandidate: OrphanedUnlockRecovery? = null
-        var latestCheckpoint = Long.MIN_VALUE
-
-        val packages = buildSet {
-            addAll(ProtectedApps.selectableScopePackages)
-            add(ProtectedApps.ANDROID_SETTINGS)
-            prefs.all.keys
-                .filter { it.startsWith(UNLOCK_FOREGROUND_STARTED_PREFIX) }
-                .mapTo(this) { it.removePrefix(UNLOCK_FOREGROUND_STARTED_PREFIX) }
+        val packageName = prefs.getString(GLOBAL_ACTIVE_TARGET, null)
+            ?.takeIf { ProtectedApps.isProtected(context, it) }
+        val state = readUnlockBudgetState(prefs, GLOBAL_USAGE_KEY)
+        if (state.foregroundStartedElapsedMs == null) {
+            prefs.edit().remove(GLOBAL_ACTIVE_TARGET).commit()
+            return null
         }
 
-        packages.filter(String::isNotBlank).forEach { packageName ->
-            val state = readUnlockBudgetState(prefs, packageName)
-            if (state.foregroundStartedElapsedMs == null) return@forEach
+        val checkpoint = state.checkpointElapsedMs
+        val safeRecovery = packageName != null &&
+            UnlockBudgetIntegrity.isSafeSameBootRecovery(
+                storedBootCount = state.foregroundBootCount,
+                currentBootCount = currentBootCount(context),
+                checkpointElapsedMs = checkpoint,
+                nowElapsedMs = SystemClock.elapsedRealtime()
+            ) &&
+            checkpoint != null &&
+            state.remainingMs > 0L
 
-            if (outOfScope(context, packageName)) {
-                prefs.edit()
-                    .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
-                    .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
-                    .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
-                    .commit()
-                return@forEach
-            }
+        val reconciled = UnlockBudgetIntegrity.reconcileOrphan(state)
+        writeUnlockBudgetState(
+            prefs,
+            GLOBAL_USAGE_KEY,
+            reconciled,
+            synchronous = true
+        )
+        prefs.edit().remove(GLOBAL_ACTIVE_TARGET).commit()
 
-            val reconciled = UnlockBudgetIntegrity.reconcileOrphan(state)
-            writeUnlockBudgetState(prefs, packageName, reconciled, synchronous = true)
-
-            // Only a same-boot abrupt service recreation can nominate a package
-            // for immediate resume. A reboot can never reuse the previous owner.
-            val checkpoint = state.checkpointElapsedMs
-            val nowElapsed = SystemClock.elapsedRealtime()
-            if (UnlockBudgetIntegrity.isSafeSameBootRecovery(
-                    storedBootCount = state.foregroundBootCount,
-                    currentBootCount = currentBoot,
-                    checkpointElapsedMs = checkpoint,
-                    nowElapsedMs = nowElapsed
-                ) &&
-                reconciled.remainingMs > 0L &&
-                checkpoint != null &&
-                checkpoint > latestCheckpoint
-            ) {
-                resumeCandidate = OrphanedUnlockRecovery(
-                    packageName = packageName,
-                    checkpointElapsedMs = checkpoint
-                )
-                latestCheckpoint = checkpoint
-            }
+        return if (safeRecovery) {
+            OrphanedUnlockRecovery(
+                packageName = packageName!!,
+                checkpointElapsedMs = checkpoint!!
+            )
+        } else {
+            null
         }
-
-        return resumeCandidate
     }
 
     @Synchronized
@@ -378,11 +379,17 @@ object GuardPrefs {
     @Synchronized
     fun expireUnlock(context: Context, packageName: String) {
         if (outOfScope(context, packageName)) return
+
+        // Persist the pending level first. If the process stops between commits,
+        // isUnlocked still fails closed instead of leaking the old credit.
+        SafeguardCyclePrefs.onIntervalExpired(context)
+
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val expired = UnlockBudgetIntegrity.expire(
             readUnlockBudgetState(prefs, packageName)
         )
         writeUnlockBudgetState(prefs, packageName, expired, synchronous = true)
+        prefs.edit().remove(GLOBAL_ACTIVE_TARGET).commit()
     }
 
     @Synchronized
@@ -399,31 +406,47 @@ object GuardPrefs {
             else -> return false
         }
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val granted = prefs.getLong(UNLOCK_GRANTED_MS_PREFIX + packageName, 0L)
+        val key = budgetKey(packageName)
+        val granted = prefs.getLong(UNLOCK_GRANTED_MS_PREFIX + key, 0L)
         val thresholdMs = thresholdMinutes * 60_000L
         if (granted <= thresholdMs || remainingUnlockMs(context, packageName) > thresholdMs) {
             return false
         }
 
-        val currentMask = prefs.getInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, 0)
+        val currentMask = prefs.getInt(UNLOCK_REMINDER_MASK_PREFIX + key, 0)
         if (currentMask and bit != 0) return false
         prefs.edit()
-            .putInt(UNLOCK_REMINDER_MASK_PREFIX + packageName, currentMask or bit)
+            .putInt(UNLOCK_REMINDER_MASK_PREFIX + key, currentMask or bit)
             .apply()
         return true
     }
 
-    fun unlockMinutes(context: Context): Int =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getInt(UNLOCK_MINUTES, 20)
-            .coerceIn(1, 20)
 
-    fun saveUnlockMinutes(context: Context, minutes: Int) {
-        require(minutes in setOf(1, 5, 10, 15, 20))
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(UNLOCK_MINUTES, minutes)
-            .apply()
+    fun globalRemainingUnlockMs(context: Context): Long {
+        val target = protectedPackages(context).firstOrNull() ?: return 0L
+        return remainingUnlockMs(context, target)
+    }
+
+    fun completedTargetUsageMs(context: Context): Long {
+        val progress = SafeguardCyclePrefs.progress(context)
+        val completed = UsageCyclePolicy.completedUsageMs(
+            UsageCycleState(
+                morningCompleted = progress.morningCompleted,
+                completedIntervals = progress.completedIntervals,
+                completedNinetyMinuteCycles = progress.completedNinetyMinuteCycles,
+                pendingLevel = progress.pendingLevel
+            )
+        )
+        val remaining = globalRemainingUnlockMs(context)
+        val liveInterval = if (progress.morningCompleted &&
+            progress.pendingLevel == null &&
+            remaining > 0L && remaining < UsageCyclePolicy.INTERVAL_MS
+        ) {
+            UsageCyclePolicy.INTERVAL_MS - remaining
+        } else {
+            0L
+        }
+        return completed + liveInterval
     }
 
     @Synchronized
@@ -434,18 +457,43 @@ object GuardPrefs {
     }
 
     @Synchronized
-    fun consumeJoker(context: Context): Boolean {
+    fun consumeJokerAndUnlock(
+        context: Context,
+        packageName: String
+    ): ChallengeLevel? {
+        if (outOfScope(context, packageName)) return null
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         normalizeJokerDay(context, prefs)
 
         val used = prefs.getInt(JOKERS_USED, 0).coerceAtLeast(0)
-        if (used >= DAILY_JOKERS) return false
+        if (used >= DAILY_JOKERS) return null
 
-        prefs.edit()
-            .putInt(JOKERS_USED, used + 1)
-            .commit()
+        val level = SafeguardCyclePrefs.currentLevel(context)
+        val page = challengePage(context, packageName)
+        val historyEntry = listOf(
+            System.currentTimeMillis().toString(),
+            packageName,
+            page.toString(),
+            "0",
+            "joker_" + level.name.lowercase(),
+            "false"
+        ).joinToString("|")
+        val history = buildList {
+            add(historyEntry)
+            addAll(
+                prefs.getString(READING_HISTORY, "")
+                    .orEmpty()
+                    .lineSequence()
+                    .filter { it.isNotBlank() }
+            )
+        }.take(MAX_READING_HISTORY)
 
-        return true
+        SafeguardCyclePrefs.skipWithJoker(context) { editor ->
+            editor.putInt(JOKERS_USED, used + 1)
+            appendUsageIntervalGrant(editor, packageName)
+            editor.putString(READING_HISTORY, history.joinToString("\n"))
+        }
+        return level
     }
 
     private fun normalizeJokerDay(
@@ -500,44 +548,24 @@ object GuardPrefs {
         }
     }
 
-    fun userAlwaysAllowedPackages(context: Context): Set<String> =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getStringSet(USER_ALWAYS_ALLOWED_PACKAGES, emptySet())
-            .orEmpty()
-            .filter { packageName ->
-                packageName.isNotBlank() &&
-                    packageName != context.packageName &&
-                    !ProtectedApps.isSelectableTarget(packageName) &&
-                    !ProtectedApps.isSystemProtected(packageName)
-            }
-            .toSet()
-
-    fun saveUserAlwaysAllowedPackages(context: Context, packages: Set<String>) {
-        val filtered = packages
-            .filter { packageName ->
-                packageName.isNotBlank() &&
-                    packageName != context.packageName &&
-                    !ProtectedApps.isSelectableTarget(packageName) &&
-                    !ProtectedApps.isSystemProtected(packageName)
-            }
-            .toSet()
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
-            .putStringSet(USER_ALWAYS_ALLOWED_PACKAGES, filtered)
-            .commit()
-        ProtectedApps.clearClassificationCache()
-    }
-
     fun protectedPackages(context: Context): Set<String> {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)
-        val source = stored?.toSet() ?: ProtectedApps.defaultPackages
+        val source = stored?.toSet() ?: AppCatalog.launchableApps(context)
+            .map(InstalledApp::packageName)
+            .toSet()
+            .also { installedDefaults ->
+                // Resolve installed targets once. New installations remain opt-in
+                // from the Applications screen and never broaden observation silently.
+                prefs.edit()
+                    .putStringSet(PROTECTED_PACKAGES, installedDefaults)
+                    .commit()
+            }
         val filtered = source
             .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
 
-        // Self-heal legacy selections: once an app becomes permanently excluded,
-        // it is removed from persisted configuration and can never be re-linked.
+        // Self-heal legacy selections so persistence contains target packages only.
         if (stored != null && filtered != stored.toSet()) {
             prefs.edit()
                 .putStringSet(PROTECTED_PACKAGES, filtered)
@@ -551,33 +579,10 @@ object GuardPrefs {
         val filtered = packages
             .filter { ProtectedApps.isSelectableTarget(it) }
             .toSet()
-        val previous = protectedPackages(context)
-        val removed = previous - filtered
-        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val editor = prefs.edit()
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            .edit()
             .putStringSet(PROTECTED_PACKAGES, filtered)
-
-        // A deselected target must never retain a usable old unlock/challenge.
-        // If it is selected again later, it starts from a clean protection state.
-        removed.forEach { packageName ->
-            editor
-                .remove(LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX + packageName)
-                .remove(LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX + packageName)
-                .remove(UNLOCK_REMAINING_MS_PREFIX + packageName)
-                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + packageName)
-                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + packageName)
-                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + packageName)
-                .remove(UNLOCK_GRANTED_MS_PREFIX + packageName)
-                .remove(UNLOCK_REMINDER_MASK_PREFIX + packageName)
-                .remove(CHALLENGE_PREFIX + packageName)
-                .remove(READING_PAGE_PREFIX + packageName)
-                .remove(READING_ACCUMULATED_PREFIX + packageName)
-                .remove(READING_STARTED_PREFIX + packageName)
-                .remove(READING_BOTTOM_REACHED_PREFIX + packageName)
-                .remove(READING_COMPLETION_RECORDED_PREFIX + packageName)
-        }
-
-        editor.commit()
+            .commit()
     }
 
     fun selectionMode(context: Context): QuranSelectionMode {
@@ -638,52 +643,31 @@ object GuardPrefs {
         require(!outOfScope(context, packageName)) {
             "Out-of-scope applications cannot create Quran Safeguard challenges."
         }
-        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val key = CHALLENGE_PREFIX + packageName
-        val existing = prefs.getInt(key, 0)
-        if (existing in 1..604) return existing
-
-        val mode = selectionMode(context)
-        val selectedUnits = when (mode) {
-            QuranSelectionMode.JUZ -> selectedJuz(context)
-            QuranSelectionMode.HIZB -> selectedHizb(context)
-        }
-
-        val effectiveUnits = if (selectedUnits.isEmpty()) {
-            when (mode) {
-                QuranSelectionMode.JUZ -> (1..30).toSet()
-                QuranSelectionMode.HIZB -> (1..60).toSet()
-            }
-        } else {
-            selectedUnits
-        }
-
-        val recentPages = recentChallengePages(context)
-        val page = QuranPageSelector.randomPage(
-            mode = mode,
-            selectedUnits = effectiveUnits,
-            recentPagesNewestFirst = recentPages,
-            maxRecentExclusions = MAX_RECENT_CHALLENGE_PAGES
-        )
-
-        prefs.edit().putInt(key, page).commit()
+        val page = SafeguardCyclePrefs.currentPage(context)
         recordChallengePage(context, page)
         ensureReadingSession(context, packageName, page)
         return page
     }
 
+    fun challengeLevel(context: Context): ChallengeLevel =
+        SafeguardCyclePrefs.currentLevel(context)
+
+    fun challengePagePosition(context: Context): Pair<Int, Int> =
+        SafeguardCyclePrefs.currentPagePosition(context)
+
     @Synchronized
     fun ensureReadingSession(context: Context, challengeKey: String, page: Int) {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val storedPage = prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0)
+        val key = readingKey(challengeKey)
+        val storedPage = prefs.getInt(READING_PAGE_PREFIX + key, 0)
         if (storedPage == page) return
 
         prefs.edit()
-            .putInt(READING_PAGE_PREFIX + challengeKey, page)
-            .putLong(READING_ACCUMULATED_PREFIX + challengeKey, 0L)
-            .remove(READING_STARTED_PREFIX + challengeKey)
-            .putBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, false)
-            .remove(READING_COMPLETION_RECORDED_PREFIX + challengeKey)
+            .putInt(READING_PAGE_PREFIX + key, page)
+            .putLong(READING_ACCUMULATED_PREFIX + key, 0L)
+            .remove(READING_STARTED_PREFIX + key)
+            .putBoolean(READING_BOTTOM_REACHED_PREFIX + key, false)
+            .remove(READING_COMPLETION_RECORDED_PREFIX + key)
             .commit()
     }
 
@@ -691,46 +675,49 @@ object GuardPrefs {
     fun beginReadingForeground(context: Context, challengeKey: String, page: Int) {
         ensureReadingSession(context, challengeKey, page)
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getLong(READING_STARTED_PREFIX + challengeKey, -1L) >= 0L) return
+        val key = readingKey(challengeKey)
+        if (prefs.getLong(READING_STARTED_PREFIX + key, -1L) >= 0L) return
 
         prefs.edit()
-            .putLong(READING_STARTED_PREFIX + challengeKey, SystemClock.elapsedRealtime())
+            .putLong(READING_STARTED_PREFIX + key, SystemClock.elapsedRealtime())
             .commit()
     }
 
     @Synchronized
     fun endReadingForeground(context: Context, challengeKey: String, page: Int) {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0) != page) return
+        val key = readingKey(challengeKey)
+        if (prefs.getInt(READING_PAGE_PREFIX + key, 0) != page) return
 
-        val started = prefs.getLong(READING_STARTED_PREFIX + challengeKey, -1L)
+        val started = prefs.getLong(READING_STARTED_PREFIX + key, -1L)
         if (started < 0L) return
 
         val now = SystemClock.elapsedRealtime()
         val delta = if (now >= started) now - started else 0L
         val accumulated = prefs.getLong(
-            READING_ACCUMULATED_PREFIX + challengeKey,
+            READING_ACCUMULATED_PREFIX + key,
             0L
         )
 
         prefs.edit()
             .putLong(
-                READING_ACCUMULATED_PREFIX + challengeKey,
+                READING_ACCUMULATED_PREFIX + key,
                 accumulated + delta
             )
-            .remove(READING_STARTED_PREFIX + challengeKey)
+            .remove(READING_STARTED_PREFIX + key)
             .commit()
     }
 
     fun readingElapsedMs(context: Context, challengeKey: String, page: Int): Long {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0) != page) return 0L
+        val key = readingKey(challengeKey)
+        if (prefs.getInt(READING_PAGE_PREFIX + key, 0) != page) return 0L
 
         val accumulated = prefs.getLong(
-            READING_ACCUMULATED_PREFIX + challengeKey,
+            READING_ACCUMULATED_PREFIX + key,
             0L
         )
-        val started = prefs.getLong(READING_STARTED_PREFIX + challengeKey, -1L)
+        val started = prefs.getLong(READING_STARTED_PREFIX + key, -1L)
         if (started < 0L) return accumulated
 
         val now = SystemClock.elapsedRealtime()
@@ -740,16 +727,18 @@ object GuardPrefs {
 
     fun markReadingBottomReached(context: Context, challengeKey: String, page: Int) {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0) != page) return
+        val key = readingKey(challengeKey)
+        if (prefs.getInt(READING_PAGE_PREFIX + key, 0) != page) return
         prefs.edit()
-            .putBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, true)
+            .putBoolean(READING_BOTTOM_REACHED_PREFIX + key, true)
             .apply()
     }
 
     fun hasReachedReadingBottom(context: Context, challengeKey: String, page: Int): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        return prefs.getInt(READING_PAGE_PREFIX + challengeKey, 0) == page &&
-            prefs.getBoolean(READING_BOTTOM_REACHED_PREFIX + challengeKey, false)
+        val key = readingKey(challengeKey)
+        return prefs.getInt(READING_PAGE_PREFIX + key, 0) == page &&
+            prefs.getBoolean(READING_BOTTOM_REACHED_PREFIX + key, false)
     }
 
     @Synchronized
@@ -766,7 +755,8 @@ object GuardPrefs {
         ) return elapsed
 
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        if (prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0) == page) {
+        val key = readingKey(challengeKey)
+        if (prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + key, 0) == page) {
             return elapsed
         }
 
@@ -778,7 +768,7 @@ object GuardPrefs {
             .putInt(READINGS_COMPLETED, completed + 1)
             .putLong(TOTAL_READING_MS, total + elapsed)
             .putLong(LAST_READING_MS, elapsed)
-            .putInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, page)
+            .putInt(READING_COMPLETION_RECORDED_PREFIX + key, page)
             .commit()
 
         recordHistory(
@@ -809,7 +799,8 @@ object GuardPrefs {
         page: Int
     ): Boolean {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-        val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + challengeKey, 0)
+        val key = readingKey(challengeKey)
+        val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + key, 0)
         if (recorded != page ||
             !ReadingValidationPolicy.canValidate(
                 activeReadingMs = readingElapsedMs(context, challengeKey, page),
@@ -818,8 +809,17 @@ object GuardPrefs {
         ) {
             return false
         }
-        unlock(context, challengeKey)
-        return true
+
+        val completed = SafeguardCyclePrefs.completePage(context, page) { editor ->
+            // The completed level and its next 15-minute credit share one
+            // SharedPreferences transaction: neither can survive without the other.
+            appendUsageIntervalGrant(editor, challengeKey)
+        }
+        if (!completed) {
+            val nextPage = SafeguardCyclePrefs.currentPage(context)
+            ensureReadingSession(context, challengeKey, nextPage)
+        }
+        return completed
     }
 
     @Synchronized
