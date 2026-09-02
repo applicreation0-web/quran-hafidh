@@ -57,6 +57,16 @@ val verifyMushafPages by tasks.registering {
         check(prefs.contains("ReadingValidationPolicy.canValidate")) {
             "Persistence must enforce the shared 60-second plus progress policy."
         }
+        val selectionUi = file(
+            "src/main/java/com/quranunlock/guard/ReadingSelectionActivity.kt"
+        ).readText()
+        check(
+            selectionUi.contains("bottomBar =") &&
+                selectionUi.contains("Text(\"OK\")") &&
+                selectionUi.contains("onClick = { finish() }")
+        ) {
+            "Juz/Hizb selection must keep a persistent, explicit OK exit."
+        }
         listOf(
             "fiftyNineSecondsCannotValidateEvenAtBottom",
             "sixtyActiveSecondsAndBottomCanValidate",
@@ -284,6 +294,24 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(!manifest.contains("android.permission.READ_PHONE_STATE")) {
             "READ_PHONE_STATE is forbidden for this counter implementation."
         }
+        check(
+            service.contains("10 to \"Il vous reste 10 min") &&
+                service.contains("5 to \"Encore 5 min") &&
+                service.contains("1 to \"Dernière minute")
+        ) {
+            "Usage reminders must remain present at 10, 5 and 1 minute."
+        }
+        val readingHistory = file(
+            "src/main/java/com/quranunlock/guard/ReadingHistoryActivity.kt"
+        ).readText()
+        check(
+            prefs.contains("fun dailyReadingSummary(") &&
+                prefs.contains("fun averageReadingMsForWindow(") &&
+                readingHistory.contains("Moyenne 7 jours") &&
+                readingHistory.contains("30 jours")
+        ) {
+            "Daily pages, reading averages and trend windows must remain visible in-app."
+        }
         check(!prefs.contains("legacyRemaining")) {
             "Boot-unsafe legacy elapsedRealtime windows must never be converted into fresh budget."
         }
@@ -444,6 +472,19 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         }
         check(manifest.contains("android:allowBackup=\"false\"")) {
             "Private app state must not be restored from Android backup into stale budget state."
+        }
+        check(!manifest.contains("android.permission.BIND_DEVICE_ADMIN")) {
+            "Quran Safeguard must remain freely uninstallable and must never become a device administrator."
+        }
+        val signingAudit = rootProject.file(
+            "docs/RELEASE_SIGNING_CONTINUITY.md"
+        ).readText()
+        check(
+            signingAudit.contains("6C:70:6F:4E") &&
+                signingAudit.contains("9C:66:DE:17") &&
+                signingAudit.contains("Release authorization remains blocked")
+        ) {
+            "The two observed signing lineages and device release blocker must remain explicit."
         }
     }
 }
