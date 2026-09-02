@@ -255,7 +255,6 @@ object AppMigrations {
                 ?: return@forEach
             val packageName = key.removePrefix(prefix)
             if (packageName.isNotBlank() &&
-                packageName != GuardPrefs.UNINSTALL_CHALLENGE_KEY &&
                 ProtectedApps.shouldNeverPersist(context, packageName)
             ) {
                 editor.remove(key)

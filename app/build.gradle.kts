@@ -257,7 +257,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(!mainUi.contains("durationChoices"))
 
         check(prefs.contains("const val DAILY_JOKERS = 3"))
-        check(prefs.contains("skipWithJoker"))
+        check(prefs.contains("consumeJokerAndUnlock"))
+        check(prefs.contains("appendUsageIntervalGrant(editor, packageName)"))
+        check(cyclePrefs.contains("onChallengeCompleted(editor)"))
         check(gate.contains("prochain intervalle 15 min"))
         check(
             service.contains("10 to \"Il vous reste 10 min") &&
@@ -317,6 +319,18 @@ val verifyProtectedOnlyBoundary by tasks.registering {
             "src/main/java/com/quranunlock/guard/MainActivity.kt"
         ).readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
+        val appCatalog = file(
+            "src/main/java/com/quranunlock/guard/AppCatalog.kt"
+        ).readText()
+        val prefs = file(
+            "src/main/java/com/quranunlock/guard/GuardPrefs.kt"
+        ).readText()
+        val applicationsUi = file(
+            "src/main/java/com/quranunlock/guard/ApplicationsActivity.kt"
+        ).readText()
+        val dashboard = file(
+            "src/main/java/com/quranunlock/guard/DashboardActivity.kt"
+        ).readText()
 
         check(!file("src/main/java/com/quranunlock/guard/SensitiveAppsActivity.kt").exists())
         check(!file("src/main/java/com/quranunlock/guard/SensitiveHandoffPolicy.kt").exists())
@@ -331,6 +345,12 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(service.contains("applyEventPackageScope(broad = true)"))
         check(service.contains("handleOutsideScopeForeground()"))
         check(service.contains("applyEventPackageScope(broad = false)"))
+        check(appCatalog.contains("ProtectedApps.selectableTargets.mapNotNull"))
+        check(appCatalog.contains("cachedLaunchableTargets"))
+        check(applicationsUi.contains("AppCatalog.refresh()"))
+        check(prefs.contains("it in installedTargets"))
+        check(!prefs.contains("UNINSTALL_CHALLENGE_KEY"))
+        check(dashboard.contains("joker(s) utilisé(s) aujourd’hui"))
 
         check(manifest.contains("android:name=\".ProtectionSetupActivity\"")) {
             "Guided accessibility activation must be packaged."

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 class ApplicationsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppCatalog.refresh()
         setContent {
             QuranSafeguardTheme {
                 ApplicationsScreen()

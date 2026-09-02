@@ -26,6 +26,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,10 +36,12 @@ import androidx.compose.ui.unit.dp
 
 class DashboardActivity : ComponentActivity() {
     private val serviceEnabledState = mutableStateOf(false)
+    private val refreshState = mutableIntStateOf(0)
 
     override fun onResume() {
         super.onResume()
         serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
+        refreshState.intValue += 1
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,6 +56,8 @@ class DashboardActivity : ComponentActivity() {
     @Composable
     private fun DashboardScreen() {
         val serviceEnabled = serviceEnabledState.value
+        @Suppress("UNUSED_VARIABLE")
+        val refresh = refreshState.intValue
         val protectedCount = GuardPrefs.protectedPackages(this@DashboardActivity).size
         val totalReadingMs = GuardPrefs.totalReadingMs(this@DashboardActivity)
         val today = GuardPrefs.dailyReadingSummary(this@DashboardActivity)
@@ -258,7 +263,7 @@ class DashboardActivity : ComponentActivity() {
                                 "/90 min"
                         )
                         Text(
-                            "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles • suivi sans jugement",
+                            "${GuardPrefs.DAILY_JOKERS - jokers} joker(s) utilisé(s) aujourd’hui • $jokers disponible(s) • suivi sans jugement",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

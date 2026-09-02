@@ -110,11 +110,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun testProtection() {
-        val candidates = buildList {
-            add("com.android.chrome")
-            addAll(BrowserDetector.supportedPackages.filterNot { it == "com.android.chrome" })
-            addAll(GuardPrefs.protectedPackages(this@MainActivity))
-        }.distinct()
+        val candidates = GuardPrefs.protectedPackages(this@MainActivity).toList()
 
         val target = candidates.firstOrNull {
             packageManager.getLaunchIntentForPackage(it) != null
@@ -172,20 +168,20 @@ class MainActivity : ComponentActivity() {
     ) {
         @Suppress("UNUSED_VARIABLE")
         val refresh = refreshToken
-        var mode by remember {
+        var mode by remember(refreshToken) {
             mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
         }
-        val selectedJuz = remember {
+        val selectedJuz = remember(refreshToken) {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
             }
         }
-        val selectedHizb = remember {
+        val selectedHizb = remember(refreshToken) {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedHizb(this@MainActivity).sorted())
             }
         }
-        val protectedPackages = remember {
+        val protectedPackages = remember(refreshToken) {
             mutableStateListOf<String>().apply {
                 addAll(GuardPrefs.protectedPackages(this@MainActivity).sorted())
             }

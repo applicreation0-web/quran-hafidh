@@ -31,8 +31,6 @@ object GuardPrefs {
     const val DAILY_JOKERS = 3
     const val USAGE_INTERVAL_MINUTES = UsageCyclePolicy.INTERVAL_MINUTES
     const val MIN_READING_MS = ReadingValidationPolicy.MIN_ACTIVE_READING_MS
-    const val UNINSTALL_CHALLENGE_KEY = "__quran_safeguard_uninstall__"
-
     internal const val FILE = "guard_prefs"
     private const val LEGACY_UNLOCK_UNTIL_ELAPSED_PREFIX = "unlock_elapsed_until_"
     private const val LEGACY_UNLOCK_STARTED_ELAPSED_PREFIX = "unlock_elapsed_started_"
@@ -85,19 +83,13 @@ object GuardPrefs {
     }
 
     private fun outOfScope(context: Context, packageName: String): Boolean =
-        packageName != UNINSTALL_CHALLENGE_KEY &&
-            ProtectedApps.shouldNeverPersist(context, packageName)
+        ProtectedApps.shouldNeverPersist(context, packageName)
 
     private fun budgetKey(packageName: String): String =
         if (ProtectedApps.isSelectableTarget(packageName)) GLOBAL_USAGE_KEY else packageName
 
     private fun readingKey(challengeKey: String): String =
         if (ProtectedApps.isSelectableTarget(challengeKey)) GLOBAL_USAGE_KEY else challengeKey
-
-    fun unlock(context: Context, packageName: String) {
-        if (outOfScope(context, packageName)) return
-        grantUsageInterval(context, packageName)
-    }
 
     private fun appendUsageIntervalGrant(
         editor: android.content.SharedPreferences.Editor,
@@ -124,106 +116,6 @@ object GuardPrefs {
             .remove(READING_COMPLETION_RECORDED_PREFIX + reading)
     }
 
-    private fun grantUsageInterval(context: Context, packageName: String) {
-        if (outOfScope(context, packageName)) return
-        val editor = context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
-        appendUsageIntervalGrant(editor, packageName)
-        check(editor.commit())
-    }
-
-    fun completeChallengeWithoutUnlock(context: Context, challengeKey: String) {
-        if (outOfScope(context, challengeKey)) return
-        val key = readingKey(challengeKey)
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .edit()
-            .remove(CHALLENGE_PREFIX + key)
-            .remove(READING_PAGE_PREFIX + key)
-            .remove(READING_ACCUMULATED_PREFIX + key)
-            .remove(READING_STARTED_PREFIX + key)
-            .remove(READING_BOTTOM_REACHED_PREFIX + key)
-            .remove(READING_COMPLETION_RECORDED_PREFIX + key)
-            .apply()
-    }
-
-    fun isUnlocked(context: Context, packageName: String): Boolean {
-        if (outOfScope(context, packageName)) return false
-        val progress = SafeguardCyclePrefs.progress(context)
-        return progress.morningCompleted &&
-            progress.pendingLevel == null &&
-            remainingUnlockMs(context, packageName) > 0L
-    }
-
-    private fun currentBootCount(context: Context): Int =
-        runCatching {
-            Settings.Global.getInt(context.contentResolver, Settings.Global.BOOT_COUNT)
-        }.getOrDefault(-1)
-
-    private fun readUnlockBudgetState(
-        prefs: android.content.SharedPreferences,
-        packageName: String
-    ): UnlockBudgetState {
-        val key = budgetKey(packageName)
-        val started = prefs.getLong(UNLOCK_FOREGROUND_STARTED_PREFIX + key, -1L)
-            .takeIf { it >= 0L }
-        val boot = prefs.getInt(UNLOCK_FOREGROUND_BOOT_PREFIX + key, Int.MIN_VALUE)
-            .takeIf { it != Int.MIN_VALUE }
-        val checkpoint = prefs.getLong(
-            UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key,
-            -1L
-        ).takeIf { it >= 0L }
-
-        return UnlockBudgetState(
-            remainingMs = prefs.getLong(
-                UNLOCK_REMAINING_MS_PREFIX + key,
-                0L
-            ).coerceAtLeast(0L),
-            foregroundStartedElapsedMs = started,
-            foregroundBootCount = boot,
-            checkpointElapsedMs = checkpoint
-        )
-    }
-
-    private fun writeUnlockBudgetState(
-        prefs: android.content.SharedPreferences,
-        packageName: String,
-        state: UnlockBudgetState,
-        synchronous: Boolean
-    ) {
-        val key = budgetKey(packageName)
-        val editor = prefs.edit()
-            .putLong(
-                UNLOCK_REMAINING_MS_PREFIX + key,
-                state.remainingMs.coerceAtLeast(0L)
-            )
-
-        val started = state.foregroundStartedElapsedMs
-        val boot = state.foregroundBootCount
-        val checkpoint = state.checkpointElapsedMs
-
-        if (started == null) {
-            editor
-                .remove(UNLOCK_FOREGROUND_STARTED_PREFIX + key)
-                .remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
-                .remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
-        } else {
-            editor.putLong(UNLOCK_FOREGROUND_STARTED_PREFIX + key, started)
-            if (boot != null) {
-                editor.putInt(UNLOCK_FOREGROUND_BOOT_PREFIX + key, boot)
-            } else {
-                editor.remove(UNLOCK_FOREGROUND_BOOT_PREFIX + key)
-            }
-            if (checkpoint != null) {
-                editor.putLong(
-                    UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key,
-                    checkpoint
-                )
-            } else {
-                editor.remove(UNLOCK_FOREGROUND_CHECKPOINT_PREFIX + key)
-            }
-        }
-
-        if (synchronous) editor.commit() else editor.apply()
-    }
 
     @Synchronized
     fun remainingUnlockMs(context: Context, packageName: String): Long {
@@ -561,8 +453,11 @@ object GuardPrefs {
                     .putStringSet(PROTECTED_PACKAGES, installedDefaults)
                     .commit()
             }
+        val installedTargets = AppCatalog.launchableApps(context)
+            .map(InstalledApp::packageName)
+            .toSet()
         val filtered = source
-            .filter { ProtectedApps.isSelectableTarget(it) }
+            .filter { ProtectedApps.isSelectableTarget(it) && it in installedTargets }
             .toSet()
 
         // Self-heal legacy selections so persistence contains target packages only.
