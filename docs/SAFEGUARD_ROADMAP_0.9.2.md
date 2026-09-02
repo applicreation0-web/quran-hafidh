@@ -9,7 +9,7 @@ contract supersede older chat notes and legacy implementation details.
   internal French translation and documentary metadata.
 - Classical commentary remains optional and source-isolated:
   one commentator, one work and one locator per commentary unit; no AI synthesis.
-  The first verified continuous Ibn ʿAjība tranche covers Hikam 1 through 12.
+  Verified continuous Ibn ʿAjība excerpts cover Hikam 1–15 and 17–20; Hikma 16 remains withheld pending a reliable source boundary.
 - Al-Ghazali is temporarily absent from the UI and daily reminders until a
   sufficient Ayyuha al-Walad corpus is verified.
 - Canonical Medina Mushaf page uses the full remaining reader viewport.
