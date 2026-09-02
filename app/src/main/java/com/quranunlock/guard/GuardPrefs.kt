@@ -529,46 +529,39 @@ object GuardPrefs {
             .map(InstalledApp::packageName)
             .filter(ProtectedApps::isSelectableTarget)
             .toSet()
-        val stored = prefs.getStringSet(PROTECTED_PACKAGES, null)?.toSet()
-        var active = (stored ?: installedTargets)
-            .filterTo(mutableSetOf()) { it in installedTargets }
-
-        var pending = prefs.getStringSet(PENDING_PROTECTED_REMOVALS, emptySet())
-            .orEmpty()
-            .filterTo(mutableSetOf()) { it in active }
-        val today = LocalDate.now().toEpochDay()
-        val effectiveDay = prefs.getLong(
-            PENDING_PROTECTED_REMOVAL_DAY,
-            Long.MAX_VALUE
-        )
-
-        // A scheduled removal remains protected for the whole current local day
-        // and is applied atomically on the first access after the next day starts.
-        if (pending.isNotEmpty() && today >= effectiveDay) {
-            active.removeAll(pending)
-            pending = mutableSetOf()
-        }
-
-        val activeChanged = stored == null || active != stored
+        val storedActive = prefs.getStringSet(
+            PROTECTED_PACKAGES,
+            null
+        )?.toSet() ?: installedTargets
         val storedPending = prefs.getStringSet(
             PENDING_PROTECTED_REMOVALS,
             emptySet()
         ).orEmpty().toSet()
-        val pendingChanged = pending != storedPending
-
-        if (activeChanged || pendingChanged) {
-            prefs.edit()
-                .putStringSet(PROTECTED_PACKAGES, active)
-                .putStringSet(PENDING_PROTECTED_REMOVALS, pending)
-                .apply {
-                    if (pending.isEmpty()) {
-                        remove(PENDING_PROTECTED_REMOVAL_DAY)
-                    }
-                }
-                .commit()
+        val storedEffectiveDay = if (
+            prefs.contains(PENDING_PROTECTED_REMOVAL_DAY)
+        ) {
+            prefs.getLong(PENDING_PROTECTED_REMOVAL_DAY, Long.MIN_VALUE)
+        } else {
+            null
         }
 
-        return active
+        val state = ProtectedSelectionPolicy.reconcile(
+            active = storedActive,
+            pendingRemoval = storedPending,
+            removalEffectiveEpochDay = storedEffectiveDay,
+            installedTargets = installedTargets,
+            todayEpochDay = LocalDate.now().toEpochDay()
+        )
+
+        if (state.active != storedActive ||
+            state.pendingRemoval != storedPending ||
+            state.removalEffectiveEpochDay != storedEffectiveDay ||
+            !prefs.contains(PROTECTED_PACKAGES)
+        ) {
+            persistProtectedSelection(prefs, state)
+        }
+
+        return state.active
     }
 
     @Synchronized
@@ -577,8 +570,7 @@ object GuardPrefs {
         return context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .getStringSet(PENDING_PROTECTED_REMOVALS, emptySet())
             .orEmpty()
-            .filter { it in active }
-            .toSet()
+            .intersect(active)
     }
 
     /**
@@ -592,34 +584,47 @@ object GuardPrefs {
             .map(InstalledApp::packageName)
             .filter(ProtectedApps::isSelectableTarget)
             .toSet()
-        val requested = packages.intersect(installedTargets)
         val active = protectedPackages(context)
-        val previousPending = pendingProtectedRemovals(context)
-
-        val updatedActive = active + requested
-        val updatedPending = previousPending.toMutableSet().apply {
-            // Re-selecting a target cancels its pending removal immediately.
-            removeAll(requested)
-            // Active targets absent from the requested set are removed tomorrow.
-            addAll(active - requested)
-            retainAll(updatedActive)
-        }
-
-        val editor = prefs.edit()
-            .putStringSet(PROTECTED_PACKAGES, updatedActive)
-            .putStringSet(PENDING_PROTECTED_REMOVALS, updatedPending)
-
-        if (updatedPending.isEmpty()) {
-            editor.remove(PENDING_PROTECTED_REMOVAL_DAY)
+        val pending = prefs.getStringSet(
+            PENDING_PROTECTED_REMOVALS,
+            emptySet()
+        ).orEmpty().intersect(active)
+        val effectiveDay = if (
+            prefs.contains(PENDING_PROTECTED_REMOVAL_DAY)
+        ) {
+            prefs.getLong(PENDING_PROTECTED_REMOVAL_DAY, Long.MIN_VALUE)
         } else {
-            val today = LocalDate.now().toEpochDay()
-            val existingDay = prefs.getLong(
-                PENDING_PROTECTED_REMOVAL_DAY,
-                Long.MIN_VALUE
-            )
-            val effectiveDay = existingDay.takeIf { it > today } ?: (today + 1L)
-            editor.putLong(PENDING_PROTECTED_REMOVAL_DAY, effectiveDay)
+            null
         }
+        val today = LocalDate.now().toEpochDay()
+
+        val state = ProtectedSelectionPolicy.update(
+            state = ProtectedSelectionState(
+                active = active,
+                pendingRemoval = pending,
+                removalEffectiveEpochDay = effectiveDay
+            ),
+            requested = packages,
+            installedTargets = installedTargets,
+            todayEpochDay = today
+        )
+        persistProtectedSelection(prefs, state)
+    }
+
+    private fun persistProtectedSelection(
+        prefs: android.content.SharedPreferences,
+        state: ProtectedSelectionState
+    ) {
+        val editor = prefs.edit()
+            .putStringSet(PROTECTED_PACKAGES, state.active)
+            .putStringSet(
+                PENDING_PROTECTED_REMOVALS,
+                state.pendingRemoval
+            )
+
+        state.removalEffectiveEpochDay?.let {
+            editor.putLong(PENDING_PROTECTED_REMOVAL_DAY, it)
+        } ?: editor.remove(PENDING_PROTECTED_REMOVAL_DAY)
 
         editor.commit()
     }
