@@ -359,7 +359,7 @@ val verifyProtectedOnlyBoundary by tasks.registering {
             "Accessibility activation must remain didactic and lightweight."
         }
         val accessibilityServiceDeclaration = Regex(
-            """(?s)<service\\b[^>]*android:name="\\.QuranAccessibilityService"[^>]*>"""
+            """(?s)<service\b[^>]*android:name="\.QuranAccessibilityService"[^>]*>"""
         ).find(manifest)?.value.orEmpty()
         check(
             accessibilityServiceDeclaration.contains("android:exported=\"true\"") &&
