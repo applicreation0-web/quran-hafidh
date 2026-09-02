@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
+import android.content.Intent
 
 enum class SafeguardTargetCategory {
     SOCIAL,
@@ -17,10 +18,13 @@ data class SafeguardTarget(
  * Quran Safeguard has a fixed, narrow product boundary.
  *
  * Only explicitly selected social apps and browsers can be protected or persisted.
- * Every other package is treated as an anonymous exit signal and is discarded
- * immediately; it is never classified as banking, health, transport, work, etc.
+ * No event from a banking, health, transport, identity or work application is
+ * requested. Only Android's System UI and the current launcher are admitted as
+ * anonymous transition signals so a target budget can pause on exit.
  */
 object ProtectedApps {
+    const val SYSTEM_UI_PACKAGE = "com.android.systemui"
+
     val socialTargets: List<SafeguardTarget> = listOf(
         SafeguardTarget("WhatsApp", "com.whatsapp", SafeguardTargetCategory.SOCIAL),
         SafeguardTarget("X", "com.twitter.android", SafeguardTargetCategory.SOCIAL),
@@ -50,11 +54,30 @@ object ProtectedApps {
     fun shouldNeverPersist(context: Context, packageName: String): Boolean =
         packageName != context.packageName && !isSelectableTarget(packageName)
 
+    private fun launcherPackage(context: Context): String? =
+        runCatching {
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            context.packageManager.resolveActivity(intent, 0)
+                ?.activityInfo
+                ?.packageName
+                ?.takeIf(String::isNotBlank)
+        }.getOrNull()
+
+    fun transitionSignalPackages(context: Context): Set<String> = buildSet {
+        add(SYSTEM_UI_PACKAGE)
+        launcherPackage(context)?.let(::add)
+    }
+
     fun eventScopePackages(context: Context): Set<String> =
-        GuardPrefs.protectedPackages(context) + context.packageName
+        GuardPrefs.protectedPackages(context) +
+            context.packageName +
+            transitionSignalPackages(context)
 
     fun isEventScopePackage(context: Context, packageName: String): Boolean =
         packageName in eventScopePackages(context)
+
+    fun isTransitionSignal(context: Context, packageName: String): Boolean =
+        packageName in transitionSignalPackages(context)
 
     fun isProtected(context: Context, packageName: String): Boolean =
         packageName != context.packageName &&
