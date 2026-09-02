@@ -67,6 +67,9 @@ class ProtectedAppsPolicyTest {
             "com.vivaldi.browser"
         )
         assertTrue(BrowserDetector.supportedPackages == expected)
+        assertTrue(
+            ProtectedApps.browserTargets.map { it.packageName }.toSet() == expected
+        )
 
         val labels = mapOf(
             "com.android.chrome" to "Chrome",
@@ -103,6 +106,8 @@ class ProtectedAppsPolicyTest {
             "com.brave.browser",
             "com.opera.browser",
             "com.sec.android.app.sbrowser",
+            "com.duckduckgo.mobile.android",
+            "com.vivaldi.browser",
             "com.google.android.youtube",
             "com.whatsapp",
             "org.telegram.messenger",
