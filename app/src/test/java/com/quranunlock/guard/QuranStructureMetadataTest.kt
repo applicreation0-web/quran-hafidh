@@ -87,4 +87,26 @@ class QuranStructureMetadataTest {
             }
         }
     }
+
+    @Test
+    fun shortHizbKeepsTenPageQuotaWithoutHidingRealBoundary() {
+        val hizb = QuranStructureMetadata.division(
+            QuranSelectionMode.HIZB,
+            15
+        )
+        val quota = QuranPageSelector.tenPageQuotaFromHizb(15)
+
+        assertEquals(142, hizb.startPage)
+        assertEquals(150, hizb.endPage)
+        assertEquals(10, quota.size)
+        assertEquals(151, quota.last())
+        assertTrue(quota.last() !in hizb.pageRange)
+        assertTrue(
+            QuranStructureMetadata.divisionsForPage(
+                QuranSelectionMode.HIZB,
+                quota.last()
+            ).any { it.number == 16 }
+        )
+    }
+
 }
