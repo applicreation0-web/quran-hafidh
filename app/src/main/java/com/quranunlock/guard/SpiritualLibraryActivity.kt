@@ -187,13 +187,7 @@ private fun SpiritualLibraryScreen(
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { onOpenHikma(hikma.canonicalId) }
                                     ) {
-                                        Text(
-                                            if (hikma.commentary?.displayEligible == true) {
-                                                "Lire • Approfondir"
-                                            } else {
-                                                "Lire"
-                                            }
-                                        )
+                                        Text("Lire")
                                     }
                                 }
                             }
