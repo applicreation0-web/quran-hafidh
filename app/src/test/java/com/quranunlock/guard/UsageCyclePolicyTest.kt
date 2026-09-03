@@ -136,7 +136,7 @@ class UsageCyclePolicyTest {
     @Test
     fun everyHizbChallengeUsesExactlyTenPages() {
         (1..60).forEach { hizb ->
-            assertEquals(10, QuranPageSelector.tenPageBlockForHizb(hizb).size)
+            assertEquals(10, QuranPageSelector.tenPageQuotaFromHizb(hizb).size)
         }
     }
 }
