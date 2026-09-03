@@ -139,7 +139,7 @@ private fun SpiritualLibraryScreen(
                     ) {
                         item {
                             Text(
-                                "Les commentaires classiques n’apparaissent que lorsque le passage et sa source ont été vérifiés. Certaines Ḥikam restent donc volontairement sans commentaire.",
+                                "Ḥikam vocalisées, avec leur traduction française et leur source vérifiée.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

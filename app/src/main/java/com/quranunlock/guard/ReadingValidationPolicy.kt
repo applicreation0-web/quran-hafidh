@@ -11,8 +11,8 @@ object ReadingValidationPolicy {
     ): Boolean =
         contentHeightPx > viewportHeightPx + tolerancePx.coerceAtLeast(0)
 
-    fun canValidate(activeReadingMs: Long, bottomReached: Boolean): Boolean =
-        bottomReached && activeReadingMs >= MIN_ACTIVE_READING_MS
+    fun canValidate(activeReadingMs: Long): Boolean =
+        activeReadingMs >= MIN_ACTIVE_READING_MS
 
     fun remainingMs(activeReadingMs: Long): Long =
         (MIN_ACTIVE_READING_MS - activeReadingMs.coerceAtLeast(0L)).coerceAtLeast(0L)

@@ -401,26 +401,40 @@ object GuardPrefs {
         return remainingUnlockMs(context, target)
     }
 
-    fun completedTargetUsageMs(context: Context): Long {
+    fun currentIntervalTargetPresenceMs(context: Context): Long {
         val progress = SafeguardCyclePrefs.progress(context)
-        val completed = UsageCyclePolicy.completedUsageMs(
-            UsageCycleState(
+        if (!progress.morningCompleted) return 0L
+        if (progress.pendingLevel != null) {
+            return if (progress.pendingLevel == ChallengeLevel.MORNING) {
+                0L
+            } else {
+                UsageCyclePolicy.INTERVAL_MS
+            }
+        }
+
+        val remaining = globalRemainingUnlockMs(context)
+        return (UsageCyclePolicy.INTERVAL_MS - remaining)
+            .coerceIn(0L, UsageCyclePolicy.INTERVAL_MS)
+    }
+
+    fun currentCycleTargetPresenceMs(context: Context): Long {
+        val progress = SafeguardCyclePrefs.progress(context)
+        return UsageCyclePolicy.currentCyclePresenceMs(
+            state = UsageCycleState(
                 morningCompleted = progress.morningCompleted,
                 completedIntervals = progress.completedIntervals,
                 completedNinetyMinuteCycles = progress.completedNinetyMinuteCycles,
                 pendingLevel = progress.pendingLevel
-            )
+            ),
+            currentIntervalPresenceMs = currentIntervalTargetPresenceMs(context)
         )
-        val remaining = globalRemainingUnlockMs(context)
-        val liveInterval = if (progress.morningCompleted &&
-            progress.pendingLevel == null &&
-            remaining > 0L && remaining < UsageCyclePolicy.INTERVAL_MS
-        ) {
-            UsageCyclePolicy.INTERVAL_MS - remaining
-        } else {
-            0L
-        }
-        return completed + liveInterval
+    }
+
+    fun completedTargetUsageMs(context: Context): Long {
+        val progress = SafeguardCyclePrefs.progress(context)
+        return progress.completedNinetyMinuteCycles.coerceAtLeast(0) *
+            UsageCyclePolicy.CUMULATIVE_MS +
+            currentCycleTargetPresenceMs(context)
     }
 
     @Synchronized
@@ -792,11 +806,7 @@ object GuardPrefs {
         page: Int
     ): Long {
         val elapsed = readingElapsedMs(context, challengeKey, page)
-        if (!ReadingValidationPolicy.canValidate(
-                activeReadingMs = elapsed,
-                bottomReached = hasReachedReadingBottom(context, challengeKey, page)
-            )
-        ) return elapsed
+        if (!ReadingValidationPolicy.canValidate(activeReadingMs = elapsed)) return elapsed
 
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val key = readingKey(challengeKey)
@@ -847,8 +857,7 @@ object GuardPrefs {
         val recorded = prefs.getInt(READING_COMPLETION_RECORDED_PREFIX + key, 0)
         if (recorded != page ||
             !ReadingValidationPolicy.canValidate(
-                activeReadingMs = readingElapsedMs(context, challengeKey, page),
-                bottomReached = hasReachedReadingBottom(context, challengeKey, page)
+                activeReadingMs = readingElapsedMs(context, challengeKey, page)
             )
         ) {
             return false

@@ -16,8 +16,9 @@ data class UsageCycleState(
 object UsageCyclePolicy {
     const val INTERVAL_MINUTES = 15
     const val INTERVAL_MS = INTERVAL_MINUTES * 60_000L
-    const val INTERVALS_PER_HIZB = 6
-    const val CUMULATIVE_MINUTES = INTERVAL_MINUTES * INTERVALS_PER_HIZB
+    const val CUMULATIVE_MINUTES = 90
+    const val CUMULATIVE_MS = CUMULATIVE_MINUTES * 60_000L
+    const val INTERVALS_PER_HIZB = CUMULATIVE_MINUTES / INTERVAL_MINUTES
     const val MORNING_PAGE_COUNT = 20
     const val HIZB_PAGE_COUNT = 10
 
@@ -78,7 +79,30 @@ object UsageCyclePolicy {
 
     fun completedUsageMs(state: UsageCycleState): Long =
         state.completedNinetyMinuteCycles.coerceAtLeast(0) *
-            CUMULATIVE_MINUTES.toLong() * 60_000L +
+            CUMULATIVE_MS +
             state.completedIntervals.coerceIn(0, INTERVALS_PER_HIZB) *
             INTERVAL_MS
+
+    /**
+     * The current 90-minute cycle is a literal sum of foreground presence in
+     * every selected target. It is never a wall-clock window and never resets
+     * when the user moves from one selected target to another.
+     */
+    fun currentCyclePresenceMs(
+        state: UsageCycleState,
+        currentIntervalPresenceMs: Long
+    ): Long {
+        if (!state.morningCompleted) return 0L
+
+        val completedIntervalsMs =
+            state.completedIntervals.coerceIn(0, INTERVALS_PER_HIZB) *
+                INTERVAL_MS
+        val livePresenceMs = if (state.pendingLevel == null) {
+            currentIntervalPresenceMs.coerceIn(0L, INTERVAL_MS)
+        } else {
+            0L
+        }
+        return (completedIntervalsMs + livePresenceMs)
+            .coerceIn(0L, CUMULATIVE_MS)
+    }
 }

@@ -233,31 +233,15 @@ class MushafReaderActivity : ComponentActivity() {
                         challengeKey,
                         currentPage
                     )
-                    val persistedBottom =
-                        GuardPrefs.hasReachedReadingBottom(
-                            this@MushafReaderActivity,
-                            challengeKey,
-                            currentPage
-                        )
-
                     if (!ReadingValidationPolicy.canValidate(
-                            activeReadingMs = persistedReadingMs,
-                            bottomReached = persistedBottom
+                            activeReadingMs = persistedReadingMs
                         )
                     ) {
-                        gestureMessage = when {
-                            persistedReadingMs < GuardPrefs.MIN_READING_MS ->
-                                "Encore " +
-                                    formatRemainingSeconds(
-                                        GuardPrefs.MIN_READING_MS -
-                                            persistedReadingMs
-                                    ) +
-                                    " avant la page suivante."
-                            !persistedBottom ->
-                                "60 secondes atteintes. Faites défiler " +
-                                    "jusqu’au bas de la page."
-                            else -> "Cette page n’est pas encore validable."
-                        }
+                        gestureMessage = "Encore " +
+                            formatRemainingSeconds(
+                                GuardPrefs.MIN_READING_MS - persistedReadingMs
+                            ) +
+                            " avant la page suivante."
                         return
                     }
 
@@ -321,8 +305,7 @@ class MushafReaderActivity : ComponentActivity() {
                     quotaReached || displayedIndex < activeIndex
                 val canValidate = !quotaReached &&
                     ReadingValidationPolicy.canValidate(
-                        activeReadingMs = readingMs,
-                        bottomReached = bottomReached
+                        activeReadingMs = readingMs
                     )
                 val sectionDivisions =
                     QuranStructureMetadata.divisionsForPage(
@@ -394,11 +377,8 @@ class MushafReaderActivity : ComponentActivity() {
                                     "Quota atteint • sortie libre • lecture facultative"
                                 viewingCompletedPage ->
                                     "Page validée • retour libre"
-                                readingMs >= GuardPrefs.MIN_READING_MS &&
-                                    bottomReached ->
-                                    "01:00 atteint • balayez pour valider"
                                 readingMs >= GuardPrefs.MIN_READING_MS ->
-                                    "01:00 atteint • parcourez le bas de page"
+                                    "01:00 atteint • balayez pour valider"
                                 bottomReached ->
                                     "Page parcourue • " +
                                         formatReadingDuration(readingMs) +

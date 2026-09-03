@@ -212,10 +212,10 @@ class GateActivity : ComponentActivity() {
 
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            if (bottomReached && readingMs >= GuardPrefs.MIN_READING_MS) {
+                            if (readingMs >= GuardPrefs.MIN_READING_MS) {
                                 "La validation se fait directement dans la page du Mushaf."
                             } else {
-                                "Parcourez la page et lisez-la activement pendant au moins 60 secondes."
+                                "Lisez la page activement pendant au moins 60 secondes."
                             },
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodySmall
