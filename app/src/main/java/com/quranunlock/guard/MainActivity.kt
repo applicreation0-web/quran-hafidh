@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
             Quran Safeguard 🌿 — version à partager
 
             Installation simple :
-            1. Utilise uniquement l’APK signé « Quran Safeguard » qui t’a été fourni avec son contrôle SHA-256. N’installe pas une APK nommée « Quran Safeguard Plus » : cette édition privée n’est pas destinée au partage.
+            1. Utilise uniquement l’APK signé « Quran Safeguard » qui t’a été fourni avec son contrôle SHA-256. N’installe pas une APK présentée comme une édition privée : elle n’est pas destinée au partage.
             2. Installe l’APK puis ouvre Quran Safeguard.
             3. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
             4. Autorise les rappels et, si tu le souhaites, la localisation approximative utilisée uniquement sur le téléphone pour calculer Fajr, le lever du soleil, ‘Asr et Maghrib.
@@ -283,7 +283,7 @@ class MainActivity : ComponentActivity() {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Quran Safeguard et Quran Safeguard Plus ne doivent pas utiliser simultanément le service d’accessibilité. La protection est suspendue pour éviter une double interception. Désactivez le service de l’autre édition dans les réglages Android."
+                                "Les deux éditions ne doivent pas utiliser simultanément le service d’accessibilité. La protection est suspendue pour éviter une double interception. Désactivez le service de l’autre édition dans les réglages Android."
                             )
                             SafeguardButton(
                                 modifier = Modifier.fillMaxWidth(),
