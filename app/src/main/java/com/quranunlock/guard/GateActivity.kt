@@ -36,6 +36,7 @@ class GateActivity : ComponentActivity() {
     }
 
     private var challengeKey: String = ""
+    private var displayedPage: Int = 0
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -52,6 +53,16 @@ class GateActivity : ComponentActivity() {
         ) {
             GuardRuntime.interception.reset()
             finishAndRemoveTask()
+            return
+        }
+
+        if (challengeKey.isNotBlank() && displayedPage != 0) {
+            val currentPage = runCatching {
+                GuardPrefs.challengePage(this, challengeKey)
+            }.getOrNull()
+            if (currentPage != null && currentPage != displayedPage) {
+                recreate()
+            }
         }
     }
 
@@ -98,7 +109,10 @@ class GateActivity : ComponentActivity() {
         )
 
         val page = GuardPrefs.challengePage(this, challengeKey)
+        displayedPage = page
         GuardPrefs.ensureReadingSession(this, challengeKey, page)
+        val level = GuardPrefs.challengeLevel(this)
+        val (pagePosition, totalPages) = GuardPrefs.challengePagePosition(this)
 
         val mode = GuardPrefs.selectionMode(this)
         val sectionLabel = when (mode) {
@@ -157,8 +171,18 @@ class GateActivity : ComponentActivity() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Une page avant de continuer",
-                            style = MaterialTheme.typography.headlineMedium
+                            when (level) {
+                                ChallengeLevel.MORNING -> "Filtre matinal • 20 pages"
+                                ChallengeLevel.MICRO -> "Pause Quran • 1 page"
+                                ChallengeLevel.HIZB -> "Palier de 90 minutes • 10 pages"
+                            },
+                            style = MaterialTheme.typography.headlineMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            "Progression : $pagePosition/$totalPages",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
@@ -175,7 +199,7 @@ class GateActivity : ComponentActivity() {
                         )
                         Spacer(Modifier.height(24.dp))
 
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { openReader(page) }
                         ) { Text("Lire la page $page") }
@@ -187,82 +211,43 @@ class GateActivity : ComponentActivity() {
                         )
 
                         Spacer(Modifier.height(12.dp))
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = bottomReached,
-                            onClick = {
-                                val elapsed = GuardPrefs.completeReadingForSummary(
-                                    this@GateActivity,
-                                    challengeKey,
-                                    page
-                                )
-                                if (GuardPrefs.hasReachedReadingBottom(
-                                        this@GateActivity,
-                                        challengeKey,
-                                        page
-                                    )
-                                ) {
-                                    GuardDiagnostics.log(
-                                        this@GateActivity,
-                                        "READING_COMPLETED_PENDING_SUMMARY",
-                                        challengeKey,
-                                        "page=$page elapsedMs=$elapsed"
-                                    )
-                                    setResult(Activity.RESULT_OK)
-                                    startActivity(
-                                        Intent(
-                                            this@GateActivity,
-                                            ReadingCompleteActivity::class.java
-                                        ).apply {
-                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
-                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
-                                            putExtra(
-                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
-                                                elapsed
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        ) {
-                            Text(
-                                if (bottomReached) {
-                                    "Page lue — continuer"
-                                } else {
-                                    "Faites défiler la page jusqu’en bas"
-                                }
-                            )
-                        }
+                        Text(
+                            if (bottomReached && readingMs >= GuardPrefs.MIN_READING_MS) {
+                                "La validation se fait directement dans la page du Mushaf."
+                            } else {
+                                "Parcourez la page et lisez-la activement pendant au moins 60 secondes."
+                            },
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall
+                        )
 
                         Spacer(Modifier.height(20.dp))
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = jokersRemaining > 0,
                             onClick = {
-                                if (GuardPrefs.consumeJoker(this@GateActivity)) {
-                                    jokersRemaining =
-                                        GuardPrefs.remainingJokers(this@GateActivity)
-                                    GuardPrefs.unlockWithJoker(
-                                        this@GateActivity,
-                                        challengeKey
-                                    )
+                                val skippedLevel = GuardPrefs.consumeJokerAndUnlock(
+                                    this@GateActivity,
+                                    challengeKey
+                                )
+                                jokersRemaining =
+                                    GuardPrefs.remainingJokers(this@GateActivity)
+                                if (skippedLevel != null) {
                                     GuardRuntime.interception.markUnlocked(challengeKey)
                                     GuardDiagnostics.log(
                                         this@GateActivity,
                                         "JOKER_UNLOCKED",
-                                        challengeKey
+                                        challengeKey,
+                                        skippedLevel.name
                                     )
                                     setResult(Activity.RESULT_OK)
                                     finishAndRemoveTask()
-                                } else {
-                                    jokersRemaining =
-                                        GuardPrefs.remainingJokers(this@GateActivity)
                                 }
                             }
                         ) {
                             Text(
                                 if (jokersRemaining > 0) {
-                                    "Utiliser 1 joker — $jokersRemaining/${GuardPrefs.DAILY_JOKERS} • ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} min max"
+                                    "Utiliser 1 joker — $jokersRemaining/${GuardPrefs.DAILY_JOKERS} • prochain intervalle 15 min"
                                 } else {
                                     "Aucun joker restant aujourd’hui"
                                 }

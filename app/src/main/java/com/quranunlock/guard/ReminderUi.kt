@@ -65,7 +65,7 @@ fun DailyReminderCard(
             }
 
             if (reminder.type == ReminderType.HIKAM) {
-                Button(
+                SafeguardButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         context.startActivity(
@@ -79,7 +79,7 @@ fun DailyReminderCard(
             }
 
             if (reminder.type == ReminderType.GHAZALI) {
-                Button(
+                SafeguardButton(
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         context.startActivity(
@@ -95,6 +95,11 @@ fun DailyReminderCard(
             if (reminder.type != ReminderType.HADITH) {
                 Text(
                     "Authenticité : source et attribution vérifiées",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Traduction française : interne Quran Safeguard • revue humaine non requise",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

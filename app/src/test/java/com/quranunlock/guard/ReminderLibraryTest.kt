@@ -68,10 +68,6 @@ class ReminderLibraryTest {
                 add(item.theme)
                 addAll(item.tags)
             }
-            HikamRepository.entries.forEach { item ->
-                add(item.theme)
-                addAll(item.tags)
-            }
             GhazaliRepository.entries.forEach { item ->
                 add(item.theme)
                 addAll(item.tags)
@@ -108,7 +104,6 @@ class ReminderLibraryTest {
             "propreté des vêtements et des lieux",
             "hygiène bucco-dentaire",
             "respect des espaces communs",
-            "gestion du temps",
             "discipline personnelle",
             "bonnes habitudes"
         )

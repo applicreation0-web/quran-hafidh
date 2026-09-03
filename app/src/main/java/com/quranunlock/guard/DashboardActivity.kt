@@ -26,6 +26,8 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -33,6 +35,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 class DashboardActivity : ComponentActivity() {
+    private val serviceEnabledState = mutableStateOf(false)
+    private val refreshState = mutableIntStateOf(0)
+
+    override fun onResume() {
+        super.onResume()
+        serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
+        refreshState.intValue += 1
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -44,10 +55,16 @@ class DashboardActivity : ComponentActivity() {
 
     @Composable
     private fun DashboardScreen() {
-        val serviceEnabled = AccessibilityStatus.isEnabled(this@DashboardActivity)
+        val serviceEnabled = serviceEnabledState.value
+        @Suppress("UNUSED_VARIABLE")
+        val refresh = refreshState.intValue
         val protectedCount = GuardPrefs.protectedPackages(this@DashboardActivity).size
         val totalReadingMs = GuardPrefs.totalReadingMs(this@DashboardActivity)
         val today = GuardPrefs.dailyReadingSummary(this@DashboardActivity)
+        val thought = DailyReminderManager.today(this@DashboardActivity)
+        val usageProgress = SafeguardCyclePrefs.progress(this@DashboardActivity)
+        val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@DashboardActivity)
+        val jokers = GuardPrefs.remainingJokers(this@DashboardActivity)
 
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -138,7 +155,16 @@ class DashboardActivity : ComponentActivity() {
                         .fillMaxWidth()
                         .clickable {
                             startActivity(
-                                Intent(this@DashboardActivity, MainActivity::class.java)
+                                Intent(
+                                    this@DashboardActivity,
+                                    if (serviceEnabled ||
+                                        !GuardPrefs.hasAccessibilityConsent(this@DashboardActivity)
+                                    ) {
+                                        MainActivity::class.java
+                                    } else {
+                                        ProtectionSetupActivity::class.java
+                                    }
+                                )
                             )
                         },
                     shape = RoundedCornerShape(24.dp),
@@ -170,7 +196,7 @@ class DashboardActivity : ComponentActivity() {
                             if (serviceEnabled) {
                                 "Safeguard est actif. Touchez ici pour les réglages."
                             } else {
-                                "Touchez ici pour activer la protection Android."
+                                "Touchez ici : Safeguard vous accompagne en trois étapes courtes, puis revient automatiquement."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (serviceEnabled) {
@@ -203,6 +229,87 @@ class DashboardActivity : ComponentActivity() {
                     )
                 }
 
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 17.dp, vertical = 15.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            "PROGRESSION DU JOUR",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (usageProgress.morningCompleted) {
+                                "Filtre matinal terminé ✓"
+                            } else {
+                                "Filtre matinal : 20 pages à lire"
+                            },
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Usage cible effectif : " + compactDuration(targetUsageMs) +
+                                " • cycle " +
+                                (usageProgress.completedIntervals * UsageCyclePolicy.INTERVAL_MINUTES) +
+                                "/90 min"
+                        )
+                        Text(
+                            "${GuardPrefs.DAILY_JOKERS - jokers} joker(s) utilisé(s) aujourd’hui • $jokers disponible(s) • suivi sans jugement",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            startActivity(
+                                Intent(
+                                    this@DashboardActivity,
+                                    ThoughtOfDayActivity::class.java
+                                )
+                            )
+                        },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 17.dp, vertical = 15.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "PENSÉE DU JOUR",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            thought.frenchText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            thought.author + " • " + thought.book,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
                 DashboardRow(
                     leftTitle = "Applications",
                     leftSubtitle = "Réseaux & navigateurs",
@@ -221,7 +328,7 @@ class DashboardActivity : ComponentActivity() {
                 )
                 DashboardRow(
                     leftTitle = "Rappel / Textes",
-                    leftSubtitle = "Hadiths • Hikam • Ghazâlî",
+                    leftSubtitle = "Hadiths • Hikam",
                     leftAction = {
                         startActivity(
                             Intent(this@DashboardActivity, SpiritualLibraryActivity::class.java)

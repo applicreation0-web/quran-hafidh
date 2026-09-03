@@ -4,10 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,7 +29,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
@@ -59,21 +56,8 @@ class MainActivity : ComponentActivity() {
         refreshState.value += 1
     }
 
-    private fun openAccessibilitySettings() {
-        runCatching {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        }
-    }
-
-    private fun openAppSystemSettings() {
-        runCatching {
-            startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:$packageName")
-                )
-            )
-        }
+    private fun openProtectionSetup() {
+        startActivity(Intent(this, ProtectionSetupActivity::class.java))
     }
 
     private fun shareInstallationGuide() {
@@ -126,11 +110,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun testProtection() {
-        val candidates = buildList {
-            add("com.android.chrome")
-            addAll(BrowserDetector.supportedPackages.filterNot { it == "com.android.chrome" })
-            addAll(GuardPrefs.protectedPackages(this@MainActivity))
-        }.distinct()
+        val candidates = GuardPrefs.protectedPackages(this@MainActivity).toList()
 
         val target = candidates.firstOrNull {
             packageManager.getLaunchIntentForPackage(it) != null
@@ -159,7 +139,7 @@ class MainActivity : ComponentActivity() {
                         onAccept = {
                             GuardPrefs.saveAccessibilityConsent(this@MainActivity)
                             showDisclosure = false
-                            openAccessibilitySettings()
+                            openProtectionSetup()
                         },
                         onLater = { showDisclosure = false }
                     )
@@ -169,7 +149,7 @@ class MainActivity : ComponentActivity() {
                         refreshToken = refreshState.value,
                         onActivateProtection = {
                             if (GuardPrefs.hasAccessibilityConsent(this@MainActivity)) {
-                                openAccessibilitySettings()
+                                openProtectionSetup()
                             } else {
                                 showDisclosure = true
                             }
@@ -188,27 +168,27 @@ class MainActivity : ComponentActivity() {
     ) {
         @Suppress("UNUSED_VARIABLE")
         val refresh = refreshToken
-        var mode by remember {
+        var mode by remember(refreshToken) {
             mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
         }
-        val selectedJuz = remember {
+        val selectedJuz = remember(refreshToken) {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
             }
         }
-        val selectedHizb = remember {
+        val selectedHizb = remember(refreshToken) {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedHizb(this@MainActivity).sorted())
             }
         }
-        val protectedPackages = remember {
+        val protectedPackages = remember(refreshToken) {
             mutableStateListOf<String>().apply {
                 addAll(GuardPrefs.protectedPackages(this@MainActivity).sorted())
             }
         }
-        var unlockMinutes by remember {
-            mutableStateOf(GuardPrefs.unlockMinutes(this@MainActivity))
-        }
+        val usageProgress = SafeguardCyclePrefs.progress(this@MainActivity)
+        val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@MainActivity)
+        val remainingIntervalMs = GuardPrefs.globalRemainingUnlockMs(this@MainActivity)
         val jokers = GuardPrefs.remainingJokers(this@MainActivity)
         val readingsCompleted = GuardPrefs.readingsCompleted(this@MainActivity)
         val totalReadingMs = GuardPrefs.totalReadingMs(this@MainActivity)
@@ -307,7 +287,7 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                         Text(
-                            "${protectedPackages.size}/${ProtectedApps.selectableTargets.size} cibles actives • réseaux sociaux et navigateurs uniquement"
+                            "${protectedPackages.size} cible(s) installée(s) active(s) • réseaux sociaux et navigateurs uniquement"
                         )
                         Text(
                             "$jokers/${GuardPrefs.DAILY_JOKERS} jokers disponibles aujourd’hui"
@@ -322,7 +302,7 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (!serviceEnabled) {
-                            Button(
+                            SafeguardButton(
                                 modifier = Modifier.fillMaxWidth(),
                                 onClick = onActivateProtection
                             ) {
@@ -335,24 +315,18 @@ class MainActivity : ComponentActivity() {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { testProtection() },
                             enabled = serviceEnabled
                         ) {
                             Text("Tester la protection")
                         }
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { openAppSystemSettings() }
-                        ) {
-                            Text("Infos et autorisations Android")
-                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            OutlinedButton(
+                            SafeguardOutlinedButton(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     startActivity(
@@ -365,7 +339,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 Text("Bibliothèque")
                             }
-                            OutlinedButton(
+                            SafeguardOutlinedButton(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     startActivity(
@@ -392,6 +366,29 @@ class MainActivity : ComponentActivity() {
                             dailyReadingMessage(todaySummary),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            if (usageProgress.morningCompleted) {
+                                "Filtre matinal terminé ✓"
+                            } else {
+                                "Filtre matinal à accomplir • 20 pages"
+                            },
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Usage des applications cibles : " +
+                                formatDashboardDuration(targetUsageMs) +
+                                " aujourd’hui"
+                        )
+                        Text(
+                            "Cycle courant : " +
+                                (usageProgress.completedIntervals * UsageCyclePolicy.INTERVAL_MINUTES) +
+                                "/90 min • " +
+                                usageProgress.completedNinetyMinuteCycles +
+                                " cycle(s) de 90 min terminé(s)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (todaySummary.pages > 0) {
                             Text(
@@ -428,7 +425,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SectionTitle("Rappel du jour")
+                SectionTitle("Pensée du jour")
                 DailyReminderCard(reminder = todayReminder)
 
                 SectionTitle("Rappels bienveillants")
@@ -438,7 +435,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            "20:00 • rappel du jour et petit bilan 🌿",
+                            "20:00 • Pensée du jour 🌿",
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
@@ -475,7 +472,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                             Column {
-                                Text("Rappel du jour à 20:00")
+                                Text("Pensée du jour à 20:00")
                                 Text(
                                     if (ReminderPrefs.dailyEnabled(this@MainActivity)) "Activé" else "Désactivé",
                                     style = MaterialTheme.typography.bodySmall,
@@ -531,7 +528,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 val requested = buildList {
@@ -551,7 +548,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -603,7 +600,7 @@ class MainActivity : ComponentActivity() {
                             Text("Historique récent", fontWeight = FontWeight.SemiBold)
                             recentHistory.forEach { entry ->
                                 Text(
-                                    if (entry.method == "joker") {
+                                    if (entry.method.startsWith("joker")) {
                                         "Joker • page ${entry.page} • ${entry.packageName}"
                                     } else {
                                         "Page " + entry.page + " • " +
@@ -619,30 +616,33 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                SectionTitle("Diagnostic")
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Text(
-                            if (serviceAlive) "Service connecté ✓" else "Service non confirmé",
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        recentDiagnostics.forEach { entry ->
+                if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                    SectionTitle("Diagnostic")
+                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
                             Text(
-                                "${GuardDiagnostics.formatTime(entry)} • ${entry.code}",
-                                style = MaterialTheme.typography.bodySmall
+                                if (serviceAlive) "Service connecté ✓" else "Service non confirmé",
+                                fontWeight = FontWeight.SemiBold
                             )
-                        }
-                        if (recentDiagnostics.isEmpty()) {
-                            Text(
-                                "Le journal local est vide.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            recentDiagnostics.forEach { entry ->
+                                Text(
+                                    "${GuardDiagnostics.formatTime(entry)} • ${entry.code}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            if (recentDiagnostics.isEmpty()) {
+                                Text(
+                                    "Le journal local est vide.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
-                }
+    
+                    }
 
                 SectionTitle("Règles du jeu")
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -650,14 +650,15 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("• 1 page complète avant de continuer.")
-                        Text("• La page conserve son format 15 lignes et se parcourt naturellement jusqu’en bas.")
-                        Text("• Le chrono mesure votre rythme réel sans imposer une vitesse de lecture.")
-                        Text("• 3 jokers maximum par jour.")
-                        Text("• Un joker ouvre au maximum ${GuardPrefs.JOKER_MAX_UNLOCK_MINUTES} minutes.")
+                        Text("• Premier accès quotidien : 20 pages, au moins 60 secondes actives par page.")
+                        Text("• Ensuite : une page après chaque tranche de 15 minutes d’usage cible effectif.")
+                        Text("• À 90 minutes, un Hizb de 10 pages remplace la pause simple et relance le cycle.")
+                        Text("• Le compteur est commun aux applications cibles et s’arrête dès qu’on les quitte.")
+                        Text("• Les appels classiques et WhatsApp audio/vidéo ne sont jamais décomptés.")
+                        Text("• 3 jokers maximum par jour, utilisables à chacun des trois niveaux.")
                         Text("• Les changements simples de date ne rechargent pas immédiatement les jokers.")
                         Text(
-                            "• Paramètres Android est protégé pendant l’usage de Safeguard pour éviter un contournement trivial ; la désinstallation reste sous le contrôle du propriétaire du téléphone.",
+                            "• Toutes les applications non ciblées restent hors de Safeguard ; aucune liste d’exclusion n’est nécessaire.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -669,7 +670,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -682,7 +683,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("Applications protégées")
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -695,7 +696,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text("Choix Juz / Hizb")
                         }
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
                                 startActivity(
@@ -712,31 +713,35 @@ class MainActivity : ComponentActivity() {
                 }
 
                 SectionTitle("Récurrence")
-                Text(
-                    "Après une lecture, chaque application dispose de son propre budget. Le compteur avance uniquement lorsqu’elle est réellement au premier plan, avec un maximum de 20 minutes. Un joker reste plafonné à " +
-                        GuardPrefs.JOKER_MAX_UNLOCK_MINUTES + " minutes.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                val durationChoices = listOf(1, 5, 10, 15, 20)
-                durationChoices.chunked(2).forEach { rowChoices ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        rowChoices.forEach { minutes ->
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = unlockMinutes == minutes,
-                                    onClick = {
-                                        unlockMinutes = minutes
-                                        GuardPrefs.saveUnlockMinutes(this@MainActivity, minutes)
-                                    }
-                                )
-                                Text(minutes.toString() + " min")
-                            }
-                        }
-                        if (rowChoices.size == 1) Spacer(Modifier.weight(1f))
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            "Intervalle fixe : 15 minutes",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Un seul compteur additionne uniquement l’usage réel des applications cibles. Changer d’application cible ne crée pas une nouvelle dette de lecture."
+                        )
+                        Text(
+                            "Toutes les 15 minutes : 1 page • Toutes les 90 minutes : 10 pages à la place de la sixième pause."
+                        )
+                        Text(
+                            if (remainingIntervalMs > 0L) {
+                                "Prochaine pause dans " + formatDashboardDuration(remainingIntervalMs)
+                            } else {
+                                when (usageProgress.pendingLevel) {
+                                    ChallengeLevel.MORNING -> "Filtre matinal en attente"
+                                    ChallengeLevel.MICRO -> "Lecture d’une page en attente"
+                                    ChallengeLevel.HIZB -> "Lecture du Hizb en attente"
+                                    null -> "Cycle prêt"
+                                }
+                            },
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 
@@ -759,7 +764,7 @@ class MainActivity : ComponentActivity() {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { shareInstallationGuide() }
                         ) {
@@ -829,13 +834,13 @@ private fun AccessibilityDisclosureScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(24.dp))
-            Button(
+            SafeguardButton(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onAccept
             ) { Text("J’accepte et je continue") }
 
             Spacer(Modifier.height(10.dp))
-            OutlinedButton(
+            SafeguardOutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onLater
             ) { Text("Plus tard") }
@@ -866,7 +871,12 @@ fun QuranSafeguardTheme(content: @Composable () -> Unit) {
         onSurfaceVariant = Color(0xFF675B50),
         outline = Color(0xFFB89A68)
     )
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(
+        colorScheme = colors,
+        shapes = SafeguardShapes,
+        typography = SafeguardTypography,
+        content = content
+    )
 }
 
 private fun dailyReadingMessage(summary: DailyReadingSummary): String =

@@ -1,7 +1,6 @@
 package com.applicreation0.quransafeguard
 
 import android.content.Context
-import android.content.Intent
 
 data class InstalledApp(
     val label: String,
@@ -9,26 +8,27 @@ data class InstalledApp(
 )
 
 object AppCatalog {
+    @Volatile
+    private var cachedLaunchableTargets: List<InstalledApp>? = null
+
+    @Synchronized
+    fun refresh() {
+        cachedLaunchableTargets = null
+    }
+
     fun launchableApps(context: Context): List<InstalledApp> {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        cachedLaunchableTargets?.let { return it }
 
-        return context.packageManager
-            .queryIntentActivities(intent, 0)
-            .mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName ?: return@mapNotNull null
-                if (packageName == context.packageName) return@mapNotNull null
-                if (ProtectedApps.isAlwaysAllowed(context, packageName)) return@mapNotNull null
-                if (packageName == ProtectedApps.ANDROID_SETTINGS) return@mapNotNull null
-
-                val label = resolveInfo.loadLabel(context.packageManager)
-                    ?.toString()
-                    ?.trim()
-                    .orEmpty()
-                    .ifBlank { packageName }
-
-                InstalledApp(label = label, packageName = packageName)
-            }
-            .distinctBy { it.packageName }
-            .sortedBy { it.label.lowercase() }
+        return synchronized(this) {
+            cachedLaunchableTargets ?: ProtectedApps.selectableTargets.mapNotNull { target ->
+                val launchIntent =
+                    context.packageManager.getLaunchIntentForPackage(target.packageName)
+                        ?: return@mapNotNull null
+                if (launchIntent.component == null && launchIntent.`package` == null) {
+                    return@mapNotNull null
+                }
+                InstalledApp(target.label, target.packageName)
+            }.also { cachedLaunchableTargets = it }
+        }
     }
 }

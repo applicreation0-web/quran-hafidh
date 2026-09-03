@@ -33,8 +33,7 @@ import androidx.compose.ui.unit.dp
 
 private enum class LibrarySection {
     HADITH,
-    HIKAM,
-    GHAZALI
+    HIKAM
 }
 
 class SpiritualLibraryActivity : ComponentActivity() {
@@ -45,16 +44,12 @@ class SpiritualLibraryActivity : ComponentActivity() {
                 SpiritualLibraryScreen(
                     hadiths = ReminderLibrary.all(this)
                         .filter { it.type == ReminderType.HADITH },
+                    hikamEntries = HikamRepository.entries(this)
+                        .filter { it.displayEligible },
                     onOpenHikma = { id ->
                         startActivity(
                             Intent(this, HikamDetailActivity::class.java)
                                 .putExtra(HikamDetailActivity.EXTRA_HIKMA_ID, id)
-                        )
-                    },
-                    onOpenGhazali = { id ->
-                        startActivity(
-                            Intent(this, GhazaliDetailActivity::class.java)
-                                .putExtra(GhazaliDetailActivity.EXTRA_ID, id)
                         )
                     }
                 )
@@ -66,8 +61,8 @@ class SpiritualLibraryActivity : ComponentActivity() {
 @Composable
 private fun SpiritualLibraryScreen(
     hadiths: List<DailyReminder>,
-    onOpenHikma: (String) -> Unit,
-    onOpenGhazali: (String) -> Unit
+    hikamEntries: List<HikmaEntry>,
+    onOpenHikma: (String) -> Unit
 ) {
     var section by remember { mutableStateOf(LibrarySection.HADITH) }
 
@@ -107,16 +102,15 @@ private fun SpiritualLibraryScreen(
                     val label = when (candidate) {
                         LibrarySection.HADITH -> "Hadiths"
                         LibrarySection.HIKAM -> "Al-Hikam"
-                        LibrarySection.GHAZALI -> "Al-Ghazâlî"
                     }
                     if (candidate == section) {
-                        Button(
+                        SafeguardButton(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             onClick = { section = candidate }
                         ) { Text(label) }
                     } else {
-                        OutlinedButton(
+                        SafeguardOutlinedButton(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(14.dp),
                             onClick = { section = candidate }
@@ -138,11 +132,18 @@ private fun SpiritualLibraryScreen(
                 }
 
                 LibrarySection.HIKAM -> {
-                    val entries = HikamRepository.entries.filter { it.displayEligible }
+                    val entries = hikamEntries
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        item {
+                            Text(
+                                "Les commentaires classiques n’apparaissent que lorsque le passage et sa source ont été vérifiés. Certaines Ḥikam restent donc volontairement sans commentaire.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         items(entries, key = { it.canonicalId }) { hikma ->
                             ElevatedCard(
                                 modifier = Modifier.fillMaxWidth(),
@@ -181,18 +182,12 @@ private fun SpiritualLibraryScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Button(
+                                    SafeguardButton(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { onOpenHikma(hikma.canonicalId) }
                                     ) {
-                                        Text(
-                                            if (hikma.commentary?.displayEligible == true) {
-                                                "Lire • Approfondir"
-                                            } else {
-                                                "Lire"
-                                            }
-                                        )
+                                        Text("Lire")
                                     }
                                 }
                             }
@@ -200,68 +195,6 @@ private fun SpiritualLibraryScreen(
                     }
                 }
 
-                LibrarySection.GHAZALI -> {
-                    val entries = GhazaliRepository.entries.filter { it.displayEligible }
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(entries, key = { it.canonicalId }) { entry ->
-                            ElevatedCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(22.dp),
-                                colors = CardDefaults.elevatedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                                elevation = CardDefaults.elevatedCardElevation(
-                                    defaultElevation = 1.dp
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(17.dp),
-                                    verticalArrangement = Arrangement.spacedBy(9.dp)
-                                ) {
-                                    Text(
-                                        entry.source.workTitle,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                    Text(
-                                        entry.arabicText,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            textDirection = TextDirection.Rtl
-                                        ),
-                                        textAlign = TextAlign.Right
-                                    )
-                                    Text(
-                                        entry.frenchText,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        entry.source.locator,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Button(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(14.dp),
-                                        onClick = { onOpenGhazali(entry.canonicalId) }
-                                    ) {
-                                        Text(
-                                            if (entry.context?.displayEligible == true) {
-                                                "Lire • Voir le contexte"
-                                            } else {
-                                                "Lire"
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }

@@ -29,6 +29,7 @@ object ReminderPrefs {
     private const val LON = "longitude"
     private const val HANAFI_ASR = "hanafi_asr"
     private const val ADHKAR_TRANSLITERATION = "adhkar_transliteration"
+    private const val LAST_THOUGHT_NOTIFICATION_DAY = "last_thought_notification_day"
 
     fun dailyEnabled(context: Context): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -88,6 +89,22 @@ object ReminderPrefs {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit().putBoolean(ADHKAR_TRANSLITERATION, enabled).apply()
     }
+
+    @Synchronized
+    fun markThoughtNotificationIfNeeded(
+        context: Context,
+        epochDay: Long = LocalDate.now().toEpochDay()
+    ): Boolean {
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val lastDay = prefs.getLong(LAST_THOUGHT_NOTIFICATION_DAY, Long.MIN_VALUE)
+        if (!ThoughtOfDayPolicy.shouldNotify(lastDay, epochDay)) {
+            return false
+        }
+        return prefs.edit()
+            .putLong(LAST_THOUGHT_NOTIFICATION_DAY, epochDay)
+            .commit()
+    }
+
 }
 
 data class AdhkarWindow(
@@ -152,7 +169,9 @@ object MindfulReminderScheduler {
 
     fun scheduleDaily(context: Context) {
         val now = ZonedDateTime.now()
-        var next = now.toLocalDate().atTime(20, 0).atZone(now.zone)
+        var next = now.toLocalDate()
+            .atTime(ThoughtOfDayPolicy.REMINDER_HOUR, 0)
+            .atZone(now.zone)
         if (!next.isAfter(now)) next = next.plusDays(1)
         schedule(context, ACTION_DAILY, REQUEST_DAILY, next.toInstant().toEpochMilli())
     }
@@ -229,22 +248,17 @@ object ReminderNotifications {
 
     fun showDaily(context: Context) {
         ensureChannel(context)
-        val summary = GuardPrefs.dailyReadingSummary(context)
-        val body = if (summary.pages > 0) {
-            summary.pages.toString() + " page(s) aujourd’hui • " +
-                formatShort(summary.totalMs) +
-                ". Votre rappel bilingue vous attend."
-        } else {
-            "Votre rappel bilingue du jour vous attend dans Quran Safeguard."
-        }
+        if (!ReminderPrefs.markThoughtNotificationIfNeeded(context)) return
 
-        val intent = Intent(context, MainActivity::class.java)
+        val thought = DailyReminderManager.today(context)
+        val intent = Intent(context, ThoughtOfDayActivity::class.java)
+            .putExtra(ThoughtOfDayActivity.EXTRA_REMINDER_ID, thought.id)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         show(
             context = context,
-            id = 8200,
-            title = "Votre rappel du jour 🌿",
-            text = body,
+            id = ThoughtOfDayPolicy.NOTIFICATION_ID,
+            title = "Pensée du jour 🌿",
+            text = thought.frenchText,
             contentIntent = intent
         )
     }
@@ -315,7 +329,7 @@ object ReminderNotifications {
             "Rappels bienveillants",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Petite bannière pour le rappel quotidien et les adhkâr matin/soir"
+            description = "Pensée du jour à 20:00 et adhkâr matin/soir"
             enableVibration(true)
             vibrationPattern = SINGLE_GENTLE_VIBRATION
             setSound(null, null)

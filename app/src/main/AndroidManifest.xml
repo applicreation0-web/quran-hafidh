@@ -4,6 +4,23 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.android.chrome" />
+        <package android:name="org.mozilla.firefox" />
+        <package android:name="com.microsoft.emmx" />
+        <package android:name="com.brave.browser" />
+        <package android:name="com.opera.browser" />
+        <package android:name="com.sec.android.app.sbrowser" />
+        <package android:name="com.duckduckgo.mobile.android" />
+        <package android:name="com.vivaldi.browser" />
+    </queries>
+
     <application
         android:name=".QuranSafeguardApp"
         android:allowBackup="false"
@@ -12,6 +29,12 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".ProtectionSetupActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".ReadingHistoryActivity"
@@ -38,10 +61,11 @@
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".GhazaliDetailActivity"
+            android:name=".ThoughtOfDayActivity"
             android:excludeFromRecents="false"
             android:exported="false"
             android:screenOrientation="portrait" />
+
 
         <activity
             android:name=".HikamDetailActivity"
@@ -53,13 +77,6 @@
             android:name=".AdhkarActivity"
             android:excludeFromRecents="false"
             android:exported="false"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ReadingCompleteActivity"
-            android:excludeFromRecents="true"
-            android:exported="false"
-            android:launchMode="standard"
             android:screenOrientation="portrait" />
 
         <activity
@@ -108,7 +125,7 @@
 
         <service
             android:name=".QuranAccessibilityService"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>

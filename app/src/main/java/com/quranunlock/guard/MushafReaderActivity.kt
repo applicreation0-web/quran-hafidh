@@ -1,22 +1,27 @@
 package com.applicreation0.quransafeguard
 
 import android.annotation.SuppressLint
-import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
@@ -27,13 +32,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import org.brotli.dec.BrotliInputStream
+import kotlin.math.abs
 
 class MushafReaderActivity : ComponentActivity() {
     companion object {
@@ -41,212 +45,542 @@ class MushafReaderActivity : ComponentActivity() {
         const val EXTRA_CHALLENGE_KEY = "challenge_key"
     }
 
-    private var page = 0
     private var challengeKey: String = ""
+    private var activeReadingPage = 0
+    private var displayedPage = 0
     private var pageReady = false
     private var activityResumed = false
+    private var activityTopResumed =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+
+    private fun mayCountActiveReading(): Boolean =
+        activityResumed &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+                activityTopResumed)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        page = intent.getIntExtra(EXTRA_PAGE, 0)
         challengeKey = intent.getStringExtra(EXTRA_CHALLENGE_KEY).orEmpty()
-
-        if (page !in 1..604 || challengeKey.isBlank()) {
+        if (challengeKey.isBlank()) {
             finish()
             return
         }
 
-        val assetPath = "mushaf/hafs/kfqc/svg-br/%03d.svg.br".format(page)
-        val svgContent = runCatching {
-            assets.open(assetPath).use { compressed ->
-                BrotliInputStream(compressed).bufferedReader(Charsets.UTF_8).use {
-                    it.readText()
-                }
-            }
+        val initialPlan = runCatching {
+            SafeguardCyclePrefs.currentPlan(this)
         }.getOrNull()
+        if (initialPlan == null || initialPlan.first.isEmpty()) {
+            finish()
+            return
+        }
+
+        val initialPages = initialPlan.first
+        val initialActiveIndex = initialPlan.second
+        activeReadingPage = initialPages[initialActiveIndex]
+        displayedPage = activeReadingPage
 
         GuardRuntime.interception.markReaderVisible(challengeKey)
-        GuardDiagnostics.log(this, "READER_VISIBLE", challengeKey, "page=$page")
+        GuardDiagnostics.log(
+            this,
+            "READER_VISIBLE",
+            challengeKey,
+            "level=${GuardPrefs.challengeLevel(this).name} " +
+                "page=$activeReadingPage " +
+                "progress=${initialActiveIndex + 1}/${initialPages.size}"
+        )
 
         setContent {
             QuranSafeguardTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    var loadFailed by remember {
-                        mutableStateOf(svgContent.isNullOrBlank())
+                var planPages by remember {
+                    mutableStateOf(initialPages)
+                }
+                var activeIndex by remember {
+                    mutableIntStateOf(initialActiveIndex)
+                }
+                var displayedIndex by remember {
+                    mutableIntStateOf(initialActiveIndex)
+                }
+                var readingMs by remember {
+                    mutableLongStateOf(
+                        GuardPrefs.readingElapsedMs(
+                            this@MushafReaderActivity,
+                            challengeKey,
+                            planPages[activeIndex]
+                        )
+                    )
+                }
+                var bottomReached by remember {
+                    mutableStateOf(
+                        GuardPrefs.hasReachedReadingBottom(
+                            this@MushafReaderActivity,
+                            challengeKey,
+                            planPages[activeIndex]
+                        )
+                    )
+                }
+                var gestureMessage by remember {
+                    mutableStateOf(
+                        "Balayez vers la gauche pour avancer, " +
+                            "vers la droite pour revenir."
+                    )
+                }
+                var quotaReached by remember {
+                    mutableStateOf(false)
+                }
+                val quotaPageCount = remember { initialPages.size }
+                val level = remember {
+                    GuardPrefs.challengeLevel(this@MushafReaderActivity)
+                }
+                val sectionMode = remember(level) {
+                    if (level == ChallengeLevel.MICRO) {
+                        GuardPrefs.selectionMode(this@MushafReaderActivity)
+                    } else {
+                        QuranSelectionMode.HIZB
                     }
-                    var readingMs by remember {
-                        mutableLongStateOf(
-                            GuardPrefs.readingElapsedMs(
-                                this@MushafReaderActivity,
-                                challengeKey,
-                                page
-                            )
+                }
+
+                fun pauseActiveReading() {
+                    if (pageReady && activeReadingPage in 1..604) {
+                        GuardPrefs.endReadingForeground(
+                            this@MushafReaderActivity,
+                            challengeKey,
+                            activeReadingPage
                         )
                     }
-                    var bottomReached by remember {
-                        mutableStateOf(
+                    pageReady = false
+                }
+
+                fun showPage(index: Int) {
+                    if (index !in planPages.indices ||
+                        (!quotaReached && index > activeIndex) ||
+                        index == displayedIndex
+                    ) {
+                        return
+                    }
+                    pauseActiveReading()
+                    displayedIndex = index
+                    displayedPage = planPages[index]
+                    gestureMessage = when {
+                        quotaReached ->
+                            "Lecture libre • vous pouvez sortir à tout moment."
+                        index < activeIndex ->
+                            "Page déjà validée. Balayez vers la gauche " +
+                                "pour revenir à la lecture en cours."
+                        else ->
+                            "Lisez cette page pendant 60 secondes, puis avancez."
+                    }
+                }
+
+                fun refreshPlanAfterValidation() {
+                    val fresh = SafeguardCyclePrefs.currentPlan(
+                        this@MushafReaderActivity
+                    )
+                    planPages = fresh.first
+                    activeIndex = fresh.second
+                    activeReadingPage = planPages[activeIndex]
+                    displayedIndex = activeIndex
+                    displayedPage = activeReadingPage
+                    readingMs = GuardPrefs.readingElapsedMs(
+                        this@MushafReaderActivity,
+                        challengeKey,
+                        activeReadingPage
+                    )
+                    bottomReached = GuardPrefs.hasReachedReadingBottom(
+                        this@MushafReaderActivity,
+                        challengeKey,
+                        activeReadingPage
+                    )
+                    gestureMessage =
+                        "Page suivante prête. Balayez après 60 secondes."
+                }
+
+                fun continueFreely() {
+                    pauseActiveReading()
+                    activeReadingPage = 0
+
+                    if (displayedIndex < planPages.lastIndex) {
+                        displayedIndex += 1
+                        displayedPage = planPages[displayedIndex]
+                    } else if (planPages.last() < 604) {
+                        val nextPage = planPages.last() + 1
+                        planPages = planPages + nextPage
+                        displayedIndex = planPages.lastIndex
+                        displayedPage = nextPage
+                    } else {
+                        gestureMessage =
+                            "Vous êtes sur la dernière page du Mushaf."
+                        return
+                    }
+
+                    gestureMessage =
+                        "Lecture libre • quota atteint, sortie possible à tout moment."
+                }
+
+                fun validateAndAdvance() {
+                    if (quotaReached) {
+                        continueFreely()
+                        return
+                    }
+                    if (displayedIndex < activeIndex) {
+                        showPage(displayedIndex + 1)
+                        return
+                    }
+
+                    val currentPage = planPages[activeIndex]
+                    val persistedReadingMs = GuardPrefs.readingElapsedMs(
+                        this@MushafReaderActivity,
+                        challengeKey,
+                        currentPage
+                    )
+                    val persistedBottom =
+                        GuardPrefs.hasReachedReadingBottom(
+                            this@MushafReaderActivity,
+                            challengeKey,
+                            currentPage
+                        )
+
+                    if (!ReadingValidationPolicy.canValidate(
+                            activeReadingMs = persistedReadingMs,
+                            bottomReached = persistedBottom
+                        )
+                    ) {
+                        gestureMessage = when {
+                            persistedReadingMs < GuardPrefs.MIN_READING_MS ->
+                                "Encore " +
+                                    formatRemainingSeconds(
+                                        GuardPrefs.MIN_READING_MS -
+                                            persistedReadingMs
+                                    ) +
+                                    " avant la page suivante."
+                            !persistedBottom ->
+                                "60 secondes atteintes. Faites défiler " +
+                                    "jusqu’au bas de la page."
+                            else -> "Cette page n’est pas encore validable."
+                        }
+                        return
+                    }
+
+                    pauseActiveReading()
+                    val elapsed = GuardPrefs.completeReadingAndUnlock(
+                        this@MushafReaderActivity,
+                        challengeKey,
+                        currentPage
+                    )
+
+                    if (GuardPrefs.isUnlocked(
+                            this@MushafReaderActivity,
+                            challengeKey
+                        )
+                    ) {
+                        GuardRuntime.interception.markUnlocked(challengeKey)
+                        GuardDiagnostics.log(
+                            this@MushafReaderActivity,
+                            "READING_QUOTA_REACHED",
+                            challengeKey,
+                            "page=$currentPage elapsedMs=$elapsed"
+                        )
+                        quotaReached = true
+                        activeReadingPage = 0
+                        readingMs = GuardPrefs.MIN_READING_MS
+                        bottomReached = true
+                        gestureMessage =
+                            "Quota atteint. Vous pouvez ouvrir l’application " +
+                                "cible ou continuer librement."
+                    } else {
+                        GuardDiagnostics.log(
+                            this@MushafReaderActivity,
+                            "READING_NEXT_PAGE",
+                            challengeKey,
+                            "page=$currentPage"
+                        )
+                        refreshPlanAfterValidation()
+                    }
+                }
+
+                LaunchedEffect(activeIndex, challengeKey, quotaReached) {
+                    while (!quotaReached) {
+                        val currentPage = planPages[activeIndex]
+                        readingMs = GuardPrefs.readingElapsedMs(
+                            this@MushafReaderActivity,
+                            challengeKey,
+                            currentPage
+                        )
+                        bottomReached =
                             GuardPrefs.hasReachedReadingBottom(
                                 this@MushafReaderActivity,
                                 challengeKey,
-                                page
+                                currentPage
                             )
-                        )
+                        delay(200L)
                     }
+                }
 
-                    LaunchedEffect(page, challengeKey) {
-                        while (true) {
-                            readingMs = GuardPrefs.readingElapsedMs(
-                                this@MushafReaderActivity,
-                                challengeKey,
-                                page
-                            )
-                            bottomReached = GuardPrefs.hasReachedReadingBottom(
-                                this@MushafReaderActivity,
-                                challengeKey,
-                                page
-                            )
-                            delay(250)
-                        }
-                    }
-
-                    var renderedPageHeightPx by remember {
-                        mutableIntStateOf(0)
-                    }
-                    val configuration = LocalConfiguration.current
-                    val density = LocalDensity.current
-                    val fallbackHeight = configuration.screenHeightDp.dp * 0.78f
-                    val measuredVisibleHeight = if (renderedPageHeightPx > 0) {
-                        with(density) {
-                            (renderedPageHeightPx.toFloat() * 0.80f).toDp()
-                        }
-                    } else {
-                        fallbackHeight
-                    }
-                    val readerViewportHeight = measuredVisibleHeight.coerceIn(
-                        320.dp,
-                        configuration.screenHeightDp.dp * 0.80f
+                val currentDisplayedPage = planPages[displayedIndex]
+                val viewingCompletedPage =
+                    quotaReached || displayedIndex < activeIndex
+                val canValidate = !quotaReached &&
+                    ReadingValidationPolicy.canValidate(
+                        activeReadingMs = readingMs,
+                        bottomReached = bottomReached
                     )
+                val sectionDivisions =
+                    QuranStructureMetadata.divisionsForPage(
+                        sectionMode,
+                        currentDisplayedPage
+                    )
+                val sectionContext = sectionDivisions.joinToString(" • ") {
+                    QuranStructureMetadata.unitLabel(sectionMode, it.number) +
+                        " · " + it.verseRangeLabel
+                }
+                val boundaryContext = sectionDivisions.mapNotNull {
+                    QuranStructureMetadata.boundaryNotice(
+                        sectionMode,
+                        it.number,
+                        currentDisplayedPage
+                    )
+                }.joinToString(" ")
 
+                Surface(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 0.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            "Mushaf de Médine • Page $page",
+                            "Mushaf de Médine • Page $currentDisplayedPage",
+                            modifier = Modifier.padding(horizontal = 10.dp),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            if (bottomReached) {
-                                "Page parcourue • ${formatReadingDuration(readingMs)}"
-                            } else {
-                                "Lecture • ${formatReadingDuration(readingMs)}"
+                            when {
+                                quotaReached ->
+                                    "Quota de $quotaPageCount pages atteint • lecture libre"
+                                level == ChallengeLevel.MORNING ->
+                                    "Filtre matinal • page " +
+                                        "${displayedIndex + 1}/$quotaPageCount"
+                                level == ChallengeLevel.MICRO ->
+                                    "Pause 15 minutes • page 1/1"
+                                else ->
+                                    "Palier 90 minutes • page " +
+                                        "${displayedIndex + 1}/$quotaPageCount"
                             },
+                            modifier = Modifier.padding(horizontal = 10.dp),
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (bottomReached) {
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (sectionContext.isNotBlank()) {
+                            Text(
+                                sectionContext,
+                                modifier = Modifier.padding(horizontal = 10.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (boundaryContext.isNotBlank()) {
+                            Text(
+                                boundaryContext,
+                                modifier = Modifier.padding(horizontal = 10.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                        Text(
+                            when {
+                                quotaReached ->
+                                    "Quota atteint • sortie libre • lecture facultative"
+                                viewingCompletedPage ->
+                                    "Page validée • retour libre"
+                                readingMs >= GuardPrefs.MIN_READING_MS &&
+                                    bottomReached ->
+                                    "01:00 atteint • balayez pour valider"
+                                readingMs >= GuardPrefs.MIN_READING_MS ->
+                                    "01:00 atteint • parcourez le bas de page"
+                                bottomReached ->
+                                    "Page parcourue • " +
+                                        formatReadingDuration(readingMs) +
+                                        " / 01:00"
+                                else ->
+                                    "Lecture active • " +
+                                        formatReadingDuration(readingMs) +
+                                        " / 01:00"
+                            },
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (viewingCompletedPage || canValidate) {
                                 MaterialTheme.colorScheme.secondary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )
-                        Spacer(Modifier.height(3.dp))
-
-                        if (!svgContent.isNullOrBlank() && !loadFailed) {
-                            MushafPageWebView(
-                                svgContent = svgContent,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(readerViewportHeight),
-                                onReady = { markPageReady() },
-                                onContentHeightMeasured = { heightPx ->
-                                    if (heightPx > 0) renderedPageHeightPx = heightPx
-                                },
-                                onBottomReached = {
-                                    GuardPrefs.markReadingBottomReached(
-                                        this@MushafReaderActivity,
-                                        challengeKey,
-                                        page
-                                    )
-                                    bottomReached = true
-                                },
-                                onFailure = {
-                                    loadFailed = true
-                                    markPageUnavailable()
-                                }
-                            )
-                        } else {
-                            Text(
-                                "La page du Mushaf n’est pas disponible. La lecture n’est pas comptabilisée."
-                            )
-                            Spacer(Modifier.weight(1f))
-                        }
-
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = bottomReached,
-                            onClick = {
-                                val elapsed = GuardPrefs.completeReadingForSummary(
-                                    this@MushafReaderActivity,
-                                    challengeKey,
-                                    page
-                                )
-                                if (GuardPrefs.hasReachedReadingBottom(
-                                        this@MushafReaderActivity,
-                                        challengeKey,
-                                        page
-                                    )
-                                ) {
-                                    GuardDiagnostics.log(
-                                        this@MushafReaderActivity,
-                                        "READING_COMPLETED_PENDING_SUMMARY",
-                                        challengeKey,
-                                        "page=$page elapsedMs=$elapsed"
-                                    )
-                                    startActivity(
-                                        Intent(
-                                            this@MushafReaderActivity,
-                                            ReadingCompleteActivity::class.java
-                                        ).apply {
-                                            putExtra(ReadingCompleteActivity.EXTRA_PAGE, page)
-                                            putExtra(ReadingCompleteActivity.EXTRA_CHALLENGE_KEY, challengeKey)
-                                            putExtra(
-                                                ReadingCompleteActivity.EXTRA_ELAPSED_MS,
-                                                elapsed
-                                            )
-                                        }
-                                    )
-                                    finish()
-                                }
-                            }
-                        ) {
-                            Text(
-                                if (bottomReached) {
-                                    "Page lue — continuer"
-                                } else {
-                                    "Faites défiler jusqu’en bas"
-                                }
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        OutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            onClick = { finish() }
-                        ) {
-                            Text("Retour au contrôle")
-                        }
                         Text(
-                            "Si tu quittes cet écran, le compteur se met en pause.",
+                            gestureMessage,
+                            modifier = Modifier.padding(horizontal = 10.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(Modifier.height(3.dp))
+
+                        AnimatedContent(
+                            targetState = displayedIndex,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            transitionSpec = {
+                                if (targetState > initialState) {
+                                    slideInHorizontally { width -> width } togetherWith
+                                        slideOutHorizontally { width -> -width }
+                                } else {
+                                    slideInHorizontally { width -> -width } togetherWith
+                                        slideOutHorizontally { width -> width }
+                                }
+                            },
+                            label = "mushaf-page-swipe"
+                        ) { pageIndex ->
+                            val pageNumber = planPages[pageIndex]
+                            val svgContent = remember(pageNumber) {
+                                loadMushafPage(pageNumber)
+                            }
+                            var loadFailed by remember(pageNumber) {
+                                mutableStateOf(svgContent.isNullOrBlank())
+                            }
+
+                            if (!svgContent.isNullOrBlank() && !loadFailed) {
+                                MushafPageWebView(
+                                    svgContent = svgContent,
+                                    modifier = Modifier.fillMaxSize(),
+                                    onReady = {
+                                        if (!quotaReached &&
+                                            pageNumber == activeReadingPage &&
+                                            displayedPage == activeReadingPage
+                                        ) {
+                                            markPageReady(pageNumber)
+                                        }
+                                    },
+                                    onBottomReached = {
+                                        if (!quotaReached &&
+                                            pageNumber == activeReadingPage &&
+                                            displayedPage == activeReadingPage
+                                        ) {
+                                            GuardPrefs.markReadingBottomReached(
+                                                this@MushafReaderActivity,
+                                                challengeKey,
+                                                pageNumber
+                                            )
+                                            bottomReached = true
+                                        }
+                                    },
+                                    onSwipePrevious = {
+                                        if (displayedIndex > 0) {
+                                            showPage(displayedIndex - 1)
+                                        } else {
+                                            gestureMessage =
+                                                "Vous êtes sur la première page."
+                                        }
+                                    },
+                                    onSwipeNext = {
+                                        validateAndAdvance()
+                                    },
+                                    onFailure = {
+                                        loadFailed = true
+                                        if (pageNumber == activeReadingPage) {
+                                            markPageUnavailable(pageNumber)
+                                        }
+                                    }
+                                )
+                            } else {
+                                Text(
+                                    "La page du Mushaf n’est pas disponible. " +
+                                        "La lecture n’est pas comptabilisée.",
+                                    modifier = Modifier.padding(18.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(7.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SafeguardOutlinedButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = displayedIndex > 0,
+                                onClick = {
+                                    showPage(displayedIndex - 1)
+                                }
+                            ) {
+                                Text("Page précédente")
+                            }
+                            SafeguardButton(
+                                modifier = Modifier.weight(1f),
+                                enabled = if (quotaReached) {
+                                    currentDisplayedPage < 604
+                                } else {
+                                    viewingCompletedPage || canValidate
+                                },
+                                onClick = {
+                                    validateAndAdvance()
+                                }
+                            ) {
+                                Text(
+                                    when {
+                                        quotaReached -> "Continuer à lire"
+                                        viewingCompletedPage -> "Page suivante"
+                                        activeIndex < planPages.lastIndex ->
+                                            "Valider et avancer"
+                                        else -> "Atteindre le quota"
+                                    }
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(5.dp))
+                        if (quotaReached) {
+                            SafeguardButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                onClick = {
+                                    pauseActiveReading()
+                                    finishAndRemoveTask()
+                                }
+                            ) {
+                                Text("Ouvrir l’application cible")
+                            }
+                        } else {
+                            SafeguardOutlinedButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                onClick = {
+                                    pauseActiveReading()
+                                    finish()
+                                }
+                            ) {
+                                Text("Quitter sans valider")
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun loadMushafPage(page: Int): String? {
+        if (page !in 1..604) return null
+        val assetPath =
+            "mushaf/hafs/kfqc/svg-br/%03d.svg.br".format(page)
+        return runCatching {
+            assets.open(assetPath).use { compressed ->
+                BrotliInputStream(compressed)
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+            }
+        }.getOrNull()
     }
 
     override fun onStart() {
@@ -266,35 +600,92 @@ class MushafReaderActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         activityResumed = true
-        if (pageReady) {
-            GuardPrefs.beginReadingForeground(this, challengeKey, page)
+        if (pageReady &&
+            displayedPage == activeReadingPage &&
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+        ) {
+            GuardPrefs.beginReadingForeground(
+                this,
+                challengeKey,
+                activeReadingPage
+            )
+        }
+    }
+
+    override fun onTopResumedActivityChanged(
+        isTopResumedActivity: Boolean
+    ) {
+        super.onTopResumedActivityChanged(isTopResumedActivity)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+            activityTopResumed == isTopResumedActivity
+        ) {
+            return
+        }
+
+        activityTopResumed = isTopResumedActivity
+        if (!pageReady || displayedPage != activeReadingPage) return
+
+        if (mayCountActiveReading()) {
+            GuardPrefs.beginReadingForeground(
+                this,
+                challengeKey,
+                activeReadingPage
+            )
+        } else {
+            GuardPrefs.endReadingForeground(
+                this,
+                challengeKey,
+                activeReadingPage
+            )
         }
     }
 
     override fun onPause() {
-        if (pageReady) {
-            GuardPrefs.endReadingForeground(this, challengeKey, page)
+        if (pageReady &&
+            displayedPage == activeReadingPage &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
+                activityTopResumed)
+        ) {
+            GuardPrefs.endReadingForeground(
+                this,
+                challengeKey,
+                activeReadingPage
+            )
         }
         activityResumed = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            activityTopResumed = false
+        }
         super.onPause()
     }
 
-    private fun markPageReady() {
+    private fun markPageReady(page: Int) {
+        if (page != activeReadingPage ||
+            displayedPage != activeReadingPage
+        ) {
+            return
+        }
         if (pageReady) return
         pageReady = true
-        if (activityResumed) {
-            GuardPrefs.beginReadingForeground(this, challengeKey, page)
+        if (mayCountActiveReading()) {
+            GuardPrefs.beginReadingForeground(
+                this,
+                challengeKey,
+                page
+            )
         }
     }
 
-    private fun markPageUnavailable() {
-        if (pageReady) {
-            GuardPrefs.endReadingForeground(this, challengeKey, page)
+    private fun markPageUnavailable(page: Int) {
+        if (pageReady && page == activeReadingPage) {
+            GuardPrefs.endReadingForeground(
+                this,
+                challengeKey,
+                page
+            )
         }
         pageReady = false
     }
-
-
 }
 
 private fun formatReadingDuration(milliseconds: Long): String {
@@ -304,14 +695,20 @@ private fun formatReadingDuration(milliseconds: Long): String {
     return "%02d:%02d".format(minutesPart, secondsPart)
 }
 
-@SuppressLint("SetJavaScriptEnabled")
+private fun formatRemainingSeconds(milliseconds: Long): String {
+    val seconds = ((milliseconds + 999L) / 1000L).coerceAtLeast(0L)
+    return if (seconds <= 1L) "1 seconde" else "$seconds secondes"
+}
+
+@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
 @androidx.compose.runtime.Composable
 private fun MushafPageWebView(
     svgContent: String,
     modifier: Modifier = Modifier,
     onReady: () -> Unit,
-    onContentHeightMeasured: (Int) -> Unit,
     onBottomReached: () -> Unit,
+    onSwipePrevious: () -> Unit,
+    onSwipeNext: () -> Unit,
     onFailure: () -> Unit
 ) {
     AndroidView(
@@ -329,16 +726,46 @@ private fun MushafPageWebView(
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
 
-                setOnScrollChangeListener { view, _, scrollY, _, oldScrollY ->
-                    val webView = view as WebView
-                    val contentHeightPx = (webView.contentHeight * webView.scale).toInt()
-                    if (contentHeightPx > 0) {
-                        onContentHeightMeasured(contentHeightPx)
+                var downX = 0f
+                var downY = 0f
+                val swipeThreshold = 72f * resources.displayMetrics.density
+                setOnTouchListener { _, event ->
+                    when (event.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            downX = event.x
+                            downY = event.y
+                        }
+                        MotionEvent.ACTION_UP -> {
+                            val deltaX = event.x - downX
+                            val deltaY = event.y - downY
+                            if (abs(deltaX) >= swipeThreshold &&
+                                abs(deltaX) > abs(deltaY) * 1.25f
+                            ) {
+                                if (deltaX < 0f) {
+                                    onSwipeNext()
+                                } else {
+                                    onSwipePrevious()
+                                }
+                            }
+                        }
                     }
-                    val userActuallyScrolled = scrollY > 0 && scrollY != oldScrollY
-                    if (userActuallyScrolled &&
-                        contentHeightPx > webView.height &&
-                        scrollY + webView.height >= contentHeightPx - 24
+                    false
+                }
+
+                setOnScrollChangeListener { view, _, scrollY, _, _ ->
+                    val webView = view as WebView
+                    val contentHeightPx =
+                        (webView.contentHeight * webView.scale).toInt()
+                    val noLongerScrollsDown =
+                        !webView.canScrollVertically(1)
+                    val needsScroll =
+                        ReadingValidationPolicy.requiresScroll(
+                            contentHeightPx = contentHeightPx,
+                            viewportHeightPx = webView.height
+                        )
+                    if (contentHeightPx > 0 &&
+                        noLongerScrollsDown &&
+                        (scrollY > 0 || !needsScroll)
                     ) {
                         onBottomReached()
                     }
@@ -350,15 +777,22 @@ private fun MushafPageWebView(
                         request: WebResourceRequest?
                     ): Boolean = true
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
+                    override fun onPageFinished(
+                        view: WebView?,
+                        url: String?
+                    ) {
                         onReady()
-                        view?.let { webView ->
-                            webView.post {
-                                val contentHeightPx =
-                                    (webView.contentHeight * webView.scale).toInt()
-                                if (contentHeightPx > 0) {
-                                    onContentHeightMeasured(contentHeightPx)
-                                }
+                        view?.post {
+                            val contentHeightPx =
+                                (view.contentHeight * view.scale).toInt()
+                            if (contentHeightPx > 0 &&
+                                view.height > 0 &&
+                                !ReadingValidationPolicy.requiresScroll(
+                                    contentHeightPx = contentHeightPx,
+                                    viewportHeightPx = view.height
+                                )
+                            ) {
+                                onBottomReached()
                             }
                         }
                     }
@@ -378,7 +812,8 @@ private fun MushafPageWebView(
                     <!doctype html>
                     <html>
                     <head>
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                      <meta name="viewport"
+                            content="width=device-width, initial-scale=1.0">
                       <style>
                         html, body {
                           margin: 0;
@@ -386,6 +821,7 @@ private fun MushafPageWebView(
                           background: #ffffff;
                           width: 100%;
                           min-height: 100%;
+                          overflow-x: hidden;
                         }
                         svg {
                           display: block;

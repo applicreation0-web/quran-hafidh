@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,13 +56,27 @@ class ReadingSelectionActivity : ComponentActivity() {
             }
         }
 
-        Surface(
+        Scaffold(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                Surface(shadowElevation = 8.dp) {
+                    SafeguardButton(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        onClick = { finish() }
+                    ) {
+                        Text("OK")
+                    }
+                }
+            }
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 18.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -72,7 +88,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez les zones du Mushaf éligibles pour les prochaines lectures.",
+                    "Choisissez avec les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -111,6 +127,12 @@ class ReadingSelectionActivity : ComponentActivity() {
                             )
                             Text("Choisir par Hizb")
                         }
+                        Text(
+                            "Les pages de frontière peuvent appartenir à deux sections voisines. Le quota reste de 20 pages le matin et 10 pages au palier de 90 minutes ; une lecture libre est ensuite proposée.",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -123,7 +145,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    OutlinedButton(
+                    SafeguardOutlinedButton(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp),
                         onClick = {
@@ -133,7 +155,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                         }
                     ) { Text("Tout sélectionner") }
 
-                    OutlinedButton(
+                    SafeguardOutlinedButton(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp),
                         onClick = {
@@ -151,34 +173,65 @@ class ReadingSelectionActivity : ComponentActivity() {
                     ),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        (1..maxUnit).chunked(3).forEach { rowUnits ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                rowUnits.forEach { unit ->
-                                    Row(
-                                        modifier = Modifier.weight(1f),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = unit in current,
-                                            onCheckedChange = { checked ->
-                                                if (checked) {
-                                                    if (unit !in current) current.add(unit)
-                                                } else {
-                                                    current.remove(unit)
-                                                }
-                                                persistReadingSelection(
-                                                    mode,
-                                                    selectedJuz,
-                                                    selectedHizb
-                                                )
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        (1..maxUnit).forEach { unit ->
+                            val division = QuranStructureMetadata.division(
+                                mode,
+                                unit
+                            )
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = unit in current,
+                                        onCheckedChange = { checked ->
+                                            if (checked) {
+                                                if (unit !in current) current.add(unit)
+                                            } else {
+                                                current.remove(unit)
                                             }
+                                            persistReadingSelection(
+                                                mode,
+                                                selectedJuz,
+                                                selectedHizb
+                                            )
+                                        }
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "$unitLabel $unit",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
                                         )
-                                        Text("$unitLabel $unit")
+                                        Text(
+                                            QuranStructureMetadata.selectionSubtitle(
+                                                mode,
+                                                division.number
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
                         }
+                        Text(
+                            "Repères : " + QuranStructureMetadata.SOURCE_LABEL +
+                                " • pagination du Mushaf de Médine (604 pages).",
+                            modifier = Modifier.padding(8.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

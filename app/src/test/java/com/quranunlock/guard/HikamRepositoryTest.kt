@@ -1,68 +1,93 @@
 package com.applicreation0.quransafeguard
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HikamRepositoryTest {
-    @Test
-    fun canonicalEntriesHaveDocumentaryMetadata() {
-        val entries = HikamRepository.entries
-        assertEquals(3, entries.size)
-        assertEquals(entries.size, entries.map { it.canonicalId }.distinct().size)
-        assertEquals(entries.size, entries.map { it.sourceNumber }.distinct().size)
+    private val verification = ClassicalVerification(
+        sourceVerified = true,
+        attributionVerified = true,
+        translationAvailable = true,
+        humanVerified = false,
+        rightsStatus =
+            TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
+        authenticityStatus =
+            ClassicalAuthenticityStatus.VERIFIED_SOURCE,
+        verificationNote = "verified corpus test"
+    )
 
-        entries.forEach { hikma ->
-            assertTrue(hikma.arabicText.isNotBlank())
-            assertTrue(hikma.frenchText.isNotBlank())
-            assertTrue(hikma.source.author.contains("Ibn ʿAṭāʾ Allāh"))
-            assertTrue(hikma.source.workTitle.contains("Hikam"))
-            assertTrue(hikma.source.locator.isNotBlank())
-            assertTrue(hikma.source.sourceUrl.startsWith("https://"))
-            assertTrue(hikma.verification.sourceVerified)
-            assertTrue(hikma.verification.attributionVerified)
-            assertTrue(hikma.verification.translationVerified)
-            assertFalse(hikma.verification.humanVerified)
-            assertTrue(hikma.displayEligible)
-        }
+    private val integrity = ClassicalTextIntegrity(
+        form = ClassicalTextForm.COMPLETE_TEXT,
+        reconstructedOrAssembled = false,
+        hasInternalOmissions = false,
+        contextChecked = true,
+        passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+    )
+
+    private fun source(
+        translator: String? =
+            "Traduction interne Quran Safeguard"
+    ) = ClassicalSource(
+        author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
+        workTitle = "Al-Hikam al-ʿAṭāʾiyya",
+        edition = "édition arabe vérifiée",
+        editor = "éditeur",
+        volume = null,
+        locator = "Hikma 1",
+        sourceUrl = "https://example.test/hikam/1",
+        translator = translator
+    )
+
+    private fun entry() = HikmaEntry(
+        canonicalId = "hikma_1",
+        sourceNumber = 1,
+        arabicText =
+            "مِنْ عَلامَةِ الاعْتِمادِ عَلى العَمَلِ، " +
+                "نُقْصانُ الرَّجاءِ عِنْدَ وُجودِ الزَّللِ.",
+        canonicalArabicText =
+            "من علامات الاعتماد على العمل، " +
+                "نقصان الرجاء عند وجود الزلل.",
+        frenchText =
+            "Parmi les signes de l’appui sur l’œuvre : " +
+                "la diminution de l’espérance lorsqu’une faute survient.",
+        theme = "spiritual_presence",
+        tags = setOf("spiritual_presence"),
+        source = source(),
+        verification = verification,
+        textIntegrity = integrity,
+        vocalizationSourceUrl =
+            "https://data.nur.nu/Kutub/Arabic/" +
+                "Ibn3AtaAllah_Hikam_themathesontrust.pdf"
+    )
+
+    @Test
+    fun verifiedVocalizedHikmaCanDisplay() {
+        val model = entry()
+        assertTrue(model.displayEligible)
+        assertTrue(model.arabicText.contains("ِ"))
+        assertTrue(model.arabicText.contains("َ"))
+        assertTrue(model.vocalizationSourceUrl!!.startsWith("https://"))
     }
 
     @Test
-    fun sourcedHikamAreVisibleWithInternalTranslationDisclosure() {
-        assertEquals(3, HikamRepository.asDailyReminders().size)
-        HikamRepository.entries.forEach {
-            assertTrue(HikamRepository.byId(it.canonicalId) != null)
-        }
+    fun translationProvenanceIsMandatory() {
+        assertTrue(source().documentaryComplete)
+        assertFalse(source(translator = null).documentaryComplete)
+        assertFalse(source(translator = "").documentaryComplete)
     }
 
     @Test
-    fun ibnAjibaIsAlwaysCommentatorNotHikamAuthor() {
-        HikamRepository.entries.forEach { hikma ->
-            val commentary = hikma.commentary!!
-            assertEquals("Ibn ʿAjība", commentary.source.author)
-            assertTrue(commentary.source.workTitle.contains("Īqāẓ al-Himam"))
-            assertTrue(commentary.source.locator.contains("Hikma " + hikma.sourceNumber))
-            assertTrue(commentary.source.sourceUrl.startsWith("https://"))
-            assertTrue(commentary.isExcerpt)
-            assertTrue(commentary.arabicText.contains("[…]"))
-            assertTrue(commentary.displayEligible)
-        }
+    fun invalidArabicOrFrenchCannotDisplay() {
+        assertFalse(entry().copy(arabicText = "").displayEligible)
+        assertFalse(entry().copy(canonicalArabicText = "").displayEligible)
+        assertFalse(entry().copy(frenchText = "").displayEligible)
     }
 
     @Test
-    fun sourceNumberingAndArabicStayLockedToRetainedSource() {
-        assertEquals(
-            "اجتهادك فيما ضمن لك وتقصيرك فيما طلب منك دليل على انطماس البصيرة منك.",
-            HikamRepository.entries.first { it.sourceNumber == 5 }.arabicText
-        )
-        assertEquals(
-            "الأعمال صور قائمة، وأرواحها وجود سر الإخلاص فيها.",
-            HikamRepository.entries.first { it.sourceNumber == 10 }.arabicText
-        )
-        assertEquals(
-            "ما نفع القلب شئ مثل عزلة يدخل بها ميدان فكرة.",
-            HikamRepository.entries.first { it.sourceNumber == 12 }.arabicText
-        )
+    fun sourceNumberMustStayInsideRetained264Range() {
+        assertTrue(entry().displayEligible)
+        assertFalse(entry().copy(sourceNumber = 0).displayEligible)
+        assertFalse(entry().copy(sourceNumber = 265).displayEligible)
     }
 }

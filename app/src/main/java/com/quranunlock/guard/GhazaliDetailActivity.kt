@@ -142,7 +142,7 @@ private fun GhazaliDetailScreen(entry: GhazaliEntry) {
 
             val context = entry.context
             if (context != null && context.displayEligible) {
-                Button(
+                SafeguardButton(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 54.dp),
@@ -188,23 +188,23 @@ private fun GhazaliDetailScreen(entry: GhazaliEntry) {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 if (contextArabic) {
-                                    Button(
+                                    SafeguardButton(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { contextArabic = true }
                                     ) { Text("Arabe") }
-                                    OutlinedButton(
+                                    SafeguardOutlinedButton(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { contextArabic = false }
                                     ) { Text("Français") }
                                 } else {
-                                    OutlinedButton(
+                                    SafeguardOutlinedButton(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { contextArabic = true }
                                     ) { Text("Arabe") }
-                                    Button(
+                                    SafeguardButton(
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(14.dp),
                                         onClick = { contextArabic = false }

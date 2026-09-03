@@ -1,60 +1,55 @@
 # Quran Safeguard
 
-Quran Safeguard is a private Android digital-wellbeing application that creates a deliberate Quran reading pause before selected apps and eight mainstream browsers.
+Quran Safeguard est une application Android privée de discipline numérique : elle place une pause de lecture du Coran avant un périmètre volontairement limité d’applications.
 
-## Product principles
+## Règles de protection 0.10.0
 
-- Voluntary discipline: normal uninstall remains available to the device owner; Android Settings is intentionally protected while Safeguard is active to prevent trivial bypass of the AccessibilityService.
-- Medina Mushaf, 604 canonical pages, Hafs ‘an ‘Asim, available offline.
-- The original 15-line page format is preserved.
-- A reading session shows roughly 80% of the rendered Mushaf page at once, at maximum practical width, while preserving the canonical page ratio and requiring a short natural scroll to the bottom.
-- Reading time is measured for personal progress without a fixed minimum reading speed.
-- Each normal unlock grants up to 20 minutes to the relevant app, counted only while that app is actually in the foreground.
-- Gentle usage reminders appear at 10, 5 and 1 minute remaining.
-- Three daily jokers remain available, each capped to a maximum of five minutes.
-- Product scope is fixed to selected social/communication targets plus exactly eight browsers: Chrome, Firefox, Edge, Brave, Opera, Samsung Internet, DuckDuckGo and Vivaldi.
-- Banking, payment, identity, authentication, password/security, calls and alarms are not selectable Safeguard targets.
-- Accessibility starts from an explicit package scope and temporarily broadens only while a protected target is active, solely to detect the first transition away and pause foreground time; unrelated packages are not classified, logged or associated with Safeguard.
-- Accessibility window content retrieval is disabled.
+- Cibles sociales : WhatsApp (messagerie textuelle), X, Instagram, Facebook, YouTube et TikTok.
+- Navigateurs : Chrome, Firefox, Edge, Brave, Opera, Samsung Internet, DuckDuckGo et Vivaldi.
+- Toutes les autres applications restent hors périmètre, sans liste d’exclusion à configurer ni classification locale.
+- Les appels téléphoniques et les appels audio/vidéo WhatsApp ne consomment jamais le temps protégé.
+- Premier accès quotidien : 20 pages du Mushaf, au moins 60 secondes actives par page.
+- Ensuite : une page au moins 60 secondes après chaque tranche globale de 15 minutes d’utilisation effective des cibles.
+- À chaque sixième tranche, soit 90 minutes : un bloc de 10 pages remplace la page simple puis le cycle repart à zéro.
+- Trois jokers quotidiens peuvent franchir n’importe lequel de ces paliers ; chaque joker ouvre le prochain intervalle normal de 15 minutes.
+- Le crédit de 15 minutes est unique et partagé entre toutes les cibles : passer de Chrome à YouTube, puis à une autre cible, ne remet jamais le chronomètre à zéro.
+- Les rappels d’usage à 10, 5 et 1 minute restent bienveillants et distincts des rappels spirituels.
 
-## Spiritual reminders
+## Lecture
 
-- One main reminder is selected locally for each day and remains stable throughout that day.
-- The bundled library has no numerical quota: only texts that pass authenticity, provenance and suitability checks are enabled.
-- Arabic is shown first, followed by French and an identifiable source.
-- Automatically curated hadiths are restricted to Sahih al-Bukhari and/or Sahih Muslim; individually reviewed texts from other recognized collections retain their explicit grading.
-- Hadith, al-Ghazali texts and al-Hikam are explicitly distinguished.
-- **AUTHENTICITÉ AVANT QUANTITÉ**: classical texts require verified source and attribution plus a reviewed French translation with compatible rights. External editorial/human certification remains a separate disclosed metadata field and is not falsely implied.
-- Quran Safeguard never interprets, summarizes, reconstructs or speaks in the voice of Ibn ʿAṭāʾ Allāh, Ibn ʿAjība or al-Ghazālī.
-- Ibn ʿAṭāʾ Allāh is identified as the author of Al-Hikam; Ibn ʿAjība is identified only as a commentator. Al-Ghazālī “Approfondir” content must come from al-Ghazālī’s own continuous text, not an app-generated explanation.
-- Every curated reminder and every adhkar has a local provenance record; frozen HadeethEnc entries are verified at build time.
-- Adhkar can optionally show a discreet transliteration layer (off by default).
-- Daily/adhkar reminders use a small heads-up banner with one short vibration and no sound.
-- Banking, payment, identity, authentication, password-manager and security apps are outside the fixed selectable scope and are rejected from Safeguard persistence/logging.
-- No transliteration is shown by default.
-- A gentle daily notification targets 20:00 local time.
-- Authenticated morning adhkar are offered between Fajr and sunrise.
-- Authenticated evening adhkar are offered between ‘Asr and Maghrib.
-- Prayer windows are calculated locally from an approximate location; coordinates are not uploaded by Quran Safeguard.
+- Mushaf de Médine Hafs ‘an ‘Asim, 604 pages canoniques, disponible hors ligne.
+- Mise en page originale de 15 lignes.
+- Une page ne peut être validée qu’après 60 secondes actives et après avoir atteint le bas lorsque le défilement est nécessaire.
+- Le temps de lecture s’arrête en arrière-plan, écran éteint ou en multi-fenêtre lorsque le lecteur n’est plus l’activité principale.
+- Les débuts et fins de Juz/Hizb suivent leurs versets exacts dans la pagination du Mushaf de Médine : une page frontière peut donc appartenir à deux sections adjacentes.
+- Le quota produit demandé reste de 10 pages par bloc, même lorsqu’un Hizb réel occupe 9, 11 pages ou davantage ; l’interface signale clairement le changement de section.
+- Si un seul Hizb est choisi, son bloc de 10 pages est répété pour former les 20 pages matinales.
+- Avec plusieurs Hizb, la progression quotidienne est séquentielle du plus petit numéro au plus grand.
+- Après la dernière page obligatoire, le déblocage est acquis immédiatement ; l’utilisateur peut ouvrir la cible ou continuer librement les pages suivantes, sans nouveau minuteur.
 
-## Updates and data
+## Confidentialité et fluidité
 
-- The Android application ID remains `com.applicreation0.quransafeguard`.
-- Persistent migrations are cumulative and non-destructive.
-- Existing user preferences are backed up before a schema migration.
-- Recognized legacy formats are normalized; malformed obsolete values are ignored safely instead of crashing.
-- A failed migration restores the pre-migration preference backup.
-- Official updates must continue through the same Google Play app/signing identity.
+- L’AccessibilityService conserve en permanence un périmètre fixe : Quran Safeguard, les cibles sélectionnées, Android System UI et le lanceur courant pour les transitions.
+- Il ne bascule jamais vers un abonnement global (`packageNames = null`) et ne reçoit pas les événements des applications bancaires, professionnelles, GPS, transport, santé, identité ou sécurité.
+- Aucune application bancaire, professionnelle, GPS, transport, santé, identité ou sécurité n’est classifiée, journalisée ou associée à Safeguard.
+- Aucune permission de journal d’appels, d’état téléphonique ou d’écoute des notifications n’est demandée.
+- La récupération du contenu des fenêtres d’accessibilité reste désactivée.
+- La désinstallation Android normale reste possible.
 
-## Private distribution
+## Rappels spirituels
 
-Preferred route: Google Play Internal Testing, then Closed Testing if the invited group grows.
+- Une pensée principale est choisie localement pour la journée et reste stable.
+- Notification quotidienne douce à 20:00 locale.
+- Les hadiths automatiquement retenus sont limités à Sahih al-Bukhari et Sahih Muslim ; les autres textes conservés indiquent leur degré et leur provenance.
+- Quran Safeguard n’interprète ni ne reconstruit la voix d’Ibn ʿAṭāʾ Allāh, d’Ibn ʿAjība ou d’al-Ghazālī.
+- Les horaires d’adhkar sont calculés localement ; les coordonnées ne sont pas téléversées.
 
-See:
-- `docs/PRIVATE_DISTRIBUTION.md`
-- `docs/GOOGLE_PLAY_PRIVATE_SETUP.md`
-- `SECURITY.md`
+## Mise à jour et signature
 
-## Security
+- L’identifiant Android reste `com.applicreation0.quransafeguard`.
+- Les migrations sont sauvegardées, cumulatives et réversibles en cas d’échec.
+- La version 0.10.0 migre les anciens crédits par application et les anciennes exclusions vers le compteur global protégé.
+- Les versions de test doivent conserver la lignée de signature historique `6C:70:6F:4E:…:AC`.
+- La clé PKCS12 et ses mots de passe ne doivent jamais être ajoutés au dépôt.
 
-Official releases must be signed and distributed through the approved private Google Play channel. Do not treat APK files received by message, email or third-party download sites as official builds.
+Le paquet de diffusion n’est publié qu’après réussite de l’audit, des tests unitaires, des compilations debug/release et de la vérification cryptographique de sa signature.

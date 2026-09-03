@@ -1,22 +1,35 @@
 package com.applicreation0.quransafeguard
 
+data class GhazaliContextControl(
+    val beforeLocator: String,
+    val afterLocator: String,
+    val passageRole: ClassicalPassageRole,
+    val continuityChecked: Boolean,
+    val nuanceRiskChecked: Boolean
+) {
+    val valid: Boolean
+        get() =
+            beforeLocator.isNotBlank() &&
+                afterLocator.isNotBlank() &&
+                continuityChecked &&
+                nuanceRiskChecked
+}
+
 data class GhazaliContext(
     val arabicText: String,
     val frenchText: String,
     val source: ClassicalSource,
     val verification: ClassicalVerification,
-    val isExcerpt: Boolean
+    val isExcerpt: Boolean,
+    val textIntegrity: ClassicalTextIntegrity
 ) {
     val displayEligible: Boolean
         get() =
             arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
-                source.author.isNotBlank() &&
-                source.workTitle.isNotBlank() &&
-                source.edition.isNotBlank() &&
-                source.locator.isNotBlank() &&
-                source.sourceUrl.isNotBlank() &&
-                verification.displayEligible
+                source.documentaryComplete &&
+                verification.displayEligible &&
+                textIntegrity.allows(arabicText, frenchText)
 }
 
 data class GhazaliEntry(
@@ -27,6 +40,8 @@ data class GhazaliEntry(
     val tags: Set<String>,
     val source: ClassicalSource,
     val verification: ClassicalVerification,
+    val contextControl: GhazaliContextControl,
+    val textIntegrity: ClassicalTextIntegrity,
     val context: GhazaliContext?
 ) {
     val displayEligible: Boolean
@@ -34,146 +49,130 @@ data class GhazaliEntry(
             canonicalId.isNotBlank() &&
                 arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
-                source.author.isNotBlank() &&
-                source.workTitle.isNotBlank() &&
-                source.edition.isNotBlank() &&
-                source.locator.isNotBlank() &&
-                source.sourceUrl.isNotBlank() &&
-                verification.displayEligible
+                source.documentaryComplete &&
+                source.workTitle.contains("Ayyuhā al-Walad") &&
+                verification.displayEligible &&
+                contextControl.valid &&
+                contextControl.passageRole == ClassicalPassageRole.AUTHOR_OWN_WORDS &&
+                textIntegrity.allows(arabicText, frenchText)
 }
 
 object GhazaliRepository {
-    private const val BIDAYAT_SOURCE =
-        "Bidāyat al-Hidāya — transcription arabe Wikisource, contrôlée contre une seconde lecture numérique; " +
-            "édition imprimée/page de référence humaine à verrouiller."
-    private const val IHYA_SOURCE =
-        "Iḥyāʾ ʿUlūm al-Dīn — Kitāb Ādāb al-Maʿīsha wa-Akhlāq al-Nubuwwa, " +
-            "transcription arabe Wikisource; édition imprimée/page de référence humaine à verrouiller."
+    private const val AYYUHA_SOURCE =
+        "Ayyuhā al-Walad — transcription arabe Wikisource; texte attribué à Abū Ḥāmid al-Ghazālī. " +
+            "La traduction française affichée est interne à Quran Safeguard."
+
+    private const val AYYUHA_URL =
+        "https://ar.wikisource.org/w/index.php?title=أيها_الولد&oldid=426675"
 
     private fun verifiedInternalTranslation(note: String) = ClassicalVerification(
         sourceVerified = true,
         attributionVerified = true,
-        translationVerified = true,
+        translationAvailable = true,
         humanVerified = false,
         rightsStatus = TranslationRightsStatus.INTERNAL_TRANSLATION_ALLOWED,
         authenticityStatus = ClassicalAuthenticityStatus.VERIFIED_SOURCE,
         verificationNote = note
     )
 
+    /**
+     * Issue #31 deliberately narrows short al-Ghazālī reminders to Ayyuhā al-Walad.
+     * This is a continuous prose work, not a maxim collection. Entries are added
+     * only after checking the immediate before/after context and the role of the
+     * selected passage.
+     */
     val entries: List<GhazaliEntry> = listOf(
         GhazaliEntry(
-            canonicalId = "ghazali_bidaya_religion_two_halves",
-            arabicText = "اعلم أن للدين شطرين، أحدهما: ترك المناهي، والآخر: فعل الطاعات.",
-            frenchText = "Sache que la religion comporte deux parts : l’une consiste à délaisser les interdits, et l’autre à accomplir les actes d’obéissance.",
+            canonicalId = "ghazali_ayyuhalwalad_works_not_bankrupt",
+            arabicText =
+                "لا تكنْ مِنَ الأَعْمالِ مُفْلِساً، ولا مِنَ الأَحْوالِ خَالِياً، " +
+                    "وتَيَقَّنْ أَنَّ العِلْمَ المُجَرَّدَ لا يَأخُذُ بِاليَدِ.",
+            frenchText =
+                "Ne sois pas démuni d’œuvres ni vide d’états spirituels, et sois certain " +
+                    "que la science purement théorique, à elle seule, ne te prend pas par la main.",
             theme = "discipline",
-            tags = setOf("discipline personnelle", "bonnes habitudes", "maîtrise de soi"),
+            tags = setOf(
+                "discipline personnelle",
+                "bonnes habitudes",
+                "mise en pratique",
+                "connaissance",
+                "action"
+            ),
             source = ClassicalSource(
                 author = "Abū Ḥāmid al-Ghazālī",
-                workTitle = "Bidāyat al-Hidāya",
-                edition = BIDAYAT_SOURCE,
+                workTitle = "Ayyuhā al-Walad (أيها الولد)",
+                edition = AYYUHA_SOURCE,
                 editor = null,
                 volume = null,
-                locator = "Section II — القول في اجتناب المعاصي — transcription Wikisource, ligne 207",
-                sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
+                locator =
+                    "Section « أيها الولد » — paragraphe commençant " +
+                        "« لا تكن من الأعمال مفلسا، ولا من الأحوال خاليا »",
+                sourceUrl = AYYUHA_URL,
                 translator = "Traduction interne Quran Safeguard"
             ),
             verification = verifiedInternalTranslation(
-                "La version précédente avait une variante non exacte (« الدين شطران »). " +
-                    "Le texte canonique interne est corrigé sur la transcription retrouvée."
+                "Texte arabe, attribution et emplacement retrouvés dans la transcription Wikisource. " +
+                    "Traduction interne non certifiée humainement; elle ne conditionne pas " +
+                    "l’authenticité documentaire du texte arabe."
+            ),
+            contextControl = GhazaliContextControl(
+                beforeLocator =
+                    "Passage immédiatement précédent : discussion de la science sans mise en pratique, " +
+                        "puis récit rapporté concernant al-Junayd",
+                afterLocator =
+                    "Suite immédiate du même paragraphe : exemple des armes et du lion, puis " +
+                        "« فكذا لو قرأ رجل مائة ألف مسألة علمية… »",
+                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS,
+                continuityChecked = true,
+                nuanceRiskChecked = true
+            ),
+            textIntegrity = ClassicalTextIntegrity(
+                form = ClassicalTextForm.CONTINUOUS_EXCERPT,
+                reconstructedOrAssembled = false,
+                hasInternalOmissions = false,
+                contextChecked = true,
+                passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             ),
             context = GhazaliContext(
-                arabicText = "القسم الثاني القول في اجتناب المعاصى توطئة اعلم ان للدين شطرين، أحدهما: ترك المناهي، والآخر: فعل الطاعات.. وترك المناهي هو الأشد؛ فإن الطاعات يقدر عليها كل واحد، وترك الشهوات لا يقدر عليه إلا الصديقون، […]",
-                frenchText = "Deuxième partie : propos sur l’évitement des désobéissances. Préambule. Sache que la religion comporte deux parts : l’une consiste à délaisser les interdits, et l’autre à accomplir les actes d’obéissance. Délaisser les interdits est le plus difficile ; car chacun peut accomplir les actes d’obéissance, tandis que délaisser les passions n’est à la portée que des véridiques. […]",
+                arabicText =
+                    "لا تكنْ مِنَ الأَعْمالِ مُفْلِساً، ولا مِنَ الأَحْوالِ خَالِياً، " +
+                        "وتَيَقَّنْ أَنَّ العِلْمَ المُجَرَّدَ لا يَأخُذُ بِاليَدِ. " +
+                        "مِثَالُهُ: لَوْ كانَ على رَجُلٍ في بَرِّيَّةٍ عَشْرَةُ أَسْيافٍ هِنْدِيَّةٍ " +
+                        "مَعَ أَسْلِحَةٍ أُخْرَى، وَكَاَن الرَّجُلُ شُجَاعاً وأَهْلَ حَرْب، " +
+                        "فَحَمَلَ عَلَيْهِ أَسَدٌ عَظِيمٌ مَهيبٌ فَمَا ظَنُّكَ؟ " +
+                        "هَلْ تَدْفَعُ الأَسْلِحَةُ شَرَّهُ عَنْهُ بِلا اسْتِعْمالِها وضَرْبِها؟ " +
+                        "ومِنَ المَعْلُومِ أَنَّهَا لَا تَدْفَعُ إِلَّا بالتَّحْرِيكِ والضَّرْبِ.",
+                frenchText =
+                    "Ne sois pas démuni d’œuvres ni vide d’états spirituels, et sois certain " +
+                        "que la science purement théorique ne te prend pas par la main. Par exemple, " +
+                        "si un homme se trouvait dans un désert avec dix sabres indiens et d’autres armes, " +
+                        "qu’il soit courageux et expérimenté au combat, puis qu’un lion énorme et redoutable " +
+                        "l’attaque, que penses-tu qu’il arriverait ? Les armes repousseraient-elles son mal " +
+                        "sans qu’il les utilise et frappe avec elles ? Il est évident qu’elles ne le repoussent " +
+                        "que par leur mise en mouvement et leur emploi.",
                 source = ClassicalSource(
                     author = "Abū Ḥāmid al-Ghazālī",
-                    workTitle = "Bidāyat al-Hidāya",
-                    edition = BIDAYAT_SOURCE,
+                    workTitle = "Ayyuhā al-Walad (أيها الولد)",
+                    edition = AYYUHA_SOURCE,
                     editor = null,
                     volume = null,
-                    locator = "Section II — Wikisource, ligne 207",
-                    sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
+                    locator =
+                        "Section « أيها الولد » — passage continu commençant " +
+                            "« لا تكن من الأعمال مفلسا » et poursuivi par l’exemple des armes et du lion",
+                    sourceUrl = AYYUHA_URL,
                     translator = "Traduction interne Quran Safeguard"
                 ),
                 verification = verifiedInternalTranslation(
-                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
+                    "Contexte continu du même paragraphe, sans assemblage ni résumé."
                 ),
-                isExcerpt = true
-            )
-        ),
-        GhazaliEntry(
-            canonicalId = "ghazali_bidaya_limb_guardianship",
-            arabicText = "فأعضاؤك رعاياك، فانظر كيف ترعاها.",
-            frenchText = "Tes membres sont ceux dont tu as la charge ; regarde donc comment tu en prends soin.",
-            theme = "discipline",
-            tags = setOf("soin du corps", "discipline personnelle", "bonnes habitudes", "comportement"),
-            source = ClassicalSource(
-                author = "Abū Ḥāmid al-Ghazālī",
-                workTitle = "Bidāyat al-Hidāya",
-                edition = BIDAYAT_SOURCE,
-                editor = null,
-                volume = null,
-                locator = "Section II — القول في اجتناب المعاصي — transcription Wikisource, ligne 208",
-                sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
-                translator = "Traduction interne Quran Safeguard"
-            ),
-            verification = verifiedInternalTranslation(
-                "Texte arabe et attribution retrouvés dans le passage continu de Bidāyat al-Hidāya."
-            ),
-            context = GhazaliContext(
-                arabicText = "واعلم أنك إنما تعصي الله بجوارحك، وهي نعمة من الله عليك وأمانة لديك، فاستعانتك بنعمة الله على معصيته غاية الكفران، وخيانتك في أمانة استودعها الله غاية الطغيان؛ فأعضاؤك رعاياك، فانظر كيف ترعاها؛ فكلكم راع، وكلكم مسؤول عن رعيته. […]",
-                frenchText = "Sache que tu ne désobéis à Dieu qu’au moyen de tes membres : ils sont un bienfait de Dieu envers toi et un dépôt confié à toi. Employer le bienfait de Dieu dans la désobéissance est le comble de l’ingratitude, et trahir le dépôt qu’Il t’a confié est le comble de la transgression. Tes membres sont ceux dont tu as la charge ; regarde donc comment tu en prends soin. Chacun de vous est gardien et chacun sera interrogé sur ce dont il a la charge. […]",
-                source = ClassicalSource(
-                    author = "Abū Ḥāmid al-Ghazālī",
-                    workTitle = "Bidāyat al-Hidāya",
-                    edition = BIDAYAT_SOURCE,
-                    editor = null,
-                    volume = null,
-                    locator = "Section II — Wikisource, ligne 208",
-                    sourceUrl = "https://ar.wikisource.org/wiki/بداية_الهداية",
-                    translator = "Traduction interne Quran Safeguard"
-                ),
-                verification = verifiedInternalTranslation(
-                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
-                ),
-                isExcerpt = true
-            )
-        ),
-        GhazaliEntry(
-            canonicalId = "ghazali_ihya_outer_inner_adab",
-            arabicText = "فإن آداب الظواهر عنوان آداب البواطن، وحركات الجوارح ثمرات الخواطر.",
-            frenchText = "Les règles de conduite extérieures sont l’indice des règles de conduite intérieures, et les mouvements des membres sont les fruits des pensées.",
-            theme = "comportement",
-            tags = setOf("bonnes mœurs", "comportement", "sincérité", "bonnes habitudes"),
-            source = ClassicalSource(
-                author = "Abū Ḥāmid al-Ghazālī",
-                workTitle = "Iḥyāʾ ʿUlūm al-Dīn",
-                edition = IHYA_SOURCE,
-                editor = null,
-                volume = "Rubʿ al-ʿĀdāt, livre 10",
-                locator = "Kitāb Ādāb al-Maʿīsha wa-Akhlāq al-Nubuwwa — transcription Wikisource, ligne 97",
-                sourceUrl = "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
-                translator = "Traduction interne Quran Safeguard"
-            ),
-            verification = verifiedInternalTranslation(
-                "Texte arabe et attribution retrouvés dans l’ouverture du livre indiqué."
-            ),
-            context = GhazaliContext(
-                arabicText = "أما بعد: فإن آداب الظواهر عنوان آداب البواطن، وحركات الجوارح ثمرات الخواطر، والأعمال نتيجة الأخلاق والآداب رشح المعارف، وسرائر القلوب هي مغارس الأفعال ومنابعها، وأنوار السرائر هي التي تشرق على الظواهر فتزينها وتجليها، وتبدل بالمحاسن مكارهها ومساويها. […]",
-                frenchText = "Ensuite : les règles de conduite extérieures sont l’indice des règles de conduite intérieures, les mouvements des membres sont les fruits des pensées, les œuvres sont le résultat des caractères, et les règles de conduite sont l’émanation des connaissances. Les secrets des cœurs sont les lieux où se plantent les actes et leurs sources ; les lumières des réalités intérieures rayonnent sur les apparences, les embellissent et les rendent manifestes, et remplacent par des beautés leurs aspects déplaisants. […]",
-                source = ClassicalSource(
-                    author = "Abū Ḥāmid al-Ghazālī",
-                    workTitle = "Iḥyāʾ ʿUlūm al-Dīn",
-                    edition = IHYA_SOURCE,
-                    editor = null,
-                    volume = "Rubʿ al-ʿĀdāt, livre 10",
-                    locator = "Kitāb Ādāb al-Maʿīsha wa-Akhlāq al-Nubuwwa — Wikisource, lignes 97-98",
-                    sourceUrl = "https://ar.wikisource.org/wiki/إحياء_علوم_الدين/كتاب_آداب_المعيشة_وأخلاق_النبوة",
-                    translator = "Traduction interne Quran Safeguard"
-                ),
-                verification = verifiedInternalTranslation(
-                    "Contexte continu retrouvé dans le texte d’al-Ghazālī; traduction française interne relue contre le passage arabe; pas de certification éditoriale externe."
-                ),
-                isExcerpt = true
+                isExcerpt = true,
+                textIntegrity = ClassicalTextIntegrity(
+                    form = ClassicalTextForm.CONTINUOUS_EXCERPT,
+                    reconstructedOrAssembled = false,
+                    hasInternalOmissions = false,
+                    contextChecked = true,
+                    passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
+                )
             )
         )
     )

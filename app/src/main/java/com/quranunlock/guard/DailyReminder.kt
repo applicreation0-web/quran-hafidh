@@ -237,8 +237,7 @@ object ReminderLibrary {
 
     fun all(context: Context): List<DailyReminder> =
         items +
-            HikamRepository.asDailyReminders() +
-            GhazaliRepository.asDailyReminders() +
+            HikamRepository.asDailyReminders(context) +
             bundled(context)
 
     fun byId(context: Context, id: String): DailyReminder? =
@@ -295,6 +294,15 @@ object ReminderLibrary {
     }
 }
 
+object ThoughtOfDayPolicy {
+    const val REMINDER_HOUR = 20
+    const val NOTIFICATION_ID = 8200
+    const val FULL_CARD_ACTIVITY_SIMPLE_NAME = "ThoughtOfDayActivity"
+
+    fun shouldNotify(lastEpochDay: Long, currentEpochDay: Long): Boolean =
+        lastEpochDay != currentEpochDay
+}
+
 object DailyReminderManager {
     private const val FILE = "daily_reminders"
     private const val DAY_KEY = "selected_epoch_day"
@@ -315,13 +323,13 @@ object DailyReminderManager {
         "liens de parenté"
     )
 
-    // Hadith remains the main source. Ghazali/Hikam slots are used only when
-    // authenticity-gated classical entries are display-eligible; otherwise
-    // the selection tiers fall back to verified available content.
+    // Hadith remains the main source. Hikam slots are used only when
+    // authenticity-gated entries are display-eligible; otherwise the
+    // selection tiers fall back to verified available content.
     private val dailyTypeCycle = listOf(
         ReminderType.HADITH,
         ReminderType.HADITH,
-        ReminderType.GHAZALI,
+        ReminderType.HIKAM,
         ReminderType.HADITH,
         ReminderType.HIKAM,
         ReminderType.HADITH,
@@ -347,8 +355,8 @@ object DailyReminderManager {
         val theme = weeklyThemes[Math.floorMod((epochDay / 7L).toInt(), weeklyThemes.size)]
         val desiredType = dailyTypeCycle[Math.floorMod(date.dayOfWeek.value - 1, dailyTypeCycle.size)]
 
-        val selected = chooseReminder(
-            context = context,
+        val selected = chooseReminderFromList(
+            all = ReminderLibrary.all(context),
             epochDay = epochDay,
             theme = theme,
             desiredType = desiredType,
@@ -369,14 +377,14 @@ object DailyReminderManager {
         return selected
     }
 
-    private fun chooseReminder(
-        context: Context,
+    internal fun chooseReminderFromList(
+        all: List<DailyReminder>,
         epochDay: Long,
         theme: String,
         desiredType: ReminderType,
         recentIds: Set<String>
     ): DailyReminder {
-        val all = ReminderLibrary.all(context)
+        require(all.isNotEmpty()) { "Thought-of-day corpus must not be empty." }
         val fresh = all.filterNot { it.id in recentIds }
 
         val tiers = listOf(
