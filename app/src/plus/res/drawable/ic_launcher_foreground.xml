@@ -110,10 +110,8 @@
     <path
         android:fillColor="#E2C77E"
         android:pathData="M54,16 L58,20 L54,24 L50,20 Z" />
-</vector>
     <!-- Discreet Plus edition mark -->
     <path
         android:fillColor="#F0D58C"
         android:pathData="M82,17 L88,17 L88,23 L94,23 L94,29 L88,29 L88,35 L82,35 L82,29 L76,29 L76,23 L82,23 Z" />
 </vector>
-
