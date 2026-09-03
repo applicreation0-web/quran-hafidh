@@ -4,8 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -196,6 +196,11 @@ class DashboardActivity : ComponentActivity() {
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.38f),
+                            shape = RoundedCornerShape(24.dp)
+                        )
                         .clickable {
                             startActivity(
                                 Intent(
@@ -217,10 +222,6 @@ class DashboardActivity : ComponentActivity() {
                         } else {
                             MaterialTheme.colorScheme.surfaceVariant
                         }
-                    ),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.38f)
                     ),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
                 ) {

@@ -84,52 +84,52 @@ class QuranAccessibilityService : AccessibilityService() {
         override fun run() {
             try {
                 // Fallback on all Android versions and safety net for listener delivery.
-            val currentMode = audioManager?.mode ?: AudioManager.MODE_NORMAL
-            handleAudioModeChanged(currentMode)
+                val currentMode = audioManager?.mode ?: AudioManager.MODE_NORMAL
+                handleAudioModeChanged(currentMode)
 
-            if (!callFreezeActive) {
-                val packageName = foregroundUnlockedPackage
-                if (packageName != null) {
-                    if (!ProtectedApps.isProtected(
+                if (!callFreezeActive) {
+                    val packageName = foregroundUnlockedPackage
+                    if (packageName != null) {
+                        if (!ProtectedApps.isProtected(
+                                this@QuranAccessibilityService,
+                                packageName
+                            )
+                        ) {
+                            pauseForegroundBudget(clearForeground = true)
+                            applyEventPackageScope(broad = false)
+                            GuardDiagnostics.log(
+                                this@QuranAccessibilityService,
+                                "TARGET_SELECTION_EXPIRED"
+                            )
+                            return
+                        }
+
+                        val now = SystemClock.elapsedRealtime()
+                        if (now - lastCheckpointElapsedMs >= 1_000L) {
+                            GuardPrefs.checkpointUnlockForeground(
+                                this@QuranAccessibilityService,
+                                packageName
+                            )
+                            lastCheckpointElapsedMs = now
+                        }
+
+                        val remaining = GuardPrefs.remainingUnlockMs(
                             this@QuranAccessibilityService,
                             packageName
                         )
-                    ) {
-                        pauseForegroundBudget(clearForeground = true)
-                        applyEventPackageScope(broad = false)
-                        GuardDiagnostics.log(
-                            this@QuranAccessibilityService,
-                            "TARGET_SELECTION_EXPIRED"
-                        )
-                        return
-                    }
 
-                    val now = SystemClock.elapsedRealtime()
-                    if (now - lastCheckpointElapsedMs >= 1_000L) {
-                        GuardPrefs.checkpointUnlockForeground(
-                            this@QuranAccessibilityService,
-                            packageName
-                        )
-                        lastCheckpointElapsedMs = now
-                    }
-
-                    val remaining = GuardPrefs.remainingUnlockMs(
-                        this@QuranAccessibilityService,
-                        packageName
-                    )
-
-                    if (remaining <= 0L) {
-                        foregroundUnlockedPackage = null
-                        applyEventPackageScope(broad = false)
-                        showGentleMessage(
-                            "15 minutes cumulées dans les applications cibles sont atteintes. Une nouvelle lecture vous permettra de continuer."
-                        )
-                        triggerExpiredGateIfNeeded(packageName)
-                    } else {
-                        maybeShowUsageReminder(packageName)
+                        if (remaining <= 0L) {
+                            foregroundUnlockedPackage = null
+                            applyEventPackageScope(broad = false)
+                            showGentleMessage(
+                                "15 minutes cumulées dans les applications cibles sont atteintes. Une nouvelle lecture vous permettra de continuer."
+                            )
+                            triggerExpiredGateIfNeeded(packageName)
+                        } else {
+                            maybeShowUsageReminder(packageName)
+                        }
                     }
                 }
-            }
 
             } catch (error: Exception) {
                 reportNonFatal("USAGE_TICK_FAILED", error)
@@ -301,6 +301,7 @@ class QuranAccessibilityService : AccessibilityService() {
             // next real event from a selected target proves foreground presence
             // and starts the shared budget again.
             foregroundPackage = null
+            whatsappCallUiActive = false
             GuardRuntime.resetForeground()
             applyEventPackageScope(broad = false)
         }
