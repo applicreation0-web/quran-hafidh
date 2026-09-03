@@ -324,6 +324,11 @@ class QuranAccessibilityService : AccessibilityService() {
             ?.takeIf(String::isNotBlank)
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (AccessibilityStatus.isOtherEditionEnabled(this)) {
+            pauseForegroundBudget(clearForeground = true)
+            applyEventPackageScope(broad = false)
+            return
+        }
         try {
             processAccessibilityEvent(event)
         } catch (error: Exception) {

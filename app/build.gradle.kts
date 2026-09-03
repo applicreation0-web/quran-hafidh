@@ -13,6 +13,41 @@ val verifyHikam264 by tasks.registering(Exec::class) {
     commandLine("python3", "scripts/verify_hikam_264.py")
 }
 
+val verifyEditionIsolation by tasks.registering {
+    doLast {
+        val mainAssets = file("src/main/assets")
+        val forbiddenMainCorpus = fileTree(mainAssets) {
+            include("**/*jalalayn*")
+            include("**/*tafsir*")
+            include("**/*.sqlite")
+            include("**/*.db")
+            include("**/*.pdf")
+        }.files
+        check(forbiddenMainCorpus.isEmpty()) {
+            "The shared/Light source set must never contain the private tafsir corpus."
+        }
+        check(file("src/light/java/com/quranunlock/guard/TafsirEdition.kt").readText()
+            .contains("isEnabled: Boolean = false"))
+        check(file("src/plus/java/com/quranunlock/guard/TafsirEdition.kt").readText()
+            .contains("isEnabled: Boolean = true"))
+        check(file("src/plus/res/xml/accessibility_service_config.xml").readText()
+            .contains("com.applicreation0.quransafeguard.plus"))
+        check(file("src/plus/res/values/strings.xml").readText()
+            .contains("Quran Safeguard Plus"))
+    }
+}
+
+val verifyPlusTafsirCorpus by tasks.registering {
+    doLast {
+        val database = file(
+            "src/plus/assets/tafsir/al_jalalayn_en.sqlite"
+        )
+        check(database.isFile && database.length() > 0L) {
+            "Generate the private Plus tafsir database before building Plus."
+        }
+    }
+}
+
 val verifyMushafPages by tasks.registering {
     doLast {
         val mushafDir = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
@@ -981,6 +1016,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyProtectedOnlyBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
     dependsOn(verifyExperienceBoundary)
+    dependsOn(verifyEditionIsolation)
 }
 
 android {
@@ -993,6 +1029,18 @@ android {
         targetSdk = 36
         versionCode = 20
         versionName = "0.10.1"
+    }
+
+    flavorDimensions += "edition"
+    productFlavors {
+        create("light") {
+            dimension = "edition"
+        }
+        create("plus") {
+            dimension = "edition"
+            applicationIdSuffix = ".plus"
+            versionNameSuffix = "-plus.1"
+        }
     }
 
     buildFeatures {
@@ -1011,6 +1059,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyProtectedOnlyBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
     dependsOn(verifyExperienceBoundary)
+    dependsOn(verifyEditionIsolation)
 }
 
 dependencies {
@@ -1018,6 +1067,7 @@ dependencies {
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-ktx:1.17.0")
+    plusImplementation("androidx.webkit:webkit:1.16.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")
@@ -1030,7 +1080,13 @@ dependencies {
 }
 
 
-tasks.matching { it.name == "assembleRelease" }.configureEach {
-    dependsOn("testDebugUnitTest")
+tasks.matching { it.name == "assembleLightRelease" }.configureEach {
+    dependsOn("testLightDebugUnitTest")
     dependsOn(verifyReleaseAudit)
+}
+
+tasks.matching {
+    it.name == "assemblePlusDebug" || it.name == "assemblePlusRelease"
+}.configureEach {
+    dependsOn(verifyPlusTafsirCorpus)
 }

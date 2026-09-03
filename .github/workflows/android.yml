@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle --no-daemon :app:testDebugUnitTest 2>&1 | tee unit-test.log
+          gradle --no-daemon :app:testLightDebugUnitTest 2>&1 | tee unit-test.log
 
       - name: Upload unit-test reports
         continue-on-error: true
@@ -57,27 +57,32 @@ jobs:
           if-no-files-found: warn
 
       - name: Build debug APK
-        run: gradle --no-daemon :app:assembleDebug
+        run: gradle --no-daemon :app:assembleLightDebug
 
       - name: Upload debug APK
         continue-on-error: true
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-unlock-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: quran-safeguard-light-debug
+          path: app/build/outputs/apk/light/debug/app-light-debug.apk
           if-no-files-found: error
 
       - name: Build unsigned release APK
-        run: gradle --no-daemon :app:assembleRelease
+        run: gradle --no-daemon :app:assembleLightRelease
+
+      - name: Prove Light contains no Plus tafsir material
+        run: >-
+          python3 scripts/verify_light_apk_no_tafsir.py
+          app/build/outputs/apk/light/release/app-light-release-unsigned.apk
 
       - name: Upload unsigned release APK
         continue-on-error: true
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-safeguard-release-unsigned
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          name: quran-safeguard-light-release-unsigned
+          path: app/build/outputs/apk/light/release/app-light-release-unsigned.apk
           if-no-files-found: error
 
       - name: Upload Android signing tools
