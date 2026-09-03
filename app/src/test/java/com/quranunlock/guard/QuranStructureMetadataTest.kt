@@ -83,7 +83,7 @@ class QuranStructureMetadataTest {
                 val division = QuranStructureMetadata.division(mode, number)
                 assertTrue(division.startPage in 1..604)
                 assertTrue(division.endPage in division.startPage..604)
-                assertTrue(division.pageRange.isNotEmpty())
+                assertFalse(division.pageRange.isEmpty())
             }
         }
     }
