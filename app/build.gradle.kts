@@ -77,7 +77,7 @@ val verifyMushafPages by tasks.registering {
             "A page requires at least 60 active seconds."
         }
         check(prefs.contains("ReadingValidationPolicy.canValidate")) {
-            "Persistence must enforce the shared 60-second plus progress policy."
+            "Persistence must enforce the shared 60-second active-reading policy."
         }
         val selectionUi = file(
             "src/main/java/com/quranunlock/guard/ReadingSelectionActivity.kt"
@@ -91,8 +91,8 @@ val verifyMushafPages by tasks.registering {
         }
         listOf(
             "fiftyNineSecondsCannotValidateEvenAtBottom",
-            "sixtyActiveSecondsAndBottomCanValidate",
-            "sixtySecondsWithoutPageProgressCannotValidate",
+            "sixtyActiveSecondsCanValidate",
+            "missingScrollSignalCannotKeepSixtySecondPageLocked",
             "pausedTimeCannotBeInventedByValidationPolicy",
             "fullyVisiblePageDoesNotRequireScroll",
             "minorWebViewRoundingDoesNotCreateFakeScrollRequirement",
@@ -117,6 +117,12 @@ val verifyPrivacyBoundary by tasks.registering {
         ).readText()
         val applicationsUi = file(
             "src/main/java/com/quranunlock/guard/ApplicationsActivity.kt"
+        ).readText()
+        val presenceScope = file(
+            "src/main/java/com/quranunlock/guard/TargetPresenceScopePolicy.kt"
+        ).readText()
+        val presenceScopeTests = file(
+            "src/test/java/com/quranunlock/guard/TargetPresenceScopePolicyTest.kt"
         ).readText()
         val migrationSource = file(
             "src/main/java/com/quranunlock/guard/AppMigrations.kt"
@@ -205,14 +211,36 @@ val verifyPrivacyBoundary by tasks.registering {
         check(applicationsUi.contains("retrait est confirmé puis appliqué le lendemain"))
         check(applicationsUi.contains("Retrait prévu demain"))
 
-        check(!service.contains("info.packageNames = null")) {
-            "Accessibility must never subscribe to every installed application."
+        check(service.contains("TargetPresenceScopePolicy.requiresAnonymousExitSentinel"))
+        check(service.contains("if (anonymousExitSentinel)"))
+        check(service.contains("info.packageNames = if (anonymousExitSentinel)")) {
+            "Broad event delivery is allowed only for the one-shot anonymous exit sentinel."
         }
         check(service.contains("ProtectedApps.eventScopePackages(this).toTypedArray()")) {
-            "Runtime accessibility scope must remain explicit and target-only."
+            "Runtime accessibility scope must return immediately to the explicit target list."
         }
         check(service.contains("handleOutsideScopeForeground()"))
+        val outsideHandler = service
+            .substringAfter("private fun handleOutsideScopeForeground()")
+            .substringBefore("private fun applyEventPackageScope")
+        check(outsideHandler.indexOf("pauseForegroundBudget(clearForeground = true)") in
+            0 until outsideHandler.indexOf("GuardRuntime.resetForeground()")
+        ) {
+            "The first anonymous outside event must pause target presence before state is cleared."
+        }
         check(service.contains("applyEventPackageScope(broad = false)"))
+        check(presenceScope.contains("foregroundPackage == runningBudgetPackage"))
+        check(presenceScope.contains("foregroundPackage in selectedTargets"))
+        listOf(
+            "runningSelectedTargetRequiresOneAnonymousExitSignal",
+            "noSentinelExistsWithoutAnActivelyRunningTargetBudget",
+            "outsideApplicationCanNeverOwnTheSharedBudgetScope",
+            "narrowScopeIsRestoredAfterTheExitSignal"
+        ).forEach { scenario ->
+            check(presenceScopeTests.contains("fun " + scenario + "(")) {
+                "Missing target-presence scope regression test: " + scenario
+            }
+        }
         check(protectedApps.contains("transitionSignalPackages"))
         check(protectedApps.contains("SYSTEM_UI_PACKAGE"))
         check(protectedApps.contains("launcherPackage(context)"))
@@ -245,6 +273,15 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         val reader = file(
             "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
         ).readText()
+        val targetReturn = file(
+            "src/main/java/com/quranunlock/guard/TargetReturnCoordinator.kt"
+        ).readText()
+        val targetReturnPolicy = file(
+            "src/main/java/com/quranunlock/guard/TargetReturnPolicy.kt"
+        ).readText()
+        val targetReturnTests = file(
+            "src/test/java/com/quranunlock/guard/TargetReturnPolicyTest.kt"
+        ).readText()
         val mainUi = file(
             "src/main/java/com/quranunlock/guard/MainActivity.kt"
         ).readText()
@@ -253,6 +290,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         ).readText()
         val budgetTests = file(
             "src/test/java/com/quranunlock/guard/UnlockBudgetIntegrityTest.kt"
+        ).readText()
+        val stressTests = file(
+            "src/test/java/com/quranunlock/guard/TargetPresenceStressTest.kt"
         ).readText()
         val structure = file(
             "src/main/java/com/quranunlock/guard/QuranStructureMetadata.kt"
@@ -271,18 +311,27 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(service.contains("isKnownWhatsAppCallActivity"))
         check(service.contains("handleAudioModeChanged"))
         check(service.contains("pauseForegroundBudget(clearForeground = true)"))
+        check(!service.contains("resumeCurrentProtectedPackageIfEligible"))
+        check(service.contains("TARGET_SELECTION_EXPIRED"))
+        check(service.contains("next real event from a selected target"))
         check(engine.contains("shouldFreezeForAudioMode"))
         check(engine.contains("MODE_IN_COMMUNICATION"))
         check(!manifest.contains("android.permission.READ_PHONE_STATE"))
         check(!manifest.contains("NotificationListenerService"))
 
         check(cycle.contains("INTERVAL_MINUTES = 15"))
-        check(cycle.contains("INTERVALS_PER_HIZB = 6"))
+        check(cycle.contains("CUMULATIVE_MINUTES = 90"))
+        check(cycle.contains("CUMULATIVE_MS = CUMULATIVE_MINUTES * 60_000L"))
+        check(cycle.contains(
+            "INTERVALS_PER_HIZB = CUMULATIVE_MINUTES / INTERVAL_MINUTES"
+        ))
         check(cycle.contains("MORNING_PAGE_COUNT = 20"))
         check(cycle.contains("HIZB_PAGE_COUNT = 10"))
         check(cycle.contains("ChallengeLevel.HIZB"))
         check(prefs.contains("GLOBAL_USAGE_KEY = \"__all_protected_targets__\""))
         check(prefs.contains("val grantedMs = UsageCyclePolicy.INTERVAL_MS"))
+        check(prefs.contains("currentIntervalTargetPresenceMs"))
+        check(prefs.contains("currentCycleTargetPresenceMs"))
         check(!prefs.contains("getInt(UNLOCK_MINUTES"))
         check(cyclePrefs.contains("SafeguardCyclePrefs"))
         check(cyclePrefs.contains("sequentialHizbPages"))
@@ -295,6 +344,22 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(reader.contains("Quota atteint • sortie libre • lecture facultative"))
         check(reader.contains("Ouvrir l’application cible"))
         check(reader.contains("continueFreely"))
+        check(reader.contains("Débloquer et ouvrir"))
+        check(reader.contains("validateAndAdvance(continueAfterQuota = true)"))
+        check(reader.contains("TargetReturnCoordinator.returnImmediately"))
+        check(gate.contains("TargetReturnCoordinator.returnImmediately"))
+        check(targetReturnPolicy.contains("REVEAL_EXISTING_TASK"))
+        check(targetReturn.contains("FLAG_ACTIVITY_RESET_TASK_IF_NEEDED"))
+        listOf(
+            "normalUnlockRevealsTheExactTriggerTaskWithoutRelaunch",
+            "missingTriggerTaskUsesLauncherFallback",
+            "unavailableTargetOnlyClosesSafeguard",
+            "blankTargetCanNeverBeLaunched"
+        ).forEach { scenario ->
+            check(targetReturnTests.contains("fun " + scenario + "(")) {
+                "Missing target-return regression test: " + scenario
+            }
+        }
         check(structure.contains("Tanzil Quran Metadata 1.0"))
         check(structure.contains("startsInsidePage"))
         check(structure.contains("endsInsidePage"))
@@ -310,6 +375,16 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         ).forEach { scenario ->
             check(structureTests.contains("fun " + scenario + "(")) {
                 "Missing Quran structure regression test: " + scenario
+            }
+        }
+        listOf(
+            "thousandsOfTargetBurstsAndOutsideGapsDebitExactlyFifteenMinutes",
+            "twoHundredFiftyNinetyMinuteCyclesRemainExactUnderRapidSwitching",
+            "oneHundredThousandScopeDecisionsNeverGiveOutsideAppsBudgetOwnership",
+            "timerAndReadingBoundaryStayStableAcrossOneMillionChecks"
+        ).forEach { scenario ->
+            check(stressTests.contains("fun " + scenario + "(")) {
+                "Missing release-blocking target-presence stress test: " + scenario
             }
         }
         check(mainUi.contains("Intervalle fixe : 15 minutes"))
@@ -342,7 +417,10 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "onlyCompletedEffectiveIntervalsCountTowardUsage",
             "singleHizbPoolRepeatsToReachTwentyMorningPages",
             "multiHizbPoolAdvancesSequentiallyFromSmallest",
-            "everyHizbChallengeUsesExactlyTenPages"
+            "everyHizbChallengeUsesExactlyTenPages",
+            "fifteenAndNinetyMinutesAreLiteralTargetPresenceThresholds",
+            "livePresenceJoinsCompletedIntervalsWithoutWallClockTime",
+            "ninetyMinutePendingHizbCannotOverflowTheCurrentCycle"
         )
         requiredScenarios.forEach { scenario ->
             check(tests.contains("fun " + scenario + "(")) {
@@ -352,7 +430,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         listOf(
             "chromeThenYoutubeShareOneHardFifteenMinuteLimit",
             "threeProtectedAppsCannotExceedFifteenMinutesTogether",
-            "frequentCheckpointsNeverExtendTheSharedInterval"
+            "frequentCheckpointsNeverExtendTheSharedInterval",
+            "outsideApplicationsAndLongGapsNeverConsumeTargetPresence",
+            "targetSwitchesAndOutsideGapsExpireAtExactlyFifteenPresenceMinutes"
         ).forEach { scenario ->
             check(budgetTests.contains("fun " + scenario + "(")) {
                 "Missing multi-target 15-minute hard-limit test: " + scenario
@@ -416,7 +496,7 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(service.contains("applyEventPackageScope(broad = true)"))
         check(service.contains("handleOutsideScopeForeground()"))
         check(service.contains("applyEventPackageScope(broad = false)"))
-        check(!service.contains("info.packageNames = null"))
+        check(service.contains("info.packageNames = if (anonymousExitSentinel)"))
         check(protectedApps.contains("eventScopePackages"))
         check(protectedApps.contains("transitionSignalPackages"))
         check(appCatalog.contains("ProtectedApps.selectableTargets.mapNotNull"))
@@ -444,7 +524,7 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(manifest.contains("android:name=\".ProtectionSetupActivity\"")) {
             "Guided accessibility activation must be packaged."
         }
-        check(setupUi.contains("Activer en trois étapes")) {
+        check(setupUi.contains("Activation guidée")) {
             "Accessibility activation must remain didactic and lightweight."
         }
         val accessibilityServiceDeclaration = Regex(
@@ -479,15 +559,18 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
             "src/main/java/com/quranunlock/guard/AppMigrations.kt"
         ).readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
+        val releaseContract = rootProject.file(
+            "docs/SAFEGUARD_CONTRACT_0.10.1.md"
+        ).readText()
 
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 19")) {
-            "0.10.0 must keep versionCode 19, above the 0.9.4 candidate."
+        check(buildFile.contains("versionCode = 20")) {
+            "0.10.1 must use versionCode 20 for an in-place update over 0.10.0."
         }
-        check(buildFile.contains("versionName = \"0.10.0\"")) {
-            "Expected point-1/point-2 candidate versionName 0.10.0."
+        check(buildFile.contains("versionName = \"0.10.1\"")) {
+            "Expected cumulative-presence and experience update 0.10.1."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -510,6 +593,15 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(!manifest.contains("android.permission.BIND_DEVICE_ADMIN")) {
             "Quran Safeguard must remain freely uninstallable."
         }
+        check(releaseContract.contains(
+            "Les 15 minutes sont exactement la somme des durées de présence"
+        ))
+        check(releaseContract.contains(
+            "Les 90 minutes sont six cumuls successifs de 15 minutes"
+        ))
+        check(releaseContract.contains(
+            "L’absence d’un signal de défilement"
+        ))
         val signingAudit = rootProject.file(
             "docs/RELEASE_SIGNING_CONTINUITY.md"
         ).readText()
@@ -589,6 +681,9 @@ val verifyEditorialBoundary by tasks.registering {
                 !spiritualLibraryUi.contains("onOpenGhazali")
         ) {
             "The incomplete Ghazali section must remain hidden until a sufficient corpus is verified."
+        }
+        check(!spiritualLibraryUi.contains("commentaire", ignoreCase = true)) {
+            "The Hikam library must not mention or expose a commentary layer."
         }
         check(!dailyReminderSource.contains("GhazaliRepository.asDailyReminders()")) {
             "Incomplete Ghazali content must not enter daily reminders."
@@ -820,6 +915,61 @@ val verifyThoughtOfDayBoundary by tasks.registering {
     }
 }
 
+val verifyExperienceBoundary by tasks.registering {
+    doLast {
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+        val theme = file("src/main/res/values/themes.xml").readText()
+        val dashboard = file(
+            "src/main/java/com/quranunlock/guard/DashboardActivity.kt"
+        ).readText()
+        val design = file(
+            "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
+        ).readText()
+        val setup = file(
+            "src/main/java/com/quranunlock/guard/ProtectionSetupActivity.kt"
+        ).readText()
+        val reader = file(
+            "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
+        ).readText()
+
+        check(manifest.contains("android:theme=\"@style/Theme.QuranSafeguard\""))
+        check(theme.contains("android:windowAnimationStyle"))
+        listOf(
+            "safeguard_open_enter",
+            "safeguard_open_exit",
+            "safeguard_close_enter",
+            "safeguard_close_exit"
+        ).forEach { animation ->
+            check(file("src/main/res/anim/" + animation + ".xml").isFile) {
+                "Missing calm application transition: " + animation
+            }
+        }
+
+        check(design.contains("fun SafeguardProgressBar("))
+        check(dashboard.contains("currentIntervalTargetPresenceMs"))
+        check(dashboard.contains("currentCycleTargetPresenceMs"))
+        check(dashboard.contains("/ 15:00"))
+        check(dashboard.contains("/ 90:00"))
+        check(dashboard.contains("Le temps hors cible et les appels ne comptent pas."))
+        check(dashboard.indexOf("thought.arabicText") < dashboard.indexOf("thought.frenchText")) {
+            "The dashboard thought must present Arabic before French."
+        }
+        listOf(
+            "ic_nav_home",
+            "ic_nav_quran",
+            "ic_nav_library",
+            "ic_nav_settings"
+        ).forEach { icon ->
+            check(dashboard.contains("R.drawable." + icon))
+            check(file("src/main/res/drawable/" + icon + ".xml").isFile)
+        }
+        check(setup.contains("Build.VERSION_CODES.TIRAMISU"))
+        check(setup.contains("Préparer l’autorisation Android"))
+        check(setup.contains("Autoriser les paramètres restreints"))
+        check(reader.contains("AnimatedContent("))
+    }
+}
+
 val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyFrozenReminderSnapshot)
     dependsOn(verifyHikam264)
@@ -830,6 +980,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyUpdateMigrationIntegrity)
     dependsOn(verifyProtectedOnlyBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
+    dependsOn(verifyExperienceBoundary)
 }
 
 android {
@@ -840,8 +991,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 19
-        versionName = "0.10.0"
+        versionCode = 20
+        versionName = "0.10.1"
     }
 
     buildFeatures {
@@ -859,6 +1010,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyUpdateMigrationIntegrity)
     dependsOn(verifyProtectedOnlyBoundary)
     dependsOn(verifyThoughtOfDayBoundary)
+    dependsOn(verifyExperienceBoundary)
 }
 
 dependencies {

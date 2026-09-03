@@ -458,4 +458,47 @@ class UnlockBudgetIntegrityTest {
         )
     }
 
+    @Test
+    fun outsideApplicationsAndLongGapsNeverConsumeTargetPresence() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+
+        shared = UnlockBudgetIntegrity.start(shared, 0L, 5)
+        shared = UnlockBudgetIntegrity.pause(shared, 4 * minute, 5)
+        assertEquals(11 * minute, shared.remainingMs)
+
+        // Two hours in a banking, work or navigation application are outside
+        // the target-presence ledger because no foreground marker is active.
+        assertEquals(
+            11 * minute,
+            UnlockBudgetIntegrity.remaining(shared, 124 * minute, 5)
+        )
+
+        shared = UnlockBudgetIntegrity.start(shared, 124 * minute, 5)
+        shared = UnlockBudgetIntegrity.pause(shared, 135 * minute, 5)
+        assertEquals(0L, shared.remainingMs)
+    }
+
+    @Test
+    fun targetSwitchesAndOutsideGapsExpireAtExactlyFifteenPresenceMinutes() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+        var wallClock = 0L
+
+        listOf(3L, 5L, 7L).forEachIndexed { index, targetMinutes ->
+            shared = UnlockBudgetIntegrity.start(shared, wallClock, 8)
+            wallClock += targetMinutes * minute
+            shared = UnlockBudgetIntegrity.pause(shared, wallClock, 8)
+
+            if (index < 2) {
+                wallClock += 30 * minute
+                assertEquals(
+                    (15L - listOf(3L, 5L, 7L).take(index + 1).sum()) * minute,
+                    UnlockBudgetIntegrity.remaining(shared, wallClock, 8)
+                )
+            }
+        }
+
+        assertEquals(0L, shared.remainingMs)
+        assertEquals(75 * minute, wallClock)
+    }
+
 }

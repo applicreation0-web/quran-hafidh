@@ -188,6 +188,10 @@ class MainActivity : ComponentActivity() {
         }
         val usageProgress = SafeguardCyclePrefs.progress(this@MainActivity)
         val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@MainActivity)
+        val intervalPresenceMs =
+            GuardPrefs.currentIntervalTargetPresenceMs(this@MainActivity)
+        val cyclePresenceMs =
+            GuardPrefs.currentCycleTargetPresenceMs(this@MainActivity)
         val remainingIntervalMs = GuardPrefs.globalRemainingUnlockMs(this@MainActivity)
         val jokers = GuardPrefs.remainingJokers(this@MainActivity)
         val readingsCompleted = GuardPrefs.readingsCompleted(this@MainActivity)
@@ -382,9 +386,8 @@ class MainActivity : ComponentActivity() {
                                 " aujourd’hui"
                         )
                         Text(
-                            "Cycle courant : " +
-                                (usageProgress.completedIntervals * UsageCyclePolicy.INTERVAL_MINUTES) +
-                                "/90 min • " +
+                            "Cycle courant : " + formatDashboardDuration(cyclePresenceMs) +
+                                " de présence cible / 90 min • " +
                                 usageProgress.completedNinetyMinuteCycles +
                                 " cycle(s) de 90 min terminé(s)",
                             style = MaterialTheme.typography.bodySmall,
@@ -724,14 +727,17 @@ class MainActivity : ComponentActivity() {
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "Un seul compteur additionne uniquement l’usage réel des applications cibles. Changer d’application cible ne crée pas une nouvelle dette de lecture."
+                            "Un seul compteur additionne en dur le temps de présence au premier plan dans toutes les applications cibles. Changer de cible ne remet jamais les 15 minutes ni les 90 minutes à zéro."
                         )
                         Text(
                             "Toutes les 15 minutes : 1 page • Toutes les 90 minutes : 10 pages à la place de la sixième pause."
                         )
                         Text(
                             if (remainingIntervalMs > 0L) {
-                                "Prochaine pause dans " + formatDashboardDuration(remainingIntervalMs)
+                                "Cumul actuel : " +
+                                    formatDashboardDuration(intervalPresenceMs) +
+                                    " / 15 min • prochaine pause dans " +
+                                    formatDashboardDuration(remainingIntervalMs)
                             } else {
                                 when (usageProgress.pendingLevel) {
                                     ChallengeLevel.MORNING -> "Filtre matinal en attente"
@@ -826,11 +832,11 @@ private fun AccessibilityDisclosureScreen(
             )
             Spacer(Modifier.height(18.dp))
             Text(
-                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter le changement de fenêtre et le nom de l’application au premier plan. Lorsqu’une application choisie est détectée, Quran Safeguard affiche immédiatement la pause Quran au-dessus de cette application."
+                "Quran Safeguard utilise le service d’accessibilité uniquement pour détecter les applications cibles au premier plan et arrêter leur compteur dès que vous les quittez. Lorsqu’une application choisie est détectée, Quran Safeguard affiche immédiatement la pause Quran au-dessus de cette application."
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Le contenu affiché à l’écran n’est pas lu, tes saisies ne sont pas enregistrées et ces informations ne sont pas envoyées ni partagées. Le service peut être désactivé à tout moment dans les Paramètres Android.",
+                "Le contenu affiché à l’écran n’est pas lu, tes saisies ne sont pas enregistrées et les applications hors cible ne sont ni classées ni conservées. Le service peut être désactivé à tout moment dans les Paramètres Android.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(24.dp))

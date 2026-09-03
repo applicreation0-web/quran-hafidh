@@ -18,9 +18,10 @@ data class SafeguardTarget(
  * Quran Safeguard has a fixed, narrow product boundary.
  *
  * Only explicitly selected social apps and browsers can be protected or persisted.
- * No event from a banking, health, transport, identity or work application is
- * requested. Only Android's System UI and the current launcher are admitted as
- * anonymous transition signals so a target budget can pause on exit.
+ * No banking, health, transport, identity or work application is classified,
+ * selectable, logged or persisted. While a selected target actively consumes
+ * the shared budget, one outside window event may be accepted anonymously so
+ * the counter can stop at the exact moment the user leaves the target.
  */
 object ProtectedApps {
     const val SYSTEM_UI_PACKAGE = "com.android.systemui"

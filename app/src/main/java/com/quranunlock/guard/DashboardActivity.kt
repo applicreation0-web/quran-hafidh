@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -32,7 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 class DashboardActivity : ComponentActivity() {
     private val serviceEnabledState = mutableStateOf(false)
@@ -64,6 +69,10 @@ class DashboardActivity : ComponentActivity() {
         val thought = DailyReminderManager.today(this@DashboardActivity)
         val usageProgress = SafeguardCyclePrefs.progress(this@DashboardActivity)
         val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@DashboardActivity)
+        val intervalPresenceMs =
+            GuardPrefs.currentIntervalTargetPresenceMs(this@DashboardActivity)
+        val cyclePresenceMs =
+            GuardPrefs.currentCycleTargetPresenceMs(this@DashboardActivity)
         val jokers = GuardPrefs.remainingJokers(this@DashboardActivity)
 
         Scaffold(
@@ -81,22 +90,13 @@ class DashboardActivity : ComponentActivity() {
                     NavigationBarItem(
                         selected = true,
                         onClick = {},
-                        icon = { Text("⌂") },
-                        label = { Text("Accueil") },
-                        colors = navColors
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = {
-                            startActivity(
-                                Intent(
-                                    this@DashboardActivity,
-                                    ReadingHistoryActivity::class.java
-                                )
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.ic_nav_home),
+                                contentDescription = null
                             )
                         },
-                        icon = { Text("▥") },
-                        label = { Text("Statistiques") },
+                        label = { Text("Accueil") },
                         colors = navColors
                     )
                     NavigationBarItem(
@@ -109,8 +109,51 @@ class DashboardActivity : ComponentActivity() {
                                 )
                             )
                         },
-                        icon = { Text("▤") },
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.ic_nav_quran),
+                                contentDescription = null
+                            )
+                        },
                         label = { Text("Lecture") },
+                        colors = navColors
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            startActivity(
+                                Intent(
+                                    this@DashboardActivity,
+                                    SpiritualLibraryActivity::class.java
+                                )
+                            )
+                        },
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.ic_nav_library),
+                                contentDescription = null
+                            )
+                        },
+                        label = { Text("Textes") },
+                        colors = navColors
+                    )
+                    NavigationBarItem(
+                        selected = false,
+                        onClick = {
+                            startActivity(
+                                Intent(
+                                    this@DashboardActivity,
+                                    MainActivity::class.java
+                                )
+                            )
+                        },
+                        icon = {
+                            Icon(
+                                painterResource(R.drawable.ic_nav_settings),
+                                contentDescription = null
+                            )
+                        },
+                        label = { Text("Réglages") },
                         colors = navColors
                     )
                 }
@@ -153,6 +196,11 @@ class DashboardActivity : ComponentActivity() {
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.38f),
+                            shape = RoundedCornerShape(24.dp)
+                        )
                         .clickable {
                             startActivity(
                                 Intent(
@@ -242,7 +290,7 @@ class DashboardActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
-                            "PROGRESSION DU JOUR",
+                            "TEMPS DANS LES APPLICATIONS CIBLES",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold
@@ -257,10 +305,34 @@ class DashboardActivity : ComponentActivity() {
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "Usage cible effectif : " + compactDuration(targetUsageMs) +
-                                " • cycle " +
-                                (usageProgress.completedIntervals * UsageCyclePolicy.INTERVAL_MINUTES) +
-                                "/90 min"
+                            "Prochaine pause • " +
+                                preciseDuration(intervalPresenceMs) + " / 15:00",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        SafeguardProgressBar(
+                            progress = intervalPresenceMs.toFloat() /
+                                UsageCyclePolicy.INTERVAL_MS.toFloat()
+                        )
+                        Text(
+                            "Palier Hizb • " +
+                                preciseDuration(cyclePresenceMs) + " / 90:00",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        SafeguardProgressBar(
+                            progress = cyclePresenceMs.toFloat() /
+                                UsageCyclePolicy.CUMULATIVE_MS.toFloat()
+                        )
+                        Text(
+                            "Chrome, YouTube et toutes les autres cibles partagent ce même cumul. Le temps hors cible et les appels ne comptent pas.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Total cible aujourd’hui : " + compactDuration(targetUsageMs),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             "${GuardPrefs.DAILY_JOKERS - jokers} joker(s) utilisé(s) aujourd’hui • $jokers disponible(s) • suivi sans jugement",
@@ -298,6 +370,16 @@ class DashboardActivity : ComponentActivity() {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
+                            thought.arabicText,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                textDirection = TextDirection.Rtl,
+                                lineHeight = 28.sp
+                            ),
+                            textAlign = TextAlign.Right,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
                             thought.frenchText,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
@@ -327,8 +409,8 @@ class DashboardActivity : ComponentActivity() {
                     }
                 )
                 DashboardRow(
-                    leftTitle = "Rappel / Textes",
-                    leftSubtitle = "Hadiths • Hikam",
+                    leftTitle = "Bibliothèque",
+                    leftSubtitle = "Hadiths • Hikam vérifiées",
                     leftAction = {
                         startActivity(
                             Intent(this@DashboardActivity, SpiritualLibraryActivity::class.java)
@@ -468,4 +550,11 @@ private fun compactDuration(milliseconds: Long): String {
         hours > 0L -> hours.toString() + "h" + rest.toString().padStart(2, '0')
         else -> minutes.toString() + "m"
     }
+}
+
+private fun preciseDuration(milliseconds: Long): String {
+    val totalSeconds = (milliseconds / 1_000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%02d:%02d".format(minutes, seconds)
 }

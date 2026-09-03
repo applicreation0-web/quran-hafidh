@@ -1,6 +1,11 @@
 package com.applicreation0.quransafeguard
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -19,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 
@@ -85,6 +91,27 @@ internal fun SafeguardOutlinedButton(
         ),
         content = content
     )
+}
+
+@Composable
+internal fun SafeguardProgressBar(
+    progress: Float,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .clip(RoundedCornerShape(99.dp))
+            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.secondary)
+        )
+    }
 }
 
 private fun Modifier.sahelianButtonOrnament(

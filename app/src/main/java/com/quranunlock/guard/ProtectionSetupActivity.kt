@@ -3,6 +3,7 @@ package com.applicreation0.quransafeguard
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
@@ -55,6 +56,8 @@ class ProtectionSetupActivity : ComponentActivity() {
                 ProtectionSetupScreen(
                     serviceEnabled = serviceEnabledState.value,
                     showRestrictedHelp = restrictedHelpState.value,
+                    showRestrictedSettingsPreparation =
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
                     onOpenAndroid = ::openAndroidAccessibility,
                     onOpenAppDetails = ::openAppDetails,
                     onClose = { finish() }
@@ -127,6 +130,7 @@ class ProtectionSetupActivity : ComponentActivity() {
 private fun ProtectionSetupScreen(
     serviceEnabled: Boolean,
     showRestrictedHelp: Boolean,
+    showRestrictedSettingsPreparation: Boolean,
     onOpenAndroid: () -> Unit,
     onOpenAppDetails: () -> Unit,
     onClose: () -> Unit
@@ -146,7 +150,7 @@ private fun ProtectionSetupScreen(
                 fontWeight = FontWeight.Bold
             )
             Text(
-                if (serviceEnabled) "Safeguard est actif" else "Activer en trois étapes",
+                if (serviceEnabled) "Safeguard est actif" else "Activation guidée",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -189,6 +193,38 @@ private fun ProtectionSetupScreen(
             }
 
             if (!serviceEnabled) {
+                if (showRestrictedSettingsPreparation && !showRestrictedHelp) {
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = SafeguardShapes.medium,
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Avant l’activation sur Android 13 ou plus",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Comme Quran Safeguard est une APK privée, Android peut griser l’interrupteur. Ouvrez les informations de l’application, touchez ⋮ puis « Autoriser les paramètres restreints ». Revenez ensuite ici.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            SafeguardOutlinedButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onOpenAppDetails
+                            ) {
+                                Text("Préparer l’autorisation Android")
+                            }
+                        }
+                    }
+                }
                 ActivationStep(
                     number = "1",
                     title = "Repérez Quran Safeguard",

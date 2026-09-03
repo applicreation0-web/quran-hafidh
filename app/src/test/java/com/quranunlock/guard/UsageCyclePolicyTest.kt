@@ -139,4 +139,47 @@ class UsageCyclePolicyTest {
             assertEquals(10, QuranPageSelector.tenPageQuotaFromHizb(hizb).size)
         }
     }
+
+    @Test
+    fun fifteenAndNinetyMinutesAreLiteralTargetPresenceThresholds() {
+        assertEquals(15L * 60_000L, UsageCyclePolicy.INTERVAL_MS)
+        assertEquals(90, UsageCyclePolicy.CUMULATIVE_MINUTES)
+        assertEquals(90L * 60_000L, UsageCyclePolicy.CUMULATIVE_MS)
+        assertEquals(6, UsageCyclePolicy.INTERVALS_PER_HIZB)
+    }
+
+    @Test
+    fun livePresenceJoinsCompletedIntervalsWithoutWallClockTime() {
+        val state = UsageCycleState(
+            morningCompleted = true,
+            completedIntervals = 4,
+            completedNinetyMinuteCycles = 3
+        )
+
+        assertEquals(
+            67L * 60_000L,
+            UsageCyclePolicy.currentCyclePresenceMs(
+                state,
+                currentIntervalPresenceMs = 7L * 60_000L
+            )
+        )
+    }
+
+    @Test
+    fun ninetyMinutePendingHizbCannotOverflowTheCurrentCycle() {
+        val state = UsageCycleState(
+            morningCompleted = true,
+            completedIntervals = 6,
+            completedNinetyMinuteCycles = 2,
+            pendingLevel = ChallengeLevel.HIZB
+        )
+
+        assertEquals(
+            UsageCyclePolicy.CUMULATIVE_MS,
+            UsageCyclePolicy.currentCyclePresenceMs(
+                state,
+                currentIntervalPresenceMs = UsageCyclePolicy.INTERVAL_MS
+            )
+        )
+    }
 }

@@ -217,7 +217,7 @@ class MushafReaderActivity : ComponentActivity() {
                         "Lecture libre • quota atteint, sortie possible à tout moment."
                 }
 
-                fun validateAndAdvance() {
+                fun validateAndAdvance(continueAfterQuota: Boolean = false) {
                     if (quotaReached) {
                         continueFreely()
                         return
@@ -233,31 +233,15 @@ class MushafReaderActivity : ComponentActivity() {
                         challengeKey,
                         currentPage
                     )
-                    val persistedBottom =
-                        GuardPrefs.hasReachedReadingBottom(
-                            this@MushafReaderActivity,
-                            challengeKey,
-                            currentPage
-                        )
-
                     if (!ReadingValidationPolicy.canValidate(
-                            activeReadingMs = persistedReadingMs,
-                            bottomReached = persistedBottom
+                            activeReadingMs = persistedReadingMs
                         )
                     ) {
-                        gestureMessage = when {
-                            persistedReadingMs < GuardPrefs.MIN_READING_MS ->
-                                "Encore " +
-                                    formatRemainingSeconds(
-                                        GuardPrefs.MIN_READING_MS -
-                                            persistedReadingMs
-                                    ) +
-                                    " avant la page suivante."
-                            !persistedBottom ->
-                                "60 secondes atteintes. Faites défiler " +
-                                    "jusqu’au bas de la page."
-                            else -> "Cette page n’est pas encore validable."
-                        }
+                        gestureMessage = "Encore " +
+                            formatRemainingSeconds(
+                                GuardPrefs.MIN_READING_MS - persistedReadingMs
+                            ) +
+                            " avant la page suivante."
                         return
                     }
 
@@ -280,6 +264,14 @@ class MushafReaderActivity : ComponentActivity() {
                             challengeKey,
                             "page=$currentPage elapsedMs=$elapsed"
                         )
+                        if (!continueAfterQuota) {
+                            TargetReturnCoordinator.returnImmediately(
+                                this@MushafReaderActivity,
+                                challengeKey,
+                                "reading_${level.name.lowercase()}"
+                            )
+                            return
+                        }
                         quotaReached = true
                         activeReadingPage = 0
                         readingMs = GuardPrefs.MIN_READING_MS
@@ -321,8 +313,7 @@ class MushafReaderActivity : ComponentActivity() {
                     quotaReached || displayedIndex < activeIndex
                 val canValidate = !quotaReached &&
                     ReadingValidationPolicy.canValidate(
-                        activeReadingMs = readingMs,
-                        bottomReached = bottomReached
+                        activeReadingMs = readingMs
                     )
                 val sectionDivisions =
                     QuranStructureMetadata.divisionsForPage(
@@ -394,11 +385,8 @@ class MushafReaderActivity : ComponentActivity() {
                                     "Quota atteint • sortie libre • lecture facultative"
                                 viewingCompletedPage ->
                                     "Page validée • retour libre"
-                                readingMs >= GuardPrefs.MIN_READING_MS &&
-                                    bottomReached ->
-                                    "01:00 atteint • balayez pour valider"
                                 readingMs >= GuardPrefs.MIN_READING_MS ->
-                                    "01:00 atteint • parcourez le bas de page"
+                                    "01:00 atteint • balayez pour valider"
                                 bottomReached ->
                                     "Page parcourue • " +
                                         formatReadingDuration(readingMs) +
@@ -533,12 +521,29 @@ class MushafReaderActivity : ComponentActivity() {
                                         viewingCompletedPage -> "Page suivante"
                                         activeIndex < planPages.lastIndex ->
                                             "Valider et avancer"
-                                        else -> "Atteindre le quota"
+                                        else -> "Débloquer et ouvrir"
                                     }
                                 )
                             }
                         }
                         Spacer(Modifier.height(5.dp))
+                        if (!quotaReached &&
+                            !viewingCompletedPage &&
+                            activeIndex == planPages.lastIndex &&
+                            canValidate
+                        ) {
+                            SafeguardOutlinedButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                onClick = {
+                                    validateAndAdvance(continueAfterQuota = true)
+                                }
+                            ) {
+                                Text("Valider et continuer à lire")
+                            }
+                            Spacer(Modifier.height(5.dp))
+                        }
                         if (quotaReached) {
                             SafeguardButton(
                                 modifier = Modifier
@@ -546,7 +551,11 @@ class MushafReaderActivity : ComponentActivity() {
                                     .padding(horizontal = 8.dp),
                                 onClick = {
                                     pauseActiveReading()
-                                    finishAndRemoveTask()
+                                    TargetReturnCoordinator.returnImmediately(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        "continued_reading_complete"
+                                    )
                                 }
                             ) {
                                 Text("Ouvrir l’application cible")
