@@ -217,7 +217,7 @@ class MushafReaderActivity : ComponentActivity() {
                         "Lecture libre • quota atteint, sortie possible à tout moment."
                 }
 
-                fun validateAndAdvance() {
+                fun validateAndAdvance(continueAfterQuota: Boolean = false) {
                     if (quotaReached) {
                         continueFreely()
                         return
@@ -264,6 +264,14 @@ class MushafReaderActivity : ComponentActivity() {
                             challengeKey,
                             "page=$currentPage elapsedMs=$elapsed"
                         )
+                        if (!continueAfterQuota) {
+                            TargetReturnCoordinator.returnImmediately(
+                                this@MushafReaderActivity,
+                                challengeKey,
+                                "reading_${level.name.lowercase()}"
+                            )
+                            return
+                        }
                         quotaReached = true
                         activeReadingPage = 0
                         readingMs = GuardPrefs.MIN_READING_MS
@@ -513,12 +521,29 @@ class MushafReaderActivity : ComponentActivity() {
                                         viewingCompletedPage -> "Page suivante"
                                         activeIndex < planPages.lastIndex ->
                                             "Valider et avancer"
-                                        else -> "Atteindre le quota"
+                                        else -> "Débloquer et ouvrir"
                                     }
                                 )
                             }
                         }
                         Spacer(Modifier.height(5.dp))
+                        if (!quotaReached &&
+                            !viewingCompletedPage &&
+                            activeIndex == planPages.lastIndex &&
+                            canValidate
+                        ) {
+                            SafeguardOutlinedButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                onClick = {
+                                    validateAndAdvance(continueAfterQuota = true)
+                                }
+                            ) {
+                                Text("Valider et continuer à lire")
+                            }
+                            Spacer(Modifier.height(5.dp))
+                        }
                         if (quotaReached) {
                             SafeguardButton(
                                 modifier = Modifier
@@ -526,7 +551,11 @@ class MushafReaderActivity : ComponentActivity() {
                                     .padding(horizontal = 8.dp),
                                 onClick = {
                                     pauseActiveReading()
-                                    finishAndRemoveTask()
+                                    TargetReturnCoordinator.returnImmediately(
+                                        this@MushafReaderActivity,
+                                        challengeKey,
+                                        "continued_reading_complete"
+                                    )
                                 }
                             ) {
                                 Text("Ouvrir l’application cible")

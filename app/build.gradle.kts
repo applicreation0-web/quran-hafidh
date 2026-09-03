@@ -273,6 +273,12 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         val reader = file(
             "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
         ).readText()
+        val targetReturn = file(
+            "src/main/java/com/quranunlock/guard/TargetReturnCoordinator.kt"
+        ).readText()
+        val targetReturnTests = file(
+            "src/test/java/com/quranunlock/guard/TargetReturnPolicyTest.kt"
+        ).readText()
         val mainUi = file(
             "src/main/java/com/quranunlock/guard/MainActivity.kt"
         ).readText()
@@ -335,6 +341,22 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(reader.contains("Quota atteint • sortie libre • lecture facultative"))
         check(reader.contains("Ouvrir l’application cible"))
         check(reader.contains("continueFreely"))
+        check(reader.contains("Débloquer et ouvrir"))
+        check(reader.contains("validateAndAdvance(continueAfterQuota = true)"))
+        check(reader.contains("TargetReturnCoordinator.returnImmediately"))
+        check(gate.contains("TargetReturnCoordinator.returnImmediately"))
+        check(targetReturn.contains("REVEAL_EXISTING_TASK"))
+        check(targetReturn.contains("FLAG_ACTIVITY_RESET_TASK_IF_NEEDED"))
+        listOf(
+            "normalUnlockRevealsTheExactTriggerTaskWithoutRelaunch",
+            "missingTriggerTaskUsesLauncherFallback",
+            "unavailableTargetOnlyClosesSafeguard",
+            "blankTargetCanNeverBeLaunched"
+        ).forEach { scenario ->
+            check(targetReturnTests.contains("fun " + scenario + "(")) {
+                "Missing target-return regression test: " + scenario
+            }
+        }
         check(structure.contains("Tanzil Quran Metadata 1.0"))
         check(structure.contains("startsInsidePage"))
         check(structure.contains("endsInsidePage"))

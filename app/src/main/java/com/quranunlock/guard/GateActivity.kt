@@ -1,6 +1,5 @@
 package com.applicreation0.quransafeguard
 
-import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -47,8 +46,19 @@ class GateActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (challengeKey.isNotBlank() &&
+            GuardPrefs.isUnlocked(this, challengeKey)
+        ) {
+            GuardRuntime.interception.markUnlocked(challengeKey)
+            TargetReturnCoordinator.returnImmediately(
+                this,
+                challengeKey,
+                "gate_resume_after_unlock"
+            )
+            return
+        }
+
+        if (challengeKey.isNotBlank() &&
             (!ProtectedApps.isProtected(this, challengeKey) ||
-                GuardPrefs.isUnlocked(this, challengeKey) ||
                 GuardRuntime.externalForegroundPackage() != challengeKey)
         ) {
             GuardRuntime.interception.reset()
@@ -240,8 +250,11 @@ class GateActivity : ComponentActivity() {
                                         challengeKey,
                                         skippedLevel.name
                                     )
-                                    setResult(Activity.RESULT_OK)
-                                    finishAndRemoveTask()
+                                    TargetReturnCoordinator.returnImmediately(
+                                        this@GateActivity,
+                                        challengeKey,
+                                        "joker_${skippedLevel.name.lowercase()}"
+                                    )
                                 }
                             }
                         ) {
