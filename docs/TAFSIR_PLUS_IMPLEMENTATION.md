@@ -59,8 +59,8 @@ voisin.
 
 ## Barrières de sortie
 
-- `assembleLightRelease` et `testLightDebugUnitTest` sont les seules variantes
-  exécutées par la CI partagée.
+- La CI compile les deux variantes. Les invitations et les artefacts de partage
+  public désignent exclusivement Light; Plus reste dans le dépôt privé.
 - `assemblePlusDebug` et `assemblePlusRelease` échouent sans la base privée
   vérifiée.
 - `scripts/verify_light_apk_no_tafsir.py` inspecte l’APK Light décompressée et

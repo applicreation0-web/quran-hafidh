@@ -23,3 +23,12 @@ L’artefact nommé `Quran-Safeguard-0.9.0-first-install-release.apk` observé d
 3. Conserver l’identifiant `com.applicreation0.quransafeguard`.
 4. Tester l’installation par mise à jour sur l’appareil avant toute diffusion.
 5. La production d’un APK local de test n’autorise aucune publication.
+
+## Lignée Plus
+
+Quran Safeguard Plus utilise une clé PKCS12 distincte nommée
+`Quran-Safeguard-Plus-release.p12`. Son certificat SHA-256 est :
+
+`18:43:D2:45:83:25:49:AF:C6:33:3A:B7:7A:58:76:49:A1:4F:ED:B1:F4:AC:C9:C0:8F:36:7C:3F:03:01:D9:89`
+
+Cette clé ne doit jamais signer Light et ne doit jamais être commitée.

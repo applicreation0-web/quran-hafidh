@@ -621,17 +621,17 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         ).readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
         val releaseContract = rootProject.file(
-            "docs/SAFEGUARD_CONTRACT_0.10.1.md"
+            "docs/SAFEGUARD_CONTRACT_0.10.2.md"
         ).readText()
 
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 20")) {
-            "0.10.1 must use versionCode 20 for an in-place update over 0.10.0."
+        check(buildFile.contains("versionCode = 21")) {
+            "0.10.2 must use versionCode 21 for an in-place update over 0.10.1."
         }
-        check(buildFile.contains("versionName = \"0.10.1\"")) {
-            "Expected cumulative-presence and experience update 0.10.1."
+        check(buildFile.contains("versionName = \"0.10.2\"")) {
+            "Expected isolated tafsir editions update 0.10.2."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -1053,8 +1053,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "0.10.1"
+        versionCode = 21
+        versionName = "0.10.2"
     }
 
     flavorDimensions += "edition"
