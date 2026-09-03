@@ -1,5 +1,7 @@
 # Audit contradictoire — Quran Safeguard 0.10.0
 
+> Document historique. Pour le comportement et les garanties actuels, consulter `ADVERSARIAL_AUDIT_0.10.1.md`, qui remplace notamment l'ancienne hypothèse d'une souscription Android toujours étroite.
+
 Date : 2026-09-03  
 Base auditée : branche `fix/0.9.2-roadmap-final-audit`, après intégration des points 1 à 4 et des corrections contradictoires.
 
