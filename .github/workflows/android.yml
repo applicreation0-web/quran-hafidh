@@ -59,6 +59,9 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleLightDebug
 
+      - name: Compile private Plus APK (not uploaded)
+        run: gradle --no-daemon :app:assemblePlusDebug
+
       - name: Upload debug APK
         continue-on-error: true
         if: success()
