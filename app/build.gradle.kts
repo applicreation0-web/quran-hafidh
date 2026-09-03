@@ -215,7 +215,7 @@ val verifyPrivacyBoundary by tasks.registering {
         check(service.contains("applyEventPackageScope(broad = false)"))
         check(protectedApps.contains("transitionSignalPackages"))
         check(protectedApps.contains("SYSTEM_UI_PACKAGE"))
-        check(protectedApps.contains("resolveCurrentLauncherPackage"))
+        check(protectedApps.contains("launcherPackage(context)"))
         check(protectedApps.contains("GuardPrefs.protectedPackages(context)"))
         check(protectedApps.contains("!isSelectableTarget(packageName)"))
     }
