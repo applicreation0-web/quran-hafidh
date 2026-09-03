@@ -126,8 +126,19 @@ class MushafReaderActivity : ComponentActivity() {
                             "vers la droite pour revenir."
                     )
                 }
+                var quotaReached by remember {
+                    mutableStateOf(false)
+                }
+                val quotaPageCount = remember { initialPages.size }
                 val level = remember {
                     GuardPrefs.challengeLevel(this@MushafReaderActivity)
+                }
+                val sectionMode = remember(level) {
+                    if (level == ChallengeLevel.MICRO) {
+                        GuardPrefs.selectionMode(this@MushafReaderActivity)
+                    } else {
+                        QuranSelectionMode.HIZB
+                    }
                 }
 
                 fun pauseActiveReading() {
@@ -143,7 +154,7 @@ class MushafReaderActivity : ComponentActivity() {
 
                 fun showPage(index: Int) {
                     if (index !in planPages.indices ||
-                        index > activeIndex ||
+                        (!quotaReached && index > activeIndex) ||
                         index == displayedIndex
                     ) {
                         return
@@ -151,11 +162,14 @@ class MushafReaderActivity : ComponentActivity() {
                     pauseActiveReading()
                     displayedIndex = index
                     displayedPage = planPages[index]
-                    gestureMessage = if (index < activeIndex) {
-                        "Page déjà validée. Balayez vers la gauche " +
-                            "pour revenir à la lecture en cours."
-                    } else {
-                        "Lisez cette page pendant 60 secondes, puis avancez."
+                    gestureMessage = when {
+                        quotaReached ->
+                            "Lecture libre • vous pouvez sortir à tout moment."
+                        index < activeIndex ->
+                            "Page déjà validée. Balayez vers la gauche " +
+                                "pour revenir à la lecture en cours."
+                        else ->
+                            "Lisez cette page pendant 60 secondes, puis avancez."
                     }
                 }
 
@@ -182,7 +196,33 @@ class MushafReaderActivity : ComponentActivity() {
                         "Page suivante prête. Balayez après 60 secondes."
                 }
 
+                fun continueFreely() {
+                    pauseActiveReading()
+                    activeReadingPage = 0
+
+                    if (displayedIndex < planPages.lastIndex) {
+                        displayedIndex += 1
+                        displayedPage = planPages[displayedIndex]
+                    } else if (planPages.last() < 604) {
+                        val nextPage = planPages.last() + 1
+                        planPages = planPages + nextPage
+                        displayedIndex = planPages.lastIndex
+                        displayedPage = nextPage
+                    } else {
+                        gestureMessage =
+                            "Vous êtes sur la dernière page du Mushaf."
+                        return
+                    }
+
+                    gestureMessage =
+                        "Lecture libre • quota atteint, sortie possible à tout moment."
+                }
+
                 fun validateAndAdvance() {
+                    if (quotaReached) {
+                        continueFreely()
+                        return
+                    }
                     if (displayedIndex < activeIndex) {
                         showPage(displayedIndex + 1)
                         return
@@ -237,11 +277,17 @@ class MushafReaderActivity : ComponentActivity() {
                         GuardRuntime.interception.markUnlocked(challengeKey)
                         GuardDiagnostics.log(
                             this@MushafReaderActivity,
-                            "READING_UNLOCKED_DIRECTLY",
+                            "READING_QUOTA_REACHED",
                             challengeKey,
                             "page=$currentPage elapsedMs=$elapsed"
                         )
-                        finishAndRemoveTask()
+                        quotaReached = true
+                        activeReadingPage = 0
+                        readingMs = GuardPrefs.MIN_READING_MS
+                        bottomReached = true
+                        gestureMessage =
+                            "Quota atteint. Vous pouvez ouvrir l’application " +
+                                "cible ou continuer librement."
                     } else {
                         GuardDiagnostics.log(
                             this@MushafReaderActivity,
@@ -253,8 +299,8 @@ class MushafReaderActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(activeIndex, challengeKey) {
-                    while (true) {
+                LaunchedEffect(activeIndex, challengeKey, quotaReached) {
+                    while (!quotaReached) {
                         val currentPage = planPages[activeIndex]
                         readingMs = GuardPrefs.readingElapsedMs(
                             this@MushafReaderActivity,
@@ -272,11 +318,29 @@ class MushafReaderActivity : ComponentActivity() {
                 }
 
                 val currentDisplayedPage = planPages[displayedIndex]
-                val viewingCompletedPage = displayedIndex < activeIndex
-                val canValidate = ReadingValidationPolicy.canValidate(
-                    activeReadingMs = readingMs,
-                    bottomReached = bottomReached
-                )
+                val viewingCompletedPage =
+                    quotaReached || displayedIndex < activeIndex
+                val canValidate = !quotaReached &&
+                    ReadingValidationPolicy.canValidate(
+                        activeReadingMs = readingMs,
+                        bottomReached = bottomReached
+                    )
+                val sectionDivisions =
+                    QuranStructureMetadata.divisionsForPage(
+                        sectionMode,
+                        currentDisplayedPage
+                    )
+                val sectionContext = sectionDivisions.joinToString(" • ") {
+                    QuranStructureMetadata.unitLabel(sectionMode, it.number) +
+                        " · " + it.verseRangeLabel
+                }
+                val boundaryContext = sectionDivisions.mapNotNull {
+                    QuranStructureMetadata.boundaryNotice(
+                        sectionMode,
+                        it.number,
+                        currentDisplayedPage
+                    )
+                }.joinToString(" ")
 
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column(
@@ -292,23 +356,43 @@ class MushafReaderActivity : ComponentActivity() {
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            when (level) {
-                                ChallengeLevel.MORNING ->
+                            when {
+                                quotaReached ->
+                                    "Quota de $quotaPageCount pages atteint • lecture libre"
+                                level == ChallengeLevel.MORNING ->
                                     "Filtre matinal • page " +
-                                        "${displayedIndex + 1}/${planPages.size}"
-                                ChallengeLevel.MICRO ->
+                                        "${displayedIndex + 1}/$quotaPageCount"
+                                level == ChallengeLevel.MICRO ->
                                     "Pause 15 minutes • page 1/1"
-                                ChallengeLevel.HIZB ->
+                                else ->
                                     "Palier 90 minutes • page " +
-                                        "${displayedIndex + 1}/${planPages.size}"
+                                        "${displayedIndex + 1}/$quotaPageCount"
                             },
                             modifier = Modifier.padding(horizontal = 10.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.SemiBold
                         )
+                        if (sectionContext.isNotBlank()) {
+                            Text(
+                                sectionContext,
+                                modifier = Modifier.padding(horizontal = 10.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (boundaryContext.isNotBlank()) {
+                            Text(
+                                boundaryContext,
+                                modifier = Modifier.padding(horizontal = 10.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
                         Text(
                             when {
+                                quotaReached ->
+                                    "Quota atteint • sortie libre • lecture facultative"
                                 viewingCompletedPage ->
                                     "Page validée • retour libre"
                                 readingMs >= GuardPrefs.MIN_READING_MS &&
@@ -370,14 +454,16 @@ class MushafReaderActivity : ComponentActivity() {
                                     svgContent = svgContent,
                                     modifier = Modifier.fillMaxSize(),
                                     onReady = {
-                                        if (pageNumber == activeReadingPage &&
+                                        if (!quotaReached &&
+                                            pageNumber == activeReadingPage &&
                                             displayedPage == activeReadingPage
                                         ) {
                                             markPageReady(pageNumber)
                                         }
                                     },
                                     onBottomReached = {
-                                        if (pageNumber == activeReadingPage &&
+                                        if (!quotaReached &&
+                                            pageNumber == activeReadingPage &&
                                             displayedPage == activeReadingPage
                                         ) {
                                             GuardPrefs.markReadingBottomReached(
@@ -433,32 +519,51 @@ class MushafReaderActivity : ComponentActivity() {
                             }
                             SafeguardButton(
                                 modifier = Modifier.weight(1f),
-                                enabled = viewingCompletedPage || canValidate,
+                                enabled = if (quotaReached) {
+                                    currentDisplayedPage < 604
+                                } else {
+                                    viewingCompletedPage || canValidate
+                                },
                                 onClick = {
                                     validateAndAdvance()
                                 }
                             ) {
                                 Text(
                                     when {
+                                        quotaReached -> "Continuer à lire"
                                         viewingCompletedPage -> "Page suivante"
                                         activeIndex < planPages.lastIndex ->
                                             "Valider et avancer"
-                                        else -> "Valider le palier"
+                                        else -> "Atteindre le quota"
                                     }
                                 )
                             }
                         }
                         Spacer(Modifier.height(5.dp))
-                        SafeguardOutlinedButton(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            onClick = {
-                                pauseActiveReading()
-                                finish()
+                        if (quotaReached) {
+                            SafeguardButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                onClick = {
+                                    pauseActiveReading()
+                                    finishAndRemoveTask()
+                                }
+                            ) {
+                                Text("Ouvrir l’application cible")
                             }
-                        ) {
-                            Text("Quitter sans valider")
+                        } else {
+                            SafeguardOutlinedButton(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                onClick = {
+                                    pauseActiveReading()
+                                    finish()
+                                }
+                            ) {
+                                Text("Quitter sans valider")
+                            }
                         }
                     }
                 }
