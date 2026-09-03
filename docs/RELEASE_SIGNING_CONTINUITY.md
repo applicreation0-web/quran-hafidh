@@ -1,6 +1,6 @@
 # Quran Safeguard — continuité de signature
 
-Date : 2026-09-02
+Date : 2026-09-03
 
 ## Lignée retenue
 
@@ -8,7 +8,9 @@ La clé historique à conserver jalousement est `Quran-Safeguard-release.p12`, d
 
 `6C:70:6F:4E:A4:4E:F6:67:D0:B9:69:8C:07:A3:9E:92:9B:1E:28:6D:23:97:66:55:04:41:1D:ED:B3:74:57:AC`
 
-Les APK 0.3.2, 0.8.2 et la version release retenue portent ce même certificat. C’est la lignée utilisée pour signer le candidat 0.10.0.
+Les APK 0.3.2, 0.8.2 et la version release retenue portent ce même certificat. C’est la lignée utilisée pour signer le candidat 0.10.1.
+
+Le candidat 0.10.1 vérifié mesure 71 981 397 octets et porte le SHA-256 `d6ee20f41be80f6b57a89cc30f107b101124b7c0f48927b80d915377379f7654`. Sa signature APK v2/v3 contient un seul signataire et retrouve exactement le certificat historique ci-dessus.
 
 ## Anomalie conservée comme preuve
 
