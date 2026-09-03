@@ -28,7 +28,7 @@ object QuranPageSelector {
         )
         return (division.startPage until
             (division.startPage + UsageCyclePolicy.HIZB_PAGE_COUNT))
-            .filter { it in division.pageRange }
+            .filter { it in 1..604 }
             .take(UsageCyclePolicy.HIZB_PAGE_COUNT)
     }
 
