@@ -276,6 +276,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         val targetReturn = file(
             "src/main/java/com/quranunlock/guard/TargetReturnCoordinator.kt"
         ).readText()
+        val targetReturnPolicy = file(
+            "src/main/java/com/quranunlock/guard/TargetReturnPolicy.kt"
+        ).readText()
         val targetReturnTests = file(
             "src/test/java/com/quranunlock/guard/TargetReturnPolicyTest.kt"
         ).readText()
@@ -345,7 +348,7 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(reader.contains("validateAndAdvance(continueAfterQuota = true)"))
         check(reader.contains("TargetReturnCoordinator.returnImmediately"))
         check(gate.contains("TargetReturnCoordinator.returnImmediately"))
-        check(targetReturn.contains("REVEAL_EXISTING_TASK"))
+        check(targetReturnPolicy.contains("REVEAL_EXISTING_TASK"))
         check(targetReturn.contains("FLAG_ACTIVITY_RESET_TASK_IF_NEEDED"))
         listOf(
             "normalUnlockRevealsTheExactTriggerTaskWithoutRelaunch",
