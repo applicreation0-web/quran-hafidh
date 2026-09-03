@@ -1,55 +1,50 @@
 # Audit contradictoire — Quran Safeguard 0.10.0
 
-Date : 2026-09-02  
-Base auditée : implémentation des points 1 et 2 au commit `ec38c931a3698e887b0c53e6a8794fce472ae377`, puis corrections contradictoires jusqu’au commit `93aea44cb93c5f72f9b73105548ad71623ea847b`.
+Date : 2026-09-03  
+Base auditée : branche `fix/0.9.2-roadmap-final-audit`, après intégration des points 1 à 4 et des corrections contradictoires.
 
 ## Méthode
 
-L’audit cherche volontairement à invalider le produit sur cinq axes : périmètre, exactitude du temps effectif, transitions 15/90 minutes, reprise après interruption et friction Android. Le premier build réel a validé l’audit Gradle, les tests unitaires et les APK debug/release avant l’application des corrections ci-dessous.
+L’audit cherche volontairement à invalider l’application sur sept axes : périmètre Android, exactitude du temps cumulé, cycle 15/90 minutes, lecture 60 secondes, limites Juz/Hizb, transitions ergonomiques et reprise après interruption.
 
 ## Résultats et corrections
 
-| Risque attaqué | Constat contradictoire | Correction |
+| Risque attaqué | Constat contradictoire | Correction vérifiée |
 | --- | --- | --- |
-| Application non cible observée | L’écoute est étroite au repos, s’élargit seulement pendant une cible et oublie le premier paquet de sortie sans journalisation. | Conforme. Les anciens classifieurs, l’écran d’exclusions et la découverte globale des applications sont supprimés. |
-| Cible désinstallée conservée | Une ancienne sélection pouvait rester dans les préférences et gonfler le compteur visuel. | Le catalogue ne vérifie que les 14 identifiants autorisés, met en cache le sous-ensemble installé et purge les sélections absentes. Une nouvelle installation reste volontairement opt-in. |
-| Changement de cible | Deux crédits séparés permettraient de contourner le quota en alternant les applications. | Un seul budget global suit toutes les cibles. Les transitions et PiP ne peuvent avoir qu’un propriétaire actif. |
-| Expiration interrompue | Un arrêt du processus entre le budget à zéro et le niveau en attente pourrait affaiblir le sixième palier. | Le niveau est persisté avant l’expiration ; l’accès exige explicitement l’absence de palier en attente. La reconstruction conserve MICRO contre HIZB. |
-| Validation interrompue | Un arrêt entre la fin d’un palier et l’attribution du crédit pourrait exiger une lecture supplémentaire ou laisser passer un crédit. | La fin du palier et le nouveau crédit de 15 minutes partagent une transaction `SharedPreferences`. |
-| Joker interrompu | Un arrêt pouvait théoriquement consommer un joker sans attribuer son crédit. | Consommation, niveau franchi, crédit et entrée d’historique partagent une transaction. |
-| Passage de minuit | Une page ouverte avant minuit pouvait ne plus appartenir au plan matinal du nouveau jour. | La page périmée est refusée sans plantage et l’interface ouvre le nouveau plan quotidien. |
-| Appel entrant/sortant | WhatsApp texte et appel partagent le même paquet Android. | Les modes audio 1 à 6 suspendent le temps pour sonnerie, téléphonie et VoIP ; les activités d’appel WhatsApp connues couvrent la transition avant le mode audio. Aucune permission téléphonique ou notification n’est ajoutée. |
-| Ancienne protection de désinstallation | Un identifiant interne inutilisé maintenait un lien conceptuel avec une application non cible. | Identifiant et méthodes mortes supprimés ; Android Settings reste totalement hors périmètre. |
-| Retour depuis les réglages | Les nombres affichés pouvaient rester anciens jusqu’à une recomposition ultérieure. | Les écrans d’accueil rechargent cibles, pool et progression à chaque retour au premier plan. |
-| Suivi des jokers | Le nombre restant était neutre mais ne consignait pas explicitement l’usage. | Le tableau de bord indique « utilisés aujourd’hui » et « disponibles », sans jugement. |
-| Test manuel | Le bouton de test pouvait ouvrir Chrome même s’il n’était pas sélectionné. | Il ne choisit plus qu’une cible installée et activée. |
+| Application bancaire perturbée | Un abonnement d’accessibilité global peut faire réagir une application sensible même sans blocage explicite. | Le service ne définit jamais `packageNames = null`. Sa liste reste limitée aux 14 cibles, à Safeguard, à System UI et au lanceur courant. Aucun identifiant bancaire, professionnel, GPS, transport ou santé n’est découvert, classé, stocké ou reçu dans les événements. |
+| Sortie du périmètre | Une liste d’exclusions imposerait de connaître toutes les applications du téléphone. | La liste d’exclusions et les classifieurs ont été supprimés. Seules les cibles choisies déclenchent une restriction. |
+| Chrome puis YouTube | Deux crédits ou une remise à zéro au changement d’application permettraient de dépasser 15 minutes. | Toutes les cibles utilisent la même clé de budget global. L’ancienne cible est arrêtée avant le démarrage de la nouvelle. Les tests 8+7 minutes, 4+6+5 minutes et checkpoints fréquents atteignent tous exactement zéro sans recrédit. |
+| Expiration interrompue | Un arrêt entre zéro et la création du palier pourrait affaiblir le sixième intervalle. | Le niveau en attente est persisté avant invalidation du crédit et l’accès exige l’absence de palier. La reconstruction conserve MICRO contre HIZB. |
+| Validation ou joker interrompu | Un arrêt pourrait accorder un crédit sans terminer le palier, ou consommer un joker sans crédit. | Niveau, crédit de 15 minutes, consommation du joker et historique sont validés dans des transactions cohérentes. |
+| Minuteur de page bloqué | Le bouton pouvait rester inutilisable après 60 secondes si la détection de défilement n’avait pas reçu le signal attendu. | La fin de page utilise aussi `canScrollVertically(1)`. Le statut indique clairement « 01:00 atteint » et le balayage devient disponible. |
+| Navigation peu intuitive | Un bouton unique ne permettait pas de revoir naturellement les pages lues. | Balayage horizontal animé, retour libre vers toute page validée et avance impossible au-delà de la page active avant 60 secondes et fin de page. Les boutons précédent/suivant restent accessibles. |
+| Quota terminé | La fermeture automatique empêchait de poursuivre une lecture engagée. | À la dernière page obligatoire, le déblocage est acquis sans fermer le lecteur. L’utilisateur choisit « Ouvrir l’application cible » ou « Continuer à lire » librement, sans nouveau minuteur. |
+| Limites Hizb/Juz | Les anciennes plages supposaient des blocs de pages réguliers, alors que les divisions commencent ou finissent souvent au milieu d’une page. | Les 30 Juz et 60 Hizb suivent leurs versets exacts et la pagination Médine 604 pages. Une page frontière peut appartenir aux deux sections adjacentes ; l’interface affiche versets, pages et changement de section. |
+| Quota de 10 pages | Un Hizb physique peut occuper 9, 10, 11 pages ou davantage. | La vérité structurelle et la règle produit sont séparées : le lecteur montre les limites réelles, mais le palier exige toujours dix pages consécutives. Si la limite réelle est franchie, le changement de Hizb est affiché. |
+| Commentaires Hikam | Une interprétation ajoutée pouvait être confondue avec la parole originale. | Le modèle, l’écran détail et la bibliothèque ne conservent plus que la Hikma arabe vocalisée, la traduction française et la source. |
+| Retrait d’une cible | Un décochage immédiat permettrait de contourner le cycle en cours. | L’ajout et l’annulation sont immédiats ; un retrait reste actif aujourd’hui et devient effectif au prochain jour local. Désinstallation : retrait immédiat. Six tests couvrent la règle. |
+| Appels WhatsApp | Texte et appel utilisent le même paquet Android. | Les modes audio de téléphonie/VoIP et les activités d’appel WhatsApp connues suspendent le budget. Aucune permission de journal d’appels, téléphone ou notifications n’est ajoutée. |
+| Retour des réglages Android | L’activation pouvait sembler figée après la page système. | La reprise revérifie le service, confirme l’activation puis retourne automatiquement à l’application ; les initialisations OEM non essentielles ne peuvent plus arrêter tout le service. |
 
-## Vérifications de règles
+Les limites exactes sont fondées sur [Tanzil Quran Metadata](https://tanzil.net/docs/quran_metadata) et présentées selon le Mushaf de Médine 604 pages, conformément au principe de pagination documenté par [Quran Foundation](https://api-docs.quran.foundation/docs/tutorials/fonts/page-layout/).
 
-- 6 cibles sociales exactes et 8 navigateurs exacts.
-- 20 pages matinales, 60 secondes actives par page.
-- Un pool d’un Hizb répète les mêmes 10 pages ; plusieurs Hizb avancent dans l’ordre croissant.
-- Cinq paliers d’une page, puis un palier de 10 pages au sixième intervalle.
-- Le palier de 90 minutes absorbe la pause simple correspondante et remet le cycle courant à zéro.
-- Trois jokers quotidiens utilisables aux trois niveaux.
-- Aucune durée configurable, aucun crédit par application et aucun accès réseau.
-- Appels, arrière-plan, écran éteint et lecteur non principal ne consomment pas le temps.
+## Vérifications automatisées
 
-## Limites honnêtes à tester sur téléphone
+- Audit Gradle total : périmètre strict, confidentialité, 264 Hikam, 604 pages, migrations, timer global et règles éditoriales.
+- Tests unitaires : cycle 15/90, budget partagé multi-cibles, checkpoints, reprise, appels, règle du lendemain, métadonnées Juz/Hizb et quota de dix pages.
+- Compilation Kotlin, APK debug et APK release réussies.
+- APK de diffusion : un signataire, schémas v2 et v3 valides, archive ZIP intègre.
+- Certificat historique SHA-256 : `6C:70:6F:4E:A4:4E:F6:67:D0:B9:69:8C:07:A3:9E:92:9B:1E:28:6D:23:97:66:55:04:41:1D:ED:B3:74:57:AC`.
+- APK signée : 71 976 853 octets, SHA-256 `32ad6777fc6a6d6b872ba63b7cbdf5c5530211dc96004405aa32716e93992b2d`.
 
-1. Les fabricants Android peuvent retarder ou regrouper certains événements d’accessibilité ; le compteur utilise des pauses immédiates et un checkpoint d’une seconde, mais un essai réel reste obligatoire.
-2. WhatsApp peut renommer ses activités d’appel. `AudioManager` reste le mécanisme principal ; le nom d’activité n’est qu’une couverture anticipée.
-3. Le minimum de 60 secondes prouve une présence active sur chaque page, pas la compréhension spirituelle.
-4. Un nouvel identifiant régional ou « Lite » d’une application n’est pas ajouté automatiquement : le périmètre reste strict par conception.
+## Limites honnêtes à vérifier sur téléphone
 
-## Verdict final — non publié
+1. Android et ses fabricants peuvent retarder certains événements d’accessibilité ; le ticker réagit toutes les 250 ms et persiste un checkpoint chaque seconde, mais une campagne réelle Chrome → YouTube reste utile.
+2. Une application bancaire peut décider par sa propre politique de refuser tout téléphone ayant un service d’accessibilité activé. Safeguard ne reçoit plus ses événements et ne peut pas neutraliser une politique interne de la banque ; ce cas ne peut être tranché que sur le téléphone concerné.
+3. WhatsApp peut renommer une activité d’appel ; `AudioManager` reste donc le mécanisme principal.
+4. Soixante secondes attestent une présence active sur la page, pas la compréhension spirituelle.
+5. Un identifiant régional ou « Lite » inconnu reste hors périmètre jusqu’à son ajout explicite.
 
-Aucun contournement logiciel certain n’est resté ouvert dans le modèle testé.
+## Verdict
 
-- Exécution CI n° 480 : audit Gradle, tests unitaires, APK debug et APK release non signée réussis.
-- Exécution CI n° 482 : mêmes contrôles réussis une seconde fois ; APK release non signée de 71 863 822 octets, SHA-256 `c4fcdf7cf3933b3e4d8aab4a0a6660db9011a6bab0f7d9e776959da9170452c9`.
-- APK finale signée localement avec la lignée historique : un signataire, schémas v2 et v3 valides, certificat SHA-256 `6C:70:6F:4E:A4:4E:F6:67:D0:B9:69:8C:07:A3:9E:92:9B:1E:28:6D:23:97:66:55:04:41:1D:ED:B3:74:57:AC`.
-- APK signée : 71 931 797 octets, SHA-256 `146f8787f28437d7a725d8b5f0b624b0656fc6a34a4d9f9a0577c03b6bb5b98c`; archive ZIP intègre.
-- Le transfert de build temporaire n’a modifié aucun octet du code applicatif et a été retiré après récupération.
-
-La branche et la pull request restent ouvertes et non fusionnées. Aucune release, aucun tag et aucune publication n’ont été créés.
+Aucun contournement logiciel certain n’est resté ouvert dans le modèle testé. Le périmètre est strictement positif, le quart d’heure est commun à toutes les cibles, la lecture respecte les limites coraniques exactes sans interrompre l’élan après quota, et le paquet final conserve la lignée de signature historique.
