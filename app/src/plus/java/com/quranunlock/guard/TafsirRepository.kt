@@ -75,6 +75,7 @@ internal object TafsirRepository {
             }
         }
 
+    @Synchronized
     private fun materializeDatabase(context: Context): File? {
         val directory = File(context.noBackupFilesDir, "tafsir")
         if (!directory.exists() && !directory.mkdirs()) return null
