@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,11 +49,13 @@ import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     private val serviceEnabledState = mutableStateOf(false)
+    private val otherEditionEnabledState = mutableStateOf(false)
     private val refreshState = mutableStateOf(0)
 
     override fun onResume() {
         super.onResume()
         serviceEnabledState.value = AccessibilityStatus.isEnabled(this)
+        otherEditionEnabledState.value = AccessibilityStatus.isOtherEditionEnabled(this)
         refreshState.value += 1
     }
 
@@ -62,17 +65,17 @@ class MainActivity : ComponentActivity() {
 
     private fun shareInstallationGuide() {
         val guide = """
-            Quran Safeguard 🌿
+            Quran Safeguard 🌿 — version à partager
 
             Installation simple :
-            1. Utilise uniquement l’APK signé de la version candidate Quran Safeguard qui t’a été fourni avec son contrôle SHA-256.
+            1. Utilise uniquement l’APK signé « Quran Safeguard » qui t’a été fourni avec son contrôle SHA-256. N’installe pas une APK présentée comme une édition privée : elle n’est pas destinée au partage.
             2. Installe l’APK puis ouvre Quran Safeguard.
             3. Suis l’étape “Activer la protection” pour autoriser le service d’accessibilité.
             4. Autorise les rappels et, si tu le souhaites, la localisation approximative utilisée uniquement sur le téléphone pour calculer Fajr, le lever du soleil, ‘Asr et Maghrib.
             5. Choisis tranquillement les applications à protéger et les Juz/Hizb souhaités.
             6. Appuie sur “Tester la protection” pour vérifier que tout est prêt.
 
-            N’installe pas une autre APK portant le même nom depuis une source différente. En cas de doute, vérifie le SHA-256 ou le certificat de signature de la version fournie.
+            L’identifiant attendu est com.applicreation0.quransafeguard. N’installe pas une autre APK portant le même nom depuis une source différente. En cas de doute, vérifie le SHA-256 ou le certificat de signature de la version fournie.
             Bonne installation 🌿
         """.trimIndent()
 
@@ -146,6 +149,7 @@ class MainActivity : ComponentActivity() {
                 } else {
                     Dashboard(
                         serviceEnabled = serviceEnabledState.value,
+                        otherEditionEnabled = otherEditionEnabledState.value,
                         refreshToken = refreshState.value,
                         onActivateProtection = {
                             if (GuardPrefs.hasAccessibilityConsent(this@MainActivity)) {
@@ -163,6 +167,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun Dashboard(
         serviceEnabled: Boolean,
+        otherEditionEnabled: Boolean,
         refreshToken: Int,
         onActivateProtection: () -> Unit
     ) {
@@ -251,7 +256,7 @@ class MainActivity : ComponentActivity() {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    "QURAN SAFEGUARD",
+                    stringResource(R.string.app_name).uppercase(),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -266,6 +271,29 @@ class MainActivity : ComponentActivity() {
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (otherEditionEnabled) {
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Deux éditions sont actives",
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Les deux éditions ne doivent pas utiliser simultanément le service d’accessibilité. La protection est suspendue pour éviter une double interception. Désactivez le service de l’autre édition dans les réglages Android."
+                            )
+                            SafeguardButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = onActivateProtection
+                            ) {
+                                Text("Ouvrir les réglages d’accessibilité")
+                            }
+                        }
+                    }
+                }
                 Text(
                     "Réglages",
                     style = MaterialTheme.typography.headlineSmall,
@@ -322,7 +350,7 @@ class MainActivity : ComponentActivity() {
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = { testProtection() },
-                            enabled = serviceEnabled
+                            enabled = serviceEnabled && !otherEditionEnabled
                         ) {
                             Text("Tester la protection")
                         }

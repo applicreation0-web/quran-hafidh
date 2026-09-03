@@ -7,6 +7,7 @@ import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
@@ -14,6 +15,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,14 +32,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import org.brotli.dec.BrotliInputStream
-import kotlin.math.abs
 
 class MushafReaderActivity : ComponentActivity() {
     companion object {
@@ -52,6 +55,22 @@ class MushafReaderActivity : ComponentActivity() {
     private var activityResumed = false
     private var activityTopResumed =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+    private var selectedTafsirVerse by mutableStateOf<VerseRef?>(null)
+    private var tafsirLoadState by mutableStateOf<TafsirLoadState>(TafsirLoadState.Closed)
+
+    private fun openTafsir(verse: VerseRef) {
+        if (!TafsirEdition.isEnabled) return
+        selectedTafsirVerse = verse
+        tafsirLoadState = TafsirLoadState.Loading
+        TafsirEdition.selectVerse(verse)
+    }
+
+    private fun closeTafsir() {
+        if (selectedTafsirVerse == null) return
+        TafsirEdition.closeAndRestore()
+        selectedTafsirVerse = null
+        tafsirLoadState = TafsirLoadState.Closed
+    }
 
     private fun mayCountActiveReading(): Boolean =
         activityResumed &&
@@ -140,6 +159,26 @@ class MushafReaderActivity : ComponentActivity() {
                     }
                 }
 
+                BackHandler(enabled = selectedTafsirVerse != null) {
+                    closeTafsir()
+                }
+
+                LaunchedEffect(selectedTafsirVerse) {
+                    val requestedVerse = selectedTafsirVerse ?: return@LaunchedEffect
+                    tafsirLoadState = TafsirLoadState.Loading
+                    val entry = TafsirEdition.load(
+                        this@MushafReaderActivity,
+                        requestedVerse
+                    )
+                    if (selectedTafsirVerse == requestedVerse) {
+                        tafsirLoadState = if (entry == null) {
+                            TafsirLoadState.Unavailable
+                        } else {
+                            TafsirLoadState.Available(entry)
+                        }
+                    }
+                }
+
                 fun pauseActiveReading() {
                     if (pageReady && activeReadingPage in 1..604) {
                         GuardPrefs.endReadingForeground(
@@ -152,7 +191,8 @@ class MushafReaderActivity : ComponentActivity() {
                 }
 
                 fun showPage(index: Int) {
-                    if (index !in planPages.indices ||
+                    if (selectedTafsirVerse != null ||
+                        index !in planPages.indices ||
                         (!quotaReached && index > activeIndex) ||
                         index == displayedIndex
                     ) {
@@ -333,11 +373,12 @@ class MushafReaderActivity : ComponentActivity() {
                 }.joinToString(" ")
 
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 0.dp, vertical = 4.dp)
-                    ) {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 0.dp, vertical = 4.dp)
+                        ) {
                         Text(
                             "Mushaf de Médine • Page $currentDisplayedPage",
                             modifier = Modifier.padding(horizontal = 10.dp),
@@ -439,6 +480,8 @@ class MushafReaderActivity : ComponentActivity() {
                             if (!svgContent.isNullOrBlank() && !loadFailed) {
                                 MushafPageWebView(
                                     svgContent = svgContent,
+                                    pageNumber = pageNumber,
+                                    tafsirOpen = selectedTafsirVerse != null,
                                     modifier = Modifier.fillMaxSize(),
                                     onReady = {
                                         if (!quotaReached &&
@@ -472,6 +515,13 @@ class MushafReaderActivity : ComponentActivity() {
                                     onSwipeNext = {
                                         validateAndAdvance()
                                     },
+                                    onVerseTapped = { verse ->
+                                        if (pageNumber == currentDisplayedPage &&
+                                            displayedPage == pageNumber
+                                        ) {
+                                            openTafsir(verse)
+                                        }
+                                    },
                                     onFailure = {
                                         loadFailed = true
                                         if (pageNumber == activeReadingPage) {
@@ -497,7 +547,7 @@ class MushafReaderActivity : ComponentActivity() {
                         ) {
                             SafeguardOutlinedButton(
                                 modifier = Modifier.weight(1f),
-                                enabled = displayedIndex > 0,
+                                enabled = selectedTafsirVerse == null && displayedIndex > 0,
                                 onClick = {
                                     showPage(displayedIndex - 1)
                                 }
@@ -506,11 +556,12 @@ class MushafReaderActivity : ComponentActivity() {
                             }
                             SafeguardButton(
                                 modifier = Modifier.weight(1f),
-                                enabled = if (quotaReached) {
-                                    currentDisplayedPage < 604
-                                } else {
-                                    viewingCompletedPage || canValidate
-                                },
+                                enabled = selectedTafsirVerse == null &&
+                                    if (quotaReached) {
+                                        currentDisplayedPage < 604
+                                    } else {
+                                        viewingCompletedPage || canValidate
+                                    },
                                 onClick = {
                                     validateAndAdvance()
                                 }
@@ -536,6 +587,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 8.dp),
+                                enabled = selectedTafsirVerse == null,
                                 onClick = {
                                     validateAndAdvance(continueAfterQuota = true)
                                 }
@@ -549,6 +601,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 8.dp),
+                                enabled = selectedTafsirVerse == null,
                                 onClick = {
                                     pauseActiveReading()
                                     TargetReturnCoordinator.returnImmediately(
@@ -565,6 +618,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 8.dp),
+                                enabled = selectedTafsirVerse == null,
                                 onClick = {
                                     pauseActiveReading()
                                     finish()
@@ -572,6 +626,19 @@ class MushafReaderActivity : ComponentActivity() {
                             ) {
                                 Text("Quitter sans valider")
                             }
+                        }
+                        }
+
+                        selectedTafsirVerse?.let { verse ->
+                            TafsirEdition.Panel(
+                                verse = verse,
+                                state = tafsirLoadState,
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                                maxPanelHeight = maxHeight * 0.5f,
+                                onPanelTopInWindow = { top ->
+                                    TafsirEdition.revealAbove(top)
+                                }
+                            )
                         }
                     }
                 }
@@ -650,6 +717,7 @@ class MushafReaderActivity : ComponentActivity() {
     }
 
     override fun onPause() {
+        closeTafsir()
         if (pageReady &&
             displayedPage == activeReadingPage &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
@@ -713,19 +781,30 @@ private fun formatRemainingSeconds(milliseconds: Long): String {
 @androidx.compose.runtime.Composable
 private fun MushafPageWebView(
     svgContent: String,
+    pageNumber: Int,
+    tafsirOpen: Boolean,
     modifier: Modifier = Modifier,
     onReady: () -> Unit,
     onBottomReached: () -> Unit,
     onSwipePrevious: () -> Unit,
     onSwipeNext: () -> Unit,
+    onVerseTapped: (VerseRef) -> Unit,
     onFailure: () -> Unit
 ) {
+    val currentTafsirOpen = rememberUpdatedState(tafsirOpen)
+    val currentOnReady = rememberUpdatedState(onReady)
+    val currentOnBottomReached = rememberUpdatedState(onBottomReached)
+    val currentOnSwipePrevious = rememberUpdatedState(onSwipePrevious)
+    val currentOnSwipeNext = rememberUpdatedState(onSwipeNext)
+    val currentOnVerseTapped = rememberUpdatedState(onVerseTapped)
+    val currentOnFailure = rememberUpdatedState(onFailure)
+
     AndroidView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
                 setBackgroundColor(android.graphics.Color.WHITE)
-                settings.javaScriptEnabled = false
+                settings.javaScriptEnabled = TafsirEdition.isEnabled
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
@@ -735,26 +814,41 @@ private fun MushafPageWebView(
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
 
-                var downX = 0f
-                var downY = 0f
                 val swipeThreshold = 72f * resources.displayMetrics.density
+                val gestureClassifier = ReaderGestureClassifier(swipeThreshold)
                 setOnTouchListener { _, event ->
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
-                            downX = event.x
-                            downY = event.y
+                            gestureClassifier.onDown(
+                                event.x,
+                                event.y,
+                                event.pointerCount
+                            )
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            gestureClassifier.onMove(
+                                event.x,
+                                event.y,
+                                event.pointerCount
+                            )
+                        }
+                        MotionEvent.ACTION_POINTER_DOWN -> {
+                            gestureClassifier.onAdditionalPointer()
+                        }
+                        MotionEvent.ACTION_CANCEL -> {
+                            gestureClassifier.onCancel()
                         }
                         MotionEvent.ACTION_UP -> {
-                            val deltaX = event.x - downX
-                            val deltaY = event.y - downY
-                            if (abs(deltaX) >= swipeThreshold &&
-                                abs(deltaX) > abs(deltaY) * 1.25f
+                            when (
+                                gestureClassifier.onUp(
+                                    event.x,
+                                    event.y,
+                                    gesturesEnabled = !currentTafsirOpen.value
+                                )
                             ) {
-                                if (deltaX < 0f) {
-                                    onSwipeNext()
-                                } else {
-                                    onSwipePrevious()
-                                }
+                                ReaderSwipe.NEXT -> currentOnSwipeNext.value()
+                                ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()
+                                null -> Unit
                             }
                         }
                     }
@@ -776,7 +870,7 @@ private fun MushafPageWebView(
                         noLongerScrollsDown &&
                         (scrollY > 0 || !needsScroll)
                     ) {
-                        onBottomReached()
+                        currentOnBottomReached.value()
                     }
                 }
 
@@ -790,7 +884,7 @@ private fun MushafPageWebView(
                         view: WebView?,
                         url: String?
                     ) {
-                        onReady()
+                        currentOnReady.value()
                         view?.post {
                             val contentHeightPx =
                                 (view.contentHeight * view.scale).toInt()
@@ -801,7 +895,7 @@ private fun MushafPageWebView(
                                     viewportHeightPx = view.height
                                 )
                             ) {
-                                onBottomReached()
+                                currentOnBottomReached.value()
                             }
                         }
                     }
@@ -812,7 +906,7 @@ private fun MushafPageWebView(
                         error: android.webkit.WebResourceError?
                     ) {
                         if (request?.isForMainFrame == true) {
-                            onFailure()
+                            currentOnFailure.value()
                         }
                     }
                 }
@@ -841,10 +935,19 @@ private fun MushafPageWebView(
                       </style>
                     </head>
                     <body>
-                      $svgContent
+                      ${TafsirEdition.prepareHtml(svgContent, pageNumber)}
                     </body>
                     </html>
                 """.trimIndent()
+
+                TafsirEdition.configureWebView(
+                    webView = this,
+                    pageNumber = pageNumber,
+                    verseIndex = MushafVerseIndex.fromSvg(svgContent),
+                    onVerseTapped = { verse ->
+                        currentOnVerseTapped.value(verse)
+                    }
+                )
 
                 loadDataWithBaseURL(
                     "https://quran-safeguard.local/",
