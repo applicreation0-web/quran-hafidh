@@ -305,6 +305,7 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "pageElevenBelongsToBothAdjacentHizb",
             "selectionIncludesSharedBoundaryPages",
             "protectionQuotaRemainsTenPagesAndContinuationCanFollow",
+            "shortHizbKeepsTenPageQuotaWithoutHidingRealBoundary",
             "everyJuzAndHizbHasOrderedValidBounds"
         ).forEach { scenario ->
             check(structureTests.contains("fun " + scenario + "(")) {
@@ -398,6 +399,9 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         val dashboard = file(
             "src/main/java/com/quranunlock/guard/DashboardActivity.kt"
         ).readText()
+        val selectionTests = file(
+            "src/test/java/com/quranunlock/guard/ProtectedSelectionPolicyTest.kt"
+        ).readText()
 
         check(!file("src/main/java/com/quranunlock/guard/SensitiveAppsActivity.kt").exists())
         check(!file("src/main/java/com/quranunlock/guard/SensitiveHandoffPolicy.kt").exists())
@@ -424,6 +428,18 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(prefs.contains("installedTargets = installedTargets"))
         check(!prefs.contains("UNINSTALL_CHALLENGE_KEY"))
         check(dashboard.contains("joker(s) utilisé(s) aujourd’hui"))
+        listOf(
+            "addition_is_immediate",
+            "removal_stays_active_until_next_day",
+            "reselecting_cancels_pending_removal",
+            "pending_removal_is_applied_on_next_day",
+            "uninstall_is_immediate_and_clears_pending_entry",
+            "missing_legacy_effective_day_is_repaired_to_tomorrow"
+        ).forEach { scenario ->
+            check(selectionTests.contains("fun " + scenario + "(")) {
+                "Missing next-day selection regression test: " + scenario
+            }
+        }
 
         check(manifest.contains("android:name=\".ProtectionSetupActivity\"")) {
             "Guided accessibility activation must be packaged."
