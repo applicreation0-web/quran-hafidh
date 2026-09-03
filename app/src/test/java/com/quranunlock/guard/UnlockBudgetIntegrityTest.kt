@@ -384,4 +384,78 @@ class UnlockBudgetIntegrityTest {
 
         assertEquals(12 * minute, shared.remainingMs)
     }
+
+    @Test
+    fun chromeThenYoutubeShareOneHardFifteenMinuteLimit() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+
+        // Chrome consumes eight minutes.
+        shared = UnlockBudgetIntegrity.start(shared, 0L, 7)
+        shared = UnlockBudgetIntegrity.pause(shared, 8 * minute, 7)
+
+        // YouTube consumes the seven minutes that remain; switching target
+        // must not mint a fresh interval.
+        shared = UnlockBudgetIntegrity.start(shared, 8 * minute, 7)
+        shared = UnlockBudgetIntegrity.pause(shared, 15 * minute, 7)
+
+        assertEquals(0L, shared.remainingMs)
+        assertTrue(
+            UnlockBudgetIntegrity.shouldGateOnExpiration(
+                remainingMs = shared.remainingMs,
+                targetPackage = "com.google.android.youtube",
+                foregroundPackage = "com.google.android.youtube",
+                isProtected = true,
+                callFrozen = false
+            )
+        )
+    }
+
+    @Test
+    fun threeProtectedAppsCannotExceedFifteenMinutesTogether() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+        var now = 0L
+
+        listOf(4L, 6L, 5L).forEach { minutes ->
+            shared = UnlockBudgetIntegrity.start(shared, now, 12)
+            now += minutes * minute
+            shared = UnlockBudgetIntegrity.pause(shared, now, 12)
+        }
+
+        assertEquals(15 * minute, now)
+        assertEquals(0L, shared.remainingMs)
+
+        // A fourth protected application receives no time from the exhausted
+        // shared interval.
+        val refused = UnlockBudgetIntegrity.start(shared, now, 12)
+        assertEquals(0L, refused.remainingMs)
+        assertEquals(null, refused.foregroundStartedElapsedMs)
+    }
+
+    @Test
+    fun frequentCheckpointsNeverExtendTheSharedInterval() {
+        var shared = UnlockBudgetIntegrity.grant(15 * minute)
+        shared = UnlockBudgetIntegrity.start(shared, 0L, 3)
+
+        (1L..14L).forEach { minuteIndex ->
+            shared = UnlockBudgetIntegrity.checkpoint(
+                shared,
+                minuteIndex * minute,
+                3
+            )
+            assertEquals(
+                (15L - minuteIndex) * minute,
+                UnlockBudgetIntegrity.remaining(
+                    shared,
+                    minuteIndex * minute,
+                    3
+                )
+            )
+        }
+
+        assertEquals(
+            0L,
+            UnlockBudgetIntegrity.remaining(shared, 15 * minute, 3)
+        )
+    }
+
 }
