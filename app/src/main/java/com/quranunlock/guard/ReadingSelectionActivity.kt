@@ -88,7 +88,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "La pause d’une page suit le mode choisi. Les filtres de 20 et 10 pages utilisent toujours le pool de Hizb enregistré.",
+                    "Choisissez avec les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -128,7 +128,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                             Text("Choisir par Hizb")
                         }
                         Text(
-                            "Un seul Hizb sera répété pour les 20 pages du matin. Plusieurs Hizb avancent dans l’ordre, du plus petit au plus grand.",
+                            "Les pages de frontière peuvent appartenir à deux sections voisines. Le quota reste de 20 pages le matin et 10 pages au palier de 90 minutes ; une lecture libre est ensuite proposée.",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -173,34 +173,65 @@ class ReadingSelectionActivity : ComponentActivity() {
                     ),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        (1..maxUnit).chunked(3).forEach { rowUnits ->
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                rowUnits.forEach { unit ->
-                                    Row(
-                                        modifier = Modifier.weight(1f),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = unit in current,
-                                            onCheckedChange = { checked ->
-                                                if (checked) {
-                                                    if (unit !in current) current.add(unit)
-                                                } else {
-                                                    current.remove(unit)
-                                                }
-                                                persistReadingSelection(
-                                                    mode,
-                                                    selectedJuz,
-                                                    selectedHizb
-                                                )
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        (1..maxUnit).forEach { unit ->
+                            val division = QuranStructureMetadata.division(
+                                mode,
+                                unit
+                            )
+                            OutlinedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = unit in current,
+                                        onCheckedChange = { checked ->
+                                            if (checked) {
+                                                if (unit !in current) current.add(unit)
+                                            } else {
+                                                current.remove(unit)
                                             }
+                                            persistReadingSelection(
+                                                mode,
+                                                selectedJuz,
+                                                selectedHizb
+                                            )
+                                        }
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "$unitLabel $unit",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
                                         )
-                                        Text("$unitLabel $unit")
+                                        Text(
+                                            QuranStructureMetadata.selectionSubtitle(
+                                                mode,
+                                                division.number
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
                             }
                         }
+                        Text(
+                            "Repères : " + QuranStructureMetadata.SOURCE_LABEL +
+                                " • pagination du Mushaf de Médine (604 pages).",
+                            modifier = Modifier.padding(8.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
