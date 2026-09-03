@@ -39,11 +39,32 @@ val verifyEditionIsolation by tasks.registering {
 
 val verifyPlusTafsirCorpus by tasks.registering {
     doLast {
-        val database = file(
-            "src/plus/assets/tafsir/al_jalalayn_en.sqlite"
-        )
-        check(database.isFile && database.length() > 0L) {
+        val archiveParts = (0..3).map { index ->
+            file("src/plus/assets/tafsir/al_jalalayn_en.sqlite.gz.part%02d".format(index))
+        }
+        check(archiveParts.all { it.isFile && it.length() > 0L }) {
             "Generate the private Plus tafsir database before building Plus."
+        }
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val streams = archiveParts.map { it.inputStream() }
+        val archive = java.io.SequenceInputStream(
+            java.util.Collections.enumeration(streams)
+        )
+        java.util.zip.GZIPInputStream(archive).use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        val actualSha256 = digest.digest().joinToString("") {
+            "%02x".format(it)
+        }
+        check(actualSha256 ==
+            "26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56"
+        ) {
+            "The private Plus tafsir database checksum is not approved."
         }
     }
 }
@@ -1067,7 +1088,7 @@ dependencies {
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-ktx:1.17.0")
-    plusImplementation("androidx.webkit:webkit:1.16.0")
+    add("plusImplementation", "androidx.webkit:webkit:1.16.0")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.animation:animation")

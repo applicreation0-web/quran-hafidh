@@ -7,13 +7,20 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.SequenceInputStream
 import java.security.MessageDigest
+import java.util.Collections
+import java.util.zip.GZIPInputStream
 
 internal object TafsirRepository {
-    private const val ASSET_PATH = "tafsir/al_jalalayn_en.sqlite"
+    private val ASSET_PARTS = (0..3).map { index ->
+        "tafsir/al_jalalayn_en.sqlite.gz.part%02d".format(index)
+    }
     private const val DATABASE_NAME = "al_jalalayn_en.sqlite"
     private const val EXPECTED_ENTRIES = 6_236
-    private const val EXPECTED_SHA256 = "TO_BE_GENERATED"
+    private const val EXPECTED_SHA256 =
+        "26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56"
 
     suspend fun load(context: Context, verse: VerseRef): TafsirEntry? =
         withContext(Dispatchers.IO) {
@@ -78,7 +85,7 @@ internal object TafsirRepository {
 
         val temporary = File(directory, "$DATABASE_NAME.tmp-${android.os.Process.myPid()}")
         return runCatching {
-            context.assets.open(ASSET_PATH).use { input ->
+            openDatabaseArchive(context).use { input ->
                 FileOutputStream(temporary).use { output ->
                     input.copyTo(output)
                     output.fd.sync()
@@ -96,6 +103,17 @@ internal object TafsirRepository {
             destination
         }.getOrNull().also {
             if (it == null) temporary.delete()
+        }
+    }
+
+    private fun openDatabaseArchive(context: Context): GZIPInputStream {
+        val streams = ArrayList<InputStream>(ASSET_PARTS.size)
+        return try {
+            ASSET_PARTS.forEach { path -> streams += context.assets.open(path) }
+            GZIPInputStream(SequenceInputStream(Collections.enumeration(streams)))
+        } catch (error: Throwable) {
+            streams.forEach { stream -> runCatching { stream.close() } }
+            throw error
         }
     }
 
@@ -123,8 +141,8 @@ internal object TafsirRepository {
                     "bold" -> TafsirRunStyle.BOLD
                     "bold_italic" -> TafsirRunStyle.BOLD_ITALIC
                     "note_ref" -> TafsirRunStyle.NOTE_REF
-                    else -> return emptyList()
-                }
+                    else -> null
+                } ?: return emptyList()
                 val text = value.getString("text")
                 if (text.isNotEmpty()) add(TafsirRun(style, text))
             }
