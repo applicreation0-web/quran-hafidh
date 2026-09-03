@@ -58,12 +58,14 @@ jobs:
 
           path = os.environ["PART_PATH"]
           with open(path, "rb") as handle:
+              # Store the base64 itself as UTF-8 text. The GitHub connector can
+              # then retrieve it without attempting to decode arbitrary APK bytes.
               content = base64.b64encode(handle.read()).decode("ascii")
-          print(json.dumps({"content": content, "encoding": "base64"}))
+          print(json.dumps({"content": content, "encoding": "utf-8"}))
           PY
             response="$(gh api --method POST \
               "repos/${GITHUB_REPOSITORY}/git/blobs" --input "$payload")"
             blob_sha="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])' \
               <<< "$response")"
-            echo "APK_CHUNK $(basename "$part") $(stat -c %s "$part") $(sha256sum "$part" | cut -d' ' -f1) $blob_sha"
+            echo "APK_B64_CHUNK $(basename "$part") $(stat -c %s "$part") $(sha256sum "$part" | cut -d' ' -f1) $blob_sha"
           done
