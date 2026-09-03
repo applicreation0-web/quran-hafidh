@@ -251,6 +251,18 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         val tests = file(
             "src/test/java/com/quranunlock/guard/UsageCyclePolicyTest.kt"
         ).readText()
+        val budgetTests = file(
+            "src/test/java/com/quranunlock/guard/UnlockBudgetIntegrityTest.kt"
+        ).readText()
+        val structure = file(
+            "src/main/java/com/quranunlock/guard/QuranStructureMetadata.kt"
+        ).readText()
+        val structureTests = file(
+            "src/test/java/com/quranunlock/guard/QuranStructureMetadataTest.kt"
+        ).readText()
+        val selectionUi = file(
+            "src/main/java/com/quranunlock/guard/ReadingSelectionActivity.kt"
+        ).readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
 
         check(!service.contains("750L"))
@@ -279,6 +291,26 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(gate.contains("Palier de 90 minutes • 10 pages"))
         check(reader.contains("Valider et avancer"))
         check(reader.contains("Balayez vers la gauche pour avancer"))
+        check(reader.contains("READING_QUOTA_REACHED"))
+        check(reader.contains("Quota atteint • sortie libre • lecture facultative"))
+        check(reader.contains("Ouvrir l’application cible"))
+        check(reader.contains("continueFreely"))
+        check(structure.contains("Tanzil Quran Metadata 1.0"))
+        check(structure.contains("startsInsidePage"))
+        check(structure.contains("endsInsidePage"))
+        check(selectionUi.contains("limites réelles des versets"))
+        check(selectionUi.contains("QuranStructureMetadata.selectionSubtitle"))
+        listOf(
+            "juzSixUsesItsExactVerseBoundary",
+            "pageElevenBelongsToBothAdjacentHizb",
+            "selectionIncludesSharedBoundaryPages",
+            "protectionQuotaRemainsTenPagesAndContinuationCanFollow",
+            "everyJuzAndHizbHasOrderedValidBounds"
+        ).forEach { scenario ->
+            check(structureTests.contains("fun " + scenario + "(")) {
+                "Missing Quran structure regression test: " + scenario
+            }
+        }
         check(mainUi.contains("Intervalle fixe : 15 minutes"))
         check(!mainUi.contains("durationChoices"))
 
@@ -314,6 +346,15 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         requiredScenarios.forEach { scenario ->
             check(tests.contains("fun " + scenario + "(")) {
                 "Missing release-blocking 15/90 cycle test: " + scenario
+            }
+        }
+        listOf(
+            "chromeThenYoutubeShareOneHardFifteenMinuteLimit",
+            "threeProtectedAppsCannotExceedFifteenMinutesTogether",
+            "frequentCheckpointsNeverExtendTheSharedInterval"
+        ).forEach { scenario ->
+            check(budgetTests.contains("fun " + scenario + "(")) {
+                "Missing multi-target 15-minute hard-limit test: " + scenario
             }
         }
 
@@ -591,7 +632,7 @@ val verifyEditorialBoundary by tasks.registering {
         check(hikam.contains("vocalization_status"))
         check(hikam.contains("source_aligned_no_automatic_generation"))
         check(hikam.contains("vocalizationSourceUrl"))
-        val hikamAsset = file("src/main/assets/classical/al_hikam_verified.json").readText()
+        val hikamAsset = file("src/main/assets/hikam/al_hikam_verified.json").readText()
         check(hikamAsset.contains("\"arabic_vocalized\""))
         check(hikamAsset.contains("\"vocalization_status\": \"source_aligned_no_automatic_generation\""))
         check(!hikamAsset.contains("\"commentary\"")) {
