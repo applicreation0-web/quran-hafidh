@@ -90,6 +90,20 @@ class QuranAccessibilityService : AccessibilityService() {
             if (!callFreezeActive) {
                 val packageName = foregroundUnlockedPackage
                 if (packageName != null) {
+                    if (!ProtectedApps.isProtected(
+                            this@QuranAccessibilityService,
+                            packageName
+                        )
+                    ) {
+                        pauseForegroundBudget(clearForeground = true)
+                        applyEventPackageScope(broad = false)
+                        GuardDiagnostics.log(
+                            this@QuranAccessibilityService,
+                            "TARGET_SELECTION_EXPIRED"
+                        )
+                        return
+                    }
+
                     val now = SystemClock.elapsedRealtime()
                     if (now - lastCheckpointElapsedMs >= 1_000L) {
                         GuardPrefs.checkpointUnlockForeground(
@@ -270,7 +284,7 @@ class QuranAccessibilityService : AccessibilityService() {
         callFreezeActive = shouldFreeze
 
         if (shouldFreeze) {
-            pauseForegroundBudget(clearForeground = false)
+            pauseForegroundBudget(clearForeground = true)
             applyEventPackageScope(broad = false)
             GuardDiagnostics.log(
                 this,
@@ -283,7 +297,12 @@ class QuranAccessibilityService : AccessibilityService() {
                 "CALL_USAGE_FREEZE_ENDED",
                 detail = "audioMode=$mode"
             )
-            resumeCurrentProtectedPackageIfEligible()
+            // Never revive a stale target merely because the call ended. The
+            // next real event from a selected target proves foreground presence
+            // and starts the shared budget again.
+            foregroundPackage = null
+            GuardRuntime.resetForeground()
+            applyEventPackageScope(broad = false)
         }
     }
 
@@ -565,21 +584,6 @@ class QuranAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun resumeCurrentProtectedPackageIfEligible() {
-        if (whatsappCallUiActive) return
-        val packageName = foregroundPackage ?: return
-        if (!ProtectedApps.isProtected(this, packageName)) return
-
-        if (GuardPrefs.isUnlocked(this, packageName)) {
-            GuardPrefs.beginUnlockForeground(this, packageName)
-            foregroundUnlockedPackage = packageName
-            lastCheckpointElapsedMs = SystemClock.elapsedRealtime()
-            applyEventPackageScope(broad = true)
-        } else {
-            triggerExpiredGateIfNeeded(packageName)
-        }
-    }
-
     private fun triggerExpiredGateIfNeeded(packageName: String) {
         val remaining = GuardPrefs.remainingUnlockMs(this, packageName)
         if (!UnlockBudgetIntegrity.shouldGateOnExpiration(
@@ -726,7 +730,7 @@ class QuranAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {
         // Not relied upon for correctness, but if Android does call it we freeze
         // immediately and wait for the next real protected foreground event.
-        pauseForegroundBudget(clearForeground = false)
+        pauseForegroundBudget(clearForeground = true)
         applyEventPackageScope(broad = false)
         GuardDiagnostics.log(this, "SERVICE_INTERRUPTED")
     }
