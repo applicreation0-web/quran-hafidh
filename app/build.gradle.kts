@@ -421,7 +421,7 @@ val verifyProtectedOnlyBoundary by tasks.registering {
         check(applicationsUi.contains("Confirmer pour demain"))
         check(applicationsUi.contains("cochez pour annuler"))
         check(prefs.contains("ProtectedSelectionPolicy.reconcile"))
-        check(prefs.contains("it in installedTargets"))
+        check(prefs.contains("installedTargets = installedTargets"))
         check(!prefs.contains("UNINSTALL_CHALLENGE_KEY"))
         check(dashboard.contains("joker(s) utilisé(s) aujourd’hui"))
 
