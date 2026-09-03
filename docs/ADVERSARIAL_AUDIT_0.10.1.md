@@ -1,7 +1,7 @@
 # Second audit contradictoire — Quran Safeguard 0.10.1
 
 Date : 2026-09-03  
-Code fonctionnel audité : `758264494504e857689ce7298311315aa485f878`  
+Code fonctionnel audité : `973587f1db5dd79fd5d23aba112002fe6b12f0d5`
 Statut : candidat signé, non fusionné et non publié.
 
 ## Périmètre attaqué
@@ -20,6 +20,7 @@ L'audit a cherché à invalider les invariants de sortie : cumul réel des appli
 | Sixième quart d'heure | Un micro-palier pouvait concurrencer le palier Hizb de 90 minutes. | Le sixième intervalle produit uniquement le palier Hizb. Sa validation clôt le cycle cumulatif et recrédite le nouveau cycle ; aucun micro-palier supplémentaire n'est empilé. |
 | Page affichée depuis plus de 60 secondes | Le lecteur pouvait rester bloqué si le WebView ne remontait jamais un signal de bas de page. | La validation dépend désormais uniquement de 60 secondes de présence active sur la page. Le défilement reste une information ergonomique et ne prolonge jamais le verrou. |
 | Balayage du lecteur | Un geste pouvait permettre d'avancer au-delà de la page active ou empêcher de revoir une page déjà lue. | Le retour par balayage reste libre vers les pages validées. L'avance ne devient possible qu'après les 60 secondes de la dernière page atteinte. Après le quota, la sortie est libre et la lecture peut continuer sans nouveau verrou. |
+| Retour vers l'application cible | Après la dernière page, le crédit était accordé mais un écran intermédiaire obligeait encore à toucher « Ouvrir l'application cible ». | Le swipe ou le bouton final retire désormais immédiatement la tâche temporaire de Safeguard et révèle l'écran exact de la cible resté dessous, sans toast ni délai. Un lancement par l'icône n'est utilisé qu'en secours si Android a perdu cette tâche. « Valider et continuer à lire » reste un choix explicite sur la dernière page et n'ajoute aucune friction au parcours normal. Les jokers suivent la même transition immédiate. |
 | Frontières Hizb/Juz | Une division coranique peut commencer ou finir au milieu d'une page ; des blocs artificiels de dix pages seraient trompeurs. | Les métadonnées présentent les versets et pages exacts des 60 Hizb et 30 Juz dans le Mushaf de Médine 604 pages, y compris les pages frontières partagées. La règle produit des dix pages obligatoires reste distincte de la frontière physique et l'interface signale le passage de section. |
 | Hikam | Des commentaires ou une interprétation ajoutée pouvaient être confondus avec le texte retenu. | Les commentaires ont disparu du modèle et de l'interface. La bibliothèque contient 264 Hikam vérifiées : arabe vocalisé, traduction française et source uniquement. |
 | Carte de progression | L'API de la version Compose utilisée n'acceptait pas le paramètre de bordure choisi. | La compilation a fait échouer la première tentative ; la bordure est maintenant appliquée par `Modifier.border`, compatible avec la version du projet. |
@@ -27,19 +28,20 @@ L'audit a cherché à invalider les invariants de sortie : cumul réel des appli
 
 ## Stress test de sortie
 
-La suite de 111 tests unitaires comprend quatre scénarios de charge bloquants pour la release :
+La suite de 115 tests unitaires comprend quatre scénarios de charge bloquants pour la release et quatre scénarios dédiés au retour vers la cible :
 
 - plus de 1 000 rafales de présence cible, séparées par de longues périodes banque/GPS/travail/appel simulées, épuisent exactement 15 minutes et jamais davantage ;
 - 250 cycles complets de 90 minutes, soit 600 000 alternances rapides réparties sur six intervalles par cycle, conservent un total exact de 22 500 minutes cibles simulées ;
 - 100 000 décisions de périmètre vérifient qu'une application hors cible ne peut jamais devenir propriétaire du budget ;
 - 1 000 000 de valeurs autour de la frontière des 60 secondes vérifient simultanément le reliquat et l'autorisation d'avancer.
+- retour normal vers la tâche exacte, lancement de secours, cible désinstallée et paquet vide sont chacun verrouillés par un test de non-régression.
 
-Cela représente plus de 1,7 million d'itérations de charge et plus de 2,8 millions d'assertions déterministes. La CI Android no 529 a réussi l'audit release, les 111 tests, la compilation Kotlin, l'APK debug et l'APK release non signé.
+Cela représente plus de 1,7 million d'itérations de charge et plus de 2,8 millions d'assertions déterministes. La CI Android no 534 a réussi l'audit release, les 115 tests, la compilation Kotlin, l'APK debug et l'APK release non signé.
 
 ## Vérification du paquet candidat
 
 - APK signée : 71 981 397 octets.
-- SHA-256 : `d6ee20f41be80f6b57a89cc30f107b101124b7c0f48927b80d915377379f7654`.
+- SHA-256 : `43c3d61e96ee23eb2c289266d99ff6dcb2da7898a92c88aa30dc0283b1c3a1f2`.
 - Archive ZIP : intègre ; toutes les entrées non compressées sont alignées sur quatre octets et les quatre bibliothèques natives sur 16 Kio.
 - Signature : schémas APK v2 et v3 valides, un seul signataire RSA 4096 bits.
 - Certificat historique SHA-256 : `6C:70:6F:4E:A4:4E:F6:67:D0:B9:69:8C:07:A3:9E:92:9B:1E:28:6D:23:97:66:55:04:41:1D:ED:B3:74:57:AC`.
@@ -54,4 +56,4 @@ Cela représente plus de 1,7 million d'itérations de charge et plus de 2,8 mill
 
 ## Verdict
 
-Le candidat 0.10.1 respecte le contrat logiciel testé : les 15 et 90 minutes sont du temps cumulé de présence dans les seules applications cibles ; les périodes hors cible et les appels ne sont pas débitées ; le lecteur ne reste plus verrouillé après 60 secondes ; la navigation et les limites coraniques sont cohérentes ; les Hikam ne contiennent plus de commentaires. Aucun défaut logiciel bloquant n'est resté ouvert dans les scénarios automatisables. La publication reste volontairement suspendue jusqu'à la validation sur appareil demandée ci-dessus.
+Le candidat 0.10.1 respecte le contrat logiciel testé : les 15 et 90 minutes sont du temps cumulé de présence dans les seules applications cibles ; les périodes hors cible et les appels ne sont pas débitées ; le lecteur ne reste plus verrouillé après 60 secondes ; la navigation et les limites coraniques sont cohérentes ; les Hikam ne contiennent plus de commentaires ; le déblocage rend immédiatement l'application déclencheuse sans écran intermédiaire, sauf choix volontaire de poursuivre la lecture. Aucun défaut logiciel bloquant n'est resté ouvert dans les scénarios automatisables. La publication reste volontairement suspendue jusqu'à la validation sur appareil demandée ci-dessus.

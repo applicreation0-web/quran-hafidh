@@ -10,7 +10,7 @@ La clé historique à conserver jalousement est `Quran-Safeguard-release.p12`, d
 
 Les APK 0.3.2, 0.8.2 et la version release retenue portent ce même certificat. C’est la lignée utilisée pour signer le candidat 0.10.1.
 
-Le candidat 0.10.1 vérifié mesure 71 981 397 octets et porte le SHA-256 `d6ee20f41be80f6b57a89cc30f107b101124b7c0f48927b80d915377379f7654`. Sa signature APK v2/v3 contient un seul signataire et retrouve exactement le certificat historique ci-dessus.
+Le candidat 0.10.1 vérifié mesure 71 981 397 octets et porte le SHA-256 `43c3d61e96ee23eb2c289266d99ff6dcb2da7898a92c88aa30dc0283b1c3a1f2`. Sa signature APK v2/v3 contient un seul signataire et retrouve exactement le certificat historique ci-dessus.
 
 ## Anomalie conservée comme preuve
 
