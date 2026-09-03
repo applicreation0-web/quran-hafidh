@@ -1,8 +1,5 @@
 name: Android CI
 
-permissions:
-  contents: write
-
 on:
   push:
     branches: [ "main" ]
@@ -73,18 +70,6 @@ jobs:
 
       - name: Build unsigned release APK
         run: gradle --no-daemon :app:assembleRelease
-
-      - name: Create temporary private APK transfer blobs
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          base64 -w0 app/build/outputs/apk/release/app-release-unsigned.apk > /tmp/quran-safeguard-release.b64
-          split -b 20000000 -d -a 2 /tmp/quran-safeguard-release.b64 /tmp/quran-safeguard-part-
-          for part in /tmp/quran-safeguard-part-*; do
-            part_name="${part##*-}"
-            sha="$(jq -Rs '{content: ., encoding: "utf-8"}' "$part" | gh api --method POST "repos/${GITHUB_REPOSITORY}/git/blobs" --input - --jq .sha)"
-            echo "APK_TRANSFER_${part_name}=${sha}"
-          done
 
       - name: Upload unsigned release APK
         continue-on-error: true
