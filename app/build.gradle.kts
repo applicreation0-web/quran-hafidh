@@ -1,3 +1,8 @@
+import java.io.SequenceInputStream
+import java.security.MessageDigest
+import java.util.Collections
+import java.util.zip.GZIPInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -45,12 +50,12 @@ val verifyPlusTafsirCorpus by tasks.registering {
         check(archiveParts.all { it.isFile && it.length() > 0L }) {
             "Generate the private Plus tafsir database before building Plus."
         }
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = MessageDigest.getInstance("SHA-256")
         val streams = archiveParts.map { it.inputStream() }
-        val archive = java.io.SequenceInputStream(
-            java.util.Collections.enumeration(streams)
+        val archive = SequenceInputStream(
+            Collections.enumeration(streams)
         )
-        java.util.zip.GZIPInputStream(archive).use { input ->
+        GZIPInputStream(archive).use { input ->
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             while (true) {
                 val read = input.read(buffer)
