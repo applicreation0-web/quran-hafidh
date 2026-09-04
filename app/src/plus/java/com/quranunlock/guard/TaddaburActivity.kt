@@ -103,13 +103,16 @@ class TaddaburActivity : ComponentActivity() {
                     readingMs = TaddaburPrefs.elapsedMs(this@TaddaburActivity, nextPage)
                 }
 
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = SafeguardReadingSurface
+                ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .padding(vertical = 5.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
                             Text(
                                 "Taddabur • Hizb ${progress.hizb}",
@@ -119,17 +122,11 @@ class TaddaburActivity : ComponentActivity() {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "${progress.completedCount}/${progress.totalPages} pages validées • 90 s minimum par page",
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                "🔖 Marque-page : page ${progress.bookmarkPage} • page affichée : $page",
+                                "${progress.completedCount}/${progress.totalPages} pages • page $page • 🔖 ${progress.bookmarkPage} • 90 s/page",
                                 modifier = Modifier.padding(horizontal = 12.dp),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.SemiBold
                             )
                             QuranStructureMetadata.boundaryNotice(
                                 QuranSelectionMode.HIZB,
@@ -149,7 +146,7 @@ class TaddaburActivity : ComponentActivity() {
                                     LocalTime.now().hour < TaddaburPolicy.START_HOUR ->
                                         "Le chrono Taddabur commencera à 07:00."
                                     readingMs >= TaddaburPolicy.MIN_PAGE_MS -> "Page validée ✓"
-                                    else -> "Temps actif sur cette page : ${formatTaddaburDuration(readingMs)} / 01:30"
+                                    else -> "Temps actif : ${formatTaddaburDuration(readingMs)} / 01:30"
                                 },
                                 modifier = Modifier.padding(horizontal = 12.dp),
                                 style = MaterialTheme.typography.bodySmall,
@@ -188,14 +185,14 @@ class TaddaburActivity : ComponentActivity() {
                                     enabled = selectedTafsirVerse == null && page > progress.startPage,
                                     onClick = { showPage(page - 1) }
                                 ) {
-                                    Text("Page précédente")
+                                    Text("Précédente")
                                 }
                                 SafeguardButton(
                                     modifier = Modifier.weight(1f),
                                     enabled = selectedTafsirVerse == null && page < progress.endPage,
                                     onClick = { showPage(page + 1) }
                                 ) {
-                                    Text("Page suivante")
+                                    Text("Suivante")
                                 }
                             }
                             Spacer(Modifier.height(2.dp))
@@ -292,8 +289,7 @@ private fun TaddaburMushafWebView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
-                // Neutral reading surface: no added light/dark/coloured background.
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                setBackgroundColor(android.graphics.Color.rgb(244, 240, 230))
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
@@ -329,7 +325,7 @@ private fun TaddaburMushafWebView(
                     <head>
                       <meta name="viewport" content="width=device-width, initial-scale=1.0">
                       <style>
-                        html, body { margin:0; padding:0; background:transparent; width:100%; min-height:100%; overflow-x:hidden; }
+                        html, body { margin:0; padding:0; background:#F4F0E6; width:100%; min-height:100%; overflow-x:hidden; }
                         svg { display:block; width:100%; height:auto; max-width:100%; }
                       </style>
                     </head>
