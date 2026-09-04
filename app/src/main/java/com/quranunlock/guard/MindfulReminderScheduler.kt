@@ -165,6 +165,7 @@ object MindfulReminderScheduler {
             cancel(context, ACTION_MORNING, REQUEST_MORNING)
             cancel(context, ACTION_EVENING, REQUEST_EVENING)
         }
+        TaddaburEdition.scheduleReminder(context)
     }
 
     fun scheduleDaily(context: Context) {
@@ -225,10 +226,14 @@ object MindfulReminderScheduler {
 
 class MindfulReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        when (intent?.action) {
-            MindfulReminderScheduler.ACTION_DAILY -> ReminderNotifications.showDaily(context)
-            MindfulReminderScheduler.ACTION_MORNING -> ReminderNotifications.showAdhkar(context, AdhkarPeriod.MORNING)
-            MindfulReminderScheduler.ACTION_EVENING -> ReminderNotifications.showAdhkar(context, AdhkarPeriod.EVENING)
+        if (TaddaburEdition.handlesReminder(intent?.action)) {
+            TaddaburEdition.handleReminder(context, intent?.action)
+        } else {
+            when (intent?.action) {
+                MindfulReminderScheduler.ACTION_DAILY -> ReminderNotifications.showDaily(context)
+                MindfulReminderScheduler.ACTION_MORNING -> ReminderNotifications.showAdhkar(context, AdhkarPeriod.MORNING)
+                MindfulReminderScheduler.ACTION_EVENING -> ReminderNotifications.showAdhkar(context, AdhkarPeriod.EVENING)
+            }
         }
         MindfulReminderScheduler.scheduleAll(context)
     }
