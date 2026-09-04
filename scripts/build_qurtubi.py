@@ -2,9 +2,22 @@ import fitz,re,sqlite3,hashlib,os,collections,sys
 BASE=os.environ.get('QURTUBI_BASE','/mnt/data/tafsir-src')
 OUT=os.environ.get('QURTUBI_OUT','/mnt/data/qurtubi_en.sqlite')
 SOURCES=[('v1',f'{BASE}/qurtubi-v1.pdf'),('v2',f'{BASE}/qurtubi-v2.pdf'),('v3',f'{BASE}/qurtubi-v3.pdf'),('v4',f'{BASE}/qurtubi-v4.pdf')]
+EXPECTED_SOURCE_SHA256={
+    'v1':'a791ec1313fa2401abe7ca25ac7ccb4bedb1afcb51f2c779160a71e98a6f04cb',
+    'v2':'466e72af70ad6c9c9ddccb418f87df6012c3078ef7947fdc88ab00c86c15645e',
+    'v3':'e69818ce49f79d7de2bb5cef37c82e7e1f4431f7117a550fa33259da7dc6b583',
+    'v4':'eb71cb2ed8c2497cc8a5d3634b3eeb7788fdc7caee9de5d6b50349fb8619965c',
+}
+EXPECTED_COVERAGE={1:7,2:286,3:200,4:22}
 PURE_AR=re.compile(r'[\u0600-\u06ff\u0750-\u077f]')
 NUM_START=re.compile(r'^(\d{1,3})\.?\s+')
 INLINE_NUM=re.compile(r'\b(\d{1,3})\.?\s+(?=[A-Za-z\u2018\u201c])')
+
+def file_sha256(path):
+    h=hashlib.sha256()
+    with open(path,'rb') as f:
+        for chunk in iter(lambda:f.read(1024*1024),b''): h.update(chunk)
+    return h.hexdigest()
 
 def norm_text(t): return t.replace('\u00ad','').replace('\uf0d6','').replace('\uf096','').replace('\uf0b7','').strip()
 def is_arabic(t):
@@ -121,10 +134,42 @@ def parse_volume(tag,path):
         rows.sort(key=lambda r:(r['surah'],r['start'],r['page']))
     return rows
 
+# Fail closed even when this builder is invoked directly, outside the packaging script.
+for tag,path in SOURCES:
+    if not os.path.isfile(path):
+        raise RuntimeError(f'Missing required Qurtubi source volume: {tag} ({path})')
+    actual=file_sha256(path)
+    if actual!=EXPECTED_SOURCE_SHA256[tag]:
+        raise RuntimeError(f'Qurtubi {tag} source SHA-256 mismatch: {actual}')
+
 allrows=[]
 for tag,path in SOURCES:
-    if os.path.exists(path):
-        rr=parse_volume(tag,path); print(tag,'rows',len(rr)); allrows.extend(rr)
+    rr=parse_volume(tag,path)
+    if not rr:
+        raise RuntimeError(f'Qurtubi {tag} produced no Tafsir rows')
+    print(tag,'rows',len(rr)); allrows.extend(rr)
+
+# Validate the complete four-volume scope before writing any database.
+for r in allrows:
+    last=EXPECTED_COVERAGE.get(r['surah'])
+    if last is None or r['start']<1 or r['end']<r['start'] or r['end']>last:
+        raise RuntimeError(f'Qurtubi row outside approved volumes 1-4 scope: {r}')
+    if not r['translation'].strip() or not r['commentary'].strip():
+        raise RuntimeError(f'Qurtubi empty translation/commentary row: {r["surah"]}:{r["start"]}-{r["end"]} {r["tag"]}')
+    joined=r['translation']+' '+r['commentary']
+    if any('\u0600'<=ch<='\u06ff' for ch in joined):
+        raise RuntimeError(f'Qurtubi Arabic source text leaked into row: {r["surah"]}:{r["start"]}-{r["end"]}')
+    if 'sunniconnect' in joined.lower():
+        raise RuntimeError(f'Qurtubi scan contamination leaked into row: {r["surah"]}:{r["start"]}-{r["end"]}')
+
+cov=collections.defaultdict(set)
+for r in allrows:
+    for a in range(r['start'],r['end']+1): cov[r['surah']].add(a)
+for s,n in EXPECTED_COVERAGE.items():
+    miss=[a for a in range(1,n+1) if a not in cov[s]]
+    if miss:
+        raise RuntimeError(f'Qurtubi volumes 1-4 coverage gap in sura {s}: {miss[:140]}')
+
 counts=collections.Counter()
 for r in allrows:
     key=(r['surah'],r['start'],r['end']);counts[key]+=1;r['segment_no']=counts[key]
@@ -147,16 +192,13 @@ CREATE TABLE tafsir_entry(
 );
 CREATE INDEX idx_tafsir_lookup ON tafsir_entry(surah,verse_start,verse_end,segment_no);
 ''')
-sha={tag:hashlib.sha256(open(path,'rb').read()).hexdigest() for tag,path in SOURCES if os.path.exists(path)}
+sha={tag:file_sha256(path) for tag,path in SOURCES}
 meta={'schema_version':'2','edition_id':'qurtubi','display_name':'Qurtubi','author':'Abu Abdallah Muhammad ibn Ahmad al-Qurtubi','work':'al-Jami li-Ahkam al-Quran / The General Judgments of the Quran','translator':'Aisha Abdurrahman Bewley','language':'English','coverage_target':'Volumes 1-4: Al-Fatihah; Al-Baqarah 1-286; Ali Imran 1-200; An-Nisa 1-22. Quran 4:23 begins volume 5.','arabic_included':'false','source_pdf_sha256_json':str(sha),'entry_count':str(len(allrows)),'volume2_status':'full volume 2 materialized and parsed'}
 con.executemany('INSERT INTO source_metadata VALUES (?,?)',meta.items())
 con.executemany('''INSERT INTO tafsir_entry(surah,verse_start,verse_end,segment_no,verse_translation,commentary,source_page,source_volume) VALUES (?,?,?,?,?,?,?,?)''',[(r['surah'],r['start'],r['end'],r['segment_no'],r['translation'],r['commentary'],r['page'],r['tag']) for r in allrows])
 con.commit();con.execute('VACUUM');con.close()
 
-expected={1:7,2:286,3:200,4:22}; cov=collections.defaultdict(set)
-for r in allrows:
-    for a in range(r['start'],r['end']+1): cov[r['surah']].add(a)
-for s,n in expected.items():
+for s,n in EXPECTED_COVERAGE.items():
     miss=[a for a in range(1,n+1) if a not in cov[s]]
     print('sura',s,'covered',len(cov[s]),'/',n,'missing',len(miss),miss[:140])
 print('ranges>',[(r['surah'],r['start'],r['end'],r['tag']) for r in allrows if r['end']>r['start']][:30])
