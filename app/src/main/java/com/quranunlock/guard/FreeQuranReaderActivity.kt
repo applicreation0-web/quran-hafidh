@@ -118,7 +118,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         "Lecture libre • appuyez sur un verset pour ouvrir le Tafsîr."
                 }
 
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = SafeguardReadingSurface
+                ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
@@ -155,8 +158,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     .weight(1f),
                                 transitionSpec = {
                                     if (targetState > initialState) {
-                                        // Arabic-book direction: old page exits right,
-                                        // next page enters from the left.
                                         slideInHorizontally { width -> -width } togetherWith
                                             slideOutHorizontally { width -> width }
                                     } else {
@@ -199,14 +200,14 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     enabled = selectedTafsirVerse == null && page > FIRST_PAGE,
                                     onClick = { showPage(page - 1) }
                                 ) {
-                                    Text("Page précédente")
+                                    Text("Précédente")
                                 }
                                 SafeguardButton(
                                     modifier = Modifier.weight(1f),
                                     enabled = selectedTafsirVerse == null && page < LAST_PAGE,
                                     onClick = { showPage(page + 1) }
                                 ) {
-                                    Text("Page suivante")
+                                    Text("Suivante")
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
@@ -290,7 +291,7 @@ private fun FreeMushafPageWebView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.WHITE)
+                setBackgroundColor(android.graphics.Color.rgb(244, 240, 230))
                 settings.javaScriptEnabled = TafsirEdition.isEnabled
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
@@ -352,7 +353,7 @@ private fun FreeMushafPageWebView(
                         html, body {
                           margin: 0;
                           padding: 0;
-                          background: #ffffff;
+                          background: #F4F0E6;
                           width: 100%;
                           min-height: 100%;
                           overflow-x: hidden;
