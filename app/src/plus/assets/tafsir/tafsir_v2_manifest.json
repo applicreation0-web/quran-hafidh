@@ -11,6 +11,8 @@
       "rights_status": "unresolved",
       "source_audit_status": "pending_content_extraction",
       "content_audit_status": "pending",
+      "content_language": "en",
+      "arabic_source_text_included": false,
       "coverage": "1:1-4:23",
       "source_status": "groundwork_complete_payload_not_bundled"
     },
@@ -24,6 +26,8 @@
       "rights_status": "unresolved",
       "source_audit_status": "anchor_audit_pass_payload_pending",
       "content_audit_status": "pending",
+      "content_language": "en",
+      "arabic_source_text_included": false,
       "coverage": "surahs_1_4",
       "source_status": "groundwork_complete_payload_not_bundled"
     }
