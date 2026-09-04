@@ -47,13 +47,14 @@ assert 'verse_commentary' in repo and 'verse_note' in repo
 assert 'sourceLabel: String? = null' in models
 assert 'note.displayLabel' in panel
 
-# Verse-specific options are based on real distributable corpus availability, not coverage alone.
+# Verse-specific options are based on a real mapped, distributable corpus, not coverage alone.
 for token in (
     'suspend fun availableEditions(',
-    'loadV2Spec(context.applicationContext, edition)?.distributionReady == true',
+    'hasV2Commentary(appContext, verse, edition)',
+    'SELECT 1 FROM entry_verse_map WHERE surah = ? AND ayah = ? LIMIT 1',
     'add(TafsirEditionId.JALALAYN)',
 ):
-    assert token in repo, f"Missing real tafsir availability rule: {token}"
+    assert token in repo, f"Missing exact tafsir availability rule: {token}"
 assert 'TafsirRepository.availableEditions(context.applicationContext, verse)' in panel
 assert 'if (editionId !in resolved)' in panel
 assert 'onEditionChange(TafsirEditionId.JALALAYN)' in panel
@@ -90,6 +91,10 @@ for token in (
     'APPROVED_RIGHTS_STATUSES',
     'sourceAuditStatus == "verified"',
     'contentAuditStatus == "verified"',
+    'contentLanguage == "en"',
+    '!arabicSourceTextIncluded',
+    'metadataValue(database, "content_language") == "en"',
+    'metadataValue(database, "arabic_source_text_included") == "false"',
     'validateV2Metadata',
     'CancellationException',
     'StandardCopyOption.ATOMIC_MOVE',
