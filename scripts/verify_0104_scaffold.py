@@ -33,10 +33,11 @@ for token in (
     'Text("A+")',
     'notesExpanded',
     'verticalScroll(scrollState)',
-    'Jalalayn ▾',
+    'Text("${editionId.displayName} ▾")',
 ):
     assert token in panel, f"Jalalayn golden UX token missing: {token}"
 
+assert 'displayName = "Jalalayn"' in models
 assert 'JALALAYN_EXPECTED_ENTRIES = 6_236' in repo
 assert '26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56' in repo
 assert 'verse_commentary' in repo and 'verse_note' in repo
@@ -49,9 +50,10 @@ assert 'selectedTafsirEdition == requestKey.editionId' in free_reader
 assert 'readyForDistribution' in repo
 assert 'English commentary unavailable for this verse in this edition.' in panel
 
-# Light must remain a true no-op.
+# Light must remain a true no-op and compile against both old/new facade signatures.
 assert 'isEnabled: Boolean = false' in light
-assert '): TafsirEntry? = null' in light
+assert light.count('): TafsirEntry? = null') >= 2
+assert light.count('fun Panel(') >= 2
 
 manifest = json.loads(
     read("app/src/plus/assets/tafsir/tafsir_v2_manifest.json")
