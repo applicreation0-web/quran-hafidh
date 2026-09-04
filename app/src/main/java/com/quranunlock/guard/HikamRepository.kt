@@ -24,6 +24,8 @@ data class HikmaEntry(
     val canonicalArabicText: String = arabicText,
     val vocalizationSourceUrl: String? = null,
     val matnBoundaryStatus: String? = null,
+    val matnPrimarySourceKind: String? = null,
+    val matnPrimarySourceUrl: String? = null,
     val matnSnapshotSha256: String? = null,
     val translationMatnSnapshotSha256: String? = null,
     val independentWitnessIds: Set<String> = emptySet()
@@ -46,6 +48,8 @@ data class HikmaEntry(
     val matnReleaseEligible: Boolean
         get() =
             matnBoundaryStatus == "verified" &&
+                matnPrimarySourceKind == "matn_only" &&
+                !matnPrimarySourceUrl.isNullOrBlank() &&
                 !matnSnapshotSha256.isNullOrBlank() &&
                 translationMatnSnapshotSha256 == matnSnapshotSha256 &&
                 independentWitnessIds.size >= 2
@@ -183,10 +187,11 @@ object HikamRepository {
                 append(it)
             }
         }
-        val canonicalSourceUrl = obj.optString("matn_primary_source_url")
+        val primarySourceUrl = obj.optString("matn_primary_source_url")
             .trim()
             .takeIf(String::isNotBlank)
-            ?: verificationSources.firstOrNull().orEmpty()
+        val canonicalSourceUrl =
+            primarySourceUrl ?: verificationSources.firstOrNull().orEmpty()
 
         return HikmaEntry(
             canonicalId = "hikma_$sourceNumber",
@@ -220,6 +225,10 @@ object HikamRepository {
             matnBoundaryStatus = obj.optString("matn_boundary_status")
                 .trim()
                 .takeIf(String::isNotBlank),
+            matnPrimarySourceKind = obj.optString("matn_primary_source_kind")
+                .trim()
+                .takeIf(String::isNotBlank),
+            matnPrimarySourceUrl = primarySourceUrl,
             matnSnapshotSha256 = obj.optString("matn_snapshot_sha256")
                 .trim()
                 .takeIf(String::isNotBlank),
