@@ -66,6 +66,7 @@ jobs:
       - name: Audit, test and build both editions
         run: |
           set -euo pipefail
+          python3 scripts/verify_0104_hikam_freeze.py
           python3 scripts/verify_0104_update.py
           gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
           python3 scripts/audit_hikam_translation_against_islamicpearls.py
@@ -143,6 +144,10 @@ jobs:
           - plages de versets et segments multiples pris en charge sans duplication artificielle ;
           - sélecteur compact Jalalayn / Qurtubi / Qushayri dans le panneau Tafsīr existant ;
           - aucun PDF source, aucune page tierce Sunniconnect et aucun texte arabe des scans dans les nouveaux corpus.
+
+          ### Al-Ḥikam
+          - le corpus et les composants Hikam critiques de la 0.10.3 sont gelés byte-for-byte dans cette mise à jour ;
+          - la 0.10.4 ne revendique pas l’achèvement d’un nouveau ré-audit textuel 264/264 distinct.
 
           ### Vérifications
           - audit contradictoire 0.10.4 des corpus et du mapping ;
