@@ -24,7 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +55,7 @@ private const val DEFAULT_FONT_SIZE = 18f
  *
  * This is deliberately the 0.10.3 panel extended by only one permanent visual
  * control: the compact edition selector. Data loading stays outside the renderer.
+ * Sustained reading uses the shared warm, low-glare reading surface.
  */
 @Composable
 internal fun TafsirPanel(
@@ -99,7 +99,7 @@ internal fun TafsirPanel(
                 onPanelTopInWindow(coordinates.boundsInWindow().top.roundToInt())
             }
             .semantics { paneTitle = "Commentaire du verset" },
-        color = Color(0xFFF7FBF6),
+        color = SafeguardReadingSurface,
         tonalElevation = 8.dp,
         shadowElevation = 12.dp
     ) {

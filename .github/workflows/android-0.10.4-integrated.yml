@@ -1,6 +1,12 @@
-name: Android 0.10.4 full Plus audit
+name: Android 0.10.4 integrated final audit
 
 on:
+  push:
+    branches:
+      - work/0.10.4-integrated-final
+  pull_request:
+    branches:
+      - release/0.10.4-multitafsir
   workflow_dispatch:
 
 jobs:
@@ -48,13 +54,19 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
-      - name: Prove Hikam layer unchanged from 0.10.3
+      - name: Prove canonical Hikam corpus integrity
         run: python3 scripts/verify_0104_hikam_freeze.py
 
-      - name: Source-level multi-tafsir contradictory audit
+      - name: Prove Hikam matn translation glossary and sharh separation
+        run: python3 scripts/verify_hikam_translation_separation.py
+
+      - name: Cross-audit all 264 Hikam French translations against the English reference
+        run: python3 scripts/audit_hikam_translation_against_islamicpearls.py
+
+      - name: Audit multi-tafsir source and mapping
         run: python3 scripts/verify_0104_update.py
 
-      - name: Taddabur and neutral-reading audit
+      - name: Audit Taddabur and eye-comfort contract
         run: python3 scripts/verify_0104_taddabur.py
 
       - name: Existing full release audit
@@ -78,5 +90,5 @@ jobs:
       - name: Prove all three Plus tafsir corpora
         run: python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
 
-      - name: Prove Plus Taddabur, neutral reader and readability controls
+      - name: Prove Plus Taddabur packaging, neutral reader and readability controls
         run: python3 scripts/verify_plus_apk_taddabur.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk

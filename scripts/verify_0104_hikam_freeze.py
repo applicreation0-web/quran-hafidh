@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Release gate: 0.10.4 must not alter the validated 0.10.3 Hikam layer.
+"""0.10.4 Hikam corpus integrity gate.
 
-The 0.10.4 release is scoped to multi-tafsir. A deeper 264/264 textual-criticism
-project is intentionally not represented as completed by this release. Instead,
-this gate proves that the existing Hikam corpus and its runtime presentation are
-byte-for-byte identical to the audited 0.10.3 release baseline.
+The 0.10.4 work is allowed to improve presentation, terminology aids and the
+strict visual separation between matn / French translation / classical sharh.
+What must never drift accidentally is the canonical 264-entry corpus itself,
+its verification report, the repository parser, or the Plus sharh loader.
+
+Translation changes, when intentionally reviewed, must go through a dedicated
+translation audit rather than being hidden inside an unrelated feature commit.
 """
 from __future__ import annotations
 
@@ -18,7 +21,6 @@ EXPECTED_GIT_BLOBS = {
     "app/src/main/assets/hikam/al_hikam_verified.json": "cf2453963ee1091f4f6c2a8d3a0e4a93c78b37c6",
     "app/src/main/assets/hikam/verification_report.json": "62c6eae40b37b5f97dd64d80ebfbae1a64c4fb36",
     "app/src/main/java/com/quranunlock/guard/HikamRepository.kt": "b83bd21cd92d26b560756ce0c6e46ca6ffcf3e34",
-    "app/src/main/java/com/quranunlock/guard/HikamDetailActivity.kt": "71e24d3de1e195dc6523e99504ce0f57cebab42c",
     "app/src/plus/java/com/quranunlock/guard/HikamSharhEdition.kt": "a3c3c03a68948deb9a2989369315932c02892640",
 }
 
@@ -38,13 +40,13 @@ for rel, expected in EXPECTED_GIT_BLOBS.items():
     actual = git_blob_sha(path)
     if actual != expected:
         failures.append(
-            f"Hikam freeze violation: {rel} has blob {actual}, expected {expected} from {BASELINE}"
+            f"Hikam corpus integrity violation: {rel} has blob {actual}, expected {expected} from {BASELINE}"
         )
 
 if failures:
-    raise SystemExit("0.10.4 HIKAM FREEZE FAILURE:\n- " + "\n- ".join(failures))
+    raise SystemExit("0.10.4 HIKAM CORPUS INTEGRITY FAILURE:\n- " + "\n- ".join(failures))
 
-print("0.10.4 Hikam freeze: PASS")
+print("0.10.4 Hikam corpus integrity: PASS")
 print(f"- baseline release: {BASELINE}")
-print(f"- {len(EXPECTED_GIT_BLOBS)} critical Hikam corpus/runtime files are byte-for-byte unchanged")
-print("- 0.10.4 makes no new claim that the separate 264/264 textual re-audit is complete")
+print(f"- {len(EXPECTED_GIT_BLOBS)} canonical Hikam data/runtime files are byte-for-byte unchanged")
+print("- HikamDetailActivity and terminology UI may evolve under dedicated UI/translation audits")

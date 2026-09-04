@@ -17,9 +17,16 @@ object TafsirEdition {
     private var currentWebView = WeakReference<WebView>(null)
 
     fun prepareHtml(svgContent: String, pageNumber: Int): String {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return svgContent
+        val styledSvg = svgContent + """
+            <style>
+              html, body, svg { background: #F4F0E6 !important; }
+            </style>
+        """.trimIndent()
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            return styledSvg
+        }
         return buildString {
-            append(svgContent)
+            append(styledSvg)
             append(
                 """
                 <style>
