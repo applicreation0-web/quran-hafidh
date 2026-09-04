@@ -29,7 +29,7 @@ service = read("app/src/main/java/com/quranunlock/guard/QuranAccessibilityServic
 gate = read("app/src/main/java/com/quranunlock/guard/GateActivity.kt")
 reminders = read("app/src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt")
 tests = read("app/src/testPlus/java/com/quranunlock/guard/TaddaburPolicyTest.kt")
-theme = read("app/src/main/java/com/quranunlock/guard/MainActivity.kt")
+tafsir_panel = read("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
 
 # Plus-only flavor boundary.
 require(light, "const val isEnabled: Boolean = false", "fun DashboardCard() = Unit")
@@ -90,22 +90,34 @@ require(
 )
 forbid(reader, "GuardPrefs.completeReadingAndUnlock", "consumeJokerAndUnlock")
 
-# Eye comfort contract: warm light reading only, never a black/dark reader.
+# Reading comfort contract: no added coloured reading background. Keep practical
+# readability controls without imposing a light/dark/ivory/green reader surface.
 require(
     reader,
-    "Color.rgb(247, 242, 232)",
-    "background:#F7F2E8",
-    "no black/dark reading mode",
+    "Color.TRANSPARENT",
+    "background:transparent",
+    "settings.builtInZoomControls = true",
+    "settings.displayZoomControls = false",
 )
 forbid(
-    reader.lower(),
+    reader,
+    "#F7F2E8",
+    "Color.rgb(247, 242, 232)",
     "background:#000",
     "background: #000",
-    "color.black",
-    "android.graphics.color.black",
 )
-require(theme, "lightColorScheme(", "background = Color(0xFFFBF7EF)")
-forbid(theme, "darkColorScheme(")
+require(
+    tafsir_panel,
+    'Text("A−")',
+    'Text("A+")',
+    "lineHeight = (fontSize * 1.42f).sp",
+    "preferences.edit().putFloat(FONT_SIZE_KEY, next).apply()",
+)
+forbid(
+    tafsir_panel,
+    "Color(0xFFF7FBF6)",
+    "androidx.compose.ui.graphics.Color",
+)
 
 # 20:00 reminder and reboot/time-change scheduling route through the flavor hook.
 require(
@@ -148,4 +160,4 @@ require(
     "deadlineStartsAtTwenty",
 )
 
-print("Taddabur 0.10.4 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, Tafsir, warm-ivory reading, 20:00-midnight enforcement")
+print("Taddabur 0.10.4 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, Tafsir, neutral reading surface, readability controls, 20:00-midnight enforcement")
