@@ -21,6 +21,7 @@ panel = read("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
 repo = read("app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt")
 light = read("app/src/light/java/com/quranunlock/guard/TafsirEdition.kt")
 free_reader = read("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
+plus_edition = read("app/src/plus/java/com/quranunlock/guard/TafsirEdition.kt")
 hikam_repo = read("app/src/main/java/com/quranunlock/guard/HikamRepository.kt")
 hikam_ui = read("app/src/main/java/com/quranunlock/guard/HikamDetailActivity.kt")
 hikam_sharh = read("app/src/main/java/com/quranunlock/guard/HikamSharh.kt")
@@ -36,7 +37,7 @@ for token in (
     'Text("A+")',
     'notesExpanded',
     'verticalScroll(scrollState)',
-    'Text("${editionId.displayName} ▾")',
+    'editionId.displayName',
 ):
     assert token in panel, f"Jalalayn golden UX token missing: {token}"
 assert 'displayName = "Jalalayn"' in models
@@ -45,6 +46,19 @@ assert '26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56' in rep
 assert 'verse_commentary' in repo and 'verse_note' in repo
 assert 'sourceLabel: String? = null' in models
 assert 'note.displayLabel' in panel
+
+# Verse-specific options: absent partial tafsir editions are hidden and Jalalayn wins fallback.
+for token in (
+    'fun availableFor(verse: VerseRef)',
+    'fun effectiveFor(',
+    'preferred.takeIf { it.covers(verse) } ?: JALALAYN',
+):
+    assert token in models, f"Missing verse-specific tafsir option rule: {token}"
+assert 'TafsirEditionId.availableFor(verse)' in panel
+assert 'availableEditions.forEach' in panel
+assert 'enabled = availableEditions.size > 1' in panel
+assert 'TafsirEditionId.effectiveFor(' in free_reader
+assert 'TafsirEditionId.effectiveFor(' in plus_edition
 
 # Multi-edition state is request-keyed and stale results are rejected.
 for token in ('JALALAYN', 'QURTUBI', 'QUSHAYRI', 'TafsirRequestKey'):
