@@ -9,7 +9,7 @@ EXPECTED_SOURCE_SHA256={
     'v4':'eb71cb2ed8c2497cc8a5d3634b3eeb7788fdc7caee9de5d6b50349fb8619965c',
 }
 EXPECTED_COVERAGE={1:7,2:286,3:200,4:22}
-PURE_AR=re.compile(r'[\u0600-\u06ff\u0750-\u077f]')
+ARABIC_SCRIPT=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 NUM_START=re.compile(r'^(\d{1,3})\.?\s+')
 INLINE_NUM=re.compile(r'\b(\d{1,3})\.?\s+(?=[A-Za-z\u2018\u201c])')
 
@@ -22,7 +22,7 @@ def file_sha256(path):
 def norm_text(t): return t.replace('\u00ad','').replace('\uf0d6','').replace('\uf096','').replace('\uf0b7','').strip()
 def is_arabic(t):
     chars=[c for c in t if c.isalpha()]
-    return bool(chars) and sum(bool(PURE_AR.match(c)) for c in chars)/len(chars)>.45
+    return bool(chars) and sum(bool(ARABIC_SCRIPT.match(c)) for c in chars)/len(chars)>.45
 
 def is_junk(t,y):
     s=t.strip()
@@ -33,7 +33,7 @@ def is_junk(t,y):
     if low.startswith('vol. ') and ('sūrat' in low or 'sūrah' in low): return True
     if low.startswith('vol. ') and 'āyah' in low: return True
     if 'ˈ˂' in s or s.startswith('ʤʢ') or s.startswith('ĒŀĠĨ') or 'ĴģĠŏĕ' in s: return True
-    if any('\u0600' <= ch <= '\u06ff' for ch in s): return True
+    if ARABIC_SCRIPT.search(s): return True
     if s in {'CONTENTS','TRANSLATOR’S NOTE','TRANSLATOR\'S NOTE'}: return True
     return False
 
@@ -157,7 +157,7 @@ for r in allrows:
     if not r['translation'].strip() or not r['commentary'].strip():
         raise RuntimeError(f'Qurtubi empty translation/commentary row: {r["surah"]}:{r["start"]}-{r["end"]} {r["tag"]}')
     joined=r['translation']+' '+r['commentary']
-    if any('\u0600'<=ch<='\u06ff' for ch in joined):
+    if ARABIC_SCRIPT.search(joined):
         raise RuntimeError(f'Qurtubi Arabic source text leaked into row: {r["surah"]}:{r["start"]}-{r["end"]}')
     if 'sunniconnect' in joined.lower():
         raise RuntimeError(f'Qurtubi scan contamination leaked into row: {r["surah"]}:{r["start"]}-{r["end"]}')
@@ -193,6 +193,8 @@ CREATE TABLE tafsir_entry(
 CREATE INDEX idx_tafsir_lookup ON tafsir_entry(surah,verse_start,verse_end,segment_no);
 ''')
 sha={tag:file_sha256(path) for tag,path in SOURCES}
+# The volume-4 cover/contents use 1-23 as the editorial boundary, while its
+# commentary body ends at 4:22; Diwan's volume 5 begins at 4:23.
 meta={'schema_version':'2','edition_id':'qurtubi','display_name':'Qurtubi','author':'Abu Abdallah Muhammad ibn Ahmad al-Qurtubi','work':'al-Jami li-Ahkam al-Quran / The General Judgments of the Quran','translator':'Aisha Abdurrahman Bewley','language':'English','coverage_target':'Volumes 1-4: Al-Fatihah; Al-Baqarah 1-286; Ali Imran 1-200; An-Nisa 1-22. Quran 4:23 begins volume 5.','arabic_included':'false','source_pdf_sha256_json':str(sha),'entry_count':str(len(allrows)),'volume2_status':'full volume 2 materialized and parsed'}
 con.executemany('INSERT INTO source_metadata VALUES (?,?)',meta.items())
 con.executemany('''INSERT INTO tafsir_entry(surah,verse_start,verse_end,segment_no,verse_translation,commentary,source_page,source_volume) VALUES (?,?,?,?,?,?,?,?)''',[(r['surah'],r['start'],r['end'],r['segment_no'],r['translation'],r['commentary'],r['page'],r['tag']) for r in allrows])
@@ -203,7 +205,7 @@ for s,n in EXPECTED_COVERAGE.items():
     print('sura',s,'covered',len(cov[s]),'/',n,'missing',len(miss),miss[:140])
 print('ranges>',[(r['surah'],r['start'],r['end'],r['tag']) for r in allrows if r['end']>r['start']][:30])
 print('sunniconnect rows',sum('sunniconnect' in (r['translation']+' '+r['commentary']).lower() for r in allrows))
-print('arabic rows',sum(is_arabic(r['translation']) or is_arabic(r['commentary']) for r in allrows))
+print('arabic rows',sum(bool(ARABIC_SCRIPT.search(r['translation']+' '+r['commentary'])) for r in allrows))
 print('db bytes',os.path.getsize(OUT),'sha256',hashlib.sha256(open(OUT,'rb').read()).hexdigest())
 for s,a in [(1,1),(2,61),(2,142),(2,143),(2,254),(2,275),(3,96),(4,11),(4,23)]:
     rs=[r for r in allrows if r['surah']==s and r['start']<=a<=r['end']]
