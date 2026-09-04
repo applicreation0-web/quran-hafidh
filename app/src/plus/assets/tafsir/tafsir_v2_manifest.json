@@ -1,21 +1,29 @@
 {
-  "schema_version": 1,
+  "manifest_schema": 2,
   "editions": [
     {
       "edition_id": "qurtubi_en_bewley",
+      "schema_version": "tafsir-v2",
       "database_name": "al_qurtubi_en.sqlite",
       "database_sha256": "",
       "asset_parts": [],
       "ready_for_distribution": false,
+      "rights_status": "unresolved",
+      "source_audit_status": "pending_content_extraction",
+      "content_audit_status": "pending",
       "coverage": "1:1-4:23",
       "source_status": "groundwork_complete_payload_not_bundled"
     },
     {
       "edition_id": "qushayri_en_sands",
+      "schema_version": "tafsir-v2",
       "database_name": "al_qushayri_en.sqlite",
       "database_sha256": "",
       "asset_parts": [],
       "ready_for_distribution": false,
+      "rights_status": "unresolved",
+      "source_audit_status": "anchor_audit_pass_payload_pending",
+      "content_audit_status": "pending",
       "coverage": "surahs_1_4",
       "source_status": "groundwork_complete_payload_not_bundled"
     }
