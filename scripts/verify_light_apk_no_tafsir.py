@@ -8,13 +8,25 @@ import zipfile
 from pathlib import Path
 
 
-FORBIDDEN_NAMES = ("tafsir", "jalalayn", ".sqlite", ".pdf")
+FORBIDDEN_NAMES = (
+    "tafsir",
+    "jalalayn",
+    "qurtubi",
+    "qushayri",
+    ".sqlite",
+    ".pdf",
+)
 FORBIDDEN_PAYLOADS = (
     b"Tafsir al-Jalalayn",
     b"al_jalalayn_en.sqlite",
+    b"qurtubi_en.sqlite",
+    b"qushayri_en.sqlite",
+    b"Qurtubi",
+    b"Qushayri",
     b"quranSafeguardVerse",
     b"Quran Safeguard Plus",
     b"jalalayn-styled-runs-v1",
+    b"english_verse_translation_included",
 )
 
 
