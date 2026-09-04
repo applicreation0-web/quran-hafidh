@@ -32,6 +32,8 @@ tests = read("app/src/testPlus/java/com/quranunlock/guard/TaddaburPolicyTest.kt"
 tafsir_panel = read("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
 free_reader = read("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
 design = read("app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt")
+light_tafsir = read("app/src/light/java/com/quranunlock/guard/TafsirEdition.kt")
+plus_tafsir = read("app/src/plus/java/com/quranunlock/guard/TafsirEdition.kt")
 
 # Plus-only flavor boundary.
 require(light, "const val isEnabled: Boolean = false", "fun DashboardCard() = Unit")
@@ -93,12 +95,14 @@ require(
 forbid(reader, "GuardPrefs.completeReadingAndUnlock", "consumeJokerAndUnlock")
 
 # Final user override for sustained reading comfort: use one warm low-glare surface
-# across Taddabur, Tafsir and the voluntary Quran reader, with no black or legacy green surface.
+# across both flavors' Mushaf rendering, Taddabur, Tafsir and the voluntary Quran reader.
 require(
     design,
     "SafeguardReadingSurface = Color(0xFFF4F0E6)",
     ".heightIn(min = 52.dp)",
 )
+require(light_tafsir, "html, body, svg { background: #F4F0E6 !important; }")
+require(plus_tafsir, "html, body, svg { background: #F4F0E6 !important; }")
 require(
     reader,
     "color = SafeguardReadingSurface",
@@ -122,7 +126,7 @@ require(
     "preferences.edit().putFloat(FONT_SIZE_KEY, next).apply()",
 )
 forbid(
-    reader + free_reader + tafsir_panel,
+    reader + free_reader + tafsir_panel + light_tafsir + plus_tafsir,
     "#F7F2E8",
     "#F7FBF6",
     "background:#000",
@@ -170,4 +174,4 @@ require(
     "deadlineStartsAtTwenty",
 )
 
-print("Taddabur 0.10.4 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, Tafsir, warm reading surface, 52dp touch ergonomics, 20:00-midnight enforcement")
+print("Taddabur 0.10.4 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, Tafsir, warm reading surface in Light/Plus, 52dp touch ergonomics, 20:00-midnight enforcement")
