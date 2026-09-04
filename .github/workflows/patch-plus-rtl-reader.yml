@@ -1,0 +1,76 @@
+name: Patch Plus RTL reader
+
+on:
+  push:
+    branches:
+      - plus-rtl-free-reader-hikam-reference
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: plus-rtl-free-reader-hikam-reference
+
+      - name: Apply narrow RTL reader patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt')
+          text = path.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  '"Balayez vers la gauche pour avancer, " +\n                            "vers la droite pour revenir."',
+                  '"Balayez vers la droite pour avancer, " +\n                            "vers la gauche pour revenir."'
+              ),
+              (
+                  '"Page déjà validée. Balayez vers la gauche " +',
+                  '"Page déjà validée. Balayez vers la droite " +'
+              ),
+              (
+                  '''if (targetState > initialState) {
+                                    slideInHorizontally { width -> width } togetherWith
+                                        slideOutHorizontally { width -> -width }
+                                } else {
+                                    slideInHorizontally { width -> -width } togetherWith
+                                        slideOutHorizontally { width -> width }
+                                }''',
+                  '''if (targetState > initialState) {
+                                    // Arabic-book direction: next page enters from the left
+                                    // while the current page moves to the right.
+                                    slideInHorizontally { width -> -width } togetherWith
+                                        slideOutHorizontally { width -> width }
+                                } else {
+                                    slideInHorizontally { width -> width } togetherWith
+                                        slideOutHorizontally { width -> -width }
+                                }'''
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected one occurrence, got {count}: {old[:70]!r}')
+              text = text.replace(old, new)
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Align challenge reader with Arabic RTL page direction"
+          git push origin HEAD:plus-rtl-free-reader-hikam-reference
