@@ -89,4 +89,29 @@ class TafsirInteractionTest {
         )
         assertEquals("Commentary on 4:11–14", entry.rangeLabel)
     }
+
+    @Test
+    fun differentSourceRangesAreNeverCollapsedIntoInventedMinMaxLabel() {
+        val entry = TafsirEntry(
+            verse = VerseRef(4, 12),
+            commentaryRuns = listOf(TafsirRun(TafsirRunStyle.REGULAR, "body")),
+            notes = emptyList(),
+            editionId = TafsirEditionId.QURTUBI,
+            verseStart = 11,
+            verseEnd = 14,
+            segmentCount = 2,
+            sourceRanges = listOf(11..14, 12..12)
+        )
+        assertNull(entry.rangeLabel)
+    }
+
+    @Test
+    fun sourceNoteLabelsArePreservedWithoutRenumberingJalalayn() {
+        val runs = listOf(TafsirRun(TafsirRunStyle.REGULAR, "note"))
+        assertEquals("3", TafsirNote(number = 3, runs = runs).displayLabel)
+        assertEquals(
+            "A",
+            TafsirNote(number = 1, runs = runs, sourceLabel = "A").displayLabel
+        )
+    }
 }
