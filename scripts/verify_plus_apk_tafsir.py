@@ -31,7 +31,6 @@ EXPECTED_V2_IDS = {"qurtubi_en_bewley", "qushayri_en_sands"}
 APPROVED_RIGHTS = {"licensed", "public_domain", "permission_documented"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 PART_PATH = re.compile(r"^assets/tafsir/[A-Za-z0-9._-]+\.sqlite\.gz\.part\d{2}$")
-FORBIDDEN_ASSET_SUFFIXES = (".pdf", ".epub", ".txt", ".ocr", ".doc", ".docx")
 FORBIDDEN_DB_MARKERS = (b"sunniconnect.com", b"Downloaded via sunniconnect")
 
 
@@ -114,9 +113,12 @@ def verify_v2(
             raise SystemExit(f"{edition_id}: asset_parts must be a string list")
         if len(parts) != len(set(parts)):
             raise SystemExit(f"{edition_id}: duplicate asset part")
-        if any(not PART_PATH.fullmatch(f"assets/{part}" if part.startswith("tafsir/") else part) for part in parts):
+        normalized_parts = [
+            f"assets/{part}" if part.startswith("tafsir/") else part
+            for part in parts
+        ]
+        if any(not PART_PATH.fullmatch(part) for part in normalized_parts):
             raise SystemExit(f"{edition_id}: unsafe asset part path")
-        apk_parts = [f"assets/{part}" if part.startswith("tafsir/") else part for part in parts]
 
         ready = spec.get("ready_for_distribution") is True
         if not ready:
@@ -138,13 +140,13 @@ def verify_v2(
         expected_db_sha = str(spec.get("database_sha256", ""))
         if not SHA256.fullmatch(expected_db_sha):
             raise SystemExit(f"{edition_id}: invalid database SHA-256")
-        if not apk_parts:
+        if not normalized_parts:
             raise SystemExit(f"{edition_id}: ready edition has no asset parts")
-        missing = [name for name in apk_parts if name not in names]
+        missing = [name for name in normalized_parts if name not in names]
         if missing:
             raise SystemExit(f"{edition_id}: manifest payload parts missing: {missing}")
 
-        compressed = b"".join(archive.read(name) for name in apk_parts)
+        compressed = b"".join(archive.read(name) for name in normalized_parts)
         try:
             database = gzip.decompress(compressed)
         except Exception as error:
@@ -184,7 +186,7 @@ def verify_v2(
         finally:
             connection.close()
             temporary.close()
-        approved_parts.update(apk_parts)
+        approved_parts.update(normalized_parts)
 
     return approved_parts
 
@@ -198,24 +200,29 @@ def main() -> None:
 
     with zipfile.ZipFile(args.apk) as archive:
         names = set(archive.namelist())
-        forbidden = [
-            name for name in names
-            if name.casefold().endswith(FORBIDDEN_ASSET_SUFFIXES)
-            and name.startswith("assets/tafsir/")
-        ]
-        if forbidden:
-            raise SystemExit(f"Raw/source tafsir material leaked into Plus: {forbidden[:8]}")
-
-        approved_parts = verify_jalalayn(archive, names)
+        approved_assets = verify_jalalayn(archive, names)
         editions = parse_manifest(archive, names)
-        approved_parts |= verify_v2(archive, names, editions)
+        approved_assets |= verify_v2(archive, names, editions)
+        approved_assets.add(V2_MANIFEST)
 
-        actual_tafsir_parts = {name for name in names if PART_PATH.fullmatch(name)}
-        unexpected_parts = actual_tafsir_parts - approved_parts
-        if unexpected_parts:
+        # Exact allow-list: PDFs, raw OCR, raw SQLite, source JSON exports and any stray
+        # unapproved tafsir part all fail the release. Only the frozen Jalalayn parts, the
+        # manifest and payloads explicitly approved by that manifest may live here.
+        actual_tafsir_assets = {
+            name for name in names
+            if name.startswith("assets/tafsir/") and not name.endswith("/")
+        }
+        unexpected_assets = actual_tafsir_assets - approved_assets
+        if unexpected_assets:
             raise SystemExit(
-                "Unlisted/unapproved tafsir payload leaked into Plus: "
-                + ", ".join(sorted(unexpected_parts))
+                "Unlisted/unapproved tafsir asset leaked into Plus: "
+                + ", ".join(sorted(unexpected_assets))
+            )
+        missing_approved = approved_assets - actual_tafsir_assets
+        if missing_approved:
+            raise SystemExit(
+                "Approved tafsir asset missing from Plus: "
+                + ", ".join(sorted(missing_approved))
             )
 
     ready_ids = [
