@@ -31,6 +31,7 @@ EXPECTED_V2_IDS = {"qurtubi_en_bewley", "qushayri_en_sands"}
 APPROVED_RIGHTS = {"licensed", "public_domain", "permission_documented"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 PART_PATH = re.compile(r"^assets/tafsir/[A-Za-z0-9._-]+\.sqlite\.gz\.part\d{2}$")
+ARABIC_SCRIPT = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]")
 FORBIDDEN_DB_MARKERS = (b"sunniconnect.com", b"Downloaded via sunniconnect")
 
 
@@ -97,7 +98,25 @@ def parse_manifest(archive: zipfile.ZipFile, names: set[str]) -> list[dict]:
     ids = [str(item.get("edition_id", "")) for item in editions if isinstance(item, dict)]
     if set(ids) != EXPECTED_V2_IDS or len(ids) != len(EXPECTED_V2_IDS):
         raise SystemExit(f"Unexpected/duplicate v2 edition ids: {ids}")
+    for item in editions:
+        edition_id = str(item.get("edition_id", ""))
+        if item.get("content_language") != "en":
+            raise SystemExit(f"{edition_id}: content_language must be English")
+        if item.get("arabic_source_text_included") is not False:
+            raise SystemExit(f"{edition_id}: Arabic source text must not be bundled")
     return editions
+
+
+def reject_arabic_source_text(connection: sqlite3.Connection, edition_id: str) -> None:
+    """Quran Arabic stays in Quran Safeguard's Mushaf, never in new tafsir payloads."""
+    for table in ("tafsir_entry", "entry_note"):
+        rows = connection.execute(f"SELECT plain_text FROM {table}").fetchall()
+        for index, row in enumerate(rows, start=1):
+            text = str(row[0] or "")
+            if ARABIC_SCRIPT.search(text):
+                raise SystemExit(
+                    f"{edition_id}: Arabic-script source text leaked into {table} row {index}"
+                )
 
 
 def verify_v2(
@@ -174,6 +193,10 @@ def verify_v2(
                 raise SystemExit(f"{edition_id}: DB source audit metadata mismatch")
             if metadata(connection, "content_audit_status") != "verified":
                 raise SystemExit(f"{edition_id}: DB content audit metadata mismatch")
+            if metadata(connection, "content_language") != "en":
+                raise SystemExit(f"{edition_id}: DB content language is not English")
+            if metadata(connection, "arabic_source_text_included") != "false":
+                raise SystemExit(f"{edition_id}: DB must declare Arabic source text excluded")
             expected_mapped = int(metadata(connection, "expected_mapped_verse_count") or "0")
             actual_mapped = connection.execute(
                 "SELECT COUNT(*) FROM (SELECT DISTINCT surah, ayah FROM entry_verse_map)"
@@ -183,6 +206,7 @@ def verify_v2(
                     f"{edition_id}: mapped verse count mismatch "
                     f"{actual_mapped}/{expected_mapped}"
                 )
+            reject_arabic_source_text(connection, edition_id)
         finally:
             connection.close()
             temporary.close()
@@ -205,9 +229,6 @@ def main() -> None:
         approved_assets |= verify_v2(archive, names, editions)
         approved_assets.add(V2_MANIFEST)
 
-        # Exact allow-list: PDFs, raw OCR, raw SQLite, source JSON exports and any stray
-        # unapproved tafsir part all fail the release. Only the frozen Jalalayn parts, the
-        # manifest and payloads explicitly approved by that manifest may live here.
         actual_tafsir_assets = {
             name for name in names
             if name.startswith("assets/tafsir/") and not name.endswith("/")
