@@ -55,6 +55,8 @@ class ReaderGestureClassifier(
         if (abs(deltaX) < swipeThresholdPx || abs(deltaX) <= abs(deltaY) * 1.25f) {
             return null
         }
-        return if (deltaX < 0f) ReaderSwipe.NEXT else ReaderSwipe.PREVIOUS
+        // Arabic-book convention: moving the page to the right advances the Mushaf;
+        // moving it to the left returns to the previous page.
+        return if (deltaX > 0f) ReaderSwipe.NEXT else ReaderSwipe.PREVIOUS
     }
 }
