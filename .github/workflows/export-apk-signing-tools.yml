@@ -29,12 +29,13 @@ jobs:
           cp "${ANDROID_HOME}/build-tools/36.0.0/apksigner" "${out}/"
           cp "${ANDROID_HOME}/build-tools/36.0.0/zipalign" "${out}/"
           cp -R "${ANDROID_HOME}/build-tools/36.0.0/lib" "${out}/"
+          cp -R "${ANDROID_HOME}/build-tools/36.0.0/lib64" "${out}/"
           ldd "${ANDROID_HOME}/build-tools/36.0.0/zipalign" > "${out}/zipalign-ldd.txt" || true
-          sha256sum "${out}/apksigner" "${out}/zipalign" "${out}/lib/apksigner.jar" > "${out}/SHA256SUMS.txt"
+          sha256sum "${out}/apksigner" "${out}/zipalign" "${out}/lib/apksigner.jar" "${out}/lib64/libc++.so" > "${out}/SHA256SUMS.txt"
       - name: Upload signing tools
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk-signing-tools-36
+          name: android-apk-signing-tools-36-complete
           path: ${{ runner.temp }}/android-build-tools-36/
           if-no-files-found: error
           retention-days: 1
