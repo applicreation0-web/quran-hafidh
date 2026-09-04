@@ -48,8 +48,8 @@ internal object MultiTafsirRepository {
         edition = PrivateTafsirEdition.QUSHAYRI,
         databaseName = "qushayri_en.sqlite",
         partCount = 1,
-        expectedEntries = 809,
-        expectedSha256 = "f83d181815a2dd19cc3f598048d503022c6d2827ce353149c03797f63158b6d2"
+        expectedEntries = 806,
+        expectedSha256 = "4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b"
     )
 
     private val qurtubi = CorpusSpec(
