@@ -47,14 +47,16 @@ assert 'verse_commentary' in repo and 'verse_note' in repo
 assert 'sourceLabel: String? = null' in models
 assert 'note.displayLabel' in panel
 
-# Verse-specific options: absent partial tafsir editions are hidden and Jalalayn wins fallback.
+# Verse-specific options are based on real distributable corpus availability, not coverage alone.
 for token in (
-    'fun availableFor(verse: VerseRef)',
-    'fun effectiveFor(',
-    'preferred.takeIf { it.covers(verse) } ?: JALALAYN',
+    'suspend fun availableEditions(',
+    'loadV2Spec(context.applicationContext, edition)?.distributionReady == true',
+    'add(TafsirEditionId.JALALAYN)',
 ):
-    assert token in models, f"Missing verse-specific tafsir option rule: {token}"
-assert 'TafsirEditionId.availableFor(verse)' in panel
+    assert token in repo, f"Missing real tafsir availability rule: {token}"
+assert 'TafsirRepository.availableEditions(context.applicationContext, verse)' in panel
+assert 'if (editionId !in resolved)' in panel
+assert 'onEditionChange(TafsirEditionId.JALALAYN)' in panel
 assert 'availableEditions.forEach' in panel
 assert 'enabled = availableEditions.size > 1' in panel
 assert 'TafsirEditionId.effectiveFor(' in free_reader
@@ -69,7 +71,7 @@ assert 'English commentary unavailable for this verse in this edition.' in panel
 assert 'sourceRanges' in models
 assert 'blocks.map { it.verseStart..it.verseEnd }.distinct()' in repo
 
-# V2 payloads fail closed independently of a single boolean.
+# V2 payloads fail closed independently of a single boolean and are English-commentary only.
 manifest = json.loads(read("app/src/plus/assets/tafsir/tafsir_v2_manifest.json"))
 assert manifest.get("manifest_schema") == 2
 ids = {item["edition_id"] for item in manifest["editions"]}
@@ -81,6 +83,8 @@ for item in manifest["editions"]:
     assert item["content_audit_status"] == "pending"
     assert item["database_sha256"] == ""
     assert item["asset_parts"] == []
+    assert item["content_language"] == "en"
+    assert item["arabic_source_text_included"] is False
 
 for token in (
     'APPROVED_RIGHTS_STATUSES',
@@ -91,6 +95,13 @@ for token in (
     'StandardCopyOption.ATOMIC_MOVE',
 ):
     assert token in repo, f"Missing runtime v2 fail-closed control: {token}"
+for token in (
+    'ARABIC_SCRIPT',
+    'reject_arabic_source_text',
+    'content_language',
+    'arabic_source_text_included',
+):
+    assert token in plus_apk_verifier, f"Missing English-only APK gate: {token}"
 
 # Builder must reject unreviewed, contaminated or structurally ambiguous input.
 for token in (
@@ -103,7 +114,7 @@ for token in (
     'Mapped verses outside declared coverage',
 ):
     assert token in builder, f"Missing v2 builder gate: {token}"
-assert 'manifest-driven' in plus_apk_verifier.lower() or 'packaged manifest' in plus_apk_verifier
+assert 'packaged manifest' in plus_apk_verifier
 assert 'EXPECTED_V2_IDS' in plus_apk_verifier
 assert 'qurtubi' in light_apk_verifier and 'qushayri' in light_apk_verifier
 
