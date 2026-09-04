@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: ${{ (github.event_name != 'pull_request' || github.head_ref != 'release/0.10.4-multitafsir') && (github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'Release Quran Safeguard 0.10.4')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
