@@ -1,6 +1,8 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,5 +52,41 @@ class TafsirInteractionTest {
         classifier.onDown(200f, 100f, 1)
         assertNull(classifier.onUp(50f, 100f, false))
         assertTrue(true)
+    }
+
+    @Test
+    fun jalalaynIsTheDefaultTafsirEdition() {
+        assertEquals(TafsirEditionId.JALALAYN, TafsirEditionId.fromStableId(null))
+        assertEquals(TafsirEditionId.JALALAYN, TafsirEditionId.fromStableId("unknown"))
+    }
+
+    @Test
+    fun partialTafsirCoverageFailsClosedAtExactBoundaries() {
+        assertTrue(TafsirEditionId.QURTUBI.covers(VerseRef(4, 23)))
+        assertFalse(TafsirEditionId.QURTUBI.covers(VerseRef(4, 24)))
+        assertTrue(TafsirEditionId.QUSHAYRI.covers(VerseRef(4, 176)))
+        assertFalse(TafsirEditionId.QUSHAYRI.covers(VerseRef(5, 1)))
+    }
+
+    @Test
+    fun tafsirRequestIdentityIncludesEdition() {
+        val verse = VerseRef(2, 85)
+        assertNotEquals(
+            TafsirRequestKey(verse, TafsirEditionId.QUSHAYRI),
+            TafsirRequestKey(verse, TafsirEditionId.QURTUBI)
+        )
+    }
+
+    @Test
+    fun rangeCommentaryKeepsItsSourceRangeLabel() {
+        val entry = TafsirEntry(
+            verse = VerseRef(4, 12),
+            commentaryRuns = listOf(TafsirRun(TafsirRunStyle.REGULAR, "body")),
+            notes = emptyList(),
+            editionId = TafsirEditionId.QURTUBI,
+            verseStart = 11,
+            verseEnd = 14
+        )
+        assertEquals("Commentary on 4:11–14", entry.rangeLabel)
     }
 }
