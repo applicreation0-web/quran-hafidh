@@ -44,6 +44,9 @@ jobs:
       - name: Verify 0.10.4 Tafsir/Hikam scaffold
         run: python3 scripts/verify_0104_scaffold.py
 
+      - name: Adversarial-test tafsir v2 builder
+        run: python3 scripts/test_build_tafsir_v2.py
+
       - name: Run Light and Plus unit tests
         shell: bash
         run: |
