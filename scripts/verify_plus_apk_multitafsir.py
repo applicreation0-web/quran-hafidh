@@ -60,14 +60,18 @@ def audit_v2(z,names,edition,spec):
                 n=con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=?',(s,a,a)).fetchone()[0]
                 if n<1:raise SystemExit(f'Qushayri regression missing {s}:{a}')
             if con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE trim(verse_translation)<>''").fetchone()[0]<800:raise SystemExit('Qushayri English verse translations unexpectedly sparse')
+            longest=con.execute('SELECT MAX(length(commentary)) FROM tafsir_entry').fetchone()[0]
+            if longest < 12000:raise SystemExit(f'Qushayri long commentary unexpectedly truncated: {longest}')
         else:
             if con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE lower(verse_translation||' '||commentary) LIKE '%sunniconnect%'").fetchone()[0]:raise SystemExit('Qurtubi third-party scan contamination detected')
             for s,a in [(1,1),(2,142),(2,254),(3,96),(4,11),(4,22)]:
                 n=con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=?',(s,a,a)).fetchone()[0]
                 if n<1:raise SystemExit(f'Qurtubi regression missing {s}:{a}')
             if con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=4 AND verse_start<=23 AND verse_end>=23').fetchone()[0]!=0:raise SystemExit('Qurtubi 4:23 must remain unavailable with volumes 1-4')
-            r=con.execute('SELECT verse_start,verse_end FROM tafsir_entry WHERE surah=4 AND verse_start<=12 AND verse_end>=12').fetchone()
-            if r!=(11,14):raise SystemExit(f'Qurtubi 4:12 range mapping mismatch: {r}')
+            r=con.execute('SELECT verse_start,verse_end,length(commentary) FROM tafsir_entry WHERE surah=4 AND verse_start<=12 AND verse_end>=12').fetchone()
+            if not r or r[0:2]!=(11,14) or r[2] < 60000:raise SystemExit(f'Qurtubi 4:11-14 range/truncation mismatch: {r}')
+            longest=con.execute('SELECT MAX(length(commentary)) FROM tafsir_entry').fetchone()[0]
+            if longest < 90000:raise SystemExit(f'Qurtubi long commentary unexpectedly truncated: {longest}')
     finally:con.close();tmp.close()
 
 def main():
@@ -78,6 +82,6 @@ def main():
         if any(n.casefold().endswith('.pdf') for n in names):raise SystemExit('Source PDF must never be embedded in Plus')
         audit_jalalayn(z,names)
         for edition,spec in V2.items():audit_v2(z,names,edition,spec)
-    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 809; Qurtubi 432; no PDFs/Arabic scan text')
+    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 809; Qurtubi 432; long blocks intact; no PDFs/Arabic scan text')
 
 if __name__=='__main__':main()
