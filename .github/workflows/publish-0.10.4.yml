@@ -70,11 +70,14 @@ jobs:
           set -euo pipefail
           python3 scripts/verify_0104_hikam_freeze.py
           python3 scripts/verify_0104_update.py
+          python3 scripts/verify_0104_taddabur.py
           gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
           python3 scripts/audit_hikam_translation_against_islamicpearls.py
           gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
           python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+          python3 scripts/verify_light_apk_no_taddabur.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
           python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+          python3 scripts/verify_plus_apk_taddabur.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
 
       - name: Sign and verify Light and Plus
         shell: bash
@@ -114,7 +117,9 @@ jobs:
           test "$(apkanalyzer manifest version-name "${light_apk}")" = "0.10.4"
           test "$(apkanalyzer manifest version-name "${plus_apk}")" = "0.10.4-plus.1"
           python3 scripts/verify_light_apk_no_tafsir.py "${light_apk}"
+          python3 scripts/verify_light_apk_no_taddabur.py "${light_apk}"
           python3 scripts/verify_plus_apk_multitafsir.py "${plus_apk}"
+          python3 scripts/verify_plus_apk_taddabur.py "${plus_apk}"
           sha256sum "${light_apk}" "${plus_apk}" > "${release_dir}/Quran-Safeguard-0.10.4-SHA256.txt"
 
       - name: Upload signed release bundle
@@ -169,18 +174,27 @@ jobs:
           - sélecteur compact Jalalayn / Qurtubi / Qushayri dans le panneau Tafsīr existant ;
           - aucun PDF source, aucune page tierce Sunniconnect et aucun texte arabe des scans dans les nouveaux corpus.
 
+          ### Taddabur — Plus uniquement
+          - objectif quotidien : un Hizb, pool fixe 1–60 sans sélection ni exclusion utilisateur ;
+          - lecture cumulative au fil de la journée à partir de 07:00, minimum 90 secondes actives par page ;
+          - Tafsīr disponible dans le lecteur Taddabur ;
+          - marque-page persistant et suivi quotidien de progression ;
+          - à 20:00, si le Hizb du jour n’est pas terminé, les seules applications protégées restent bloquées jusqu’à minuit ;
+          - terminer après 20:00 n’écourte pas ce blocage ; aucun joker ou challenge de déblocage ne le contourne ;
+          - Light ne contient ni activité, ni stockage, ni alarme, ni interface Taddabur.
+
           ### Al-Ḥikam
           - le corpus et les composants Hikam critiques de la 0.10.3 sont gelés byte-for-byte dans cette mise à jour ;
           - la 0.10.4 ne revendique pas l’achèvement d’un nouveau ré-audit textuel 264/264 distinct.
 
           ### Vérifications
-          - audit contradictoire 0.10.4 des corpus et du mapping ;
+          - audit contradictoire 0.10.4 des corpus, du mapping et de Taddabur ;
           - Qushayrī : 806 segments authentiques de mise en page source, couverture 1–4 complète, cas 2:68 et 4:167–169 contrôlés ; faux ancrages de renvoi, introductions de sourate et glyphes privés du PDF exclus ;
           - Qurṭubī : 432 blocs, couverture continue Fātiḥa → 4:22, bloc 4:11–14 contrôlé ;
           - tests Light + Plus ;
           - audit global de release ;
           - isolation Light/Plus ;
-          - vérification des trois corpus directement dans l’APK Plus ;
+          - vérification des trois corpus et de Taddabur directement dans les APK ;
           - signatures APK v2/v3, identités Android, versionCode 23 et SHA-256 vérifiés ;
           - le tag v0.10.4 cible le commit exact contenant les métadonnées de version 0.10.4 utilisées pour construire les APK.
 
