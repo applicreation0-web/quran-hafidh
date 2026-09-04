@@ -17,7 +17,7 @@ jobs:
         run: bash scripts/fetch_mushaf_pages.sh
 
       - name: Set up Python corpus tools
-        run: python3 -m pip install --disable-pip-version-check pymupdf beautifulsoup4
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
 
       - name: Fetch pinned private tafsir sources
         shell: bash
