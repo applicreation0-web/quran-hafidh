@@ -51,6 +51,9 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
+      - name: Prove Hikam layer unchanged from 0.10.3
+        run: python3 scripts/verify_0104_hikam_freeze.py
+
       - name: Source-level contradictory audit
         run: python3 scripts/verify_0104_update.py
 
