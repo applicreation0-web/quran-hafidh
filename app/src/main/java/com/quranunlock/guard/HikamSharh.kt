@@ -42,6 +42,7 @@ data class HikamRichSpan(
 )
 
 data class HikamSharhEntry(
+    /** Historical single-number field kept for source/test compatibility. */
     val hikmaNumber: Int,
     val commentator: HikamCommentator,
     val workId: String,
@@ -51,6 +52,14 @@ data class HikamSharhEntry(
     val sourceUrl: String,
     val printLocator: String,
     val verified: Boolean,
+    /**
+     * One classical source block may genuinely explain several canonical Hikam. Store the
+     * block once and map it to every applicable canonical number instead of duplicating or
+     * inventing a split.
+     */
+    val canonicalHikmaNumbers: Set<Int> = setOf(hikmaNumber),
+    val sourceHikmaLocator: String = hikmaNumber.toString(),
+    val commentaryGroupId: String = "${commentator.stableId}_$hikmaNumber",
     val richSpansArabic: List<HikamRichSpan> = emptyList(),
     val richSpansFrench: List<HikamRichSpan> = emptyList(),
     val technicalTerms: Set<String> = emptySet()
@@ -61,6 +70,11 @@ data class HikamSharhEntry(
     val displayEligible: Boolean
         get() =
             hikmaNumber in 1..264 &&
+                canonicalHikmaNumbers.isNotEmpty() &&
+                canonicalHikmaNumbers.all { it in 1..264 } &&
+                hikmaNumber in canonicalHikmaNumbers &&
+                sourceHikmaLocator.isNotBlank() &&
+                commentaryGroupId.isNotBlank() &&
                 attributionMatchesSource &&
                 workTitle.isNotBlank() &&
                 arabicText.isNotBlank() &&
@@ -79,14 +93,31 @@ data class HikamSharhAvailability(
 }
 
 object HikamSharhIntegrity {
-    /** Fail closed instead of silently choosing the first duplicated attribution. */
+    /** Fail closed instead of silently choosing or duplicating an attribution. */
     fun requireUnique(entries: List<HikamSharhEntry>) {
-        val keys = entries.map { it.hikmaNumber to it.commentator }
-        require(keys.size == keys.toSet().size) {
-            "Duplicate Hikam sharh entry for the same Hikma/commentator"
-        }
         require(entries.all(HikamSharhEntry::attributionMatchesSource)) {
             "Hikam sharh work/commentator attribution mismatch"
+        }
+        require(entries.all { entry ->
+            entry.canonicalHikmaNumbers.isNotEmpty() &&
+                entry.canonicalHikmaNumbers.all { it in 1..264 } &&
+                entry.hikmaNumber in entry.canonicalHikmaNumbers &&
+                entry.commentaryGroupId.isNotBlank() &&
+                entry.sourceHikmaLocator.isNotBlank()
+        }) {
+            "Invalid Hikam sharh source mapping metadata"
+        }
+
+        val mappedKeys = entries.flatMap { entry ->
+            entry.canonicalHikmaNumbers.map { number -> number to entry.commentator }
+        }
+        require(mappedKeys.size == mappedKeys.toSet().size) {
+            "Duplicate Hikam sharh mapping for the same canonical Hikma/commentator"
+        }
+
+        val groupIds = entries.map(HikamSharhEntry::commentaryGroupId)
+        require(groupIds.size == groupIds.toSet().size) {
+            "Duplicate commentary_group_id: one classical block must be stored once"
         }
     }
 }
