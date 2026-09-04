@@ -235,7 +235,7 @@ private fun HikamTerminologyBlock(hikma: HikmaEntry) {
                     buildAnnotatedString {
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
                             append("[")
-                            append(term.transliteration)
+                            append(term.displayTerm)
                             append("]")
                         }
                         append(" — ")
