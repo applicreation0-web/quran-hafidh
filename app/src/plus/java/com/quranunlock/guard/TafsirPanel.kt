@@ -177,7 +177,7 @@ internal fun TafsirPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TafsirLoadState.Unavailable -> Text(
-                    "English commentary unavailable for this verse in this edition.",
+                    "Commentaire anglais indisponible pour ce verset dans cette édition.",
                     fontSize = fontSize.sp
                 )
                 is TafsirLoadState.Available -> {
