@@ -1,16 +1,29 @@
-# Al-Hikam — cahier éditorial Islamic Pearls / al-Sharnubi
+# Al-Hikam — cahier éditorial Islamic Pearls / al-Sharnubi / Ibn ʿAbbad
 
 ## Objectif
 
-Faire évoluer le module Al-Hikam sans remplacer les auteurs classiques par une synthèse IA.
+Faire évoluer le module Al-Hikam de Quran Safeguard Plus sans remplacer les auteurs classiques par une synthèse IA.
 Chaque Hikma reste rattachée à son numéro canonique 1–264 et doit pouvoir afficher :
 
 1. le matn arabe vérifié ;
 2. une traduction française contrôlée ;
 3. le commentaire arabe classique d'Abd al-Majid al-Sharnubi al-Azhari ;
 4. une traduction française indépendante de ce commentaire ;
-5. les termes techniques reliés à un lexique ;
-6. les références documentaires exactes.
+5. le commentaire correspondant d'Ibn ʿAbbad al-Rundi lorsqu'il est identifié et vérifié ;
+6. une traduction française indépendante de ce second commentaire ;
+7. les termes techniques reliés à un lexique ;
+8. les références documentaires exactes.
+
+## Interaction obligatoire
+
+Sur la fiche d'une même Hikma, l'utilisateur doit pouvoir passer d'un commentaire à l'autre sans quitter la fiche :
+
+- **al-Sharnubi** : commentaire plus condensé ;
+- **Ibn ʿAbbad al-Rundi** : commentaire plus développé.
+
+Le sélecteur doit rester visible au-dessus du commentaire. Le changement de commentateur ne modifie ni la Hikma affichée ni sa traduction. Il conserve autant que possible la position générale de lecture dans la fiche.
+
+Si l'un des deux commentaires n'est pas encore vérifié pour une Hikma donnée, son option reste visible mais désactivée avec un statut explicite du type « non vérifié / indisponible » ; aucun texte ne doit être inventé pour remplir l'espace.
 
 ## Références de contrôle
 
@@ -18,11 +31,12 @@ Chaque Hikma reste rattachée à son numéro canonique 1–264 et doit pouvoir a
   - référence de contrôle pour la correspondance des 264 Hikam ;
   - structure Hikma / sharh / arabe / traduction ;
   - conventions de termes techniques et présence d'un glossaire ;
-  - ne pas recopier en masse la traduction anglaise du site dans l'APK sans droit explicite.
+  - pour l'édition personnelle Plus, peut servir de référence de travail et de comparaison, tout en conservant l'attribution et la provenance de chaque texte.
 - Maktabat Ibn al-Arabi : https://www.ibnalarabi.com/books/hikam-ataiya.php
-  - texte arabe du Sharh d'al-Sharnubi annoncé comme relevant du domaine public par le site ;
+  - texte arabe du Sharh d'al-Sharnubi ;
   - chaque entrée doit être recoupée avec une édition paginée avant statut « vérifié ».
 - Édition imprimée de contrôle : Sharh al-Hikam al-Ata'iyya, Abd al-Majid al-Sharnubi al-Azhari.
+- Commentaire d'Ibn ʿAbbad al-Rundi : Ghayth al-Mawahib al-ʿAliyya fi Sharh al-Hikam al-ʿAta'iyya, à contrôler par numéro, passage et édition.
 
 ## Contrat de données par Hikma
 
@@ -31,6 +45,11 @@ Chaque enregistrement éditorial doit contenir au minimum :
 - `source_number` : 1..264 ;
 - `canonical_arabic` ;
 - `french_translation` ;
+- `commentaries` : collection indépendante de commentaires.
+
+Chaque commentaire contient :
+
+- `commentator_id` ;
 - `commentary_author` ;
 - `commentary_work` ;
 - `commentary_arabic` ;
@@ -62,14 +81,14 @@ Les couleurs doivent utiliser les rôles du thème Quran Safeguard afin de reste
 
 ## Lexique
 
-Un terme technique rencontré dans une Hikma ou son commentaire doit être sélectionnable et ouvrir une fiche courte comprenant :
+Un terme technique rencontré dans une Hikma ou l'un de ses commentaires doit être sélectionnable et ouvrir une fiche courte comprenant :
 
 - forme arabe ;
 - translittération normalisée ;
 - sens littéral ;
 - sens technique dans le contexte ;
 - source de la définition ;
-- renvois vers les Hikam dans lesquelles le terme apparaît.
+- renvois vers les Hikam et vers le commentateur dans lesquels le terme apparaît.
 
 Termes prioritaires à contrôler à partir de la référence : `arif`, `abd`, `adab`, `aghyar`, `al-Haqq`, `hadra`, `mureed`, `qabd`, `bast`, `salik`, `shawq`, `yaqin`, `dhikr`, `zuhd`.
 
@@ -78,17 +97,21 @@ Termes prioritaires à contrôler à partir de la référence : `arif`, `abd`, `
 - pas de résumé IA présenté comme commentaire d'un auteur ;
 - pas de fusion de plusieurs commentateurs ;
 - 1 commentaire = 1 auteur + 1 ouvrage + 1 source ;
+- les deux commentaires restent deux objets documentaires distincts même lorsqu'al-Sharnubi reprend Ibn ʿAbbad ;
 - la traduction française peut être interne, mais doit être identifiée comme telle ;
 - les ajouts du traducteur doivent être visuellement distingués du texte classique ;
 - toute différence de numérotation entre éditions doit être documentée ;
 - le texte arabe demeure la référence en cas d'ambiguïté de traduction.
 
-## Contrôles avant release
+## Contrôles avant release personnelle
 
 - couverture 1–264 sans doublon ;
-- correspondance Hikma/commentaire contrôlée ;
-- aucune entrée sans source ;
+- correspondance Hikma/al-Sharnubi contrôlée ;
+- correspondance Hikma/Ibn ʿAbbad contrôlée ;
+- aucun commentaire sans auteur, ouvrage et source ;
+- test du sélecteur entre les deux commentateurs sur une même Hikma ;
+- aucun mélange d'attribution lors du changement de commentateur ;
 - validation des références coraniques et des hadiths cités lorsque présents ;
 - tests de rendu gras/italique/couleurs/RTL ;
 - tests du lexique et des renvois ;
-- audit contradictoire éditorial avant publication.
+- audit contradictoire éditorial avant release personnelle.
