@@ -140,8 +140,8 @@ class MushafReaderActivity : ComponentActivity() {
                 }
                 var gestureMessage by remember {
                     mutableStateOf(
-                        "Balayez vers la gauche pour avancer, " +
-                            "vers la droite pour revenir."
+                        "Balayez vers la droite pour avancer, " +
+                            "vers la gauche pour revenir."
                     )
                 }
                 var quotaReached by remember {
@@ -205,7 +205,7 @@ class MushafReaderActivity : ComponentActivity() {
                         quotaReached ->
                             "Lecture libre • vous pouvez sortir à tout moment."
                         index < activeIndex ->
-                            "Page déjà validée. Balayez vers la gauche " +
+                            "Page déjà validée. Balayez vers la droite " +
                                 "pour revenir à la lecture en cours."
                         else ->
                             "Lisez cette page pendant 60 secondes, puis avancez."
@@ -232,7 +232,7 @@ class MushafReaderActivity : ComponentActivity() {
                         activeReadingPage
                     )
                     gestureMessage =
-                        "Page suivante prête. Balayez après 60 secondes."
+                        "Page suivante prête. Balayez vers la droite après 60 secondes."
                 }
 
                 fun continueFreely() {
@@ -427,7 +427,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 viewingCompletedPage ->
                                     "Page validée • retour libre"
                                 readingMs >= GuardPrefs.MIN_READING_MS ->
-                                    "01:00 atteint • balayez pour valider"
+                                    "01:00 atteint • balayez vers la droite pour valider"
                                 bottomReached ->
                                     "Page parcourue • " +
                                         formatReadingDuration(readingMs) +
@@ -460,11 +460,11 @@ class MushafReaderActivity : ComponentActivity() {
                                 .weight(1f),
                             transitionSpec = {
                                 if (targetState > initialState) {
-                                    slideInHorizontally { width -> width } togetherWith
-                                        slideOutHorizontally { width -> -width }
-                                } else {
                                     slideInHorizontally { width -> -width } togetherWith
                                         slideOutHorizontally { width -> width }
+                                } else {
+                                    slideInHorizontally { width -> width } togetherWith
+                                        slideOutHorizontally { width -> -width }
                                 }
                             },
                             label = "mushaf-page-swipe"
@@ -913,7 +913,7 @@ private fun MushafPageWebView(
 
                 val html = """
                     <!doctype html>
-                    <html>
+                    <html dir="rtl">
                     <head>
                       <meta name="viewport"
                             content="width=device-width, initial-scale=1.0">
