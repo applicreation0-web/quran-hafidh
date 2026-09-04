@@ -136,7 +136,7 @@ private fun HikmaDetailScreen(
                 }
             }
 
-            if (HikamSharhEdition.isEnabled && sharhAvailability.isNotEmpty()) {
+            if (HikamSharhEdition.isEnabled && sharhAvailability.any { it.available }) {
                 DualSharhBlock(sharhAvailability)
             }
 

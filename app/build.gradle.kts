@@ -635,11 +635,11 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 21")) {
-            "0.10.2 must use versionCode 21 for an in-place update over 0.10.1."
+        check(buildFile.contains("versionCode = 22")) {
+            "0.10.3 must use versionCode 22 for an in-place update over 0.10.2."
         }
-        check(buildFile.contains("versionName = \"0.10.2\"")) {
-            "Expected isolated tafsir editions update 0.10.2."
+        check(buildFile.contains("versionName = \"0.10.3\"")) {
+            "Expected audited personal Plus update 0.10.3."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -1061,8 +1061,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "0.10.2"
+        versionCode = 22
+        versionName = "0.10.3"
     }
 
     flavorDimensions += "edition"
