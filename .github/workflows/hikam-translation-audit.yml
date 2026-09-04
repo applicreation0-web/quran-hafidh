@@ -1,12 +1,7 @@
 name: Hikam translation cross-audit
 
 on:
-  push:
-    branches:
-      - plus-rtl-free-reader-hikam-reference
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   audit:
