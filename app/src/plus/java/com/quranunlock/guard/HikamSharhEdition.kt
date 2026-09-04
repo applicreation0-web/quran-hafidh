@@ -7,12 +7,16 @@ import org.json.JSONObject
 /**
  * Personal Plus-only commentary layer.
  *
- * The asset is optional while the corpus is being verified. The UI can therefore
- * ship the dual-commentator interaction before all 264 pairs are ready, without
- * inventing missing text.
+ * 0.10.4 is deliberately fail-closed. Historical research extraction exists,
+ * but its own contract marks every candidate as research-only until commentary
+ * boundaries, source locator and the matching French translation are independently
+ * verified. No display-eligible hikam_sharh_dual.json is shipped in this release.
+ *
+ * Keep the parser here for the future verified corpus, but never expose an empty or
+ * partially researched sharh selector as if commentaries were already available.
  */
 object HikamSharhEdition {
-    const val isEnabled: Boolean = true
+    const val isEnabled: Boolean = false
     private const val ASSET = "hikam/hikam_sharh_dual.json"
 
     private var cached: Map<Int, List<HikamSharhEntry>>? = null
@@ -22,6 +26,7 @@ object HikamSharhEdition {
         context: Context,
         hikmaNumber: Int
     ): List<HikamSharhAvailability> {
+        if (!isEnabled) return emptyList()
         val entries = load(context)[hikmaNumber].orEmpty()
         return HikamCommentator.entries.map { commentator ->
             HikamSharhAvailability(
@@ -35,6 +40,7 @@ object HikamSharhEdition {
 
     @Synchronized
     private fun load(context: Context): Map<Int, List<HikamSharhEntry>> {
+        if (!isEnabled) return emptyMap()
         cached?.let { return it }
         val raw = runCatching {
             context.assets.open(ASSET)
