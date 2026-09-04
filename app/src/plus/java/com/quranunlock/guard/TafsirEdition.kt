@@ -180,8 +180,10 @@ object TafsirEdition {
         )
     }
 
-    suspend fun load(context: Context, verse: VerseRef): TafsirEntry? =
-        TafsirRepository.load(context, verse)
+    // Compatibility hook used by the shared reader. Plus data loading is owned
+    // exclusively by MultiTafsirPanel so opening Qurtubi/Qushayri cannot trigger
+    // an obsolete parallel Jalalayn database read.
+    suspend fun load(context: Context, verse: VerseRef): TafsirEntry? = null
 
     @Composable
     fun Panel(
