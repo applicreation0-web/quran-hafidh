@@ -9,7 +9,12 @@ import androidx.compose.ui.unit.Dp
 object TafsirEdition {
     const val isEnabled: Boolean = false
 
-    fun prepareHtml(svgContent: String, pageNumber: Int): String = svgContent
+    fun prepareHtml(svgContent: String, pageNumber: Int): String =
+        svgContent + """
+            <style>
+              html, body, svg { background: #F4F0E6 !important; }
+            </style>
+        """.trimIndent()
 
     fun configureWebView(
         webView: WebView,

@@ -283,6 +283,8 @@ class DashboardActivity : ComponentActivity() {
                     )
                 }
 
+                TaddaburEdition.DashboardCard()
+
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(22.dp),
