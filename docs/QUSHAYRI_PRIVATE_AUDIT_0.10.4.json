@@ -1,0 +1,23 @@
+{
+  "status": "PASS_LOCAL_SOURCE_AUDIT",
+  "source_pdf_sha256": "f5b064cfe8ece67a89aaeea04540a7d79c8ef5a531ce2aff880608621e3e1bd3",
+  "structural_anchors": 807,
+  "structural_verses": 669,
+  "verified_commentary_verses_fail_closed": 529,
+  "emitted_entries": 655,
+  "ambiguous_clusters_hidden": 69,
+  "arabic_source_text_included": false,
+  "rules": [
+    "Arabic Quran source lines are excluded",
+    "Italic English Quran translation preceding commentary is excluded",
+    "Only sequential source anchors are accepted",
+    "Ambiguous multi-verse attribution is hidden rather than guessed",
+    "Explicit source range 4:167-169 is preserved",
+    "2:68 inline source anchor is preserved"
+  ],
+  "regressions": {
+    "2:68": true,
+    "4:167-169": true
+  },
+  "scope": "private_personal"
+}
