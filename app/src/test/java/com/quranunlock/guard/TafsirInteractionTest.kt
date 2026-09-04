@@ -69,6 +69,42 @@ class TafsirInteractionTest {
     }
 
     @Test
+    fun selectorOnlyOffersEditionsThatCoverTheTappedVerse() {
+        assertEquals(
+            listOf(
+                TafsirEditionId.JALALAYN,
+                TafsirEditionId.QURTUBI,
+                TafsirEditionId.QUSHAYRI
+            ),
+            TafsirEditionId.availableFor(VerseRef(4, 23))
+        )
+        assertEquals(
+            listOf(TafsirEditionId.JALALAYN, TafsirEditionId.QUSHAYRI),
+            TafsirEditionId.availableFor(VerseRef(4, 24))
+        )
+        assertEquals(
+            listOf(TafsirEditionId.JALALAYN),
+            TafsirEditionId.availableFor(VerseRef(5, 1))
+        )
+    }
+
+    @Test
+    fun unavailablePreferredEditionFallsBackToJalalayn() {
+        assertEquals(
+            TafsirEditionId.JALALAYN,
+            TafsirEditionId.effectiveFor(VerseRef(4, 24), TafsirEditionId.QURTUBI)
+        )
+        assertEquals(
+            TafsirEditionId.JALALAYN,
+            TafsirEditionId.effectiveFor(VerseRef(5, 1), TafsirEditionId.QUSHAYRI)
+        )
+        assertEquals(
+            TafsirEditionId.QUSHAYRI,
+            TafsirEditionId.effectiveFor(VerseRef(4, 24), TafsirEditionId.QUSHAYRI)
+        )
+    }
+
+    @Test
     fun tafsirRequestIdentityIncludesEdition() {
         val verse = VerseRef(2, 85)
         assertNotEquals(
