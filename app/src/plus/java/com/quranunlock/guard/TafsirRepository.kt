@@ -27,6 +27,8 @@ internal object TafsirRepository {
         "26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56"
     private const val V2_MANIFEST_ASSET = "tafsir/tafsir_v2_manifest.json"
     private const val V2_SCHEMA_VERSION = "tafsir-v2"
+    private const val PRIVATE_PERSONAL_SCOPE = "private_personal"
+    private const val PRIVATE_PERSONAL_RIGHTS_STATUS = "private_personal_only"
     private val APPROVED_RIGHTS_STATUSES = setOf(
         "licensed",
         "public_domain",
@@ -36,9 +38,12 @@ internal object TafsirRepository {
     private val SAFE_SHA256 = Regex("[0-9a-f]{64}")
 
     /**
-     * A partial tafsir is offered only when an audited distributable database contains
+     * A partial tafsir is offered only when an audited runtime-approved database contains
      * an actual mapping for the tapped verse. Static source coverage alone is not enough.
      * Jalalayn remains the baseline/default edition.
+     *
+     * Plus may also load an explicitly private-personal corpus. That scope is deliberately
+     * distinct from redistribution approval and must never be interpreted as a public license.
      */
     suspend fun availableEditions(
         context: Context,
@@ -142,7 +147,7 @@ internal object TafsirRepository {
         editionId: TafsirEditionId
     ): Boolean {
         val spec = loadV2Spec(context, editionId) ?: return false
-        if (!spec.distributionReady) return false
+        if (!spec.runtimeReady) return false
         val databaseFile = materializeDatabase(
             context = context,
             databaseName = spec.databaseName,
@@ -169,7 +174,7 @@ internal object TafsirRepository {
         editionId: TafsirEditionId
     ): TafsirEntry? {
         val spec = loadV2Spec(context, editionId) ?: return null
-        if (!spec.distributionReady) return null
+        if (!spec.runtimeReady) return null
 
         val databaseFile = materializeDatabase(
             context = context,
@@ -243,14 +248,23 @@ internal object TafsirRepository {
         database: SQLiteDatabase,
         editionId: TafsirEditionId,
         spec: V2Spec
-    ): Boolean =
-        metadataValue(database, "schema_version") == V2_SCHEMA_VERSION &&
-            metadataValue(database, "edition_id") == editionId.stableId &&
-            metadataValue(database, "rights_status") == spec.rightsStatus &&
-            metadataValue(database, "source_audit_status") == "verified" &&
-            metadataValue(database, "content_audit_status") == "verified" &&
-            metadataValue(database, "content_language") == "en" &&
-            metadataValue(database, "arabic_source_text_included") == "false"
+    ): Boolean {
+        val common =
+            metadataValue(database, "schema_version") == V2_SCHEMA_VERSION &&
+                metadataValue(database, "edition_id") == editionId.stableId &&
+                metadataValue(database, "rights_status") == spec.rightsStatus &&
+                metadataValue(database, "source_audit_status") == "verified" &&
+                metadataValue(database, "content_audit_status") == "verified" &&
+                metadataValue(database, "content_language") == "en" &&
+                metadataValue(database, "arabic_source_text_included") == "false"
+        if (!common) return false
+        return if (spec.privatePersonalReady) {
+            metadataValue(database, "distribution_scope") == PRIVATE_PERSONAL_SCOPE &&
+                metadataValue(database, "private_personal_build_authorized") == "true"
+        } else {
+            true
+        }
+    }
 
     private fun metadataValue(database: SQLiteDatabase, key: String): String? =
         database.rawQuery(
@@ -298,6 +312,8 @@ internal object TafsirRepository {
                 databaseSha256 = obj.optString("database_sha256").trim(),
                 assetParts = parts,
                 readyForDistribution = obj.optBoolean("ready_for_distribution", false),
+                readyForPrivateUse = obj.optBoolean("ready_for_private_use", false),
+                distributionScope = obj.optString("distribution_scope").trim(),
                 schemaVersion = obj.optString("schema_version").trim(),
                 rightsStatus = obj.optString("rights_status").trim(),
                 sourceAuditStatus = obj.optString("source_audit_status").trim(),
@@ -428,6 +444,8 @@ internal object TafsirRepository {
         val databaseSha256: String,
         val assetParts: List<String>,
         val readyForDistribution: Boolean,
+        val readyForPrivateUse: Boolean,
+        val distributionScope: String,
         val schemaVersion: String,
         val rightsStatus: String,
         val sourceAuditStatus: String,
@@ -442,9 +460,10 @@ internal object TafsirRepository {
                     assetParts.distinct().size == assetParts.size &&
                     assetParts.all(::safeAssetPath)
 
-        val distributionReady: Boolean
+        val publicDistributionReady: Boolean
             get() =
                 readyForDistribution &&
+                    !readyForPrivateUse &&
                     schemaVersion == V2_SCHEMA_VERSION &&
                     rightsStatus in APPROVED_RIGHTS_STATUSES &&
                     sourceAuditStatus == "verified" &&
@@ -453,6 +472,22 @@ internal object TafsirRepository {
                     !arabicSourceTextIncluded &&
                     SAFE_SHA256.matches(databaseSha256) &&
                     assetParts.isNotEmpty()
+
+        val privatePersonalReady: Boolean
+            get() =
+                !readyForDistribution &&
+                    readyForPrivateUse &&
+                    distributionScope == PRIVATE_PERSONAL_SCOPE &&
+                    rightsStatus == PRIVATE_PERSONAL_RIGHTS_STATUS &&
+                    sourceAuditStatus == "verified" &&
+                    contentAuditStatus == "verified" &&
+                    contentLanguage == "en" &&
+                    !arabicSourceTextIncluded &&
+                    SAFE_SHA256.matches(databaseSha256) &&
+                    assetParts.isNotEmpty()
+
+        val runtimeReady: Boolean
+            get() = publicDistributionReady || privatePersonalReady
     }
 
     private data class V2Block(
