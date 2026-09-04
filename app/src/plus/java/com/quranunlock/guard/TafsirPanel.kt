@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -75,6 +74,7 @@ internal fun TafsirPanel(
     var notesExpanded by remember(verse, editionId) { mutableStateOf(false) }
     var editionMenuExpanded by remember { mutableStateOf(false) }
     val scrollState = remember(verse, editionId) { ScrollState(0) }
+    val availableEditions = remember(verse) { TafsirEditionId.availableFor(verse) }
 
     LaunchedEffect(verse, editionId) {
         scrollState.scrollTo(0)
@@ -144,15 +144,22 @@ internal fun TafsirPanel(
                         contentDescription =
                             "Choisir le Tafsir. Source actuelle : ${editionId.displayName}"
                     },
+                    enabled = availableEditions.size > 1,
                     onClick = { editionMenuExpanded = true }
                 ) {
-                    Text("${editionId.displayName} ▾")
+                    Text(
+                        if (availableEditions.size > 1) {
+                            "${editionId.displayName} ▾"
+                        } else {
+                            editionId.displayName
+                        }
+                    )
                 }
                 DropdownMenu(
-                    expanded = editionMenuExpanded,
+                    expanded = editionMenuExpanded && availableEditions.size > 1,
                     onDismissRequest = { editionMenuExpanded = false }
                 ) {
-                    TafsirEditionId.entries.forEach { candidate ->
+                    availableEditions.forEach { candidate ->
                         DropdownMenuItem(
                             text = { Text(candidate.displayName) },
                             onClick = {
