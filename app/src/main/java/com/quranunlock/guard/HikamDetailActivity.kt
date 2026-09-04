@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -116,8 +118,14 @@ private fun HikmaDetailScreen(
                         horizontal = 19.dp,
                         vertical = 22.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Text(
+                        "ḤIKMA — TEXTE ARABE",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(
                         hikma.arabicText,
                         modifier = Modifier.fillMaxWidth(),
@@ -128,6 +136,13 @@ private fun HikmaDetailScreen(
                         textAlign = TextAlign.Right,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    HorizontalDivider()
+                    Text(
+                        "TRADUCTION FRANÇAISE",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(
                         hikma.frenchText,
                         style = MaterialTheme.typography.bodyLarge,
@@ -135,6 +150,8 @@ private fun HikmaDetailScreen(
                     )
                 }
             }
+
+            HikamTerminologyBlock(hikma)
 
             if (HikamSharhEdition.isEnabled && sharhAvailability.any { it.available }) {
                 DualSharhBlock(sharhAvailability)
@@ -164,6 +181,12 @@ private fun HikmaDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
+                        "L’arabe reste l’autorité. La traduction anglaise et son glossaire " +
+                            "servent uniquement de contrôle terminologique et de sens.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
                         "Le tashkīl provient d’une édition vocalisée. " +
                             "Aucun signe n’est généré automatiquement.",
                         style = MaterialTheme.typography.bodySmall,
@@ -177,6 +200,51 @@ private fun HikmaDetailScreen(
                 hasVocalizationSource =
                     !hikma.vocalizationSourceUrl.isNullOrBlank()
             )
+        }
+    }
+}
+
+@Composable
+private fun HikamTerminologyBlock(hikma: HikmaEntry) {
+    val terms = remember(hikma.canonicalId) {
+        HikamTechnicalLexicon.forHikma(hikma)
+    }
+    if (terms.isEmpty()) return
+
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Text(
+                "AIDE TERMINOLOGIQUE",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Repères éditoriaux séparés du texte de la Ḥikma et du commentaire classique.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            terms.forEach { term ->
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("[")
+                            append(term.transliteration)
+                            append("]")
+                        }
+                        append(" — ")
+                        append(term.frenchMeaning)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 21.sp
+                )
+            }
         }
     }
 }
@@ -220,10 +288,15 @@ private fun DualSharhBlock(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "SHARḤ — CHOISIR LE COMMENTATEUR",
+                "COMMENTAIRE CLASSIQUE — SHARḤ",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Choisir le commentateur. Aucun commentaire n’est fusionné avec la Ḥikma.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Row(
@@ -309,7 +382,8 @@ private fun DualSharhBlock(
                 )
                 if (entry.technicalTerms.isNotEmpty()) {
                     Text(
-                        "Lexique : " + entry.technicalTerms.sorted().joinToString(" • "),
+                        "Lexique du commentaire : " +
+                            entry.technicalTerms.sorted().joinToString(" • "),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.secondary,
                         fontWeight = FontWeight.SemiBold
