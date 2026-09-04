@@ -5,6 +5,11 @@ data class VerseRef(
     val ayah: Int
 )
 
+enum class TafsirSource {
+    JALALAYN,
+    QUSHAYRI_LATAIF
+}
+
 data class TafsirNote(
     val number: Int,
     val runs: List<TafsirRun>
