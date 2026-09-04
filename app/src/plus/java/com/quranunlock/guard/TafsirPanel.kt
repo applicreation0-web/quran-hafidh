@@ -218,7 +218,7 @@ internal fun TafsirPanel(
                                         withStyle(
                                             SpanStyle(fontWeight = FontWeight.Bold)
                                         ) {
-                                            append("${note.number}. ")
+                                            append("${note.displayLabel}. ")
                                         }
                                         append(runsToAnnotatedString(note.runs))
                                     }.toAnnotatedString(),
