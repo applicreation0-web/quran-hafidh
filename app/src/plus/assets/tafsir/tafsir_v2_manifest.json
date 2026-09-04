@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "editions": [
+    {
+      "edition_id": "qurtubi_en_bewley",
+      "database_name": "al_qurtubi_en.sqlite",
+      "database_sha256": "",
+      "asset_parts": [],
+      "ready_for_distribution": false,
+      "coverage": "1:1-4:23",
+      "source_status": "groundwork_complete_payload_not_bundled"
+    },
+    {
+      "edition_id": "qushayri_en_sands",
+      "database_name": "al_qushayri_en.sqlite",
+      "database_sha256": "",
+      "asset_parts": [],
+      "ready_for_distribution": false,
+      "coverage": "surahs_1_4",
+      "source_status": "groundwork_complete_payload_not_bundled"
+    }
+  ]
+}
