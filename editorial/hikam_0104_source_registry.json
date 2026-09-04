@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "primary_boundary_source_must_be_matn_only": true,
+    "minimum_independent_witnesses_per_hikma": 2,
+    "witness_identity_is_not_equivalent_to_completed_comparison": true
+  },
+  "sources": [
+    {
+      "source_id": "matheson_2014_original_arabic",
+      "role": "primary_boundary",
+      "source_kind": "matn_only",
+      "title": "Al-Hikam — original Arabic text",
+      "institution": "The Matheson Trust",
+      "url": "https://themathesontrust.org/papers/islam/ibnataallah-hikam-AR.pdf",
+      "boundary_authority": true,
+      "counts_as_independent_witness": false,
+      "identity_status": "identified",
+      "comparison_status": "primary_segmentation_source"
+    },
+    {
+      "source_id": "dar_al_iman_1986_abd_al_rahim",
+      "role": "independent_control",
+      "source_kind": "printed_edition",
+      "title": "الحكم العطائية",
+      "editor": "محمد عبد الرحيم",
+      "publisher": "دار الإيمان",
+      "edition": "الأولى",
+      "publication": "1406 هـ / 1986 م — دمشق",
+      "url": "https://usul.ai/ar/t/al-hikam-al-ataiyya",
+      "boundary_authority": false,
+      "counts_as_independent_witness": true,
+      "identity_status": "identified",
+      "comparison_status": "pending_264_by_264"
+    },
+    {
+      "source_id": "emir_abdelkader_ms_4267",
+      "role": "manuscript_arbitration",
+      "source_kind": "manuscript",
+      "title": "متن الحكم العطائية",
+      "institution": "Université Emir Abdelkader",
+      "url": "https://dspace.univ-emir-constantine.edu.dz/jspui/handle/123456789/4267",
+      "boundary_authority": false,
+      "counts_as_independent_witness": true,
+      "identity_status": "identified",
+      "comparison_status": "pending_264_by_264"
+    },
+    {
+      "source_id": "al_mostafa_unresolved_edition",
+      "role": "supplementary_control",
+      "source_kind": "digital_scan_unknown_edition",
+      "title": "Matn al-Hikam — Al-Mostafa scan",
+      "url": "https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_000802_al-mostafa.pdf",
+      "boundary_authority": false,
+      "counts_as_independent_witness": false,
+      "identity_status": "underlying_edition_unresolved",
+      "comparison_status": "supplementary_only"
+    }
+  ]
+}
