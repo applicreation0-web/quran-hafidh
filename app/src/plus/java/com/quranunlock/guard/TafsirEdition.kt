@@ -233,7 +233,14 @@ object TafsirEdition {
     }
 
     suspend fun load(context: Context, verse: VerseRef): TafsirEntry? =
-        load(context, verse, TafsirReaderPreferences.selectedEdition(context))
+        load(
+            context,
+            verse,
+            TafsirEditionId.effectiveFor(
+                verse,
+                TafsirReaderPreferences.selectedEdition(context)
+            )
+        )
 
     suspend fun load(
         context: Context,
@@ -257,12 +264,24 @@ object TafsirEdition {
     ) {
         val context = LocalContext.current
         var editionId by remember {
-            mutableStateOf(TafsirReaderPreferences.selectedEdition(context))
+            mutableStateOf(
+                TafsirEditionId.effectiveFor(
+                    verse,
+                    TafsirReaderPreferences.selectedEdition(context)
+                )
+            )
         }
         var localState by remember(verse, editionId) {
             mutableStateOf<TafsirLoadState>(TafsirLoadState.Loading)
         }
         LaunchedEffect(verse, editionId) {
+            val effectiveEdition = TafsirEditionId.effectiveFor(verse, editionId)
+            if (effectiveEdition != editionId) {
+                editionId = effectiveEdition
+                TafsirReaderPreferences.setSelectedEdition(context, effectiveEdition)
+                return@LaunchedEffect
+            }
+
             localState = TafsirLoadState.Loading
             val requestKey = TafsirRequestKey(verse, editionId)
             val entry = load(context, requestKey.verse, requestKey.editionId)
@@ -281,8 +300,10 @@ object TafsirEdition {
             modifier = modifier,
             maxPanelHeight = maxPanelHeight,
             onEditionChange = { next ->
-                editionId = next
-                TafsirReaderPreferences.setSelectedEdition(context, next)
+                if (next.covers(verse)) {
+                    editionId = next
+                    TafsirReaderPreferences.setSelectedEdition(context, next)
+                }
             },
             onPanelTopInWindow = onPanelTopInWindow
         )
@@ -300,11 +321,13 @@ object TafsirEdition {
     ) {
         TafsirPanel(
             verse = verse,
-            editionId = editionId,
+            editionId = TafsirEditionId.effectiveFor(verse, editionId),
             state = state,
             modifier = modifier,
             maxPanelHeight = maxPanelHeight,
-            onEditionChange = onEditionChange,
+            onEditionChange = { next ->
+                if (next.covers(verse)) onEditionChange(next)
+            },
             onPanelTopInWindow = onPanelTopInWindow
         )
     }
