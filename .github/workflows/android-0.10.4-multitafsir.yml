@@ -55,7 +55,9 @@ jobs:
         run: python3 scripts/verify_0104_hikam_freeze.py
 
       - name: Source-level contradictory audit
-        run: python3 scripts/verify_0104_update.py
+        run: |
+          python3 scripts/verify_0104_update.py
+          python3 scripts/verify_0104_taddabur.py
 
       - name: Existing full release audit
         run: gradle --no-daemon :app:verifyReleaseAudit
@@ -70,7 +72,11 @@ jobs:
         run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
 
       - name: Prove Light isolation
-        run: python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+        run: |
+          python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+          python3 scripts/verify_light_apk_no_taddabur.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
 
-      - name: Prove all three Plus tafsir corpora
-        run: python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+      - name: Prove Plus private corpora and Taddabur
+        run: |
+          python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+          python3 scripts/verify_plus_apk_taddabur.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
