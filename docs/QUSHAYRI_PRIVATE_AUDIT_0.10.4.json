@@ -1,23 +1,33 @@
 {
-  "status": "PASS_LOCAL_SOURCE_AUDIT",
+  "status": "PASS_LOCAL_SOURCE_AUDIT_FAIL_CLOSED_V10",
   "source_pdf_sha256": "f5b064cfe8ece67a89aaeea04540a7d79c8ef5a531ce2aff880608621e3e1bd3",
-  "structural_anchors": 807,
+  "structural_anchor_events": 806,
   "structural_verses": 669,
-  "verified_commentary_verses_fail_closed": 529,
-  "emitted_entries": 655,
-  "ambiguous_clusters_hidden": 69,
+  "verified_commentary_verses_fail_closed": 519,
+  "emitted_entries": 644,
+  "ambiguous_clusters_hidden": 76,
+  "ambiguous_anchors_hidden": 162,
   "arabic_source_text_included": false,
+  "english_quran_translation_included_as_commentary": false,
+  "translator_editor_footnotes_included": false,
+  "database_sha256_local_audit": "cd93f65e16f79a680611c4defccf4d7d6eea50ea95cffd36039b563770653549",
   "rules": [
     "Arabic Quran source lines are excluded",
-    "Italic English Quran translation preceding commentary is excluded",
-    "Only sequential source anchors are accepted",
+    "Printed English Quran translation preceding commentary is excluded",
+    "Standalone styled source anchors are preferred over inline cross-references",
     "Ambiguous multi-verse attribution is hidden rather than guessed",
-    "Explicit source range 4:167-169 is preserved",
-    "2:68 inline source anchor is preserved"
+    "Explicit source range 4:167-169 is preserved as one range",
+    "2:68 is the verified true inline canonical case and only text after its anchor is retained",
+    "4:120 is not exposed as an independent commentary because the apparent earlier inline marker is a cross-reference and the source commentary is structurally grouped with 4:121",
+    "Translator/editor footnotes remain excluded until exact binding is separately audited"
   ],
   "regressions": {
-    "2:68": true,
-    "4:167-169": true
+    "2:68_mapped_after_anchor_only": true,
+    "2:83_structurally_present": true,
+    "2:84_structurally_present": true,
+    "4:167_169_range_present": true,
+    "4:120_false_inline_not_exposed": true
   },
-  "scope": "private_personal"
+  "scope": "private_personal",
+  "audit_note": "This V10 result supersedes the earlier 529-verse/655-entry audit. The lower retained count is intentional: deeper typography-aware contradictory review removed unsafe inline-boundary assumptions rather than broadening coverage by inference."
 }
