@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -25,6 +26,7 @@ ALLOWED_TYPES = {
     "VERSE_RANGE_COMMENTARY",
 }
 ALLOWED_COVERAGE_STATUS = {"available", "partial"}
+ARABIC_SCRIPT = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]")
 FORBIDDEN_PAYLOAD_MARKERS = (
     "sunniconnect.com",
     "Downloaded via sunniconnect",
@@ -39,6 +41,8 @@ REQUIRED_METADATA = {
     "source_audit_status",
     "content_audit_status",
     "expected_mapped_verse_count",
+    "content_language",
+    "arabic_source_text_included",
 }
 
 SCHEMA = """
@@ -102,6 +106,13 @@ def require_sha256(value: object, field: str) -> str:
     return text
 
 
+def metadata_text(value: object) -> str:
+    """Store booleans as JSON lowercase true/false so runtime checks are deterministic."""
+    if isinstance(value, (dict, list, bool)):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+    return str(value)
+
+
 def canonical_runs(runs: object) -> tuple[str, str]:
     if not isinstance(runs, list):
         raise ValueError("body_runs/note runs must be a list")
@@ -125,6 +136,10 @@ def canonical_runs(runs: object) -> tuple[str, str]:
     for marker in FORBIDDEN_PAYLOAD_MARKERS:
         if marker.casefold() in folded:
             raise ValueError(f"Forbidden third-party contamination marker: {marker}")
+    if ARABIC_SCRIPT.search(plain_text):
+        raise ValueError(
+            "Arabic-script source text is forbidden in Qurtubi/Qushayri English payloads"
+        )
     return body_json, plain_text
 
 
@@ -144,6 +159,10 @@ def validate_metadata(metadata: dict, allow_unreleased: bool) -> None:
     expected = int(metadata["expected_mapped_verse_count"])
     if expected <= 0:
         raise ValueError("expected_mapped_verse_count must be positive")
+    if metadata.get("content_language") != "en":
+        raise ValueError("New tafsir payload content_language must be 'en'")
+    if metadata.get("arabic_source_text_included") is not False:
+        raise ValueError("Arabic source text must not be included in new tafsir payloads")
     if not allow_unreleased:
         if metadata["rights_status"] not in ALLOWED_RIGHTS:
             raise ValueError("Redistribution rights are not cleared")
@@ -200,12 +219,7 @@ def main() -> None:
         for key, value in sorted(metadata.items()):
             con.execute(
                 "INSERT INTO source_metadata(key,value) VALUES(?,?)",
-                (
-                    str(key),
-                    json.dumps(value, ensure_ascii=False)
-                    if isinstance(value, (dict, list))
-                    else str(value),
-                ),
+                (str(key), metadata_text(value)),
             )
 
         source_ids: set[str] = set()
