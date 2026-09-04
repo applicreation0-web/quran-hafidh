@@ -29,6 +29,8 @@ def base_document() -> dict:
             "source_audit_status": "pending",
             "content_audit_status": "pending",
             "expected_mapped_verse_count": 1,
+            "content_language": "en",
+            "arabic_source_text_included": False,
         },
         "entries": [
             {
@@ -56,7 +58,11 @@ def base_document() -> dict:
     }
 
 
-def run_builder(document: dict, *, allow_unreleased: bool) -> tuple[subprocess.CompletedProcess, Path, tempfile.TemporaryDirectory]:
+def run_builder(
+    document: dict,
+    *,
+    allow_unreleased: bool,
+) -> tuple[subprocess.CompletedProcess, Path, tempfile.TemporaryDirectory]:
     tmp = tempfile.TemporaryDirectory()
     root = Path(tmp.name)
     source = root / "input.json"
@@ -69,7 +75,12 @@ def run_builder(document: dict, *, allow_unreleased: bool) -> tuple[subprocess.C
     return result, output, tmp
 
 
-def expect_failure(document: dict, phrase: str, *, allow_unreleased: bool = True) -> None:
+def expect_failure(
+    document: dict,
+    phrase: str,
+    *,
+    allow_unreleased: bool = True,
+) -> None:
     result, output, tmp = run_builder(document, allow_unreleased=allow_unreleased)
     try:
         assert result.returncode != 0, result.stdout
@@ -89,6 +100,13 @@ def test_valid_audit_build() -> None:
             assert db.execute(
                 "SELECT value FROM source_metadata WHERE key='schema_version'"
             ).fetchone()[0] == "tafsir-v2"
+            assert db.execute(
+                "SELECT value FROM source_metadata WHERE key='content_language'"
+            ).fetchone()[0] == "en"
+            assert db.execute(
+                "SELECT value FROM source_metadata "
+                "WHERE key='arabic_source_text_included'"
+            ).fetchone()[0] == "false"
             assert db.execute("SELECT source_entry_id FROM tafsir_entry").fetchone()[0] == (
                 "synthetic-2-3-a"
             )
@@ -118,6 +136,30 @@ def test_release_can_build_only_when_all_distribution_gates_are_explicit() -> No
         assert output.is_file()
     finally:
         tmp.cleanup()
+
+
+def test_non_english_payload_is_rejected() -> None:
+    doc = base_document()
+    doc["metadata"]["content_language"] = "ar"
+    expect_failure(doc, "content_language must be 'en'")
+
+
+def test_arabic_source_flag_must_be_false() -> None:
+    doc = base_document()
+    doc["metadata"]["arabic_source_text_included"] = True
+    expect_failure(doc, "Arabic source text must not be included")
+
+
+def test_arabic_script_commentary_is_rejected() -> None:
+    doc = base_document()
+    doc["entries"][0]["body_runs"][0]["text"] = "نص عربي"
+    expect_failure(doc, "Arabic-script source text is forbidden")
+
+
+def test_arabic_script_note_is_rejected() -> None:
+    doc = base_document()
+    doc["entries"][0]["notes"][0]["runs"][0]["text"] = "ملاحظة عربية"
+    expect_failure(doc, "Arabic-script source text is forbidden")
 
 
 def test_third_party_contamination_is_rejected() -> None:
