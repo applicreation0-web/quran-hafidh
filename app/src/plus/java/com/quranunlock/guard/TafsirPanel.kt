@@ -74,7 +74,18 @@ internal fun TafsirPanel(
     var notesExpanded by remember(verse, editionId) { mutableStateOf(false) }
     var editionMenuExpanded by remember { mutableStateOf(false) }
     val scrollState = remember(verse, editionId) { ScrollState(0) }
-    val availableEditions = remember(verse) { TafsirEditionId.availableFor(verse) }
+    var availableEditions by remember(verse) {
+        mutableStateOf(listOf(editionId))
+    }
+
+    LaunchedEffect(verse) {
+        val resolved = TafsirRepository.availableEditions(context.applicationContext, verse)
+        availableEditions = resolved
+        if (editionId !in resolved) {
+            editionMenuExpanded = false
+            onEditionChange(TafsirEditionId.JALALAYN)
+        }
+    }
 
     LaunchedEffect(verse, editionId) {
         scrollState.scrollTo(0)
@@ -141,8 +152,11 @@ internal fun TafsirPanel(
             Box {
                 TextButton(
                     modifier = Modifier.semantics {
-                        contentDescription =
+                        contentDescription = if (availableEditions.size > 1) {
                             "Choisir le Tafsir. Source actuelle : ${editionId.displayName}"
+                        } else {
+                            "Tafsir disponible : ${editionId.displayName}"
+                        }
                     },
                     enabled = availableEditions.size > 1,
                     onClick = { editionMenuExpanded = true }
