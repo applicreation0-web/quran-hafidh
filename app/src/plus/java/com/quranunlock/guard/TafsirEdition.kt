@@ -3,7 +3,13 @@ package com.applicreation0.quransafeguard
 import android.content.Context
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -21,146 +27,146 @@ object TafsirEdition {
             return svgContent
         }
         return buildString {
-        append(svgContent)
-        append(
-            """
-            <style>
-              .ayahPolygon { pointer-events: all; cursor: pointer; }
-              .ayahPolygon.qsg-selected {
-                fill: #BFE8C8 !important;
-                fill-opacity: .48 !important;
-              }
-            </style>
-            <script>
-              (() => {
-                'use strict';
-                const PAGE = $pageNumber;
-                let pointer = null;
-                let savedPosition = null;
+            append(svgContent)
+            append(
+                """
+                <style>
+                  .ayahPolygon { pointer-events: all; cursor: pointer; }
+                  .ayahPolygon.qsg-selected {
+                    fill: #BFE8C8 !important;
+                    fill-opacity: .48 !important;
+                  }
+                </style>
+                <script>
+                  (() => {
+                    'use strict';
+                    const PAGE = $pageNumber;
+                    let pointer = null;
+                    let savedPosition = null;
 
-                const polygons = () => Array.from(
-                  document.querySelectorAll('path.ayahPolygon')
-                );
-                const sameVerse = (surah, ayah) => polygons().filter((path) =>
-                  Number(path.getAttribute('surah')) === surah &&
-                  Number(path.getAttribute('ayah')) === ayah
-                );
-                const clearHighlight = () => polygons().forEach((path) => {
-                  path.classList.remove('qsg-selected');
-                  path.removeAttribute('aria-pressed');
-                });
-
-                window.qsgTafsir = {
-                  select(surah, ayah) {
-                    if (savedPosition === null) {
-                      savedPosition = { x: window.scrollX, y: window.scrollY };
-                    }
-                    clearHighlight();
-                    sameVerse(surah, ayah).forEach((path) => {
-                      path.classList.add('qsg-selected');
-                      path.setAttribute('aria-pressed', 'true');
-                    });
-                  },
-                  reveal(occludedDevicePixels) {
-                    const ratio = window.devicePixelRatio || 1;
-                    const occlusion = Math.max(0, occludedDevicePixels / ratio);
-                    document.body.style.paddingBottom = occlusion + 'px';
-                    const selected = Array.from(
-                      document.querySelectorAll('.ayahPolygon.qsg-selected')
+                    const polygons = () => Array.from(
+                      document.querySelectorAll('path.ayahPolygon')
                     );
-                    if (!selected.length) return;
-                    requestAnimationFrame(() => {
-                      const bottom = Math.max(...selected.map((path) =>
-                        path.getBoundingClientRect().bottom
-                      ));
-                      const visibleBottom = window.innerHeight - occlusion - 12;
-                      if (bottom > visibleBottom) {
-                        window.scrollBy({ top: bottom - visibleBottom, behavior: 'smooth' });
-                      }
+                    const sameVerse = (surah, ayah) => polygons().filter((path) =>
+                      Number(path.getAttribute('surah')) === surah &&
+                      Number(path.getAttribute('ayah')) === ayah
+                    );
+                    const clearHighlight = () => polygons().forEach((path) => {
+                      path.classList.remove('qsg-selected');
+                      path.removeAttribute('aria-pressed');
                     });
-                  },
-                  clearAndRestore() {
-                    clearHighlight();
-                    document.body.style.paddingBottom = '0px';
-                    const restore = savedPosition;
-                    savedPosition = null;
-                    if (restore !== null) {
-                      requestAnimationFrame(() => window.scrollTo({
-                        left: restore.x,
-                        top: restore.y,
-                        behavior: 'smooth'
-                      }));
-                    }
-                  }
-                };
 
-                const activate = (path) => {
-                  const surah = Number(path.getAttribute('surah'));
-                  const ayah = Number(path.getAttribute('ayah'));
-                  if (!Number.isInteger(surah) || !Number.isInteger(ayah)) return;
-                  window.qsgTafsir.select(surah, ayah);
-                  if (window.$BRIDGE_NAME && window.$BRIDGE_NAME.postMessage) {
-                    window.$BRIDGE_NAME.postMessage(JSON.stringify({
-                      type: 'verseTap', page: PAGE, surah, ayah
-                    }));
-                  }
-                };
+                    window.qsgTafsir = {
+                      select(surah, ayah) {
+                        if (savedPosition === null) {
+                          savedPosition = { x: window.scrollX, y: window.scrollY };
+                        }
+                        clearHighlight();
+                        sameVerse(surah, ayah).forEach((path) => {
+                          path.classList.add('qsg-selected');
+                          path.setAttribute('aria-pressed', 'true');
+                        });
+                      },
+                      reveal(occludedDevicePixels) {
+                        const ratio = window.devicePixelRatio || 1;
+                        const occlusion = Math.max(0, occludedDevicePixels / ratio);
+                        document.body.style.paddingBottom = occlusion + 'px';
+                        const selected = Array.from(
+                          document.querySelectorAll('.ayahPolygon.qsg-selected')
+                        );
+                        if (!selected.length) return;
+                        requestAnimationFrame(() => {
+                          const bottom = Math.max(...selected.map((path) =>
+                            path.getBoundingClientRect().bottom
+                          ));
+                          const visibleBottom = window.innerHeight - occlusion - 12;
+                          if (bottom > visibleBottom) {
+                            window.scrollBy({ top: bottom - visibleBottom, behavior: 'smooth' });
+                          }
+                        });
+                      },
+                      clearAndRestore() {
+                        clearHighlight();
+                        document.body.style.paddingBottom = '0px';
+                        const restore = savedPosition;
+                        savedPosition = null;
+                        if (restore !== null) {
+                          requestAnimationFrame(() => window.scrollTo({
+                            left: restore.x,
+                            top: restore.y,
+                            behavior: 'smooth'
+                          }));
+                        }
+                      }
+                    };
 
-                const pathAt = (x, y) => document.elementsFromPoint(x, y)
-                  .map((element) => element.closest && element.closest('path.ayahPolygon'))
-                  .find(Boolean);
+                    const activate = (path) => {
+                      const surah = Number(path.getAttribute('surah'));
+                      const ayah = Number(path.getAttribute('ayah'));
+                      if (!Number.isInteger(surah) || !Number.isInteger(ayah)) return;
+                      window.qsgTafsir.select(surah, ayah);
+                      if (window.$BRIDGE_NAME && window.$BRIDGE_NAME.postMessage) {
+                        window.$BRIDGE_NAME.postMessage(JSON.stringify({
+                          type: 'verseTap', page: PAGE, surah, ayah
+                        }));
+                      }
+                    };
 
-                document.addEventListener('pointerdown', (event) => {
-                  if (pointer !== null || !event.isPrimary) {
-                    if (pointer !== null) pointer.cancelled = true;
-                    return;
-                  }
-                  pointer = {
-                    id: event.pointerId,
-                    x: event.clientX,
-                    y: event.clientY,
-                    cancelled: false
-                  };
-                }, { passive: true });
-                document.addEventListener('pointermove', (event) => {
-                  if (pointer === null || pointer.id !== event.pointerId) return;
-                  if (Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 12) {
-                    pointer.cancelled = true;
-                  }
-                }, { passive: true });
-                document.addEventListener('pointercancel', () => { pointer = null; }, { passive: true });
-                document.addEventListener('pointerup', (event) => {
-                  const candidate = pointer;
-                  pointer = null;
-                  if (candidate === null || candidate.id !== event.pointerId || candidate.cancelled) return;
-                  const path = pathAt(event.clientX, event.clientY);
-                  if (path) activate(path);
-                }, { passive: true });
+                    const pathAt = (x, y) => document.elementsFromPoint(x, y)
+                      .map((element) => element.closest && element.closest('path.ayahPolygon'))
+                      .find(Boolean);
 
-                const firstByVerse = new Set();
-                polygons().forEach((path) => {
-                  const surah = Number(path.getAttribute('surah'));
-                  const ayah = Number(path.getAttribute('ayah'));
-                  const key = surah + ':' + ayah;
-                  if (firstByVerse.has(key)) {
-                    path.setAttribute('aria-hidden', 'true');
-                    return;
-                  }
-                  firstByVerse.add(key);
-                  path.setAttribute('role', 'button');
-                  path.setAttribute('tabindex', '0');
-                  path.setAttribute('aria-label', 'Sourate ' + surah + ', verset ' + ayah);
-                  path.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      activate(path);
-                    }
-                  });
-                });
-              })();
-            </script>
-            """.trimIndent()
-        )
+                    document.addEventListener('pointerdown', (event) => {
+                      if (pointer !== null || !event.isPrimary) {
+                        if (pointer !== null) pointer.cancelled = true;
+                        return;
+                      }
+                      pointer = {
+                        id: event.pointerId,
+                        x: event.clientX,
+                        y: event.clientY,
+                        cancelled: false
+                      };
+                    }, { passive: true });
+                    document.addEventListener('pointermove', (event) => {
+                      if (pointer === null || pointer.id !== event.pointerId) return;
+                      if (Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 12) {
+                        pointer.cancelled = true;
+                      }
+                    }, { passive: true });
+                    document.addEventListener('pointercancel', () => { pointer = null; }, { passive: true });
+                    document.addEventListener('pointerup', (event) => {
+                      const candidate = pointer;
+                      pointer = null;
+                      if (candidate === null || candidate.id !== event.pointerId || candidate.cancelled) return;
+                      const path = pathAt(event.clientX, event.clientY);
+                      if (path) activate(path);
+                    }, { passive: true });
+
+                    const firstByVerse = new Set();
+                    polygons().forEach((path) => {
+                      const surah = Number(path.getAttribute('surah'));
+                      const ayah = Number(path.getAttribute('ayah'));
+                      const key = surah + ':' + ayah;
+                      if (firstByVerse.has(key)) {
+                        path.setAttribute('aria-hidden', 'true');
+                        return;
+                      }
+                      firstByVerse.add(key);
+                      path.setAttribute('role', 'button');
+                      path.setAttribute('tabindex', '0');
+                      path.setAttribute('aria-label', 'Sourate ' + surah + ', verset ' + ayah);
+                      path.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          activate(path);
+                        }
+                      });
+                    });
+                  })();
+                </script>
+                """.trimIndent()
+            )
         }
     }
 
@@ -227,8 +233,27 @@ object TafsirEdition {
     }
 
     suspend fun load(context: Context, verse: VerseRef): TafsirEntry? =
-        TafsirRepository.load(context, verse)
+        load(
+            context,
+            verse,
+            TafsirEditionId.effectiveFor(
+                verse,
+                TafsirReaderPreferences.selectedEdition(context)
+            )
+        )
 
+    suspend fun load(
+        context: Context,
+        verse: VerseRef,
+        editionId: TafsirEditionId
+    ): TafsirEntry? = TafsirRepository.load(context, verse, editionId)
+
+    /**
+     * Backward-compatible entry point used by the challenge reader.
+     *
+     * It deliberately self-loads the persisted edition so the 0.10.3 challenge
+     * activity does not need a risky structural rewrite just to gain the selector.
+     */
     @Composable
     fun Panel(
         verse: VerseRef,
@@ -237,11 +262,72 @@ object TafsirEdition {
         maxPanelHeight: Dp,
         onPanelTopInWindow: (Int) -> Unit
     ) {
+        val context = LocalContext.current
+        var editionId by remember {
+            mutableStateOf(
+                TafsirEditionId.effectiveFor(
+                    verse,
+                    TafsirReaderPreferences.selectedEdition(context)
+                )
+            )
+        }
+        var localState by remember(verse, editionId) {
+            mutableStateOf<TafsirLoadState>(TafsirLoadState.Loading)
+        }
+        LaunchedEffect(verse, editionId) {
+            val effectiveEdition = TafsirEditionId.effectiveFor(verse, editionId)
+            if (effectiveEdition != editionId) {
+                editionId = effectiveEdition
+                TafsirReaderPreferences.setSelectedEdition(context, effectiveEdition)
+                return@LaunchedEffect
+            }
+
+            localState = TafsirLoadState.Loading
+            val requestKey = TafsirRequestKey(verse, editionId)
+            val entry = load(context, requestKey.verse, requestKey.editionId)
+            if (editionId == requestKey.editionId) {
+                localState = if (entry == null) {
+                    TafsirLoadState.Unavailable
+                } else {
+                    TafsirLoadState.Available(entry)
+                }
+            }
+        }
         TafsirPanel(
             verse = verse,
+            editionId = editionId,
+            state = localState,
+            modifier = modifier,
+            maxPanelHeight = maxPanelHeight,
+            onEditionChange = { next ->
+                if (next.covers(verse)) {
+                    editionId = next
+                    TafsirReaderPreferences.setSelectedEdition(context, next)
+                }
+            },
+            onPanelTopInWindow = onPanelTopInWindow
+        )
+    }
+
+    @Composable
+    fun Panel(
+        verse: VerseRef,
+        editionId: TafsirEditionId,
+        state: TafsirLoadState,
+        modifier: Modifier,
+        maxPanelHeight: Dp,
+        onEditionChange: (TafsirEditionId) -> Unit,
+        onPanelTopInWindow: (Int) -> Unit
+    ) {
+        TafsirPanel(
+            verse = verse,
+            editionId = TafsirEditionId.effectiveFor(verse, editionId),
             state = state,
             modifier = modifier,
             maxPanelHeight = maxPanelHeight,
+            onEditionChange = { next ->
+                if (next.covers(verse)) onEditionChange(next)
+            },
             onPanelTopInWindow = onPanelTopInWindow
         )
     }

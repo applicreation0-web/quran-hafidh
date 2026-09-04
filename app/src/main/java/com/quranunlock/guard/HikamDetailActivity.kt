@@ -116,8 +116,14 @@ private fun HikmaDetailScreen(
                         horizontal = 19.dp,
                         vertical = 22.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Text(
+                        "ḤIKMA",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(
                         hikma.arabicText,
                         modifier = Modifier.fillMaxWidth(),
@@ -127,6 +133,12 @@ private fun HikmaDetailScreen(
                         ),
                         textAlign = TextAlign.Right,
                         color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "TRADUCTION FRANÇAISE",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         hikma.frenchText,
@@ -220,10 +232,15 @@ private fun DualSharhBlock(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "SHARḤ — CHOISIR LE COMMENTATEUR",
+                "COMMENTAIRE CLASSIQUE",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Bold
+            )
+            Text(
+                "Choisir le commentateur",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Row(
@@ -303,7 +320,7 @@ private fun DualSharhBlock(
                     lineHeight = 25.sp
                 )
                 Text(
-                    entry.printLocator,
+                    "Source : ${entry.workTitle} • ${entry.printLocator}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

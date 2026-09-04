@@ -1,20 +1,247 @@
 #!/usr/bin/env python3
-"""Fail closed unless a Plus APK embeds the exact approved tafsir corpus."""
+"""Fail closed unless a Plus APK embeds exactly the approved tafsir payloads.
 
+Jalalayn remains a frozen legacy corpus and is checked byte-for-byte. New v2 editions
+are driven by the packaged manifest. A public/distributable corpus must carry an approved
+redistribution-rights status. A strictly personal Plus corpus uses a separate explicit
+private-personal gate and must never be represented as redistribution-approved.
+"""
 from __future__ import annotations
 
 import argparse
 import gzip
 import hashlib
+import json
+import re
 import sqlite3
 import tempfile
 import zipfile
 from pathlib import Path
 
+JALALAYN_DATABASE_SHA256 = (
+    "26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56"
+)
+JALALAYN_ARCHIVE_SHA256 = (
+    "824fa202ad2b47aabdc6910f4792e0c8951a5cc8a641f47a2bab70de73b90680"
+)
+JALALAYN_PARTS = [
+    f"assets/tafsir/al_jalalayn_en.sqlite.gz.part{index:02d}" for index in range(4)
+]
+V2_MANIFEST = "assets/tafsir/tafsir_v2_manifest.json"
+EXPECTED_V2_IDS = {"qurtubi_en_bewley", "qushayri_en_sands"}
+APPROVED_RIGHTS = {"licensed", "public_domain", "permission_documented"}
+PRIVATE_SCOPE = "private_personal"
+PRIVATE_RIGHTS = "private_personal_only"
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+PART_PATH = re.compile(r"^assets/tafsir/[A-Za-z0-9._-]+\.sqlite\.gz\.part\d{2}$")
+ARABIC_SCRIPT = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]")
+FORBIDDEN_DB_MARKERS = (b"sunniconnect.com", b"Downloaded via sunniconnect")
 
-DATABASE_SHA256 = "26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56"
-ARCHIVE_SHA256 = "824fa202ad2b47aabdc6910f4792e0c8951a5cc8a641f47a2bab70de73b90680"
-PARTS = [f"assets/tafsir/al_jalalayn_en.sqlite.gz.part{index:02d}" for index in range(4)]
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def open_database(database: bytes):
+    temporary = tempfile.NamedTemporaryFile(suffix=".sqlite")
+    temporary.write(database)
+    temporary.flush()
+    connection = sqlite3.connect(f"file:{temporary.name}?mode=ro", uri=True)
+    return temporary, connection
+
+
+def metadata(connection: sqlite3.Connection, key: str) -> str | None:
+    row = connection.execute(
+        "SELECT value FROM source_metadata WHERE key = ?", (key,)
+    ).fetchone()
+    return None if row is None else str(row[0])
+
+
+def verify_jalalayn(archive: zipfile.ZipFile, names: set[str]) -> set[str]:
+    missing = [name for name in JALALAYN_PARTS if name not in names]
+    if missing:
+        raise SystemExit(f"Frozen Jalalayn parts missing: {missing}")
+    compressed = b"".join(archive.read(name) for name in JALALAYN_PARTS)
+    if sha256(compressed) != JALALAYN_ARCHIVE_SHA256:
+        raise SystemExit("Frozen Jalalayn archive checksum mismatch")
+    database = gzip.decompress(compressed)
+    if sha256(database) != JALALAYN_DATABASE_SHA256:
+        raise SystemExit("Frozen Jalalayn database checksum mismatch")
+
+    temporary, connection = open_database(database)
+    try:
+        if connection.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+            raise SystemExit("Jalalayn SQLite integrity check failed")
+        comments = connection.execute("SELECT COUNT(*) FROM verse_commentary").fetchone()[0]
+        notes = connection.execute("SELECT COUNT(*) FROM verse_note").fetchone()[0]
+        verse_count = metadata(connection, "verse_count")
+    finally:
+        connection.close()
+        temporary.close()
+    if comments != 6_236 or notes != 427 or verse_count != "6236":
+        raise SystemExit(
+            f"Frozen Jalalayn corpus changed: comments={comments}, notes={notes}, "
+            f"metadata verse_count={verse_count!r}"
+        )
+    return set(JALALAYN_PARTS)
+
+
+def parse_manifest(archive: zipfile.ZipFile, names: set[str]) -> list[dict]:
+    if V2_MANIFEST not in names:
+        raise SystemExit("Plus tafsir v2 manifest is missing")
+    try:
+        document = json.loads(archive.read(V2_MANIFEST).decode("utf-8"))
+    except Exception as error:
+        raise SystemExit(f"Invalid tafsir v2 manifest: {error}") from error
+    if document.get("manifest_schema") != 2:
+        raise SystemExit("Unexpected tafsir v2 manifest schema")
+    editions = document.get("editions")
+    if not isinstance(editions, list):
+        raise SystemExit("Manifest editions must be a list")
+    ids = [str(item.get("edition_id", "")) for item in editions if isinstance(item, dict)]
+    if set(ids) != EXPECTED_V2_IDS or len(ids) != len(EXPECTED_V2_IDS):
+        raise SystemExit(f"Unexpected/duplicate v2 edition ids: {ids}")
+    for item in editions:
+        edition_id = str(item.get("edition_id", ""))
+        if item.get("content_language") != "en":
+            raise SystemExit(f"{edition_id}: content_language must be English")
+        if item.get("arabic_source_text_included") is not False:
+            raise SystemExit(f"{edition_id}: Arabic source text must not be bundled")
+        if item.get("ready_for_distribution") is True and item.get("ready_for_private_use") is True:
+            raise SystemExit(f"{edition_id}: public and private readiness cannot both be true")
+    return editions
+
+
+def reject_arabic_source_text(connection: sqlite3.Connection, edition_id: str) -> None:
+    """Quran Arabic stays in Quran Safeguard's Mushaf, never in new tafsir payloads."""
+    for table in ("tafsir_entry", "entry_note"):
+        rows = connection.execute(f"SELECT plain_text FROM {table}").fetchall()
+        for index, row in enumerate(rows, start=1):
+            text = str(row[0] or "")
+            if ARABIC_SCRIPT.search(text):
+                raise SystemExit(
+                    f"{edition_id}: Arabic-script source text leaked into {table} row {index}"
+                )
+
+
+def readiness_mode(spec: dict) -> str | None:
+    public_ready = spec.get("ready_for_distribution") is True
+    private_ready = spec.get("ready_for_private_use") is True
+    if public_ready:
+        return "public_distribution"
+    if private_ready:
+        if spec.get("distribution_scope") != PRIVATE_SCOPE:
+            raise SystemExit(
+                f"{spec.get('edition_id')}: private-ready payload must declare {PRIVATE_SCOPE!r} scope"
+            )
+        if spec.get("rights_status") != PRIVATE_RIGHTS:
+            raise SystemExit(
+                f"{spec.get('edition_id')}: private-ready payload must declare {PRIVATE_RIGHTS!r}"
+            )
+        return PRIVATE_SCOPE
+    return None
+
+
+def verify_v2(
+    archive: zipfile.ZipFile,
+    names: set[str],
+    editions: list[dict],
+) -> tuple[set[str], list[str]]:
+    approved_parts: set[str] = set()
+    active: list[str] = []
+    for spec in editions:
+        edition_id = str(spec["edition_id"])
+        parts = spec.get("asset_parts")
+        if not isinstance(parts, list) or any(not isinstance(item, str) for item in parts):
+            raise SystemExit(f"{edition_id}: asset_parts must be a string list")
+        if len(parts) != len(set(parts)):
+            raise SystemExit(f"{edition_id}: duplicate asset part")
+        normalized_parts = [
+            f"assets/{part}" if part.startswith("tafsir/") else part
+            for part in parts
+        ]
+        if any(not PART_PATH.fullmatch(part) for part in normalized_parts):
+            raise SystemExit(f"{edition_id}: unsafe asset part path")
+
+        mode = readiness_mode(spec)
+        if mode is None:
+            if parts or str(spec.get("database_sha256", "")).strip():
+                raise SystemExit(f"{edition_id}: inactive edition must not carry payload/hash")
+            continue
+
+        if spec.get("schema_version") != "tafsir-v2":
+            raise SystemExit(f"{edition_id}: wrong schema gate")
+        rights = str(spec.get("rights_status", ""))
+        if mode == "public_distribution" and rights not in APPROVED_RIGHTS:
+            raise SystemExit(f"{edition_id}: redistribution rights not approved")
+        if mode == PRIVATE_SCOPE and rights != PRIVATE_RIGHTS:
+            raise SystemExit(f"{edition_id}: private-personal rights marker mismatch")
+        if spec.get("source_audit_status") != "verified":
+            raise SystemExit(f"{edition_id}: source audit not verified")
+        if spec.get("content_audit_status") != "verified":
+            raise SystemExit(f"{edition_id}: content audit not verified")
+        expected_db_sha = str(spec.get("database_sha256", ""))
+        if not SHA256.fullmatch(expected_db_sha):
+            raise SystemExit(f"{edition_id}: invalid database SHA-256")
+        if not normalized_parts:
+            raise SystemExit(f"{edition_id}: ready edition has no asset parts")
+        missing = [name for name in normalized_parts if name not in names]
+        if missing:
+            raise SystemExit(f"{edition_id}: manifest payload parts missing: {missing}")
+
+        compressed = b"".join(archive.read(name) for name in normalized_parts)
+        try:
+            database = gzip.decompress(compressed)
+        except Exception as error:
+            raise SystemExit(f"{edition_id}: invalid gzip payload: {error}") from error
+        if sha256(database) != expected_db_sha:
+            raise SystemExit(f"{edition_id}: database checksum mismatch")
+        folded = database.lower()
+        for marker in FORBIDDEN_DB_MARKERS:
+            if marker.lower() in folded:
+                raise SystemExit(f"{edition_id}: third-party contamination marker present")
+
+        temporary, connection = open_database(database)
+        try:
+            if connection.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                raise SystemExit(f"{edition_id}: SQLite quick_check failed")
+            if connection.execute("PRAGMA foreign_key_check").fetchall():
+                raise SystemExit(f"{edition_id}: SQLite foreign_key_check failed")
+            if metadata(connection, "schema_version") != "tafsir-v2":
+                raise SystemExit(f"{edition_id}: DB schema metadata mismatch")
+            if metadata(connection, "edition_id") != edition_id:
+                raise SystemExit(f"{edition_id}: DB edition metadata mismatch")
+            if metadata(connection, "rights_status") != rights:
+                raise SystemExit(f"{edition_id}: DB rights metadata mismatch")
+            if mode == PRIVATE_SCOPE:
+                if metadata(connection, "distribution_scope") != PRIVATE_SCOPE:
+                    raise SystemExit(f"{edition_id}: DB private scope metadata mismatch")
+                if metadata(connection, "private_personal_build_authorized") != "true":
+                    raise SystemExit(f"{edition_id}: DB private authorization marker missing")
+            if metadata(connection, "source_audit_status") != "verified":
+                raise SystemExit(f"{edition_id}: DB source audit metadata mismatch")
+            if metadata(connection, "content_audit_status") != "verified":
+                raise SystemExit(f"{edition_id}: DB content audit metadata mismatch")
+            if metadata(connection, "content_language") != "en":
+                raise SystemExit(f"{edition_id}: DB content language is not English")
+            if metadata(connection, "arabic_source_text_included") != "false":
+                raise SystemExit(f"{edition_id}: DB must declare Arabic source text excluded")
+            expected_mapped = int(metadata(connection, "expected_mapped_verse_count") or "0")
+            actual_mapped = connection.execute(
+                "SELECT COUNT(*) FROM (SELECT DISTINCT surah, ayah FROM entry_verse_map)"
+            ).fetchone()[0]
+            if expected_mapped <= 0 or actual_mapped != expected_mapped:
+                raise SystemExit(
+                    f"{edition_id}: mapped verse count mismatch {actual_mapped}/{expected_mapped}"
+                )
+            reject_arabic_source_text(connection, edition_id)
+        finally:
+            connection.close()
+            temporary.close()
+        approved_parts.update(normalized_parts)
+        active.append(f"{edition_id}:{mode}")
+
+    return approved_parts, active
 
 
 def main() -> None:
@@ -26,35 +253,33 @@ def main() -> None:
 
     with zipfile.ZipFile(args.apk) as archive:
         names = set(archive.namelist())
-        missing = [name for name in PARTS if name not in names]
-        if missing:
-            raise SystemExit(f"Plus tafsir parts missing: {missing}")
-        if any(name.casefold().endswith(".pdf") for name in names):
-            raise SystemExit("The source PDF must never be embedded in Plus")
-        compressed = b"".join(archive.read(name) for name in PARTS)
+        approved_assets = verify_jalalayn(archive, names)
+        editions = parse_manifest(archive, names)
+        v2_assets, active = verify_v2(archive, names, editions)
+        approved_assets |= v2_assets
+        approved_assets.add(V2_MANIFEST)
 
-    if hashlib.sha256(compressed).hexdigest() != ARCHIVE_SHA256:
-        raise SystemExit("Plus tafsir archive checksum mismatch")
-    database = gzip.decompress(compressed)
-    if hashlib.sha256(database).hexdigest() != DATABASE_SHA256:
-        raise SystemExit("Plus tafsir database checksum mismatch")
+        actual_tafsir_assets = {
+            name for name in names
+            if name.startswith("assets/tafsir/") and not name.endswith("/")
+        }
+        unexpected_assets = actual_tafsir_assets - approved_assets
+        if unexpected_assets:
+            raise SystemExit(
+                "Unlisted/unapproved tafsir asset leaked into Plus: "
+                + ", ".join(sorted(unexpected_assets))
+            )
+        missing_approved = approved_assets - actual_tafsir_assets
+        if missing_approved:
+            raise SystemExit(
+                "Approved tafsir asset missing from Plus: "
+                + ", ".join(sorted(missing_approved))
+            )
 
-    with tempfile.NamedTemporaryFile(suffix=".sqlite") as temporary:
-        temporary.write(database)
-        temporary.flush()
-        connection = sqlite3.connect(f"file:{temporary.name}?mode=ro", uri=True)
-        try:
-            if connection.execute("PRAGMA quick_check").fetchone()[0] != "ok":
-                raise SystemExit("Plus tafsir database integrity check failed")
-            comments = connection.execute(
-                "SELECT COUNT(*) FROM verse_commentary"
-            ).fetchone()[0]
-            notes = connection.execute("SELECT COUNT(*) FROM verse_note").fetchone()[0]
-        finally:
-            connection.close()
-    if comments != 6_236 or notes != 427:
-        raise SystemExit(f"Unexpected Plus corpus counts: {comments} / {notes}")
-    print(f"Verified Plus APK corpus: {comments} comments, {notes} notes")
+    print(
+        "Verified Plus APK tafsir corpus: frozen Jalalayn 6236/427; "
+        f"active v2 editions={active or 'none (fail-closed scaffold)'}"
+    )
 
 
 if __name__ == "__main__":

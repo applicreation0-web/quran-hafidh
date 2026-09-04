@@ -4,6 +4,8 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
+private val SHA256_HEX = Regex("[0-9a-f]{64}")
+
 /**
  * Canonical in-app source for the 264 Al-Hikam al-ʿAṭāʾiyya.
  *
@@ -22,7 +24,18 @@ data class HikmaEntry(
     val verification: ClassicalVerification,
     val textIntegrity: ClassicalTextIntegrity,
     val canonicalArabicText: String = arabicText,
-    val vocalizationSourceUrl: String? = null
+    val vocalizationSourceUrl: String? = null,
+    val matnBoundaryStatus: String? = null,
+    val matnPrimarySourceId: String? = null,
+    val matnPrimarySourceKind: String? = null,
+    val matnPrimarySourceUrl: String? = null,
+    /** Hash of the canonical unvocalized Arabic matn boundary for this exact number. */
+    val matnSnapshotSha256: String? = null,
+    /** Separate hash of the vocalized rendering. It must never drive translation validity. */
+    val vocalizedSnapshotSha256: String? = null,
+    /** French verification is linked only to the canonical matn snapshot. */
+    val translationMatnSnapshotSha256: String? = null,
+    val independentWitnessIds: Set<String> = emptySet()
 ) {
     val displayEligible: Boolean
         get() =
@@ -34,6 +47,26 @@ data class HikmaEntry(
                 source.documentaryComplete &&
                 verification.displayEligible &&
                 textIntegrity.allows(canonicalArabicText, frenchText)
+
+    /**
+     * 0.10.4 release-level matn gate. Kept separate from displayEligible while the
+     * full 264/264 source-boundary re-audit is still being completed.
+     */
+    val matnReleaseEligible: Boolean
+        get() {
+            val primaryId = matnPrimarySourceId.orEmpty()
+            val matnHash = matnSnapshotSha256.orEmpty()
+            val vocalizedHash = vocalizedSnapshotSha256.orEmpty()
+            return matnBoundaryStatus == "verified" &&
+                primaryId.isNotBlank() &&
+                matnPrimarySourceKind == "matn_only" &&
+                !matnPrimarySourceUrl.isNullOrBlank() &&
+                SHA256_HEX.matches(matnHash) &&
+                SHA256_HEX.matches(vocalizedHash) &&
+                translationMatnSnapshotSha256 == matnHash &&
+                independentWitnessIds.size >= 2 &&
+                primaryId !in independentWitnessIds
+        }
 }
 
 object HikamRepository {
@@ -168,6 +201,11 @@ object HikamRepository {
                 append(it)
             }
         }
+        val primarySourceUrl = obj.optString("matn_primary_source_url")
+            .trim()
+            .takeIf(String::isNotBlank)
+        val canonicalSourceUrl =
+            primarySourceUrl ?: verificationSources.firstOrNull().orEmpty()
 
         return HikmaEntry(
             canonicalId = "hikma_$sourceNumber",
@@ -181,10 +219,12 @@ object HikamRepository {
                 author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
                 workTitle = "Al-Hikam al-ʿAṭāʾiyya",
                 edition = obj.getString("source_edition"),
-                editor = "ʿĀṣim Ibrāhīm al-Kayyālī",
+                editor = obj.optString("source_editor")
+                    .trim()
+                    .takeIf(String::isNotBlank),
                 volume = null,
                 locator = locator,
-                sourceUrl = verificationSources.firstOrNull().orEmpty(),
+                sourceUrl = canonicalSourceUrl,
                 translator = "Traduction interne Quran Safeguard"
             ),
             verification = verification,
@@ -195,7 +235,28 @@ object HikamRepository {
                 contextChecked = true,
                 passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             ),
-            vocalizationSourceUrl = vocalizationSource
+            vocalizationSourceUrl = vocalizationSource,
+            matnBoundaryStatus = obj.optString("matn_boundary_status")
+                .trim()
+                .takeIf(String::isNotBlank),
+            matnPrimarySourceId = obj.optString("matn_primary_source_id")
+                .trim()
+                .takeIf(String::isNotBlank),
+            matnPrimarySourceKind = obj.optString("matn_primary_source_kind")
+                .trim()
+                .takeIf(String::isNotBlank),
+            matnPrimarySourceUrl = primarySourceUrl,
+            matnSnapshotSha256 = obj.optString("matn_snapshot_sha256")
+                .trim()
+                .takeIf(String::isNotBlank),
+            vocalizedSnapshotSha256 = obj.optString("vocalized_snapshot_sha256")
+                .trim()
+                .takeIf(String::isNotBlank),
+            translationMatnSnapshotSha256 =
+                obj.optString("translation_matn_snapshot_sha256")
+                    .trim()
+                    .takeIf(String::isNotBlank),
+            independentWitnessIds = obj.stringList("independent_witness_ids").toSet()
         )
     }
 

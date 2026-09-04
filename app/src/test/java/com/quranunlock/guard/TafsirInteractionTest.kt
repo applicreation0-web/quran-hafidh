@@ -1,6 +1,8 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,5 +52,102 @@ class TafsirInteractionTest {
         classifier.onDown(200f, 100f, 1)
         assertNull(classifier.onUp(50f, 100f, false))
         assertTrue(true)
+    }
+
+    @Test
+    fun jalalaynIsTheDefaultTafsirEdition() {
+        assertEquals(TafsirEditionId.JALALAYN, TafsirEditionId.fromStableId(null))
+        assertEquals(TafsirEditionId.JALALAYN, TafsirEditionId.fromStableId("unknown"))
+    }
+
+    @Test
+    fun partialTafsirCoverageFailsClosedAtExactBoundaries() {
+        assertTrue(TafsirEditionId.QURTUBI.covers(VerseRef(4, 23)))
+        assertFalse(TafsirEditionId.QURTUBI.covers(VerseRef(4, 24)))
+        assertTrue(TafsirEditionId.QUSHAYRI.covers(VerseRef(4, 176)))
+        assertFalse(TafsirEditionId.QUSHAYRI.covers(VerseRef(5, 1)))
+    }
+
+    @Test
+    fun selectorOnlyOffersEditionsThatCoverTheTappedVerse() {
+        assertEquals(
+            listOf(
+                TafsirEditionId.JALALAYN,
+                TafsirEditionId.QURTUBI,
+                TafsirEditionId.QUSHAYRI
+            ),
+            TafsirEditionId.availableFor(VerseRef(4, 23))
+        )
+        assertEquals(
+            listOf(TafsirEditionId.JALALAYN, TafsirEditionId.QUSHAYRI),
+            TafsirEditionId.availableFor(VerseRef(4, 24))
+        )
+        assertEquals(
+            listOf(TafsirEditionId.JALALAYN),
+            TafsirEditionId.availableFor(VerseRef(5, 1))
+        )
+    }
+
+    @Test
+    fun unavailablePreferredEditionFallsBackToJalalayn() {
+        assertEquals(
+            TafsirEditionId.JALALAYN,
+            TafsirEditionId.effectiveFor(VerseRef(4, 24), TafsirEditionId.QURTUBI)
+        )
+        assertEquals(
+            TafsirEditionId.JALALAYN,
+            TafsirEditionId.effectiveFor(VerseRef(5, 1), TafsirEditionId.QUSHAYRI)
+        )
+        assertEquals(
+            TafsirEditionId.QUSHAYRI,
+            TafsirEditionId.effectiveFor(VerseRef(4, 24), TafsirEditionId.QUSHAYRI)
+        )
+    }
+
+    @Test
+    fun tafsirRequestIdentityIncludesEdition() {
+        val verse = VerseRef(2, 85)
+        assertNotEquals(
+            TafsirRequestKey(verse, TafsirEditionId.QUSHAYRI),
+            TafsirRequestKey(verse, TafsirEditionId.QURTUBI)
+        )
+    }
+
+    @Test
+    fun rangeCommentaryKeepsItsSourceRangeLabel() {
+        val entry = TafsirEntry(
+            verse = VerseRef(4, 12),
+            commentaryRuns = listOf(TafsirRun(TafsirRunStyle.REGULAR, "body")),
+            notes = emptyList(),
+            editionId = TafsirEditionId.QURTUBI,
+            verseStart = 11,
+            verseEnd = 14
+        )
+        assertEquals("Commentary on 4:11–14", entry.rangeLabel)
+    }
+
+    @Test
+    fun differentSourceRangesAreNeverCollapsedIntoInventedMinMaxLabel() {
+        val entry = TafsirEntry(
+            verse = VerseRef(4, 12),
+            commentaryRuns = listOf(TafsirRun(TafsirRunStyle.REGULAR, "body")),
+            notes = emptyList(),
+            editionId = TafsirEditionId.QURTUBI,
+            verseStart = 11,
+            verseEnd = 14,
+            segmentCount = 2,
+            sourceRanges = listOf(11..14, 12..12)
+        )
+        assertNull(entry.rangeLabel)
+    }
+
+    @Test
+    fun sourceNoteLabelsArePreservedWithoutRenumberingJalalayn() {
+        val runs = listOf(TafsirRun(TafsirRunStyle.REGULAR, "note"))
+        assertEquals("3", TafsirNote(number = 3, runs = runs).displayLabel)
+        assertEquals(
+            "A",
+            TafsirNote(number = 1, runs = runs, sourceLabel = "A").displayLabel
+        )
     }
 }

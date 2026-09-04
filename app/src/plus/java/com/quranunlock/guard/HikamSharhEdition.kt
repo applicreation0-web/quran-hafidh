@@ -26,7 +26,7 @@ object HikamSharhEdition {
         return HikamCommentator.entries.map { commentator ->
             HikamSharhAvailability(
                 commentator = commentator,
-                entry = entries.firstOrNull {
+                entry = entries.singleOrNull {
                     it.commentator == commentator && it.displayEligible
                 }
             )
@@ -46,8 +46,16 @@ object HikamSharhEdition {
             return emptyMap<Int, List<HikamSharhEntry>>().also { cached = it }
         }
 
-        val parsed = parse(raw)
-        cached = parsed.groupBy(HikamSharhEntry::hikmaNumber)
+        val parsed = runCatching { parse(raw) }.getOrElse {
+            return emptyMap<Int, List<HikamSharhEntry>>().also { cached = it }
+        }
+        val byCanonical = mutableMapOf<Int, MutableList<HikamSharhEntry>>()
+        parsed.forEach { entry ->
+            entry.canonicalHikmaNumbers.forEach { number ->
+                byCanonical.getOrPut(number) { mutableListOf() }.add(entry)
+            }
+        }
+        cached = byCanonical.mapValues { (_, entries) -> entries.toList() }
         return cached.orEmpty()
     }
 
@@ -58,7 +66,7 @@ object HikamSharhEdition {
                 val obj = array.getJSONObject(index)
                 add(parseOne(obj))
             }
-        }
+        }.also(HikamSharhIntegrity::requireUnique)
     }
 
     private fun parseOne(obj: JSONObject): HikamSharhEntry {
@@ -67,10 +75,14 @@ object HikamSharhEdition {
             HikamCommentator.IBN_ABBAD.stableId -> HikamCommentator.IBN_ABBAD
             else -> error("Unsupported Hikam commentator")
         }
+        val canonicalNumbers = obj.requiredIntSet("canonical_hikma_numbers")
+        val primaryCanonical = canonicalNumbers.minOrNull()
+            ?: error("canonical_hikma_numbers must not be empty")
 
         return HikamSharhEntry(
-            hikmaNumber = obj.getInt("source_number"),
+            hikmaNumber = primaryCanonical,
             commentator = commentator,
+            workId = obj.getString("commentary_work_id").trim(),
             workTitle = obj.getString("commentary_work").trim(),
             arabicText = obj.getString("commentary_arabic").trim(),
             frenchText = obj.getString("commentary_french").trim(),
@@ -78,6 +90,9 @@ object HikamSharhEdition {
             printLocator = obj.getString("commentary_print_locator").trim(),
             verified = obj.optString("commentary_status") == "verified" &&
                 obj.optString("translation_status") == "verified",
+            canonicalHikmaNumbers = canonicalNumbers,
+            sourceHikmaLocator = obj.getString("source_hikma_locator").trim(),
+            commentaryGroupId = obj.getString("commentary_group_id").trim(),
             richSpansArabic = obj.richSpans("rich_spans_arabic"),
             richSpansFrench = obj.richSpans("rich_spans_french"),
             technicalTerms = obj.stringSet("technical_terms")
@@ -91,7 +106,7 @@ object HikamSharhEdition {
                 val span = array.getJSONObject(index)
                 val role = runCatching {
                     HikamRichRole.valueOf(span.getString("role").uppercase())
-                }.getOrNull() ?: continue
+                }.getOrNull() ?: error("Unsupported rich span role in $key")
                 add(
                     HikamRichSpan(
                         start = span.getInt("start"),
@@ -115,6 +130,17 @@ object HikamSharhEdition {
                     .takeIf(String::isNotBlank)
                     ?.let(::add)
             }
+        }
+    }
+
+    private fun JSONObject.requiredIntSet(key: String): Set<Int> {
+        val array = getJSONArray(key)
+        return buildSet {
+            for (index in 0 until array.length()) {
+                add(array.getInt(index))
+            }
+        }.also {
+            require(it.isNotEmpty()) { "$key must not be empty" }
         }
     }
 }

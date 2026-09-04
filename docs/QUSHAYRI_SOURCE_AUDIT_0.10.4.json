@@ -1,0 +1,21 @@
+{
+  "status": "PASS_STRUCTURAL_INDEX_ONLY",
+  "source": "Kristin Zahra Sands, Subtle Allusions / Lata'if al-Isharat, user-provided PDF",
+  "source_pdf_sha256": "f5b064cfe8ece67a89aaeea04540a7d79c8ef5a531ce2aff880608621e3e1bd3",
+  "coverage": "Suras 1-4",
+  "expected_canonical_verses": 669,
+  "distinct_verses_mapped": 669,
+  "accepted_anchor_blocks": 807,
+  "range_blocks": 1,
+  "inline_expected_anchors": 5,
+  "verses_with_multiple_segments": 82,
+  "max_segments_for_one_verse": 8,
+  "missing_verses": [],
+  "regressions": {
+    "2:68_mapped": true,
+    "2:83_mapped": true,
+    "2:84_mapped": true,
+    "4:167-169_preserved_as_range": true
+  },
+  "release_note": "This audit verifies structural addressability only. It does not authorize redistribution and does not mark the full English payload ready_for_distribution. Exact commentary boundaries/notes must still be source-verified before the database manifest is activated."
+}

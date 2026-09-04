@@ -1,0 +1,28 @@
+{
+  "status": "PASS_METADATA_INDEX_ONLY",
+  "source": "Tafsir al-Qurtubi, Aisha Abdarrahman Bewley translation, Diwan Press; four-volume English set inspected via Archive.org secondary scan",
+  "coverage": [
+    {"volume": 1, "range": "1:1-2:141"},
+    {"volume": 2, "range": "2:142-2:253"},
+    {"volume": 3, "range": "2:254-3:95"},
+    {"volume": 4, "range": "3:96-4:23"}
+  ],
+  "canonical_verses_covered": 516,
+  "last_available_verse": "4:23",
+  "first_unavailable_verse_after_set": "4:24",
+  "known_structure": [
+    "sura introductions",
+    "single-verse commentary",
+    "multi-verse/range commentary",
+    "source Topic/point subdivisions"
+  ],
+  "sanitization_required": [
+    "remove third-party Sunniconnect insertion",
+    "exclude running headers/footers and tables of contents from commentary",
+    "do not use Archive OCR as final wording authority"
+  ],
+  "quran_text_rule": "Do not replace Quran Safeguard's Hafs Mushaf with the Warsh 'an Nafi' Arabic printed in the Bewley source edition.",
+  "translation_notice": "The translator acknowledges minor omissions and occasional shortening of grammatical/tangential material.",
+  "rights_status": "permission_required_before_distributed_full_text",
+  "release_note": "The runtime/data architecture is implemented, but the Qurtubi payload remains ready_for_distribution=false. No full copyrighted Qurtubi text has been committed by this branch."
+}
