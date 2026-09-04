@@ -2,8 +2,9 @@
 """Fail closed unless a Plus APK embeds exactly the approved tafsir payloads.
 
 Jalalayn remains a frozen legacy corpus and is checked byte-for-byte. New v2 editions
-are driven by the packaged manifest and are accepted only when every distribution,
-rights, source-audit, content-audit and database-integrity gate is explicit.
+are driven by the packaged manifest. A public/distributable corpus must carry an approved
+redistribution-rights status. A strictly personal Plus corpus uses a separate explicit
+private-personal gate and must never be represented as redistribution-approved.
 """
 from __future__ import annotations
 
@@ -29,6 +30,8 @@ JALALAYN_PARTS = [
 V2_MANIFEST = "assets/tafsir/tafsir_v2_manifest.json"
 EXPECTED_V2_IDS = {"qurtubi_en_bewley", "qushayri_en_sands"}
 APPROVED_RIGHTS = {"licensed", "public_domain", "permission_documented"}
+PRIVATE_SCOPE = "private_personal"
+PRIVATE_RIGHTS = "private_personal_only"
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 PART_PATH = re.compile(r"^assets/tafsir/[A-Za-z0-9._-]+\.sqlite\.gz\.part\d{2}$")
 ARABIC_SCRIPT = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff]")
@@ -104,6 +107,8 @@ def parse_manifest(archive: zipfile.ZipFile, names: set[str]) -> list[dict]:
             raise SystemExit(f"{edition_id}: content_language must be English")
         if item.get("arabic_source_text_included") is not False:
             raise SystemExit(f"{edition_id}: Arabic source text must not be bundled")
+        if item.get("ready_for_distribution") is True and item.get("ready_for_private_use") is True:
+            raise SystemExit(f"{edition_id}: public and private readiness cannot both be true")
     return editions
 
 
@@ -119,12 +124,31 @@ def reject_arabic_source_text(connection: sqlite3.Connection, edition_id: str) -
                 )
 
 
+def readiness_mode(spec: dict) -> str | None:
+    public_ready = spec.get("ready_for_distribution") is True
+    private_ready = spec.get("ready_for_private_use") is True
+    if public_ready:
+        return "public_distribution"
+    if private_ready:
+        if spec.get("distribution_scope") != PRIVATE_SCOPE:
+            raise SystemExit(
+                f"{spec.get('edition_id')}: private-ready payload must declare {PRIVATE_SCOPE!r} scope"
+            )
+        if spec.get("rights_status") != PRIVATE_RIGHTS:
+            raise SystemExit(
+                f"{spec.get('edition_id')}: private-ready payload must declare {PRIVATE_RIGHTS!r}"
+            )
+        return PRIVATE_SCOPE
+    return None
+
+
 def verify_v2(
     archive: zipfile.ZipFile,
     names: set[str],
     editions: list[dict],
-) -> set[str]:
+) -> tuple[set[str], list[str]]:
     approved_parts: set[str] = set()
+    active: list[str] = []
     for spec in editions:
         edition_id = str(spec["edition_id"])
         parts = spec.get("asset_parts")
@@ -139,19 +163,19 @@ def verify_v2(
         if any(not PART_PATH.fullmatch(part) for part in normalized_parts):
             raise SystemExit(f"{edition_id}: unsafe asset part path")
 
-        ready = spec.get("ready_for_distribution") is True
-        if not ready:
+        mode = readiness_mode(spec)
+        if mode is None:
             if parts or str(spec.get("database_sha256", "")).strip():
-                raise SystemExit(
-                    f"{edition_id}: non-distributable edition must not carry payload/hash"
-                )
+                raise SystemExit(f"{edition_id}: inactive edition must not carry payload/hash")
             continue
 
         if spec.get("schema_version") != "tafsir-v2":
             raise SystemExit(f"{edition_id}: wrong schema gate")
         rights = str(spec.get("rights_status", ""))
-        if rights not in APPROVED_RIGHTS:
+        if mode == "public_distribution" and rights not in APPROVED_RIGHTS:
             raise SystemExit(f"{edition_id}: redistribution rights not approved")
+        if mode == PRIVATE_SCOPE and rights != PRIVATE_RIGHTS:
+            raise SystemExit(f"{edition_id}: private-personal rights marker mismatch")
         if spec.get("source_audit_status") != "verified":
             raise SystemExit(f"{edition_id}: source audit not verified")
         if spec.get("content_audit_status") != "verified":
@@ -189,6 +213,11 @@ def verify_v2(
                 raise SystemExit(f"{edition_id}: DB edition metadata mismatch")
             if metadata(connection, "rights_status") != rights:
                 raise SystemExit(f"{edition_id}: DB rights metadata mismatch")
+            if mode == PRIVATE_SCOPE:
+                if metadata(connection, "distribution_scope") != PRIVATE_SCOPE:
+                    raise SystemExit(f"{edition_id}: DB private scope metadata mismatch")
+                if metadata(connection, "private_personal_build_authorized") != "true":
+                    raise SystemExit(f"{edition_id}: DB private authorization marker missing")
             if metadata(connection, "source_audit_status") != "verified":
                 raise SystemExit(f"{edition_id}: DB source audit metadata mismatch")
             if metadata(connection, "content_audit_status") != "verified":
@@ -203,16 +232,16 @@ def verify_v2(
             ).fetchone()[0]
             if expected_mapped <= 0 or actual_mapped != expected_mapped:
                 raise SystemExit(
-                    f"{edition_id}: mapped verse count mismatch "
-                    f"{actual_mapped}/{expected_mapped}"
+                    f"{edition_id}: mapped verse count mismatch {actual_mapped}/{expected_mapped}"
                 )
             reject_arabic_source_text(connection, edition_id)
         finally:
             connection.close()
             temporary.close()
         approved_parts.update(normalized_parts)
+        active.append(f"{edition_id}:{mode}")
 
-    return approved_parts
+    return approved_parts, active
 
 
 def main() -> None:
@@ -226,7 +255,8 @@ def main() -> None:
         names = set(archive.namelist())
         approved_assets = verify_jalalayn(archive, names)
         editions = parse_manifest(archive, names)
-        approved_assets |= verify_v2(archive, names, editions)
+        v2_assets, active = verify_v2(archive, names, editions)
+        approved_assets |= v2_assets
         approved_assets.add(V2_MANIFEST)
 
         actual_tafsir_assets = {
@@ -246,14 +276,9 @@ def main() -> None:
                 + ", ".join(sorted(missing_approved))
             )
 
-    ready_ids = [
-        str(item["edition_id"])
-        for item in editions
-        if item.get("ready_for_distribution") is True
-    ]
     print(
         "Verified Plus APK tafsir corpus: frozen Jalalayn 6236/427; "
-        f"approved v2 editions={ready_ids or 'none (fail-closed scaffold)'}"
+        f"active v2 editions={active or 'none (fail-closed scaffold)'}"
     )
 
 
