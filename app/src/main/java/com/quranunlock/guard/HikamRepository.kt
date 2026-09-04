@@ -22,7 +22,11 @@ data class HikmaEntry(
     val verification: ClassicalVerification,
     val textIntegrity: ClassicalTextIntegrity,
     val canonicalArabicText: String = arabicText,
-    val vocalizationSourceUrl: String? = null
+    val vocalizationSourceUrl: String? = null,
+    val matnBoundaryStatus: String? = null,
+    val matnSnapshotSha256: String? = null,
+    val translationMatnSnapshotSha256: String? = null,
+    val independentWitnessIds: Set<String> = emptySet()
 ) {
     val displayEligible: Boolean
         get() =
@@ -34,6 +38,17 @@ data class HikmaEntry(
                 source.documentaryComplete &&
                 verification.displayEligible &&
                 textIntegrity.allows(canonicalArabicText, frenchText)
+
+    /**
+     * 0.10.4 release-level matn gate. Kept separate from displayEligible while the
+     * full 264/264 source-boundary re-audit is still being completed.
+     */
+    val matnReleaseEligible: Boolean
+        get() =
+            matnBoundaryStatus == "verified" &&
+                !matnSnapshotSha256.isNullOrBlank() &&
+                translationMatnSnapshotSha256 == matnSnapshotSha256 &&
+                independentWitnessIds.size >= 2
 }
 
 object HikamRepository {
@@ -168,6 +183,10 @@ object HikamRepository {
                 append(it)
             }
         }
+        val canonicalSourceUrl = obj.optString("matn_primary_source_url")
+            .trim()
+            .takeIf(String::isNotBlank)
+            ?: verificationSources.firstOrNull().orEmpty()
 
         return HikmaEntry(
             canonicalId = "hikma_$sourceNumber",
@@ -181,10 +200,12 @@ object HikamRepository {
                 author = "Ibn ʿAṭāʾ Allāh al-Iskandarī",
                 workTitle = "Al-Hikam al-ʿAṭāʾiyya",
                 edition = obj.getString("source_edition"),
-                editor = "ʿĀṣim Ibrāhīm al-Kayyālī",
+                editor = obj.optString("source_editor")
+                    .trim()
+                    .takeIf(String::isNotBlank),
                 volume = null,
                 locator = locator,
-                sourceUrl = verificationSources.firstOrNull().orEmpty(),
+                sourceUrl = canonicalSourceUrl,
                 translator = "Traduction interne Quran Safeguard"
             ),
             verification = verification,
@@ -195,7 +216,18 @@ object HikamRepository {
                 contextChecked = true,
                 passageRole = ClassicalPassageRole.AUTHOR_OWN_WORDS
             ),
-            vocalizationSourceUrl = vocalizationSource
+            vocalizationSourceUrl = vocalizationSource,
+            matnBoundaryStatus = obj.optString("matn_boundary_status")
+                .trim()
+                .takeIf(String::isNotBlank),
+            matnSnapshotSha256 = obj.optString("matn_snapshot_sha256")
+                .trim()
+                .takeIf(String::isNotBlank),
+            translationMatnSnapshotSha256 =
+                obj.optString("translation_matn_snapshot_sha256")
+                    .trim()
+                    .takeIf(String::isNotBlank),
+            independentWitnessIds = obj.stringList("independent_witness_ids").toSet()
         )
     }
 
