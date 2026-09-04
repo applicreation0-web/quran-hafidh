@@ -11,7 +11,7 @@ V2={
  'qushayri':{'parts':[f'assets/tafsir/qushayri_en.sqlite.gz.b64.part{i:02d}' for i in range(1)],'archive_sha':'56b1e78ad6e8fea5302b6ca9773f65b8ba48cb3f1cf9475ed8b57b93f9309a68','db_sha':'4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b','entries':806,'coverage':{1:7,2:286,3:200,4:176}},
  'qurtubi':{'parts':[f'assets/tafsir/qurtubi_en.sqlite.gz.b64.part{i:02d}' for i in range(4)],'archive_sha':'fff869e3504affa565cfbfaf321a22f4ad47f6108da87bc0ebfa287084a7cad9','db_sha':'4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e','entries':432,'coverage':{1:7,2:286,3:200,4:22}},
 }
-ARABIC=re.compile(r'[\u0600-\u06ff]')
+ARABIC=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 PUA=re.compile(r'[\ue000-\uf8ff]')
 QSH_HEADER=re.compile(r'(?:^|\n\n)(?:\d+\s*\|\s*•|•\s*Laṭāʾif|Subtle Allusions\s*\[|Laṭāʾif al-ishārāt\s*\[)')
 QSH_SURA_HEADING=re.compile(r'(?:^|\n\n)S(?:ūrat|urāt|ūra)\b',re.I)
