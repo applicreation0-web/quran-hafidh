@@ -3,7 +3,13 @@ package com.applicreation0.quransafeguard
 import android.content.Context
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -226,11 +232,61 @@ object TafsirEdition {
         )
     }
 
+    suspend fun load(context: Context, verse: VerseRef): TafsirEntry? =
+        load(context, verse, TafsirReaderPreferences.selectedEdition(context))
+
     suspend fun load(
         context: Context,
         verse: VerseRef,
         editionId: TafsirEditionId
     ): TafsirEntry? = TafsirRepository.load(context, verse, editionId)
+
+    /**
+     * Backward-compatible entry point used by the challenge reader.
+     *
+     * It deliberately self-loads the persisted edition so the 0.10.3 challenge
+     * activity does not need a risky structural rewrite just to gain the selector.
+     */
+    @Composable
+    fun Panel(
+        verse: VerseRef,
+        state: TafsirLoadState,
+        modifier: Modifier,
+        maxPanelHeight: Dp,
+        onPanelTopInWindow: (Int) -> Unit
+    ) {
+        val context = LocalContext.current
+        var editionId by remember {
+            mutableStateOf(TafsirReaderPreferences.selectedEdition(context))
+        }
+        var localState by remember(verse, editionId) {
+            mutableStateOf<TafsirLoadState>(TafsirLoadState.Loading)
+        }
+        LaunchedEffect(verse, editionId) {
+            localState = TafsirLoadState.Loading
+            val requestKey = TafsirRequestKey(verse, editionId)
+            val entry = load(context, requestKey.verse, requestKey.editionId)
+            if (editionId == requestKey.editionId) {
+                localState = if (entry == null) {
+                    TafsirLoadState.Unavailable
+                } else {
+                    TafsirLoadState.Available(entry)
+                }
+            }
+        }
+        TafsirPanel(
+            verse = verse,
+            editionId = editionId,
+            state = localState,
+            modifier = modifier,
+            maxPanelHeight = maxPanelHeight,
+            onEditionChange = { next ->
+                editionId = next
+                TafsirReaderPreferences.setSelectedEdition(context, next)
+            },
+            onPanelTopInWindow = onPanelTopInWindow
+        )
+    }
 
     @Composable
     fun Panel(
