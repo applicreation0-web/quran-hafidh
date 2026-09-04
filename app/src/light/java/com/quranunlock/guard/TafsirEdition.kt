@@ -24,14 +24,20 @@ object TafsirEdition {
 
     fun closeAndRestore() = Unit
 
-    suspend fun load(context: Context, verse: VerseRef): TafsirEntry? = null
+    suspend fun load(
+        context: Context,
+        verse: VerseRef,
+        editionId: TafsirEditionId
+    ): TafsirEntry? = null
 
     @Composable
     fun Panel(
         verse: VerseRef,
+        editionId: TafsirEditionId,
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
+        onEditionChange: (TafsirEditionId) -> Unit,
         onPanelTopInWindow: (Int) -> Unit
     ) = Unit
 }
