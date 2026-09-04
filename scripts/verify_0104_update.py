@@ -43,7 +43,7 @@ req('Missing required Qurtubi source volume' in qurtubi_builder and 'coverage ga
 
 specs={'qushayri':(1,'4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b',806),'qurtubi':(4,'4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e',432)}
 coverage={'qushayri':{1:7,2:286,3:200,4:176},'qurtubi':{1:7,2:286,3:200,4:22}}
-arabic=re.compile(r'[\u0600-\u06ff]')
+arabic=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 pua=re.compile(r'[\ue000-\uf8ff]')
 qsh_header=re.compile(r'(?:^|\n\n)(?:\d+\s*\|\s*•|•\s*Laṭāʾif|Subtle Allusions\s*\[|Laṭāʾif al-ishārāt\s*\[)')
 qsh_sura_heading=re.compile(r'(?:^|\n\n)S(?:ūrat|urāt|ūra)\b',re.I)
