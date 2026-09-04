@@ -1,10 +1,18 @@
 import fitz,re,sqlite3,json,hashlib,gzip,os,collections
 PDF=os.environ.get('QUSHAYRI_PDF','/mnt/data/tafsir-src/lataif.pdf')
 OUT=os.environ.get('QUSHAYRI_OUT','/mnt/data/qushayri_en.sqlite')
+EXPECTED_SOURCE_SHA256='f5b064cfe8ece67a89aaeea04540a7d79c8ef5a531ce2aff880608621e3e1bd3'
 anchor_re=re.compile(r'^\[(\d+):(\d+)(?:[\u2013\u2014-](\d+))?\]\s*')
 sura_heading_re=re.compile(r'^S(?:ūrat|urāt|ūra)\b', re.I)
 header_re=re.compile(r'^(Subtle Allusions\s+\[|Laṭāʾif al-ishārāt\s+\[|\d+\s*\|\s*•|•\s*Laṭāʾif)')
 pua_re=re.compile(r'[\ue000-\uf8ff]')
+arabic_re=re.compile(r'[\u0600-\u06ff\u0750-\u077f]')
+
+def file_sha256(path):
+    h=hashlib.sha256()
+    with open(path,'rb') as f:
+        for chunk in iter(lambda:f.read(1024*1024),b''): h.update(chunk)
+    return h.hexdigest()
 
 def line_info(line):
     spans=line['spans']; text=''.join(s['text'] for s in spans).replace('\u00ad','')
@@ -48,6 +56,12 @@ def finish_current(current,segments):
     del current['body']; del current['translation_parts']
     segments.append(current)
     return None
+
+if not os.path.isfile(PDF):
+    raise RuntimeError(f'Missing required Qushayri source PDF: {PDF}')
+source_sha=file_sha256(PDF)
+if source_sha!=EXPECTED_SOURCE_SHA256:
+    raise RuntimeError(f'Qushayri source SHA-256 mismatch: {source_sha}')
 
 doc=fitz.open(PDF)
 segments=[]
@@ -131,6 +145,8 @@ for r in rows:
     joined=r['translation']+' '+r['commentary']
     if pua_re.search(joined):
         raise RuntimeError('Qushayri private-use PDF glyph leaked into corpus')
+    if arabic_re.search(joined):
+        raise RuntimeError(f'Qushayri Arabic source text leaked into row: {r["surah"]}:{r["start"]}-{r["end"]}')
     if '| • Laṭāʾif al-ishārāt' in joined or sura_heading_re.search(r['commentary']):
         raise RuntimeError('Qushayri page/sura heading leaked into verse commentary')
 
@@ -157,7 +173,7 @@ meta={
  'schema_version':'2','edition_id':'qushayri','display_name':'Qushayri',
  'author':'Abu l-Qasim Abd al-Karim al-Qushayri','work':'Lataif al-Isharat / Subtle Allusions',
  'translator':'Kristin Zahra Sands','language':'English','coverage':'Suras 1-4','arabic_included':'false',
- 'english_verse_translation_included':'true','source_pdf_sha256':hashlib.sha256(open(PDF,'rb').read()).hexdigest(),
+ 'english_verse_translation_included':'true','source_pdf_sha256':source_sha,
  'entry_count':str(len(rows))
 }
 con.executemany('INSERT INTO source_metadata(key,value) VALUES (?,?)',meta.items())
