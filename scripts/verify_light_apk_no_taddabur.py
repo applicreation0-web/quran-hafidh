@@ -4,14 +4,15 @@ import argparse
 import zipfile
 from pathlib import Path
 
-FORBIDDEN = (
-    b"TaddaburActivity",
-    b"taddabur_prefs",
-    b"TADDABUR_DEADLINE",
-    b"TADDABUR âTADDABUR \xe2TADDABUR \xe2\x80¢TADDABUR \xe2\x80\xa2 PLUS",
-    b"pool fixe 1âpool fixe 1\xe2pool fixe 1\xe2\x80pool fixe 1\xe2\x80\x9360",
-    b"Blocage Taddabur actif jusquâBlocage Taddabur actif jusqu\xe2Blocage Taddabur actif jusqu\xe2\x80Blocage Taddabur actif jusqu\xe2\x80\x99ÃBlocage Taddabur actif jusqu\xe2\x80\x99\xc3 Blocage Taddabur actif jusqu\xe2\x80\x99\xc3\xa0 minuit",
+FORBIDDEN_TEXT = (
+    "TaddaburActivity",
+    "taddabur_prefs",
+    "com.applicreation0.quransafeguard.TADDABUR_DEADLINE",
+    "TADDABUR • PLUS",
+    "pool fixe 1–60",
+    "Blocage Taddabur actif jusqu’à minuit",
 )
+FORBIDDEN = tuple(text.encode("utf-8") for text in FORBIDDEN_TEXT)
 
 def main() -> None:
     ap = argparse.ArgumentParser()
@@ -24,10 +25,10 @@ def main() -> None:
             if info.file_size > 32 * 1024 * 1024:
                 continue
             payload = archive.read(info)
-            for marker in FORBIDDEN:
+            for marker, label in zip(FORBIDDEN, FORBIDDEN_TEXT):
                 if marker in payload:
                     raise SystemExit(
-                        f"Plus-only Taddabur marker {marker!r} leaked into Light: {info.filename}"
+                        f"Plus-only Taddabur marker {label!r} leaked into Light: {info.filename}"
                     )
     print("Verified Light APK: no Taddabur activity, storage, reminder or Plus UI payload")
 
