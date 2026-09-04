@@ -47,8 +47,12 @@ data class TafsirRequestKey(
 
 data class TafsirNote(
     val number: Int,
-    val runs: List<TafsirRun>
-)
+    val runs: List<TafsirRun>,
+    val sourceLabel: String? = null
+) {
+    val displayLabel: String
+        get() = sourceLabel?.trim()?.takeIf(String::isNotBlank) ?: number.toString()
+}
 
 data class TafsirEntry(
     val verse: VerseRef,
@@ -57,13 +61,19 @@ data class TafsirEntry(
     val editionId: TafsirEditionId = TafsirEditionId.JALALAYN,
     val verseStart: Int = verse.ayah,
     val verseEnd: Int = verse.ayah,
-    val segmentCount: Int = 1
+    val segmentCount: Int = 1,
+    val sourceRanges: List<IntRange> = listOf(verseStart..verseEnd)
 ) {
     val rangeLabel: String?
-        get() = if (verseEnd > verseStart) {
-            "Commentary on ${verse.surah}:$verseStart–$verseEnd"
-        } else {
-            null
+        get() {
+            val distinct = sourceRanges.distinct()
+            if (distinct.size != 1) return null
+            val range = distinct.single()
+            return if (range.last > range.first) {
+                "Commentary on ${verse.surah}:${range.first}–${range.last}"
+            } else {
+                null
+            }
         }
 }
 
