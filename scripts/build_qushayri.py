@@ -2,7 +2,9 @@ import fitz,re,sqlite3,json,hashlib,gzip,os,collections
 PDF=os.environ.get('QUSHAYRI_PDF','/mnt/data/tafsir-src/lataif.pdf')
 OUT=os.environ.get('QUSHAYRI_OUT','/mnt/data/qushayri_en.sqlite')
 anchor_re=re.compile(r'^\[(\d+):(\d+)(?:[\u2013\u2014-](\d+))?\]\s*')
+sura_heading_re=re.compile(r'^S(?:ūrat|urāt|ūra)\b', re.I)
 header_re=re.compile(r'^(Subtle Allusions\s+\[|Laṭāʾif al-ishārāt\s+\[|\d+\s*\|\s*•|•\s*Laṭāʾif)')
+pua_re=re.compile(r'[\ue000-\uf8ff]')
 
 def line_info(line):
     spans=line['spans']; text=''.join(s['text'] for s in spans).replace('\u00ad','')
@@ -29,7 +31,7 @@ def normalize(parts):
             if buf:
                 out.append(' '.join(buf).strip()); buf=[]
             continue
-        t=p.strip()
+        t=pua_re.sub('',p).strip()
         if not t: continue
         buf.append(t)
     if buf: out.append(' '.join(buf).strip())
@@ -38,6 +40,14 @@ def normalize(parts):
     text=re.sub(r'[ \t]+',' ',text)
     text=re.sub(r' *\n\n *','\n\n',text)
     return text.strip()
+
+def finish_current(current,segments):
+    if not current: return None
+    current['commentary']=normalize(current['body'])
+    current['translation']=normalize(current['translation_parts'])
+    del current['body']; del current['translation_parts']
+    segments.append(current)
+    return None
 
 doc=fitz.open(PDF)
 segments=[]
@@ -54,19 +64,21 @@ for pi in range(37,506):
             st=text.strip()
             if not st: continue
             if re.fullmatch(r'\d+',st): continue
-            if st.startswith('Subtle Allusions ') or st.startswith('Laṭāʾif al-ishārāt '): continue
+            if header_re.match(st): continue
+            if sura_heading_re.match(st):
+                current=finish_current(current,segments)
+                continue
             if is_arabic_line(fonts,st): continue
             if sizes and max(sizes) <= 9.4: continue
             page_lines.append((bi,li,st,fonts,sizes,y0))
     prev_block=None
     for bi,li,st,fonts,sizes,y0 in page_lines:
         m=anchor_re.match(st)
-        if m:
-            if current:
-                current['commentary']=normalize(current['body'])
-                current['translation']=normalize(current['translation_parts'])
-                del current['body']; del current['translation_parts']
-                segments.append(current)
+        # Genuine verse translations use the book's italic verse typography.
+        # Bare regular-font references such as "[58:18]" inside commentary
+        # are cross-references and must never open a new Tafsir segment.
+        if m and any('Italic' in f for f in fonts):
+            current=finish_current(current,segments)
             s=int(m.group(1)); a1=int(m.group(2)); a2=int(m.group(3) or a1)
             rest=st[m.end():].strip()
             current={'surah':s,'start':a1,'end':a2,'translation_parts':[],'body':[],'page':pi+1}
@@ -81,10 +93,11 @@ for pi in range(37,506):
                 current['body'].append(None)
             current['body'].append(st)
         prev_block=bi
-if current:
-    current['commentary']=normalize(current['body']); current['translation']=normalize(current['translation_parts'])
-    del current['body']; del current['translation_parts']; segments.append(current)
+current=finish_current(current,segments)
 
+# 2:68 is typographically exceptional: its reference sits mid-sentence rather
+# than at the start of an italic verse-translation line. Extract only that exact
+# source passage; do not reconstruct or paraphrase it.
 if not any(s['surah']==2 and s['start']<=68<=s['end'] for s in segments):
     p68=doc[118]
     lines=[]
@@ -98,7 +111,7 @@ if not any(s['surah']==2 and s['start']<=68<=s['end'] for s in segments):
             lines.append((st,fonts))
     start=next(i for i,(t,_) in enumerate(lines) if 'When He said: “She is a cow neither old' in t)
     end=next(i for i,(t,_) in enumerate(lines[start:],start) if 'yet retains some of the vigor of his youth.' in t)
-    raw=' '.join(t for t,_ in lines[start:end+1])
+    raw=pua_re.sub('',' '.join(t for t,_ in lines[start:end+1]))
     raw=re.sub(r'([A-Za-z])-\s+([a-z])',r'\1\2',raw)
     raw=re.sub(r'\s+',' ',raw).strip()
     m=re.search(r'When He said: “(?P<tr>.+?)” \[2:68\], it meant (?P<com>.+)$',raw)
@@ -111,6 +124,15 @@ counts=collections.Counter(); rows=[]
 for s in segments:
     key=(s['surah'],s['start'],s['end']); counts[key]+=1
     s['segment_no']=counts[key]; rows.append(s)
+
+if len(rows)!=806:
+    raise RuntimeError(f'Qushayri approved segment count changed: {len(rows)} != 806')
+for r in rows:
+    joined=r['translation']+' '+r['commentary']
+    if pua_re.search(joined):
+        raise RuntimeError('Qushayri private-use PDF glyph leaked into corpus')
+    if '| • Laṭāʾif al-ishārāt' in joined or sura_heading_re.search(r['commentary']):
+        raise RuntimeError('Qushayri page/sura heading leaked into verse commentary')
 
 if os.path.exists(OUT): os.remove(OUT)
 con=sqlite3.connect(OUT)
@@ -149,6 +171,7 @@ expected={1:7,2:286,3:200,4:176}
 print('segments',len(rows))
 for s,n in expected.items():
  missing=[a for a in range(1,n+1) if a not in cov[s]]
+ if missing: raise RuntimeError(f'Qushayri coverage gap in sura {s}: {missing[:25]}')
  print('sura',s,'covered',len(cov[s]),'missing',len(missing),missing[:25])
 print('repeated exact anchors',sum(1 for v in counts.values() if v>1),'max segments',max(counts.values()))
 print('db bytes',os.path.getsize(OUT),'sha256',hashlib.sha256(open(OUT,'rb').read()).hexdigest())
