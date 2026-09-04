@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - work/0.10.4-integrated-final
+  pull_request:
+    branches:
+      - release/0.10.4-multitafsir
   workflow_dispatch:
 
 jobs:
