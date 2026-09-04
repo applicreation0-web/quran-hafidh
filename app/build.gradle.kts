@@ -310,7 +310,6 @@ val verifyPrivacyBoundary by tasks.registering {
     }
 }
 
-
 val verifyUnlockBudgetIntegrity by tasks.registering {
     doLast {
         val service = file(
@@ -333,6 +332,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         ).readText()
         val reader = file(
             "src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
+        ).readText()
+        val gestureTests = file(
+            "src/test/java/com/quranunlock/guard/ReaderGestureClassifierTest.kt"
         ).readText()
         val targetReturn = file(
             "src/main/java/com/quranunlock/guard/TargetReturnCoordinator.kt"
@@ -400,7 +402,14 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(gate.contains("Filtre matinal • 20 pages"))
         check(gate.contains("Palier de 90 minutes • 10 pages"))
         check(reader.contains("Valider et avancer"))
-        check(reader.contains("Balayez vers la gauche pour avancer"))
+        check(reader.contains("Balayez vers la droite pour avancer"))
+        check(
+            gestureTests.contains("fun swipeRightAdvancesArabicBook(") &&
+                gestureTests.contains("fun swipeLeftReturnsToPreviousPage(") &&
+                gestureTests.contains("fun verticalScrollIsNotMisclassifiedAsPageTurn(")
+        ) {
+            "Arabic-book RTL navigation requires right-next/left-previous regression tests."
+        }
         check(reader.contains("READING_QUOTA_REACHED"))
         check(reader.contains("Quota atteint • sortie libre • lecture facultative"))
         check(reader.contains("Ouvrir l’application cible"))
@@ -511,7 +520,6 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         )
     }
 }
-
 
 val verifyProtectedOnlyBoundary by tasks.registering {
     doLast {
