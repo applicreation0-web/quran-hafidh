@@ -15,7 +15,9 @@ renderer=read('app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt')
 light=read('app/src/light/java/com/quranunlock/guard/TafsirEdition.kt')
 legacy_repo=read('app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt')
 light_apk_checker=read('scripts/verify_light_apk_no_tafsir.py')
+qurtubi_builder=read('scripts/build_qurtubi.py')
 req('MultiTafsirPanel(' in edition,'existing Plus panel is not routed through multi-tafsir controller')
+req('suspend fun load(context: Context, verse: VerseRef): TafsirEntry? = null' in edition,'obsolete shared-reader hook must not trigger a parallel Jalalayn load in Plus')
 req('QURTUBI("qurtubi", "Qurtubi")' in repo and 'QUSHAYRI("qushayri", "Qushayri")' in repo,'edition ids missing')
 req('MultiTafsirRequestKey' in repo,'multi-source request key missing')
 req('remember(verse, selectedEdition)' in controller,'edition/verse changes must create a fresh load state')
@@ -32,8 +34,11 @@ req('expectedEntries = 806' in repo and '4356e836e8e14818f6b4f5007eeac12454cb388
 req('Base64.decode' in repo and 'OPEN_READONLY' in repo,'read-only/base64 materialization guard missing')
 req('al_jalalayn_en.sqlite' in legacy_repo and '6_236' in legacy_repo and '26d8715a' in legacy_repo,'Jalalayn golden repository changed')
 req('qurtubi' in light_apk_checker.lower() and 'qushayri' in light_apk_checker.lower(), 'Light APK checker must explicitly reject Qurtubi and Qushayri markers')
+req("'v1':'a791ec1313fa2401abe7ca25ac7ccb4bedb1afcb51f2c779160a71e98a6f04cb'" in qurtubi_builder and "'v4':'eb71cb2ed8c2497cc8a5d3634b3eeb7788fdc7caee9de5d6b50349fb8619965c'" in qurtubi_builder,'Qurtubi builder must pin all four approved source volumes')
+req('Missing required Qurtubi source volume' in qurtubi_builder and 'coverage gap in sura' in qurtubi_builder,'Qurtubi builder must fail closed on missing volumes or verse coverage')
 
 specs={'qushayri':(1,'4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b',806),'qurtubi':(4,'4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e',432)}
+coverage={'qushayri':{1:7,2:286,3:200,4:176},'qurtubi':{1:7,2:286,3:200,4:22}}
 arabic=re.compile(r'[\u0600-\u06ff]')
 pua=re.compile(r'[\ue000-\uf8ff]')
 qsh_header=re.compile(r'(?:^|\n\n)(?:\d+\s*\|\s*•|•\s*Laṭāʾif|Subtle Allusions\s*\[|Laṭāʾif al-ishārāt\s*\[)')
@@ -53,19 +58,17 @@ for name,(parts,dbsha,count) in specs.items():
             text_rows=list(con.execute('select verse_translation,commentary from tafsir_entry'))
             req(not any(arabic.search((tr or '')+(co or '')) for tr,co in text_rows),f'{name} contains Arabic source text')
             req(not any(pua.search((tr or '')+(co or '')) for tr,co in text_rows),f'{name} contains private-use PDF glyphs')
+            for surah,last_ayah in coverage[name].items():
+                missing=[ayah for ayah in range(1,last_ayah+1) if con.execute('select count(*) from tafsir_entry where surah=? and verse_start<=? and verse_end>=?',(surah,ayah,ayah)).fetchone()[0]<1]
+                req(not missing,f'{name} exhaustive coverage gap in sura {surah}: {missing[:25]}')
             if name=='qushayri':
                 req(meta.get('english_verse_translation_included')=='true','Qushayri English verse translation flag missing')
+                req(con.execute("select count(*) from tafsir_entry where trim(verse_translation)<>''").fetchone()[0]==count,'Qushayri English verse translation must be retained for every approved segment')
                 req(con.execute('select count(*) from tafsir_entry where surah=2 and verse_start<=68 and verse_end>=68').fetchone()[0]>=1,'Qushayri 2:68 missing')
                 req(con.execute('select count(*) from tafsir_entry where surah=4 and verse_start<=168 and verse_end>=168').fetchone()[0]>=1,'Qushayri 4:167-169 mapping missing')
                 req(con.execute('select max(length(commentary)) from tafsir_entry').fetchone()[0]>=12000,'Qushayri long commentary appears truncated')
                 req(not any(qsh_header.search(co or '') for _,co in text_rows),'Qushayri page header leaked into commentary')
                 req(not any(qsh_sura_heading.search(co or '') for _,co in text_rows),'Qushayri Sura introduction leaked into previous verse')
-                false_refs={(58,18),(3,26),(4,70)}
-                for s,a in false_refs:
-                    # These are known source cross-references that previously created false anchors.
-                    if s<=4:
-                        # A real verse with the same number must still exist; the guard is the fixed total/hash.
-                        continue
             else:
                 req(con.execute("select count(*) from tafsir_entry where lower(verse_translation||' '||commentary) like '%sunniconnect%'").fetchone()[0]==0,'Qurtubi scan contamination')
                 r=con.execute('select verse_start,verse_end,length(commentary) from tafsir_entry where surah=4 and verse_start<=12 and verse_end>=12').fetchone()
@@ -75,10 +78,11 @@ for name,(parts,dbsha,count) in specs.items():
         finally: con.close()
 print('0.10.4 multi-tafsir source audit: PASS')
 print('- Jalalayn legacy corpus untouched; Qushayri 806 genuine segments; Qurtubi 432 blocks')
+print('- Qushayri Arabic source text excluded and every approved segment retains its English verse translation')
 print('- Qushayri false cross-reference anchors, Sura-intro leakage and private-use glyphs are blocked')
-print('- Qushayri English verse translations preserved; Arabic source text absent')
+print('- Qurtubi all four pinned volumes are mandatory; exhaustive verse coverage is release-blocking')
 print('- Qurtubi volumes 1-4 mapped through 4:22; 4:23 fail-closed')
 print('- long Qushayri/Qurtubi commentary blocks retained without truncation')
-print('- single 0.10.3-derived renderer retained with compact selector')
+print('- single 0.10.3-derived renderer retained with compact selector and no duplicate Jalalayn I/O')
 print('- Light remains tafsir-free and explicitly rejects all 3 edition markers')
 print('- Plus selector reload/race guards present')
