@@ -105,6 +105,8 @@ jobs:
           "${tools}/apksigner" verify --verbose --print-certs "${plus_apk}" | tee "${release_dir}/plus-signature.txt"
           grep -Fq "Verified using v2 scheme (APK Signature Scheme v2): true" "${release_dir}/light-signature.txt"
           grep -Fq "Verified using v3 scheme (APK Signature Scheme v3): true" "${release_dir}/light-signature.txt"
+          grep -Fq "Verified using v2 scheme (APK Signature Scheme v2): true" "${release_dir}/plus-signature.txt"
+          grep -Fq "Verified using v3 scheme (APK Signature Scheme v3): true" "${release_dir}/plus-signature.txt"
           grep -Fq "Signer #1 certificate SHA-256 digest: 6c706f4ea44ef667d0b9698c07a39e929b1e286d2397665504411dedb37457ac" "${release_dir}/light-signature.txt"
           grep -Fq "Signer #1 certificate SHA-256 digest: 1843d245832549afc6333ab77a587649a14fedb1f4acc9c08f367c3f0301d989" "${release_dir}/plus-signature.txt"
           test "$(apkanalyzer manifest application-id "${light_apk}")" = "com.applicreation0.quransafeguard"
@@ -132,7 +134,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin main
-          existing="$(git log origin/main --format='%H' --grep='^Finalize Quran Safeguard 0.10.4 version metadata$' -1 || true)"
+          existing="$(git log origin/main --format='%H' --grep='^Finalize Quran Safeguard 0.10.4 version metadata \[skip ci\]$' -1 || true)"
           if [ -n "${existing}" ] && [ "$(git rev-parse "${existing}^")" = "${GITHUB_SHA}" ]; then
             release_source_sha="${existing}"
           else
@@ -141,7 +143,7 @@ jobs:
               echo "Prepared 0.10.4 version metadata was not captured in source history."
               exit 1
             fi
-            git commit -m "Finalize Quran Safeguard 0.10.4 version metadata"
+            git commit -m "Finalize Quran Safeguard 0.10.4 version metadata [skip ci]"
             git push origin HEAD:main
             release_source_sha="$(git rev-parse HEAD)"
           fi
