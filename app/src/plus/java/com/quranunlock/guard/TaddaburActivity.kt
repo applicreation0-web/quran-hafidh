@@ -293,7 +293,8 @@ private fun TaddaburMushafWebView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.WHITE)
+                // Warm ivory only: Quran Safeguard deliberately has no black/dark reading mode.
+                setBackgroundColor(android.graphics.Color.rgb(247, 242, 232))
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
@@ -329,7 +330,7 @@ private fun TaddaburMushafWebView(
                     <head>
                       <meta name="viewport" content="width=device-width, initial-scale=1.0">
                       <style>
-                        html, body { margin:0; padding:0; background:#fff; width:100%; min-height:100%; overflow-x:hidden; }
+                        html, body { margin:0; padding:0; background:#F7F2E8; width:100%; min-height:100%; overflow-x:hidden; }
                         svg { display:block; width:100%; height:auto; max-width:100%; }
                       </style>
                     </head>
