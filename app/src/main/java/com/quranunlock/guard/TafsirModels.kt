@@ -37,6 +37,22 @@ enum class TafsirEditionId(
     companion object {
         fun fromStableId(value: String?): TafsirEditionId =
             entries.firstOrNull { it.stableId == value } ?: JALALAYN
+
+        /**
+         * Only editions whose reviewed source covers the tapped verse are offered.
+         * Jalalayn is always the baseline/default edition.
+         */
+        fun availableFor(verse: VerseRef): List<TafsirEditionId> =
+            entries.filter { it.covers(verse) }
+
+        /**
+         * If a previously selected partial edition does not cover the new verse,
+         * fall back explicitly to Jalalayn instead of showing an unavailable edition.
+         */
+        fun effectiveFor(
+            verse: VerseRef,
+            preferred: TafsirEditionId
+        ): TafsirEditionId = preferred.takeIf { it.covers(verse) } ?: JALALAYN
     }
 }
 
