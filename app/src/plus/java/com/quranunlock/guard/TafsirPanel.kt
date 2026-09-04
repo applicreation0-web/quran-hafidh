@@ -55,7 +55,7 @@ private const val DEFAULT_FONT_SIZE = 18f
  *
  * This is deliberately the 0.10.3 panel extended by only one permanent visual
  * control: the compact edition selector. Data loading stays outside the renderer.
- * No extra reading-background colour is imposed.
+ * Sustained reading uses the shared warm, low-glare reading surface.
  */
 @Composable
 internal fun TafsirPanel(
@@ -99,6 +99,7 @@ internal fun TafsirPanel(
                 onPanelTopInWindow(coordinates.boundsInWindow().top.roundToInt())
             }
             .semantics { paneTitle = "Commentaire du verset" },
+        color = SafeguardReadingSurface,
         tonalElevation = 8.dp,
         shadowElevation = 12.dp
     ) {
