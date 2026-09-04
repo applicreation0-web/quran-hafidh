@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +19,16 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -40,16 +50,28 @@ class HikamDetailActivity : ComponentActivity() {
             finish()
             return
         }
+        val sharhAvailability = if (HikamSharhEdition.isEnabled) {
+            HikamSharhEdition.forHikma(this, hikma.sourceNumber)
+        } else {
+            emptyList()
+        }
+
         setContent {
             QuranSafeguardTheme {
-                HikmaDetailScreen(hikma)
+                HikmaDetailScreen(
+                    hikma = hikma,
+                    sharhAvailability = sharhAvailability
+                )
             }
         }
     }
 }
 
 @Composable
-private fun HikmaDetailScreen(hikma: HikmaEntry) {
+private fun HikmaDetailScreen(
+    hikma: HikmaEntry,
+    sharhAvailability: List<HikamSharhAvailability>
+) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -114,6 +136,10 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                 }
             }
 
+            if (HikamSharhEdition.isEnabled && sharhAvailability.isNotEmpty()) {
+                DualSharhBlock(sharhAvailability)
+            }
+
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp)
@@ -152,6 +178,193 @@ private fun HikmaDetailScreen(hikma: HikmaEntry) {
                     !hikma.vocalizationSourceUrl.isNullOrBlank()
             )
         }
+    }
+}
+
+@Composable
+private fun DualSharhBlock(
+    availability: List<HikamSharhAvailability>
+) {
+    val sharnubi = availability.firstOrNull {
+        it.commentator == HikamCommentator.SHARNUBI
+    } ?: HikamSharhAvailability(HikamCommentator.SHARNUBI, null)
+    val ibnAbbad = availability.firstOrNull {
+        it.commentator == HikamCommentator.IBN_ABBAD
+    } ?: HikamSharhAvailability(HikamCommentator.IBN_ABBAD, null)
+
+    var selected by remember(availability) {
+        mutableStateOf(
+            when {
+                sharnubi.available -> HikamCommentator.SHARNUBI
+                ibnAbbad.available -> HikamCommentator.IBN_ABBAD
+                else -> HikamCommentator.SHARNUBI
+            }
+        )
+    }
+
+    val selectedAvailability = when (selected) {
+        HikamCommentator.SHARNUBI -> sharnubi
+        HikamCommentator.IBN_ABBAD -> ibnAbbad
+    }
+
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "SHARḤ — CHOISIR LE COMMENTATEUR",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Bold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (selected == HikamCommentator.SHARNUBI && sharnubi.available) {
+                    SafeguardButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { selected = HikamCommentator.SHARNUBI }
+                    ) {
+                        Text("al-Sharnūbī")
+                    }
+                } else {
+                    SafeguardOutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = sharnubi.available,
+                        onClick = { selected = HikamCommentator.SHARNUBI }
+                    ) {
+                        Text("al-Sharnūbī")
+                    }
+                }
+
+                if (selected == HikamCommentator.IBN_ABBAD && ibnAbbad.available) {
+                    SafeguardButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = { selected = HikamCommentator.IBN_ABBAD }
+                    ) {
+                        Text("Ibn ʿAbbād")
+                    }
+                } else {
+                    SafeguardOutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        enabled = ibnAbbad.available,
+                        onClick = { selected = HikamCommentator.IBN_ABBAD }
+                    ) {
+                        Text("Ibn ʿAbbād")
+                    }
+                }
+            }
+
+            selectedAvailability.entry?.takeIf(HikamSharhEntry::displayEligible)?.let { entry ->
+                Text(
+                    entry.commentator.fullName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    entry.workTitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontStyle = FontStyle.Italic
+                )
+                Text(
+                    richSharhText(
+                        text = entry.arabicText,
+                        spans = entry.richSpansArabic,
+                        accent = MaterialTheme.colorScheme.secondary,
+                        quoteColor = MaterialTheme.colorScheme.primary
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = TextDirection.Rtl,
+                        lineHeight = 31.sp
+                    ),
+                    textAlign = TextAlign.Right
+                )
+                Text(
+                    richSharhText(
+                        text = entry.frenchText,
+                        spans = entry.richSpansFrench,
+                        accent = MaterialTheme.colorScheme.secondary,
+                        quoteColor = MaterialTheme.colorScheme.primary
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 25.sp
+                )
+                Text(
+                    entry.printLocator,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (entry.technicalTerms.isNotEmpty()) {
+                    Text(
+                        "Lexique : " + entry.technicalTerms.sorted().joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            } ?: Text(
+                "Ce sharḥ n’est pas encore marqué comme vérifié pour cette Hikma. " +
+                    "Aucun texte de remplacement n’est généré.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontStyle = FontStyle.Italic
+            )
+        }
+    }
+}
+
+private fun richSharhText(
+    text: String,
+    spans: List<HikamRichSpan>,
+    accent: Color,
+    quoteColor: Color
+): AnnotatedString = buildAnnotatedString {
+    append(text)
+    spans.forEach { span ->
+        if (span.start < 0 ||
+            span.endExclusive <= span.start ||
+            span.endExclusive > text.length
+        ) {
+            return@forEach
+        }
+        val style = when (span.role) {
+            HikamRichRole.TECHNICAL_TERM -> SpanStyle(
+                fontWeight = FontWeight.Bold,
+                color = accent
+            )
+            HikamRichRole.AUTHOR_EMPHASIS -> SpanStyle(
+                fontWeight = FontWeight.Bold
+            )
+            HikamRichRole.COMMENTATOR_EMPHASIS -> SpanStyle(
+                fontStyle = FontStyle.Italic
+            )
+            HikamRichRole.QURAN_QUOTE,
+            HikamRichRole.HADITH_QUOTE -> SpanStyle(
+                fontWeight = FontWeight.SemiBold,
+                color = quoteColor
+            )
+            HikamRichRole.EDITORIAL_BRACKET -> SpanStyle(
+                fontStyle = FontStyle.Italic,
+                color = accent
+            )
+            HikamRichRole.SOURCE_NOTE -> SpanStyle(
+                fontStyle = FontStyle.Italic
+            )
+        }
+        addStyle(style, span.start, span.endExclusive)
     }
 }
 
