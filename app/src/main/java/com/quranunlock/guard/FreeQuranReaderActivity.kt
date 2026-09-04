@@ -87,7 +87,20 @@ class FreeQuranReaderActivity : ComponentActivity() {
 
                 LaunchedEffect(selectedTafsirVerse, selectedTafsirEdition) {
                     val requestedVerse = selectedTafsirVerse ?: return@LaunchedEffect
-                    val requestKey = TafsirRequestKey(requestedVerse, selectedTafsirEdition)
+                    val effectiveEdition = TafsirEditionId.effectiveFor(
+                        requestedVerse,
+                        selectedTafsirEdition
+                    )
+                    if (effectiveEdition != selectedTafsirEdition) {
+                        selectedTafsirEdition = effectiveEdition
+                        TafsirReaderPreferences.setSelectedEdition(
+                            this@FreeQuranReaderActivity,
+                            effectiveEdition
+                        )
+                        return@LaunchedEffect
+                    }
+
+                    val requestKey = TafsirRequestKey(requestedVerse, effectiveEdition)
                     tafsirLoadState = TafsirLoadState.Loading
                     val entry = TafsirEdition.load(
                         this@FreeQuranReaderActivity,
@@ -161,8 +174,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     .weight(1f),
                                 transitionSpec = {
                                     if (targetState > initialState) {
-                                        // Arabic-book direction: old page exits right,
-                                        // next page enters from the left.
                                         slideInHorizontally { width -> -width } togetherWith
                                             slideOutHorizontally { width -> width }
                                     } else {
@@ -235,11 +246,13 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                 modifier = Modifier.align(Alignment.BottomCenter),
                                 maxPanelHeight = maxHeight * 0.5f,
                                 onEditionChange = { next ->
-                                    selectedTafsirEdition = next
-                                    TafsirReaderPreferences.setSelectedEdition(
-                                        this@FreeQuranReaderActivity,
-                                        next
-                                    )
+                                    if (next.covers(verse)) {
+                                        selectedTafsirEdition = next
+                                        TafsirReaderPreferences.setSelectedEdition(
+                                            this@FreeQuranReaderActivity,
+                                            next
+                                        )
+                                    }
                                 },
                                 onPanelTopInWindow = { top ->
                                     TafsirEdition.revealAbove(top)
