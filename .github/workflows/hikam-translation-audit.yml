@@ -16,7 +16,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install parser
-        run: python -m pip install --disable-pip-version-check beautifulsoup4
+      - name: Install audit tools
+        run: python -m pip install --disable-pip-version-check beautifulsoup4 sentence-transformers
       - name: Audit 264 French translations against English reference
         run: python scripts/audit_hikam_translation_against_islamicpearls.py
+      - name: Rank cross-lingual semantic divergences
+        run: python scripts/audit_hikam_crosslingual_semantics.py
