@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Release gate: 0.10.4 must not alter the validated 0.10.3 Hikam layer.
+"""0.10.4 Hikam integrity gate.
 
-The 0.10.4 release is scoped to multi-tafsir. A deeper 264/264 textual-criticism
-project is intentionally not represented as completed by this release. Instead,
-this gate proves that the existing Hikam corpus and its runtime presentation are
-byte-for-byte identical to the audited 0.10.3 release baseline.
+This gate deliberately distinguishes two questions:
+1) has the shipped 0.10.3 Hikam layer been accidentally changed? (must be no),
+2) has the stronger 0.10.4 matn-only, two-witness 264/264 documentary re-audit been completed? (not yet).
+
+A release may use this script as a regression guard, but it must not use its PASS
+message as proof that the stronger editorial release contract is complete.
 """
 from __future__ import annotations
 
@@ -44,7 +46,7 @@ for rel, expected in EXPECTED_GIT_BLOBS.items():
 if failures:
     raise SystemExit("0.10.4 HIKAM FREEZE FAILURE:\n- " + "\n- ".join(failures))
 
-print("0.10.4 Hikam freeze: PASS")
+print("0.10.4 Hikam regression freeze: PASS")
 print(f"- baseline release: {BASELINE}")
 print(f"- {len(EXPECTED_GIT_BLOBS)} critical Hikam corpus/runtime files are byte-for-byte unchanged")
-print("- 0.10.4 makes no new claim that the separate 264/264 textual re-audit is complete")
+print("- IMPORTANT: stronger 264/264 matn-only + two-independent-witness documentary audit remains a separate release gate")
