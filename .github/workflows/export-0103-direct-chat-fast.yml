@@ -1,0 +1,35 @@
+name: Export Quran Safeguard 0.10.3 direct chat fast
+
+on:
+  push:
+    paths:
+      - '.github/workflows/export-0103-direct-chat-fast.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download signed 0.10.3 release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p direct-chat
+          gh release download v0.10.3 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --pattern 'Quran-Safeguard-0.10.3-Light-release.apk' \
+            --pattern 'Quran-Safeguard-Plus-0.10.3-release.apk' \
+            --pattern 'Quran-Safeguard-0.10.3-SHA256.txt' \
+            --dir direct-chat
+
+      - name: Upload temporary direct-chat bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.3-direct-chat-fast
+          path: direct-chat/
+          if-no-files-found: error
+          retention-days: 1
