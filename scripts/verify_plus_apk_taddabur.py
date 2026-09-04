@@ -12,14 +12,15 @@ REQUIRED_TEXT = (
     "pool fixe 1–60",
     "Fermer • garder le marque-page",
     "applications protégées bloquées jusqu’à minuit",
-    "background:transparent",
+    "#F4F0E6",
     "A−",
     "A+",
 )
 FORBIDDEN_TEXT = (
     "#F7F2E8",
     "#F7FBF6",
-    "Warm ivory only",
+    "background:#000",
+    "background: #000",
 )
 REQUIRED = tuple(text.encode("utf-8") for text in REQUIRED_TEXT)
 FORBIDDEN = tuple(text.encode("utf-8") for text in FORBIDDEN_TEXT)
@@ -48,8 +49,8 @@ def main() -> None:
         raise SystemExit(f"Plus APK missing Taddabur/readability contract markers: {missing}")
     leaked = [label for label, present in forbidden_seen.items() if present]
     if leaked:
-        raise SystemExit(f"Plus APK contains forbidden added reading background marker(s): {leaked}")
-    print("Verified Plus APK: Taddabur, bookmark, reminder, neutral reading surface, readability controls and fixed deadline enforcement are packaged")
+        raise SystemExit(f"Plus APK contains forbidden legacy/dark reading background marker(s): {leaked}")
+    print("Verified Plus APK: Taddabur, bookmark, reminder, warm reading surface, readability controls and fixed deadline enforcement are packaged")
 
 if __name__ == "__main__":
     main()
