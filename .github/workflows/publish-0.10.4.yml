@@ -175,7 +175,7 @@ jobs:
 
           ### Vérifications
           - audit contradictoire 0.10.4 des corpus et du mapping ;
-          - Qushayrī : 809 segments, couverture 1–4 complète, cas 2:68 et 4:167–169 contrôlés ;
+          - Qushayrī : 806 segments authentiques de mise en page source, couverture 1–4 complète, cas 2:68 et 4:167–169 contrôlés ; faux ancrages de renvoi, introductions de sourate et glyphes privés du PDF exclus ;
           - Qurṭubī : 432 blocs, couverture continue Fātiḥa → 4:22, bloc 4:11–14 contrôlé ;
           - tests Light + Plus ;
           - audit global de release ;
