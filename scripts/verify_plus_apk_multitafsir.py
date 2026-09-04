@@ -8,8 +8,8 @@ JALALAYN_DB_SHA='26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a5
 JALALAYN_ARCHIVE_SHA='824fa202ad2b47aabdc6910f4792e0c8951a5cc8a641f47a2bab70de73b90680'
 JALALAYN_PARTS=[f'assets/tafsir/al_jalalayn_en.sqlite.gz.part{i:02d}' for i in range(4)]
 V2={
- 'qushayri':{'parts':[f'assets/tafsir/qushayri_en.sqlite.gz.b64.part{i:02d}' for i in range(1)],'archive_sha':'56b1e78ad6e8fea5302b6ca9773f65b8ba48cb3f1cf9475ed8b57b93f9309a68','db_sha':'4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b','entries':806},
- 'qurtubi':{'parts':[f'assets/tafsir/qurtubi_en.sqlite.gz.b64.part{i:02d}' for i in range(4)],'archive_sha':'fff869e3504affa565cfbfaf321a22f4ad47f6108da87bc0ebfa287084a7cad9','db_sha':'4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e','entries':432},
+ 'qushayri':{'parts':[f'assets/tafsir/qushayri_en.sqlite.gz.b64.part{i:02d}' for i in range(1)],'archive_sha':'56b1e78ad6e8fea5302b6ca9773f65b8ba48cb3f1cf9475ed8b57b93f9309a68','db_sha':'4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b','entries':806,'coverage':{1:7,2:286,3:200,4:176}},
+ 'qurtubi':{'parts':[f'assets/tafsir/qurtubi_en.sqlite.gz.b64.part{i:02d}' for i in range(4)],'archive_sha':'fff869e3504affa565cfbfaf321a22f4ad47f6108da87bc0ebfa287084a7cad9','db_sha':'4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e','entries':432,'coverage':{1:7,2:286,3:200,4:22}},
 }
 ARABIC=re.compile(r'[\u0600-\u06ff]')
 PUA=re.compile(r'[\ue000-\uf8ff]')
@@ -57,21 +57,22 @@ def audit_v2(z,names,edition,spec):
         text_rows=list(con.execute('SELECT verse_translation, commentary FROM tafsir_entry'))
         if any(ARABIC.search((tr or '')+(co or '')) for tr,co in text_rows):raise SystemExit(f'{edition} contains Arabic-script rows')
         if any(PUA.search((tr or '')+(co or '')) for tr,co in text_rows):raise SystemExit(f'{edition} contains private-use PDF glyphs')
+        for surah,last_ayah in spec['coverage'].items():
+            missing_ayahs=[ayah for ayah in range(1,last_ayah+1) if con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=?',(surah,ayah,ayah)).fetchone()[0]<1]
+            if missing_ayahs:raise SystemExit(f'{edition} exhaustive coverage gap in sura {surah}: {missing_ayahs[:25]}')
         if edition=='qushayri':
             if meta.get('english_verse_translation_included')!='true':raise SystemExit('Qushayri English verse translation flag missing')
             for s,a in [(2,68),(4,167),(4,176)]:
                 n=con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=?',(s,a,a)).fetchone()[0]
                 if n<1:raise SystemExit(f'Qushayri regression missing {s}:{a}')
-            if con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE trim(verse_translation)<>''").fetchone()[0]<800:raise SystemExit('Qushayri English verse translations unexpectedly sparse')
+            translated=con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE trim(verse_translation)<>''").fetchone()[0]
+            if translated!=spec['entries']:raise SystemExit(f'Qushayri English verse translation missing from {spec["entries"]-translated} approved segment(s)')
             if any(QSH_HEADER.search(co or '') for _,co in text_rows):raise SystemExit('Qushayri page header leaked into commentary')
             if any(QSH_SURA_HEADING.search(co or '') for _,co in text_rows):raise SystemExit('Qushayri Sura introduction leaked into previous verse')
             longest=con.execute('SELECT MAX(length(commentary)) FROM tafsir_entry').fetchone()[0]
             if longest < 12000:raise SystemExit(f'Qushayri long commentary unexpectedly truncated: {longest}')
         else:
             if con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE lower(verse_translation||' '||commentary) LIKE '%sunniconnect%'").fetchone()[0]:raise SystemExit('Qurtubi third-party scan contamination detected')
-            for s,a in [(1,1),(2,142),(2,254),(3,96),(4,11),(4,22)]:
-                n=con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=?',(s,a,a)).fetchone()[0]
-                if n<1:raise SystemExit(f'Qurtubi regression missing {s}:{a}')
             if con.execute('SELECT COUNT(*) FROM tafsir_entry WHERE surah=4 AND verse_start<=23 AND verse_end>=23').fetchone()[0]!=0:raise SystemExit('Qurtubi 4:23 must remain unavailable with volumes 1-4')
             r=con.execute('SELECT verse_start,verse_end,length(commentary) FROM tafsir_entry WHERE surah=4 AND verse_start<=12 AND verse_end>=12').fetchone()
             if not r or r[0:2]!=(11,14) or r[2] < 60000:raise SystemExit(f'Qurtubi 4:11-14 range/truncation mismatch: {r}')
@@ -87,6 +88,6 @@ def main():
         if any(n.casefold().endswith('.pdf') for n in names):raise SystemExit('Source PDF must never be embedded in Plus')
         audit_jalalayn(z,names)
         for edition,spec in V2.items():audit_v2(z,names,edition,spec)
-    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 806 genuine segments; Qurtubi 432; long blocks intact; no PDFs/Arabic/PUA leakage')
+    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 806 genuine translated segments; Qurtubi 432; exhaustive coverage; long blocks intact; no PDFs/Arabic/PUA leakage')
 
 if __name__=='__main__':main()
