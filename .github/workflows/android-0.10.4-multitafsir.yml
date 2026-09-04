@@ -1,4 +1,4 @@
-name: Android 0.10.4 multi-tafsir audit
+name: Android 0.10.4 full Plus audit
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ jobs:
         run: bash scripts/fetch_mushaf_pages.sh
 
       - name: Set up Python corpus tools
-        run: python3 -m pip install --disable-pip-version-check pymupdf beautifulsoup4
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
 
       - name: Fetch pinned private tafsir sources
         shell: bash
@@ -51,8 +51,11 @@ jobs:
       - name: Prove Hikam layer unchanged from 0.10.3
         run: python3 scripts/verify_0104_hikam_freeze.py
 
-      - name: Source-level contradictory audit
+      - name: Source-level multi-tafsir contradictory audit
         run: python3 scripts/verify_0104_update.py
+
+      - name: Taddabur and neutral-reading audit
+        run: python3 scripts/verify_0104_taddabur.py
 
       - name: Existing full release audit
         run: gradle --no-daemon :app:verifyReleaseAudit
@@ -66,8 +69,14 @@ jobs:
       - name: Build unsigned Light and Plus release
         run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
 
-      - name: Prove Light isolation
+      - name: Prove Light tafsir isolation
         run: python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+
+      - name: Prove Light Taddabur isolation
+        run: python3 scripts/verify_light_apk_no_taddabur.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
 
       - name: Prove all three Plus tafsir corpora
         run: python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+
+      - name: Prove Plus Taddabur, neutral reader and readability controls
+        run: python3 scripts/verify_plus_apk_taddabur.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
