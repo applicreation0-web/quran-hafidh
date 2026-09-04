@@ -35,6 +35,27 @@ internal object TafsirRepository {
     private val SAFE_DATABASE_NAME = Regex("[A-Za-z0-9._-]+\\.sqlite")
     private val SAFE_SHA256 = Regex("[0-9a-f]{64}")
 
+    /**
+     * UI availability is based on a distributable, audited corpus, not merely on the
+     * theoretical source coverage. Jalalayn is always the baseline. This prevents a
+     * Qurtubi/Qushayri option from being shown when its reviewed payload is absent.
+     */
+    suspend fun availableEditions(
+        context: Context,
+        verse: VerseRef
+    ): List<TafsirEditionId> = withContext(Dispatchers.IO) {
+        buildList {
+            add(TafsirEditionId.JALALAYN)
+            listOf(TafsirEditionId.QURTUBI, TafsirEditionId.QUSHAYRI).forEach { edition ->
+                if (edition.covers(verse) &&
+                    loadV2Spec(context.applicationContext, edition)?.distributionReady == true
+                ) {
+                    add(edition)
+                }
+            }
+        }
+    }
+
     suspend fun load(
         context: Context,
         verse: VerseRef,
