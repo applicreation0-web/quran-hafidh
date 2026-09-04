@@ -13,11 +13,11 @@ SOURCE_SHA = {
     'qurtubi-v4': 'eb71cb2ed8c2497cc8a5d3634b3eeb7788fdc7caee9de5d6b50349fb8619965c',
 }
 DB_SHA = {
-    'qushayri': 'f83d181815a2dd19cc3f598048d503022c6d2827ce353149c03797f63158b6d2',
+    'qushayri': '4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b',
     'qurtubi': '4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e',
 }
 ARCHIVE_SHA = {
-    'qushayri': 'e38c894b5fe20bb10c8d3a12b5de8c1fc1ed2173709c7ab491faac1cda79f552',
+    'qushayri': '56b1e78ad6e8fea5302b6ca9773f65b8ba48cb3f1cf9475ed8b57b93f9309a68',
     'qurtubi': 'fff869e3504affa565cfbfaf321a22f4ad47f6108da87bc0ebfa287084a7cad9',
 }
 PART_CHARS = 500_000
