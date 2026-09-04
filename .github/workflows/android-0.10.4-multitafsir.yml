@@ -1,10 +1,7 @@
 name: Android 0.10.4 multi-tafsir audit
 
 on:
-  push:
-    branches: [ "release/0.10.4-multitafsir" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   audit:
