@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout release source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Prepare 0.10.4 Android version metadata
         run: python3 scripts/prepare_0104_version.py
@@ -123,6 +125,28 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Freeze exact release version in source history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          existing="$(git log origin/main --format='%H' --grep='^Finalize Quran Safeguard 0.10.4 version metadata$' -1 || true)"
+          if [ -n "${existing}" ] && [ "$(git rev-parse "${existing}^")" = "${GITHUB_SHA}" ]; then
+            release_source_sha="${existing}"
+          else
+            git add app/build.gradle.kts
+            if git diff --cached --quiet; then
+              echo "Prepared 0.10.4 version metadata was not captured in source history."
+              exit 1
+            fi
+            git commit -m "Finalize Quran Safeguard 0.10.4 version metadata"
+            git push origin HEAD:main
+            release_source_sha="$(git rev-parse HEAD)"
+          fi
+          echo "RELEASE_SOURCE_SHA=${release_source_sha}" >> "${GITHUB_ENV}"
+
       - name: Publish private GitHub release
         shell: bash
         run: |
@@ -157,8 +181,10 @@ jobs:
           - audit global de release ;
           - isolation Light/Plus ;
           - vérification des trois corpus directement dans l’APK Plus ;
-          - signatures APK v2/v3, identités Android, versionCode 23 et SHA-256 vérifiés.
+          - signatures APK v2/v3, identités Android, versionCode 23 et SHA-256 vérifiés ;
+          - le tag v0.10.4 cible le commit exact contenant les métadonnées de version 0.10.4 utilisées pour construire les APK.
 
           **Quran Safeguard Plus et ses corpus sont réservés à l’usage strictement personnel du propriétaire du dépôt.**
           NOTES
-          gh release create v0.10.4 "${release_dir}/Quran-Safeguard-0.10.4-Light-release.apk" "${release_dir}/Quran-Safeguard-Plus-0.10.4-release.apk" "${release_dir}/Quran-Safeguard-0.10.4-SHA256.txt" --repo "${GITHUB_REPOSITORY}" --target "${GITHUB_SHA}" --title "Quran Safeguard 0.10.4 — Light & Plus" --notes-file "${release_dir}/release-notes.md"
+          test -n "${RELEASE_SOURCE_SHA}"
+          gh release create v0.10.4 "${release_dir}/Quran-Safeguard-0.10.4-Light-release.apk" "${release_dir}/Quran-Safeguard-Plus-0.10.4-release.apk" "${release_dir}/Quran-Safeguard-0.10.4-SHA256.txt" --repo "${GITHUB_REPOSITORY}" --target "${RELEASE_SOURCE_SHA}" --title "Quran Safeguard 0.10.4 — Light & Plus" --notes-file "${release_dir}/release-notes.md"
