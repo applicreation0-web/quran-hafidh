@@ -6,7 +6,7 @@ anchor_re=re.compile(r'^\[(\d+):(\d+)(?:[\u2013\u2014-](\d+))?\]\s*')
 sura_heading_re=re.compile(r'^S(?:ūrat|urāt|ūra)\b', re.I)
 header_re=re.compile(r'^(Subtle Allusions\s+\[|Laṭāʾif al-ishārāt\s+\[|\d+\s*\|\s*•|•\s*Laṭāʾif)')
 pua_re=re.compile(r'[\ue000-\uf8ff]')
-arabic_re=re.compile(r'[\u0600-\u06ff\u0750-\u077f]')
+arabic_re=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 
 def file_sha256(path):
     h=hashlib.sha256()
@@ -25,7 +25,7 @@ def is_arabic_line(fonts,text):
         return not anchor_re.match(text.strip())
     chars=[c for c in text if not c.isspace()]
     if chars:
-        ar=sum('\u0600'<=c<='\u06ff' or '\u0750'<=c<='\u077f' for c in chars)
+        ar=sum(bool(arabic_re.match(c)) for c in chars)
         if ar/len(chars)>.55: return True
     return False
 
