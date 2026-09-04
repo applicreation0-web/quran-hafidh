@@ -12,6 +12,7 @@ REQUIRED_TEXT = (
     "pool fixe 1–60",
     "Fermer • garder le marque-page",
     "applications protégées bloquées jusqu’à minuit",
+    "#F7F2E8",
 )
 REQUIRED = tuple(text.encode("utf-8") for text in REQUIRED_TEXT)
 
@@ -33,7 +34,7 @@ def main() -> None:
     missing = [label for label, present in seen.items() if not present]
     if missing:
         raise SystemExit(f"Plus APK missing Taddabur contract markers: {missing}")
-    print("Verified Plus APK: Taddabur activity, bookmark, reminder and fixed deadline enforcement are packaged")
+    print("Verified Plus APK: Taddabur activity, bookmark, reminder, warm-ivory reader and fixed deadline enforcement are packaged")
 
 if __name__ == "__main__":
     main()
