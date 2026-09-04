@@ -36,20 +36,19 @@ internal object TafsirRepository {
     private val SAFE_SHA256 = Regex("[0-9a-f]{64}")
 
     /**
-     * UI availability is based on a distributable, audited corpus, not merely on the
-     * theoretical source coverage. Jalalayn is always the baseline. This prevents a
-     * Qurtubi/Qushayri option from being shown when its reviewed payload is absent.
+     * A partial tafsir is offered only when an audited distributable database contains
+     * an actual mapping for the tapped verse. Static source coverage alone is not enough.
+     * Jalalayn remains the baseline/default edition.
      */
     suspend fun availableEditions(
         context: Context,
         verse: VerseRef
     ): List<TafsirEditionId> = withContext(Dispatchers.IO) {
+        val appContext = context.applicationContext
         buildList {
             add(TafsirEditionId.JALALAYN)
             listOf(TafsirEditionId.QURTUBI, TafsirEditionId.QUSHAYRI).forEach { edition ->
-                if (edition.covers(verse) &&
-                    loadV2Spec(context.applicationContext, edition)?.distributionReady == true
-                ) {
+                if (edition.covers(verse) && hasV2Commentary(appContext, verse, edition)) {
                     add(edition)
                 }
             }
@@ -132,6 +131,33 @@ internal object TafsirRepository {
                 notes = notes,
                 editionId = TafsirEditionId.JALALAYN
             )
+        } finally {
+            database.close()
+        }
+    }
+
+    private fun hasV2Commentary(
+        context: Context,
+        verse: VerseRef,
+        editionId: TafsirEditionId
+    ): Boolean {
+        val spec = loadV2Spec(context, editionId) ?: return false
+        if (!spec.distributionReady) return false
+        val databaseFile = materializeDatabase(
+            context = context,
+            databaseName = spec.databaseName,
+            expectedSha256 = spec.databaseSha256,
+            assetParts = spec.assetParts
+        ) ?: return false
+        val database = runCatching { openReadOnly(databaseFile) }.getOrNull() ?: return false
+        return try {
+            if (!validateV2Metadata(database, editionId, spec)) return false
+            database.rawQuery(
+                "SELECT 1 FROM entry_verse_map WHERE surah = ? AND ayah = ? LIMIT 1",
+                arrayOf(verse.surah.toString(), verse.ayah.toString())
+            ).use { cursor -> cursor.moveToFirst() }
+        } catch (_: Exception) {
+            false
         } finally {
             database.close()
         }
@@ -222,7 +248,9 @@ internal object TafsirRepository {
             metadataValue(database, "edition_id") == editionId.stableId &&
             metadataValue(database, "rights_status") == spec.rightsStatus &&
             metadataValue(database, "source_audit_status") == "verified" &&
-            metadataValue(database, "content_audit_status") == "verified"
+            metadataValue(database, "content_audit_status") == "verified" &&
+            metadataValue(database, "content_language") == "en" &&
+            metadataValue(database, "arabic_source_text_included") == "false"
 
     private fun metadataValue(database: SQLiteDatabase, key: String): String? =
         database.rawQuery(
@@ -273,7 +301,9 @@ internal object TafsirRepository {
                 schemaVersion = obj.optString("schema_version").trim(),
                 rightsStatus = obj.optString("rights_status").trim(),
                 sourceAuditStatus = obj.optString("source_audit_status").trim(),
-                contentAuditStatus = obj.optString("content_audit_status").trim()
+                contentAuditStatus = obj.optString("content_audit_status").trim(),
+                contentLanguage = obj.optString("content_language").trim(),
+                arabicSourceTextIncluded = obj.optBoolean("arabic_source_text_included", true)
             ).takeIf { it.safe }
         }
         return null
@@ -401,7 +431,9 @@ internal object TafsirRepository {
         val schemaVersion: String,
         val rightsStatus: String,
         val sourceAuditStatus: String,
-        val contentAuditStatus: String
+        val contentAuditStatus: String,
+        val contentLanguage: String,
+        val arabicSourceTextIncluded: Boolean
     ) {
         val safe: Boolean
             get() =
@@ -417,6 +449,8 @@ internal object TafsirRepository {
                     rightsStatus in APPROVED_RIGHTS_STATUSES &&
                     sourceAuditStatus == "verified" &&
                     contentAuditStatus == "verified" &&
+                    contentLanguage == "en" &&
+                    !arabicSourceTextIncluded &&
                     SAFE_SHA256.matches(databaseSha256) &&
                     assetParts.isNotEmpty()
     }
