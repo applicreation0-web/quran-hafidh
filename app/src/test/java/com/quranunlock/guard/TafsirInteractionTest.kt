@@ -23,13 +23,13 @@ class TafsirInteractionTest {
     }
 
     @Test
-    fun horizontalSwipesRemainDirectional() {
+    fun horizontalSwipesFollowArabicBookDirection() {
         val classifier = ReaderGestureClassifier(72f)
-        classifier.onDown(200f, 100f, 1)
-        assertEquals(ReaderSwipe.NEXT, classifier.onUp(100f, 105f, true))
-
         classifier.onDown(100f, 100f, 1)
-        assertEquals(ReaderSwipe.PREVIOUS, classifier.onUp(200f, 95f, true))
+        assertEquals(ReaderSwipe.NEXT, classifier.onUp(200f, 105f, true))
+
+        classifier.onDown(200f, 100f, 1)
+        assertEquals(ReaderSwipe.PREVIOUS, classifier.onUp(100f, 95f, true))
     }
 
     @Test

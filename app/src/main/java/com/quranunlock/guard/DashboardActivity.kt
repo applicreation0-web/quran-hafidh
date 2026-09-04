@@ -105,7 +105,11 @@ class DashboardActivity : ComponentActivity() {
                             startActivity(
                                 Intent(
                                     this@DashboardActivity,
-                                    ReadingSelectionActivity::class.java
+                                    if (TafsirEdition.isEnabled) {
+                                        FreeQuranReaderActivity::class.java
+                                    } else {
+                                        ReadingSelectionActivity::class.java
+                                    }
                                 )
                             )
                         },
@@ -115,7 +119,9 @@ class DashboardActivity : ComponentActivity() {
                                 contentDescription = null
                             )
                         },
-                        label = { Text("Lecture") },
+                        label = {
+                            Text(if (TafsirEdition.isEnabled) "Qur’an" else "Lecture")
+                        },
                         colors = navColors
                     )
                     NavigationBarItem(

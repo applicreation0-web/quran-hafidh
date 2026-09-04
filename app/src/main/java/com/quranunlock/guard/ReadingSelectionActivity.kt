@@ -1,5 +1,6 @@
 package com.applicreation0.quransafeguard
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,13 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -91,6 +90,48 @@ class ReadingSelectionActivity : ComponentActivity() {
                     "Choisissez avec les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (TafsirEdition.isEnabled) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.elevatedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Qur’an & Tafsîr",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Ouvrez librement le Mushaf de Médine et le Tafsîr al-Jalalayn, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            SafeguardButton(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp),
+                                onClick = {
+                                    startActivity(
+                                        Intent(
+                                            this@ReadingSelectionActivity,
+                                            FreeQuranReaderActivity::class.java
+                                        )
+                                    )
+                                }
+                            ) {
+                                Text("Ouvrir le Qur’an & Tafsîr")
+                            }
+                        }
+                    }
+                }
 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),

@@ -49,6 +49,12 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".FreeQuranReaderActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".ApplicationsActivity"
             android:excludeFromRecents="false"
             android:exported="false"
