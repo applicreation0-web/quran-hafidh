@@ -26,7 +26,7 @@ object HikamSharhEdition {
         return HikamCommentator.entries.map { commentator ->
             HikamSharhAvailability(
                 commentator = commentator,
-                entry = entries.firstOrNull {
+                entry = entries.singleOrNull {
                     it.commentator == commentator && it.displayEligible
                 }
             )
@@ -47,6 +47,7 @@ object HikamSharhEdition {
         }
 
         val parsed = parse(raw)
+        HikamSharhIntegrity.requireUnique(parsed)
         cached = parsed.groupBy(HikamSharhEntry::hikmaNumber)
         return cached.orEmpty()
     }
@@ -58,7 +59,7 @@ object HikamSharhEdition {
                 val obj = array.getJSONObject(index)
                 add(parseOne(obj))
             }
-        }
+        }.also(HikamSharhIntegrity::requireUnique)
     }
 
     private fun parseOne(obj: JSONObject): HikamSharhEntry {
@@ -71,6 +72,7 @@ object HikamSharhEdition {
         return HikamSharhEntry(
             hikmaNumber = obj.getInt("source_number"),
             commentator = commentator,
+            workId = obj.getString("commentary_work_id").trim(),
             workTitle = obj.getString("commentary_work").trim(),
             arabicText = obj.getString("commentary_arabic").trim(),
             frenchText = obj.getString("commentary_french").trim(),
