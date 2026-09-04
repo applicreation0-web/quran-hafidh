@@ -108,10 +108,15 @@ for token in (
 ):
     assert token in plus_apk_verifier, f"Missing English-only APK gate: {token}"
 
-# Builder must reject unreviewed, contaminated or structurally ambiguous input.
+# Builder must reject unreviewed, contaminated, Arabic-source or structurally ambiguous input.
 for token in (
     '--allow-unreleased',
     'expected_mapped_verse_count',
+    'content_language',
+    'arabic_source_text_included',
+    'metadata_text',
+    'ARABIC_SCRIPT',
+    'Arabic-script source text is forbidden',
     'Forbidden third-party contamination marker',
     'VERSE_RANGE_COMMENTARY must span >1 verse',
     'must stay structurally separate from verse taps',
