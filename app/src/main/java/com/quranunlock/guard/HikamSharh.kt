@@ -81,7 +81,16 @@ data class HikamSharhEntry(
                 frenchText.isNotBlank() &&
                 sourceUrl.isNotBlank() &&
                 printLocator.isNotBlank() &&
+                validSpans(richSpansArabic, arabicText) &&
+                validSpans(richSpansFrench, frenchText) &&
                 verified
+
+    private fun validSpans(spans: List<HikamRichSpan>, text: String): Boolean =
+        spans.all { span ->
+            span.start >= 0 &&
+                span.endExclusive > span.start &&
+                span.endExclusive <= text.length
+        }
 }
 
 data class HikamSharhAvailability(
@@ -98,14 +107,8 @@ object HikamSharhIntegrity {
         require(entries.all(HikamSharhEntry::attributionMatchesSource)) {
             "Hikam sharh work/commentator attribution mismatch"
         }
-        require(entries.all { entry ->
-            entry.canonicalHikmaNumbers.isNotEmpty() &&
-                entry.canonicalHikmaNumbers.all { it in 1..264 } &&
-                entry.hikmaNumber in entry.canonicalHikmaNumbers &&
-                entry.commentaryGroupId.isNotBlank() &&
-                entry.sourceHikmaLocator.isNotBlank()
-        }) {
-            "Invalid Hikam sharh source mapping metadata"
+        require(entries.all(HikamSharhEntry::displayEligible)) {
+            "Invalid or unverified Hikam sharh entry"
         }
 
         val mappedKeys = entries.flatMap { entry ->
