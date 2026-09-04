@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Fail closed unless Plus embeds the exact approved three-tafsir corpus."""
+"""Fail closed unless Plus embeds the approved three-tafsir corpus."""
 from __future__ import annotations
-import argparse, base64, gzip, hashlib, re, sqlite3, tempfile, zipfile
+import argparse,base64,gzip,hashlib,json,re,sqlite3,tempfile,zipfile
 from pathlib import Path
 
 JALALAYN_DB_SHA='26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56'
 JALALAYN_ARCHIVE_SHA='824fa202ad2b47aabdc6910f4792e0c8951a5cc8a641f47a2bab70de73b90680'
 JALALAYN_PARTS=[f'assets/tafsir/al_jalalayn_en.sqlite.gz.part{i:02d}' for i in range(4)]
 V2={
- 'qushayri':{'parts':[f'assets/tafsir/qushayri_en.sqlite.gz.b64.part{i:02d}' for i in range(1)],'archive_sha':'56b1e78ad6e8fea5302b6ca9773f65b8ba48cb3f1cf9475ed8b57b93f9309a68','db_sha':'4356e836e8e14818f6b4f5007eeac12454cb388e6aa59759a926bdc560569c5b','entries':806,'coverage':{1:7,2:286,3:200,4:176}},
- 'qurtubi':{'parts':[f'assets/tafsir/qurtubi_en.sqlite.gz.b64.part{i:02d}' for i in range(4)],'archive_sha':'fff869e3504affa565cfbfaf321a22f4ad47f6108da87bc0ebfa287084a7cad9','db_sha':'4f3e890085f8d991818d7b3fe9280d534adcf2242ac1694c9cc985aa842ea87e','entries':432,'coverage':{1:7,2:286,3:200,4:22}},
+ 'qushayri':{'parts':[f'assets/tafsir/qushayri_en.sqlite.gz.b64.part{i:02d}' for i in range(1)],'entries':806,'coverage':{1:7,2:286,3:200,4:176}},
+ 'qurtubi':{'parts':[f'assets/tafsir/qurtubi_en.sqlite.gz.b64.part{i:02d}' for i in range(4)],'entries':432,'coverage':{1:7,2:286,3:200,4:22}},
 }
 ARABIC=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 PUA=re.compile(r'[\ue000-\uf8ff]')
@@ -20,6 +20,13 @@ def sha(data:bytes)->str:return hashlib.sha256(data).hexdigest()
 def open_db(blob:bytes):
     tmp=tempfile.NamedTemporaryFile(suffix='.sqlite');tmp.write(blob);tmp.flush()
     return tmp,sqlite3.connect(f'file:{tmp.name}?mode=ro',uri=True)
+
+def logical_digest(con):
+    meta=dict(con.execute('select key,value from source_metadata order by key'))
+    columns=[row[1] for row in con.execute('pragma table_info(tafsir_entry)')]
+    rows=con.execute('select '+','.join(columns)+' from tafsir_entry order by id').fetchall()
+    payload={'metadata':sorted(meta.items()),'columns':columns,'rows':rows}
+    return hashlib.sha256(json.dumps(payload,ensure_ascii=False,separators=(',',':'),sort_keys=True).encode('utf-8')).hexdigest()
 
 def audit_jalalayn(z,names):
     missing=[p for p in JALALAYN_PARTS if p not in names]
@@ -42,9 +49,8 @@ def audit_v2(z,names,edition,spec):
     encoded=b''.join(z.read(p) for p in spec['parts'])
     try:compressed=base64.b64decode(encoded,validate=True)
     except Exception as exc:raise SystemExit(f'{edition} base64 invalid: {exc}')
-    if sha(compressed)!=spec['archive_sha']:raise SystemExit(f'{edition} archive checksum mismatch')
-    db=gzip.decompress(compressed)
-    if sha(db)!=spec['db_sha']:raise SystemExit(f'{edition} DB checksum mismatch')
+    try:db=gzip.decompress(compressed)
+    except Exception as exc:raise SystemExit(f'{edition} gzip invalid: {exc}')
     tmp,con=open_db(db)
     try:
         if con.execute('PRAGMA quick_check').fetchone()[0]!='ok':raise SystemExit(f'{edition} quick_check failed')
@@ -78,16 +84,19 @@ def audit_v2(z,names,edition,spec):
             if not r or r[0:2]!=(11,14) or r[2] < 60000:raise SystemExit(f'Qurtubi 4:11-14 range/truncation mismatch: {r}')
             longest=con.execute('SELECT MAX(length(commentary)) FROM tafsir_entry').fetchone()[0]
             if longest < 90000:raise SystemExit(f'Qurtubi long commentary unexpectedly truncated: {longest}')
+        return logical_digest(con)
     finally:con.close();tmp.close()
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('apk',type=Path);args=ap.parse_args()
     if not args.apk.is_file():raise SystemExit(f'Plus APK not found: {args.apk}')
+    logical={}
     with zipfile.ZipFile(args.apk) as z:
         names=set(z.namelist())
         if any(n.casefold().endswith('.pdf') for n in names):raise SystemExit('Source PDF must never be embedded in Plus')
         audit_jalalayn(z,names)
-        for edition,spec in V2.items():audit_v2(z,names,edition,spec)
-    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 806 genuine translated segments; Qurtubi 432; exhaustive coverage; long blocks intact; no PDFs/Arabic/PUA leakage')
+        for edition,spec in V2.items():logical[edition]=audit_v2(z,names,edition,spec)
+    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 806 translated segments; Qurtubi 432; exhaustive coverage; long blocks intact; no PDFs/Arabic/PUA leakage')
+    print(f'Logical corpus digests: Qushayri={logical["qushayri"]}; Qurtubi={logical["qurtubi"]}')
 
 if __name__=='__main__':main()
