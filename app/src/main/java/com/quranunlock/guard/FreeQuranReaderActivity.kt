@@ -14,6 +14,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -59,7 +61,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
         private const val EXTRA_REFERENCE_END_AYAH = "reference_end_ayah"
         private const val PREFS = "free_quran_reader"
         private const val KEY_LAST_PAGE = "last_page"
-        private const val KEY_BOOKMARK_PAGE = "bookmark_page"
         private const val FIRST_PAGE = 1
         private const val LAST_PAGE = 604
     }
@@ -87,8 +88,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
         val readerPrefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         val requestedPage = intent.getIntExtra(EXTRA_PAGE, 0)
         val storedPage = readerPrefs.getInt(KEY_LAST_PAGE, FIRST_PAGE)
-        val storedBookmark = readerPrefs.getInt(KEY_BOOKMARK_PAGE, 0)
-            .takeIf { it in FIRST_PAGE..LAST_PAGE }
+        val storedBookmarks = QuranBookmarkStore.load(this)
         val initialPage = when {
             requestedPage in FIRST_PAGE..LAST_PAGE -> requestedPage
             !referenceMode && storedPage in FIRST_PAGE..LAST_PAGE -> storedPage
@@ -99,7 +99,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
             QuranSafeguardTheme {
                 val coroutineScope = rememberCoroutineScope()
                 var page by remember { mutableIntStateOf(initialPage) }
-                var bookmarkPage by remember { mutableStateOf(storedBookmark) }
+                var bookmarkPages by remember { mutableStateOf(storedBookmarks) }
                 var message by remember {
                     mutableStateOf(
                         if (referenceMode) {
@@ -149,24 +149,18 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         "Lecture libre • appuyez sur un verset pour ouvrir le Tafsîr."
                 }
 
-                fun saveBookmark() {
+                fun toggleBookmark() {
                     if (referenceMode || selectedTafsirVerse != null) return
-                    readerPrefs.edit()
-                        .putInt(KEY_BOOKMARK_PAGE, page)
-                        .apply()
-                    bookmarkPage = page
-                    message = "Marque-page enregistré • page $page."
-                }
-
-                fun resumeBookmark() {
-                    if (referenceMode || selectedTafsirVerse != null) return
-                    val bookmark = bookmarkPage
-                    if (bookmark == null) {
-                        message = "Aucun marque-page enregistré."
-                        return
+                    val wasMarked = page in bookmarkPages
+                    bookmarkPages = QuranBookmarkStore.toggle(
+                        this@FreeQuranReaderActivity,
+                        page
+                    )
+                    message = if (wasMarked) {
+                        "Marque-page retiré • page $page."
+                    } else {
+                        "Marque-page ajouté • page $page."
                     }
-                    showPage(bookmark)
-                    message = "Reprise au marque-page • page $bookmark."
                 }
 
                 fun openReference(referenceToOpen: QuranReferenceRef) {
@@ -306,32 +300,50 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     }
                                 }
                                 Spacer(Modifier.height(4.dp))
-                                Row(
+                                SafeguardOutlinedButton(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(horizontal = 10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    enabled = selectedTafsirVerse == null,
+                                    onClick = { toggleBookmark() }
                                 ) {
-                                    SafeguardOutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = selectedTafsirVerse == null,
-                                        onClick = { saveBookmark() }
+                                    Text(
+                                        if (page in bookmarkPages) {
+                                            "🔖 Retirer le marque-page • p. $page"
+                                        } else {
+                                            "🔖 Ajouter un marque-page • p. $page"
+                                        }
+                                    )
+                                }
+                                if (bookmarkPages.isNotEmpty()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .horizontalScroll(rememberScrollState())
+                                            .padding(horizontal = 10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            if (bookmarkPage == page) "🔖 Marquée ✓"
-                                            else "🔖 Marquer"
+                                            "Signets ${bookmarkPages.size} :",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                            fontWeight = FontWeight.SemiBold
                                         )
-                                    }
-                                    SafeguardOutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = selectedTafsirVerse == null &&
-                                            bookmarkPage != null && bookmarkPage != page,
-                                        onClick = { resumeBookmark() }
-                                    ) {
-                                        Text(
-                                            bookmarkPage?.let { "Reprendre p. $it" }
-                                                ?: "Aucun marque-page"
-                                        )
+                                        bookmarkPages.sorted().forEach { bookmarkedPage ->
+                                            SafeguardOutlinedButton(
+                                                enabled = selectedTafsirVerse == null &&
+                                                    bookmarkedPage != page,
+                                                onClick = {
+                                                    showPage(bookmarkedPage)
+                                                    message =
+                                                        "Ouverture du marque-page • page $bookmarkedPage."
+                                                }
+                                            ) {
+                                                Text("p. $bookmarkedPage")
+                                            }
+                                        }
                                     }
                                 }
                                 Spacer(Modifier.height(4.dp))
