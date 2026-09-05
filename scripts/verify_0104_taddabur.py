@@ -89,6 +89,7 @@ require(
     hardening,
     "const val CHECKPOINT_MS = 5_000L",
     "fun shouldCheckpoint",
+    "fun dayChanged",
 )
 require(
     reader,
@@ -99,6 +100,20 @@ require(
     "flushPending()",
     "PowerManager::class.java",
     "isInteractive != false",
+)
+
+# An activity left open across midnight must stop the old page session before any
+# new-day second is credited, roll persisted state, re-apply the canonical boundary
+# carry, and reload the new bookmark/page context.
+require(
+    reader,
+    "LaunchedEffect(page, progress.epochDay)",
+    "val sessionEpochDay = progress.epochDay",
+    "LocalDate.now().toEpochDay()",
+    "TaddaburPageSessionPolicy.dayChanged(sessionEpochDay, currentEpochDay)",
+    "pendingMs = 0L",
+    "TaddaburBoundaryCarry.applyIfEligible(this@TaddaburActivity)",
+    "page = rolled.bookmarkPage",
 )
 
 # P0 regression gate: changing the logical page must recreate the Mushaf WebView,
@@ -223,7 +238,8 @@ require(
     "midnightEndsDeadlineWindow",
     "navigationChangesPhysicalAssetAndRejectsStaleCallbacks",
     "activeTimeUsesInMemoryCheckpointBeforePersisting",
+    "openReaderDetectsCalendarDayChangeBeforeCreditingMoreTime",
     "completedAdjacentHizbCarriesOnlyTheSharedCanonicalBoundaryPage",
 )
 
-print("Taddabur 0.10.5 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, interactive-screen active time with 5 s checkpoints, canonical boundary carry, bookmark, page-keyed WebView reload, stale-callback rejection, Tafsir remapping, warm reading surface, 20:00-midnight enforcement")
+print("Taddabur 0.10.5 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, interactive-screen active time with 5 s checkpoints, live midnight rollover, canonical boundary carry, bookmark, page-keyed WebView reload, stale-callback rejection, Tafsir remapping, warm reading surface, 20:00-midnight enforcement")

@@ -16,6 +16,14 @@ internal object TaddaburPageSessionPolicy {
 
     fun shouldCheckpoint(pendingMs: Long, displayedTotalMs: Long): Boolean =
         pendingMs >= CHECKPOINT_MS || displayedTotalMs >= TaddaburPolicy.MIN_PAGE_MS
+
+    /**
+     * A reader can remain open across midnight. Once the calendar day changes,
+     * the in-memory page session belongs to the previous day and must be
+     * reloaded from persisted state before any further second is credited.
+     */
+    fun dayChanged(sessionEpochDay: Long, currentEpochDay: Long): Boolean =
+        sessionEpochDay != currentEpochDay
 }
 
 /**

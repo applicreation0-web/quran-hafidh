@@ -67,6 +67,14 @@ class TaddaburPolicyTest {
     }
 
     @Test
+    fun openReaderDetectsCalendarDayChangeBeforeCreditingMoreTime() {
+        val day = 20_000L
+        assertFalse(TaddaburPageSessionPolicy.dayChanged(day, day))
+        assertTrue(TaddaburPageSessionPolicy.dayChanged(day, day + 1L))
+        assertTrue(TaddaburPageSessionPolicy.dayChanged(day, day - 1L))
+    }
+
+    @Test
     fun completedAdjacentHizbCarriesOnlyTheSharedCanonicalBoundaryPage() {
         var sharedBoundaryCount = 0
         for (hizb in TaddaburPolicy.FIRST_HIZB until TaddaburPolicy.LAST_HIZB) {
