@@ -83,6 +83,23 @@ require(
     "Fermer • garder le marque-page",
 )
 
+# P0 regression gate: changing the logical page must recreate the Mushaf WebView,
+# rebuild the page-specific Tafsir mapping, and ignore stale callbacks from an old page.
+require(
+    reader,
+    "androidx.compose.runtime.key(pageNumber)",
+    "onReady: (Int) -> Unit",
+    "onFailure: (Int) -> Unit",
+    "currentOnReady.value(pageNumber)",
+    "currentOnFailure.value(pageNumber)",
+    "if (readyPage == page) pageReady = true",
+    "if (failedPage == page) pageReady = false",
+    "TafsirEdition.prepareHtml(svgContent, pageNumber)",
+    "pageNumber = pageNumber",
+    "verseIndex = MushafVerseIndex.fromSvg(svgContent)",
+)
+forbid(reader, "onReady: () -> Unit", "onFailure: () -> Unit")
+
 # Tafsir is available inside the Taddabur reader and must not pause the active-page timer.
 require(
     reader,
@@ -174,4 +191,4 @@ require(
     "deadlineStartsAtTwenty",
 )
 
-print("Taddabur 0.10.4 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, Tafsir, warm reading surface in Light/Plus, 52dp touch ergonomics, 20:00-midnight enforcement")
+print("Taddabur 0.10.5 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, page-keyed WebView reload, stale-callback rejection, Tafsir remapping, warm reading surface, 20:00-midnight enforcement")
