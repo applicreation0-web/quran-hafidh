@@ -27,6 +27,9 @@ jobs:
       - name: Prepare 0.10.5 Android version metadata
         run: python3 scripts/prepare_0105_version.py
 
+      - name: Verify 0.10.5 stability priorities
+        run: python3 scripts/verify_0105_stability_priorities.py
+
       - name: Fetch and verify all 604 Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
 
@@ -53,13 +56,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/verify_0105_stability_priorities.py
           python3 scripts/verify_0105_sensitive_scope.py
           python3 scripts/verify_0105_tafsir_update.py
-          python3 scripts/audit_0105_tafsir_cleanup.py app/src/plus/assets/tafsir
-          python3 scripts/verify_0104_hikam_freeze.py
+          python3 scripts/verify_0105_tafsir_typography_contract.py
+          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir
+          python3 scripts/verify_0105_hikam_verified_only.py
           python3 scripts/verify_hikam_translation_separation.py
-          python3 scripts/audit_hikam_translation_against_islamicpearls.py
-          python3 scripts/verify_0104_taddabur.py
+          python3 scripts/audit_hikam_technical_lexicon_0105.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -98,7 +102,10 @@ jobs:
           python3 scripts/verify_light_apk_no_tafsir.py "${light}"
           python3 scripts/verify_light_apk_no_taddabur.py "${light}"
           python3 scripts/verify_plus_apk_multitafsir.py "${plus}"
-          python3 scripts/verify_plus_apk_taddabur.py "${plus}"
+          if apkanalyzer manifest print "${plus}" | grep -Fq "TaddaburActivity"; then
+            echo "Deferred TaddaburActivity must not be declared in the 0.10.5 Plus runtime."
+            exit 1
+          fi
 
       - name: Sign and verify Light and Plus 0.10.5
         shell: bash
@@ -142,7 +149,10 @@ jobs:
           python3 scripts/verify_light_apk_no_tafsir.py "${light_apk}"
           python3 scripts/verify_light_apk_no_taddabur.py "${light_apk}"
           python3 scripts/verify_plus_apk_multitafsir.py "${plus_apk}"
-          python3 scripts/verify_plus_apk_taddabur.py "${plus_apk}"
+          if apkanalyzer manifest print "${plus_apk}" | grep -Fq "TaddaburActivity"; then
+            echo "Deferred TaddaburActivity must not be declared in the signed 0.10.5 Plus runtime."
+            exit 1
+          fi
           sha256sum "${light_apk}" "${plus_apk}" > "${release_dir}/Quran-Safeguard-0.10.5-SHA256.txt"
 
       - name: Upload signed release bundle
@@ -185,6 +195,8 @@ jobs:
 
           ### Coran / Muṣḥaf
           - 604/604 pages Hafs/KFQC contrôlées contre la source épinglée ;
+          - reprise automatique de la dernière page lue conservée ;
+          - marque-page explicite persistant ajouté, avec reprise directe au marque-page ;
           - décompression et structure SVG contrôlées ;
           - page 552 explicitement vérifiée comme contenant sourate aṣ-Ṣaff (61) ;
           - aucune page coranique reconstruite ou éditée manuellement.
@@ -193,15 +205,28 @@ jobs:
           - 30 Juz et 60 Hizb canoniques conservés ;
           - frontières au milieu des pages respectées ;
           - continuité des 6 236 versets testée sans trou ni chevauchement ;
-          - les quotas Safeguard 20/10/1 pages sont séparés des divisions canoniques et ne sortent jamais du pool sélectionné.
+          - les quotas Safeguard sont séparés des divisions canoniques et ne sortent jamais du pool sélectionné.
 
           ### Tafsīr Plus
+          - Tafsīr traité comme fonctionnalité bloquante de release ;
           - Jalalayn inchangé : 6 236 commentaires + 427 notes ;
           - Qushayrī : 806 ancres source préservées, 720 entrées logiques, 76 plages de commentaire partagé, anglais du verset conservé, arabe source exclu ;
           - Qurtubī : volumes anglais 1–4, 432 entrées, jusqu’à 4:22 ;
+          - Qurtubī : inventaires séparés des 2 959 glyphes honorifiques de source et des 2 898 marques retenues dans le payload contrôlés ;
           - nettoyage renforcé des césures PDF, soft hyphens, NBSP et artefacts ;
           - commentaire principal et notes affichés en texte justifié ;
           - Light reste sans Tafsīr privé.
+
+          ### Ḥikam
+          - 264/264 matn arabes et traductions françaises restent vérifiés ;
+          - la traduction française est prioritaire ;
+          - aucun commentaire n’est requis pour rendre une Ḥikma disponible ;
+          - matn, traduction, aide terminologique et commentaire éventuel restent strictement séparés.
+
+          ### Stabilité
+          - Taddabur est différé de la 0.10.5 publiée ;
+          - aucun blocage, aucune alarme et aucune activité Taddabur ne sont exposés dans le runtime Plus ;
+          - son travail interne est conservé dans le dépôt pour une version ultérieure.
 
           ### Confidentialité / applications sensibles
           - le sentinel Accessibility non filtré est désactivé en permanence ;
