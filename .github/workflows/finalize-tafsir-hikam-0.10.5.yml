@@ -90,6 +90,7 @@ jobs:
             app/src/test/java/com/quranunlock/guard/HikamTechnicalLexiconTest.kt \
             scripts/audit_hikam_technical_lexicon_0105.py \
             scripts/verify_0105_tafsir_typography_contract.py \
+            scripts/verify_0105_tafsir_update.py \
             docs/TAFSIR_TYPOGRAPHY_ALIGNMENT_CONTRACT_0.10.5.md
           git diff --cached --check
           git diff --cached --quiet && { echo "No finalization changes produced"; exit 1; }
