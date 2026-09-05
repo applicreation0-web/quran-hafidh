@@ -38,6 +38,14 @@ jobs:
             --assets-dir app/src/plus/assets/tafsir \
             --work-dir "${RUNNER_TEMP}/tafsir-work"
 
+      - name: Retain rebuilt databases for contradictory diagnosis
+        uses: actions/upload-artifact@v4
+        with:
+          name: tafsir-0105-rebuilt-databases
+          path: ${{ runner.temp }}/tafsir-work/*.sqlite
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Exhaustive 0.10.5 corpus-cleanliness audit
         id: tafsir_cleanup_audit
         shell: bash
