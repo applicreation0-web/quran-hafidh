@@ -26,8 +26,13 @@ JALALAYN_PARTS = [f"al_jalalayn_en.sqlite.gz.part{i:02d}" for i in range(4)]
 V2 = {
     "qushayri": {
         "parts": ["qushayri_en.sqlite.gz.b64.part00"],
-        "entries": 806,
+        "entries": 720,
         "coverage": {1: 7, 2: 286, 3: 200, 4: 176},
+        "source_structure": {
+            "raw_segment_count": "806",
+            "translation_only_anchor_count": "86",
+            "grouped_source_range_count": "76",
+        },
     },
     "qurtubi": {
         "parts": [f"qurtubi_en.sqlite.gz.b64.part{i:02d}" for i in range(4)],
@@ -157,6 +162,11 @@ def audit_v2(assets: Path, edition: str, spec: dict) -> str:
         for key, expected in required_meta.items():
             if meta.get(key) != expected:
                 raise SystemExit(f"{edition}: metadata {key}={meta.get(key)!r}, expected {expected!r}")
+        for key, expected in spec.get("source_structure", {}).items():
+            if meta.get(key) != expected:
+                raise SystemExit(
+                    f"{edition}: source-structure metadata {key}={meta.get(key)!r}, expected {expected!r}"
+                )
 
         rows = list(
             con.execute(
@@ -199,7 +209,21 @@ def audit_v2(assets: Path, edition: str, spec: dict) -> str:
                 "SELECT COUNT(*) FROM tafsir_entry WHERE trim(verse_translation)<>''"
             ).fetchone()[0]
             if translated != spec["entries"]:
-                raise SystemExit("Qushayri: one or more approved segments lost the English verse translation")
+                raise SystemExit("Qushayri: one or more logical entries lost their English verse translation")
+            blank_commentaries = con.execute(
+                "SELECT COUNT(*) FROM tafsir_entry WHERE trim(commentary)=''"
+            ).fetchone()[0]
+            if blank_commentaries:
+                raise SystemExit(f"Qushayri: {blank_commentaries} empty commentary rows survived grouping")
+            # Grouped translations explicitly keep each source anchor label, proving
+            # that range grouping did not silently discard the consecutive verses.
+            grouped = con.execute(
+                "SELECT COUNT(*) FROM tafsir_entry WHERE instr(verse_translation, '[' || surah || ':')>0"
+            ).fetchone()[0]
+            if grouped < int(meta["grouped_source_range_count"]):
+                raise SystemExit(
+                    "Qushayri: grouped ranges do not retain enough explicit source-anchor labels"
+                )
         else:
             volumes = {
                 value
@@ -237,9 +261,9 @@ def main() -> None:
 
     print("0.10.5 Tafsir contradictory cleanup audit PASS")
     print("- Jalalayn byte-identical approved corpus: 6236 entries / 427 notes")
-    print("- Qushayri: 806 English-only segments, English verse translations retained, suras 1-4 exhaustive")
+    print("- Qushayri: 806 source anchors preserved as 720 logical entries; 86 translation-only anchors grouped into 76 shared-commentary ranges; English verse translations retained; suras 1-4 exhaustive")
     print("- Qurtubi: 432 English-only ranges from volumes 1-4, exhaustive through 4:22, 4:23 excluded")
-    print("- no Arabic-source leakage, PUA/replacement glyphs, soft hyphens, control characters or known scan/header debris")
+    print("- no Arabic-source leakage, empty commentary rows, PUA/replacement glyphs, soft hyphens, control characters or known scan/header debris")
     print(f"- logical digests: Qushayri={digests['qushayri']} Qurtubi={digests['qurtubi']}")
 
 
