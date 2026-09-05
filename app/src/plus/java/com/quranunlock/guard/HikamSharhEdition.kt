@@ -81,7 +81,8 @@ object HikamSharhEdition {
             printLocator = obj.getString("commentary_print_locator").trim(),
             verified = obj.optString("commentary_status") == "verified" &&
                 obj.optString("translation_status") == "verified" &&
-                obj.optString("hikma_alignment_status") == "verified",
+                obj.optString("hikma_alignment_status") == "verified" &&
+                obj.optString("source_boundary_status") == "verified",
             richSpansArabic = obj.richSpans("rich_spans_arabic"),
             richSpansFrench = obj.richSpans("rich_spans_french"),
             technicalTerms = obj.stringSet("technical_terms")
