@@ -31,12 +31,18 @@ object TafsirEdition {
 
     suspend fun load(context: Context, verse: VerseRef): TafsirEntry? = null
 
+    suspend fun referencePage(
+        context: Context,
+        reference: QuranReferenceRef
+    ): Int? = null
+
     @Composable
     fun Panel(
         verse: VerseRef,
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
-        onPanelTopInWindow: (Int) -> Unit
+        onPanelTopInWindow: (Int) -> Unit,
+        onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) = Unit
 }
