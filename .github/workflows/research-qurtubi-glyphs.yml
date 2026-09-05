@@ -1,0 +1,39 @@
+name: Research Qurtubi special glyphs
+
+on:
+  push:
+    branches:
+      - "research/0.10.5-tafsir-glyphs"
+  workflow_dispatch:
+
+jobs:
+  glyph-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PDF tooling
+        run: python -m pip install --disable-pip-version-check pymupdf==1.26.7
+      - name: Fetch pinned Qurtubi volumes 1-4
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "$src"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "$src/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+      - name: Inventory source glyph spans
+        run: |
+          python scripts/research_qurtubi_special_glyphs.py \
+            --source-dir "${RUNNER_TEMP}/tafsir-src" \
+            --report "${RUNNER_TEMP}/qurtubi-special-glyphs.json"
+      - name: Upload research report
+        uses: actions/upload-artifact@v4
+        with:
+          name: qurtubi-special-glyphs
+          path: ${{ runner.temp }}/qurtubi-special-glyphs.json
+          retention-days: 7
