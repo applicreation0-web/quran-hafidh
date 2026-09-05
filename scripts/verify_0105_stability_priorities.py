@@ -11,21 +11,27 @@ def require(condition: bool, message: str) -> None:
 
 
 free_reader = (ROOT / "app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt").read_text()
+bookmark_store = (ROOT / "app/src/main/java/com/quranunlock/guard/QuranBookmarkStore.kt").read_text()
 plus_taddabur = (ROOT / "app/src/plus/java/com/quranunlock/guard/TaddaburEdition.kt").read_text()
 plus_manifest = (ROOT / "app/src/plus/AndroidManifest.xml").read_text()
 plus_tafsir = (ROOT / "app/src/plus/java/com/quranunlock/guard/TafsirEdition.kt").read_text()
 multitafsir_repo = (ROOT / "app/src/plus/java/com/quranunlock/guard/MultiTafsirRepository.kt").read_text()
 hikam_report = json.loads((ROOT / "app/src/main/assets/hikam/verification_report.json").read_text())
 
-# Qur'an reader: automatic last-page resume and explicit user bookmark must remain distinct.
+# Qur'an reader: automatic last-page resume and multiple explicit user bookmarks are distinct.
 require('private const val KEY_LAST_PAGE = "last_page"' in free_reader,
         "automatic last-page resume key missing")
-require('private const val KEY_BOOKMARK_PAGE = "bookmark_page"' in free_reader,
-        "explicit bookmark key missing")
-require("fun saveBookmark()" in free_reader and "fun resumeBookmark()" in free_reader,
-        "bookmark save/resume actions missing")
-require("Marque-page enregistré" in free_reader and "Reprise au marque-page" in free_reader,
-        "bookmark user feedback missing")
+require('private const val KEY_BOOKMARK_PAGES = "bookmark_pages"' in bookmark_store,
+        "multiple-bookmark persistence key missing")
+require("getStringSet(KEY_BOOKMARK_PAGES" in bookmark_store and
+        "putStringSet(KEY_BOOKMARK_PAGES" in bookmark_store,
+        "multiple bookmarks must be persisted as a set")
+require("fun toggle(context: Context, page: Int): Set<Int>" in bookmark_store,
+        "bookmark add/remove action missing")
+require("var bookmarkPages" in free_reader and "bookmarkPages.sorted().forEach" in free_reader,
+        "reader must expose all saved bookmarks")
+require("Ajouter un marque-page" in free_reader and "Retirer le marque-page" in free_reader,
+        "multiple-bookmark user feedback missing")
 require("TafsirEdition.load" in free_reader and "TafsirEdition.Panel" in free_reader,
         "bookmark work must not remove Tafsir integration")
 
@@ -55,4 +61,4 @@ require(hikam_report.get("verified_and_translated") == 264,
 require(hikam_report.get("missing_french_translation") == 0,
         "no Hikma may be active without French translation")
 
-print("PASS: 0.10.5 priorities locked — Tafsir critical, Quran bookmark persistent, Hikam translations complete, Taddabur runtime deferred")
+print("PASS: 0.10.5 priorities locked — Tafsir critical, Quran multi-bookmarks persistent, Hikam translations complete, Taddabur runtime deferred")
