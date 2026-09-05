@@ -32,6 +32,8 @@ V2 = {
             "raw_segment_count": "806",
             "translation_only_anchor_count": "86",
             "grouped_source_range_count": "76",
+            "source_soft_hyphen_count": "584",
+            "soft_hyphen_policy": "preserve-marker-then-source-driven-join",
         },
     },
     "qurtubi": {
@@ -45,6 +47,7 @@ ARABIC = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb5
 PUA = re.compile(r"[\ue000-\uf8ff]")
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 BAD_SPACE = re.compile(r"[ \t]+\n|\n[ \t]+|[ \t]{2,}")
+QUSHAYRI_ANCHOR_LABEL = re.compile(r"\[(\d+):(\d+)(?:–(\d+))?\]")
 QUSHAYRI_DEBRIS = re.compile(
     r"(?:Subtle Allusions\s*\[|Laṭāʾif al-ishārāt\s*\[|"
     r"(?:^|\n)\s*\d+\s*\|\s*•|(?:^|\n)\s*•\s*Laṭāʾif|"
@@ -80,6 +83,10 @@ def assert_clean(
         raise SystemExit(f"{label}: empty text")
     if "\ufffd" in text or "\u00ad" in text:
         raise SystemExit(f"{label}: replacement/discretionary-hyphen debris")
+    if "\u00a0" in text:
+        raise SystemExit(f"{label}: non-breaking-space PDF debris")
+    if "__QSH_SOFT_HYPHEN__" in text:
+        raise SystemExit(f"{label}: unresolved internal soft-hyphen marker")
     if PUA.search(text):
         raise SystemExit(f"{label}: private-use PDF glyph")
     if CONTROL.search(text):
@@ -215,14 +222,46 @@ def audit_v2(assets: Path, edition: str, spec: dict) -> str:
             ).fetchone()[0]
             if blank_commentaries:
                 raise SystemExit(f"Qushayri: {blank_commentaries} empty commentary rows survived grouping")
-            # Grouped translations explicitly keep each source anchor label, proving
-            # that range grouping did not silently discard the consecutive verses.
-            grouped = con.execute(
-                "SELECT COUNT(*) FROM tafsir_entry WHERE instr(verse_translation, '[' || surah || ':')>0"
-            ).fetchone()[0]
-            if grouped < int(meta["grouped_source_range_count"]):
+
+            # Recount the original source anchors from the actual payload, rather
+            # than trusting metadata alone. Non-grouped rows represent one anchor;
+            # grouped rows carry an explicit [sura:ayah] label for every anchor.
+            raw_anchor_equivalent = 0
+            grouped_rows = 0
+            secondary_anchor_count = 0
+            for _, surah, start, end, _, translation, _ in rows:
+                labels = QUSHAYRI_ANCHOR_LABEL.findall(translation)
+                if labels:
+                    grouped_rows += 1
+                    raw_anchor_equivalent += len(labels)
+                    secondary_anchor_count += len(labels) - 1
+                    for label_surah, label_start, label_end in labels:
+                        if int(label_surah) != surah:
+                            raise SystemExit(
+                                f"Qushayri: grouped translation label escaped source sura {surah}: {translation[:160]!r}"
+                            )
+                        label_last = int(label_end or label_start)
+                        if int(label_start) < start or label_last > end:
+                            raise SystemExit(
+                                f"Qushayri: grouped translation label escaped source range {surah}:{start}-{end}"
+                            )
+                else:
+                    raw_anchor_equivalent += 1
+
+            expected_raw = int(meta["raw_segment_count"])
+            expected_grouped = int(meta["grouped_source_range_count"])
+            expected_secondary = int(meta["translation_only_anchor_count"])
+            if raw_anchor_equivalent != expected_raw:
                 raise SystemExit(
-                    "Qushayri: grouped ranges do not retain enough explicit source-anchor labels"
+                    f"Qushayri: actual payload reconstructs {raw_anchor_equivalent} source anchors, expected {expected_raw}"
+                )
+            if grouped_rows != expected_grouped:
+                raise SystemExit(
+                    f"Qushayri: actual payload has {grouped_rows} grouped rows, expected {expected_grouped}"
+                )
+            if secondary_anchor_count != expected_secondary:
+                raise SystemExit(
+                    f"Qushayri: actual payload has {secondary_anchor_count} secondary grouped anchors, expected {expected_secondary}"
                 )
         else:
             volumes = {
@@ -261,9 +300,9 @@ def main() -> None:
 
     print("0.10.5 Tafsir contradictory cleanup audit PASS")
     print("- Jalalayn byte-identical approved corpus: 6236 entries / 427 notes")
-    print("- Qushayri: 806 source anchors preserved as 720 logical entries; 86 translation-only anchors grouped into 76 shared-commentary ranges; English verse translations retained; suras 1-4 exhaustive")
+    print("- Qushayri: actual payload reconstructs exactly 806 source anchors as 720 logical entries; 86 translation-only anchors grouped into exactly 76 shared-commentary ranges; 584 source soft hyphens resolved before normalization; English verse translations retained; suras 1-4 exhaustive")
     print("- Qurtubi: 432 English-only ranges from volumes 1-4, exhaustive through 4:22, 4:23 excluded")
-    print("- no Arabic-source leakage, empty commentary rows, PUA/replacement glyphs, soft hyphens, control characters or known scan/header debris")
+    print("- no Arabic-source leakage, empty commentary rows, PUA/replacement glyphs, soft hyphens, NBSPs, control characters or known scan/header debris")
     print(f"- logical digests: Qushayri={digests['qushayri']} Qurtubi={digests['qurtubi']}")
 
 
