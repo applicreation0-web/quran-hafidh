@@ -36,7 +36,7 @@ jobs:
           gradle-version: "9.5.0"
 
       - name: Verify total release audit
-        run: gradle --no-daemon :app:verifyReleaseAudit
+        run: gradle --no-daemon :app:verifyReleaseAudit --stacktrace
 
       - name: Verify 0.10.3 contradictory update audit
         run: python3 scripts/verify_0103_update.py
