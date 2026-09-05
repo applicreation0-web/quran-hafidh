@@ -21,9 +21,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Hikam audit dependencies
+        run: python3 -m pip install --disable-pip-version-check beautifulsoup4
+
       - name: Preserve canonical 264 Hikam and separation rules
         run: |
-          python3 scripts/verify_0104_hikam_freeze.py
+          python3 scripts/verify_0105_hikam_canonical_freeze.py
           python3 scripts/verify_hikam_translation_separation.py
           python3 scripts/audit_hikam_translation_against_islamicpearls.py
 
