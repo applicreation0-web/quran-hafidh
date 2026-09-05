@@ -78,6 +78,7 @@ def inventory(pdf: Path) -> dict:
     calls: list[dict] = []
     apparatus_by_page: dict[int, list[str]] = collections.defaultdict(list)
     numbered_blocks: list[dict] = []
+    layout_lines_by_page: dict[int, list[dict]] = collections.defaultdict(list)
 
     for page_index in range(FIRST_COMMENTARY_PAGE_INDEX, LAST_COMMENTARY_PAGE_INDEX_EXCLUSIVE):
         page_number = page_index + 1
@@ -87,7 +88,7 @@ def inventory(pdf: Path) -> dict:
                 continue
 
             block_lines: list[str] = []
-            for line in block["lines"]:
+            for line_index, line in enumerate(block["lines"]):
                 line_spans = spans(line)
                 if not line_spans:
                     continue
@@ -97,6 +98,16 @@ def inventory(pdf: Path) -> dict:
                 block_lines.append(text)
 
                 sizes = [float(span.get("size", 0.0)) for span in line_spans]
+                x0, y0, x1, y1 = [float(v) for v in line.get("bbox", (0, 0, 0, 0))]
+                layout_lines_by_page[page_number].append(
+                    {
+                        "block_index": block_index,
+                        "line_index": line_index,
+                        "text": text,
+                        "bbox": (x0, y0, x1, y1),
+                        "sizes": sizes,
+                    }
+                )
                 max_size = max(sizes)
                 if max_size <= SMALL_TEXT_MAX:
                     apparatus_by_page[page_number].append(text)
@@ -160,9 +171,63 @@ def inventory(pdf: Path) -> dict:
         blocks_by_key[(note["page"], note["number"])].append(note)
     block_keys = set(blocks_by_key)
 
+    # Detector C: layout-row starts. In some source pages the printed note
+    # number is its own narrow text line/block, while the body begins in a
+    # separate block on the same baseline. Detect only bottom-page, left-margin
+    # standalone numbers that have one horizontally adjacent English text line.
+    row_starts: list[dict] = []
+    for page_number, records in sorted(layout_lines_by_page.items()):
+        page = doc[page_number - 1]
+        page_width = float(page.rect.width)
+        page_height = float(page.rect.height)
+        for record in records:
+            text = record["text"].strip()
+            if not re.fullmatch(r"\d{1,3}", text):
+                continue
+            number = int(text)
+            x0, y0, x1, y1 = record["bbox"]
+            if y0 < page_height * 0.55 or x0 > page_width * 0.30:
+                continue
+            cy = (y0 + y1) / 2.0
+            neighbors = []
+            for other in records:
+                if other is record:
+                    continue
+                other_text = other["text"].strip()
+                if (
+                    not other_text
+                    or re.fullmatch(r"\d{1,3}", other_text)
+                    or HEADER_RE.match(other_text)
+                    or mostly_arabic(other_text)
+                ):
+                    continue
+                ox0, oy0, ox1, oy1 = other["bbox"]
+                ocy = (oy0 + oy1) / 2.0
+                if ox0 <= x1 or ox0 > page_width * 0.55:
+                    continue
+                if abs(ocy - cy) <= 5.0:
+                    neighbors.append(other)
+            if len(neighbors) == 1:
+                body_start = neighbors[0]
+                row_starts.append(
+                    {
+                        "page": page_number,
+                        "number": number,
+                        "number_bbox": [round(v, 2) for v in record["bbox"]],
+                        "body_bbox": [round(v, 2) for v in body_start["bbox"]],
+                        "body_start": body_start["text"],
+                    }
+                )
+
+    rows_by_key: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
+    for note in row_starts:
+        rows_by_key[(note["page"], note["number"])].append(note)
+    row_keys = set(rows_by_key)
+
     strict_paired = call_keys & strict_keys
     block_paired = call_keys & block_keys
-    union_paired = strict_paired | block_paired
+    row_paired = call_keys & row_keys
+    union_paired = strict_paired | block_paired | row_paired
     both_paired = strict_paired & block_paired
 
     duplicate_call_keys = sorted(key for key, value in calls_by_key.items() if len(value) != 1)
@@ -174,6 +239,7 @@ def inventory(pdf: Path) -> dict:
         call = calls_by_key[key][0]
         strict_note = strict_by_key.get(key, [None])[0]
         block_note = blocks_by_key.get(key, [None])[0]
+        row_note = rows_by_key.get(key, [None])[0]
         samples.append(
             {
                 "page": key[0],
@@ -181,11 +247,13 @@ def inventory(pdf: Path) -> dict:
                 "call_text": call["call_text"],
                 "strict_note_body": strict_note["body"] if strict_note else None,
                 "block_note_body": block_note["body"] if block_note else None,
+                "layout_row_body_start": row_note["body_start"] if row_note else None,
                 "detectors": [
                     name
                     for name, present in (
                         ("strict_small_text", key in strict_paired),
                         ("numbered_block", key in block_paired),
+                        ("layout_row", key in row_paired),
                     )
                     if present
                 ],
@@ -193,7 +261,7 @@ def inventory(pdf: Path) -> dict:
         )
 
     return {
-        "schema": "quran-safeguard-qushayri-note-research-v3",
+        "schema": "quran-safeguard-qushayri-note-research-v5",
         "production_eligible": False,
         "source_sha256": actual_sha,
         "pdf_page_index_window": [FIRST_COMMENTARY_PAGE_INDEX, LAST_COMMENTARY_PAGE_INDEX_EXCLUSIVE - 1],
@@ -205,16 +273,25 @@ def inventory(pdf: Path) -> dict:
         "numbered_block_start_candidates": len(numbered_blocks),
         "numbered_block_candidate_keys": len(block_keys),
         "numbered_block_matched_page_number_pairs": len(block_paired),
-        "matched_by_both_detectors": len(both_paired),
-        "matched_by_either_detector": len(union_paired),
+        "matched_by_both_original_detectors": len(both_paired),
+        "layout_row_start_candidates": len(row_starts),
+        "layout_row_candidate_keys": len(row_keys),
+        "layout_row_matched_page_number_pairs": len(row_paired),
+        "matched_by_any_detector": len(union_paired),
         "strict_only_pairs": [list(key) for key in sorted(strict_paired - block_paired)],
         "block_only_pairs": [list(key) for key in sorted(block_paired - strict_paired)],
+        "layout_row_only_pairs": [list(key) for key in sorted(row_paired - strict_paired - block_paired)],
         "still_unpaired_call_keys": [list(key) for key in sorted(call_keys - union_paired)],
         "duplicate_call_keys": [list(key) for key in duplicate_call_keys],
         "duplicate_strict_note_keys": [list(key) for key in duplicate_strict_note_keys],
         "duplicate_block_note_keys": [list(key) for key in duplicate_block_note_keys],
+        "duplicate_layout_row_keys": [
+            list(key) for key, value in sorted(rows_by_key.items()) if len(value) != 1
+        ],
         "strict_uncalled_note_keys": [list(key) for key in sorted(strict_keys - call_keys)],
         "block_uncalled_note_keys": [list(key) for key in sorted(block_keys - call_keys)],
+        "layout_row_uncalled_note_keys": [list(key) for key in sorted(row_keys - call_keys)],
+        "layout_row_samples": row_starts[:80],
         "sample_pairs": samples,
     }
 
