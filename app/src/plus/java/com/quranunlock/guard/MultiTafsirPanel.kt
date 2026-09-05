@@ -25,7 +25,8 @@ internal fun MultiTafsirPanel(
     verse: VerseRef,
     modifier: Modifier,
     maxPanelHeight: Dp,
-    onPanelTopInWindow: (Int) -> Unit
+    onPanelTopInWindow: (Int) -> Unit,
+    onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val prefs = remember {
@@ -84,6 +85,7 @@ internal fun MultiTafsirPanel(
         selectedEdition = selectedEdition,
         availableEditions = loaded?.editions.orEmpty(),
         onEditionSelected = ::choose,
+        onQuranReferenceSelected = onQuranReferenceSelected,
         modifier = modifier,
         maxPanelHeight = maxPanelHeight,
         onPanelTopInWindow = onPanelTopInWindow
