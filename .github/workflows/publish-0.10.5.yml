@@ -28,7 +28,9 @@ jobs:
         run: python3 scripts/prepare_0105_version.py
 
       - name: Verify 0.10.5 stability priorities
-        run: python3 scripts/verify_0105_stability_priorities.py
+        run: |
+          python3 scripts/verify_0105_stability_priorities.py
+          python3 scripts/verify_0105_runtime_clean.py
 
       - name: Fetch and verify all 604 Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
@@ -57,6 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/verify_0105_stability_priorities.py
+          python3 scripts/verify_0105_runtime_clean.py
           python3 scripts/verify_0105_sensitive_scope.py
           python3 scripts/verify_0105_tafsir_update.py
           python3 scripts/verify_0105_tafsir_typography_contract.py
@@ -101,12 +104,8 @@ jobs:
           light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
           plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
           python3 scripts/verify_light_apk_no_tafsir.py "${light}"
-          python3 scripts/verify_light_apk_no_taddabur.py "${light}"
           python3 scripts/verify_plus_apk_multitafsir.py "${plus}"
-          if apkanalyzer manifest print "${plus}" | grep -Fq "TaddaburActivity"; then
-            echo "Deferred TaddaburActivity must not be declared in the 0.10.5 Plus runtime."
-            exit 1
-          fi
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
 
       - name: Sign and verify Light and Plus 0.10.5
         shell: bash
@@ -148,12 +147,8 @@ jobs:
           test "$(apkanalyzer manifest version-name "${light_apk}")" = "0.10.5"
           test "$(apkanalyzer manifest version-name "${plus_apk}")" = "0.10.5-plus.1"
           python3 scripts/verify_light_apk_no_tafsir.py "${light_apk}"
-          python3 scripts/verify_light_apk_no_taddabur.py "${light_apk}"
           python3 scripts/verify_plus_apk_multitafsir.py "${plus_apk}"
-          if apkanalyzer manifest print "${plus_apk}" | grep -Fq "TaddaburActivity"; then
-            echo "Deferred TaddaburActivity must not be declared in the signed 0.10.5 Plus runtime."
-            exit 1
-          fi
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light_apk}" --apk "${plus_apk}"
           sha256sum "${light_apk}" "${plus_apk}" > "${release_dir}/Quran-Safeguard-0.10.5-SHA256.txt"
 
       - name: Upload signed release bundle
@@ -197,7 +192,7 @@ jobs:
           ### Coran / Muṣḥaf
           - 604/604 pages Hafs/KFQC contrôlées contre la source épinglée ;
           - reprise automatique de la dernière page lue conservée ;
-          - marque-page explicite persistant ajouté, avec reprise directe au marque-page ;
+          - plusieurs marque-pages persistants peuvent être ajoutés, retirés et ouverts directement ;
           - décompression et structure SVG contrôlées ;
           - page 552 explicitement vérifiée comme contenant sourate aṣ-Ṣaff (61) ;
           - aucune page coranique reconstruite ou éditée manuellement.
@@ -225,9 +220,9 @@ jobs:
           - matn, traduction, aide terminologique et commentaire éventuel restent strictement séparés.
 
           ### Stabilité
-          - Taddabur est différé de la 0.10.5 publiée ;
-          - aucun blocage, aucune alarme et aucune activité Taddabur ne sont exposés dans le runtime Plus ;
-          - son travail interne est conservé dans le dépôt pour une version ultérieure.
+          - Taddabur est retiré de la 0.10.5 : sources Light/Plus, activité, hooks de blocage, alarmes et anciens tests dédiés supprimés ;
+          - un audit source + APK échoue si un élément Taddabur réapparaît dans le runtime ;
+          - le rappel quotidien à 20:00 et les Adhkâr matin/soir restent indépendants et actifs selon les réglages.
 
           ### Confidentialité / applications sensibles
           - le sentinel Accessibility non filtré est désactivé en permanence ;
