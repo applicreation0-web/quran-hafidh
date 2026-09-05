@@ -87,16 +87,6 @@ class QuranAccessibilityService : AccessibilityService() {
                 val currentMode = audioManager?.mode ?: AudioManager.MODE_NORMAL
                 handleAudioModeChanged(currentMode)
 
-                val taddaburTarget = foregroundPackage
-                    ?.takeIf { ProtectedApps.isProtected(this@QuranAccessibilityService, it) }
-                if (!callFreezeActive &&
-                    taddaburTarget != null &&
-                    TaddaburEdition.shouldBlockNow(this@QuranAccessibilityService)
-                ) {
-                    triggerTaddaburGateIfNeeded(taddaburTarget)
-                    return
-                }
-
                 if (!callFreezeActive) {
                     val packageName = foregroundUnlockedPackage
                     if (packageName != null) {
@@ -169,9 +159,6 @@ class QuranAccessibilityService : AccessibilityService() {
         startupStep("DIAGNOSTIC_INIT_FAILED") {
             GuardDiagnostics.log(this, "SERVICE_CONNECTED")
         }
-        startupStep("TADDABUR_SCHEDULE_INIT_FAILED") {
-            TaddaburEdition.scheduleReminder(this)
-        }
 
         guardPrefs = try {
             getSharedPreferences(GuardPrefs.FILE, Context.MODE_PRIVATE).also {
@@ -204,7 +191,6 @@ class QuranAccessibilityService : AccessibilityService() {
         if (orphanedRecovery != null) {
             startupStep("FOREGROUND_RECOVERY_ARM_FAILED") {
                 if (!callFreezeActive &&
-                    !TaddaburEdition.shouldBlockNow(this) &&
                     isScreenInteractiveAndUnlocked() &&
                     ProtectedApps.isProtected(this, orphanedRecovery.packageName) &&
                     GuardPrefs.isUnlocked(this, orphanedRecovery.packageName)
@@ -419,8 +405,7 @@ class QuranAccessibilityService : AccessibilityService() {
                 if (recovery.packageName == protectedForeground) {
                     GuardPrefs.chargeRecoveredForegroundGap(this, recovery)
                     if (GuardPrefs.isUnlocked(this, recovery.packageName) &&
-                        !callFreezeActive &&
-                        !TaddaburEdition.shouldBlockNow(this)
+                        !callFreezeActive
                     ) {
                         GuardPrefs.beginUnlockForeground(this, recovery.packageName)
                         foregroundUnlockedPackage = recovery.packageName
@@ -475,10 +460,6 @@ class QuranAccessibilityService : AccessibilityService() {
         // Never display the Quran gate on top of an ongoing/ringing call.
         if (callFreezeActive) return
 
-        if (TaddaburEdition.shouldBlockNow(this)) {
-            triggerTaddaburGateIfNeeded(packageName)
-            return
-        }
 
         if (GuardPrefs.isUnlocked(this, packageName)) return
 
@@ -574,8 +555,7 @@ class QuranAccessibilityService : AccessibilityService() {
                     isProtected = ProtectedApps.isProtected(this, packageName),
                     isUnlocked = GuardPrefs.isUnlocked(this, packageName),
                     callFrozen = callFreezeActive ||
-                        whatsappCallUiActive ||
-                        TaddaburEdition.shouldBlockNow(this)
+                        whatsappCallUiActive
                 )
             ) {
                 GuardPrefs.beginUnlockForeground(this, packageName)
@@ -593,7 +573,6 @@ class QuranAccessibilityService : AccessibilityService() {
         foregroundPackage = packageName
 
         if (!callFreezeActive &&
-            !TaddaburEdition.shouldBlockNow(this) &&
             ProtectedApps.isProtected(this, packageName) &&
             GuardPrefs.isUnlocked(this, packageName)
         ) {
@@ -613,27 +592,6 @@ class QuranAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun triggerTaddaburGateIfNeeded(packageName: String) {
-        if (callFreezeActive || whatsappCallUiActive) return
-        if (!ProtectedApps.isProtected(this, packageName)) return
-        if (!TaddaburEdition.shouldBlockNow(this)) return
-        if (GuardRuntime.externalForegroundPackage() != packageName) return
-
-        pauseForegroundBudget(clearForeground = false)
-        GuardRuntime.interception.reset()
-        val now = SystemClock.elapsedRealtime()
-        if (!GuardRuntime.interception.begin(packageName, now)) return
-
-        GuardDiagnostics.log(
-            this,
-            "TADDABUR_DEADLINE_GATE",
-            packageName
-        )
-        cancelPendingLaunches()
-        launchGate(packageName, "taddabur_deadline")
-        scheduleRetry(packageName, 350L, "taddabur_retry_1")
-        scheduleRetry(packageName, 900L, "taddabur_retry_2")
-    }
 
     private fun triggerExpiredGateIfNeeded(packageName: String) {
         val remaining = GuardPrefs.remainingUnlockMs(this, packageName)
@@ -691,8 +649,7 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private fun launchGate(packageName: String, reason: String) {
         if (callFreezeActive || whatsappCallUiActive) return
-        val taddaburBlocked = TaddaburEdition.shouldBlockNow(this)
-        if (!taddaburBlocked && GuardPrefs.isUnlocked(this, packageName)) return
+        if (GuardPrefs.isUnlocked(this, packageName)) return
         if (!ProtectedApps.isProtected(this, packageName)) return
         if (GuardRuntime.externalForegroundPackage() != packageName) return
         if (!GuardRuntime.interception.shouldRetry(packageName) && reason != "initial") return

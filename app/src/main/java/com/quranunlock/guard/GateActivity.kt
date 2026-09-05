@@ -46,7 +46,6 @@ class GateActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         if (challengeKey.isNotBlank() &&
-            !TaddaburEdition.shouldBlockNow(this) &&
             GuardPrefs.isUnlocked(this, challengeKey)
         ) {
             GuardRuntime.interception.markUnlocked(challengeKey)
@@ -120,11 +119,6 @@ class GateActivity : ComponentActivity() {
         )
 
         // Flavor boundary: Light always returns false; Plus may replace the
-        // ordinary Quran/joker gate with the fixed 20:00–midnight Taddabur gate.
-        if (TaddaburEdition.renderBlockingGate(this, challengeKey)) {
-            displayedPage = 0
-            return
-        }
 
         val page = GuardPrefs.challengePage(this, challengeKey)
         displayedPage = page
@@ -167,10 +161,6 @@ class GateActivity : ComponentActivity() {
 
                     LaunchedEffect(challengeKey, page) {
                         while (true) {
-                            if (TaddaburEdition.shouldBlockNow(this@GateActivity)) {
-                                recreate()
-                                return@LaunchedEffect
-                            }
                             readingMs = GuardPrefs.readingElapsedMs(
                                 this@GateActivity,
                                 challengeKey,
@@ -248,10 +238,6 @@ class GateActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = jokersRemaining > 0,
                             onClick = {
-                                if (TaddaburEdition.shouldBlockNow(this@GateActivity)) {
-                                    recreate()
-                                    return@SafeguardOutlinedButton
-                                }
                                 val skippedLevel = GuardPrefs.consumeJokerAndUnlock(
                                     this@GateActivity,
                                     challengeKey
@@ -308,10 +294,6 @@ class GateActivity : ComponentActivity() {
 
     private fun openReader(page: Int) {
         if (isFinishing || challengeKey.isBlank()) return
-        if (TaddaburEdition.shouldBlockNow(this)) {
-            recreate()
-            return
-        }
         startActivity(
             Intent(this, MushafReaderActivity::class.java).apply {
                 putExtra(MushafReaderActivity.EXTRA_PAGE, page)
