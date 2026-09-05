@@ -54,16 +54,16 @@ private const val DEFAULT_FONT_SIZE = 18f
 /**
  * Single Tafsir renderer for Plus.
  *
- * This is deliberately the 0.10.3 panel extended by only one permanent visual
- * control: the compact edition selector. Data loading stays outside the renderer.
- * Sustained reading uses the shared warm, low-glare reading surface.
- * Long-form Tafsir prose and notes are justified for book-like reading.
+ * Only editions with a real source-backed entry for the tapped verse are offered
+ * by the selector. Sustained reading uses the shared warm, low-glare surface and
+ * long-form Tafsir prose/notes remain justified without rewriting source text.
  */
 @Composable
 internal fun TafsirPanel(
     verse: VerseRef,
     state: TafsirLoadState,
     selectedEdition: PrivateTafsirEdition,
+    availableEditions: List<PrivateTafsirEdition>,
     onEditionSelected: (PrivateTafsirEdition) -> Unit,
     modifier: Modifier,
     maxPanelHeight: Dp,
@@ -151,15 +151,22 @@ internal fun TafsirPanel(
                         contentDescription = "Choisir le Tafsîr"
                         stateDescription = selectedEdition.displayName
                     },
+                    enabled = availableEditions.size > 1,
                     onClick = { menuExpanded = true }
                 ) {
-                    Text("${selectedEdition.displayName} ▾")
+                    Text(
+                        if (availableEditions.size > 1) {
+                            "${selectedEdition.displayName} ▾"
+                        } else {
+                            selectedEdition.displayName
+                        }
+                    )
                 }
                 DropdownMenu(
-                    expanded = menuExpanded,
+                    expanded = menuExpanded && availableEditions.size > 1,
                     onDismissRequest = { menuExpanded = false }
                 ) {
-                    PrivateTafsirEdition.entries.forEach { edition ->
+                    availableEditions.forEach { edition ->
                         DropdownMenuItem(
                             text = { Text(edition.displayName) },
                             onClick = {
@@ -179,7 +186,7 @@ internal fun TafsirPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TafsirLoadState.Unavailable -> Text(
-                    "Commentaire anglais indisponible pour ce verset dans cette édition.",
+                    "Aucun commentaire vérifié n’est disponible pour ce verset.",
                     fontSize = fontSize.sp
                 )
                 is TafsirLoadState.Available -> {
