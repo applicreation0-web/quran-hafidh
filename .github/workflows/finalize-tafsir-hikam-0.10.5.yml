@@ -1,0 +1,95 @@
+name: Finalize 0.10.5 Tafsir and Hikam
+
+on:
+  push:
+    branches:
+      - "work/0.10.5-tafsir-hikam-finalize"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: ${{ !contains(github.event.head_commit.message, '[finalize-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout finalization branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply deterministic finalization patch
+        run: python3 scripts/finalize_tafsir_hikam_0105.py
+
+      - name: Verify corpus files were not rewritten
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git diff --name-only -- app/src/main/assets/hikam/al_hikam_verified.json app/src/plus/assets/tafsir)"
+
+      - name: Run Tafsir and Hikam blocking audits
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_0105_tafsir_typography_contract.py
+          python3 scripts/verify_0105_tafsir_update.py
+          python3 scripts/verify_0105_hikam_verified_only.py
+          python3 scripts/verify_hikam_translation_separation.py
+          python3 scripts/audit_hikam_technical_lexicon_0105.py
+          python3 scripts/verify_0105_stability_priorities.py
+          python3 scripts/verify_0105_runtime_clean.py
+          python3 scripts/verify_0105_sensitive_scope.py
+
+      - name: Fetch and verify all 604 Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Run release audit and Light/Plus unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:verifyReleaseAudit
+          gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Check patch hygiene
+        run: git diff --check
+
+      - name: Commit audited finalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/src/main/java/com/quranunlock/guard/TafsirModels.kt \
+            app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt \
+            app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt \
+            app/src/test/java/com/quranunlock/guard/TafsirInteractionTest.kt \
+            app/src/main/java/com/quranunlock/guard/HikamTechnicalLexicon.kt \
+            app/src/main/java/com/quranunlock/guard/HikamDetailActivity.kt \
+            app/src/test/java/com/quranunlock/guard/HikamTechnicalLexiconTest.kt \
+            scripts/audit_hikam_technical_lexicon_0105.py \
+            scripts/verify_0105_tafsir_typography_contract.py \
+            docs/TAFSIR_TYPOGRAPHY_ALIGNMENT_CONTRACT_0.10.5.md
+          git diff --cached --check
+          git diff --cached --quiet && { echo "No finalization changes produced"; exit 1; }
+          git commit -m "0.10.5: finalize Tafsir typography and Hikam lexicon [finalize-applied]"
+          git push origin HEAD:work/0.10.5-tafsir-hikam-finalize
