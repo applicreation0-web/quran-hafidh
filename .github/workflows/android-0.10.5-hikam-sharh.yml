@@ -1,0 +1,67 @@
+name: Android 0.10.5 Hikam Sharh audit
+
+on:
+  push:
+    branches:
+      - "work/0.10.5-hikam-commentaries"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  structural-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Preserve canonical 264 Hikam and separation rules
+        run: |
+          python3 scripts/verify_0104_hikam_freeze.py
+          python3 scripts/verify_hikam_translation_separation.py
+          python3 scripts/audit_hikam_translation_against_islamicpearls.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Compile and test both editions
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest :app:assembleLightDebug :app:assemblePlusDebug
+
+  documentary-release-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require 264 x 2 independently verified commentaries
+        run: python3 scripts/verify_0105_hikam_sharh_264.py
+
+      - name: Confirm Light remains free of Plus Sharh asset
+        if: success()
+        run: |
+          if find app/src/light app/src/main -type f -iname '*hikam_sharh_dual*' | grep -q .; then
+            echo 'Hikam Sharh asset leaked outside Plus' >&2
+            exit 1
+          fi
