@@ -1,0 +1,37 @@
+name: Export Android Build Tools 36 for Quran Safeguard signing
+
+on:
+  push:
+    branches:
+      - "tools/0.10.5-build-tools-export"
+
+permissions:
+  contents: read
+
+jobs:
+  export-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Build Tools 36.0.0
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "build-tools;36.0.0"
+          test -x "${ANDROID_HOME}/build-tools/36.0.0/zipalign"
+          test -f "${ANDROID_HOME}/build-tools/36.0.0/apksigner"
+          "${ANDROID_HOME}/build-tools/36.0.0/apksigner" version
+          "${ANDROID_HOME}/build-tools/36.0.0/zipalign" -h >/dev/null 2>&1 || test $? -eq 1
+
+      - name: Upload official Build Tools 36.0.0
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36.0.0-official
+          path: ${{ env.ANDROID_HOME }}/build-tools/36.0.0/
+          if-no-files-found: error
+          retention-days: 1
