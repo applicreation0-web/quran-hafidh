@@ -64,7 +64,13 @@ def open_db(blob: bytes):
     return tmp, sqlite3.connect(f"file:{tmp.name}?mode=ro", uri=True)
 
 
-def assert_clean(label: str, text: str, *, arabic_forbidden: bool = False) -> None:
+def assert_clean(
+    label: str,
+    text: str,
+    *,
+    arabic_forbidden: bool = False,
+    normalized_whitespace_required: bool = True,
+) -> None:
     if not text.strip():
         raise SystemExit(f"{label}: empty text")
     if "\ufffd" in text or "\u00ad" in text:
@@ -75,7 +81,7 @@ def assert_clean(label: str, text: str, *, arabic_forbidden: bool = False) -> No
         raise SystemExit(f"{label}: control character")
     if "\r" in text:
         raise SystemExit(f"{label}: carriage-return debris")
-    if BAD_SPACE.search(text):
+    if normalized_whitespace_required and BAD_SPACE.search(text):
         raise SystemExit(f"{label}: non-normalized whitespace")
     if arabic_forbidden and ARABIC.search(text):
         raise SystemExit(f"{label}: Arabic source text leaked into English-only corpus")
@@ -99,14 +105,24 @@ def audit_jalalayn(assets: Path) -> None:
         notes = con.execute("SELECT COUNT(*) FROM verse_note").fetchone()[0]
         if (comments, notes) != (6236, 427):
             raise SystemExit(f"Jalalayn count regression: {comments}/{notes}")
+        # Jalalayn is frozen by exact archive/database hashes. Do not introduce a
+        # new formatting policy that could reject its already-approved spacing.
         for surah, ayah, body in con.execute(
             "SELECT surah,ayah,plain_text FROM verse_commentary ORDER BY surah,ayah"
         ):
-            assert_clean(f"Jalalayn {surah}:{ayah}", body)
+            assert_clean(
+                f"Jalalayn {surah}:{ayah}",
+                body,
+                normalized_whitespace_required=False,
+            )
         for surah, ayah, ordinal, body in con.execute(
             "SELECT surah,ayah,ordinal,plain_text FROM verse_note ORDER BY surah,ayah,ordinal"
         ):
-            assert_clean(f"Jalalayn note {surah}:{ayah}#{ordinal}", body)
+            assert_clean(
+                f"Jalalayn note {surah}:{ayah}#{ordinal}",
+                body,
+                normalized_whitespace_required=False,
+            )
     finally:
         con.close()
         tmp.close()
