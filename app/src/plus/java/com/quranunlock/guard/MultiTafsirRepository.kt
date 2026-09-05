@@ -14,9 +14,9 @@ enum class PrivateTafsirEdition(
     val storageValue: String,
     val displayName: String
 ) {
-    JALALAYN("jalalayn", "Jalālayn"),
-    QURTUBI("qurtubi", "Qurṭubī"),
-    QUSHAYRI("qushayri", "Qushayrī");
+    JALALAYN("jalalayn", "Jalalayn"),
+    QURTUBI("qurtubi", "Qurtubi"),
+    QUSHAYRI("qushayri", "Qushayri");
 
     companion object {
         fun fromStorage(value: String?): PrivateTafsirEdition =
