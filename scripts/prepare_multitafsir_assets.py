@@ -30,6 +30,7 @@ EXPECTED_QUSHAYRI_STRUCTURE = {
     'grouped_source_range_count': '76',
     'source_soft_hyphen_count': '584',
     'soft_hyphen_policy': 'preserve-marker-then-source-driven-join',
+    'source_honorific_glyph_policy': 'restore-edition-pua-to-source-abbreviations-no-name-inference',
 }
 PART_CHARS = 500_000
 
@@ -117,8 +118,6 @@ def publish_packages(payloads: dict[str, list[str]], assets: Path, staging: Path
             expected_names.add(filename)
             (staged / filename).write_text(part, encoding='ascii')
 
-    # No final asset is touched until both rebuilt corpora have passed their
-    # source, structural and logical-content checks.
     for name in payloads:
         for old in assets.glob(f'{name}_en.sqlite.gz.b64.part*'):
             old.unlink()

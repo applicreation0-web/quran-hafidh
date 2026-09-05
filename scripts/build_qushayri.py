@@ -21,6 +21,28 @@ header_re = re.compile(r"^(Subtle Allusions\s+\[|Laṭāʾif al-ishārāt\s+\[|\
 pua_re = re.compile(r"[\ue000-\uf8ff]")
 arabic_re = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]")
 
+# The Fons Vitae / Royal Aal al-Bayt PDF embeds compact source marks in an
+# `Honorifics` font. PyMuPDF exposes those marks as private-use code points.
+# The public text layer of the same edition identifies their meanings with the
+# following abbreviations. Preserve those source distinctions exactly; never
+# infer an honorific from a person's name.
+SOURCE_PUA_MAP = {
+    "\uf063": "(swt)",   # divine glorification/exaltation
+    "\uf067": "(ṣ)",     # Prophet Muhammad source mark
+    "\uf068": "(r)",     # source prayer for a male companion/person
+    "\uf069": "(r)",     # source prayer for a female companion/person
+    "\uf06e": "(ʿa)",    # individual prophet/angel source mark
+    "\uf070": "(ʿa)",    # plural prophets source mark in this edition
+    "\uf072": "(r)",     # al-Qushayri source prayer
+    "\uf082": "(ṣʿa)",   # distinct expanded Prophetic source mark
+    "\uf094": "(t)",     # divine exaltation source mark
+    "\uf096": "(s)",     # divine source mark
+}
+# Standalone ornaments / basmala artwork are structural decoration, not Latin
+# commentary text. They are omitted only when the PDF exposes these exact PUA
+# code points; any other unknown PUA fails closed below.
+DECORATIVE_PUA = {"\uf023", "\uf081", "\uf085"}
+
 
 def file_sha256(path):
     h = hashlib.sha256()
@@ -28,6 +50,20 @@ def file_sha256(path):
         for chunk in iter(lambda: f.read(1024 * 1024), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def restore_source_pua(text):
+    out = []
+    for ch in text:
+        if ch in SOURCE_PUA_MAP:
+            out.append(SOURCE_PUA_MAP[ch])
+        elif ch in DECORATIVE_PUA:
+            continue
+        elif "\ue000" <= ch <= "\uf8ff":
+            raise RuntimeError(f"Qushayri unknown private-use source glyph: U+{ord(ch):04X}")
+        else:
+            out.append(ch)
+    return "".join(out)
 
 
 def line_info(line):
@@ -77,7 +113,7 @@ def normalize(parts):
                 out.append(" ".join(buf).strip())
                 buf = []
             continue
-        t = pua_re.sub("", p).replace("\u00a0", " ").strip()
+        t = restore_source_pua(p).replace("\u00a0", " ").strip()
         if not t:
             continue
         buf.append(t)
@@ -272,7 +308,7 @@ if not any(s["surah"] == 2 and s["start"] <= 68 <= s["end"] for s in segments):
             lines.append((st, fonts))
     start = next(i for i, (t, _) in enumerate(lines) if 'When He said: “She is a cow neither old' in t)
     end = next(i for i, (t, _) in enumerate(lines[start:], start) if 'yet retains some of the vigor of his youth.' in t)
-    raw = pua_re.sub("", " ".join(t for t, _ in lines[start : end + 1])).replace("\u00a0", " ")
+    raw = restore_source_pua(" ".join(t for t, _ in lines[start : end + 1])).replace("\u00a0", " ")
     raw = resolve_discretionary_hyphens(raw)
     raw = re.sub(r"([A-Za-z])-\s+([a-z])", r"\1\2", raw)
     raw = re.sub(r"\s+", " ", raw).strip()
@@ -373,6 +409,7 @@ meta = {
     "grouped_source_range_count": str(EXPECTED_GROUPED_RANGES),
     "source_soft_hyphen_count": str(source_soft_hyphen_count),
     "soft_hyphen_policy": "preserve-marker-then-source-driven-join",
+    "source_honorific_glyph_policy": "restore-edition-pua-to-source-abbreviations-no-name-inference",
     "entry_count": str(len(rows)),
 }
 con.executemany("INSERT INTO source_metadata(key,value) VALUES (?,?)", meta.items())

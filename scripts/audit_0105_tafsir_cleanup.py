@@ -10,7 +10,9 @@ script runs.
 from __future__ import annotations
 
 import argparse
+import ast
 import base64
+import collections
 import gzip
 import hashlib
 import json
@@ -60,6 +62,55 @@ QURTUBI_DEBRIS = re.compile(
     re.IGNORECASE | re.MULTILINE,
 )
 
+# These are not injected Arabic commentary. They are calligraphic marks encoded
+# by the approved Qurtubi PDFs in KFGQPCArabicSymbols01 and restored by
+# build_qurtubi.py from the exact embedded source font. Keep this allow-list
+# deliberately closed and longest-first so a shorter phrase can never mask a
+# longer one.
+QURTUBI_ALLOWED_SOURCE_MARKS = (
+    "رضي الله عنهما",
+    "سبحانه وتعالى",
+    "رضي الله عنها",
+    "رضي الله عنه",
+    "عليهم السلام",
+    "عليه السلام",
+    "ﷺ",
+)
+QURTUBI_EXPECTED_MARK_COUNTS = {
+    "ﷺ": 2930,
+    "رضي الله عنه": 4,
+    "رضي الله عنها": 4,
+    "رضي الله عنهما": 1,
+    "عليه السلام": 15,
+    "عليهم السلام": 4,
+    "سبحانه وتعالى": 1,
+}
+QURTUBI_EXPECTED_SOURCE_SYMBOL_KEYS = {
+    "v1:f": 1,
+    "v1:g": 748,
+    "v1:h": 2,
+    "v1:i": 1,
+    "v1:k": 1,
+    "v1:n": 10,
+    "v1:p": 3,
+    "v2:c": 1,
+    "v2:f": 1003,
+    "v2:g": 1,
+    "v2:h": 1,
+    "v2:i": 3,
+    "v2:n": 1,
+    "v2:p": 1,
+    "v3:c": 5,
+    "v3:f": 13,
+    "v3:g": 520,
+    "v3:n": 3,
+    "v4:c": 19,
+    "v4:g": 620,
+    "v4:h": 1,
+    "v4:n": 1,
+}
+QURTUBI_EXPECTED_SOURCE_MARK_TOTAL = 2959
+
 
 def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -72,11 +123,19 @@ def open_db(blob: bytes):
     return tmp, sqlite3.connect(f"file:{tmp.name}?mode=ro", uri=True)
 
 
+def strip_allowed_arabic(text: str, allowed_arabic_phrases: tuple[str, ...]) -> str:
+    value = text
+    for phrase in allowed_arabic_phrases:
+        value = value.replace(phrase, "")
+    return value
+
+
 def assert_clean(
     label: str,
     text: str,
     *,
     arabic_forbidden: bool = False,
+    allowed_arabic_phrases: tuple[str, ...] = (),
     normalized_whitespace_required: bool = True,
 ) -> None:
     if not text.strip():
@@ -95,8 +154,16 @@ def assert_clean(
         raise SystemExit(f"{label}: carriage-return debris")
     if normalized_whitespace_required and BAD_SPACE.search(text):
         raise SystemExit(f"{label}: non-normalized whitespace")
-    if arabic_forbidden and ARABIC.search(text):
-        raise SystemExit(f"{label}: Arabic source text leaked into English-only corpus")
+    if arabic_forbidden:
+        residual = strip_allowed_arabic(text, allowed_arabic_phrases)
+        match = ARABIC.search(residual)
+        if match:
+            start = max(0, match.start() - 24)
+            end = min(len(residual), match.end() + 24)
+            sample = residual[start:end].replace("\n", " ")
+            raise SystemExit(
+                f"{label}: Arabic source text leaked into English-only corpus near {sample!r}"
+            )
 
 
 def audit_jalalayn(assets: Path) -> None:
@@ -184,6 +251,9 @@ def audit_v2(assets: Path, edition: str, spec: dict) -> str:
         if len(rows) != spec["entries"]:
             raise SystemExit(f"{edition}: row count {len(rows)} != {spec['entries']}")
 
+        allowed_arabic = QURTUBI_ALLOWED_SOURCE_MARKS if edition == "qurtubi" else ()
+        source_mark_counts: collections.Counter[str] = collections.Counter()
+
         seen_keys = set()
         for row_id, surah, start, end, segment, translation, commentary in rows:
             key = (surah, start, end, segment)
@@ -192,8 +262,22 @@ def audit_v2(assets: Path, edition: str, spec: dict) -> str:
             seen_keys.add(key)
             if start < 1 or end < start or segment < 1:
                 raise SystemExit(f"{edition}: invalid source range {key}")
-            assert_clean(f"{edition} row {row_id} translation", translation, arabic_forbidden=True)
-            assert_clean(f"{edition} row {row_id} commentary", commentary, arabic_forbidden=True)
+            assert_clean(
+                f"{edition} row {row_id} translation",
+                translation,
+                arabic_forbidden=True,
+                allowed_arabic_phrases=allowed_arabic,
+            )
+            assert_clean(
+                f"{edition} row {row_id} commentary",
+                commentary,
+                arabic_forbidden=True,
+                allowed_arabic_phrases=allowed_arabic,
+            )
+            if edition == "qurtubi":
+                joined = translation + "\n" + commentary
+                for mark in QURTUBI_ALLOWED_SOURCE_MARKS:
+                    source_mark_counts[mark] += joined.count(mark)
             if edition == "qushayri" and QUSHAYRI_DEBRIS.search(commentary):
                 raise SystemExit(f"Qushayri row {row_id}: source page/sura header leaked")
             if edition == "qurtubi" and QURTUBI_DEBRIS.search(translation + "\n" + commentary):
@@ -275,6 +359,37 @@ def audit_v2(assets: Path, edition: str, spec: dict) -> str:
             ).fetchone()[0]:
                 raise SystemExit("Qurtubi: 4:23 must remain outside approved volumes 1-4")
 
+            if meta.get("source_honorific_glyphs_restored") != "true":
+                raise SystemExit("Qurtubi: source honorific glyph restoration metadata missing")
+            raw_key_counts = meta.get("source_symbol_key_counts")
+            try:
+                parsed_key_counts = ast.literal_eval(raw_key_counts or "")
+            except Exception as exc:
+                raise SystemExit(
+                    f"Qurtubi: invalid source_symbol_key_counts metadata: {raw_key_counts!r}"
+                ) from exc
+            if parsed_key_counts != QURTUBI_EXPECTED_SOURCE_SYMBOL_KEYS:
+                raise SystemExit(
+                    "Qurtubi: embedded source-symbol key inventory changed; "
+                    f"got {parsed_key_counts!r}"
+                )
+
+            actual_mark_counts = {
+                mark: source_mark_counts.get(mark, 0)
+                for mark in QURTUBI_EXPECTED_MARK_COUNTS
+            }
+            if actual_mark_counts != QURTUBI_EXPECTED_MARK_COUNTS:
+                raise SystemExit(
+                    "Qurtubi: restored source-honorific inventory changed; "
+                    f"got {actual_mark_counts!r}"
+                )
+            if sum(source_mark_counts.values()) != QURTUBI_EXPECTED_SOURCE_MARK_TOTAL:
+                raise SystemExit(
+                    "Qurtubi: restored source-honorific total changed; "
+                    f"got {sum(source_mark_counts.values())}, "
+                    f"expected {QURTUBI_EXPECTED_SOURCE_MARK_TOTAL}"
+                )
+
         logical = {
             "metadata": sorted(meta.items()),
             "rows": rows,
@@ -302,6 +417,7 @@ def main() -> None:
     print("- Jalalayn byte-identical approved corpus: 6236 entries / 427 notes")
     print("- Qushayri: actual payload reconstructs exactly 806 source anchors as 720 logical entries; 86 translation-only anchors grouped into exactly 76 shared-commentary ranges; 584 source soft hyphens resolved before normalization; English verse translations retained; suras 1-4 exhaustive")
     print("- Qurtubi: 432 English-only ranges from volumes 1-4, exhaustive through 4:22, 4:23 excluded")
+    print("- Qurtubi source honorifics: exactly 2959 approved KFGQPC source glyphs restored; any other Arabic remains blocking")
     print("- no Arabic-source leakage, empty commentary rows, PUA/replacement glyphs, soft hyphens, NBSPs, control characters or known scan/header debris")
     print(f"- logical digests: Qushayri={digests['qushayri']} Qurtubi={digests['qurtubi']}")
 

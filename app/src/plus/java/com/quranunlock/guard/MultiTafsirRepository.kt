@@ -29,6 +29,21 @@ data class MultiTafsirRequestKey(
     val edition: PrivateTafsirEdition
 )
 
+internal data class MultiTafsirAvailability(
+    val entries: Map<PrivateTafsirEdition, TafsirEntry>
+) {
+    val editions: List<PrivateTafsirEdition>
+        get() = PrivateTafsirEdition.entries.filter(entries::containsKey)
+
+    fun resolveEdition(preferred: PrivateTafsirEdition): PrivateTafsirEdition? =
+        when {
+            entries.containsKey(preferred) -> preferred
+            entries.containsKey(PrivateTafsirEdition.JALALAYN) ->
+                PrivateTafsirEdition.JALALAYN
+            else -> editions.firstOrNull()
+        }
+}
+
 internal object MultiTafsirRepository {
     private data class CorpusSpec(
         val edition: PrivateTafsirEdition,
@@ -56,15 +71,36 @@ internal object MultiTafsirRepository {
         expectedEntries = 432
     )
 
+    /**
+     * Loads only real source-backed entries for the tapped verse. The returned
+     * edition list is therefore the authority for the selector: an edition with
+     * no matching row is not advertised to the reader.
+     */
+    suspend fun loadAvailable(
+        context: Context,
+        verse: VerseRef
+    ): MultiTafsirAvailability {
+        val available = linkedMapOf<PrivateTafsirEdition, TafsirEntry>()
+        PrivateTafsirEdition.entries.forEach { edition ->
+            load(context, verse, edition)?.let { entry ->
+                available[edition] = entry
+            }
+        }
+        return MultiTafsirAvailability(available)
+    }
+
     suspend fun load(
         context: Context,
         verse: VerseRef,
         edition: PrivateTafsirEdition
     ): TafsirEntry? = withContext(Dispatchers.IO) {
         when (edition) {
-            PrivateTafsirEdition.JALALAYN -> TafsirRepository.load(context.applicationContext, verse)
-            PrivateTafsirEdition.QURTUBI -> loadV2(context.applicationContext, verse, qurtubi)
-            PrivateTafsirEdition.QUSHAYRI -> loadV2(context.applicationContext, verse, qushayri)
+            PrivateTafsirEdition.JALALAYN ->
+                TafsirRepository.load(context.applicationContext, verse)
+            PrivateTafsirEdition.QURTUBI ->
+                loadV2(context.applicationContext, verse, qurtubi)
+            PrivateTafsirEdition.QUSHAYRI ->
+                loadV2(context.applicationContext, verse, qushayri)
         }
     }
 
@@ -90,9 +126,9 @@ internal object MultiTafsirRepository {
                 buildList {
                     while (cursor.moveToNext()) {
                         add(
-                            SourceRow(
-                                start = cursor.getInt(0),
-                                end = cursor.getInt(1),
+                            SourceBackedTafsirSegment(
+                                verseStart = cursor.getInt(0),
+                                verseEnd = cursor.getInt(1),
                                 segment = cursor.getInt(2),
                                 translation = cursor.getString(3).trim(),
                                 commentary = cursor.getString(4).trim()
@@ -103,42 +139,13 @@ internal object MultiTafsirRepository {
             }
             if (rows.isEmpty()) return null
 
-            val runs = buildList {
-                rows.forEachIndexed { index, row ->
-                    if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
-                    if (row.start != row.end) {
-                        add(
-                            TafsirRun(
-                                TafsirRunStyle.BOLD_ITALIC,
-                                "Commentary on ${verse.surah}:${row.start}–${row.end}\n\n"
-                            )
-                        )
-                    }
-                    if (row.translation.isNotBlank()) {
-                        add(TafsirRun(TafsirRunStyle.ITALIC, row.translation))
-                        if (row.commentary.isNotBlank()) {
-                            add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
-                        }
-                    }
-                    if (row.commentary.isNotBlank()) {
-                        add(TafsirRun(TafsirRunStyle.REGULAR, row.commentary))
-                    }
-                }
-            }
+            val runs = renderSourceBackedTafsirSegments(rows)
             if (runs.isEmpty()) return null
             return TafsirEntry(verse = verse, commentaryRuns = runs, notes = emptyList())
         } finally {
             database.close()
         }
     }
-
-    private data class SourceRow(
-        val start: Int,
-        val end: Int,
-        val segment: Int,
-        val translation: String,
-        val commentary: String
-    )
 
     private fun metadataMatches(database: SQLiteDatabase, spec: CorpusSpec): Boolean {
         if (database.rawQuery("PRAGMA quick_check", null).use { cursor ->

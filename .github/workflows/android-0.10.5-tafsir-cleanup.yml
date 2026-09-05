@@ -19,6 +19,9 @@ jobs:
       - name: Source and justified-rendering contract
         run: python3 scripts/verify_0105_tafsir_update.py
 
+      - name: Typography and alignment non-regression contract
+        run: python3 scripts/verify_0105_tafsir_typography_contract.py
+
       - name: Fetch Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
 
@@ -36,11 +39,26 @@ jobs:
           for n in 1 2 3 4; do
             curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
           done
+          python3 scripts/research_qushayri_notes.py "${src}/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-note-research.json"
+          python3 scripts/research_qushayri_note_superscripts.py "${src}/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-note-superscript-crosscheck.json"
           python3 scripts/prepare_multitafsir_assets.py \
             --source-dir "${src}" \
             --assets-dir app/src/plus/assets/tafsir \
             --work-dir "${RUNNER_TEMP}/tafsir-work" \
             2>&1 | tee "${RUNNER_TEMP}/tafsir-0105-rebuild.log"
+
+      - name: Upload Qushayri note research inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qushayri-note-research
+          path: |
+            ${{ runner.temp }}/qushayri-note-research.json
+            ${{ runner.temp }}/qushayri-note-superscript-crosscheck.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload Tafsir rebuild diagnostic
         if: always()
@@ -59,13 +77,18 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Exhaustive Qushayri note-call relation audit
+        run: >-
+          python3 scripts/verify_qushayri_note_crosscheck.py
+          "${RUNNER_TEMP}/qushayri-note-superscript-crosscheck.json"
+
       - name: Exhaustive 0.10.5 corpus-cleanliness audit
         id: tafsir_cleanup_audit
         shell: bash
         run: |
           set +e
           report="${RUNNER_TEMP}/tafsir-0105-audit.log"
-          python3 scripts/audit_0105_tafsir_cleanup.py app/src/plus/assets/tafsir >"${report}" 2>&1
+          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir >"${report}" 2>&1
           rc=$?
           cat "${report}"
           if [ "${rc}" -ne 0 ]; then
@@ -88,7 +111,9 @@ jobs:
           retention-days: 7
 
       - name: Re-run source/UI contract after corpus reconstruction
-        run: python3 scripts/verify_0105_tafsir_update.py
+        run: |
+          python3 scripts/verify_0105_tafsir_update.py
+          python3 scripts/verify_0105_tafsir_typography_contract.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
