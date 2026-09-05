@@ -19,9 +19,9 @@ data class SafeguardTarget(
  *
  * Only explicitly selected social apps and browsers can be protected or persisted.
  * No banking, health, transport, identity or work application is classified,
- * selectable, logged or persisted. While a selected target actively consumes
- * the shared budget, one outside window event may be accepted anonymously so
- * the counter can stop at the exact moment the user leaves the target.
+ * selectable, logged or persisted. Accessibility is also kept permanently inside
+ * that product boundary plus Quran Safeguard, System UI and the current launcher;
+ * excluded applications are never admitted as anonymous exit sentinels.
  */
 object ProtectedApps {
     const val SYSTEM_UI_PACKAGE = "com.android.systemui"
