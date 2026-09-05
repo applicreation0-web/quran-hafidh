@@ -9,7 +9,8 @@ import org.json.JSONObject
  *
  * The asset is optional while the corpus is being verified. The UI can therefore
  * ship the dual-commentator interaction before all 264 pairs are ready, without
- * inventing missing text.
+ * inventing missing text. The 0.10.5 release gate separately requires the full
+ * verified asset before publication.
  */
 object HikamSharhEdition {
     const val isEnabled: Boolean = true
@@ -72,12 +73,17 @@ object HikamSharhEdition {
             hikmaNumber = obj.getInt("source_number"),
             commentator = commentator,
             workTitle = obj.getString("commentary_work").trim(),
+            sourceEdition = obj.getString("commentary_source_edition").trim(),
             arabicText = obj.getString("commentary_arabic").trim(),
             frenchText = obj.getString("commentary_french").trim(),
+            translationCredit = obj.getString("commentary_translation_credit").trim(),
             sourceUrl = obj.getString("commentary_source_url").trim(),
             printLocator = obj.getString("commentary_print_locator").trim(),
+            boundaryLocator = obj.getString("commentary_boundary_locator").trim(),
             verified = obj.optString("commentary_status") == "verified" &&
-                obj.optString("translation_status") == "verified",
+                obj.optString("translation_status") == "verified" &&
+                obj.optString("hikma_alignment_status") == "verified" &&
+                obj.optString("source_boundary_status") == "verified",
             richSpansArabic = obj.richSpans("rich_spans_arabic"),
             richSpansFrench = obj.richSpans("rich_spans_french"),
             technicalTerms = obj.stringSet("technical_terms")

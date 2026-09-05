@@ -42,10 +42,13 @@ data class HikamSharhEntry(
     val hikmaNumber: Int,
     val commentator: HikamCommentator,
     val workTitle: String,
+    val sourceEdition: String,
     val arabicText: String,
     val frenchText: String,
+    val translationCredit: String,
     val sourceUrl: String,
     val printLocator: String,
+    val boundaryLocator: String,
     val verified: Boolean,
     val richSpansArabic: List<HikamRichSpan> = emptyList(),
     val richSpansFrench: List<HikamRichSpan> = emptyList(),
@@ -55,10 +58,13 @@ data class HikamSharhEntry(
         get() =
             hikmaNumber in 1..264 &&
                 workTitle.isNotBlank() &&
+                sourceEdition.isNotBlank() &&
                 arabicText.isNotBlank() &&
                 frenchText.isNotBlank() &&
+                translationCredit.isNotBlank() &&
                 sourceUrl.isNotBlank() &&
                 printLocator.isNotBlank() &&
+                boundaryLocator.isNotBlank() &&
                 verified
 }
 

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.BaselineShift
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ private const val DEFAULT_FONT_SIZE = 18f
  * This is deliberately the 0.10.3 panel extended by only one permanent visual
  * control: the compact edition selector. Data loading stays outside the renderer.
  * Sustained reading uses the shared warm, low-glare reading surface.
+ * Long-form Tafsir prose and notes are justified for book-like reading.
  */
 @Composable
 internal fun TafsirPanel(
@@ -185,6 +187,7 @@ internal fun TafsirPanel(
                         text = runsToAnnotatedString(state.entry.commentaryRuns),
                         fontSize = fontSize.sp,
                         lineHeight = (fontSize * 1.42f).sp,
+                        textAlign = TextAlign.Justify,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     if (state.entry.notes.isNotEmpty()) {
@@ -220,6 +223,7 @@ internal fun TafsirPanel(
                                     }.toAnnotatedString(),
                                     fontSize = (fontSize - 1f).coerceAtLeast(MIN_FONT_SIZE).sp,
                                     lineHeight = (fontSize * 1.35f).sp,
+                                    textAlign = TextAlign.Justify,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
