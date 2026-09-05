@@ -1,7 +1,6 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TargetPresenceScopePolicyTest {
@@ -12,8 +11,8 @@ class TargetPresenceScopePolicyTest {
     )
 
     @Test
-    fun runningSelectedTargetRequiresOneAnonymousExitSignal() {
-        assertTrue(
+    fun runningSelectedTargetNeverEnablesAnonymousExitSentinel() {
+        assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = true,
                 foregroundPackage = "com.android.chrome",
@@ -24,19 +23,7 @@ class TargetPresenceScopePolicyTest {
     }
 
     @Test
-    fun noSentinelExistsWithoutAnActivelyRunningTargetBudget() {
-        assertFalse(
-            TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
-                broadRequested = true,
-                foregroundPackage = "com.android.chrome",
-                runningBudgetPackage = null,
-                selectedTargets = targets
-            )
-        )
-    }
-
-    @Test
-    fun outsideApplicationCanNeverOwnTheSharedBudgetScope() {
+    fun outsideApplicationCanNeverTriggerBroadScope() {
         assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = true,
@@ -48,7 +35,7 @@ class TargetPresenceScopePolicyTest {
     }
 
     @Test
-    fun narrowScopeIsRestoredAfterTheExitSignal() {
+    fun narrowScopeRemainsNarrowWithoutRunningBudget() {
         assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = false,
