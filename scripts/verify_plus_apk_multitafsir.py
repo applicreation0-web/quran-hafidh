@@ -16,12 +16,15 @@ V2={
          'raw_segment_count':'806',
          'translation_only_anchor_count':'86',
          'grouped_source_range_count':'76',
+         'source_soft_hyphen_count':'584',
+         'soft_hyphen_policy':'preserve-marker-then-source-driven-join',
      },
  },
  'qurtubi':{'parts':[f'assets/tafsir/qurtubi_en.sqlite.gz.b64.part{i:02d}' for i in range(4)],'entries':432,'coverage':{1:7,2:286,3:200,4:22}},
 }
 ARABIC=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 PUA=re.compile(r'[\ue000-\uf8ff]')
+QSH_ANCHOR=re.compile(r'\[(\d+):(\d+)(?:–(\d+))?\]')
 QSH_HEADER=re.compile(r'(?:^|\n\n)(?:\d+\s*\|\s*•|•\s*Laṭāʾif|Subtle Allusions\s*\[|Laṭāʾif al-ishārāt\s*\[)')
 QSH_SURA_HEADING=re.compile(r'(?:^|\n\n)S(?:ūrat|urāt|ūra)\b',re.I)
 
@@ -71,9 +74,12 @@ def audit_v2(z,names,edition,spec):
             if meta.get(key)!=expected:raise SystemExit(f'{edition} source structure mismatch for {key}: {meta.get(key)!r} != {expected!r}')
         count=con.execute('SELECT COUNT(*) FROM tafsir_entry').fetchone()[0]
         if count!=spec['entries']:raise SystemExit(f'{edition} entry count mismatch: {count}')
-        text_rows=list(con.execute('SELECT verse_translation, commentary FROM tafsir_entry'))
+        rows=list(con.execute('SELECT surah,verse_start,verse_end,verse_translation,commentary FROM tafsir_entry ORDER BY id'))
+        text_rows=[(tr,co) for _,_,_,tr,co in rows]
         if any(not (tr or '').strip() for tr,_ in text_rows):raise SystemExit(f'{edition} contains blank verse translation rows')
         if any(not (co or '').strip() for _,co in text_rows):raise SystemExit(f'{edition} contains blank commentary rows')
+        if any('\u00a0' in ((tr or '')+(co or '')) for tr,co in text_rows):raise SystemExit(f'{edition} contains non-breaking-space PDF debris')
+        if any('\u00ad' in ((tr or '')+(co or '')) or '__QSH_SOFT_HYPHEN__' in ((tr or '')+(co or '')) for tr,co in text_rows):raise SystemExit(f'{edition} contains unresolved discretionary-hyphen debris')
         if any(ARABIC.search((tr or '')+(co or '')) for tr,co in text_rows):raise SystemExit(f'{edition} contains Arabic-script rows')
         if any(PUA.search((tr or '')+(co or '')) for tr,co in text_rows):raise SystemExit(f'{edition} contains private-use PDF glyphs')
         for surah,last_ayah in spec['coverage'].items():
@@ -86,8 +92,19 @@ def audit_v2(z,names,edition,spec):
                 if n<1:raise SystemExit(f'Qushayri regression missing {s}:{a}')
             translated=con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE trim(verse_translation)<>''").fetchone()[0]
             if translated!=spec['entries']:raise SystemExit(f'Qushayri English verse translation missing from {spec["entries"]-translated} logical entry/entries')
-            grouped=con.execute("SELECT COUNT(*) FROM tafsir_entry WHERE instr(verse_translation, '[' || surah || ':')>0").fetchone()[0]
-            if grouped<int(meta['grouped_source_range_count']):raise SystemExit('Qushayri grouped ranges lost explicit source-anchor labels')
+            raw_anchor_equivalent=0;grouped_rows=0;secondary_anchor_count=0
+            for surah,start,end,tr,_ in rows:
+                labels=QSH_ANCHOR.findall(tr or '')
+                if labels:
+                    grouped_rows+=1;raw_anchor_equivalent+=len(labels);secondary_anchor_count+=len(labels)-1
+                    for ls,la,le in labels:
+                        if int(ls)!=surah:raise SystemExit(f'Qushayri grouped label escaped source sura {surah}')
+                        last=int(le or la)
+                        if int(la)<start or last>end:raise SystemExit(f'Qushayri grouped label escaped source range {surah}:{start}-{end}')
+                else:raw_anchor_equivalent+=1
+            if raw_anchor_equivalent!=int(meta['raw_segment_count']):raise SystemExit(f'Qushayri APK payload reconstructs {raw_anchor_equivalent} source anchors, expected {meta["raw_segment_count"]}')
+            if grouped_rows!=int(meta['grouped_source_range_count']):raise SystemExit(f'Qushayri APK payload has {grouped_rows} grouped rows, expected {meta["grouped_source_range_count"]}')
+            if secondary_anchor_count!=int(meta['translation_only_anchor_count']):raise SystemExit(f'Qushayri APK payload has {secondary_anchor_count} secondary grouped anchors, expected {meta["translation_only_anchor_count"]}')
             if any(QSH_HEADER.search(co or '') for _,co in text_rows):raise SystemExit('Qushayri page header leaked into commentary')
             if any(QSH_SURA_HEADING.search(co or '') for _,co in text_rows):raise SystemExit('Qushayri Sura introduction leaked into previous verse')
             longest=con.execute('SELECT MAX(length(commentary)) FROM tafsir_entry').fetchone()[0]
@@ -111,7 +128,7 @@ def main():
         if any(n.casefold().endswith('.pdf') for n in names):raise SystemExit('Source PDF must never be embedded in Plus')
         audit_jalalayn(z,names)
         for edition,spec in V2.items():logical[edition]=audit_v2(z,names,edition,spec)
-    print('Verified Plus APK: Jalalayn 6236/427; Qushayri 806 source anchors -> 720 logical entries with translations preserved; Qurtubi 432; exhaustive coverage; long blocks intact; no PDFs/Arabic/PUA leakage')
+    print('Verified Plus APK: Jalalayn 6236/427; Qushayri actual payload reconstructs 806 source anchors -> 720 logical entries with 584 source soft hyphens resolved and translations preserved; Qurtubi 432; exhaustive coverage; long blocks intact; no PDFs/Arabic/PUA/NBSP/soft-hyphen leakage')
     print(f'Logical corpus digests: Qushayri={logical["qushayri"]}; Qurtubi={logical["qurtubi"]}')
 
 if __name__=='__main__':main()
