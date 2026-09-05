@@ -42,6 +42,11 @@ jobs:
           python scripts/research_qushayri_unmatched_notes.py \
             "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
             --report "${RUNNER_TEMP}/qushayri-unmatched-notes.json"
+      - name: Render visual samples for special glyph mapping
+        run: |
+          python scripts/research_render_tafsir_glyph_samples.py \
+            --source-dir "${RUNNER_TEMP}/tafsir-src" \
+            --out-dir "${RUNNER_TEMP}/glyph-samples"
       - name: Upload research reports
         uses: actions/upload-artifact@v4
         with:
@@ -50,4 +55,5 @@ jobs:
             ${{ runner.temp }}/qurtubi-special-glyphs.json
             ${{ runner.temp }}/qushayri-special-glyphs.json
             ${{ runner.temp }}/qushayri-unmatched-notes.json
+            ${{ runner.temp }}/glyph-samples/*.png
           retention-days: 7
