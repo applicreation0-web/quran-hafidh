@@ -77,7 +77,7 @@ def main() -> None:
 
     by_hikma: dict[int, list[dict]] = defaultdict(list)
     seen = set()
-    source_locators = set()
+    documentary_keys = set()
     arabic_digests = set()
     french_digests = set()
     counts = Counter()
@@ -110,6 +110,7 @@ def main() -> None:
         credit = require_text(entry, "commentary_translation_credit", label)
         url = require_text(entry, "commentary_source_url", label)
         locator = require_text(entry, "commentary_print_locator", label)
+        boundary = require_text(entry, "commentary_boundary_locator", label)
 
         if not ARABIC.search(arabic):
             fail(f"{label}: commentary_arabic contains no Arabic letters")
@@ -127,15 +128,10 @@ def main() -> None:
         parsed = urlparse(url)
         if parsed.scheme != "https" or parsed.hostname not in APPROVED_SOURCE_HOSTS[commentator]:
             fail(f"{label}: source URL host is not approved: {url}")
-        locator_key = (commentator, edition, locator)
-        if locator_key in source_locators:
-            # One printed page may contain several Hikam, but an identical locator alone is
-            # not sufficient documentary identity. The asset must include a boundary label.
-            boundary = require_text(entry, "commentary_boundary_locator", label)
-            locator_key = (commentator, edition, locator, boundary)
-            if locator_key in source_locators:
-                fail(f"{label}: duplicate documentary locator/boundary")
-        source_locators.add(locator_key)
+        documentary_key = (commentator, edition, locator, boundary)
+        if documentary_key in documentary_keys:
+            fail(f"{label}: duplicate documentary locator/boundary")
+        documentary_keys.add(documentary_key)
 
         for status_key in (
             "hikma_alignment_status",
@@ -193,7 +189,7 @@ def main() -> None:
     print("- 264/264 Hikam have al-Sharnubi commentary")
     print("- 264/264 Hikam have Ibn Abbad commentary")
     print("- 528/528 alignments, Arabic texts, translations and source boundaries are independently verified")
-    print("- every entry carries explicit work, edition, translation credit, source URL and locator")
+    print("- every entry carries explicit work, edition, translation credit, source URL, page locator and boundary locator")
     print("- no placeholders, research candidates, truncated excerpts or duplicated commentary payloads")
 
 
