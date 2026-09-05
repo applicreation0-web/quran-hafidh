@@ -1,0 +1,36 @@
+name: Clean removed runtime from 0.10.5
+
+on:
+  push:
+    branches:
+      - "release/0.10.5-stability-core"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout stability branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply clean runtime migration
+        run: python3 scripts/clean_taddabur_runtime_0105.py
+
+      - name: Commit cleaned runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Runtime already clean."
+            exit 0
+          fi
+          git commit -m "0.10.5: remove Taddabur runtime and stale hooks"
+          git push origin HEAD:release/0.10.5-stability-core
