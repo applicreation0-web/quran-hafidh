@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import org.brotli.dec.BrotliInputStream
+import java.time.LocalDate
 import java.time.LocalTime
 
 class TaddaburActivity : ComponentActivity() {
@@ -76,11 +77,12 @@ class TaddaburActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(page) {
+                LaunchedEffect(page, progress.epochDay) {
                     pageReady = false
                     TaddaburPrefs.setBookmark(this@TaddaburActivity, page)
                     var persistedMs = TaddaburPrefs.elapsedMs(this@TaddaburActivity, page)
                     var pendingMs = 0L
+                    val sessionEpochDay = progress.epochDay
                     readingMs = persistedMs
 
                     fun flushPending() {
@@ -97,6 +99,24 @@ class TaddaburActivity : ComponentActivity() {
 
                     try {
                         while (true) {
+                            val currentEpochDay = LocalDate.now().toEpochDay()
+                            if (TaddaburPageSessionPolicy.dayChanged(sessionEpochDay, currentEpochDay)) {
+                                // Never leak a partial pre-midnight checkpoint into the new day.
+                                // At most CHECKPOINT_MS - 1 ms can be discarded here; all earlier
+                                // active time was already checkpointed. Reloading progress performs
+                                // the canonical day rollover and boundary carry before counting again.
+                                pendingMs = 0L
+                                TaddaburBoundaryCarry.applyIfEligible(this@TaddaburActivity)
+                                val rolled = TaddaburPrefs.progress(this@TaddaburActivity)
+                                progress = rolled
+                                page = rolled.bookmarkPage
+                                readingMs = TaddaburPrefs.elapsedMs(
+                                    this@TaddaburActivity,
+                                    rolled.bookmarkPage,
+                                )
+                                continue
+                            }
+
                             if (mayCountActiveReading() &&
                                 pageReady &&
                                 TaddaburPolicy.mayAccumulate(LocalTime.now())
@@ -114,7 +134,8 @@ class TaddaburActivity : ComponentActivity() {
                         }
                     } finally {
                         // Page navigation, closing the activity and lifecycle cancellation must
-                        // never discard a partial in-memory checkpoint.
+                        // never discard a partial in-memory checkpoint. Midnight is the only
+                        // intentional exception, handled above before the new day's state loads.
                         flushPending()
                     }
                 }
