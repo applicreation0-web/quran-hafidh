@@ -5,6 +5,22 @@ data class VerseRef(
     val ayah: Int
 )
 
+data class QuranReferenceRef(
+    val surah: Int,
+    val startAyah: Int,
+    val endAyah: Int = startAyah
+) {
+    val startVerse: VerseRef
+        get() = VerseRef(surah, startAyah)
+
+    val label: String
+        get() = if (startAyah == endAyah) {
+            "$surah:$startAyah"
+        } else {
+            "$surah:$startAyah–$endAyah"
+        }
+}
+
 data class TafsirNote(
     val number: Int,
     val runs: List<TafsirRun>

@@ -87,7 +87,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez avec les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf.",
+                    "Choisissez selon les limites canoniques des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf ; cette page de frontière appartient alors visuellement aux deux sections voisines.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
@@ -169,7 +169,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                             Text("Choisir par Hizb")
                         }
                         Text(
-                            "Les pages de frontière peuvent appartenir à deux sections voisines. Le quota reste de 20 pages le matin et 10 pages au palier de 90 minutes ; une lecture libre est ensuite proposée.",
+                            "Les Juz/Hizb définissent strictement les pages autorisées. Safeguard demande jusqu’à 20 pages le matin et jusqu’à 10 pages au palier de 90 minutes, sans sortir d’une section sélectionnée ni répéter une page si le pool canonique choisi est plus court.",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
