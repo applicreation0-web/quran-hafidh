@@ -50,7 +50,32 @@ jobs:
           gradle-version: "9.5.0"
 
       - name: Compile and test both editions
-        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest :app:assembleLightDebug :app:assemblePlusDebug
+        id: compile_test
+        shell: bash
+        run: |
+          set +e
+          report="${RUNNER_TEMP}/hikam-0105-compile.log"
+          gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest :app:assembleLightDebug :app:assemblePlusDebug >"${report}" 2>&1
+          rc=$?
+          cat "${report}"
+          if [ "${rc}" -ne 0 ]; then
+            {
+              echo "### Hikam 0.10.5 structural compile/test failure"
+              echo '```text'
+              tail -n 160 "${report}"
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${rc}"
+
+      - name: Upload Hikam structural diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hikam-0105-structural-diagnostic
+          path: ${{ runner.temp }}/hikam-0105-compile.log
+          if-no-files-found: error
+          retention-days: 7
 
   documentary-release-gate:
     runs-on: ubuntu-latest
