@@ -39,7 +39,32 @@ jobs:
             --work-dir "${RUNNER_TEMP}/tafsir-work"
 
       - name: Exhaustive 0.10.5 corpus-cleanliness audit
-        run: python3 scripts/audit_0105_tafsir_cleanup.py app/src/plus/assets/tafsir
+        id: tafsir_cleanup_audit
+        shell: bash
+        run: |
+          set +e
+          report="${RUNNER_TEMP}/tafsir-0105-audit.log"
+          python3 scripts/audit_0105_tafsir_cleanup.py app/src/plus/assets/tafsir >"${report}" 2>&1
+          rc=$?
+          cat "${report}"
+          if [ "${rc}" -ne 0 ]; then
+            {
+              echo "### Tafsir 0.10.5 audit failure"
+              echo '```text'
+              cat "${report}"
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${rc}"
+
+      - name: Upload Tafsir audit diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tafsir-0105-audit-diagnostic
+          path: ${{ runner.temp }}/tafsir-0105-audit.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Existing source-level contradictory audit
         run: python3 scripts/verify_0104_update.py
