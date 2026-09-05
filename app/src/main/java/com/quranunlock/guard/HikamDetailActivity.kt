@@ -146,7 +146,8 @@ private fun HikmaDetailScreen(
                     Text(
                         hikma.frenchText,
                         style = MaterialTheme.typography.bodyLarge,
-                        lineHeight = 25.sp
+                        lineHeight = 25.sp,
+                        textAlign = TextAlign.Justify
                     )
                 }
             }
@@ -242,9 +243,15 @@ private fun HikamTerminologyBlock(hikma: HikmaEntry) {
                         append(term.frenchMeaning)
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    lineHeight = 21.sp
+                    lineHeight = 21.sp,
+                    textAlign = TextAlign.Justify
                 )
             }
+            Text(
+                HikamTechnicalLexicon.sourceNote,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -373,7 +380,8 @@ private fun DualSharhBlock(
                         quoteColor = MaterialTheme.colorScheme.primary
                     ),
                     style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 25.sp
+                    lineHeight = 25.sp,
+                    textAlign = TextAlign.Justify
                 )
                 Text(
                     entry.printLocator,

@@ -58,7 +58,10 @@ require("enabled = availableEditions.size > 1" in renderer, "selector must not a
 
 # One visual/typographic contract for all editions and notes.
 require("private fun InteractiveTafsirText(" in renderer, "shared interactive Tafsir text renderer missing")
-require("textAlign = TextAlign.Justify" in renderer, "shared Tafsir prose renderer is not justified")
+require(
+    "textAlign = if (isPoetry) TextAlign.Start else TextAlign.Justify" in renderer,
+    "shared Tafsir prose renderer must remain justified while explicit poetry is Start-aligned",
+)
 require("COMMENTARY_LINE_HEIGHT_RATIO = 1.50f" in renderer, "commentary reading line-height contract changed")
 require("NOTE_LINE_HEIGHT_RATIO = 1.45f" in renderer, "note reading line-height contract changed")
 require("MIN_FONT_SIZE = 16f" in renderer, "minimum sustained-reading font size changed")
@@ -196,7 +199,7 @@ require("qurtubi" in light_apk.lower() and "qushayri" in light_apk.lower(),
 print("0.10.5 Tafsir source/UI audit: PASS")
 print("- Jalalayn golden repository/checksum and 427 structured note calls remain preserved")
 print("- selector exposes only editions with a real source-backed row for the tapped verse")
-print("- one shared justified low-glare renderer serves commentary and source notes")
+print("- shared low-glare renderer justifies prose/notes while explicit source-tagged poetry stays Start-aligned")
 print("- source note calls jump to their linked note and return to exact commentary scroll position")
 print("- only explicit canonically valid Quran references become offline internal links; impossible source citations stay plain")
 print("- Qushayri: 806 source anchors -> 720 logical entries; 584 source soft hyphens source-cleaned")

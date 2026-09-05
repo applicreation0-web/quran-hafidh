@@ -35,7 +35,7 @@ No separate decorative font is permitted inside the commentary body before relea
 ## Paragraph and spacing rules
 
 1. Commentary prose is justified. A final short line is not artificially stretched.
-2. Poetry is never justified. Source line breaks and stanza spacing are retained.
+2. Poetry is never justified. Source line breaks and stanza spacing are retained. A poetry block is rendered as such only when the source/extractor explicitly tags that semantic role; italics alone never trigger poetry classification.
 3. A real paragraph break is preserved; PDF block boundaries alone do not create a paragraph.
 4. False PDF/OCR blank lines are removed only when source continuity is demonstrated.
 5. Qur’an translation and commentary remain visually distinct without inserting generated labels.
