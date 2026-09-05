@@ -126,9 +126,9 @@ internal object MultiTafsirRepository {
                 buildList {
                     while (cursor.moveToNext()) {
                         add(
-                            SourceRow(
-                                start = cursor.getInt(0),
-                                end = cursor.getInt(1),
+                            SourceBackedTafsirSegment(
+                                verseStart = cursor.getInt(0),
+                                verseEnd = cursor.getInt(1),
                                 segment = cursor.getInt(2),
                                 translation = cursor.getString(3).trim(),
                                 commentary = cursor.getString(4).trim()
@@ -139,37 +139,13 @@ internal object MultiTafsirRepository {
             }
             if (rows.isEmpty()) return null
 
-            val runs = buildList {
-                rows.forEachIndexed { index, row ->
-                    if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
-                    // verse_start / verse_end remain structural provenance in the
-                    // database and query. Do not inject generated verse-number
-                    // headings into the classical text shown to the reader.
-                    if (row.translation.isNotBlank()) {
-                        add(TafsirRun(TafsirRunStyle.BOLD_ITALIC, row.translation))
-                        if (row.commentary.isNotBlank()) {
-                            add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
-                        }
-                    }
-                    if (row.commentary.isNotBlank()) {
-                        add(TafsirRun(TafsirRunStyle.REGULAR, row.commentary))
-                    }
-                }
-            }
+            val runs = renderSourceBackedTafsirSegments(rows)
             if (runs.isEmpty()) return null
             return TafsirEntry(verse = verse, commentaryRuns = runs, notes = emptyList())
         } finally {
             database.close()
         }
     }
-
-    private data class SourceRow(
-        val start: Int,
-        val end: Int,
-        val segment: Int,
-        val translation: String,
-        val commentary: String
-    )
 
     private fun metadataMatches(database: SQLiteDatabase, spec: CorpusSpec): Boolean {
         if (database.rawQuery("PRAGMA quick_check", null).use { cursor ->
