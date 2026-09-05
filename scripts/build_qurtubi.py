@@ -19,7 +19,7 @@ def file_sha256(path):
         for chunk in iter(lambda:f.read(1024*1024),b''): h.update(chunk)
     return h.hexdigest()
 
-def norm_text(t): return t.replace('\u00ad','').replace('\uf0d6','').replace('\uf096','').replace('\uf0b7','').strip()
+def norm_text(t): return t.replace('\u00ad','').replace('\u00a0',' ').replace('\uf0d6','').replace('\uf096','').replace('\uf0b7','').strip()
 def is_arabic(t):
     chars=[c for c in t if c.isalpha()]
     return bool(chars) and sum(bool(ARABIC_SCRIPT.match(c)) for c in chars)/len(chars)>.45
@@ -157,6 +157,8 @@ for r in allrows:
     if not r['translation'].strip() or not r['commentary'].strip():
         raise RuntimeError(f'Qurtubi empty translation/commentary row: {r["surah"]}:{r["start"]}-{r["end"]} {r["tag"]}')
     joined=r['translation']+' '+r['commentary']
+    if '\u00a0' in joined:
+        raise RuntimeError(f'Qurtubi non-breaking-space extraction debris: {r["surah"]}:{r["start"]}-{r["end"]}')
     if ARABIC_SCRIPT.search(joined):
         raise RuntimeError(f'Qurtubi Arabic source text leaked into row: {r["surah"]}:{r["start"]}-{r["end"]}')
     if 'sunniconnect' in joined.lower():
