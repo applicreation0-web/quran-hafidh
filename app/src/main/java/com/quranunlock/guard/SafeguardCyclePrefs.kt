@@ -162,9 +162,29 @@ object SafeguardCyclePrefs {
     private fun ensurePlan(context: Context) {
         ensureDailyState(context)
         val prefs = context.getSharedPreferences(GuardPrefs.FILE, Context.MODE_PRIVATE)
+
+        val mode = GuardPrefs.selectionMode(context)
+        val selectedUnits = when (mode) {
+            QuranSelectionMode.JUZ -> GuardPrefs.selectedJuz(context)
+                .filter { it in 1..30 }
+                .toSet()
+                .ifEmpty { (1..30).toSet() }
+            QuranSelectionMode.HIZB -> GuardPrefs.selectedHizb(context)
+                .filter { it in 1..60 }
+                .toSet()
+                .ifEmpty { (1..60).toSet() }
+        }
+        val canonicalPool = QuranPageSelector.availablePages(mode, selectedUnits).toSet()
+
         val existing = readPlan(prefs)
         val existingIndex = prefs.getInt(PLAN_INDEX, 0)
-        if (existing.isNotEmpty() && existingIndex in existing.indices) return
+        if (
+            existing.isNotEmpty() &&
+            existingIndex in existing.indices &&
+            existing.all { it in canonicalPool }
+        ) {
+            return
+        }
 
         var state = readState(prefs)
         var level = UsageCyclePolicy.requiredLevel(state)
@@ -176,47 +196,50 @@ object SafeguardCyclePrefs {
                 ?: error("Unable to reconstruct the pending Safeguard level.")
         }
 
-        val selectedHizb = GuardPrefs.selectedHizb(context)
-            .filter { it in 1..60 }
-            .toSet()
-            .ifEmpty { (1..60).toSet() }
-
         val plan = when (level) {
-            ChallengeLevel.MORNING -> QuranPageSelector.sequentialHizbPages(
-                selectedHizb = selectedHizb,
+            ChallengeLevel.MORNING -> QuranPageSelector.sequentialCanonicalQuotaPages(
+                mode = mode,
+                selectedUnits = selectedUnits,
                 cursor = prefs.getInt(MORNING_CURSOR, 0),
-                hizbCount = 2
+                pageCount = UsageCyclePolicy.MORNING_PAGE_COUNT
             )
-            ChallengeLevel.HIZB -> QuranPageSelector.sequentialHizbPages(
-                selectedHizb = selectedHizb,
+            ChallengeLevel.HIZB -> QuranPageSelector.sequentialCanonicalQuotaPages(
+                mode = mode,
+                selectedUnits = selectedUnits,
                 cursor = prefs.getInt(HIZB_CURSOR, 0),
-                hizbCount = 1
+                pageCount = UsageCyclePolicy.HIZB_PAGE_COUNT
             )
-            ChallengeLevel.MICRO -> {
-                val mode = GuardPrefs.selectionMode(context)
-                val selectedUnits = when (mode) {
-                    QuranSelectionMode.JUZ -> GuardPrefs.selectedJuz(context)
-                    QuranSelectionMode.HIZB -> selectedHizb
-                }
-                HizbPagePlan(
-                    pages = listOf(
-                        QuranPageSelector.randomPage(
-                            mode = mode,
-                            selectedUnits = selectedUnits,
-                            recentPagesNewestFirst = GuardPrefs.recentChallengePages(context)
-                        )
-                    ),
-                    hizbNumbers = emptyList(),
-                    nextCursor = 0
-                )
-            }
+            ChallengeLevel.MICRO -> HizbPagePlan(
+                pages = listOf(
+                    QuranPageSelector.randomPage(
+                        mode = mode,
+                        selectedUnits = selectedUnits,
+                        recentPagesNewestFirst = GuardPrefs.recentChallengePages(context)
+                    )
+                ),
+                hizbNumbers = emptyList(),
+                nextCursor = 0
+            )
         }
 
-        require(plan.pages.size == when (level) {
+        val requestedPageCount = when (level) {
             ChallengeLevel.MORNING -> UsageCyclePolicy.MORNING_PAGE_COUNT
             ChallengeLevel.MICRO -> 1
             ChallengeLevel.HIZB -> UsageCyclePolicy.HIZB_PAGE_COUNT
-        })
+        }
+        require(plan.pages.isNotEmpty()) { "Canonical Quran reading plan is empty." }
+        require(plan.pages.size <= requestedPageCount) {
+            "Canonical Quran reading plan exceeds the Safeguard quota."
+        }
+        if (level == ChallengeLevel.MICRO) {
+            require(plan.pages.size == 1)
+        }
+        require(plan.pages.distinct().size == plan.pages.size) {
+            "Canonical Quran reading plan must not repeat a page."
+        }
+        require(plan.pages.all { it in canonicalPool }) {
+            "Canonical Quran reading plan escaped the selected Juz/Hizb pool."
+        }
 
         writeState(prefs, state.copy(pendingLevel = level), clearPlan = true)
         check(
