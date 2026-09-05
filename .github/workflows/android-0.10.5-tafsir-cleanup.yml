@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - "fix/0.10.5-tafsir-formatting"
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
