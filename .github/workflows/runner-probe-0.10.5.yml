@@ -1,0 +1,14 @@
+name: 0.10.5 hosted runner probe
+
+on:
+  push:
+    branches:
+      - "release/0.10.5-final"
+
+jobs:
+  probe:
+    if: startsWith(github.event.head_commit.message, 'Probe Quran Safeguard 0.10.5 runner')
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "GitHub hosted runner is available"
