@@ -17,6 +17,7 @@ def fail(message: str) -> None:
 
 entries = json.loads(CORPUS.read_text(encoding="utf-8"))
 report = json.loads(REPORT.read_text(encoding="utf-8"))
+special_recovery_numbers = {int(n) for n in report.get("special_recovery_numbers", [])}
 
 if len(entries) != 264:
     fail(f"expected 264 verified maxims, found {len(entries)}")
@@ -30,15 +31,29 @@ required_nonempty = (
     "french",
     "source_title",
     "source_edition",
-    "source_page",
     "verification_status",
     "translation_status",
 )
 for item in entries:
-    number = item["source_number"]
+    number = int(item["source_number"])
     for field in required_nonempty:
         if not str(item.get(field, "")).strip():
             fail(f"Hikma {number}: missing {field}")
+    sources = item.get("verification_sources") or []
+    source_page = str(item.get("source_page", "")).strip()
+    if not source_page:
+        # Hikma 233 is explicitly documented by the corpus verification report
+        # as a special recovery outside the primary digital-page extraction.
+        # Do not invent a primary page locator: require the exact documented
+        # exception, three independent Arabic controls, and a recovery note.
+        if number not in special_recovery_numbers:
+            fail(f"Hikma {number}: missing source_page without documented special recovery")
+        if len(sources) < 3:
+            fail(f"Hikma {number}: special recovery needs at least three Arabic controls")
+        if "recovered only after independent confirmation" not in item.get("verification_notes", ""):
+            fail(f"Hikma {number}: special recovery explanation missing")
+    elif number in special_recovery_numbers:
+        fail(f"Hikma {number}: documented special recovery unexpectedly gained an unproved primary page")
     if item["verification_status"] != "verified":
         fail(f"Hikma {number}: Arabic matn is not verified")
     if item["translation_status"] != "verified":
@@ -47,7 +62,6 @@ for item in entries:
         fail(f"Hikma {number}: explanation/commentary must be empty in 0.10.5")
     if item.get("text_type") != "author_wisdom":
         fail(f"Hikma {number}: text_type is not author_wisdom")
-    sources = item.get("verification_sources") or []
     if len(sources) < 2:
         fail(f"Hikma {number}: fewer than two Arabic verification controls")
     cross = item.get("translation_cross_audit") or {}
@@ -55,6 +69,9 @@ for item in entries:
         fail(f"Hikma {number}: English semantic cross-audit marker missing")
     if cross.get("authority_rule") != "verified_arabic_remains_authoritative":
         fail(f"Hikma {number}: Arabic authority rule changed")
+
+if special_recovery_numbers != {233}:
+    fail(f"unexpected special-recovery set: {sorted(special_recovery_numbers)}")
 
 if FORBIDDEN_PRODUCTION_SHARH.exists():
     fail("commentary/sharh production asset must not ship in the maxims-only release")
@@ -73,5 +90,6 @@ if report.get("memory_generated_arabic") is not False:
 print("0.10.5 Hikam verified-only gate: PASS")
 print("- 264/264 ordered author maxims")
 print("- Arabic and French present and verified for every row")
+print("- Hikma 233 remains an explicit three-source special recovery; no locator invented")
 print("- English reference is secondary cross-audit only; Arabic remains authoritative")
 print("- no explanation/commentary text and no production sharh asset")
