@@ -21,6 +21,7 @@ def forbid(text: str, *needles: str) -> None:
 
 plus = read("app/src/plus/java/com/quranunlock/guard/TaddaburEdition.kt")
 reader = read("app/src/plus/java/com/quranunlock/guard/TaddaburActivity.kt")
+hardening = read("app/src/plus/java/com/quranunlock/guard/TaddaburHardening.kt")
 light = read("app/src/light/java/com/quranunlock/guard/TaddaburEdition.kt")
 main_manifest = read("app/src/main/AndroidManifest.xml")
 plus_manifest = read("app/src/plus/AndroidManifest.xml")
@@ -82,6 +83,53 @@ require(
     "TaddaburPrefs.recordActiveMs",
     "Fermer • garder le marque-page",
 )
+
+# Active time is accumulated in memory and checkpointed, not synchronously committed every second.
+require(
+    hardening,
+    "const val CHECKPOINT_MS = 5_000L",
+    "fun shouldCheckpoint",
+)
+require(
+    reader,
+    "var pendingMs = 0L",
+    "fun flushPending()",
+    "TaddaburPageSessionPolicy.shouldCheckpoint(pendingMs, readingMs)",
+    "finally",
+    "flushPending()",
+    "PowerManager::class.java",
+    "isInteractive != false",
+)
+
+# P0 regression gate: changing the logical page must recreate the Mushaf WebView,
+# rebuild the page-specific Tafsir mapping, and ignore stale callbacks from an old page.
+require(
+    reader,
+    "androidx.compose.runtime.key(pageNumber)",
+    "onReady: (Int) -> Unit",
+    "onFailure: (Int) -> Unit",
+    "currentOnReady.value(pageNumber)",
+    "currentOnFailure.value(pageNumber)",
+    "TaddaburPageSessionPolicy.acceptsPageCallback(page, readyPage)",
+    "TaddaburPageSessionPolicy.acceptsPageCallback(page, failedPage)",
+    "TafsirEdition.prepareHtml(svgContent, pageNumber)",
+    "pageNumber = pageNumber",
+    "verseIndex = MushafVerseIndex.fromSvg(svgContent)",
+    "TaddaburPageSessionPolicy.mushafAssetPath(page)",
+)
+forbid(reader, "onReady: () -> Unit", "onFailure: () -> Unit")
+
+# Canonical mid-page Hizb boundaries stay canonical, while a physical page fully
+# validated yesterday is carried once instead of demanding another artificial 90 s.
+require(
+    hardening,
+    "object TaddaburBoundaryPolicy",
+    "previous.endPage.takeIf { it == current.startPage }",
+    "object TaddaburBoundaryCarry",
+    "it.epochDay == yesterday && it.complete",
+    "TaddaburPrefs.recordActiveMs(context, page, TaddaburPolicy.MIN_PAGE_MS)",
+)
+require(reader, "TaddaburBoundaryCarry.applyIfEligible(this)")
 
 # Tafsir is available inside the Taddabur reader and must not pause the active-page timer.
 require(
@@ -165,13 +213,17 @@ require(
     "if (TaddaburEdition.shouldBlockNow(this@GateActivity))",
 )
 
-# Regression tests must encode the literal contract.
+# Regression tests must encode the literal contract and new hardening rules.
 require(
     tests,
     "poolIsFixedFromOneToSixtyAndWrapsWithoutSelection",
     "pageRequiresExactlyNinetySecondsMinimum",
     "activeReadingStartsAtSevenAndCanContinueAfterDeadline",
     "deadlineStartsAtTwenty",
+    "midnightEndsDeadlineWindow",
+    "navigationChangesPhysicalAssetAndRejectsStaleCallbacks",
+    "activeTimeUsesInMemoryCheckpointBeforePersisting",
+    "completedAdjacentHizbCarriesOnlyTheSharedCanonicalBoundaryPage",
 )
 
-print("Taddabur 0.10.4 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, bookmark, Tafsir, warm reading surface in Light/Plus, 52dp touch ergonomics, 20:00-midnight enforcement")
+print("Taddabur 0.10.5 source audit PASS: Plus-only, fixed Hizb 1-60, 90 s/page, interactive-screen active time with 5 s checkpoints, canonical boundary carry, bookmark, page-keyed WebView reload, stale-callback rejection, Tafsir remapping, warm reading surface, 20:00-midnight enforcement")
