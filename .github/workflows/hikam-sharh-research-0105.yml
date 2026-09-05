@@ -22,18 +22,99 @@ jobs:
       - name: Install text extraction tools
         run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
 
-      - name: Download research witnesses
+      - name: Download and validate research witnesses
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "${RUNNER_TEMP}/hikam-research"
-          curl --fail --location --retry 3 \
-            -o "${RUNNER_TEMP}/hikam-research/sharnubi.pdf" \
+          root="${RUNNER_TEMP}/hikam-research"
+          mkdir -p "${root}"
+
+          # The primary Waqfeya/Internet Archive URL currently returns HTTP 403
+          # from hosted runners. Fallbacks below document the same bibliographic
+          # witness (al-Sharnubi, ed. Abd al-Fattah al-Bazm, 2nd ed., 1410/1989,
+          # 240 PDF pages). No mirror is trusted merely because it downloads:
+          # every candidate is rejected unless it is a real 240-page PDF.
+          sharnubi_urls=(
             "https://archive.org/download/FP40507/40507.pdf"
+            "https://archive.org/download/FP40507/40507.pdf?download=1"
+            "https://ketabpedia.com/download/413596/"
+            "https://www.alarabimag.com/download/23502-pdf"
+          )
+
+          rm -f "${root}/sharnubi.pdf" "${root}/sharnubi_source_url.txt"
+          for url in "${sharnubi_urls[@]}"; do
+            echo "Trying Sharnubi research mirror: ${url}"
+            tmp="${root}/sharnubi.candidate"
+            rm -f "${tmp}"
+            if ! curl --fail --location --retry 2 --connect-timeout 20 --max-time 120 \
+              -A "Mozilla/5.0 QuranSafeguardResearch/0.10.5" \
+              -o "${tmp}" "${url}"; then
+              continue
+            fi
+            if python3 - "${tmp}" <<'PY'
+          import sys
+          from pathlib import Path
+          import fitz
+
+          path = Path(sys.argv[1])
+          try:
+              if path.read_bytes()[:5] != b"%PDF-":
+                  raise ValueError("not a PDF signature")
+              doc = fitz.open(path)
+              if doc.page_count != 240:
+                  raise ValueError(f"unexpected page count: {doc.page_count}")
+              if path.stat().st_size < 3_000_000:
+                  raise ValueError(f"unexpectedly small PDF: {path.stat().st_size}")
+          except Exception as exc:
+              print(f"Rejected mirror candidate: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+          print(f"Validated research PDF: {doc.page_count} pages, {path.stat().st_size} bytes")
+          PY
+            then
+              mv "${tmp}" "${root}/sharnubi.pdf"
+              printf '%s\n' "${url}" > "${root}/sharnubi_source_url.txt"
+              break
+            fi
+          done
+          test -s "${root}/sharnubi.pdf"
+          test -s "${root}/sharnubi_source_url.txt"
+
           curl --fail --location --retry 3 \
             -A "Mozilla/5.0 QuranSafeguardResearch/0.10.5" \
-            -o "${RUNNER_TEMP}/hikam-research/ibn_abbad.html" \
+            -o "${root}/ibn_abbad.html" \
             "https://quranandsunnah.world/fr/kutuphane/tasavvuf-20240818-20240818-1119-mktbhazzaen-txt"
+
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import fitz
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "hikam-research"
+          pdf = root / "sharnubi.pdf"
+          data = pdf.read_bytes()
+          doc = fitz.open(pdf)
+          metadata = {
+              "schema": "quran-safeguard-hikam-sharnubi-research-witness-v1",
+              "production_eligible": False,
+              "work": "Sharh al-Hikam al-Ataiyya",
+              "commentator": "Abd al-Majid al-Sharnubi",
+              "editor": "Abd al-Fattah al-Bazm",
+              "edition": "2",
+              "publication": "1410 H / 1989 CE",
+              "expected_pdf_pages": 240,
+              "actual_pdf_pages": doc.page_count,
+              "bytes": len(data),
+              "sha256": hashlib.sha256(data).hexdigest(),
+              "download_url_used": (root / "sharnubi_source_url.txt").read_text(encoding="utf-8").strip(),
+              "bibliographic_reference_url": "https://waqfeya.net/books/شرح-الحكم-العطائية-7634e36af5324f5792b3f6ec4f735f45",
+          }
+          (root / "sharnubi_witness_metadata.json").write_text(
+              json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+          )
+          print(json.dumps(metadata, ensure_ascii=False, indent=2))
+          PY
 
       - name: Extract page-preserving Sharnubi text and secondary Ibn Abbad transcript
         shell: bash
@@ -62,16 +143,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          out="${RUNNER_TEMP}/hikam-research/output"
+          root="${RUNNER_TEMP}/hikam-research"
+          out="${root}/output"
           mkdir -p "${out}"
+          sharnubi_url="$(cat "${root}/sharnubi_source_url.txt")"
           python3 scripts/research_align_hikam_sharh_candidates_0105.py \
-            --source "${RUNNER_TEMP}/hikam-research/sharnubi.txt" \
+            --source "${root}/sharnubi.txt" \
             --output "${out}/sharnubi_candidates.json" \
             --commentator sharnubi \
-            --source-label "al-Sharnubi, Sharh al-Hikam, scan pagine de recherche" \
-            --source-url "https://archive.org/download/FP40507/40507.pdf"
+            --source-label "al-Sharnubi, Sharh al-Hikam, 2nd ed. 1410/1989, page-preserving research scan" \
+            --source-url "${sharnubi_url}"
           python3 scripts/research_align_hikam_sharh_candidates_0105.py \
-            --source "${RUNNER_TEMP}/hikam-research/ibn_abbad.txt" \
+            --source "${root}/ibn_abbad.txt" \
             --output "${out}/ibn_abbad_candidates.json" \
             --commentator ibn_abbad \
             --source-label "Ibn Abbad, Ghayth al-mawahib, transcription secondaire de reperage" \
@@ -91,6 +174,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hikam-sharh-0105-research-candidates
-          path: ${{ runner.temp }}/hikam-research/output/*.json
+          path: |
+            ${{ runner.temp }}/hikam-research/output/*.json
+            ${{ runner.temp }}/hikam-research/sharnubi_witness_metadata.json
           if-no-files-found: error
           retention-days: 14
