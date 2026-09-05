@@ -1,0 +1,96 @@
+name: Hikam Sharh 0.10.5 research alignment
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "work/0.10.5-hikam-commentaries-resumed"
+    paths:
+      - "scripts/research_align_hikam_sharh_candidates_0105.py"
+      - ".github/workflows/hikam-sharh-research-0105.yml"
+      - "app/src/main/assets/hikam/al_hikam_verified.json"
+
+jobs:
+  research-candidates:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install text extraction tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Download research witnesses
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/hikam-research"
+          curl --fail --location --retry 3 \
+            -o "${RUNNER_TEMP}/hikam-research/sharnubi.pdf" \
+            "https://archive.org/download/FP40507/40507.pdf"
+          curl --fail --location --retry 3 \
+            -A "Mozilla/5.0 QuranSafeguardResearch/0.10.5" \
+            -o "${RUNNER_TEMP}/hikam-research/ibn_abbad.html" \
+            "https://quranandsunnah.world/fr/kutuphane/tasavvuf-20240818-20240818-1119-mktbhazzaen-txt"
+
+      - name: Extract page-preserving Sharnubi text and secondary Ibn Abbad transcript
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import fitz
+          from bs4 import BeautifulSoup
+
+          root = Path(os.environ["RUNNER_TEMP"]) / "hikam-research"
+          doc = fitz.open(root / "sharnubi.pdf")
+          sharnubi = "\f".join(page.get_text("text") for page in doc)
+          (root / "sharnubi.txt").write_text(sharnubi, encoding="utf-8")
+
+          html = (root / "ibn_abbad.html").read_text(encoding="utf-8", errors="strict")
+          soup = BeautifulSoup(html, "html.parser")
+          for tag in soup(["script", "style", "nav", "header", "footer"]):
+              tag.decompose()
+          ibn_abbad = soup.get_text("\n")
+          (root / "ibn_abbad.txt").write_text(ibn_abbad, encoding="utf-8")
+          PY
+
+      - name: Align frozen 264 Hikam — research candidates only
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="${RUNNER_TEMP}/hikam-research/output"
+          mkdir -p "${out}"
+          python3 scripts/research_align_hikam_sharh_candidates_0105.py \
+            --source "${RUNNER_TEMP}/hikam-research/sharnubi.txt" \
+            --output "${out}/sharnubi_candidates.json" \
+            --commentator sharnubi \
+            --source-label "al-Sharnubi, Sharh al-Hikam, scan pagine de recherche" \
+            --source-url "https://archive.org/download/FP40507/40507.pdf"
+          python3 scripts/research_align_hikam_sharh_candidates_0105.py \
+            --source "${RUNNER_TEMP}/hikam-research/ibn_abbad.txt" \
+            --output "${out}/ibn_abbad_candidates.json" \
+            --commentator ibn_abbad \
+            --source-label "Ibn Abbad, Ghayth al-mawahib, transcription secondaire de reperage" \
+            --source-url "https://quranandsunnah.world/fr/kutuphane/tasavvuf-20240818-20240818-1119-mktbhazzaen-txt"
+
+      - name: Prove research output cannot masquerade as production asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e app/src/plus/assets/hikam/hikam_sharh_dual.json
+          grep -q '"production_eligible": false' "${RUNNER_TEMP}/hikam-research/output/sharnubi_candidates.json"
+          grep -q '"production_eligible": false' "${RUNNER_TEMP}/hikam-research/output/ibn_abbad_candidates.json"
+          grep -q '"verification_status": "unverified"' "${RUNNER_TEMP}/hikam-research/output/sharnubi_candidates.json"
+          grep -q '"verification_status": "unverified"' "${RUNNER_TEMP}/hikam-research/output/ibn_abbad_candidates.json"
+
+      - name: Upload research reports only
+        uses: actions/upload-artifact@v4
+        with:
+          name: hikam-sharh-0105-research-candidates
+          path: ${{ runner.temp }}/hikam-research/output/*.json
+          if-no-files-found: error
+          retention-days: 14
