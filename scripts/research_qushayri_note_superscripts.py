@@ -5,12 +5,16 @@ PyMuPDF flattens many printed superscript calls into their surrounding text, so
 span size alone cannot enumerate them reliably. This script therefore starts
 from independently detected note bodies, finds the top edge of the printed
 footnote apparatus on each page, and searches only the main commentary area for
-a tightly-attached number with the same page+number key.
+a same-page call with the same note number.
 
-The detector accepts calls attached to a word (for example ``not25``) as well
-as calls after punctuation. It excludes decimal fractions and Qur'an-style
-chapter:verse numbers. Every result remains research-only and is never promoted
-to an application asset by this script.
+The primary detector accepts calls attached to a word (for example ``not25``)
+as well as calls after punctuation. A second, deliberately narrow geometry
+fallback handles a note number isolated in its own superscript span. It is used
+only for note-body keys that the primary detector did not match, and only when
+there is exactly one raised/smaller numeric span candidate on that page.
+Decimals, percentages and Qur'an-style chapter:verse numbers remain excluded.
+Every result remains research-only and is never promoted to an application
+asset by this script.
 """
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ import collections
 import hashlib
 import json
 import re
+import statistics
 from pathlib import Path
 
 import fitz
@@ -65,6 +70,69 @@ def mostly_arabic(text: str) -> bool:
     return bool(letters) and sum(bool(ARABIC_RE.match(c)) for c in letters) / len(letters) > 0.45
 
 
+def span_snapshot(span: dict) -> dict:
+    return {
+        "text": span.get("text", ""),
+        "size": round(float(span.get("size", 0.0)), 2),
+        "bbox": [round(float(v), 2) for v in span.get("bbox", (0, 0, 0, 0))],
+        "font": span.get("font", ""),
+    }
+
+
+def isolated_superscript_candidates(record: dict, number: int) -> list[dict]:
+    """Return only visually credible isolated numeric superscripts for one key.
+
+    This is intentionally stricter than a text regex. The candidate must be a
+    span containing exactly the desired number and must be either materially
+    smaller than neighboring prose or visibly raised relative to the prose
+    baseline. Ordinary verse/page numbers therefore do not qualify.
+    """
+    wanted = str(number)
+    raw_spans = record.get("spans", [])
+    if len(raw_spans) < 2:
+        return []
+
+    prose = [
+        s for s in raw_spans
+        if s.get("text", "").strip()
+        and not re.fullmatch(r"\d{1,3}", s.get("text", "").strip())
+    ]
+    if not prose:
+        return []
+
+    prose_sizes = [float(s.get("size", 0.0)) for s in prose if float(s.get("size", 0.0)) > 0]
+    prose_bottoms = [float(s.get("bbox", (0, 0, 0, 0))[3]) for s in prose]
+    if not prose_sizes or not prose_bottoms:
+        return []
+    prose_size = statistics.median(prose_sizes)
+    prose_bottom = statistics.median(prose_bottoms)
+
+    found = []
+    for span in raw_spans:
+        text = span.get("text", "")
+        if text.strip() != wanted:
+            continue
+        size = float(span.get("size", 0.0))
+        bbox = span.get("bbox", (0, 0, 0, 0))
+        bottom = float(bbox[3])
+        smaller = size > 0 and size <= prose_size * 0.86
+        raised = bottom <= prose_bottom - 1.2
+        if not (smaller or raised):
+            continue
+        found.append(
+            {
+                "page": record["page"],
+                "number": number,
+                "text": record["text"],
+                "offset": None,
+                "bbox": [round(float(v), 2) for v in record["bbox"]],
+                "span": span_snapshot(span),
+                "evidence": "isolated-superscript-span",
+            }
+        )
+    return found
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("pdf", type=Path)
@@ -100,6 +168,7 @@ def main() -> None:
                     "max_size": max(sizes),
                     "block": block_index,
                     "line": line_index,
+                    "spans": line_spans,
                 }
                 page_records[page_number].append(record)
 
@@ -180,11 +249,32 @@ def main() -> None:
                     "text": text,
                     "offset": match.start(1),
                     "bbox": [round(float(v), 2) for v in record["bbox"]],
+                    "evidence": "attached-text-call",
                 }
                 all_attached_candidates.append(candidate)
                 key = (page_number, number)
                 if key in body_keys:
                     attached_calls[key].append(candidate)
+
+    primary_call_keys = set(attached_calls)
+    primary_missing = body_keys - primary_call_keys
+
+    # Narrow geometry fallback: only unresolved note-body keys are considered,
+    # and a key is accepted only when there is exactly one credible isolated
+    # superscript span above the apparatus. Ambiguous pages stay unresolved.
+    geometry_calls: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
+    for page_number, number in sorted(primary_missing):
+        top = apparatus_top.get(page_number)
+        if top is None:
+            continue
+        candidates = []
+        for record in page_records[page_number]:
+            if float(record["bbox"][3]) >= top - 1.0:
+                continue
+            candidates.extend(isolated_superscript_candidates(record, number))
+        if len(candidates) == 1:
+            geometry_calls[(page_number, number)] = candidates
+            attached_calls[(page_number, number)] = candidates
 
     call_keys = set(attached_calls)
     missing = body_keys - call_keys
@@ -192,14 +282,59 @@ def main() -> None:
         (item["page"], item["number"]) for item in all_attached_candidates
     } - body_keys
 
+    unmatched_diagnostics = []
+    for page_number, number in sorted(missing):
+        top = apparatus_top.get(page_number)
+        note_records = []
+        for record in strict_note_starts.get((page_number, number), []):
+            note_records.append(
+                {
+                    "kind": "strict-body",
+                    "text": record["text"],
+                    "bbox": [round(float(v), 2) for v in record["bbox"]],
+                }
+            )
+        for pair in layout_note_starts.get((page_number, number), []):
+            note_records.append(
+                {
+                    "kind": "layout-body",
+                    "number_bbox": [round(float(v), 2) for v in pair["number"]["bbox"]],
+                    "body_text": pair["body"]["text"],
+                    "body_bbox": [round(float(v), 2) for v in pair["body"]["bbox"]],
+                }
+            )
+        numeric_context = []
+        for record in page_records[page_number]:
+            if top is not None and float(record["bbox"][3]) >= top - 1.0:
+                continue
+            if str(number) not in record["text"]:
+                continue
+            numeric_context.append(
+                {
+                    "text": record["text"],
+                    "bbox": [round(float(v), 2) for v in record["bbox"]],
+                    "spans": [span_snapshot(s) for s in record.get("spans", [])],
+                }
+            )
+        unmatched_diagnostics.append(
+            {
+                "page": page_number,
+                "number": number,
+                "note_bodies": note_records,
+                "main_text_candidates_containing_number": numeric_context[:20],
+            }
+        )
+
     report = {
-        "schema": "quran-safeguard-qushayri-note-reverse-crosscheck-v2",
+        "schema": "quran-safeguard-qushayri-note-reverse-crosscheck-v3",
         "production_eligible": False,
         "source_sha256": source_sha,
         "strict_note_body_keys": len(strict_keys),
         "layout_note_body_keys": len(layout_keys),
         "note_body_union_keys": len(body_keys),
         "matched_note_body_call_keys": len(call_keys),
+        "matched_by_primary_attached_detector": len(primary_call_keys),
+        "matched_by_geometry_fallback": len(geometry_calls),
         "unmatched_note_body_keys": [list(k) for k in sorted(missing)],
         "duplicate_matched_call_keys": [
             list(k) for k, values in sorted(attached_calls.items()) if len(values) != 1
@@ -208,6 +343,11 @@ def main() -> None:
         "matched_by_layout_body_detector": len(call_keys & layout_keys),
         "attached_candidates_without_same_page_note_body": len(extra_candidate_keys),
         "candidate_keys_without_body_sample": [list(k) for k in sorted(extra_candidate_keys)[:100]],
+        "geometry_fallback_matches": [
+            {"page": k[0], "number": k[1], **geometry_calls[k][0]}
+            for k in sorted(geometry_calls)
+        ],
+        "unmatched_diagnostics": unmatched_diagnostics,
         "matched_samples": [
             {"page": k[0], "number": k[1], **attached_calls[k][0]}
             for k in sorted(call_keys)[:120]
@@ -216,7 +356,20 @@ def main() -> None:
 
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({k: v for k, v in report.items() if k != "matched_samples"}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {
+                k: v
+                for k, v in report.items()
+                if k not in {"matched_samples", "unmatched_diagnostics"}
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    if unmatched_diagnostics:
+        print("Unmatched diagnostics:")
+        print(json.dumps(unmatched_diagnostics, ensure_ascii=False, indent=2))
     print(f"Research-only report written to {args.report}")
 
 
