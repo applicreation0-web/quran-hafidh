@@ -13,6 +13,7 @@ EXPECTED_RAW_SEGMENTS = 806
 EXPECTED_LOGICAL_ENTRIES = 720
 EXPECTED_TRANSLATION_ONLY_ANCHORS = 86
 EXPECTED_GROUPED_RANGES = 76
+SOFT_HYPHEN_MARKER = "__QSH_SOFT_HYPHEN__"
 
 anchor_re = re.compile(r"^\[(\d+):(\d+)(?:[\u2013\u2014-](\d+))?\]\s*")
 sura_heading_re = re.compile(r"^S(?:ūrat|urāt|ūra)\b", re.I)
@@ -31,10 +32,25 @@ def file_sha256(path):
 
 def line_info(line):
     spans = line["spans"]
-    text = "".join(s["text"] for s in spans).replace("\u00ad", "")
+    # Do not discard a discretionary hyphen yet.  If it marks a PDF line/block
+    # break, removing it here loses the information needed to rejoin the word.
+    text = "".join(s["text"] for s in spans).replace("\u00ad", SOFT_HYPHEN_MARKER)
     fonts = [s["font"] for s in spans if s["text"].strip()]
     sizes = [s["size"] for s in spans if s["text"].strip()]
     return text, fonts, sizes
+
+
+def resolve_discretionary_hyphens(text):
+    marker = re.escape(SOFT_HYPHEN_MARKER)
+    # Join alphabetic fragments even when the PDF block boundary became one or
+    # more whitespace/newline characters.  Remaining markers are removed only
+    # after this source-driven join has been attempted.
+    text = re.sub(
+        rf"([A-Za-zÀ-ÖØ-öø-ÿ]){marker}\s*([A-Za-zÀ-ÖØ-öø-ÿ])",
+        r"\1\2",
+        text,
+    )
+    return text.replace(SOFT_HYPHEN_MARKER, "")
 
 
 def is_arabic_line(fonts, text):
@@ -61,15 +77,17 @@ def normalize(parts):
                 out.append(" ".join(buf).strip())
                 buf = []
             continue
-        t = pua_re.sub("", p).strip()
+        t = pua_re.sub("", p).replace("\u00a0", " ").strip()
         if not t:
             continue
         buf.append(t)
     if buf:
         out.append(" ".join(buf).strip())
     text = "\n\n".join(x for x in out if x)
+    text = resolve_discretionary_hyphens(text)
     text = re.sub(r"([A-Za-z])\-\s+([a-z])", r"\1\2", text)
     text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"[ \t]+([,.;:!?])", r"\1", text)
     text = re.sub(r" *\n\n *", "\n\n", text)
     return text.strip()
 
@@ -172,6 +190,7 @@ if source_sha != EXPECTED_SOURCE_SHA256:
 doc = fitz.open(PDF)
 segments = []
 current = None
+source_soft_hyphen_count = 0
 for pi in range(37, 506):
     page = doc[pi]
     pd = page.get_text("dict")
@@ -181,6 +200,7 @@ for pi in range(37, 506):
             continue
         for li, line in enumerate(b["lines"]):
             text, fonts, sizes = line_info(line)
+            source_soft_hyphen_count += text.count(SOFT_HYPHEN_MARKER)
             _, y0, _, _ = line["bbox"]
             st = text.strip()
             if not st:
@@ -244,7 +264,7 @@ if not any(s["surah"] == 2 and s["start"] <= 68 <= s["end"] for s in segments):
             continue
         for line in b["lines"]:
             text, fonts, sizes = line_info(line)
-            st = text.replace("\u00ad", "").strip()
+            st = text.strip()
             if not st or is_arabic_line(fonts, st):
                 continue
             if sizes and max(sizes) <= 9.4:
@@ -252,9 +272,11 @@ if not any(s["surah"] == 2 and s["start"] <= 68 <= s["end"] for s in segments):
             lines.append((st, fonts))
     start = next(i for i, (t, _) in enumerate(lines) if 'When He said: “She is a cow neither old' in t)
     end = next(i for i, (t, _) in enumerate(lines[start:], start) if 'yet retains some of the vigor of his youth.' in t)
-    raw = pua_re.sub("", " ".join(t for t, _ in lines[start : end + 1]))
+    raw = pua_re.sub("", " ".join(t for t, _ in lines[start : end + 1])).replace("\u00a0", " ")
+    raw = resolve_discretionary_hyphens(raw)
     raw = re.sub(r"([A-Za-z])-\s+([a-z])", r"\1\2", raw)
     raw = re.sub(r"\s+", " ", raw).strip()
+    raw = re.sub(r"\s+([,.;:!?])", r"\1", raw)
     m = re.search(r'When He said: “(?P<tr>.+?)” \[2:68\], it meant (?P<com>.+)$', raw)
     if not m:
         raise RuntimeError("Could not extract Qushayri 2:68 source exception")
@@ -293,6 +315,14 @@ for r in rows:
     if not r["commentary"].strip():
         raise RuntimeError(
             f'Qushayri empty commentary survived grouping: {r["surah"]}:{r["start"]}-{r["end"]}'
+        )
+    if SOFT_HYPHEN_MARKER in joined or "\u00ad" in joined:
+        raise RuntimeError(
+            f'Qushayri unresolved discretionary hyphen: {r["surah"]}:{r["start"]}-{r["end"]}'
+        )
+    if "\u00a0" in joined:
+        raise RuntimeError(
+            f'Qushayri non-breaking-space extraction debris: {r["surah"]}:{r["start"]}-{r["end"]}'
         )
     if pua_re.search(joined):
         raise RuntimeError("Qushayri private-use PDF glyph leaked into corpus")
@@ -341,6 +371,8 @@ meta = {
     "raw_segment_count": str(EXPECTED_RAW_SEGMENTS),
     "translation_only_anchor_count": str(EXPECTED_TRANSLATION_ONLY_ANCHORS),
     "grouped_source_range_count": str(EXPECTED_GROUPED_RANGES),
+    "source_soft_hyphen_count": str(source_soft_hyphen_count),
+    "soft_hyphen_policy": "preserve-marker-then-source-driven-join",
     "entry_count": str(len(rows)),
 }
 con.executemany("INSERT INTO source_metadata(key,value) VALUES (?,?)", meta.items())
@@ -374,6 +406,7 @@ print("raw segments", len(raw_rows))
 print("logical entries", len(rows))
 print("translation-only anchors merged", EXPECTED_TRANSLATION_ONLY_ANCHORS)
 print("grouped source ranges", EXPECTED_GROUPED_RANGES)
+print("source discretionary hyphens observed", source_soft_hyphen_count)
 for s, n in expected.items():
     missing = [a for a in range(1, n + 1) if a not in cov[s]]
     if missing:
