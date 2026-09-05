@@ -18,8 +18,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply clean runtime migration
-        run: python3 scripts/clean_taddabur_runtime_0105.py
+      - name: Apply clean runtime migration with exact residual diagnostic
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/clean_taddabur_runtime_0105.py
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "--- Residual references after in-memory cleanup was written to workspace ---"
+            grep -Rni --include='*.kt' --include='*.java' --include='*.xml' --include='*.kts' 'taddabur' app/src/main app/src/light app/src/plus app/src/test app/src/testPlus 2>/dev/null || true
+            exit "$rc"
+          fi
 
       - name: Commit cleaned runtime
         shell: bash
