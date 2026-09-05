@@ -1,7 +1,7 @@
 # Quran Safeguard 0.10.5 — integrated release candidate
 
 This marker records the final integrated candidate after replacing the brittle
-0.10.4 unlock-release assertions with the explicit 0.10.5 contract.
+0.10.4 unlock-release assertions with the explicit functional 0.10.5 contract.
 
 Release remains fail-closed: publication is permitted only after the dedicated
 0.10.5 pipeline validates the 604-page Medina Mushaf, page 552, canonical
