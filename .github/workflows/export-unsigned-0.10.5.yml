@@ -1,0 +1,121 @@
+name: Export audited Quran Safeguard 0.10.5 unsigned APKs
+
+on:
+  push:
+    branches:
+      - "build/0.10.5-unsigned-export"
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout audited source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare exact 0.10.5 version metadata
+        run: python3 scripts/prepare_0105_version.py
+
+      - name: Verify release priorities
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_0105_stability_priorities.py
+          python3 scripts/verify_0105_runtime_clean.py
+          python3 scripts/verify_0105_sensitive_scope.py
+
+      - name: Fetch and verify all 604 Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up Python corpus tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Rebuild Qushayri and Qurtubi from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "${src}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+          python3 scripts/prepare_multitafsir_assets.py \
+            --source-dir "${src}" \
+            --assets-dir app/src/plus/assets/tafsir \
+            --work-dir "${RUNNER_TEMP}/tafsir-work"
+
+      - name: Run contradictory corpus/source audits
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_0105_stability_priorities.py
+          python3 scripts/verify_0105_runtime_clean.py
+          python3 scripts/verify_0105_sensitive_scope.py
+          python3 scripts/verify_0105_tafsir_update.py
+          python3 scripts/verify_0105_tafsir_typography_contract.py
+          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir
+          python3 scripts/verify_0105_hikam_verified_only.py
+          python3 scripts/verify_hikam_translation_separation.py
+          python3 scripts/audit_hikam_technical_lexicon_0105.py
+          python3 scripts/audit_hikam_translation_against_islamicpearls.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Full release audit and Light/Plus tests
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:verifyReleaseAudit
+          gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Build Light and Plus release APKs
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
+
+      - name: Inspect unsigned APK boundaries and payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          python3 scripts/verify_light_apk_no_tafsir.py "${light}"
+          python3 scripts/verify_plus_apk_multitafsir.py "${plus}"
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
+          out="${RUNNER_TEMP}/quran-safeguard-0.10.5-unsigned"
+          mkdir -p "${out}"
+          cp "${light}" "${out}/Quran-Safeguard-0.10.5-Light-unsigned.apk"
+          cp "${plus}" "${out}/Quran-Safeguard-Plus-0.10.5-unsigned.apk"
+          sha256sum "${out}"/*.apk > "${out}/UNSIGNED-SHA256.txt"
+          printf '%s\n' "release_source_parent=94440ef847a54c746bc5dd19af9064f6fc1eb2b9" > "${out}/BUILD-PROVENANCE.txt"
+          printf '%s\n' "export_workflow_commit=$(git rev-parse HEAD)" >> "${out}/BUILD-PROVENANCE.txt"
+          printf '%s\n' "app_source_diff_vs_parent:" >> "${out}/BUILD-PROVENANCE.txt"
+          git diff --name-only 94440ef847a54c746bc5dd19af9064f6fc1eb2b9..HEAD -- app >> "${out}/BUILD-PROVENANCE.txt"
+          test -z "$(git diff --name-only 94440ef847a54c746bc5dd19af9064f6fc1eb2b9..HEAD -- app)"
+
+      - name: Upload audited unsigned APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.5-unsigned-for-offline-signing
+          path: ${{ runner.temp }}/quran-safeguard-0.10.5-unsigned/
+          if-no-files-found: error
+          retention-days: 7
