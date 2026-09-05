@@ -6,8 +6,8 @@ import org.junit.Test
 
 class HikamSharhContractTest {
     @Test
-    fun fullyVerifiedEntryIsDisplayEligible() {
-        val entry = HikamSharhEdition.parse(sampleJson()).single()
+    fun fullyVerifiedDocumentaryEntryIsDisplayEligible() {
+        val entry = sampleEntry()
 
         assertTrue(entry.verified)
         assertTrue(entry.displayEligible)
@@ -17,56 +17,41 @@ class HikamSharhContractTest {
     }
 
     @Test
-    fun unverifiedBoundaryIsRejectedAtRuntime() {
-        val entry = HikamSharhEdition.parse(
-            sampleJson(sourceBoundaryStatus = "candidate")
-        ).single()
+    fun blankBoundaryLocatorIsRejected() {
+        val entry = sampleEntry(boundaryLocator = "")
 
-        assertFalse(entry.verified)
         assertFalse(entry.displayEligible)
     }
 
     @Test
-    fun unverifiedAlignmentIsRejectedAtRuntime() {
-        val entry = HikamSharhEdition.parse(
-            sampleJson(alignmentStatus = "candidate")
-        ).single()
+    fun unverifiedEntryIsRejected() {
+        val entry = sampleEntry(verified = false)
 
-        assertFalse(entry.verified)
         assertFalse(entry.displayEligible)
     }
 
-    @Test(expected = org.json.JSONException::class)
-    fun missingBoundaryLocatorIsRejectedByParser() {
-        HikamSharhEdition.parse(
-            sampleJson().replace(
-                "\"commentary_boundary_locator\":\"matn A → next matn B\",",
-                ""
-            )
-        )
+    @Test
+    fun missingTranslationCreditIsRejected() {
+        val entry = sampleEntry(translationCredit = "")
+
+        assertFalse(entry.displayEligible)
     }
 
-    private fun sampleJson(
-        sourceBoundaryStatus: String = "verified",
-        alignmentStatus: String = "verified"
-    ): String = """
-        [
-          {
-            "source_number": 1,
-            "commentator_id": "sharnubi",
-            "commentary_work": "شرح الحكم العطائية",
-            "commentary_source_edition": "Dar Ibn Kathir, 2e éd., 1410/1989",
-            "commentary_arabic": "هذا نص عربي تجريبي طويل بما يكفي لاختبار عقد البيانات فقط ولا يمثل محتوى منشورا.",
-            "commentary_french": "Texte de test suffisamment long pour vérifier le contrat de données sans constituer un commentaire publié.",
-            "commentary_translation_credit": "Quran Safeguard — test",
-            "commentary_source_url": "https://archive.org/example",
-            "commentary_print_locator": "p. 12",
-            "commentary_boundary_locator": "matn A → next matn B",
-            "commentary_status": "verified",
-            "translation_status": "verified",
-            "hikma_alignment_status": "$alignmentStatus",
-            "source_boundary_status": "$sourceBoundaryStatus"
-          }
-        ]
-    """.trimIndent()
+    private fun sampleEntry(
+        boundaryLocator: String = "matn A → next matn B",
+        translationCredit: String = "Quran Safeguard — test",
+        verified: Boolean = true
+    ) = HikamSharhEntry(
+        hikmaNumber = 1,
+        commentator = HikamCommentator.SHARNUBI,
+        workTitle = "شرح الحكم العطائية",
+        sourceEdition = "Dar Ibn Kathir, 2e éd., 1410/1989",
+        arabicText = "هذا نص عربي تجريبي لا يمثل محتوى منشورا.",
+        frenchText = "Texte de test ne constituant pas un commentaire publié.",
+        translationCredit = translationCredit,
+        sourceUrl = "https://archive.org/example",
+        printLocator = "p. 12",
+        boundaryLocator = boundaryLocator,
+        verified = verified
+    )
 }
