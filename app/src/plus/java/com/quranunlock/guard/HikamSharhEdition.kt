@@ -79,6 +79,7 @@ object HikamSharhEdition {
             translationCredit = obj.getString("commentary_translation_credit").trim(),
             sourceUrl = obj.getString("commentary_source_url").trim(),
             printLocator = obj.getString("commentary_print_locator").trim(),
+            boundaryLocator = obj.getString("commentary_boundary_locator").trim(),
             verified = obj.optString("commentary_status") == "verified" &&
                 obj.optString("translation_status") == "verified" &&
                 obj.optString("hikma_alignment_status") == "verified" &&
