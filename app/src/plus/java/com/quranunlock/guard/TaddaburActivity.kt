@@ -3,6 +3,7 @@ package com.applicreation0.quransafeguard
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -47,6 +48,7 @@ class TaddaburActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         TaddaburEdition.scheduleReminder(this)
+        TaddaburBoundaryCarry.applyIfEligible(this)
         val initial = TaddaburPrefs.progress(this)
 
         setContent {
@@ -77,20 +79,43 @@ class TaddaburActivity : ComponentActivity() {
                 LaunchedEffect(page) {
                     pageReady = false
                     TaddaburPrefs.setBookmark(this@TaddaburActivity, page)
-                    readingMs = TaddaburPrefs.elapsedMs(this@TaddaburActivity, page)
-                    while (true) {
-                        if (mayCountActiveReading() &&
-                            pageReady &&
-                            TaddaburPolicy.mayAccumulate(LocalTime.now())
-                        ) {
-                            progress = TaddaburPrefs.recordActiveMs(
-                                this@TaddaburActivity,
-                                page,
-                                1_000L
-                            )
-                            readingMs = TaddaburPrefs.elapsedMs(this@TaddaburActivity, page)
+                    var persistedMs = TaddaburPrefs.elapsedMs(this@TaddaburActivity, page)
+                    var pendingMs = 0L
+                    readingMs = persistedMs
+
+                    fun flushPending() {
+                        if (pendingMs <= 0L) return
+                        progress = TaddaburPrefs.recordActiveMs(
+                            this@TaddaburActivity,
+                            page,
+                            pendingMs,
+                        )
+                        pendingMs = 0L
+                        persistedMs = TaddaburPrefs.elapsedMs(this@TaddaburActivity, page)
+                        readingMs = persistedMs
+                    }
+
+                    try {
+                        while (true) {
+                            if (mayCountActiveReading() &&
+                                pageReady &&
+                                TaddaburPolicy.mayAccumulate(LocalTime.now())
+                            ) {
+                                pendingMs += 1_000L
+                                readingMs = persistedMs + pendingMs
+                                if (TaddaburPageSessionPolicy.shouldCheckpoint(pendingMs, readingMs)) {
+                                    flushPending()
+                                }
+                            } else {
+                                // Force-persist as soon as the page is no longer genuinely active.
+                                flushPending()
+                            }
+                            delay(1_000L)
                         }
-                        delay(1_000L)
+                    } finally {
+                        // Page navigation, closing the activity and lifecycle cancellation must
+                        // never discard a partial in-memory checkpoint.
+                        flushPending()
                     }
                 }
 
@@ -169,11 +194,15 @@ class TaddaburActivity : ComponentActivity() {
                                         .fillMaxWidth()
                                         .weight(1f),
                                     onReady = { readyPage ->
-                                        if (readyPage == page) pageReady = true
+                                        if (TaddaburPageSessionPolicy.acceptsPageCallback(page, readyPage)) {
+                                            pageReady = true
+                                        }
                                     },
                                     onVerseTapped = { verse -> openTafsir(verse) },
                                     onFailure = { failedPage ->
-                                        if (failedPage == page) pageReady = false
+                                        if (TaddaburPageSessionPolicy.acceptsPageCallback(page, failedPage)) {
+                                            pageReady = false
+                                        }
                                     }
                                 )
                             }
@@ -231,7 +260,8 @@ class TaddaburActivity : ComponentActivity() {
 
     private fun mayCountActiveReading(): Boolean =
         activityResumed &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || activityTopResumed)
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || activityTopResumed) &&
+            (getSystemService(PowerManager::class.java)?.isInteractive != false)
 
     override fun onResume() {
         super.onResume()
@@ -264,7 +294,7 @@ class TaddaburActivity : ComponentActivity() {
 
     private fun loadMushafPage(page: Int): String? {
         if (page !in 1..604) return null
-        val assetPath = "mushaf/hafs/kfqc/svg-br/%03d.svg.br".format(page)
+        val assetPath = TaddaburPageSessionPolicy.mushafAssetPath(page)
         return runCatching {
             assets.open(assetPath).use { compressed ->
                 BrotliInputStream(compressed)
