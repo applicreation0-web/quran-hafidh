@@ -51,12 +51,13 @@ object QuranPageSelector {
     }
 
     /**
-     * Builds a fixed Safeguard reading quota without ever escaping the exact
+     * Builds a Safeguard reading quota without ever escaping the exact
      * canonical pool selected by the user.
      *
-     * When the selected canonical pool contains fewer physical Mushaf pages
-     * than the requested quota, the plan is shortened rather than repeating a
-     * page or borrowing a page from an unselected adjacent Juz/Hizb.
+     * A challenge never wraps from the end of the selected pool back to its
+     * beginning. If fewer pages remain than the requested quota, the current
+     * plan ends at the canonical pool boundary and the following challenge
+     * restarts from the beginning. This preserves normal Mushaf reading order.
      */
     fun sequentialCanonicalQuotaPages(
         mode: QuranSelectionMode,
@@ -75,10 +76,9 @@ object QuranPageSelector {
         require(pool.isNotEmpty()) { "No Quran pages available." }
 
         val startIndex = Math.floorMod(cursor, pool.size)
-        val actualCount = minOf(pageCount, pool.size)
-        val pages = (0 until actualCount).map { offset ->
-            pool[(startIndex + offset) % pool.size]
-        }
+        val remaining = pool.size - startIndex
+        val actualCount = minOf(pageCount, remaining)
+        val pages = pool.subList(startIndex, startIndex + actualCount).toList()
         val selectedSet = validUnits.toSet()
         val touchedUnits = pages
             .flatMap { page ->
@@ -88,14 +88,11 @@ object QuranPageSelector {
             .filter { it in selectedSet }
             .distinct()
 
+        val endIndex = startIndex + actualCount
         return HizbPagePlan(
             pages = pages,
             hizbNumbers = touchedUnits,
-            nextCursor = if (pool.size == 1) {
-                0
-            } else {
-                (startIndex + actualCount) % pool.size
-            }
+            nextCursor = if (endIndex >= pool.size) 0 else endIndex
         )
     }
 
