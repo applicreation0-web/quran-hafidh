@@ -275,10 +275,16 @@ val verifyPrivacyBoundary by tasks.registering {
         check(service.contains("TargetPresenceScopePolicy.requiresAnonymousExitSentinel"))
         check(service.contains("if (anonymousExitSentinel)"))
         check(service.contains("info.packageNames = if (anonymousExitSentinel)")) {
-            "Broad event delivery is allowed only for the one-shot anonymous exit sentinel."
+            "Broad event delivery must remain guarded by the privacy-first sentinel policy."
         }
         check(service.contains("ProtectedApps.eventScopePackages(this).toTypedArray()")) {
-            "Runtime accessibility scope must return immediately to the explicit target list."
+            "Runtime accessibility scope must remain on the explicit target list."
+        }
+        check(presenceScope.contains("): Boolean = false")) {
+            "0.10.5 must make broad Accessibility scope impossible in policy."
+        }
+        check(presenceScopeTests.contains("fun runningSelectedTargetNeverEnablesAnonymousExitSentinel(")) {
+            "Missing 0.10.5 privacy-first sentinel regression test."
         }
         check(service.contains("handleOutsideScopeForeground()"))
         val outsideHandler = service
@@ -287,21 +293,9 @@ val verifyPrivacyBoundary by tasks.registering {
         check(outsideHandler.indexOf("pauseForegroundBudget(clearForeground = true)") in
             0 until outsideHandler.indexOf("GuardRuntime.resetForeground()")
         ) {
-            "The first anonymous outside event must pause target presence before state is cleared."
+            "Any in-scope transition that proves exit must pause target presence before state is cleared."
         }
         check(service.contains("applyEventPackageScope(broad = false)"))
-        check(presenceScope.contains("foregroundPackage == runningBudgetPackage"))
-        check(presenceScope.contains("foregroundPackage in selectedTargets"))
-        listOf(
-            "runningSelectedTargetRequiresOneAnonymousExitSignal",
-            "noSentinelExistsWithoutAnActivelyRunningTargetBudget",
-            "outsideApplicationCanNeverOwnTheSharedBudgetScope",
-            "narrowScopeIsRestoredAfterTheExitSignal"
-        ).forEach { scenario ->
-            check(presenceScopeTests.contains("fun " + scenario + "(")) {
-                "Missing target-presence scope regression test: " + scenario
-            }
-        }
         check(protectedApps.contains("transitionSignalPackages"))
         check(protectedApps.contains("SYSTEM_UI_PACKAGE"))
         check(protectedApps.contains("launcherPackage(context)"))
@@ -385,11 +379,10 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(cycle.contains("INTERVAL_MINUTES = 15"))
         check(cycle.contains("CUMULATIVE_MINUTES = 90"))
         check(cycle.contains("CUMULATIVE_MS = CUMULATIVE_MINUTES * 60_000L"))
-        check(cycle.contains(
-            "INTERVALS_PER_HIZB = CUMULATIVE_MINUTES / INTERVAL_MINUTES"
-        ))
+        check(cycle.contains("INTERVALS_PER_NINETY_MINUTE_CYCLE ="))
+        check(cycle.contains("CUMULATIVE_MINUTES / INTERVAL_MINUTES"))
         check(cycle.contains("MORNING_PAGE_COUNT = 20"))
-        check(cycle.contains("HIZB_PAGE_COUNT = 10"))
+        check(cycle.contains("NINETY_MINUTE_PAGE_COUNT = 10"))
         check(cycle.contains("ChallengeLevel.HIZB"))
         check(prefs.contains("GLOBAL_USAGE_KEY = \"__all_protected_targets__\""))
         check(prefs.contains("val grantedMs = UsageCyclePolicy.INTERVAL_MS"))
@@ -397,8 +390,12 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(prefs.contains("currentCycleTargetPresenceMs"))
         check(!prefs.contains("getInt(UNLOCK_MINUTES"))
         check(cyclePrefs.contains("SafeguardCyclePrefs"))
-        check(cyclePrefs.contains("sequentialHizbPages"))
-        check(cyclePrefs.contains("hizbCount = 2"))
+        check(cyclePrefs.contains("val mode = GuardPrefs.selectionMode(context)"))
+        check(cyclePrefs.contains("GuardPrefs.selectedJuz(context)"))
+        check(cyclePrefs.contains("GuardPrefs.selectedHizb(context)"))
+        check(cyclePrefs.contains("QuranPageSelector.sequentialCanonicalQuotaPages"))
+        check(cyclePrefs.contains("plan.pages.distinct().size == plan.pages.size"))
+        check(cyclePrefs.contains("plan.pages.all { it in canonicalPool }"))
         check(gate.contains("Filtre matinal • 20 pages"))
         check(gate.contains("Palier de 90 minutes • 10 pages"))
         check(reader.contains("Valider et avancer"))
@@ -436,12 +433,15 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(selectionUi.contains("limites réelles des versets"))
         check(selectionUi.contains("QuranStructureMetadata.selectionSubtitle"))
         listOf(
-            "juzSixUsesItsExactVerseBoundary",
-            "pageElevenBelongsToBothAdjacentHizb",
-            "selectionIncludesSharedBoundaryPages",
-            "protectionQuotaRemainsTenPagesAndContinuationCanFollow",
-            "shortHizbKeepsTenPageQuotaWithoutHidingRealBoundary",
-            "everyJuzAndHizbHasOrderedValidBounds"
+            "allThirtyJuzStartsAndPagesMatchCanonicalMetadata",
+            "allSixtyHizbStartsAndPagesMatchCanonicalMetadata",
+            "everyCanonicalDivisionIsGaplessAndNonOverlappingByVerse",
+            "sharedBoundaryPagesRemainVisibleToBothCanonicalSections",
+            "canonicalSelectionIncludesSharedBoundaryPageButNeverOutsideRange",
+            "shortHizbQuotaNeverBorrowsFromNextHizb",
+            "longHizbQuotaMayBeTenPagesButNeverCrossesCanonicalBoundary",
+            "fixedQuotaHonoursJuzSelectionAsCanonicalPool",
+            "quotaNeverRepeatsPagesWhenSelectedPoolIsSmallerThanRequest"
         ).forEach { scenario ->
             check(structureTests.contains("fun " + scenario + "(")) {
                 "Missing Quran structure regression test: " + scenario
@@ -485,9 +485,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "completingHizbResetsEntireNinetyMinuteCycle",
             "jokerCanSkipMorningMicroAndHizbLevels",
             "onlyCompletedEffectiveIntervalsCountTowardUsage",
-            "singleHizbPoolRepeatsToReachTwentyMorningPages",
-            "multiHizbPoolAdvancesSequentiallyFromSmallest",
-            "everyHizbChallengeUsesExactlyTenPages",
+            "canonicalQuotaDoesNotRepeatShortSelectedPool",
+            "canonicalQuotaAdvancesSequentiallyAcrossSelectedUnits",
+            "ninetyMinuteQuotaNeverCrossesSelectedCanonicalPool",
             "fifteenAndNinetyMinutesAreLiteralTargetPresenceThresholds",
             "livePresenceJoinsCompletedIntervalsWithoutWallClockTime",
             "ninetyMinutePendingHizbCannotOverflowTheCurrentCycle"
@@ -635,11 +635,14 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 22")) {
-            "0.10.3 must use versionCode 22 for an in-place update over 0.10.2."
-        }
-        check(buildFile.contains("versionName = \"0.10.3\"")) {
-            "Expected audited personal Plus update 0.10.3."
+        val auditedBaselineMetadata =
+            buildFile.contains("versionCode = 22") &&
+                buildFile.contains("versionName = \"0.10.3\"")
+        val preparedReleaseMetadata =
+            buildFile.contains("versionCode = 24") &&
+                buildFile.contains("versionName = \"0.10.5\"")
+        check(auditedBaselineMetadata || preparedReleaseMetadata) {
+            "Expected either the audited 0.10.3 baseline metadata or prepared 0.10.5 release metadata."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."

@@ -187,6 +187,11 @@ object TafsirEdition {
         )
     }
 
+    suspend fun referencePage(
+        context: Context,
+        reference: QuranReferenceRef
+    ): Int? = TafsirReferenceNavigation.pageFor(context.applicationContext, reference)
+
     // Compatibility hook used by the shared reader. Plus data loading is owned
     // exclusively by MultiTafsirPanel so opening Qurtubi/Qushayri cannot trigger
     // an obsolete parallel Jalalayn database read.
@@ -198,13 +203,15 @@ object TafsirEdition {
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
-        onPanelTopInWindow: (Int) -> Unit
+        onPanelTopInWindow: (Int) -> Unit,
+        onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) {
         MultiTafsirPanel(
             verse = verse,
             modifier = modifier,
             maxPanelHeight = maxPanelHeight,
-            onPanelTopInWindow = onPanelTopInWindow
+            onPanelTopInWindow = onPanelTopInWindow,
+            onQuranReferenceSelected = onQuranReferenceSelected
         )
     }
 
