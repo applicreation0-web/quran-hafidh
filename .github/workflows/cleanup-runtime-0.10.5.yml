@@ -23,20 +23,16 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           path = Path('app/src/main/java/com/quranunlock/guard/QuranAccessibilityService.kt')
           text = path.read_text()
-          old = '''                    if (GuardPrefs.isUnlocked(this, recovery.packageName) &&
-                        !callFreezeActive &&
-                        !TaddaburEdition.shouldBlockNow(this)
-                    ) {
-          '''
-          new = '''                    if (GuardPrefs.isUnlocked(this, recovery.packageName) &&
-                        !callFreezeActive
-                    ) {
-          '''
-          if old not in text:
-              raise SystemExit('FAIL: expected IME recovery Taddabur condition not found')
-          path.write_text(text.replace(old, new, 1))
+          pattern = re.compile(
+              r'(if \(GuardPrefs\.isUnlocked\(this, recovery\.packageName\) &&\s*\n\s*!callFreezeActive) &&\s*\n\s*!TaddaburEdition\.shouldBlockNow\(this\)(\s*\n\s*\) \{)'
+          )
+          text, count = pattern.subn(r'\1\2', text, count=1)
+          if count != 1:
+              raise SystemExit(f'FAIL: expected exactly one IME recovery condition, found {count}')
+          path.write_text(text)
           PY
 
       - name: Apply clean runtime migration with exact residual diagnostic
