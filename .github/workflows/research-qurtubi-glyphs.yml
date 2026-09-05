@@ -1,4 +1,4 @@
-name: Research Qurtubi special glyphs
+name: Research Tafsir source glyphs and notes
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  glyph-inventory:
+  source-diagnostics:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,24 +16,32 @@ jobs:
           python-version: "3.12"
       - name: Install PDF tooling
         run: python -m pip install --disable-pip-version-check pymupdf==1.26.7
-      - name: Fetch pinned Qurtubi volumes 1-4
+      - name: Fetch pinned Tafsir sources
         shell: bash
         run: |
           set -euo pipefail
           src="${RUNNER_TEMP}/tafsir-src"
           mkdir -p "$src"
+          curl --fail --location --retry 3 -o "$src/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
           base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
           for n in 1 2 3 4; do
             curl --fail --location --retry 3 -o "$src/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
           done
-      - name: Inventory source glyph spans
+      - name: Inventory Qurtubi source glyph spans
         run: |
           python scripts/research_qurtubi_special_glyphs.py \
             --source-dir "${RUNNER_TEMP}/tafsir-src" \
             --report "${RUNNER_TEMP}/qurtubi-special-glyphs.json"
-      - name: Upload research report
+      - name: Diagnose residual Qushayri note keys
+        run: |
+          python scripts/research_qushayri_unmatched_notes.py \
+            "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-unmatched-notes.json"
+      - name: Upload research reports
         uses: actions/upload-artifact@v4
         with:
-          name: qurtubi-special-glyphs
-          path: ${{ runner.temp }}/qurtubi-special-glyphs.json
+          name: tafsir-source-diagnostics
+          path: |
+            ${{ runner.temp }}/qurtubi-special-glyphs.json
+            ${{ runner.temp }}/qushayri-unmatched-notes.json
           retention-days: 7
