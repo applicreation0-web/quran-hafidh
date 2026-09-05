@@ -38,6 +38,8 @@ jobs:
           done
           python3 scripts/research_qushayri_notes.py "${src}/lataif.pdf" \
             --report "${RUNNER_TEMP}/qushayri-note-research.json"
+          python3 scripts/research_qushayri_note_superscripts.py "${src}/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-note-superscript-crosscheck.json"
           python3 scripts/prepare_multitafsir_assets.py \
             --source-dir "${src}" \
             --assets-dir app/src/plus/assets/tafsir \
@@ -49,7 +51,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qushayri-note-research
-          path: ${{ runner.temp }}/qushayri-note-research.json
+          path: |
+            ${{ runner.temp }}/qushayri-note-research.json
+            ${{ runner.temp }}/qushayri-note-superscript-crosscheck.json
           if-no-files-found: error
           retention-days: 7
 
