@@ -19,7 +19,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply deterministic finalization patch
-        run: python3 scripts/finalize_tafsir_hikam_0105.py
+        run: |
+          python3 scripts/finalize_tafsir_hikam_0105.py
+          python3 scripts/finalize_tafsir_hikam_gate_fix_0105.py
 
       - name: Verify corpus files were not rewritten
         shell: bash
