@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "work/0.10.5-hikam-commentaries"
+      - "work/0.10.5-hikam-commentaries-resumed"
     paths:
       - "scripts/research_align_hikam_sharh_candidates_0105.py"
       - ".github/workflows/hikam-sharh-research-0105.yml"
