@@ -59,6 +59,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
         private const val EXTRA_REFERENCE_END_AYAH = "reference_end_ayah"
         private const val PREFS = "free_quran_reader"
         private const val KEY_LAST_PAGE = "last_page"
+        private const val KEY_BOOKMARK_PAGE = "bookmark_page"
         private const val FIRST_PAGE = 1
         private const val LAST_PAGE = 604
     }
@@ -83,9 +84,11 @@ class FreeQuranReaderActivity : ComponentActivity() {
             null
         }
         val referenceMode = reference != null
+        val readerPrefs = getSharedPreferences(PREFS, MODE_PRIVATE)
         val requestedPage = intent.getIntExtra(EXTRA_PAGE, 0)
-        val storedPage = getSharedPreferences(PREFS, MODE_PRIVATE)
-            .getInt(KEY_LAST_PAGE, FIRST_PAGE)
+        val storedPage = readerPrefs.getInt(KEY_LAST_PAGE, FIRST_PAGE)
+        val storedBookmark = readerPrefs.getInt(KEY_BOOKMARK_PAGE, 0)
+            .takeIf { it in FIRST_PAGE..LAST_PAGE }
         val initialPage = when {
             requestedPage in FIRST_PAGE..LAST_PAGE -> requestedPage
             !referenceMode && storedPage in FIRST_PAGE..LAST_PAGE -> storedPage
@@ -96,6 +99,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
             QuranSafeguardTheme {
                 val coroutineScope = rememberCoroutineScope()
                 var page by remember { mutableIntStateOf(initialPage) }
+                var bookmarkPage by remember { mutableStateOf(storedBookmark) }
                 var message by remember {
                     mutableStateOf(
                         if (referenceMode) {
@@ -138,12 +142,31 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         return
                     }
                     page = nextPage
-                    getSharedPreferences(PREFS, MODE_PRIVATE)
-                        .edit()
+                    readerPrefs.edit()
                         .putInt(KEY_LAST_PAGE, page)
                         .apply()
                     message =
                         "Lecture libre • appuyez sur un verset pour ouvrir le Tafsîr."
+                }
+
+                fun saveBookmark() {
+                    if (referenceMode || selectedTafsirVerse != null) return
+                    readerPrefs.edit()
+                        .putInt(KEY_BOOKMARK_PAGE, page)
+                        .apply()
+                    bookmarkPage = page
+                    message = "Marque-page enregistré • page $page."
+                }
+
+                fun resumeBookmark() {
+                    if (referenceMode || selectedTafsirVerse != null) return
+                    val bookmark = bookmarkPage
+                    if (bookmark == null) {
+                        message = "Aucun marque-page enregistré."
+                        return
+                    }
+                    showPage(bookmark)
+                    message = "Reprise au marque-page • page $bookmark."
                 }
 
                 fun openReference(referenceToOpen: QuranReferenceRef) {
@@ -280,6 +303,35 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         onClick = { showPage(page + 1) }
                                     ) {
                                         Text("Suivante")
+                                    }
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    SafeguardOutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        enabled = selectedTafsirVerse == null,
+                                        onClick = { saveBookmark() }
+                                    ) {
+                                        Text(
+                                            if (bookmarkPage == page) "🔖 Marquée ✓"
+                                            else "🔖 Marquer"
+                                        )
+                                    }
+                                    SafeguardOutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        enabled = selectedTafsirVerse == null &&
+                                            bookmarkPage != null && bookmarkPage != page,
+                                        onClick = { resumeBookmark() }
+                                    ) {
+                                        Text(
+                                            bookmarkPage?.let { "Reprendre p. $it" }
+                                                ?: "Aucun marque-page"
+                                        )
                                     }
                                 }
                                 Spacer(Modifier.height(4.dp))
