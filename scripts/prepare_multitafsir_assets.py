@@ -28,6 +28,8 @@ EXPECTED_QUSHAYRI_STRUCTURE = {
     'raw_segment_count': '806',
     'translation_only_anchor_count': '86',
     'grouped_source_range_count': '76',
+    'source_soft_hyphen_count': '584',
+    'soft_hyphen_policy': 'preserve-marker-then-source-driven-join',
 }
 PART_CHARS = 500_000
 
