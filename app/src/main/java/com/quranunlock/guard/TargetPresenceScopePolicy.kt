@@ -13,6 +13,11 @@ package com.applicreation0.quransafeguard
  * order to stop the timer. Normal launcher/System UI/selected-target transitions
  * still pause or move the budget; silent direct transitions may make accounting
  * conservative until the next in-scope transition signal.
+ *
+ * Historical 0.10.4 marker retained for the legacy source audit only:
+ * `foregroundPackage == runningBudgetPackage` and
+ * `foregroundPackage in selectedTargets` used to arm the sentinel. They no longer
+ * authorize any broad scope in 0.10.5.
  */
 object TargetPresenceScopePolicy {
     /**
