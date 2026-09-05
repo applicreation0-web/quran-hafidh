@@ -32,6 +32,11 @@ jobs:
           python scripts/research_qurtubi_special_glyphs.py \
             --source-dir "${RUNNER_TEMP}/tafsir-src" \
             --report "${RUNNER_TEMP}/qurtubi-special-glyphs.json"
+      - name: Inventory Qushayri PUA/source glyphs
+        run: |
+          python scripts/research_qushayri_special_glyphs.py \
+            "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-special-glyphs.json"
       - name: Diagnose residual Qushayri note keys
         run: |
           python scripts/research_qushayri_unmatched_notes.py \
@@ -43,5 +48,6 @@ jobs:
           name: tafsir-source-diagnostics
           path: |
             ${{ runner.temp }}/qurtubi-special-glyphs.json
+            ${{ runner.temp }}/qushayri-special-glyphs.json
             ${{ runner.temp }}/qushayri-unmatched-notes.json
           retention-days: 7
