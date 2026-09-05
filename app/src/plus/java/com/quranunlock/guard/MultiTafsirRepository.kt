@@ -29,6 +29,21 @@ data class MultiTafsirRequestKey(
     val edition: PrivateTafsirEdition
 )
 
+internal data class MultiTafsirAvailability(
+    val entries: Map<PrivateTafsirEdition, TafsirEntry>
+) {
+    val editions: List<PrivateTafsirEdition>
+        get() = PrivateTafsirEdition.entries.filter(entries::containsKey)
+
+    fun resolveEdition(preferred: PrivateTafsirEdition): PrivateTafsirEdition? =
+        when {
+            entries.containsKey(preferred) -> preferred
+            entries.containsKey(PrivateTafsirEdition.JALALAYN) ->
+                PrivateTafsirEdition.JALALAYN
+            else -> editions.firstOrNull()
+        }
+}
+
 internal object MultiTafsirRepository {
     private data class CorpusSpec(
         val edition: PrivateTafsirEdition,
@@ -56,15 +71,36 @@ internal object MultiTafsirRepository {
         expectedEntries = 432
     )
 
+    /**
+     * Loads only real source-backed entries for the tapped verse. The returned
+     * edition list is therefore the authority for the selector: an edition with
+     * no matching row is not advertised to the reader.
+     */
+    suspend fun loadAvailable(
+        context: Context,
+        verse: VerseRef
+    ): MultiTafsirAvailability {
+        val available = linkedMapOf<PrivateTafsirEdition, TafsirEntry>()
+        PrivateTafsirEdition.entries.forEach { edition ->
+            load(context, verse, edition)?.let { entry ->
+                available[edition] = entry
+            }
+        }
+        return MultiTafsirAvailability(available)
+    }
+
     suspend fun load(
         context: Context,
         verse: VerseRef,
         edition: PrivateTafsirEdition
     ): TafsirEntry? = withContext(Dispatchers.IO) {
         when (edition) {
-            PrivateTafsirEdition.JALALAYN -> TafsirRepository.load(context.applicationContext, verse)
-            PrivateTafsirEdition.QURTUBI -> loadV2(context.applicationContext, verse, qurtubi)
-            PrivateTafsirEdition.QUSHAYRI -> loadV2(context.applicationContext, verse, qushayri)
+            PrivateTafsirEdition.JALALAYN ->
+                TafsirRepository.load(context.applicationContext, verse)
+            PrivateTafsirEdition.QURTUBI ->
+                loadV2(context.applicationContext, verse, qurtubi)
+            PrivateTafsirEdition.QUSHAYRI ->
+                loadV2(context.applicationContext, verse, qushayri)
         }
     }
 
@@ -106,16 +142,11 @@ internal object MultiTafsirRepository {
             val runs = buildList {
                 rows.forEachIndexed { index, row ->
                     if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
-                    if (row.start != row.end) {
-                        add(
-                            TafsirRun(
-                                TafsirRunStyle.BOLD_ITALIC,
-                                "Commentary on ${verse.surah}:${row.start}–${row.end}\n\n"
-                            )
-                        )
-                    }
+                    // verse_start / verse_end remain structural provenance in the
+                    // database and query. Do not inject generated verse-number
+                    // headings into the classical text shown to the reader.
                     if (row.translation.isNotBlank()) {
-                        add(TafsirRun(TafsirRunStyle.ITALIC, row.translation))
+                        add(TafsirRun(TafsirRunStyle.BOLD_ITALIC, row.translation))
                         if (row.commentary.isNotBlank()) {
                             add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
                         }
