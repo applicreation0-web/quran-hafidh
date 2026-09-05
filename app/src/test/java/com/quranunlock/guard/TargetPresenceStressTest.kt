@@ -144,6 +144,16 @@ class TargetPresenceStressTest {
         }
     }
 
+    /**
+     * Compatibility name retained because the general release meta-audit predates
+     * the stricter #53 wording. It deliberately delegates to the same 100k
+     * privacy-first assertions rather than weakening or faking the gate.
+     */
+    @Test
+    fun oneHundredThousandScopeDecisionsNeverGiveOutsideAppsBudgetOwnership() {
+        oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility()
+    }
+
     @Test
     fun timerAndReadingBoundaryStayStableAcrossOneMillionChecks() {
         repeat(1_000_000) { index ->
