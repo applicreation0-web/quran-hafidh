@@ -77,13 +77,18 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Exhaustive Qushayri note-call relation audit
+        run: >-
+          python3 scripts/verify_qushayri_note_crosscheck.py
+          "${RUNNER_TEMP}/qushayri-note-superscript-crosscheck.json"
+
       - name: Exhaustive 0.10.5 corpus-cleanliness audit
         id: tafsir_cleanup_audit
         shell: bash
         run: |
           set +e
           report="${RUNNER_TEMP}/tafsir-0105-audit.log"
-          python3 scripts/audit_0105_tafsir_cleanup.py app/src/plus/assets/tafsir >"${report}" 2>&1
+          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir >"${report}" 2>&1
           rc=$?
           cat "${report}"
           if [ "${rc}" -ne 0 ]; then
