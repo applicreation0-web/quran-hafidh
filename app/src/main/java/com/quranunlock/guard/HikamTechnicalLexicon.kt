@@ -17,6 +17,35 @@ data class HikamTechnicalTerm(
 )
 
 object HikamTechnicalLexicon {
+    const val sourceNote: String =
+        "Contrôle terminologique secondaire : glossaire Islamic Pearls ; le matn arabe vérifié reste l’autorité."
+
+    private val arabicDiacritics = Regex("[\u064B-\u065F\u0670\u06D6-\u06ED]")
+    private val arabicWord = Regex("[\u0621-\u063A\u0641-\u064A\u066E-\u06D3]+")
+
+    private fun normalizedWords(text: String): Set<String> = buildSet {
+        arabicWord.findAll(arabicDiacritics.replace(text, "")).forEach { match ->
+            val token = match.value
+            add(token)
+
+            // Common conjunctions attach directly to the following word.
+            // Example: والبسط -> البسط. Never strip a lexical prefix such as يـ.
+            if ((token.startsWith("و") || token.startsWith("ف")) && token.length > 3) {
+                add(token.drop(1))
+            }
+
+            // Preposition + definite article. Examples: بالبسط / كالبسط -> البسط.
+            if ((token.startsWith("بال") || token.startsWith("كال")) && token.length > 4) {
+                add("ال" + token.drop(3))
+            }
+
+            // Contracted li- + definite article. Example: للنفس -> النفس.
+            if (token.startsWith("لل") && token.length > 3) {
+                add("ال" + token.drop(2))
+            }
+        }
+    }
+
     private val terms = listOf(
         HikamTechnicalTerm(
             key = "arif",
@@ -82,13 +111,13 @@ object HikamTechnicalLexicon {
             key = "qabd",
             displayTerm = "qabḍ",
             frenchMeaning = "contraction ou resserrement spirituel du cœur",
-            arabicNeedles = listOf("القبض", "قبض")
+            arabicNeedles = listOf("القبض", "قبضك")
         ),
         HikamTechnicalTerm(
             key = "bast",
             displayTerm = "basṭ",
             frenchMeaning = "dilatation ou expansion spirituelle du cœur",
-            arabicNeedles = listOf("البسط", "بسط")
+            arabicNeedles = listOf("البسط", "بسطك")
         ),
         HikamTechnicalTerm(
             key = "salik",
@@ -107,6 +136,12 @@ object HikamTechnicalLexicon {
             displayTerm = "walī",
             frenchMeaning = "ami rapproché de Dieu ; saint",
             arabicNeedles = listOf("ولي", "الأولياء", "اوليا", "أولياء")
+        ),
+        HikamTechnicalTerm(
+            key = "nafs",
+            displayTerm = "nafs",
+            frenchMeaning = "âme individuelle ; ego ou soi inférieur selon le contexte spirituel",
+            arabicNeedles = listOf("النفس")
         ),
         HikamTechnicalTerm(
             key = "warid",
@@ -188,10 +223,15 @@ object HikamTechnicalLexicon {
         )
     )
 
-    fun forHikma(hikma: HikmaEntry): List<HikamTechnicalTerm> {
-        val arabic = hikma.canonicalArabicText
+    internal fun forArabicText(arabic: String): List<HikamTechnicalTerm> {
+        val words = normalizedWords(arabic)
         return terms.filter { term ->
-            term.arabicNeedles.any(arabic::contains)
+            term.arabicNeedles.any { needle ->
+                normalizedWords(needle).singleOrNull()?.let(words::contains) == true
+            }
         }
     }
+
+    fun forHikma(hikma: HikmaEntry): List<HikamTechnicalTerm> =
+        forArabicText(hikma.canonicalArabicText)
 }

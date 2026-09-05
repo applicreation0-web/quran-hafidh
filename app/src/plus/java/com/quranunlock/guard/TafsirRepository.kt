@@ -141,6 +141,9 @@ internal object TafsirRepository {
                     "italic" -> TafsirRunStyle.ITALIC
                     "bold" -> TafsirRunStyle.BOLD
                     "bold_italic" -> TafsirRunStyle.BOLD_ITALIC
+                    "technical_term" -> TafsirRunStyle.TECHNICAL_TERM
+                    "transliteration" -> TafsirRunStyle.TRANSLITERATION
+                    "poetry" -> TafsirRunStyle.POETRY
                     "note_ref" -> TafsirRunStyle.NOTE_REF
                     else -> null
                 } ?: return emptyList()

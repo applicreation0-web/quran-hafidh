@@ -37,6 +37,9 @@ enum class TafsirRunStyle {
     ITALIC,
     BOLD,
     BOLD_ITALIC,
+    TECHNICAL_TERM,
+    TRANSLITERATION,
+    POETRY,
     NOTE_REF
 }
 
@@ -44,6 +47,50 @@ data class TafsirRun(
     val style: TafsirRunStyle,
     val text: String
 )
+
+enum class TafsirBlockKind {
+    PROSE,
+    POETRY
+}
+
+data class TafsirRenderBlock(
+    val kind: TafsirBlockKind,
+    val runs: List<TafsirRun>
+)
+
+/**
+ * Preserve explicit source semantics at paragraph level. Poetry is recognized
+ * only when the source/extractor supplied the POETRY role; italics alone never
+ * imply poetry. This makes the non-justified poetry rule executable without
+ * guessing from typography.
+ */
+internal fun splitTafsirRenderBlocks(runs: List<TafsirRun>): List<TafsirRenderBlock> {
+    if (runs.isEmpty()) return emptyList()
+    val blocks = mutableListOf<TafsirRenderBlock>()
+    var currentKind: TafsirBlockKind? = null
+    var currentRuns = mutableListOf<TafsirRun>()
+
+    fun flush() {
+        val kind = currentKind ?: return
+        if (currentRuns.isNotEmpty()) {
+            blocks += TafsirRenderBlock(kind, currentRuns.toList())
+        }
+        currentRuns = mutableListOf()
+    }
+
+    runs.forEach { run ->
+        val kind = if (run.style == TafsirRunStyle.POETRY) {
+            TafsirBlockKind.POETRY
+        } else {
+            TafsirBlockKind.PROSE
+        }
+        if (currentKind != null && currentKind != kind) flush()
+        currentKind = kind
+        currentRuns += run
+    }
+    flush()
+    return blocks
+}
 
 sealed interface TafsirLoadState {
     data object Closed : TafsirLoadState

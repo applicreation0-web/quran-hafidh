@@ -60,6 +60,7 @@ private const val MAX_FONT_SIZE = 26f
 private const val DEFAULT_FONT_SIZE = 18f
 private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.50f
 private const val NOTE_LINE_HEIGHT_RATIO = 1.45f
+private const val POETRY_LINE_HEIGHT_RATIO = 1.55f
 private const val NOTE_LINK_TAG = "tafsir_note"
 private const val QURAN_LINK_TAG = "tafsir_quran"
 
@@ -70,6 +71,9 @@ private const val QURAN_LINK_TAG = "tafsir_quran"
  * - regular: commentary prose;
  * - italic/bold: source emphasis preserved when the source supplies it;
  * - bold italic: source-provided Qur'an translation;
+ * - technical term: semi-bold only when explicitly source/semantic tagged;
+ * - transliteration: italic only when explicitly source/semantic tagged;
+ * - poetry: italic, source line breaks preserved, never justified;
  * - superscript: source note call.
  *
  * Only explicit, canonically valid source chapter:verse notation is interactive.
@@ -338,30 +342,38 @@ private fun InteractiveTafsirText(
     onNoteSelected: (Int) -> Unit,
     onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)?
 ) {
-    val annotated = remember(runs, linkColor, enableQuranLinks) {
-        runsToAnnotatedString(runs, linkColor, enableQuranLinks)
-    }
-    ClickableText(
-        text = annotated,
-        style = TextStyle(
-            color = color,
-            fontSize = fontSize.sp,
-            lineHeight = (fontSize * lineHeightRatio).sp,
-            textAlign = TextAlign.Justify
-        ),
-        onClick = { offset ->
-            annotated.getStringAnnotations(NOTE_LINK_TAG, offset, offset)
-                .firstOrNull()
-                ?.item
-                ?.toIntOrNull()
-                ?.let(onNoteSelected)
-                ?: annotated.getStringAnnotations(QURAN_LINK_TAG, offset, offset)
-                    .firstOrNull()
-                    ?.item
-                    ?.let(::decodeQuranReference)
-                    ?.let { reference -> onQuranReferenceSelected?.invoke(reference) }
+    val blocks = remember(runs) { splitTafsirRenderBlocks(runs) }
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        blocks.forEach { block ->
+            val annotated = remember(block.runs, linkColor, enableQuranLinks) {
+                runsToAnnotatedString(block.runs, linkColor, enableQuranLinks)
+            }
+            val isPoetry = block.kind == TafsirBlockKind.POETRY
+            ClickableText(
+                text = annotated,
+                style = TextStyle(
+                    color = color,
+                    fontSize = fontSize.sp,
+                    lineHeight = (
+                        fontSize * if (isPoetry) POETRY_LINE_HEIGHT_RATIO else lineHeightRatio
+                    ).sp,
+                    textAlign = if (isPoetry) TextAlign.Start else TextAlign.Justify
+                ),
+                onClick = { offset ->
+                    annotated.getStringAnnotations(NOTE_LINK_TAG, offset, offset)
+                        .firstOrNull()
+                        ?.item
+                        ?.toIntOrNull()
+                        ?.let(onNoteSelected)
+                        ?: annotated.getStringAnnotations(QURAN_LINK_TAG, offset, offset)
+                            .firstOrNull()
+                            ?.item
+                            ?.let(::decodeQuranReference)
+                            ?.let { reference -> onQuranReferenceSelected?.invoke(reference) }
+                }
+            )
         }
-    )
+    }
 }
 
 private fun runsToAnnotatedString(
@@ -381,6 +393,15 @@ private fun runsToAnnotatedString(
             TafsirRunStyle.BOLD -> SpanStyle(fontWeight = FontWeight.Bold)
             TafsirRunStyle.BOLD_ITALIC -> SpanStyle(
                 fontWeight = FontWeight.Bold,
+                fontStyle = FontStyle.Italic
+            )
+            TafsirRunStyle.TECHNICAL_TERM -> SpanStyle(
+                fontWeight = FontWeight.SemiBold
+            )
+            TafsirRunStyle.TRANSLITERATION -> SpanStyle(
+                fontStyle = FontStyle.Italic
+            )
+            TafsirRunStyle.POETRY -> SpanStyle(
                 fontStyle = FontStyle.Italic
             )
             TafsirRunStyle.NOTE_REF -> SpanStyle(
