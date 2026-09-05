@@ -36,11 +36,22 @@ jobs:
           for n in 1 2 3 4; do
             curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
           done
+          python3 scripts/research_qushayri_notes.py "${src}/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-note-research.json"
           python3 scripts/prepare_multitafsir_assets.py \
             --source-dir "${src}" \
             --assets-dir app/src/plus/assets/tafsir \
             --work-dir "${RUNNER_TEMP}/tafsir-work" \
             2>&1 | tee "${RUNNER_TEMP}/tafsir-0105-rebuild.log"
+
+      - name: Upload Qushayri note research inventory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qushayri-note-research
+          path: ${{ runner.temp }}/qushayri-note-research.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload Tafsir rebuild diagnostic
         if: always()
