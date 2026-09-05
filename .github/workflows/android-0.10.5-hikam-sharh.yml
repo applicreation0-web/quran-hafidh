@@ -3,10 +3,10 @@ name: Android 0.10.5 Hikam Sharh audit
 on:
   push:
     branches:
-      - "work/0.10.5-hikam-commentaries"
+      - "work/0.10.5-hikam-commentaries-resumed"
   pull_request:
     branches:
-      - main
+      - release/0.10.5-final
   workflow_dispatch:
 
 jobs:
@@ -30,8 +30,11 @@ jobs:
           python3 scripts/verify_hikam_translation_separation.py
           python3 scripts/audit_hikam_translation_against_islamicpearls.py
 
+      - name: Fetch pinned Medina Mushaf pages required by build gates
+        run: bash scripts/fetch_mushaf_pages.sh
+
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
