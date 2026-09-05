@@ -48,6 +48,7 @@ data class HikamSharhEntry(
     val translationCredit: String,
     val sourceUrl: String,
     val printLocator: String,
+    val boundaryLocator: String,
     val verified: Boolean,
     val richSpansArabic: List<HikamRichSpan> = emptyList(),
     val richSpansFrench: List<HikamRichSpan> = emptyList(),
@@ -63,6 +64,7 @@ data class HikamSharhEntry(
                 translationCredit.isNotBlank() &&
                 sourceUrl.isNotBlank() &&
                 printLocator.isNotBlank() &&
+                boundaryLocator.isNotBlank() &&
                 verified
 }
 
