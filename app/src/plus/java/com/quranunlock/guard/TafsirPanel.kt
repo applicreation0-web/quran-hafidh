@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -47,16 +48,25 @@ import kotlin.math.roundToInt
 
 private const val TAFSIR_PREFS = "tafsir_reader_preferences"
 private const val FONT_SIZE_KEY = "commentary_font_size_sp"
-private const val MIN_FONT_SIZE = 14f
+private const val MIN_FONT_SIZE = 16f
 private const val MAX_FONT_SIZE = 26f
 private const val DEFAULT_FONT_SIZE = 18f
+private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.50f
+private const val NOTE_LINE_HEIGHT_RATIO = 1.45f
 
 /**
  * Single Tafsir renderer for Plus.
  *
+ * Visual semantics are shared by every edition while source semantics remain intact:
+ * - regular: commentary prose;
+ * - italic/bold: source emphasis preserved when the source supplies it;
+ * - bold italic: source-provided Qur'an translation;
+ * - superscript: source note call.
+ *
  * Only editions with a real source-backed entry for the tapped verse are offered
- * by the selector. Sustained reading uses the shared warm, low-glare surface and
- * long-form Tafsir prose/notes remain justified without rewriting source text.
+ * by the selector. The navigation/header controls remain visible while the long-form
+ * commentary alone scrolls. Commentary and notes stay justified on the shared warm,
+ * low-glare reading surface.
  */
 @Composable
 internal fun TafsirPanel(
@@ -102,137 +112,150 @@ internal fun TafsirPanel(
             }
             .semantics { paneTitle = "Commentaire du verset" },
         color = SafeguardReadingSurface,
-        tonalElevation = 8.dp,
-        shadowElevation = 12.dp
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(
-                    text = "Sourate ${verse.surah}, verset ${verse.ayah}",
-                    modifier = Modifier.semantics { heading() },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                Row {
-                    TextButton(
-                        modifier = Modifier.semantics {
-                            contentDescription = "Réduire la taille du commentaire"
-                        },
-                        enabled = fontSize > MIN_FONT_SIZE,
-                        onClick = { changeFont(-2f) }
-                    ) {
-                        Text("A−")
-                    }
-                    TextButton(
-                        modifier = Modifier.semantics {
-                            contentDescription = "Agrandir la taille du commentaire"
-                        },
-                        enabled = fontSize < MAX_FONT_SIZE,
-                        onClick = { changeFont(2f) }
-                    ) {
-                        Text("A+")
-                    }
-                }
-            }
-
-            Box {
-                TextButton(
-                    modifier = Modifier.semantics {
-                        contentDescription = "Choisir le Tafsîr"
-                        stateDescription = selectedEdition.displayName
-                    },
-                    enabled = availableEditions.size > 1,
-                    onClick = { menuExpanded = true }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        if (availableEditions.size > 1) {
-                            "${selectedEdition.displayName} ▾"
-                        } else {
-                            selectedEdition.displayName
-                        }
+                        text = "Sourate ${verse.surah}, verset ${verse.ayah}",
+                        modifier = Modifier.semantics { heading() },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-                DropdownMenu(
-                    expanded = menuExpanded && availableEditions.size > 1,
-                    onDismissRequest = { menuExpanded = false }
-                ) {
-                    availableEditions.forEach { edition ->
-                        DropdownMenuItem(
-                            text = { Text(edition.displayName) },
-                            onClick = {
-                                menuExpanded = false
-                                onEditionSelected(edition)
-                            }
-                        )
-                    }
-                }
-            }
-            HorizontalDivider()
-
-            when (state) {
-                TafsirLoadState.Closed,
-                TafsirLoadState.Loading -> Text(
-                    "Chargement du commentaire…",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TafsirLoadState.Unavailable -> Text(
-                    "Aucun commentaire vérifié n’est disponible pour ce verset.",
-                    fontSize = fontSize.sp
-                )
-                is TafsirLoadState.Available -> {
-                    Text(
-                        text = runsToAnnotatedString(state.entry.commentaryRuns),
-                        fontSize = fontSize.sp,
-                        lineHeight = (fontSize * 1.42f).sp,
-                        textAlign = TextAlign.Justify,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (state.entry.notes.isNotEmpty()) {
-                        HorizontalDivider()
+                    Row {
                         TextButton(
                             modifier = Modifier.semantics {
-                                stateDescription = if (notesExpanded) {
-                                    "Notes développées"
-                                } else {
-                                    "Notes repliées"
-                                }
+                                contentDescription = "Réduire la taille du commentaire"
                             },
-                            onClick = { notesExpanded = !notesExpanded }
+                            enabled = fontSize > MIN_FONT_SIZE,
+                            onClick = { changeFont(-2f) }
                         ) {
-                            Text(
-                                if (notesExpanded) {
-                                    "Notes (${state.entry.notes.size}) — replier"
-                                } else {
-                                    "Notes (${state.entry.notes.size})"
+                            Text("A−")
+                        }
+                        TextButton(
+                            modifier = Modifier.semantics {
+                                contentDescription = "Agrandir la taille du commentaire"
+                            },
+                            enabled = fontSize < MAX_FONT_SIZE,
+                            onClick = { changeFont(2f) }
+                        ) {
+                            Text("A+")
+                        }
+                    }
+                }
+
+                Box {
+                    TextButton(
+                        modifier = Modifier.semantics {
+                            contentDescription = "Choisir le Tafsîr"
+                            stateDescription = selectedEdition.displayName
+                        },
+                        enabled = availableEditions.size > 1,
+                        onClick = { menuExpanded = true }
+                    ) {
+                        Text(
+                            if (availableEditions.size > 1) {
+                                "${selectedEdition.displayName} ▾"
+                            } else {
+                                selectedEdition.displayName
+                            },
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded && availableEditions.size > 1,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        availableEditions.forEach { edition ->
+                            DropdownMenuItem(
+                                text = { Text(edition.displayName) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onEditionSelected(edition)
                                 }
                             )
                         }
-                        if (notesExpanded) {
-                            state.entry.notes.forEach { note ->
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            Column(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                when (state) {
+                    TafsirLoadState.Closed,
+                    TafsirLoadState.Loading -> Text(
+                        "Chargement du commentaire…",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TafsirLoadState.Unavailable -> Text(
+                        "Aucun commentaire vérifié n’est disponible pour ce verset.",
+                        fontSize = fontSize.sp,
+                        lineHeight = (fontSize * COMMENTARY_LINE_HEIGHT_RATIO).sp
+                    )
+                    is TafsirLoadState.Available -> {
+                        Text(
+                            text = runsToAnnotatedString(state.entry.commentaryRuns),
+                            fontSize = fontSize.sp,
+                            lineHeight = (fontSize * COMMENTARY_LINE_HEIGHT_RATIO).sp,
+                            textAlign = TextAlign.Justify,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (state.entry.notes.isNotEmpty()) {
+                            HorizontalDivider()
+                            TextButton(
+                                modifier = Modifier.semantics {
+                                    stateDescription = if (notesExpanded) {
+                                        "Notes développées"
+                                    } else {
+                                        "Notes repliées"
+                                    }
+                                },
+                                onClick = { notesExpanded = !notesExpanded }
+                            ) {
                                 Text(
-                                    text = AnnotatedString.Builder().apply {
-                                        withStyle(
-                                            SpanStyle(fontWeight = FontWeight.Bold)
-                                        ) {
-                                            append("${note.number}. ")
-                                        }
-                                        append(runsToAnnotatedString(note.runs))
-                                    }.toAnnotatedString(),
-                                    fontSize = (fontSize - 1f).coerceAtLeast(MIN_FONT_SIZE).sp,
-                                    lineHeight = (fontSize * 1.35f).sp,
-                                    textAlign = TextAlign.Justify,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    if (notesExpanded) {
+                                        "Notes (${state.entry.notes.size}) — replier"
+                                    } else {
+                                        "Notes (${state.entry.notes.size})"
+                                    },
+                                    fontWeight = FontWeight.SemiBold
                                 )
+                            }
+                            if (notesExpanded) {
+                                state.entry.notes.forEach { note ->
+                                    Text(
+                                        text = AnnotatedString.Builder().apply {
+                                            withStyle(
+                                                SpanStyle(fontWeight = FontWeight.Bold)
+                                            ) {
+                                                append("${note.number}. ")
+                                            }
+                                            append(runsToAnnotatedString(note.runs))
+                                        }.toAnnotatedString(),
+                                        fontSize = (fontSize - 1f).coerceAtLeast(MIN_FONT_SIZE).sp,
+                                        lineHeight = (fontSize * NOTE_LINE_HEIGHT_RATIO).sp,
+                                        textAlign = TextAlign.Justify,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -255,7 +278,8 @@ private fun runsToAnnotatedString(runs: List<TafsirRun>): AnnotatedString {
                 )
                 TafsirRunStyle.NOTE_REF -> SpanStyle(
                     baselineShift = BaselineShift.Superscript,
-                    fontSize = 0.78.em
+                    fontSize = 0.78.em,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
             withStyle(style) { append(run.text) }
