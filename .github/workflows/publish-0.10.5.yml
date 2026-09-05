@@ -64,6 +64,7 @@ jobs:
           python3 scripts/verify_0105_hikam_verified_only.py
           python3 scripts/verify_hikam_translation_separation.py
           python3 scripts/audit_hikam_technical_lexicon_0105.py
+          python3 scripts/audit_hikam_translation_against_islamicpearls.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -219,7 +220,7 @@ jobs:
 
           ### Ḥikam
           - 264/264 matn arabes et traductions françaises restent vérifiés ;
-          - la traduction française est prioritaire ;
+          - la traduction française est prioritaire et contre-auditée sur les 264 entrées, l’arabe restant l’autorité ;
           - aucun commentaire n’est requis pour rendre une Ḥikma disponible ;
           - matn, traduction, aide terminologique et commentaire éventuel restent strictement séparés.
 
