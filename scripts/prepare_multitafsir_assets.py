@@ -6,6 +6,9 @@ therefore checked at two separate layers:
 - exact SHA-256 for every approved source PDF;
 - deterministic logical digest of ordered metadata + ordered tafsir rows.
 The builders themselves remain fail-closed on counts, coverage and leakage.
+
+Qushayri 0.10.5 keeps all 806 source anchors but stores 720 logical commentary
+entries after grouping consecutive verse translations that share one commentary.
 """
 from __future__ import annotations
 import argparse, base64, gzip, hashlib, json, os, sqlite3, subprocess, sys
@@ -19,8 +22,13 @@ SOURCE_SHA = {
     'qurtubi-v3': 'e69818ce49f79d7de2bb5cef37c82e7e1f4431f7117a550fa33259da7dc6b583',
     'qurtubi-v4': 'eb71cb2ed8c2497cc8a5d3634b3eeb7788fdc7caee9de5d6b50349fb8619965c',
 }
-EXPECTED_ENTRIES = {'qushayri': 806, 'qurtubi': 432}
+EXPECTED_ENTRIES = {'qushayri': 720, 'qurtubi': 432}
 EXPECTED_PARTS = {'qushayri': 1, 'qurtubi': 4}
+EXPECTED_QUSHAYRI_STRUCTURE = {
+    'raw_segment_count': '806',
+    'translation_only_anchor_count': '86',
+    'grouped_source_range_count': '76',
+}
 PART_CHARS = 500_000
 
 
@@ -54,6 +62,13 @@ def logical_digest(name: str, db: Path) -> str:
         expected = EXPECTED_ENTRIES[name]
         if int(meta.get('entry_count', '-1')) != expected:
             raise SystemExit(f'{name} metadata entry count mismatch')
+        if name == 'qushayri':
+            for key, expected_value in EXPECTED_QUSHAYRI_STRUCTURE.items():
+                if meta.get(key) != expected_value:
+                    raise SystemExit(
+                        f'qushayri source-structure metadata mismatch: '
+                        f'{key}={meta.get(key)!r}, expected {expected_value!r}'
+                    )
         columns = [row[1] for row in con.execute('PRAGMA table_info(tafsir_entry)')]
         rows = con.execute(
             'SELECT ' + ','.join(columns) + ' FROM tafsir_entry ORDER BY id'
