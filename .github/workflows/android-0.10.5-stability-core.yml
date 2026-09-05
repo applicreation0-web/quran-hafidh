@@ -54,7 +54,7 @@ jobs:
 
       - name: Audit rebuilt Tafsir databases
         run: |
-          python3 scripts/audit_0105_tafsir_cleanup.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir
           python3 scripts/verify_0105_tafsir_update.py
 
       - name: Set up JDK 17
