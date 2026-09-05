@@ -33,8 +33,11 @@ jobs:
       - name: Fetch and verify all 604 Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
 
-      - name: Set up Python Tafsir corpus tools
+      - name: Set up Python Tafsir and translation-audit tools
         run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Cross-audit all 264 Hikam French translations
+        run: python3 scripts/audit_hikam_translation_against_islamicpearls.py
 
       - name: Rebuild Qushayri and Qurtubi from pinned sources
         shell: bash
