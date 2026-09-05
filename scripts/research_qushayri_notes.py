@@ -5,13 +5,14 @@ This script deliberately does NOT build an application asset. It measures the
 printed call/body relationship so production note extraction can be frozen only
 after the source structure is understood.
 
-The PDF text layer flattens superscript calls into the surrounding prose, e.g.
-`imām)19`, `servant,”20`, `implication.21`. We therefore recognize only a
-1–3 digit token glued immediately after punctuation typical of a printed
-footnote call, then require a same-page small-text note body with the identical
-number. Ordinary chapter:verse notation is excluded by construction.
+Two independent note-body detectors are compared:
+1. strict small-text lines (the original conservative detector);
+2. numbered text blocks whose first meaningful English line begins with the same
+   note number as a source call on that page.
 
-The report remains research-only and records every ambiguity instead of guessing.
+The second detector exists because some genuine printed footnote blocks use a
+number glyph or mixed line whose maximum text size exceeds the strict threshold.
+It never promotes data to production: every mismatch remains explicit.
 """
 from __future__ import annotations
 
@@ -29,9 +30,6 @@ FIRST_COMMENTARY_PAGE_INDEX = 37
 LAST_COMMENTARY_PAGE_INDEX_EXCLUSIVE = 506
 SMALL_TEXT_MAX = 9.4
 NOTE_START_RE = re.compile(r"^(\d{1,3})[\s\u2009\u200a]+")
-# Footnote calls in this edition are printed after punctuation and are flattened
-# into the prose text layer. Colon is deliberately absent, so Qur'an 2:255 is
-# never considered a footnote call.
 INLINE_CALL_RE = re.compile(r"(?<=[\.,;!?…\)\]”’\"])(\d{1,3})(?![\d:])")
 ARABIC_RE = re.compile(
     r"[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]"
@@ -63,7 +61,7 @@ def mostly_arabic(text: str) -> bool:
     return bool(chars) and sum(bool(ARABIC_RE.match(char)) for char in chars) / len(chars) > 0.45
 
 
-def normalize_small_lines(lines: list[str]) -> str:
+def normalize_lines(lines: list[str]) -> str:
     value = " ".join(part.strip() for part in lines if part.strip())
     value = value.replace("\u00ad", "").replace("\u00a0", " ")
     value = re.sub(r"([A-Za-zÀ-ÖØ-öø-ÿ])-\s+([a-zà-öø-ÿ])", r"\1\2", value)
@@ -79,13 +77,16 @@ def inventory(pdf: Path) -> dict:
     doc = fitz.open(pdf)
     calls: list[dict] = []
     apparatus_by_page: dict[int, list[str]] = collections.defaultdict(list)
+    numbered_blocks: list[dict] = []
 
     for page_index in range(FIRST_COMMENTARY_PAGE_INDEX, LAST_COMMENTARY_PAGE_INDEX_EXCLUSIVE):
         page_number = page_index + 1
         page_dict = doc[page_index].get_text("dict")
-        for block in page_dict.get("blocks", []):
+        for block_index, block in enumerate(page_dict.get("blocks", [])):
             if "lines" not in block:
                 continue
+
+            block_lines: list[str] = []
             for line in block["lines"]:
                 line_spans = spans(line)
                 if not line_spans:
@@ -93,86 +94,128 @@ def inventory(pdf: Path) -> dict:
                 text = line_text(line)
                 if not text or HEADER_RE.match(text) or mostly_arabic(text):
                     continue
+                block_lines.append(text)
+
                 sizes = [float(span.get("size", 0.0)) for span in line_spans]
                 max_size = max(sizes)
-
                 if max_size <= SMALL_TEXT_MAX:
                     apparatus_by_page[page_number].append(text)
-                    continue
+                else:
+                    for match in INLINE_CALL_RE.finditer(text):
+                        calls.append(
+                            {
+                                "page": page_number,
+                                "number": int(match.group(1)),
+                                "call_text": text,
+                                "call_offset": match.start(1),
+                            }
+                        )
 
-                for match in INLINE_CALL_RE.finditer(text):
-                    calls.append(
+            if block_lines:
+                first = block_lines[0]
+                start = NOTE_START_RE.match(first)
+                if start:
+                    numbered_blocks.append(
                         {
                             "page": page_number,
-                            "number": int(match.group(1)),
-                            "call_text": text,
-                            "call_offset": match.start(1),
+                            "number": int(start.group(1)),
+                            "block_index": block_index,
+                            "body": normalize_lines([first[start.end():], *block_lines[1:]]),
+                            "first_line": first,
                         }
                     )
 
-    calls_by_page_number: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
+    calls_by_key: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
     for call in calls:
-        calls_by_page_number[(call["page"], call["number"])].append(call)
+        calls_by_key[(call["page"], call["number"])].append(call)
+    call_keys = set(calls_by_key)
 
-    # Build every small-text numbered note candidate independently from calls.
-    # This makes uncalled apparatus entries visible in the report.
-    notes: list[dict] = []
-    apparatus_start_candidates = 0
+    # Detector A: strict small-text apparatus.
+    strict_notes: list[dict] = []
+    strict_start_candidates = 0
     for page_number, lines in sorted(apparatus_by_page.items()):
         starts: list[tuple[int, int, int]] = []
         for index, text in enumerate(lines):
             match = NOTE_START_RE.match(text)
             if not match:
                 continue
-            apparatus_start_candidates += 1
+            strict_start_candidates += 1
             starts.append((index, int(match.group(1)), match.end()))
 
         for position, (start_index, number, prefix_end) in enumerate(starts):
             end_index = starts[position + 1][0] if position + 1 < len(starts) else len(lines)
             first = lines[start_index][prefix_end:]
-            body = normalize_small_lines([first, *lines[start_index + 1 : end_index]])
-            notes.append({"page": page_number, "number": number, "body": body})
+            body = normalize_lines([first, *lines[start_index + 1 : end_index]])
+            strict_notes.append({"page": page_number, "number": number, "body": body})
 
-    notes_by_page_number: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
-    for note in notes:
-        notes_by_page_number[(note["page"], note["number"])].append(note)
+    strict_by_key: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
+    for note in strict_notes:
+        strict_by_key[(note["page"], note["number"])].append(note)
+    strict_keys = set(strict_by_key)
 
-    call_keys = set(calls_by_page_number)
-    note_keys = set(notes_by_page_number)
-    paired_keys = sorted(call_keys & note_keys)
-    duplicate_call_keys = sorted(key for key, value in calls_by_page_number.items() if len(value) != 1)
-    duplicate_note_keys = sorted(key for key, value in notes_by_page_number.items() if len(value) != 1)
-    unpaired_calls = sorted(call_keys - note_keys)
-    uncalled_notes = sorted(note_keys - call_keys)
+    # Detector B: full text blocks. A block only becomes a pairing candidate if
+    # its printed number is also a source call on that exact page.
+    blocks_by_key: dict[tuple[int, int], list[dict]] = collections.defaultdict(list)
+    for note in numbered_blocks:
+        blocks_by_key[(note["page"], note["number"])].append(note)
+    block_keys = set(blocks_by_key)
 
-    pair_samples = []
-    for key in paired_keys[:60]:
-        call = calls_by_page_number[key][0]
-        note = notes_by_page_number[key][0]
-        pair_samples.append(
+    strict_paired = call_keys & strict_keys
+    block_paired = call_keys & block_keys
+    union_paired = strict_paired | block_paired
+    both_paired = strict_paired & block_paired
+
+    duplicate_call_keys = sorted(key for key, value in calls_by_key.items() if len(value) != 1)
+    duplicate_strict_note_keys = sorted(key for key, value in strict_by_key.items() if len(value) != 1)
+    duplicate_block_note_keys = sorted(key for key, value in blocks_by_key.items() if len(value) != 1)
+
+    samples = []
+    for key in sorted(union_paired)[:80]:
+        call = calls_by_key[key][0]
+        strict_note = strict_by_key.get(key, [None])[0]
+        block_note = blocks_by_key.get(key, [None])[0]
+        samples.append(
             {
                 "page": key[0],
                 "number": key[1],
                 "call_text": call["call_text"],
-                "note_body": note["body"],
+                "strict_note_body": strict_note["body"] if strict_note else None,
+                "block_note_body": block_note["body"] if block_note else None,
+                "detectors": [
+                    name
+                    for name, present in (
+                        ("strict_small_text", key in strict_paired),
+                        ("numbered_block", key in block_paired),
+                    )
+                    if present
+                ],
             }
         )
 
     return {
-        "schema": "quran-safeguard-qushayri-note-research-v2",
+        "schema": "quran-safeguard-qushayri-note-research-v3",
         "production_eligible": False,
         "source_sha256": actual_sha,
         "pdf_page_index_window": [FIRST_COMMENTARY_PAGE_INDEX, LAST_COMMENTARY_PAGE_INDEX_EXCLUSIVE - 1],
         "candidate_call_occurrences": len(calls),
         "candidate_call_keys": len(call_keys),
-        "apparatus_numeric_start_candidates": apparatus_start_candidates,
-        "candidate_note_keys": len(note_keys),
-        "matched_page_number_pairs": len(paired_keys),
+        "strict_apparatus_numeric_start_candidates": strict_start_candidates,
+        "strict_candidate_note_keys": len(strict_keys),
+        "strict_matched_page_number_pairs": len(strict_paired),
+        "numbered_block_start_candidates": len(numbered_blocks),
+        "numbered_block_candidate_keys": len(block_keys),
+        "numbered_block_matched_page_number_pairs": len(block_paired),
+        "matched_by_both_detectors": len(both_paired),
+        "matched_by_either_detector": len(union_paired),
+        "strict_only_pairs": [list(key) for key in sorted(strict_paired - block_paired)],
+        "block_only_pairs": [list(key) for key in sorted(block_paired - strict_paired)],
+        "still_unpaired_call_keys": [list(key) for key in sorted(call_keys - union_paired)],
         "duplicate_call_keys": [list(key) for key in duplicate_call_keys],
-        "duplicate_note_keys": [list(key) for key in duplicate_note_keys],
-        "unpaired_call_keys": [list(key) for key in unpaired_calls],
-        "uncalled_note_keys": [list(key) for key in uncalled_notes],
-        "sample_pairs": pair_samples,
+        "duplicate_strict_note_keys": [list(key) for key in duplicate_strict_note_keys],
+        "duplicate_block_note_keys": [list(key) for key in duplicate_block_note_keys],
+        "strict_uncalled_note_keys": [list(key) for key in sorted(strict_keys - call_keys)],
+        "block_uncalled_note_keys": [list(key) for key in sorted(block_keys - call_keys)],
+        "sample_pairs": samples,
     }
 
 
