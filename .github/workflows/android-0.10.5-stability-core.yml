@@ -16,6 +16,9 @@ jobs:
       - name: Verify release-priority source contract
         run: python3 scripts/verify_0105_stability_priorities.py
 
+      - name: Verify removed runtime stays absent
+        run: python3 scripts/verify_0105_runtime_clean.py
+
       - name: Verify sensitive-app scope remains isolated
         run: python3 scripts/verify_0105_sensitive_scope.py
 
@@ -95,10 +98,6 @@ jobs:
           light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
           plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
           python3 scripts/verify_light_apk_no_tafsir.py "${light}"
-          python3 scripts/verify_light_apk_no_taddabur.py "${light}"
           python3 scripts/verify_plus_apk_multitafsir.py "${plus}"
-          if apkanalyzer manifest print "${plus}" | grep -Fq "TaddaburActivity"; then
-            echo "FAIL: deferred TaddaburActivity is still declared in Plus manifest"
-            exit 1
-          fi
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
           python3 scripts/verify_0105_stability_priorities.py
