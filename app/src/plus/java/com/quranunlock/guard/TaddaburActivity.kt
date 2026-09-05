@@ -168,9 +168,13 @@ class TaddaburActivity : ComponentActivity() {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .weight(1f),
-                                    onReady = { pageReady = true },
+                                    onReady = { readyPage ->
+                                        if (readyPage == page) pageReady = true
+                                    },
                                     onVerseTapped = { verse -> openTafsir(verse) },
-                                    onFailure = { pageReady = false }
+                                    onFailure = { failedPage ->
+                                        if (failedPage == page) pageReady = false
+                                    }
                                 )
                             }
 
@@ -277,79 +281,81 @@ private fun TaddaburMushafWebView(
     svgContent: String,
     pageNumber: Int,
     modifier: Modifier = Modifier,
-    onReady: () -> Unit,
+    onReady: (Int) -> Unit,
     onVerseTapped: (VerseRef) -> Unit,
-    onFailure: () -> Unit
+    onFailure: (Int) -> Unit
 ) {
     val currentOnReady = rememberUpdatedState(onReady)
     val currentOnVerseTapped = rememberUpdatedState(onVerseTapped)
     val currentOnFailure = rememberUpdatedState(onFailure)
 
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.rgb(244, 240, 230))
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = false
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
-                settings.blockNetworkLoads = true
-                settings.builtInZoomControls = true
-                settings.displayZoomControls = false
-                settings.useWideViewPort = true
-                settings.loadWithOverviewMode = true
+    androidx.compose.runtime.key(pageNumber) {
+        AndroidView(
+            modifier = modifier,
+            factory = { context ->
+                WebView(context).apply {
+                    setBackgroundColor(android.graphics.Color.rgb(244, 240, 230))
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = false
+                    settings.allowFileAccess = false
+                    settings.allowContentAccess = false
+                    settings.blockNetworkLoads = true
+                    settings.builtInZoomControls = true
+                    settings.displayZoomControls = false
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = true
 
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): Boolean = true
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean = true
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        currentOnReady.value()
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            currentOnReady.value(pageNumber)
+                        }
+
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: android.webkit.WebResourceError?
+                        ) {
+                            if (request?.isForMainFrame == true) currentOnFailure.value(pageNumber)
+                        }
                     }
 
-                    override fun onReceivedError(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                        error: android.webkit.WebResourceError?
-                    ) {
-                        if (request?.isForMainFrame == true) currentOnFailure.value()
-                    }
+                    val html = """
+                        <!doctype html>
+                        <html dir="rtl">
+                        <head>
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                          <style>
+                            html, body { margin:0; padding:0; background:#F4F0E6; width:100%; min-height:100%; overflow-x:hidden; }
+                            svg { display:block; width:100%; height:auto; max-width:100%; }
+                          </style>
+                        </head>
+                        <body>${TafsirEdition.prepareHtml(svgContent, pageNumber)}</body>
+                        </html>
+                    """.trimIndent()
+
+                    TafsirEdition.configureWebView(
+                        webView = this,
+                        pageNumber = pageNumber,
+                        verseIndex = MushafVerseIndex.fromSvg(svgContent),
+                        onVerseTapped = { verse -> currentOnVerseTapped.value(verse) }
+                    )
+
+                    loadDataWithBaseURL(
+                        "https://quran-safeguard.local/",
+                        html,
+                        "text/html",
+                        "UTF-8",
+                        null
+                    )
                 }
-
-                val html = """
-                    <!doctype html>
-                    <html dir="rtl">
-                    <head>
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <style>
-                        html, body { margin:0; padding:0; background:#F4F0E6; width:100%; min-height:100%; overflow-x:hidden; }
-                        svg { display:block; width:100%; height:auto; max-width:100%; }
-                      </style>
-                    </head>
-                    <body>${TafsirEdition.prepareHtml(svgContent, pageNumber)}</body>
-                    </html>
-                """.trimIndent()
-
-                TafsirEdition.configureWebView(
-                    webView = this,
-                    pageNumber = pageNumber,
-                    verseIndex = MushafVerseIndex.fromSvg(svgContent),
-                    onVerseTapped = { verse -> currentOnVerseTapped.value(verse) }
-                )
-
-                loadDataWithBaseURL(
-                    "https://quran-safeguard.local/",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null
-                )
             }
-        }
-    )
+        )
+    }
 }
 
 private fun formatTaddaburDuration(milliseconds: Long): String {
