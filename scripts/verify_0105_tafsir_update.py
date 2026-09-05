@@ -3,7 +3,8 @@
 
 This complements the rebuilt-database and APK audits. It freezes the intended
 0.10.5 contracts in source: Jalalayn untouched, Qurtubi four-volume boundary,
-Qushayri 806 source anchors -> 720 logical entries, and justified long-form text.
+Qushayri 806 source anchors -> 720 logical entries, coverage-driven edition
+selection, and source-only English-first justified rendering.
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ def require(condition: bool, message: str) -> None:
 repo = read("app/src/plus/java/com/quranunlock/guard/MultiTafsirRepository.kt")
 renderer = read("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
 controller = read("app/src/plus/java/com/quranunlock/guard/MultiTafsirPanel.kt")
+source_rendering = read("app/src/plus/java/com/quranunlock/guard/TafsirSourceRendering.kt")
 legacy_repo = read("app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt")
 light = read("app/src/light/java/com/quranunlock/guard/TafsirEdition.kt")
 light_apk = read("scripts/verify_light_apk_no_tafsir.py")
@@ -37,9 +39,20 @@ apk_audit = read("scripts/verify_plus_apk_multitafsir.py")
 require("PrivateTafsirEdition.JALALAYN" in repo, "Jalalayn must remain the runtime fallback/default")
 require('QURTUBI("qurtubi", "Qurtubi")' in repo, "Qurtubi edition id missing")
 require('QUSHAYRI("qushayri", "Qushayri")' in repo, "Qushayri edition id missing")
-require("activeRequest == requestKey" in controller, "stale Tafsir request rejection missing")
-require("remember(verse, selectedEdition)" in controller, "edition/verse reload state missing")
+require("data class MultiTafsirAvailability" in repo, "coverage model missing")
+require("suspend fun loadAvailable(" in repo, "per-verse coverage lookup missing")
+require("entries.containsKey(preferred)" in repo, "remembered edition must be kept only when it covers the verse")
+require(
+    "entries.containsKey(PrivateTafsirEdition.JALALAYN)" in repo,
+    "Jalalayn-first fallback is missing",
+)
+require("availability = null" in controller, "verse change must reset availability before reload")
+require("MultiTafsirRepository.loadAvailable(context, verse)" in controller, "controller must load real per-verse coverage")
+require("loaded.resolveEdition(selectedEdition)" in controller, "coverage-driven fallback resolution missing")
+require("availableEditions = loaded?.editions.orEmpty()" in controller, "renderer must receive only real available editions")
 require("DropdownMenu" in renderer, "single Tafsir renderer must expose edition selector")
+require("availableEditions.forEach" in renderer, "selector must enumerate only available editions")
+require("enabled = availableEditions.size > 1" in renderer, "selector must not advertise a choice when only one edition covers the verse")
 require("TextAlign.Justify" in renderer, "Tafsir renderer is not configured for justified prose")
 require(
     renderer.count("textAlign = TextAlign.Justify") >= 2,
@@ -53,6 +66,26 @@ note_marker = "append(runsToAnnotatedString(note.runs))"
 require(note_marker in renderer, "Jalalayn note renderer missing")
 note_window = renderer[renderer.index(note_marker):renderer.index(note_marker) + 700]
 require("textAlign = TextAlign.Justify" in note_window, "Tafsir notes are not justified")
+
+# Source-only Qurtubi/Qushayri rendering. Structural verse numbers are provenance
+# only: the app must not synthesize a displayed verse title or explanatory label.
+require("data class SourceBackedTafsirSegment" in source_rendering, "source-backed rendering model missing")
+require("fun renderSourceBackedTafsirSegments(" in source_rendering, "source-only rendering function missing")
+require("TafsirRunStyle.BOLD_ITALIC, row.translation.trim()" in source_rendering,
+        "source English verse translation must remain first and visually distinct")
+require("TafsirRunStyle.REGULAR, row.commentary.trim()" in source_rendering,
+        "source commentary rendering missing")
+require("renderSourceBackedTafsirSegments(rows)" in repo,
+        "Qurtubi/Qushayri runtime must use the source-only renderer")
+require('value("arabic_included") == "false"' in repo,
+        "Qurtubi/Qushayri runtime must reject a corpus that injects Arabic verse text")
+for forbidden in (
+    "Commentary on ${verse.surah}",
+    "Verse ${",
+    "Ayah ${",
+):
+    require(forbidden not in repo and forbidden not in source_rendering,
+            f"generated Tafsir heading must remain absent: {forbidden}")
 
 # Jalalayn remains the byte-frozen golden corpus/repository.
 require("6_236" in legacy_repo, "Jalalayn expected row count changed")
@@ -75,8 +108,6 @@ for marker in (
 ):
     require(marker in qsh, f"Qushayri 0.10.5 grouping/cleanup invariant missing: {marker}")
 require("expectedEntries = 720" in repo, "runtime Qushayri logical count must be 720")
-require("TafsirRunStyle.ITALIC, row.translation" in repo, "Qushayri/Qurtubi verse translation rendering missing")
-require("Commentary on ${verse.surah}:${row.start}–${row.end}" in repo, "shared-range label missing")
 require("'qushayri': 720" in prep, "asset packager still expects pre-cleanup Qushayri row count")
 for marker in (
     "raw_segment_count",
@@ -119,8 +150,10 @@ require("qurtubi" in light_apk.lower() and "qushayri" in light_apk.lower(),
         "Light APK gate must explicitly reject Qurtubi/Qushayri leakage")
 
 print("0.10.5 Tafsir source/UI audit: PASS")
-print("- Jalalayn golden repository/checksum preserved")
+print("- Jalalayn golden repository/checksum preserved and remains first fallback")
+print("- selector exposes only editions with a real source-backed row for the tapped verse")
 print("- Qushayri: 806 source anchors -> 720 logical entries, 86 translation-only anchors grouped into 76 shared-commentary ranges; 584 source soft hyphens are preserved until source-driven joining")
 print("- Qurtubi: 432 entries, four approved volumes, 4:23 excluded; residual PDF NBSPs normalized")
+print("- Qurtubi/Qushayri keep source English verse translation first, then source commentary; no generated verse heading or Arabic injection")
 print("- one shared Plus renderer keeps all three Tafsir commentaries and notes justified")
 print("- Light remains Tafsir-free")
