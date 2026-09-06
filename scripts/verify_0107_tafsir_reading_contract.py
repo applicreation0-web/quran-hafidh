@@ -17,8 +17,8 @@ light_edition = read("app/src/light/java/com/quranunlock/guard/TafsirEdition.kt"
 repo = read("app/src/plus/java/com/quranunlock/guard/MultiTafsirRepository.kt")
 contract = read("docs/TAFSIR_READING_CONTRACT_0.10.7.md")
 
-require("textAlign = TextAlign.Start" in panel, "Latin Tafsir text must use Start alignment")
-require("TextAlign.Justify" not in panel, "full justification must not survive in the 0.10.7 renderer")
+require("if (isPoetry) TextAlign.Start else TextAlign.Justify" in panel,
+        "commentary must be justified while poetry remains Start-aligned")
 require("COMMENTARY_LINE_HEIGHT_RATIO = 1.50f" in panel, "commentary line height changed")
 require("NOTE_LINE_HEIGHT_RATIO = 1.45f" in panel, "note line height changed")
 require("POETRY_LINE_HEIGHT_RATIO = 1.55f" in panel, "poetry line height changed")
@@ -31,6 +31,6 @@ require("expanded: Boolean = false" in light_edition and "onExpandedChange: (Boo
 require("stroke: none !important" in edition and "#C8CEC8" in edition, "neutral no-outline verse highlight missing")
 for marker in ('JALALAYN("jalalayn", "Jalalayn")', 'QURTUBI("qurtubi", "Qurtubi")', 'QUSHAYRI("qushayri", "Qushayri")'):
     require(marker in repo, "author label changed: " + marker)
-for marker in ("source-backed English", "Full justification is disabled", "compact and expanded", "grayscale"):
+for marker in ("source-backed English", "full justification", "Poetry is the exception", "compact and expanded", "grayscale"):
     require(marker in contract, "contract marker missing: " + marker)
 print("0.10.7 Tafsir reading contract: PASS")
