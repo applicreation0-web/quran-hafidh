@@ -2,13 +2,9 @@
 """Build the private English tafsir DBs from pinned PDFs and stage APK assets.
 
 SQLite file bytes are not a stable cross-platform serialization. Integrity is
-therefore checked at two separate layers:
-- exact SHA-256 for every approved source PDF;
-- deterministic logical digest of ordered metadata + ordered tafsir rows.
-The builders themselves remain fail-closed on counts, coverage and leakage.
-
-Qushayri 0.10.5 keeps all 806 source anchors but stores 720 logical commentary
-entries after grouping consecutive verse translations that share one commentary.
+checked at two layers: exact source-PDF SHA-256 and deterministic logical
+content digests. 0.10.6 also includes Qushayri semantic runs in that logical
+digest so poetry tagging cannot drift independently of the commentary text.
 """
 from __future__ import annotations
 import argparse, base64, gzip, hashlib, json, os, sqlite3, subprocess, sys
@@ -24,6 +20,10 @@ SOURCE_SHA = {
 }
 EXPECTED_ENTRIES = {'qushayri': 720, 'qurtubi': 432}
 EXPECTED_PARTS = {'qushayri': 1, 'qurtubi': 4}
+PRESENTATION_REVISION = {
+    'qushayri': '0106-qushayri-source-semantics-v1',
+    'qurtubi': '0106-qurtubi-hide-verse-labels-v1',
+}
 EXPECTED_QUSHAYRI_STRUCTURE = {
     'raw_segment_count': '806',
     'translation_only_anchor_count': '86',
@@ -31,6 +31,14 @@ EXPECTED_QUSHAYRI_STRUCTURE = {
     'source_soft_hyphen_count': '584',
     'soft_hyphen_policy': 'preserve-marker-then-source-driven-join',
     'source_honorific_glyph_policy': 'restore-edition-pua-to-source-abbreviations-no-name-inference',
+    'verified_note_call_count': '928',
+    'note_call_display_policy': 'remove-only-source-verified-unexposed-footnote-calls',
+    'poetry_index_entry_count': '121',
+    'poetry_index_occurrence_count': '126',
+    'poetry_unique_line_count': '542',
+    'poetry_semantics': 'source-poetry-index-v1',
+    'paragraph_policy': 'source-geometry-no-pdf-block-breaks',
+    'semantic_run_table': 'tafsir_run',
 }
 PART_CHARS = 500_000
 
@@ -51,8 +59,20 @@ def require_sha(label: str, path: Path, expected: str) -> None:
         raise SystemExit(f'{label} SHA-256 mismatch: {actual}')
 
 
+def stamp_presentation_revision(name: str, db: Path) -> None:
+    con = sqlite3.connect(db)
+    try:
+        con.execute(
+            'INSERT OR REPLACE INTO source_metadata(key,value) VALUES (?,?)',
+            ('presentation_revision', PRESENTATION_REVISION[name]),
+        )
+        con.commit()
+    finally:
+        con.close()
+
+
 def logical_digest(name: str, db: Path) -> str:
-    """Digest database meaning, not environment-dependent SQLite page bytes."""
+    """Digest database meaning, including Qushayri semantic presentation runs."""
     con = sqlite3.connect(f'file:{db}?mode=ro', uri=True)
     try:
         if con.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
@@ -62,6 +82,8 @@ def logical_digest(name: str, db: Path) -> str:
             raise SystemExit(f'{name} source metadata mismatch')
         if meta.get('arabic_included') != 'false':
             raise SystemExit(f'{name} must contain no Arabic source text')
+        if meta.get('presentation_revision') != PRESENTATION_REVISION[name]:
+            raise SystemExit(f'{name} 0.10.6 presentation revision mismatch')
         expected = EXPECTED_ENTRIES[name]
         if int(meta.get('entry_count', '-1')) != expected:
             raise SystemExit(f'{name} metadata entry count mismatch')
@@ -72,6 +94,11 @@ def logical_digest(name: str, db: Path) -> str:
                         f'qushayri source-structure metadata mismatch: '
                         f'{key}={meta.get(key)!r}, expected {expected_value!r}'
                     )
+        if name == 'qurtubi' and meta.get('verse_marker_display_policy') != (
+            'indexed-source-verse-labels-hidden-in-translation'
+        ):
+            raise SystemExit('qurtubi verse-marker display policy mismatch')
+
         columns = [row[1] for row in con.execute('PRAGMA table_info(tafsir_entry)')]
         rows = con.execute(
             'SELECT ' + ','.join(columns) + ' FROM tafsir_entry ORDER BY id'
@@ -83,6 +110,24 @@ def logical_digest(name: str, db: Path) -> str:
             'columns': columns,
             'rows': rows,
         }
+        if name == 'qushayri':
+            tables = {
+                row[0]
+                for row in con.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
+            }
+            if 'tafsir_run' not in tables:
+                raise SystemExit('qushayri semantic tafsir_run table missing')
+            run_columns = [row[1] for row in con.execute('PRAGMA table_info(tafsir_run)')]
+            run_rows = con.execute(
+                'SELECT ' + ','.join(run_columns) + ' FROM tafsir_run ORDER BY entry_id,run_no'
+            ).fetchall()
+            if not run_rows:
+                raise SystemExit('qushayri semantic tafsir_run table empty')
+            payload['semantic_run_columns'] = run_columns
+            payload['semantic_runs'] = run_rows
+
         encoded = json.dumps(
             payload, ensure_ascii=False, separators=(',', ':'), sort_keys=True
         ).encode('utf-8')
@@ -160,9 +205,12 @@ def main() -> None:
     env = os.environ.copy()
     env.update(QUSHAYRI_PDF=str(qsh), QUSHAYRI_OUT=str(qsh_db))
     subprocess.run([sys.executable, str(ROOT / 'scripts/build_qushayri.py')], env=env, check=True)
+    stamp_presentation_revision('qushayri', qsh_db)
+
     env = os.environ.copy()
     env.update(QURTUBI_BASE=str(source), QURTUBI_OUT=str(qur_db))
     subprocess.run([sys.executable, str(ROOT / 'scripts/build_qurtubi.py')], env=env, check=True)
+    stamp_presentation_revision('qurtubi', qur_db)
 
     prepared = {
         'qushayri': prepare_package('qushayri', qsh_db),
