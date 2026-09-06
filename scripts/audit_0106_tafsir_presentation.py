@@ -15,9 +15,9 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-QUSHAYRI_PARTS = ["qushayri_en.sqlite.gz.b64.part00"]
+QUSHAYRI_PARTS = [f"qushayri_en.sqlite.gz.b64.part{i:02d}" for i in range(2)]
 QURTUBI_PARTS = [f"qurtubi_en.sqlite.gz.b64.part{i:02d}" for i in range(4)]
-QURTUBI_MARKER = re.compile(r"\b(\d{1,3})\.?\s+(?=[A-Za-z‘“])")
+QURTUBI_MARKER = re.compile(r"\b(\d{1,3})\.?\s+(?=(?:…\s*)?(?:[^\W\d_]|[\"‘“]))")
 
 
 def decode(assets: Path, parts: list[str]) -> bytes:
@@ -57,12 +57,6 @@ def audit_qurtubi(assets: Path) -> None:
             raise SystemExit(f"Qurtubi row count changed: {len(rows)}")
         suspicious = []
         for row_id, surah, start, end, translation, commentary in rows:
-            leading = re.match(r"^\s*(\d{1,3})\.?\s+(?=[A-Za-z‘“])", translation)
-            if leading and start <= int(leading.group(1)) <= end:
-                suspicious.append((row_id, surah, start, end, translation[:100]))
-            # A multi-verse translation must not retain its own sequential source
-            # labels either. Only labels equal to the indexed row range are tested;
-            # unrelated numbers are not globally removed or rejected.
             in_range = [
                 int(match.group(1))
                 for match in QURTUBI_MARKER.finditer(translation)
@@ -83,7 +77,6 @@ def audit_qurtubi(assets: Path) -> None:
             raise SystemExit("Qurtubi 2:21 still displays the redundant 21 label")
         if not row[0].lstrip().startswith("Mankind!"):
             raise SystemExit(f"Qurtubi 2:21 translation changed unexpectedly: {row[0][:100]!r}")
-        # Genuine source references belong to commentary and remain untouched.
         genuine_refs = con.execute(
             "SELECT COUNT(*) FROM tafsir_entry WHERE commentary GLOB '*[0-9]:[0-9]*'"
         ).fetchone()[0]
@@ -142,7 +135,6 @@ def audit_qushayri(assets: Path) -> None:
             if rebuilt != commentary:
                 raise SystemExit(f"Qushayri semantic runs diverge from entry {entry_id}")
 
-        # 2a: useful grouped Qur'an references stay visible for navigation.
         quran_refs = con.execute(
             "SELECT COUNT(*) FROM tafsir_entry "
             "WHERE verse_translation LIKE '%[2:11]%' OR verse_translation LIKE '%[2:12]%'"
@@ -150,8 +142,6 @@ def audit_qushayri(assets: Path) -> None:
         if quran_refs < 1:
             raise SystemExit("Qushayri useful [2:11]/[2:12] Qur'an references were removed")
 
-        # 2b: the verified but currently unexposed note calls seen by the user
-        # must no longer appear glued to the commentary text.
         row = con.execute(
             "SELECT id,commentary FROM tafsir_entry "
             "WHERE surah=2 AND verse_start<=10 AND verse_end>=10 ORDER BY id LIMIT 1"
