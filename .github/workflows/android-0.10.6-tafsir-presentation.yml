@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/prepare_multitafsir_assets.py \
+          python3 scripts/prepare_multitafsir_assets_0106.py \
             --source-dir "${RUNNER_TEMP}/tafsir-src" \
             --assets-dir app/src/plus/assets/tafsir \
             --work-dir "${RUNNER_TEMP}/tafsir-work" \
@@ -80,6 +80,9 @@ jobs:
 
       - name: 0.10.6 contradictory presentation gate
         run: python3 scripts/audit_0106_tafsir_presentation.py app/src/plus/assets/tafsir
+
+      - name: Qurtubi Unicode verse-label gate
+        run: python3 scripts/audit_0106_qurtubi_unicode_labels.py app/src/plus/assets/tafsir
 
       - name: Existing typography contract
         run: python3 scripts/verify_0105_tafsir_typography_contract.py
