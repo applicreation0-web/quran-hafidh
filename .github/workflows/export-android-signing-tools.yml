@@ -29,13 +29,14 @@ jobs:
           set -euo pipefail
           src="${ANDROID_HOME}/build-tools/36.0.0"
           out="${RUNNER_TEMP}/android-build-tools-36-signing"
-          mkdir -p "${out}/lib"
+          mkdir -p "${out}/lib" "${out}/lib64"
           cp "${src}/apksigner" "${out}/apksigner"
           cp "${src}/zipalign" "${out}/zipalign"
           cp "${src}/lib/apksigner.jar" "${out}/lib/apksigner.jar"
+          cp "${src}/lib64/libc++.so" "${out}/lib64/libc++.so"
           cp "${src}/source.properties" "${out}/source.properties"
           chmod +x "${out}/apksigner" "${out}/zipalign"
-          sha256sum "${out}/apksigner" "${out}/zipalign" "${out}/lib/apksigner.jar" > "${out}/SHA256.txt"
+          (cd "${out}" && sha256sum apksigner zipalign lib/apksigner.jar lib64/libc++.so > SHA256.txt)
 
       - name: Upload Android signing utilities
         uses: actions/upload-artifact@v4
