@@ -1,0 +1,41 @@
+name: Reset obsolete 0.10.7 UI gate
+
+on:
+  push:
+    branches:
+      - "release/0.10.7-clean"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reset-ui-gate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/0.10.7-clean
+          fetch-depth: 0
+      - name: Replace obsolete decorative gate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/build.gradle.kts')
+          s = p.read_text(encoding='utf-8')
+          old = '''        val safeguardDesign = file(\n            "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"\n        ).readText()\n        check(\n            safeguardDesign.contains("sahelianButtonOrnament") &&\n                safeguardDesign.contains("drawDiamond") &&\n                safeguardDesign.contains("chevron")\n        ) {\n            "Safeguard buttons must retain their Sahelian/oriental contour."\n        }'''
+          new = '''        val safeguardDesign = file(\n            "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"\n        ).readText()\n        check(\n            !safeguardDesign.contains("sahelianButtonOrnament") &&\n                !safeguardDesign.contains("drawDiamond") &&\n                !safeguardDesign.contains("chevron") &&\n                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF4F0E6)")\n        ) {\n            "0.10.7 requires calm cream controls without ornamental button drawing."\n        }'''
+          if s.count(old) != 1:
+              raise SystemExit('obsolete ornamental gate not found exactly once')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit updated gate
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts
+          git commit -m "Update 0.10.7 UI audit for neutral reader design [skip ci]"
+          git push origin HEAD:release/0.10.7-clean
