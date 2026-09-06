@@ -90,6 +90,8 @@ internal fun TafsirPanel(
     onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)?,
     modifier: Modifier,
     maxPanelHeight: Dp,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onPanelTopInWindow: (Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -206,6 +208,22 @@ internal fun TafsirPanel(
                     }
                 }
                 Row {
+                    TextButton(
+                        modifier = Modifier.semantics {
+                            contentDescription = if (expanded) {
+                                "Réduire le panneau du Tafsîr"
+                            } else {
+                                "Agrandir le panneau du Tafsîr"
+                            }
+                            stateDescription = if (expanded) "Tafsîr agrandi" else "Tafsîr compact"
+                        },
+                        onClick = { onExpandedChange(!expanded) }
+                    ) {
+                        Text(
+                            if (expanded) "⤡" else "⤢",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     TextButton(
                         modifier = Modifier.semantics {
                             contentDescription = "Réduire la taille du commentaire"
@@ -357,7 +375,7 @@ private fun InteractiveTafsirText(
                     lineHeight = (
                         fontSize * if (isPoetry) POETRY_LINE_HEIGHT_RATIO else lineHeightRatio
                     ).sp,
-                    textAlign = if (isPoetry) TextAlign.Start else TextAlign.Justify
+                    textAlign = TextAlign.Start
                 ),
                 onClick = { offset ->
                     annotated.getStringAnnotations(NOTE_LINK_TAG, offset, offset)

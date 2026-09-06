@@ -32,8 +32,9 @@ object TafsirEdition {
                 <style>
                   .ayahPolygon { pointer-events: all; cursor: pointer; }
                   .ayahPolygon.qsg-selected {
-                    fill: #BFE8C8 !important;
-                    fill-opacity: .48 !important;
+                    fill: #C8CEC8 !important;
+                    fill-opacity: .44 !important;
+                    stroke: none !important;
                   }
                 </style>
                 <script>
@@ -203,6 +204,8 @@ object TafsirEdition {
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
         onPanelTopInWindow: (Int) -> Unit,
         onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) {
@@ -210,6 +213,8 @@ object TafsirEdition {
             verse = verse,
             modifier = modifier,
             maxPanelHeight = maxPanelHeight,
+            expanded = expanded,
+            onExpandedChange = onExpandedChange,
             onPanelTopInWindow = onPanelTopInWindow,
             onQuranReferenceSelected = onQuranReferenceSelected
         )

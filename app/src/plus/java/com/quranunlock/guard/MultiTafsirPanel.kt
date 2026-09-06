@@ -26,6 +26,8 @@ internal fun MultiTafsirPanel(
     verse: VerseRef,
     modifier: Modifier,
     maxPanelHeight: Dp,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onPanelTopInWindow: (Int) -> Unit,
     onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
 ) {
@@ -89,6 +91,8 @@ internal fun MultiTafsirPanel(
         onQuranReferenceSelected = onQuranReferenceSelected,
         modifier = modifier,
         maxPanelHeight = maxPanelHeight,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
         onPanelTopInWindow = onPanelTopInWindow
     )
 }

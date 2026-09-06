@@ -117,6 +117,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 var quickNavInput by remember { mutableStateOf(initialPage.toString()) }
                 var comfortOpen by remember { mutableStateOf(false) }
                 var pureReading by remember { mutableStateOf(false) }
+                var tafsirExpanded by remember { mutableStateOf(false) }
                 var visualMode by remember {
                     mutableStateOf(ReaderComfortPrefs.visualMode(this@FreeQuranReaderActivity))
                 }
@@ -164,6 +165,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(selectedTafsirVerse) {
+                    tafsirExpanded = false
                     val requestedVerse = selectedTafsirVerse ?: return@LaunchedEffect
                     tafsirLoadState = TafsirLoadState.Loading
                     val entry = TafsirEdition.load(
@@ -674,7 +676,9 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     verse = verse,
                                     state = tafsirLoadState,
                                     modifier = Modifier.align(Alignment.BottomCenter),
-                                    maxPanelHeight = maxHeight * 0.42f,
+                                    maxPanelHeight = maxHeight * if (tafsirExpanded) 0.84f else 0.42f,
+                                    expanded = tafsirExpanded,
+                                    onExpandedChange = { tafsirExpanded = it },
                                     onPanelTopInWindow = { top ->
                                         TafsirEdition.revealAbove(top)
                                     },
