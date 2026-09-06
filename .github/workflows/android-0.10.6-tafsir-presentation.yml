@@ -65,6 +65,12 @@ jobs:
           print('Qushayri source semantics PASS: 928 notes; 121 index entries; 126 occurrences; 542 unique poetry lines')
           PY
 
+      - name: Source-authoritative Qushayri honorific inventory
+        run: |
+          python3 scripts/research_qushayri_honorific_glyphs_0106.py \
+            "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
+            --json "${RUNNER_TEMP}/qushayri-honorific-glyphs.json"
+
       - name: Rebuild and package private Tafsir assets from pinned sources
         shell: bash
         run: |
@@ -75,8 +81,8 @@ jobs:
             --work-dir "${RUNNER_TEMP}/tafsir-work" \
             2>&1 | tee "${RUNNER_TEMP}/tafsir-0106-rebuild.log"
 
-      - name: 0.10.5 corpus integrity regression gate
-        run: python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir
+      - name: 0.10.6 inherited corpus and all-Tafsir honorific gate
+        run: python3 scripts/audit_0106_tafsir_honorifics.py app/src/plus/assets/tafsir
 
       - name: 0.10.6 contradictory presentation gate
         run: python3 scripts/audit_0106_tafsir_presentation.py app/src/plus/assets/tafsir
@@ -138,5 +144,6 @@ jobs:
             ${{ runner.temp }}/tafsir-work/*.sqlite
             ${{ runner.temp }}/tafsir-0106-rebuild.log
             ${{ runner.temp }}/qushayri-note-crosscheck.json
+            ${{ runner.temp }}/qushayri-honorific-glyphs.json
           if-no-files-found: warn
           retention-days: 7
