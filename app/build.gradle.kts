@@ -782,11 +782,12 @@ val verifyEditorialBoundary by tasks.registering {
             "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
         ).readText()
         check(
-            safeguardDesign.contains("sahelianButtonOrnament") &&
-                safeguardDesign.contains("drawDiamond") &&
-                safeguardDesign.contains("chevron")
+            !safeguardDesign.contains("sahelianButtonOrnament") &&
+                !safeguardDesign.contains("drawDiamond") &&
+                !safeguardDesign.contains("chevron") &&
+                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF4F0E6)")
         ) {
-            "Safeguard buttons must retain their Sahelian/oriental contour."
+            "0.10.7 requires calm cream controls without ornamental button drawing."
         }
         val launcherIcon = file(
             "src/main/res/drawable/ic_launcher_foreground.xml"
