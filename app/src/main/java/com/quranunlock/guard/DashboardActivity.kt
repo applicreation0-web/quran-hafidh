@@ -71,6 +71,7 @@ class DashboardActivity : ComponentActivity() {
         val intervalPresenceMs = GuardPrefs.currentIntervalTargetPresenceMs(this@DashboardActivity)
         val cyclePresenceMs = GuardPrefs.currentCycleTargetPresenceMs(this@DashboardActivity)
         val jokers = GuardPrefs.remainingJokers(this@DashboardActivity)
+        val usedJokers = GuardPrefs.DAILY_JOKERS - jokers
 
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -304,7 +305,12 @@ class DashboardActivity : ComponentActivity() {
                                 UsageCyclePolicy.CUMULATIVE_MS.toFloat()
                         )
                         Text(
-                            "Total cible : ${compactDuration(targetUsageMs)} • $jokers joker(s) disponible(s)",
+                            "Total cible : ${compactDuration(targetUsageMs)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "$usedJokers joker(s) utilisé(s) aujourd’hui • $jokers disponible(s)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
