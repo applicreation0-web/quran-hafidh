@@ -1,0 +1,74 @@
+name: Quran Safeguard 0.10.7 signing preflight
+
+on:
+  push:
+    branches:
+      - "release/0.10.7-clean"
+
+jobs:
+  signing-preflight:
+    runs-on: ubuntu-latest
+    env:
+      LIGHT_KEYSTORE_B64: ${{ secrets.LIGHT_KEYSTORE_B64 }}
+      LIGHT_KEYSTORE_PASSWORD: ${{ secrets.LIGHT_KEYSTORE_PASSWORD }}
+      PLUS_KEYSTORE_B64: ${{ secrets.PLUS_KEYSTORE_B64 }}
+      PLUS_KEYSTORE_PASSWORD: ${{ secrets.PLUS_KEYSTORE_PASSWORD }}
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Check signing material safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          check_present() {
+            local name="$1"
+            local value="$2"
+            if [ -z "${value}" ]; then
+              echo "::error::Missing GitHub Actions secret: ${name}"
+              exit 1
+            fi
+            echo "${name}: present"
+          }
+
+          check_present LIGHT_KEYSTORE_B64 "${LIGHT_KEYSTORE_B64}"
+          check_present LIGHT_KEYSTORE_PASSWORD "${LIGHT_KEYSTORE_PASSWORD}"
+          check_present PLUS_KEYSTORE_B64 "${PLUS_KEYSTORE_B64}"
+          check_present PLUS_KEYSTORE_PASSWORD "${PLUS_KEYSTORE_PASSWORD}"
+
+          light="${RUNNER_TEMP}/light.p12"
+          plus="${RUNNER_TEMP}/plus.p12"
+          if ! printf '%s' "${LIGHT_KEYSTORE_B64}" | base64 --decode > "${light}"; then
+            echo "::error::LIGHT_KEYSTORE_B64 is not valid base64"
+            exit 1
+          fi
+          if ! printf '%s' "${PLUS_KEYSTORE_B64}" | base64 --decode > "${plus}"; then
+            echo "::error::PLUS_KEYSTORE_B64 is not valid base64"
+            exit 1
+          fi
+
+          if ! keytool -list -keystore "${light}" -storetype PKCS12 -storepass "${LIGHT_KEYSTORE_PASSWORD}" -alias quran-safeguard >/dev/null 2>&1; then
+            echo "::error::Light keystore/password/alias quran-safeguard is invalid"
+            exit 1
+          fi
+          if ! keytool -list -keystore "${plus}" -storetype PKCS12 -storepass "${PLUS_KEYSTORE_PASSWORD}" -alias quran-safeguard-plus >/dev/null 2>&1; then
+            echo "::error::Plus keystore/password/alias quran-safeguard-plus is invalid"
+            exit 1
+          fi
+
+          light_fp="$(keytool -list -v -keystore "${light}" -storetype PKCS12 -storepass "${LIGHT_KEYSTORE_PASSWORD}" -alias quran-safeguard 2>/dev/null | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d ':\r' | tr '[:upper:]' '[:lower:]')"
+          plus_fp="$(keytool -list -v -keystore "${plus}" -storetype PKCS12 -storepass "${PLUS_KEYSTORE_PASSWORD}" -alias quran-safeguard-plus 2>/dev/null | sed -n 's/^[[:space:]]*SHA256: //p' | tr -d ':\r' | tr '[:upper:]' '[:lower:]')"
+
+          if [ "${light_fp}" != "6c706f4ea44ef667d0b9698c07a39e929b1e286d2397665504411dedb37457ac" ]; then
+            echo "::error::Light signing certificate does not match the historical certificate"
+            exit 1
+          fi
+          if [ "${plus_fp}" != "1843d245832549afc6333ab77a587649a14fedb1f4acc9c08f367c3f0301d989" ]; then
+            echo "::error::Plus signing certificate does not match the historical certificate"
+            exit 1
+          fi
+
+          echo "Signing preflight PASS: both historical keystores, passwords, aliases and certificate fingerprints are valid."
