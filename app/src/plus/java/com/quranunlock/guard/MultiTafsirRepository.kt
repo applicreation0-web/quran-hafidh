@@ -49,7 +49,8 @@ internal object MultiTafsirRepository {
         val edition: PrivateTafsirEdition,
         val databaseName: String,
         val partCount: Int,
-        val expectedEntries: Int
+        val expectedEntries: Int,
+        val presentationRevision: String
     ) {
         val assetParts: List<String>
             get() = (0 until partCount).map { index ->
@@ -57,25 +58,27 @@ internal object MultiTafsirRepository {
             }
     }
 
+    private data class LoadedV2Row(
+        val id: Long,
+        val segment: SourceBackedTafsirSegment
+    )
+
     private val qushayri = CorpusSpec(
         edition = PrivateTafsirEdition.QUSHAYRI,
         databaseName = "qushayri_en.sqlite",
         partCount = 1,
-        expectedEntries = 720
+        expectedEntries = 720,
+        presentationRevision = "0106-qushayri-source-semantics-v1"
     )
 
     private val qurtubi = CorpusSpec(
         edition = PrivateTafsirEdition.QURTUBI,
         databaseName = "qurtubi_en.sqlite",
         partCount = 4,
-        expectedEntries = 432
+        expectedEntries = 432,
+        presentationRevision = "0106-qurtubi-hide-verse-labels-v1"
     )
 
-    /**
-     * Loads only real source-backed entries for the tapped verse. The returned
-     * edition list is therefore the authority for the selector: an edition with
-     * no matching row is not advertised to the reader.
-     */
     suspend fun loadAvailable(
         context: Context,
         verse: VerseRef
@@ -118,7 +121,7 @@ internal object MultiTafsirRepository {
         try {
             if (!metadataMatches(database, spec)) return null
             val rows = database.rawQuery(
-                "SELECT verse_start, verse_end, segment_no, verse_translation, commentary " +
+                "SELECT id, verse_start, verse_end, segment_no, verse_translation, commentary " +
                     "FROM tafsir_entry WHERE surah = ? AND verse_start <= ? AND verse_end >= ? " +
                     "ORDER BY verse_start, verse_end, segment_no, id",
                 arrayOf(verse.surah.toString(), verse.ayah.toString(), verse.ayah.toString())
@@ -126,12 +129,15 @@ internal object MultiTafsirRepository {
                 buildList {
                     while (cursor.moveToNext()) {
                         add(
-                            SourceBackedTafsirSegment(
-                                verseStart = cursor.getInt(0),
-                                verseEnd = cursor.getInt(1),
-                                segment = cursor.getInt(2),
-                                translation = cursor.getString(3).trim(),
-                                commentary = cursor.getString(4).trim()
+                            LoadedV2Row(
+                                id = cursor.getLong(0),
+                                segment = SourceBackedTafsirSegment(
+                                    verseStart = cursor.getInt(1),
+                                    verseEnd = cursor.getInt(2),
+                                    segment = cursor.getInt(3),
+                                    translation = cursor.getString(4).trim(),
+                                    commentary = cursor.getString(5).trim()
+                                )
                             )
                         )
                     }
@@ -139,7 +145,11 @@ internal object MultiTafsirRepository {
             }
             if (rows.isEmpty()) return null
 
-            val runs = renderSourceBackedTafsirSegments(rows)
+            val runs = if (spec.edition == PrivateTafsirEdition.QUSHAYRI) {
+                renderQushayriRows(database, rows)
+            } else {
+                renderSourceBackedTafsirSegments(rows.map { it.segment })
+            }
             if (runs.isEmpty()) return null
             return TafsirEntry(verse = verse, commentaryRuns = runs, notes = emptyList())
         } finally {
@@ -147,27 +157,83 @@ internal object MultiTafsirRepository {
         }
     }
 
+    private fun renderQushayriRows(
+        database: SQLiteDatabase,
+        rows: List<LoadedV2Row>
+    ): List<TafsirRun> = buildList {
+        rows.forEachIndexed { index, row ->
+            if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
+            val segment = row.segment
+            if (segment.translation.isNotBlank()) {
+                add(TafsirRun(TafsirRunStyle.BOLD_ITALIC, segment.translation))
+                if (segment.commentary.isNotBlank()) {
+                    add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
+                }
+            }
+
+            val semanticRuns = database.rawQuery(
+                "SELECT style, text FROM tafsir_run WHERE entry_id = ? ORDER BY run_no",
+                arrayOf(row.id.toString())
+            ).use { cursor ->
+                buildList {
+                    while (cursor.moveToNext()) {
+                        val style = when (cursor.getString(0)) {
+                            "REGULAR" -> TafsirRunStyle.REGULAR
+                            "POETRY" -> TafsirRunStyle.POETRY
+                            else -> error("Unsupported Qushayri semantic Tafsir run style")
+                        }
+                        add(TafsirRun(style, cursor.getString(1)))
+                    }
+                }
+            }
+            check(semanticRuns.isNotEmpty()) {
+                "Qushayri semantic run table is empty for entry ${row.id}"
+            }
+            check(semanticRuns.joinToString(separator = "") { it.text } == segment.commentary) {
+                "Qushayri semantic run text does not match verified commentary"
+            }
+            addAll(semanticRuns)
+        }
+    }
+
+    private fun metadataValue(database: SQLiteDatabase, key: String): String? =
+        database.rawQuery(
+            "SELECT value FROM source_metadata WHERE key = ?",
+            arrayOf(key)
+        ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
+
     private fun metadataMatches(database: SQLiteDatabase, spec: CorpusSpec): Boolean {
         if (database.rawQuery("PRAGMA quick_check", null).use { cursor ->
                 cursor.moveToFirst() && cursor.getString(0) == "ok"
             }.not()
         ) return false
 
-        fun value(key: String): String? = database.rawQuery(
-            "SELECT value FROM source_metadata WHERE key = ?",
-            arrayOf(key)
-        ).use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else null }
-
         val rowCount = database.rawQuery(
             "SELECT COUNT(*) FROM tafsir_entry",
             null
         ).use { cursor -> if (cursor.moveToFirst()) cursor.getInt(0) else -1 }
 
-        return value("schema_version") == "2" &&
-            value("edition_id") == spec.edition.storageValue &&
-            value("entry_count")?.toIntOrNull() == spec.expectedEntries &&
-            value("arabic_included") == "false" &&
+        val baseMatches = metadataValue(database, "schema_version") == "2" &&
+            metadataValue(database, "edition_id") == spec.edition.storageValue &&
+            metadataValue(database, "entry_count")?.toIntOrNull() == spec.expectedEntries &&
+            metadataValue(database, "arabic_included") == "false" &&
+            metadataValue(database, "presentation_revision") == spec.presentationRevision &&
             rowCount == spec.expectedEntries
+        if (!baseMatches) return false
+
+        if (spec.edition == PrivateTafsirEdition.QUSHAYRI) {
+            if (metadataValue(database, "semantic_run_table") != "tafsir_run") return false
+            if (metadataValue(database, "verified_note_call_count") != "928") return false
+            if (metadataValue(database, "poetry_index_entry_count") != "121") return false
+            if (metadataValue(database, "poetry_index_occurrence_count") != "126") return false
+            if (metadataValue(database, "poetry_unique_line_count") != "542") return false
+            val runTableExists = database.rawQuery(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='tafsir_run'",
+                null
+            ).use { cursor -> cursor.moveToFirst() && cursor.getInt(0) == 1 }
+            if (!runTableExists) return false
+        }
+        return true
     }
 
     private fun databaseFileMatches(file: File, spec: CorpusSpec): Boolean = runCatching {
