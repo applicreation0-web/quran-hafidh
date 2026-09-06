@@ -309,7 +309,7 @@ class DashboardActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "ⓘ Le cumul est partagé entre les applications cibles. Les détails sont dans Réglages › Protection.",
+                            "ⓘ Le cumul est partagé entre les applications cibles. Le temps hors cible et les appels ne comptent pas. Détails : Réglages › Protection.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
