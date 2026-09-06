@@ -896,16 +896,28 @@ fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
         primary = Color(0xFF3F4943),
         onPrimary = Color(0xFFFFFBF3),
+        primaryContainer = Color(0xFFE1E5E1),
+        onPrimaryContainer = Color(0xFF303732),
         secondary = Color(0xFF6F665B),
+        onSecondary = Color(0xFFFFFBF3),
+        secondaryContainer = Color(0xFFE8E0D5),
+        onSecondaryContainer = Color(0xFF3A352F),
         tertiary = Color(0xFF5C5148),
+        onTertiary = Color(0xFFFFFBF3),
+        tertiaryContainer = Color(0xFFE9E0D8),
+        onTertiaryContainer = Color(0xFF3E352F),
         background = Color(0xFFF5F0E6),
+        onBackground = Color(0xFF292622),
         surface = Color(0xFFF8F3EA),
         surfaceVariant = Color(0xFFE8E0D5),
         onSurface = Color(0xFF292622),
         onSurfaceVariant = Color(0xFF625D56),
         outline = Color(0xFF9B9185),
+        outlineVariant = Color(0xFFCFC5B8),
         error = Color(0xFF7A4D46),
-        onError = Color(0xFFFFFBF3)
+        onError = Color(0xFFFFFBF3),
+        errorContainer = Color(0xFFF0E2DF),
+        onErrorContainer = Color(0xFF5B3934)
     )
     MaterialTheme(
         colorScheme = colors,

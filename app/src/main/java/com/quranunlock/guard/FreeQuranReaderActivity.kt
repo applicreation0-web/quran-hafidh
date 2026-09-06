@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -138,7 +141,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                     ReaderVisualMode.DARK -> Color(0xFF171A18)
                 }
                 val shellPrimary = if (darkShell) Color(0xFFE8E0D2) else MaterialTheme.colorScheme.primary
-                val shellSecondary = if (darkShell) Color(0xFFD2AE6C) else MaterialTheme.colorScheme.secondary
+                val shellSecondary = if (darkShell) Color(0xFFBDB5A9) else MaterialTheme.colorScheme.secondary
                 val shellMuted = if (darkShell) Color(0xFFB9B8B2) else MaterialTheme.colorScheme.onSurfaceVariant
                 val chromeHidden = pureReading && !referenceMode && !quickNavOpen && !comfortOpen
 
@@ -245,6 +248,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .statusBarsPadding()
+                                .navigationBarsPadding()
                                 .padding(vertical = if (chromeHidden) 0.dp else 2.dp)
                         ) {
                             if (!chromeHidden) {
@@ -274,10 +279,23 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                                     comfortOpen = !comfortOpen
                                                     if (comfortOpen) quickNavOpen = false
                                                 }
-                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                                .padding(horizontal = 7.dp, vertical = 5.dp),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = shellSecondary,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            "Masquer",
+                                            modifier = Modifier
+                                                .clickable {
+                                                    pureReading = true
+                                                    comfortOpen = false
+                                                    quickNavOpen = false
+                                                }
+                                                .padding(horizontal = 7.dp, vertical = 5.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = shellMuted,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
@@ -314,7 +332,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp, vertical = 4.dp),
-                                        shape = MaterialTheme.shapes.medium,
+                                        shape = MaterialTheme.shapes.small,
+                                        color = shellColor,
                                         tonalElevation = 0.dp
                                     ) {
                                         Column(
@@ -391,13 +410,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                                         )
                                                     }
                                                 ) { Text("Auto") }
-                                                SafeguardButton(
+                                                SafeguardOutlinedButton(
                                                     modifier = Modifier.weight(1f),
-                                                    onClick = {
-                                                        pureReading = true
-                                                        comfortOpen = false
-                                                    }
-                                                ) { Text("Masquer les commandes") }
+                                                    onClick = { comfortOpen = false }
+                                                ) { Text("Fermer") }
                                             }
                                         }
                                     }
@@ -408,7 +424,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp, vertical = 4.dp),
-                                        shape = MaterialTheme.shapes.medium,
+                                        shape = MaterialTheme.shapes.small,
+                                        color = shellColor,
                                         tonalElevation = 0.dp
                                     ) {
                                         Column(
@@ -577,38 +594,23 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         SafeguardOutlinedButton(
                                             modifier = Modifier.weight(1f),
                                             enabled = selectedTafsirVerse == null && page > FIRST_PAGE,
                                             onClick = { showPage(page - 1) }
-                                        ) {
-                                            Text("Précédente")
-                                        }
-                                        SafeguardButton(
+                                        ) { Text("Préc.") }
+                                        SafeguardOutlinedButton(
+                                            modifier = Modifier.weight(1f),
+                                            enabled = selectedTafsirVerse == null,
+                                            onClick = { toggleBookmark() }
+                                        ) { Text(if (page in bookmarkPages) "Signet ✓" else "Signet") }
+                                        SafeguardOutlinedButton(
                                             modifier = Modifier.weight(1f),
                                             enabled = selectedTafsirVerse == null && page < LAST_PAGE,
                                             onClick = { showPage(page + 1) }
-                                        ) {
-                                            Text("Suivante")
-                                        }
-                                    }
-                                    Spacer(Modifier.height(2.dp))
-                                    SafeguardOutlinedButton(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 10.dp),
-                                        enabled = selectedTafsirVerse == null,
-                                        onClick = { toggleBookmark() }
-                                    ) {
-                                        Text(
-                                            if (page in bookmarkPages) {
-                                                "Retirer le signet • p. $page"
-                                            } else {
-                                                "Ajouter un signet • p. $page"
-                                            }
-                                        )
+                                        ) { Text("Suiv.") }
                                     }
                                     if (bookmarkPages.isNotEmpty()) {
                                         Spacer(Modifier.height(2.dp))
@@ -641,31 +643,28 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             }
                                         }
                                     }
-                                    Spacer(Modifier.height(2.dp))
-                                    SafeguardOutlinedButton(
+                                    TextButton(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp),
                                         enabled = selectedTafsirVerse == null,
                                         onClick = { finish() }
-                                    ) {
-                                        Text("Fermer la lecture")
-                                    }
+                                    ) { Text("Fermer") }
                                 }
                             }
                         }
 
                         if (chromeHidden && !referenceMode && selectedTafsirVerse == null) {
                             Text(
-                                "Aa / ☼",
+                                "Afficher",
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .padding(8.dp)
-                                    .clickable { comfortOpen = true }
-                                    .padding(horizontal = 9.dp, vertical = 7.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFFD2AE6C),
-                                fontWeight = FontWeight.Bold
+                                    .padding(6.dp)
+                                    .clickable { pureReading = false }
+                                    .padding(horizontal = 8.dp, vertical = 5.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = shellMuted,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
 

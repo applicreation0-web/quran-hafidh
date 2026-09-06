@@ -200,13 +200,9 @@ class DashboardActivity : ComponentActivity() {
                         },
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.elevatedCardColors(
-                        containerColor = if (serviceEnabled) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        }
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
@@ -216,7 +212,7 @@ class DashboardActivity : ComponentActivity() {
                             if (serviceEnabled) "Protection active ✓" else "Protection à activer",
                             style = MaterialTheme.typography.headlineSmall,
                             color = if (serviceEnabled) {
-                                MaterialTheme.colorScheme.onPrimary
+                                MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.error
                             },
@@ -229,11 +225,7 @@ class DashboardActivity : ComponentActivity() {
                                 "Touchez pour terminer l’activation guidée."
                             },
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (serviceEnabled) {
-                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.84f)
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

@@ -58,9 +58,9 @@ private const val FONT_SIZE_KEY = "commentary_font_size_sp"
 private const val MIN_FONT_SIZE = 16f
 private const val MAX_FONT_SIZE = 26f
 private const val DEFAULT_FONT_SIZE = 18f
-private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.36f
-private const val NOTE_LINE_HEIGHT_RATIO = 1.34f
-private const val POETRY_LINE_HEIGHT_RATIO = 1.46f
+private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.50f
+private const val NOTE_LINE_HEIGHT_RATIO = 1.45f
+private const val POETRY_LINE_HEIGHT_RATIO = 1.55f
 private const val NOTE_LINK_TAG = "tafsir_note"
 private const val QURAN_LINK_TAG = "tafsir_quran"
 
@@ -163,60 +163,30 @@ internal fun TafsirPanel(
         shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                    .padding(horizontal = 8.dp, vertical = 1.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Sourate ${verse.surah}, verset ${verse.ayah}",
-                        modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Row {
-                        TextButton(
-                            modifier = Modifier.semantics {
-                                contentDescription = "Réduire la taille du commentaire"
-                            },
-                            enabled = fontSize > MIN_FONT_SIZE,
-                            onClick = { changeFont(-2f) }
-                        ) {
-                            Text("A−")
-                        }
-                        TextButton(
-                            modifier = Modifier.semantics {
-                                contentDescription = "Agrandir la taille du commentaire"
-                            },
-                            enabled = fontSize < MAX_FONT_SIZE,
-                            onClick = { changeFont(2f) }
-                        ) {
-                            Text("A+")
-                        }
-                    }
-                }
-
-                Box {
+                Box(modifier = Modifier.weight(1f)) {
                     TextButton(
                         modifier = Modifier.semantics {
-                            contentDescription = "Choisir le Tafsîr"
+                            contentDescription =
+                                "Tafsîr ${selectedEdition.displayName}, sourate ${verse.surah}, verset ${verse.ayah}"
                             stateDescription = selectedEdition.displayName
+                            heading()
                         },
                         enabled = availableEditions.size > 1,
                         onClick = { menuExpanded = true }
                     ) {
                         Text(
                             if (availableEditions.size > 1) {
-                                "${selectedEdition.displayName} ▾"
+                                "${selectedEdition.displayName} ▾ · ${verse.surah}:${verse.ayah}"
                             } else {
-                                selectedEdition.displayName
+                                "${selectedEdition.displayName} · ${verse.surah}:${verse.ayah}"
                             },
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -234,6 +204,22 @@ internal fun TafsirPanel(
                             )
                         }
                     }
+                }
+                Row {
+                    TextButton(
+                        modifier = Modifier.semantics {
+                            contentDescription = "Réduire la taille du commentaire"
+                        },
+                        enabled = fontSize > MIN_FONT_SIZE,
+                        onClick = { changeFont(-2f) }
+                    ) { Text("A−") }
+                    TextButton(
+                        modifier = Modifier.semantics {
+                            contentDescription = "Agrandir la taille du commentaire"
+                        },
+                        enabled = fontSize < MAX_FONT_SIZE,
+                        onClick = { changeFont(2f) }
+                    ) { Text("A+") }
                 }
             }
 
@@ -351,7 +337,7 @@ private fun InteractiveTafsirText(
             val isPoetry = block.kind == TafsirBlockKind.POETRY
             if (isPoetry) {
                 Text(
-                    text = "Poésie · disposition de l’édition source",
+                    text = "Poésie · lignes conservées selon l’édition source",
                     modifier = Modifier.padding(start = 12.dp, top = 3.dp, bottom = 1.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
