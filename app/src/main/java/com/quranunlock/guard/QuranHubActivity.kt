@@ -4,18 +4,20 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -30,25 +32,29 @@ class QuranHubActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 18.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 18.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         "Qur’an",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Lire, choisir votre parcours et retrouver votre progression.",
+                        "Lecture, Tafsîr et parcours.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    QuranHubCard(
+                    HorizontalDivider(
+                        modifier = Modifier.padding(top = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    QuranHubRow(
                         title = if (TafsirEdition.isEnabled) "Lecture libre & Tafsîr" else "Lecture du Qur’an",
-                        subtitle = "Muṣḥaf de Médine • navigation rapide • marque-pages",
-                        primary = true,
+                        subtitle = "Muṣḥaf de Médine • signets • navigation",
                         onClick = {
                             startActivity(
                                 Intent(
@@ -62,22 +68,24 @@ class QuranHubActivity : ComponentActivity() {
                             )
                         }
                     )
-                    QuranHubCard(
+                    QuranHubRow(
                         title = "Parcours Juz / Hizb",
-                        subtitle = "Choisir les zones utilisées pour le parcours quotidien Safeguard",
+                        subtitle = "Choisir le parcours quotidien Safeguard",
                         onClick = {
                             startActivity(Intent(this@QuranHubActivity, ReadingSelectionActivity::class.java))
                         }
                     )
-                    QuranHubCard(
+                    QuranHubRow(
                         title = "Historique de lecture",
-                        subtitle = "Pages validées, temps de lecture et progression enregistrée sur ce téléphone",
+                        subtitle = "Pages, temps de lecture et progression locale",
                         onClick = {
                             startActivity(Intent(this@QuranHubActivity, ReadingHistoryActivity::class.java))
                         }
                     )
+
                     Text(
-                        "La lecture libre reste séparée du parcours quotidien et ne crédite jamais un déblocage.",
+                        "La lecture libre reste séparée du parcours quotidien et ne crédite aucun déblocage.",
+                        modifier = Modifier.padding(top = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -87,41 +95,43 @@ class QuranHubActivity : ComponentActivity() {
     }
 }
 
-@androidx.compose.runtime.Composable
-private fun QuranHubCard(
+@Composable
+private fun QuranHubRow(
     title: String,
     subtitle: String,
-    primary: Boolean = false,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = if (primary) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 17.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 2.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                "›",
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
