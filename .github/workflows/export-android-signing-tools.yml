@@ -32,11 +32,12 @@ jobs:
           mkdir -p "${out}/lib" "${out}/lib64"
           cp "${src}/apksigner" "${out}/apksigner"
           cp "${src}/zipalign" "${out}/zipalign"
+          cp "${src}/aapt" "${out}/aapt"
           cp "${src}/lib/apksigner.jar" "${out}/lib/apksigner.jar"
           cp "${src}/lib64/libc++.so" "${out}/lib64/libc++.so"
           cp "${src}/source.properties" "${out}/source.properties"
-          chmod +x "${out}/apksigner" "${out}/zipalign"
-          (cd "${out}" && sha256sum apksigner zipalign lib/apksigner.jar lib64/libc++.so > SHA256.txt)
+          chmod +x "${out}/apksigner" "${out}/zipalign" "${out}/aapt"
+          (cd "${out}" && sha256sum apksigner zipalign aapt lib/apksigner.jar lib64/libc++.so > SHA256.txt)
 
       - name: Upload Android signing utilities
         uses: actions/upload-artifact@v4
