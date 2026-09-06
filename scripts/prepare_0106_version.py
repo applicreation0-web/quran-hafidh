@@ -38,9 +38,11 @@ updated = updated.replace(old_audit, new_audit, 1)
 
 if updated.count('versionCode = 25') != 2:
     raise SystemExit("0.10.6 versionCode 25 must appear exactly in defaultConfig and release audit")
-if updated.count('versionName = "0.10.6"') != 2:
-    raise SystemExit("0.10.6 versionName must appear exactly in defaultConfig and release audit")
-if 'versionCode = 24' in updated and 'versionName = "0.10.5"' in updated:
+if updated.count('versionName = "0.10.6"') != 1:
+    raise SystemExit("0.10.6 defaultConfig versionName must appear exactly once")
+if updated.count('versionName = \\"0.10.6\\"') != 1:
+    raise SystemExit("0.10.6 escaped release-audit versionName must appear exactly once")
+if 'versionCode = 24' in updated or 'versionName = \\"0.10.5\\"' in updated:
     raise SystemExit("Obsolete prepared 0.10.5 release tuple survived")
 
 path.write_text(updated, encoding="utf-8")
