@@ -21,7 +21,7 @@ PREPARE = ROOT / "scripts" / "prepare_multitafsir_assets.py"
 INLINE_LINE = "INLINE_NUM=re.compile(r'\\b(\\d{1,3})\\.?\\s+(?=[A-Za-z\\u2018\\u201c])')"
 DISPLAY_LINE = (
     "DISPLAY_NUM=re.compile(r'\\b(\\d{1,3})\\.?\\s+"
-    "(?=(?:[^\\W\\d_]|[\"\\u2018\\u201c]))')"
+    "(?=(?:\\u2026\\s*)?(?:[^\\W\\d_]|[\"\\u2018\\u201c]))')"
 )
 LOOP_OLD = "for match in INLINE_NUM.finditer(text):"
 LOOP_NEW = "for match in DISPLAY_NUM.finditer(text):"
