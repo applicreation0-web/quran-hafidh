@@ -453,7 +453,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                                     message = "Navigation rapide • page $target."
                                                 },
                                                 valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat(),
-                                                steps = LAST_PAGE - FIRST_PAGE - 1,
                                                 modifier = Modifier.fillMaxWidth()
                                             )
                                             Row(
@@ -592,6 +591,50 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         Text("← Retour au commentaire")
                                     }
                                 } else {
+                                    if (selectedTafsirVerse == null) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 10.dp),
+                                            verticalArrangement = Arrangement.spacedBy(0.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    "Navigation • page $quickNavPage / $LAST_PAGE",
+                                                    modifier = Modifier.weight(1f),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = shellMuted,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                                Text(
+                                                    "1 — $LAST_PAGE",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = shellMuted
+                                                )
+                                            }
+                                            Slider(
+                                                value = quickNavPage.toFloat(),
+                                                onValueChange = { value ->
+                                                    val candidate = value.roundToInt()
+                                                        .coerceIn(FIRST_PAGE, LAST_PAGE)
+                                                    quickNavPage = candidate
+                                                    quickNavInput = candidate.toString()
+                                                },
+                                                onValueChangeFinished = {
+                                                    val target = quickNavPage
+                                                    showPage(target)
+                                                    message = "Navigation rapide • page $target."
+                                                },
+                                                valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat(),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(28.dp)
+                                            )
+                                        }
+                                    }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
