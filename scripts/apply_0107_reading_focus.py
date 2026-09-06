@@ -22,6 +22,7 @@ def replace_once(rel: str, old: str, new: str) -> None:
 panel = "app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt"
 multi = "app/src/plus/java/com/quranunlock/guard/MultiTafsirPanel.kt"
 edition = "app/src/plus/java/com/quranunlock/guard/TafsirEdition.kt"
+light_edition = "app/src/light/java/com/quranunlock/guard/TafsirEdition.kt"
 reader = "app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt"
 
 # Narrow mobile/e-reader layouts must not stretch English words to fill the line.
@@ -96,14 +97,17 @@ replace_once(
         onExpandedChange = onExpandedChange,
         onPanelTopInWindow = onPanelTopInWindow""",
 )
+
+# Keep the shared reader API source-set compatible. Defaults preserve existing
+# Safeguard/Mushaf call sites, while FreeQuranReader can pass the expansion state.
 replace_once(
     edition,
     """        maxPanelHeight: Dp,
         onPanelTopInWindow: (Int) -> Unit,
         onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null""",
     """        maxPanelHeight: Dp,
-        expanded: Boolean,
-        onExpandedChange: (Boolean) -> Unit,
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
         onPanelTopInWindow: (Int) -> Unit,
         onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null""",
 )
@@ -117,6 +121,17 @@ replace_once(
             expanded = expanded,
             onExpandedChange = onExpandedChange,
             onPanelTopInWindow = onPanelTopInWindow,""",
+)
+replace_once(
+    light_edition,
+    """        maxPanelHeight: Dp,
+        onPanelTopInWindow: (Int) -> Unit,
+        onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null""",
+    """        maxPanelHeight: Dp,
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
+        onPanelTopInWindow: (Int) -> Unit,
+        onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null""",
 )
 
 # Compact by default for consultation; expand to 84% for sustained Tafsir reading.
@@ -197,6 +212,7 @@ def require(condition, message):
 panel = read("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
 reader = read("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
 edition = read("app/src/plus/java/com/quranunlock/guard/TafsirEdition.kt")
+light_edition = read("app/src/light/java/com/quranunlock/guard/TafsirEdition.kt")
 repo = read("app/src/plus/java/com/quranunlock/guard/MultiTafsirRepository.kt")
 contract = read("docs/TAFSIR_READING_CONTRACT_0.10.7.md")
 
@@ -209,6 +225,8 @@ require("run.text.replace(Regex" in panel and "n{2,}" in panel, "false blank-lin
 require("tapStart = (linkStart - 2)" in panel and "tapEnd = (linkEnd + 2)" in panel, "expanded Quran reference tap target missing")
 require("onExpandedChange(!expanded)" in panel, "Tafsir expand/collapse control missing")
 require("0.84f" in reader and "0.42f" in reader, "compact/expanded Tafsir heights missing")
+require("expanded: Boolean = false" in edition and "onExpandedChange: (Boolean) -> Unit = {}" in edition, "Plus shared Panel defaults missing")
+require("expanded: Boolean = false" in light_edition and "onExpandedChange: (Boolean) -> Unit = {}" in light_edition, "Light shared Panel defaults missing")
 require("stroke: none !important" in edition and "#C8CEC8" in edition, "neutral no-outline verse highlight missing")
 for marker in ('JALALAYN("jalalayn", "Jalalayn")', 'QURTUBI("qurtubi", "Qurtubi")', 'QUSHAYRI("qushayri", "Qushayri")'):
     require(marker in repo, "author label changed: " + marker)
