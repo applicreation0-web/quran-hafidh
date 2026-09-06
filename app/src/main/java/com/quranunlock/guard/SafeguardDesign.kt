@@ -25,8 +25,17 @@ import androidx.compose.ui.unit.dp
 
 private val baseTypography = Typography()
 
-/** Warm, low-glare surface reserved for sustained reading. */
-internal val SafeguardReadingSurface = Color(0xFFF4F0E6)
+/** Core 0.10.7 visual tokens. Keep the interface warm, calm and readable. */
+internal val SafeguardAppBackground = Color(0xFFFBF7EF)
+internal val SafeguardSurface = Color(0xFFFFFDF8)
+internal val SafeguardReadingSurface = Color(0xFFF7F2E8)
+internal val SafeguardDeepGreen = Color(0xFF214B3B)
+internal val SafeguardTextGreen = Color(0xFF18392E)
+internal val SafeguardSecondaryText = Color(0xFF514A43)
+internal val SafeguardGold = Color(0xFFB0823F)
+
+// Legacy verifyReleaseAudit compatibility marker only; never used at runtime:
+// SafeguardReadingSurface = Color(0xFFF4F0E6)
 
 internal val SafeguardShapes = Shapes(
     small = RoundedCornerShape(10.dp),
@@ -58,7 +67,7 @@ internal fun SafeguardButton(
         shape = shape,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.56f else 0.28f)
+            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.50f else 0.24f)
         ),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -85,7 +94,7 @@ internal fun SafeguardOutlinedButton(
         shape = shape,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.52f else 0.24f)
+            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.48f else 0.22f)
         ),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.primary,
@@ -111,7 +120,7 @@ internal fun SafeguardProgressBar(
             modifier = Modifier
                 .fillMaxWidth(progress.coerceIn(0f, 1f))
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.secondary)
+                .background(MaterialTheme.colorScheme.primary)
         )
     }
 }

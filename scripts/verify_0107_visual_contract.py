@@ -35,23 +35,55 @@ require("chromeHidden" in reader and "pureReading" in reader,
         "clean reading mode must remain available")
 require("0.84f" in reader and "0.42f" in reader,
         "Tafsir compact/expanded reading states missing")
-require("SafeguardReadingSurface = Color(0xFFF4F0E6)" in design,
-        "cream reading surface changed")
+
+for marker in (
+    "SafeguardAppBackground = Color(0xFFFBF7EF)",
+    "SafeguardSurface = Color(0xFFFFFDF8)",
+    "SafeguardReadingSurface = Color(0xFFF7F2E8)",
+    "SafeguardDeepGreen = Color(0xFF214B3B)",
+    "SafeguardTextGreen = Color(0xFF18392E)",
+    "SafeguardSecondaryText = Color(0xFF514A43)",
+    "SafeguardGold = Color(0xFFB0823F)",
+):
+    require(marker in design, "0.10.7 palette token missing: " + marker)
+
 for old in ("sahelianButtonOrnament", "drawDiamond"):
     require(old not in design, "ornamental button drawing returned: " + old)
-for color in ("primary = Color(0xFF3F4943)", "background = Color(0xFFF5F0E6)",
-              "surface = Color(0xFFF8F3EA)", "outline = Color(0xFF9B9185)"):
-    require(color in theme, "neutral palette marker missing: " + color)
+
+for color in (
+    "primary = SafeguardDeepGreen",
+    "background = SafeguardAppBackground",
+    "surface = SafeguardSurface",
+    "onBackground = SafeguardTextGreen",
+    "onSurfaceVariant = SafeguardSecondaryText",
+    "tertiary = SafeguardGold",
+):
+    require(color in theme, "premium palette marker missing: " + color)
+
 require("ElevatedCard" not in hub and "QuranHubRow" in hub,
         "Qur'an hub must remain a light list rather than elevated-card grid")
-require("TextAlign.Justify" not in panel,
-        "Tafsir prose must not force stretched justification on narrow screens")
+require("if (isPoetry) TextAlign.Start else TextAlign.Justify" in panel,
+        "Tafsir prose must be justified while poetry stays start-aligned")
+require("run.text.replace(Regex(\"\\\\n{2,}\"), \"\\n\")" in panel,
+        "non-poetry double blank lines must stay collapsed")
 require("stroke: none !important" in edition and "#C8CEC8" in edition,
         "neutral no-outline verse selection changed")
+
 for marker in ('JALALAYN("jalalayn", "Jalalayn")',
                'QURTUBI("qurtubi", "Qurtubi")',
                'QUSHAYRI("qushayri", "Qushayri")'):
     require(marker in repo, "author label changed: " + marker)
-for marker in ("curseur horizontal permanent", "niveaux de gris", "Tafsîr reste en anglais"):
+
+for marker in (
+    "curseur horizontal permanent",
+    "niveaux de gris",
+    "Tafsîr reste en anglais",
+    "#214B3B",
+    "#B0823F",
+    "Aucun mode noir",
+    "prose du commentaire est justifiée",
+    "réellement orphelins",
+):
     require(marker in contract, "visual contract marker missing: " + marker)
+
 print("0.10.7 visual publication contract: PASS")
