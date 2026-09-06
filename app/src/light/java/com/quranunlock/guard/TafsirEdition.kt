@@ -42,6 +42,8 @@ object TafsirEdition {
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
         onPanelTopInWindow: (Int) -> Unit,
         onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) = Unit
