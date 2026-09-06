@@ -6,6 +6,11 @@ import sqlite3
 
 import fitz
 
+from qushayri_source_semantics_0106_verified import (
+    EXPECTED_UNIQUE_POETRY_LINES,
+    build_qushayri_source_semantics,
+)
+
 PDF = os.environ.get("QUSHAYRI_PDF", "/mnt/data/tafsir-src/lataif.pdf")
 OUT = os.environ.get("QUSHAYRI_OUT", "/mnt/data/qushayri_en.sqlite")
 EXPECTED_SOURCE_SHA256 = "f5b064cfe8ece67a89aaeea04540a7d79c8ef5a531ce2aff880608621e3e1bd3"
@@ -13,7 +18,12 @@ EXPECTED_RAW_SEGMENTS = 806
 EXPECTED_LOGICAL_ENTRIES = 720
 EXPECTED_TRANSLATION_ONLY_ANCHORS = 86
 EXPECTED_GROUPED_RANGES = 76
+EXPECTED_VERIFIED_NOTE_CALLS = 928
+EXPECTED_POETRY_INDEX_ENTRIES = 121
+EXPECTED_POETRY_OCCURRENCES = 126
 SOFT_HYPHEN_MARKER = "__QSH_SOFT_HYPHEN__"
+SOURCE_PARAGRAPH_GAP = 15.0
+SOURCE_PARAGRAPH_INDENT = 9.0
 
 anchor_re = re.compile(r"^\[(\d+):(\d+)(?:[\u2013\u2014-](\d+))?\]\s*")
 sura_heading_re = re.compile(r"^S(?:ūrat|urāt|ūra)\b", re.I)
@@ -21,26 +31,18 @@ header_re = re.compile(r"^(Subtle Allusions\s+\[|Laṭāʾif al-ishārāt\s+\[|\
 pua_re = re.compile(r"[\ue000-\uf8ff]")
 arabic_re = re.compile(r"[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]")
 
-# The Fons Vitae / Royal Aal al-Bayt PDF embeds compact source marks in an
-# `Honorifics` font. PyMuPDF exposes those marks as private-use code points.
-# The public text layer of the same edition identifies their meanings with the
-# following abbreviations. Preserve those source distinctions exactly; never
-# infer an honorific from a person's name.
 SOURCE_PUA_MAP = {
-    "\uf063": "(swt)",   # divine glorification/exaltation
-    "\uf067": "(ṣ)",     # Prophet Muhammad source mark
-    "\uf068": "(r)",     # source prayer for a male companion/person
-    "\uf069": "(r)",     # source prayer for a female companion/person
-    "\uf06e": "(ʿa)",    # individual prophet/angel source mark
-    "\uf070": "(ʿa)",    # plural prophets source mark in this edition
-    "\uf072": "(r)",     # al-Qushayri source prayer
-    "\uf082": "(ṣʿa)",   # distinct expanded Prophetic source mark
-    "\uf094": "(t)",     # divine exaltation source mark
-    "\uf096": "(s)",     # divine source mark
+    "\uf063": "(swt)",
+    "\uf067": "(ṣ)",
+    "\uf068": "(r)",
+    "\uf069": "(r)",
+    "\uf06e": "(ʿa)",
+    "\uf070": "(ʿa)",
+    "\uf072": "(r)",
+    "\uf082": "(ṣʿa)",
+    "\uf094": "(t)",
+    "\uf096": "(s)",
 }
-# Standalone ornaments / basmala artwork are structural decoration, not Latin
-# commentary text. They are omitted only when the PDF exposes these exact PUA
-# code points; any other unknown PUA fails closed below.
 DECORATIVE_PUA = {"\uf023", "\uf081", "\uf085"}
 
 
@@ -68,8 +70,6 @@ def restore_source_pua(text):
 
 def line_info(line):
     spans = line["spans"]
-    # Do not discard a discretionary hyphen yet.  If it marks a PDF line/block
-    # break, removing it here loses the information needed to rejoin the word.
     text = "".join(s["text"] for s in spans).replace("\u00ad", SOFT_HYPHEN_MARKER)
     fonts = [s["font"] for s in spans if s["text"].strip()]
     sizes = [s["size"] for s in spans if s["text"].strip()]
@@ -78,9 +78,6 @@ def line_info(line):
 
 def resolve_discretionary_hyphens(text):
     marker = re.escape(SOFT_HYPHEN_MARKER)
-    # Join alphabetic fragments even when the PDF block boundary became one or
-    # more whitespace/newline characters.  Remaining markers are removed only
-    # after this source-driven join has been attempted.
     text = re.sub(
         rf"([A-Za-zÀ-ÖØ-öø-ÿ]){marker}\s*([A-Za-zÀ-ÖØ-öø-ÿ])",
         r"\1\2",
@@ -105,34 +102,104 @@ def starts_italic(fonts):
 
 
 def normalize(parts):
-    out = []
-    buf = []
-    for p in parts:
-        if p is None:
-            if buf:
-                out.append(" ".join(buf).strip())
-                buf = []
-            continue
-        t = restore_source_pua(p).replace("\u00a0", " ").strip()
-        if not t:
-            continue
-        buf.append(t)
-    if buf:
-        out.append(" ".join(buf).strip())
-    text = "\n\n".join(x for x in out if x)
+    values = []
+    for part in parts:
+        text = restore_source_pua(part).replace("\u00a0", " ").strip()
+        if text:
+            values.append(text)
+    text = " ".join(values)
     text = resolve_discretionary_hyphens(text)
     text = re.sub(r"([A-Za-z])\-\s+([a-z])", r"\1\2", text)
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"[ \t]+([,.;:!?])", r"\1", text)
-    text = re.sub(r" *\n\n *", "\n\n", text)
     return text.strip()
+
+
+def clean_run_text(text):
+    text = restore_source_pua(text).replace("\u00a0", " ")
+    text = resolve_discretionary_hyphens(text)
+    text = re.sub(r"([A-Za-z])\-\s+([a-z])", r"\1\2", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"[ \t]+([,.;:!?])", r"\1", text)
+    text = re.sub(r" *\n *", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text
+
+
+def is_true_prose_paragraph(previous, current):
+    """Use source geometry; a PDF block change alone is never a paragraph."""
+    if previous is None or previous["poetry"] is not None or current["poetry"] is not None:
+        return False
+    if previous["block"] == current["block"] and previous["page"] == current["page"]:
+        return False
+    indented = current["x0"] - previous["x0"] >= SOURCE_PARAGRAPH_INDENT
+    if previous["page"] != current["page"]:
+        return indented
+    vertical_gap = current["y0"] - previous["y0"]
+    return indented or vertical_gap > SOURCE_PARAGRAPH_GAP
+
+
+def normalize_body(items):
+    if not items:
+        return "", []
+
+    raw_runs = []
+
+    def append_piece(style, value):
+        if not value:
+            return
+        if raw_runs and raw_runs[-1][0] == style:
+            raw_runs[-1] = (style, raw_runs[-1][1] + value)
+        else:
+            raw_runs.append((style, value))
+
+    previous = None
+    for item in items:
+        poetry = item["poetry"]
+        style = "POETRY" if poetry is not None else "REGULAR"
+        if previous is not None:
+            previous_poetry = previous["poetry"]
+            if poetry is not None and previous_poetry is not None and poetry.poem_id == previous_poetry.poem_id:
+                separator = "\n\n" if poetry.stanza_break_before else "\n"
+            elif poetry is not None or previous_poetry is not None:
+                separator = "\n\n"
+            elif is_true_prose_paragraph(previous, item):
+                separator = "\n\n"
+            else:
+                separator = " "
+            if raw_runs:
+                previous_style, previous_text = raw_runs[-1]
+                raw_runs[-1] = (previous_style, previous_text + separator)
+        append_piece(style, item["text"])
+        previous = item
+
+    runs = []
+    for style, raw_text in raw_runs:
+        text = clean_run_text(raw_text)
+        if text:
+            runs.append((style, text))
+    commentary = "".join(text for _, text in runs).strip()
+    if runs:
+        first_style, first_text = runs[0]
+        runs[0] = (first_style, first_text.lstrip("\n"))
+        last_style, last_text = runs[-1]
+        runs[-1] = (last_style, last_text.rstrip("\n"))
+        runs = [(style, text) for style, text in runs if text]
+        commentary = "".join(text for _, text in runs)
+    return commentary.strip(), runs
 
 
 def finish_current(current, segments):
     if not current:
         return None
-    current["commentary"] = normalize(current["body"])
+    commentary, runs = normalize_body(current["body"])
+    current["commentary"] = commentary
+    current["commentary_runs"] = runs
     current["translation"] = normalize(current["translation_parts"])
+    if current["body"]:
+        current["page_end"] = max(item["page"] for item in current["body"])
+    else:
+        current["page_end"] = current["page"]
     del current["body"]
     del current["translation_parts"]
     segments.append(current)
@@ -145,18 +212,6 @@ def anchor_label(row):
 
 
 def group_shared_commentaries(raw_rows):
-    """Collapse consecutive verse translations followed by one shared commentary.
-
-    In the printed source a frequent pattern is:
-      [2:11] English verse translation
-      [2:12] English verse translation
-      one commentary applying to the displayed 2:11–12 block
-
-    Treating every italic anchor as an independent commentary row created an empty
-    2:11 record and attached the shared commentary only to 2:12.  Preserve the
-    source structure instead: one logical range, every English translation retained,
-    and the shared classical commentary stored exactly once.
-    """
     logical = []
     pending = []
     blank_anchor_count = 0
@@ -171,14 +226,12 @@ def group_shared_commentaries(raw_rows):
                     f'{row["surah"]}:{row["start"]}; refusing to infer a non-contiguous commentary scope'
                 )
         pending.append(row)
-
         if not row["commentary"].strip():
             blank_anchor_count += 1
             continue
 
         if len(pending) == 1:
             merged = dict(row)
-            merged["page_end"] = row["page"]
         else:
             first = pending[0]
             last = pending[-1]
@@ -191,8 +244,9 @@ def group_shared_commentaries(raw_rows):
                     f"{anchor_label(part)} {part['translation']}" for part in pending
                 ),
                 "commentary": last["commentary"],
+                "commentary_runs": last["commentary_runs"],
                 "page": first["page"],
-                "page_end": last["page"],
+                "page_end": last.get("page_end", last["page"]),
             }
         logical.append(merged)
         pending = []
@@ -203,7 +257,6 @@ def group_shared_commentaries(raw_rows):
             "Qushayri source ends with translation-only anchor(s) without a following commentary: "
             f'{first["surah"]}:{first["start"]}'
         )
-
     if blank_anchor_count != EXPECTED_TRANSLATION_ONLY_ANCHORS:
         raise RuntimeError(
             f"Qushayri translation-only anchor count changed: {blank_anchor_count} "
@@ -217,6 +270,18 @@ def group_shared_commentaries(raw_rows):
     return logical
 
 
+def strip_verified_calls_without_count(semantics, page, block, line, text):
+    value = text
+    calls = semantics.note_calls_by_line.get((page, block, line), ())
+    for call in sorted(calls, key=lambda item: item.start, reverse=True):
+        if value[call.start:call.end] != str(call.number):
+            raise RuntimeError(
+                f"Qushayri special extraction note call drifted: {page}:{call.number}"
+            )
+        value = value[:call.start] + value[call.end:]
+    return value
+
+
 if not os.path.isfile(PDF):
     raise RuntimeError(f"Missing required Qushayri source PDF: {PDF}")
 source_sha = file_sha256(PDF)
@@ -224,6 +289,16 @@ if source_sha != EXPECTED_SOURCE_SHA256:
     raise RuntimeError(f"Qushayri source SHA-256 mismatch: {source_sha}")
 
 doc = fitz.open(PDF)
+semantics = build_qushayri_source_semantics(doc)
+if semantics.verified_note_relation_count != EXPECTED_VERIFIED_NOTE_CALLS:
+    raise RuntimeError("Qushayri verified note-call inventory changed")
+if semantics.poetry_entry_count != EXPECTED_POETRY_INDEX_ENTRIES:
+    raise RuntimeError("Qushayri Poetry Index inventory changed")
+if semantics.poetry_occurrence_count != EXPECTED_POETRY_OCCURRENCES:
+    raise RuntimeError("Qushayri Poetry Index occurrence inventory changed")
+if semantics.poetry_line_count != EXPECTED_UNIQUE_POETRY_LINES:
+    raise RuntimeError("Qushayri unique poetry-line inventory changed")
+
 segments = []
 current = None
 source_soft_hyphen_count = 0
@@ -231,13 +306,14 @@ for pi in range(37, 506):
     page = doc[pi]
     pd = page.get_text("dict")
     page_lines = []
-    for bi, b in enumerate(pd["blocks"]):
-        if "lines" not in b:
+    for bi, block in enumerate(pd["blocks"]):
+        if "lines" not in block:
             continue
-        for li, line in enumerate(b["lines"]):
+        for li, line in enumerate(block["lines"]):
             text, fonts, sizes = line_info(line)
             source_soft_hyphen_count += text.count(SOFT_HYPHEN_MARKER)
-            _, y0, _, _ = line["bbox"]
+            text = semantics.strip_verified_note_calls(pi + 1, bi, li, text)
+            x0, y0, _, y1 = [float(v) for v in line["bbox"]]
             st = text.strip()
             if not st:
                 continue
@@ -252,14 +328,10 @@ for pi in range(37, 506):
                 continue
             if sizes and max(sizes) <= 9.4:
                 continue
-            page_lines.append((bi, li, st, fonts, sizes, y0))
+            page_lines.append((bi, li, st, fonts, sizes, x0, y0, y1))
 
-    prev_block = None
-    for bi, li, st, fonts, sizes, y0 in page_lines:
+    for bi, li, st, fonts, sizes, x0, y0, y1 in page_lines:
         m = anchor_re.match(st)
-        # Genuine verse translations use the book's italic verse typography.
-        # Bare regular-font references such as "[58:18]" inside commentary
-        # are cross-references and must never open a new Tafsir segment.
         if m and any("Italic" in f for f in fonts):
             current = finish_current(current, segments)
             s = int(m.group(1))
@@ -276,30 +348,37 @@ for pi in range(37, 506):
             }
             if rest:
                 current["translation_parts"].append(rest)
-            prev_block = bi
             continue
         if not current:
             continue
         if not current["body"] and starts_italic(fonts):
             current["translation_parts"].append(st)
         else:
-            if prev_block is not None and bi != prev_block and current["body"]:
-                current["body"].append(None)
-            current["body"].append(st)
-        prev_block = bi
+            current["body"].append(
+                {
+                    "text": st,
+                    "page": pi + 1,
+                    "block": bi,
+                    "line": li,
+                    "x0": x0,
+                    "y0": y0,
+                    "y1": y1,
+                    "poetry": semantics.poetry_line(pi + 1, bi, li),
+                }
+            )
 current = finish_current(current, segments)
+semantics.assert_complete_note_stripping()
 
-# 2:68 is typographically exceptional: its reference sits mid-sentence rather
-# than at the start of an italic verse-translation line. Extract only that exact
-# source passage; do not reconstruct or paraphrase it.
+# 2:68 is typographically exceptional: its reference sits mid-sentence.
 if not any(s["surah"] == 2 and s["start"] <= 68 <= s["end"] for s in segments):
     p68 = doc[118]
     lines = []
-    for b in p68.get_text("dict")["blocks"]:
-        if "lines" not in b:
+    for bi, block in enumerate(p68.get_text("dict")["blocks"]):
+        if "lines" not in block:
             continue
-        for line in b["lines"]:
+        for li, line in enumerate(block["lines"]):
             text, fonts, sizes = line_info(line)
+            text = strip_verified_calls_without_count(semantics, 119, bi, li, text)
             st = text.strip()
             if not st or is_arabic_line(fonts, st):
                 continue
@@ -316,14 +395,17 @@ if not any(s["surah"] == 2 and s["start"] <= 68 <= s["end"] for s in segments):
     m = re.search(r'When He said: “(?P<tr>.+?)” \[2:68\], it meant (?P<com>.+)$', raw)
     if not m:
         raise RuntimeError("Could not extract Qushayri 2:68 source exception")
+    commentary = "It meant " + m.group("com").strip()
     segments.append(
         {
             "surah": 2,
             "start": 68,
             "end": 68,
             "translation": m.group("tr").strip(),
-            "commentary": "It meant " + m.group("com").strip(),
+            "commentary": commentary,
+            "commentary_runs": [("REGULAR", commentary)],
             "page": 119,
+            "page_end": 119,
         }
     )
 
@@ -333,7 +415,6 @@ if len(raw_rows) != EXPECTED_RAW_SEGMENTS:
     raise RuntimeError(
         f"Qushayri raw approved segment count changed: {len(raw_rows)} != {EXPECTED_RAW_SEGMENTS}"
     )
-
 rows = group_shared_commentaries(raw_rows)
 if len(rows) != EXPECTED_LOGICAL_ENTRIES:
     raise RuntimeError(
@@ -346,12 +427,18 @@ for row in rows:
     counts[key] += 1
     row["segment_no"] = counts[key]
 
+poetry_run_count = 0
 for r in rows:
     joined = r["translation"] + " " + r["commentary"]
     if not r["commentary"].strip():
         raise RuntimeError(
             f'Qushayri empty commentary survived grouping: {r["surah"]}:{r["start"]}-{r["end"]}'
         )
+    if "".join(text for _, text in r["commentary_runs"]) != r["commentary"]:
+        raise RuntimeError(
+            f'Qushayri semantic run/text mismatch: {r["surah"]}:{r["start"]}-{r["end"]}'
+        )
+    poetry_run_count += sum(1 for style, _ in r["commentary_runs"] if style == "POETRY")
     if SOFT_HYPHEN_MARKER in joined or "\u00ad" in joined:
         raise RuntimeError(
             f'Qushayri unresolved discretionary hyphen: {r["surah"]}:{r["start"]}-{r["end"]}'
@@ -390,6 +477,15 @@ CREATE TABLE tafsir_entry(
  UNIQUE(surah,verse_start,verse_end,segment_no)
 );
 CREATE INDEX idx_tafsir_lookup ON tafsir_entry(surah,verse_start,verse_end,segment_no);
+CREATE TABLE tafsir_run(
+ entry_id INTEGER NOT NULL,
+ run_no INTEGER NOT NULL,
+ style TEXT NOT NULL CHECK(style IN ('REGULAR','POETRY')),
+ text TEXT NOT NULL,
+ PRIMARY KEY(entry_id, run_no),
+ FOREIGN KEY(entry_id) REFERENCES tafsir_entry(id)
+);
+CREATE INDEX idx_tafsir_run_entry ON tafsir_run(entry_id, run_no);
 """
 )
 meta = {
@@ -411,25 +507,30 @@ meta = {
     "soft_hyphen_policy": "preserve-marker-then-source-driven-join",
     "source_honorific_glyph_policy": "restore-edition-pua-to-source-abbreviations-no-name-inference",
     "entry_count": str(len(rows)),
+    "verified_note_call_count": str(EXPECTED_VERIFIED_NOTE_CALLS),
+    "note_call_display_policy": "remove-only-source-verified-unexposed-footnote-calls",
+    "poetry_index_entry_count": str(EXPECTED_POETRY_INDEX_ENTRIES),
+    "poetry_index_occurrence_count": str(EXPECTED_POETRY_OCCURRENCES),
+    "poetry_unique_line_count": str(EXPECTED_UNIQUE_POETRY_LINES),
+    "poetry_semantics": "source-poetry-index-v1",
+    "paragraph_policy": "source-geometry-no-pdf-block-breaks",
+    "semantic_run_table": "tafsir_run",
 }
 con.executemany("INSERT INTO source_metadata(key,value) VALUES (?,?)", meta.items())
-con.executemany(
-    "INSERT INTO tafsir_entry(surah,verse_start,verse_end,segment_no,verse_translation,commentary,source_page,source_page_end) "
-    "VALUES (?,?,?,?,?,?,?,?)",
-    [
+for r in rows:
+    cursor = con.execute(
+        "INSERT INTO tafsir_entry(surah,verse_start,verse_end,segment_no,verse_translation,commentary,source_page,source_page_end) "
+        "VALUES (?,?,?,?,?,?,?,?)",
         (
-            r["surah"],
-            r["start"],
-            r["end"],
-            r["segment_no"],
-            r["translation"],
-            r["commentary"],
-            r["page"],
-            r.get("page_end", r["page"]),
-        )
-        for r in rows
-    ],
-)
+            r["surah"], r["start"], r["end"], r["segment_no"],
+            r["translation"], r["commentary"], r["page"], r.get("page_end", r["page"]),
+        ),
+    )
+    entry_id = cursor.lastrowid
+    con.executemany(
+        "INSERT INTO tafsir_run(entry_id,run_no,style,text) VALUES (?,?,?,?)",
+        [(entry_id, index, style, text) for index, (style, text) in enumerate(r["commentary_runs"])],
+    )
 con.commit()
 con.execute("VACUUM")
 con.close()
@@ -444,6 +545,11 @@ print("logical entries", len(rows))
 print("translation-only anchors merged", EXPECTED_TRANSLATION_ONLY_ANCHORS)
 print("grouped source ranges", EXPECTED_GROUPED_RANGES)
 print("source discretionary hyphens observed", source_soft_hyphen_count)
+print("verified source note calls removed", semantics.stripped_note_calls)
+print("Poetry Index entries", semantics.poetry_entry_count)
+print("Poetry Index occurrences", semantics.poetry_occurrence_count)
+print("unique poetry source lines", semantics.poetry_line_count)
+print("semantic poetry runs", poetry_run_count)
 for s, n in expected.items():
     missing = [a for a in range(1, n + 1) if a not in cov[s]]
     if missing:
@@ -452,14 +558,15 @@ for s, n in expected.items():
 print("repeated exact logical ranges", sum(1 for v in counts.values() if v > 1), "max segments", max(counts.values()))
 print("db bytes", os.path.getsize(OUT), "sha256", hashlib.sha256(open(OUT, "rb").read()).hexdigest())
 con = sqlite3.connect(OUT)
-for s, a in [(2, 11), (2, 36), (2, 68), (3, 55), (4, 167), (4, 176)]:
+for s, a in [(2, 10), (2, 11), (2, 36), (2, 68), (3, 55), (4, 167), (4, 176)]:
     rs = con.execute(
-        "SELECT verse_start,verse_end,segment_no,substr(verse_translation,1,240),"
-        "substr(commentary,1,260),source_page,source_page_end "
+        "SELECT id,verse_start,verse_end,segment_no,substr(verse_translation,1,240),"
+        "substr(commentary,1,420),source_page,source_page_end "
         "FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=? ORDER BY id",
         (s, a, a),
     ).fetchall()
     print("\n", s, a, "rows", len(rs))
     for x in rs[:3]:
         print(x)
+        print("runs", con.execute("SELECT run_no,style,substr(text,1,260) FROM tafsir_run WHERE entry_id=? ORDER BY run_no", (x[0],)).fetchall())
 con.close()
