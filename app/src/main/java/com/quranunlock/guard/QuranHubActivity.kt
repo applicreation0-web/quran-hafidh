@@ -106,7 +106,7 @@ private fun QuranHubRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                .padding(horizontal = 2.dp, vertical = 14.dp),
+                .padding(horizontal = 2.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
