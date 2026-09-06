@@ -33,9 +33,6 @@ EXPECTED_PAYLOAD_MARK_COUNTS = {
 }
 EXPECTED_PAYLOAD_MARK_TOTAL = 2898
 
-# These are the counts produced by the legacy overlapping substring algorithm.
-# They are used only to let all unrelated legacy gates execute after the strict
-# non-overlapping provenance audit above has passed.
 LEGACY_OVERLAPPING_COUNTS = {
     "ﷺ": 2873,
     "رضي الله عنه": 8,
@@ -125,16 +122,18 @@ def main() -> None:
     if not assets.is_dir():
         raise SystemExit(f"Assets directory not found: {assets}")
 
-    # Run the source/payload distinction before the inherited cleanup audit.
+    # 0.10.6 only changes the transport split of the larger corrected Qushayri
+    # SQLite payload. The inherited 0.10.5 content/coverage gates remain intact.
+    legacy.V2["qushayri"]["parts"] = [
+        "qushayri_en.sqlite.gz.b64.part00",
+        "qushayri_en.sqlite.gz.b64.part01",
+    ]
+
     strict_qurtubi_source_payload_audit(assets)
 
     legacy.audit_jalalayn(assets)
     qushayri_digest = legacy.audit_v2(assets, "qushayri", legacy.V2["qushayri"])
 
-    # The strict audit above is authoritative for Qurtubi mark counting. Preserve
-    # all other inherited Qurtubi gates (coverage, metadata, Arabic allow-list,
-    # scan debris, 4:23 exclusion, source-key inventory) without allowing the
-    # known legacy substring-count bug to abort them first.
     legacy.QURTUBI_EXPECTED_MARK_COUNTS = LEGACY_OVERLAPPING_COUNTS
     legacy.QURTUBI_EXPECTED_SOURCE_MARK_TOTAL = LEGACY_OVERLAPPING_TOTAL
     qurtubi_digest = legacy.audit_v2(assets, "qurtubi", legacy.V2["qurtubi"])
