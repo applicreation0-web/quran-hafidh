@@ -155,6 +155,11 @@ jobs:
         with:
           gradle-version: "9.5.0"
 
+      - name: Install canonical Medina Mushaf pages
+        run: |
+          chmod +x scripts/fetch_mushaf_pages.sh
+          scripts/fetch_mushaf_pages.sh
+
       - name: Compile and unit-test Light and Plus
         run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
 
