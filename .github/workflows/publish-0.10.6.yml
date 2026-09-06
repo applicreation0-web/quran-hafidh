@@ -90,6 +90,12 @@ jobs:
           print('Qushayri source semantics PASS')
           PY
 
+      - name: Verify source-authoritative Qushayri honorific inventory
+        run: |
+          python3 scripts/research_qushayri_honorific_glyphs_0106.py \
+            "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
+            --json "${RUNNER_TEMP}/qushayri-honorific-glyphs.json"
+
       - name: Rebuild Qushayri and Qurtubi from pinned sources
         shell: bash
         run: |
@@ -104,7 +110,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_tafsir_honorifics.py app/src/plus/assets/tafsir
           python3 scripts/audit_0106_tafsir_presentation.py app/src/plus/assets/tafsir
           python3 scripts/audit_0106_qurtubi_unicode_labels.py app/src/plus/assets/tafsir
           python3 scripts/verify_0105_tafsir_typography_contract.py
@@ -236,14 +242,16 @@ jobs:
           ### Tafsīr Plus — corrections 0.10.6
           - Qurtubī : les numéros éditoriaux placés devant les traductions de versets ne sont plus affichés ; l'indexation interne et les vraies références du commentaire restent intactes ;
           - Qurtubī : 432 entrées des volumes anglais 1–4 conservées, couverture inchangée jusqu'à 4:22 ;
+          - Qurtubī : restauration des honorifiques de la source contrôlée sur l'inventaire exact des glyphes intégrés ;
           - Qushayrī : les références coraniques utiles telles que [2:11] et [2:12] restent visibles et navigables ;
           - Qushayrī : 928/928 appels de notes de l'édition source, non exposés dans l'application, ont été identifiés de manière source-vérifiée puis retirés de l'affichage ;
           - Qushayrī : Poetry Index officiel utilisé comme autorité — 121 entrées, 126 occurrences, 542 lignes poétiques uniques ;
           - Qushayrī : vrais retours de vers et séparations de strophes conservés ; les faux grands blancs issus des frontières techniques de blocs PDF sont supprimés ;
+          - Qushayrī : les glyphes honorifiques sont restaurés selon la légende de l'édition (plus de marqueurs techniques `(s)`, `(ṣ)`, `(swt)`, etc.) ;
+          - Jalalayn : corpus approuvé conservé byte-identique et contrôlé sans glyphes privés/corrompus ;
           - le rendu POETRY existant reste appliqué aux passages explicitement établis par la source.
 
           ### Non-régression
-          - Jalalayn inchangé ;
           - Light reste sans Tafsīr privé ;
           - 264 Ḥikam et leurs contrôles restent inchangés ;
           - 604 pages du Muṣḥaf de Médine contrôlées ;
@@ -252,7 +260,7 @@ jobs:
 
           ### Vérifications release
           - reconstruction depuis les sources PDF épinglées ;
-          - audits contradictoires 0.10.5 + 0.10.6 ;
+          - audits contradictoires 0.10.5 + 0.10.6 et audit honorifiques sur les trois Tafsīr ;
           - audit général Gradle ;
           - tests Light + Plus ;
           - contrôle des payloads APK Light/Plus ;
