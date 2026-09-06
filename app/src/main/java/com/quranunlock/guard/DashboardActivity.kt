@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -69,10 +68,8 @@ class DashboardActivity : ComponentActivity() {
         val thought = DailyReminderManager.today(this@DashboardActivity)
         val usageProgress = SafeguardCyclePrefs.progress(this@DashboardActivity)
         val targetUsageMs = GuardPrefs.completedTargetUsageMs(this@DashboardActivity)
-        val intervalPresenceMs =
-            GuardPrefs.currentIntervalTargetPresenceMs(this@DashboardActivity)
-        val cyclePresenceMs =
-            GuardPrefs.currentCycleTargetPresenceMs(this@DashboardActivity)
+        val intervalPresenceMs = GuardPrefs.currentIntervalTargetPresenceMs(this@DashboardActivity)
+        val cyclePresenceMs = GuardPrefs.currentCycleTargetPresenceMs(this@DashboardActivity)
         val jokers = GuardPrefs.remainingJokers(this@DashboardActivity)
 
         Scaffold(
@@ -102,16 +99,7 @@ class DashboardActivity : ComponentActivity() {
                     NavigationBarItem(
                         selected = false,
                         onClick = {
-                            startActivity(
-                                Intent(
-                                    this@DashboardActivity,
-                                    if (TafsirEdition.isEnabled) {
-                                        FreeQuranReaderActivity::class.java
-                                    } else {
-                                        ReadingSelectionActivity::class.java
-                                    }
-                                )
-                            )
+                            startActivity(Intent(this@DashboardActivity, QuranHubActivity::class.java))
                         },
                         icon = {
                             Icon(
@@ -119,9 +107,7 @@ class DashboardActivity : ComponentActivity() {
                                 contentDescription = null
                             )
                         },
-                        label = {
-                            Text(if (TafsirEdition.isEnabled) "Qur’an" else "Lecture")
-                        },
+                        label = { Text("Qur’an") },
                         colors = navColors
                     )
                     NavigationBarItem(
@@ -146,12 +132,7 @@ class DashboardActivity : ComponentActivity() {
                     NavigationBarItem(
                         selected = false,
                         onClick = {
-                            startActivity(
-                                Intent(
-                                    this@DashboardActivity,
-                                    MainActivity::class.java
-                                )
-                            )
+                            startActivity(Intent(this@DashboardActivity, SettingsHubActivity::class.java))
                         },
                         icon = {
                             Icon(
@@ -204,24 +185,19 @@ class DashboardActivity : ComponentActivity() {
                         .fillMaxWidth()
                         .border(
                             width = 1.dp,
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.38f),
-                            shape = RoundedCornerShape(24.dp)
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.34f),
+                            shape = RoundedCornerShape(22.dp)
                         )
                         .clickable {
-                            startActivity(
-                                Intent(
-                                    this@DashboardActivity,
-                                    if (serviceEnabled ||
-                                        !GuardPrefs.hasAccessibilityConsent(this@DashboardActivity)
-                                    ) {
-                                        MainActivity::class.java
-                                    } else {
-                                        ProtectionSetupActivity::class.java
-                                    }
-                                )
-                            )
+                            val destination = when {
+                                serviceEnabled -> SettingsHubActivity::class.java
+                                !GuardPrefs.hasAccessibilityConsent(this@DashboardActivity) ->
+                                    MainActivity::class.java
+                                else -> ProtectionSetupActivity::class.java
+                            }
+                            startActivity(Intent(this@DashboardActivity, destination))
                         },
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = if (serviceEnabled) {
                             MaterialTheme.colorScheme.primary
@@ -229,15 +205,14 @@ class DashboardActivity : ComponentActivity() {
                             MaterialTheme.colorScheme.surfaceVariant
                         }
                     ),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
-                            if (serviceEnabled) "Protection active ✓"
-                            else "Protection à activer",
+                            if (serviceEnabled) "Protection active ✓" else "Protection à activer",
                             style = MaterialTheme.typography.headlineSmall,
                             color = if (serviceEnabled) {
                                 MaterialTheme.colorScheme.onPrimary
@@ -248,9 +223,9 @@ class DashboardActivity : ComponentActivity() {
                         )
                         Text(
                             if (serviceEnabled) {
-                                "Safeguard est actif. Touchez ici pour les réglages."
+                                "Touchez pour ouvrir les réglages de protection."
                             } else {
-                                "Touchez ici : Safeguard vous accompagne en trois étapes courtes, puis revient automatiquement."
+                                "Touchez pour terminer l’activation guidée."
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (serviceEnabled) {
@@ -296,7 +271,7 @@ class DashboardActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Text(
-                            "TEMPS DANS LES APPLICATIONS CIBLES",
+                            "AUJOURD’HUI",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Bold
@@ -311,8 +286,7 @@ class DashboardActivity : ComponentActivity() {
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            "Prochaine pause • " +
-                                preciseDuration(intervalPresenceMs) + " / 15:00",
+                            "Prochaine pause • ${preciseDuration(intervalPresenceMs)} / 15:00",
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -321,8 +295,7 @@ class DashboardActivity : ComponentActivity() {
                                 UsageCyclePolicy.INTERVAL_MS.toFloat()
                         )
                         Text(
-                            "Palier Hizb • " +
-                                preciseDuration(cyclePresenceMs) + " / 90:00",
+                            "Palier Hizb • ${preciseDuration(cyclePresenceMs)} / 90:00",
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -331,17 +304,12 @@ class DashboardActivity : ComponentActivity() {
                                 UsageCyclePolicy.CUMULATIVE_MS.toFloat()
                         )
                         Text(
-                            "Chrome, YouTube et toutes les autres cibles partagent ce même cumul. Le temps hors cible et les appels ne comptent pas.",
+                            "Total cible : ${compactDuration(targetUsageMs)} • $jokers joker(s) disponible(s)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            "Total cible aujourd’hui : " + compactDuration(targetUsageMs),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            "${GuardPrefs.DAILY_JOKERS - jokers} joker(s) utilisé(s) aujourd’hui • $jokers disponible(s) • suivi sans jugement",
+                            "ⓘ Le cumul est partagé entre les applications cibles. Les détails sont dans Réglages › Protection.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -397,55 +365,6 @@ class DashboardActivity : ComponentActivity() {
                         )
                     }
                 }
-
-                DashboardRow(
-                    leftTitle = "Applications",
-                    leftSubtitle = "Réseaux & navigateurs",
-                    leftAction = {
-                        startActivity(
-                            Intent(this@DashboardActivity, ApplicationsActivity::class.java)
-                        )
-                    },
-                    rightTitle = "Juz / Hizb",
-                    rightSubtitle = "Zones de lecture",
-                    rightAction = {
-                        startActivity(
-                            Intent(this@DashboardActivity, ReadingSelectionActivity::class.java)
-                        )
-                    }
-                )
-                DashboardRow(
-                    leftTitle = "Bibliothèque",
-                    leftSubtitle = "Hadiths • Hikam vérifiées",
-                    leftAction = {
-                        startActivity(
-                            Intent(this@DashboardActivity, SpiritualLibraryActivity::class.java)
-                        )
-                    },
-                    rightTitle = "Adhkâr",
-                    rightSubtitle = "Matin • soir",
-                    rightAction = {
-                        startActivity(
-                            Intent(this@DashboardActivity, AdhkarActivity::class.java)
-                        )
-                    }
-                )
-                DashboardRow(
-                    leftTitle = "Historique",
-                    leftSubtitle = "Lecture & progression",
-                    leftAction = {
-                        startActivity(
-                            Intent(this@DashboardActivity, ReadingHistoryActivity::class.java)
-                        )
-                    },
-                    rightTitle = "Paramètres",
-                    rightSubtitle = "Protection & rappels",
-                    rightAction = {
-                        startActivity(
-                            Intent(this@DashboardActivity, MainActivity::class.java)
-                        )
-                    }
-                )
             }
         }
     }
@@ -477,70 +396,6 @@ private fun DashboardStatCard(
             )
             Text(
                 label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun DashboardRow(
-    leftTitle: String,
-    leftSubtitle: String,
-    leftAction: () -> Unit,
-    rightTitle: String,
-    rightSubtitle: String,
-    rightAction: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        DashboardCard(
-            modifier = Modifier.weight(1f),
-            title = leftTitle,
-            subtitle = leftSubtitle,
-            onClick = leftAction
-        )
-        DashboardCard(
-            modifier = Modifier.weight(1f),
-            title = rightTitle,
-            subtitle = rightSubtitle,
-            onClick = rightAction
-        )
-    }
-}
-
-@Composable
-private fun DashboardCard(
-    modifier: Modifier,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    ElevatedCard(
-        modifier = modifier
-            .heightIn(min = 112.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
