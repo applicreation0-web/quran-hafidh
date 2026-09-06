@@ -14,11 +14,6 @@ NUM_START=re.compile(r'^(\d{1,3})\.?\s+')
 INLINE_NUM=re.compile(r'\b(\d{1,3})\.?\s+(?=[A-Za-z\u2018\u201c])')
 SYMBOL_FONT='KFGQPCArabicSymbols01'
 
-# The embedded KFGQPC symbol font is source content. Its PDF ToUnicode mapping
-# exposes the calligraphic marks as Latin letters. The mapping is frozen per
-# approved volume because the embedded font subsets are not identical across
-# the four PDFs (for example v2 uses `f` for the Prophet mark while v1/v4 use
-# `g`). This is source-glyph restoration, never person-name inference.
 SOURCE_SYMBOL_MAP={
     'v1':{
         'g':'ﷺ', 'f':'ﷺ', 'n':'عليه السلام', 'p':'عليهم السلام',
@@ -86,8 +81,6 @@ def is_junk(t,y):
     if low.startswith('vol. ') and ('sūrat' in low or 'sūrah' in low): return True
     if low.startswith('vol. ') and 'āyah' in low: return True
     if 'ˈ˂' in s or s.startswith('ʤʢ') or s.startswith('ĒŀĠĨ') or 'ĴģĠŏĕ' in s: return True
-    # Entire Arabic source lines remain excluded, but an English line carrying
-    # a restored source honorific must survive.
     if is_arabic(without_restored_honorifics(s)): return True
     if s in {'CONTENTS','TRANSLATOR’S NOTE','TRANSLATOR\'S NOTE'}: return True
     return False
@@ -125,6 +118,35 @@ def normalize_lines(seq):
     text=re.sub(r'[ \t]+',' ',text); text=re.sub(r' *\n\n *','\n\n',text)
     return text.strip()
 
+def strip_display_verse_markers(text, verse_numbers, *, strict=True):
+    """Remove only source verse-number labels already used for row indexing.
+
+    Genuine numeric content and commentary references are untouched. The exact
+    sequential labels supplied by the printed translation are removed once,
+    in order, solely from the displayed English verse translation.
+    """
+    expected=list(verse_numbers)
+    if not expected:
+        return text
+    marker_spans=[]
+    next_index=0
+    for match in INLINE_NUM.finditer(text):
+        if next_index>=len(expected): break
+        if int(match.group(1))==expected[next_index]:
+            marker_spans.append(match.span())
+            next_index+=1
+    if strict and next_index!=len(expected):
+        raise RuntimeError(
+            f'Qurtubi could not locate every indexed verse label in translation: '
+            f'expected={expected} found={next_index} text={text[:180]!r}'
+        )
+    value=text
+    for start,end in reversed(marker_spans):
+        value=value[:start]+value[end:]
+    value=re.sub(r'[ \t]+',' ',value)
+    value=re.sub(r' *\n\n *','\n\n',value)
+    return value.strip()
+
 def parse_volume(tag,path):
     doc=fitz.open(path); ls=lines(doc,tag)
     appendix_start_page={"v1":445,"v2":634,"v3":373,"v4":381}[tag]
@@ -140,12 +162,14 @@ def parse_volume(tag,path):
         prev_num=n; next_idx=starts[si+1] if si+1<len(starts) else len(ls)
         j=idx; trans=[]
         while j<next_idx and is_translation_line(ls[j]): trans.append(ls[j]); j+=1
-        translation=normalize_lines(trans); nums=[int(x) for x in INLINE_NUM.findall(translation)]
+        raw_translation=normalize_lines(trans)
+        nums=[int(x) for x in INLINE_NUM.findall(raw_translation)]
         if not nums or nums[0]!=n: nums=[n]+nums
         clean=[n]
         for x in nums[1:]:
             if x==clean[-1]+1: clean.append(x)
             elif x==clean[-1]: continue
+        translation=strip_display_verse_markers(raw_translation,clean)
         commentary=normalize_lines(ls[j:next_idx])
         proto.append({'tag':tag,'surah':stage,'start':clean[0],'end':clean[-1],'translation':translation,'commentary':commentary,'page':L['page']})
 
@@ -177,7 +201,8 @@ def parse_volume(tag,path):
                 t=decode_source_spans(tag,sp)
                 if re.match(r'^[1-7]\s+',t): tr.append(t)
         fat_lines=[x for x in ls if 9<=x['page']<=56]
-        rows.insert(0,{'tag':'v1','surah':1,'start':1,'end':7,'translation':' '.join(tr),'commentary':normalize_lines(fat_lines),'page':8})
+        raw_fatiha=' '.join(tr)
+        rows.insert(0,{'tag':'v1','surah':1,'start':1,'end':7,'translation':strip_display_verse_markers(raw_fatiha,range(1,8)),'commentary':normalize_lines(fat_lines),'page':8})
 
     if tag=='v3' and not any(r['surah']==3 and r['start']<=1<=r['end'] for r in rows):
         p=doc[209]; trans=[]
@@ -189,11 +214,11 @@ def parse_volume(tag,path):
                 t=decode_source_spans(tag,sp)
                 if 'Helvetica' in sp[0]['font'] and 'Bold' in sp[0]['font'] and ('1 Alif' in t or 'Sustaining' in t): trans.append(t)
         body=[x for x in ls if (x['page']>210 and x['page']<214)]
-        rows.append({'tag':'v3','surah':3,'start':1,'end':2,'translation':' '.join(trans),'commentary':normalize_lines(body),'page':210})
+        raw_special=' '.join(trans)
+        rows.append({'tag':'v3','surah':3,'start':1,'end':2,'translation':strip_display_verse_markers(raw_special,[1,2],strict=False),'commentary':normalize_lines(body),'page':210})
         rows.sort(key=lambda r:(r['surah'],r['start'],r['page']))
     return rows
 
-# Fail closed even when this builder is invoked directly, outside the packaging script.
 for tag,path in SOURCES:
     if not os.path.isfile(path):
         raise RuntimeError(f'Missing required Qurtubi source volume: {tag} ({path})')
@@ -212,13 +237,14 @@ if not SYMBOL_COUNTS:
     raise RuntimeError('Qurtubi source-symbol restoration found no KFGQPC symbols')
 print('restored source symbols',sum(SYMBOL_COUNTS.values()),sorted(SYMBOL_COUNTS.items()))
 
-# Validate the complete four-volume scope before writing any database.
 for r in allrows:
     last=EXPECTED_COVERAGE.get(r['surah'])
     if last is None or r['start']<1 or r['end']<r['start'] or r['end']>last:
         raise RuntimeError(f'Qurtubi row outside approved volumes 1-4 scope: {r}')
     if not r['translation'].strip() or not r['commentary'].strip():
         raise RuntimeError(f'Qurtubi empty translation/commentary row: {r["surah"]}:{r["start"]}-{r["end"]} {r["tag"]}')
+    if NUM_START.match(r['translation']):
+        raise RuntimeError(f'Qurtubi visible leading verse label survived: {r["surah"]}:{r["start"]}-{r["end"]}')
     joined=r['translation']+' '+r['commentary']
     if '\u00a0' in joined:
         raise RuntimeError(f'Qurtubi non-breaking-space extraction debris: {r["surah"]}:{r["start"]}-{r["end"]}')
@@ -259,9 +285,7 @@ CREATE INDEX idx_tafsir_lookup ON tafsir_entry(surah,verse_start,verse_end,segme
 ''')
 sha={tag:file_sha256(path) for tag,path in SOURCES}
 symbol_meta={f'{tag}:{key}':count for (tag,key,_value),count in sorted(SYMBOL_COUNTS.items())}
-# The volume-4 cover/contents use 1-23 as the editorial boundary, while its
-# commentary body ends at 4:22; Diwan's volume 5 begins at 4:23.
-meta={'schema_version':'2','edition_id':'qurtubi','display_name':'Qurtubi','author':'Abu Abdallah Muhammad ibn Ahmad al-Qurtubi','work':'al-Jami li-Ahkam al-Quran / The General Judgments of the Quran','translator':'Aisha Abdurrahman Bewley','language':'English','coverage_target':'Volumes 1-4: Al-Fatihah; Al-Baqarah 1-286; Ali Imran 1-200; An-Nisa 1-22. Quran 4:23 begins volume 5.','arabic_included':'false','source_pdf_sha256_json':str(sha),'source_honorific_glyphs_restored':'true','source_symbol_key_counts':str(symbol_meta),'entry_count':str(len(allrows)),'volume2_status':'full volume 2 materialized and parsed'}
+meta={'schema_version':'2','edition_id':'qurtubi','display_name':'Qurtubi','author':'Abu Abdallah Muhammad ibn Ahmad al-Qurtubi','work':'al-Jami li-Ahkam al-Quran / The General Judgments of the Quran','translator':'Aisha Abdurrahman Bewley','language':'English','coverage_target':'Volumes 1-4: Al-Fatihah; Al-Baqarah 1-286; Ali Imran 1-200; An-Nisa 1-22. Quran 4:23 begins volume 5.','arabic_included':'false','source_pdf_sha256_json':str(sha),'source_honorific_glyphs_restored':'true','source_symbol_key_counts':str(symbol_meta),'entry_count':str(len(allrows)),'volume2_status':'full volume 2 materialized and parsed','verse_marker_display_policy':'indexed-source-verse-labels-hidden-in-translation'}
 con.executemany('INSERT INTO source_metadata VALUES (?,?)',meta.items())
 con.executemany('''INSERT INTO tafsir_entry(surah,verse_start,verse_end,segment_no,verse_translation,commentary,source_page,source_volume) VALUES (?,?,?,?,?,?,?,?)''',[(r['surah'],r['start'],r['end'],r['segment_no'],r['translation'],r['commentary'],r['page'],r['tag']) for r in allrows])
 con.commit();con.execute('VACUUM');con.close()
@@ -272,8 +296,9 @@ for s,n in EXPECTED_COVERAGE.items():
 print('ranges>',[(r['surah'],r['start'],r['end'],r['tag']) for r in allrows if r['end']>r['start']][:30])
 print('sunniconnect rows',sum('sunniconnect' in (r['translation']+' '+r['commentary']).lower() for r in allrows))
 print('arabic source rows',sum(bool(is_arabic(without_restored_honorifics(r['translation']+' '+r['commentary']))) for r in allrows))
+print('visible leading translation labels',sum(bool(NUM_START.match(r['translation'])) for r in allrows))
 print('db bytes',os.path.getsize(OUT),'sha256',hashlib.sha256(open(OUT,'rb').read()).hexdigest())
-for s,a in [(1,1),(2,61),(2,142),(2,143),(2,254),(2,275),(3,96),(4,11),(4,23)]:
+for s,a in [(1,1),(2,21),(2,61),(2,142),(2,143),(2,254),(2,275),(3,96),(4,11),(4,23)]:
     rs=[r for r in allrows if r['surah']==s and r['start']<=a<=r['end']]
     print('\ncheck',s,a,'rows',len(rs))
-    for r in rs[:2]:print(r['start'],r['end'],r['tag'],r['page'],r['translation'][:140],'=>',r['commentary'][:180])
+    for r in rs[:2]:print(r['start'],r['end'],r['tag'],r['page'],r['translation'][:180],'=>',r['commentary'][:180])
