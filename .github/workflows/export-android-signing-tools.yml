@@ -1,0 +1,46 @@
+name: Export Android Build Tools 36 signing utilities
+
+on:
+  push:
+    branches:
+      - "ci/android-signing-tools"
+
+permissions:
+  contents: read
+
+jobs:
+  export-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools 36
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "build-tools;36.0.0"
+
+      - name: Package signing utilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${ANDROID_HOME}/build-tools/36.0.0"
+          out="${RUNNER_TEMP}/android-build-tools-36-signing"
+          mkdir -p "${out}/lib"
+          cp "${src}/apksigner" "${out}/apksigner"
+          cp "${src}/zipalign" "${out}/zipalign"
+          cp "${src}/lib/apksigner.jar" "${out}/lib/apksigner.jar"
+          cp "${src}/source.properties" "${out}/source.properties"
+          chmod +x "${out}/apksigner" "${out}/zipalign"
+          sha256sum "${out}/apksigner" "${out}/zipalign" "${out}/lib/apksigner.jar" > "${out}/SHA256.txt"
+
+      - name: Upload Android signing utilities
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36-signing
+          path: ${{ runner.temp }}/android-build-tools-36-signing/
+          if-no-files-found: error
+          retention-days: 1
