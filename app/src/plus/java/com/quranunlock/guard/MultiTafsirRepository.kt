@@ -66,7 +66,7 @@ internal object MultiTafsirRepository {
     private val qushayri = CorpusSpec(
         edition = PrivateTafsirEdition.QUSHAYRI,
         databaseName = "qushayri_en.sqlite",
-        partCount = 1,
+        partCount = 2,
         expectedEntries = 720,
         presentationRevision = "0106-qushayri-source-semantics-v1"
     )
