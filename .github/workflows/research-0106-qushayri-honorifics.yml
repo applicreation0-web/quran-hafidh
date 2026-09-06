@@ -1,0 +1,32 @@
+name: Research 0.10.6 Qushayri honorific glyphs
+
+on:
+  push:
+    branches:
+      - "release/0.10.6-final"
+    paths:
+      - "scripts/research_qushayri_honorific_glyphs_0106.py"
+      - ".github/workflows/research-0106-qushayri-honorifics.yml"
+  workflow_dispatch:
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7
+      - name: Fetch pinned source
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o "${RUNNER_TEMP}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+      - name: Inventory every Qushayri source glyph
+        run: |
+          python3 scripts/research_qushayri_honorific_glyphs_0106.py \
+            "${RUNNER_TEMP}/lataif.pdf" \
+            --json "${RUNNER_TEMP}/qushayri-honorific-glyphs.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qushayri-honorific-glyph-inventory-0106
+          path: ${{ runner.temp }}/qushayri-honorific-glyphs.json
+          if-no-files-found: error
+          retention-days: 7
