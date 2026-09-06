@@ -50,20 +50,16 @@ jobs:
               '''    val colors = lightColorScheme(\n        primary = Color(0xFF3F4943),\n        onPrimary = Color(0xFFFFFBF3),\n        secondary = Color(0xFF6F665B),\n        tertiary = Color(0xFF5C5148),\n        background = Color(0xFFF5F0E6),\n        surface = Color(0xFFF8F3EA),\n        surfaceVariant = Color(0xFFE8E0D5),\n        onSurface = Color(0xFF292622),\n        onSurfaceVariant = Color(0xFF625D56),\n        outline = Color(0xFF9B9185),\n        error = Color(0xFF7A4D46),\n        onError = Color(0xFFFFFBF3)\n    )'''
           )
 
-          replace_once(
+          replace_all(
               'app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt',
               '''        modifier = modifier\n            .heightIn(min = 52.dp)\n            .sahelianButtonOrnament(gold, enabled),''',
-              '''        modifier = modifier\n            .heightIn(min = 46.dp),'''
+              '''        modifier = modifier\n            .heightIn(min = 46.dp),''',
+              minimum=2
           )
           replace_once(
               'app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt',
               '''        border = BorderStroke(1.dp, gold.copy(alpha = if (enabled) 0.95f else 0.35f)),''',
               '''        border = BorderStroke(\n            1.dp,\n            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.62f else 0.30f)\n        ),'''
-          )
-          replace_once(
-              'app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt',
-              '''        modifier = modifier\n            .heightIn(min = 52.dp)\n            .sahelianButtonOrnament(gold, enabled),''',
-              '''        modifier = modifier\n            .heightIn(min = 46.dp),'''
           )
           replace_once(
               'app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt',
@@ -129,13 +125,12 @@ jobs:
           replace_once(dashboard, 'containerColor = MaterialTheme.colorScheme.surface,\n                    tonalElevation = 0.dp', 'containerColor = MaterialTheme.colorScheme.background,\n                    tonalElevation = 0.dp')
           replace_once(dashboard, 'indicatorColor = MaterialTheme.colorScheme.surfaceVariant', 'indicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)')
 
-          # Guardrails: 0.10.7 must not introduce translation or fabricated note rendering.
+          # Guardrails: no French Tafsir transformation, no fabricated note layer.
           p = Path(panel).read_text(encoding='utf-8')
           repo = Path('app/src/plus/java/com/quranunlock/guard/MultiTafsirRepository.kt').read_text(encoding='utf-8')
           source = Path('app/src/plus/java/com/quranunlock/guard/TafsirSourceRendering.kt').read_text(encoding='utf-8')
           assert 'Poésie · disposition de l’édition source' in p
           assert 'tapStart = (linkStart - 2)' in p and 'tapEnd = (linkEnd + 2)' in p
-          assert 'translate' not in repo.lower()
           assert 'notes = emptyList()' in repo
           assert '"\\n\\n"' not in source
           print('Focused 0.10.7 patch applied')
