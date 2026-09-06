@@ -127,7 +127,7 @@ jobs:
         run: python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
 
       - name: Prove Plus embeds approved Tafsir corpora
-        run: python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+        run: python3 scripts/verify_plus_apk_multitafsir_0106.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
 
       - name: Upload rebuilt databases and audit diagnostics
         if: always()
