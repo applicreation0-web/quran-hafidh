@@ -19,6 +19,7 @@ private const val MULTI_EDITION_KEY = "selected_edition"
  * Availability is resolved from real source-backed rows for the tapped verse.
  * A remembered edition that does not cover the verse is never left selected:
  * Jalalayn is the first fallback, then the first genuinely available edition.
+ * Primary reader labels stay author-based: Jalalayn, Qurtubi and Qushayri.
  */
 @Composable
 internal fun MultiTafsirPanel(
