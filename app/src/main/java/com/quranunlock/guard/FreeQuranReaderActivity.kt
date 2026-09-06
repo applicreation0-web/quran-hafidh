@@ -34,6 +34,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +44,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -109,6 +112,14 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 var quickNavOpen by remember { mutableStateOf(false) }
                 var quickNavPage by remember { mutableIntStateOf(initialPage) }
                 var quickNavInput by remember { mutableStateOf(initialPage.toString()) }
+                var comfortOpen by remember { mutableStateOf(false) }
+                var pureReading by remember { mutableStateOf(false) }
+                var visualMode by remember {
+                    mutableStateOf(ReaderComfortPrefs.visualMode(this@FreeQuranReaderActivity))
+                }
+                var readerBrightness by remember {
+                    mutableFloatStateOf(ReaderComfortPrefs.brightness(this@FreeQuranReaderActivity))
+                }
                 var message by remember {
                     mutableStateOf(
                         if (referenceMode) {
@@ -118,6 +129,25 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                 "vers la gauche pour revenir."
                         }
                     )
+                }
+
+                val darkShell = visualMode == ReaderVisualMode.DARK
+                val shellColor = when (visualMode) {
+                    ReaderVisualMode.COMFORT -> SafeguardReadingSurface
+                    ReaderVisualMode.LIGHT -> Color(0xFFFCFBF7)
+                    ReaderVisualMode.DARK -> Color(0xFF171A18)
+                }
+                val shellPrimary = if (darkShell) Color(0xFFE8E0D2) else MaterialTheme.colorScheme.primary
+                val shellSecondary = if (darkShell) Color(0xFFD2AE6C) else MaterialTheme.colorScheme.secondary
+                val shellMuted = if (darkShell) Color(0xFFB9B8B2) else MaterialTheme.colorScheme.onSurfaceVariant
+                val chromeHidden = pureReading && !referenceMode && !quickNavOpen && !comfortOpen
+
+                LaunchedEffect(readerBrightness) {
+                    ReaderComfortPrefs.applyBrightness(window, readerBrightness)
+                }
+
+                BackHandler(enabled = comfortOpen && selectedTafsirVerse == null) {
+                    comfortOpen = false
                 }
 
                 BackHandler(enabled = quickNavOpen && selectedTafsirVerse == null) {
@@ -163,8 +193,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                     readerPrefs.edit()
                         .putInt(KEY_LAST_PAGE, page)
                         .apply()
-                    message =
-                        "Lecture libre • appuyez sur un verset pour ouvrir le Tafsîr."
+                    message = "Lecture libre • appuyez sur un verset pour ouvrir le Tafsîr."
                 }
 
                 fun toggleBookmark() {
@@ -210,159 +239,280 @@ class FreeQuranReaderActivity : ComponentActivity() {
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = SafeguardReadingSurface
+                    color = shellColor
                 ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 6.dp)
+                                .padding(vertical = if (chromeHidden) 0.dp else 6.dp)
                         ) {
-                            Text(
-                                if (referenceMode) {
-                                    "Référence Qur’an • ${reference!!.label}"
-                                } else {
-                                    "Qur’an & Tafsîr"
-                                },
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                if (referenceMode) {
-                                    "Mushaf de Médine • Page $page / $LAST_PAGE"
-                                } else {
-                                    "Mushaf de Médine • Page $page / $LAST_PAGE ${if (quickNavOpen) "▴" else "▾"}"
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(
-                                        enabled = !referenceMode && selectedTafsirVerse == null
-                                    ) {
-                                        if (quickNavOpen) {
-                                            quickNavOpen = false
-                                        } else {
-                                            quickNavPage = page
-                                            quickNavInput = page.toString()
-                                            quickNavOpen = true
-                                        }
-                                    }
-                                    .padding(horizontal = 12.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            if (quickNavOpen && !referenceMode && selectedTafsirVerse == null) {
-                                Surface(
+                            if (!chromeHidden) {
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                                    shape = MaterialTheme.shapes.medium,
-                                    tonalElevation = 2.dp
+                                        .padding(horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
-                                    ) {
+                                    Text(
+                                        if (referenceMode) {
+                                            "Référence Qur’an • ${reference!!.label}"
+                                        } else {
+                                            "Qur’an & Tafsîr"
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = shellPrimary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (!referenceMode && selectedTafsirVerse == null) {
                                         Text(
-                                            "Navigation rapide • page $quickNavPage",
+                                            "Aa / ☼",
+                                            modifier = Modifier
+                                                .clickable {
+                                                    comfortOpen = !comfortOpen
+                                                    if (comfortOpen) quickNavOpen = false
+                                                }
+                                                .padding(horizontal = 8.dp, vertical = 6.dp),
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.SemiBold
+                                            color = shellSecondary,
+                                            fontWeight = FontWeight.Bold
                                         )
-                                        Slider(
-                                            value = quickNavPage.toFloat(),
-                                            onValueChange = { value ->
-                                                val candidate = value.roundToInt()
-                                                    .coerceIn(FIRST_PAGE, LAST_PAGE)
-                                                quickNavPage = candidate
-                                                quickNavInput = candidate.toString()
-                                            },
-                                            onValueChangeFinished = {
-                                                val target = quickNavPage
-                                                showPage(target)
-                                                message = "Navigation rapide • page $target."
-                                            },
-                                            valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat(),
-                                            steps = LAST_PAGE - FIRST_PAGE - 1,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                    }
+                                }
+
+                                Text(
+                                    if (referenceMode) {
+                                        "Mushaf de Médine • Page $page / $LAST_PAGE"
+                                    } else {
+                                        "Mushaf de Médine • Page $page / $LAST_PAGE ${if (quickNavOpen) "▴" else "▾"}"
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            enabled = !referenceMode &&
+                                                selectedTafsirVerse == null &&
+                                                !comfortOpen
                                         ) {
-                                            SafeguardOutlinedButton(
-                                                enabled = quickNavPage > FIRST_PAGE,
-                                                onClick = {
-                                                    quickNavPage = (quickNavPage - 1)
-                                                        .coerceAtLeast(FIRST_PAGE)
-                                                    quickNavInput = quickNavPage.toString()
-                                                }
-                                            ) {
-                                                Text("−1")
-                                            }
-                                            OutlinedTextField(
-                                                value = quickNavInput,
-                                                onValueChange = { value ->
-                                                    if (
-                                                        value.length <= LAST_PAGE.toString().length &&
-                                                        value.all(Char::isDigit)
-                                                    ) {
-                                                        quickNavInput = value
-                                                        value.toIntOrNull()
-                                                            ?.takeIf { it in FIRST_PAGE..LAST_PAGE }
-                                                            ?.let { quickNavPage = it }
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                                singleLine = true,
-                                                label = { Text("Page") },
-                                                keyboardOptions = KeyboardOptions(
-                                                    keyboardType = KeyboardType.Number
-                                                )
-                                            )
-                                            SafeguardOutlinedButton(
-                                                enabled = quickNavPage < LAST_PAGE,
-                                                onClick = {
-                                                    quickNavPage = (quickNavPage + 1)
-                                                        .coerceAtMost(LAST_PAGE)
-                                                    quickNavInput = quickNavPage.toString()
-                                                }
-                                            ) {
-                                                Text("+1")
+                                            if (quickNavOpen) {
+                                                quickNavOpen = false
+                                            } else {
+                                                quickNavPage = page
+                                                quickNavInput = page.toString()
+                                                quickNavOpen = true
                                             }
                                         }
-                                        Spacer(Modifier.height(6.dp))
-                                        val typedPage = quickNavInput.toIntOrNull()
-                                        SafeguardButton(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            enabled = typedPage != null &&
-                                                typedPage in FIRST_PAGE..LAST_PAGE,
-                                            onClick = {
-                                                typedPage
-                                                    ?.takeIf { it in FIRST_PAGE..LAST_PAGE }
-                                                    ?.let { target ->
-                                                        showPage(target)
-                                                        message = "Navigation rapide • page $target."
-                                                    }
-                                            }
+                                        .padding(horizontal = 12.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = shellSecondary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                if (comfortOpen && !referenceMode && selectedTafsirVerse == null) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                                        shape = MaterialTheme.shapes.medium,
+                                        tonalElevation = 2.dp
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
-                                            Text("Aller à la page $quickNavPage")
+                                            Text(
+                                                "Confort de lecture",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                ReaderVisualMode.entries.forEach { mode ->
+                                                    val label = when (mode) {
+                                                        ReaderVisualMode.COMFORT -> "Confort"
+                                                        ReaderVisualMode.LIGHT -> "Clair"
+                                                        ReaderVisualMode.DARK -> "Sombre"
+                                                    }
+                                                    if (visualMode == mode) {
+                                                        SafeguardButton(
+                                                            modifier = Modifier.weight(1f),
+                                                            onClick = {}
+                                                        ) { Text(label) }
+                                                    } else {
+                                                        SafeguardOutlinedButton(
+                                                            modifier = Modifier.weight(1f),
+                                                            onClick = {
+                                                                visualMode = mode
+                                                                ReaderComfortPrefs.setVisualMode(
+                                                                    this@FreeQuranReaderActivity,
+                                                                    mode
+                                                                )
+                                                            }
+                                                        ) { Text(label) }
+                                                    }
+                                                }
+                                            }
+                                            Text(
+                                                if (readerBrightness < 0f) {
+                                                    "Luminosité : téléphone"
+                                                } else {
+                                                    "Luminosité : ${(readerBrightness * 100).toInt()} %"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Slider(
+                                                value = if (readerBrightness < 0f) 0.72f else readerBrightness,
+                                                onValueChange = { value ->
+                                                    readerBrightness = value.coerceIn(0.12f, 1f)
+                                                    ReaderComfortPrefs.setBrightness(
+                                                        this@FreeQuranReaderActivity,
+                                                        readerBrightness
+                                                    )
+                                                },
+                                                valueRange = 0.12f..1f,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                SafeguardOutlinedButton(
+                                                    modifier = Modifier.weight(1f),
+                                                    onClick = {
+                                                        readerBrightness = -1f
+                                                        ReaderComfortPrefs.setBrightness(
+                                                            this@FreeQuranReaderActivity,
+                                                            null
+                                                        )
+                                                    }
+                                                ) { Text("Auto") }
+                                                SafeguardButton(
+                                                    modifier = Modifier.weight(1f),
+                                                    onClick = {
+                                                        pureReading = true
+                                                        comfortOpen = false
+                                                    }
+                                                ) { Text("Lecture pure") }
+                                            }
                                         }
                                     }
                                 }
-                            }
 
-                            Text(
-                                if (TafsirEdition.isEnabled) message else
-                                    "Lecture libre du Mushaf de Médine.",
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(4.dp))
+                                if (quickNavOpen && !referenceMode && selectedTafsirVerse == null) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                                        shape = MaterialTheme.shapes.medium,
+                                        tonalElevation = 2.dp
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                        ) {
+                                            Text(
+                                                "Navigation rapide • page $quickNavPage",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Slider(
+                                                value = quickNavPage.toFloat(),
+                                                onValueChange = { value ->
+                                                    val candidate = value.roundToInt()
+                                                        .coerceIn(FIRST_PAGE, LAST_PAGE)
+                                                    quickNavPage = candidate
+                                                    quickNavInput = candidate.toString()
+                                                },
+                                                onValueChangeFinished = {
+                                                    val target = quickNavPage
+                                                    showPage(target)
+                                                    message = "Navigation rapide • page $target."
+                                                },
+                                                valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat(),
+                                                steps = LAST_PAGE - FIRST_PAGE - 1,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                SafeguardOutlinedButton(
+                                                    enabled = quickNavPage > FIRST_PAGE,
+                                                    onClick = {
+                                                        quickNavPage = (quickNavPage - 1)
+                                                            .coerceAtLeast(FIRST_PAGE)
+                                                        quickNavInput = quickNavPage.toString()
+                                                    }
+                                                ) {
+                                                    Text("−1")
+                                                }
+                                                OutlinedTextField(
+                                                    value = quickNavInput,
+                                                    onValueChange = { value ->
+                                                        if (
+                                                            value.length <= LAST_PAGE.toString().length &&
+                                                            value.all(Char::isDigit)
+                                                        ) {
+                                                            quickNavInput = value
+                                                            value.toIntOrNull()
+                                                                ?.takeIf { it in FIRST_PAGE..LAST_PAGE }
+                                                                ?.let { quickNavPage = it }
+                                                        }
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    singleLine = true,
+                                                    label = { Text("Page") },
+                                                    keyboardOptions = KeyboardOptions(
+                                                        keyboardType = KeyboardType.Number
+                                                    )
+                                                )
+                                                SafeguardOutlinedButton(
+                                                    enabled = quickNavPage < LAST_PAGE,
+                                                    onClick = {
+                                                        quickNavPage = (quickNavPage + 1)
+                                                            .coerceAtMost(LAST_PAGE)
+                                                        quickNavInput = quickNavPage.toString()
+                                                    }
+                                                ) {
+                                                    Text("+1")
+                                                }
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            val typedPage = quickNavInput.toIntOrNull()
+                                            SafeguardButton(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                enabled = typedPage != null &&
+                                                    typedPage in FIRST_PAGE..LAST_PAGE,
+                                                onClick = {
+                                                    typedPage
+                                                        ?.takeIf { it in FIRST_PAGE..LAST_PAGE }
+                                                        ?.let { target ->
+                                                            showPage(target)
+                                                            message = "Navigation rapide • page $target."
+                                                        }
+                                                }
+                                            ) {
+                                                Text("Aller à la page $quickNavPage")
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    if (TafsirEdition.isEnabled) message else
+                                        "Lecture libre du Mushaf de Médine.",
+                                    modifier = Modifier.padding(horizontal = 12.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = shellMuted
+                                )
+                                Spacer(Modifier.height(4.dp))
+                            }
 
                             AnimatedContent(
                                 targetState = page,
@@ -386,114 +536,137 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                 if (svgContent.isNullOrBlank()) {
                                     Text(
                                         "La page du Mushaf n’est pas disponible.",
-                                        modifier = Modifier.padding(18.dp)
+                                        modifier = Modifier.padding(18.dp),
+                                        color = shellPrimary
                                     )
                                 } else {
-                                    FreeMushafPageWebView(
-                                        svgContent = svgContent,
-                                        pageNumber = pageNumber,
-                                        tafsirOpen = selectedTafsirVerse != null || quickNavOpen,
-                                        referenceHighlight = reference?.startVerse,
-                                        modifier = Modifier.fillMaxSize(),
-                                        onSwipePrevious = { showPage(page - 1) },
-                                        onSwipeNext = { showPage(page + 1) },
-                                        onVerseTapped = { verse ->
-                                            if (!referenceMode && !quickNavOpen) openTafsir(verse)
-                                        }
-                                    )
+                                    key(visualMode) {
+                                        FreeMushafPageWebView(
+                                            svgContent = svgContent,
+                                            pageNumber = pageNumber,
+                                            pageBackground = ReaderComfortPrefs.pageBackground(visualMode),
+                                            tafsirOpen = selectedTafsirVerse != null ||
+                                                quickNavOpen || comfortOpen,
+                                            referenceHighlight = reference?.startVerse,
+                                            modifier = Modifier.fillMaxSize(),
+                                            onSwipePrevious = { showPage(page - 1) },
+                                            onSwipeNext = { showPage(page + 1) },
+                                            onVerseTapped = { verse ->
+                                                if (!referenceMode && !quickNavOpen && !comfortOpen) {
+                                                    openTafsir(verse)
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
 
-                            Spacer(Modifier.height(7.dp))
-                            if (referenceMode) {
-                                SafeguardOutlinedButton(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
-                                    onClick = { finish() }
-                                ) {
-                                    Text("← Retour au commentaire")
-                                }
-                            } else {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                            if (!chromeHidden) {
+                                Spacer(Modifier.height(7.dp))
+                                if (referenceMode) {
                                     SafeguardOutlinedButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = selectedTafsirVerse == null && page > FIRST_PAGE,
-                                        onClick = { showPage(page - 1) }
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp),
+                                        onClick = { finish() }
                                     ) {
-                                        Text("Précédente")
+                                        Text("← Retour au commentaire")
                                     }
-                                    SafeguardButton(
-                                        modifier = Modifier.weight(1f),
-                                        enabled = selectedTafsirVerse == null && page < LAST_PAGE,
-                                        onClick = { showPage(page + 1) }
-                                    ) {
-                                        Text("Suivante")
-                                    }
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                SafeguardOutlinedButton(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
-                                    enabled = selectedTafsirVerse == null,
-                                    onClick = { toggleBookmark() }
-                                ) {
-                                    Text(
-                                        if (page in bookmarkPages) {
-                                            "🔖 Retirer le marque-page • p. $page"
-                                        } else {
-                                            "🔖 Ajouter un marque-page • p. $page"
-                                        }
-                                    )
-                                }
-                                if (bookmarkPages.isNotEmpty()) {
-                                    Spacer(Modifier.height(4.dp))
+                                } else {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState())
                                             .padding(horizontal = 10.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        SafeguardOutlinedButton(
+                                            modifier = Modifier.weight(1f),
+                                            enabled = selectedTafsirVerse == null && page > FIRST_PAGE,
+                                            onClick = { showPage(page - 1) }
+                                        ) {
+                                            Text("Précédente")
+                                        }
+                                        SafeguardButton(
+                                            modifier = Modifier.weight(1f),
+                                            enabled = selectedTafsirVerse == null && page < LAST_PAGE,
+                                            onClick = { showPage(page + 1) }
+                                        ) {
+                                            Text("Suivante")
+                                        }
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    SafeguardOutlinedButton(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp),
+                                        enabled = selectedTafsirVerse == null,
+                                        onClick = { toggleBookmark() }
                                     ) {
                                         Text(
-                                            "Signets ${bookmarkPages.size} :",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.secondary,
-                                            fontWeight = FontWeight.SemiBold
+                                            if (page in bookmarkPages) {
+                                                "🔖 Retirer le marque-page • p. $page"
+                                            } else {
+                                                "🔖 Ajouter un marque-page • p. $page"
+                                            }
                                         )
-                                        bookmarkPages.sorted().forEach { bookmarkedPage ->
-                                            SafeguardOutlinedButton(
-                                                enabled = selectedTafsirVerse == null &&
-                                                    bookmarkedPage != page,
-                                                onClick = {
-                                                    showPage(bookmarkedPage)
-                                                    message =
-                                                        "Ouverture du marque-page • page $bookmarkedPage."
+                                    }
+                                    if (bookmarkPages.isNotEmpty()) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState())
+                                                .padding(horizontal = 10.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "Signets ${bookmarkPages.size} :",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = shellSecondary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            bookmarkPages.sorted().forEach { bookmarkedPage ->
+                                                SafeguardOutlinedButton(
+                                                    enabled = selectedTafsirVerse == null &&
+                                                        bookmarkedPage != page,
+                                                    onClick = {
+                                                        showPage(bookmarkedPage)
+                                                        message =
+                                                            "Ouverture du marque-page • page $bookmarkedPage."
+                                                    }
+                                                ) {
+                                                    Text("p. $bookmarkedPage")
                                                 }
-                                            ) {
-                                                Text("p. $bookmarkedPage")
                                             }
                                         }
                                     }
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                SafeguardOutlinedButton(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
-                                    enabled = selectedTafsirVerse == null,
-                                    onClick = { finish() }
-                                ) {
-                                    Text("Fermer la lecture")
+                                    Spacer(Modifier.height(4.dp))
+                                    SafeguardOutlinedButton(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp),
+                                        enabled = selectedTafsirVerse == null,
+                                        onClick = { finish() }
+                                    ) {
+                                        Text("Fermer la lecture")
+                                    }
                                 }
                             }
+                        }
+
+                        if (chromeHidden && !referenceMode && selectedTafsirVerse == null) {
+                            Text(
+                                "Aa / ☼",
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .clickable { comfortOpen = true }
+                                    .padding(horizontal = 9.dp, vertical = 7.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFD2AE6C),
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
                         if (!referenceMode) {
@@ -557,6 +730,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
 private fun FreeMushafPageWebView(
     svgContent: String,
     pageNumber: Int,
+    pageBackground: String,
     tafsirOpen: Boolean,
     referenceHighlight: VerseRef?,
     modifier: Modifier = Modifier,
@@ -574,7 +748,7 @@ private fun FreeMushafPageWebView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.rgb(244, 240, 230))
+                setBackgroundColor(android.graphics.Color.parseColor(pageBackground))
                 settings.javaScriptEnabled = TafsirEdition.isEnabled
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
@@ -599,8 +773,7 @@ private fun FreeMushafPageWebView(
                             event.y,
                             event.pointerCount
                         )
-                        MotionEvent.ACTION_POINTER_DOWN ->
-                            gestureClassifier.onAdditionalPointer()
+                        MotionEvent.ACTION_POINTER_DOWN -> gestureClassifier.onAdditionalPointer()
                         MotionEvent.ACTION_CANCEL -> gestureClassifier.onCancel()
                         MotionEvent.ACTION_UP -> {
                             when (
@@ -653,7 +826,7 @@ private fun FreeMushafPageWebView(
                         html, body {
                           margin: 0;
                           padding: 0;
-                          background: #F4F0E6;
+                          background: $pageBackground;
                           width: 100%;
                           min-height: 100%;
                           overflow-x: hidden;
