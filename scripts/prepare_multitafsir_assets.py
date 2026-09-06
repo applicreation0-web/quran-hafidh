@@ -19,7 +19,7 @@ SOURCE_SHA = {
     'qurtubi-v4': 'eb71cb2ed8c2497cc8a5d3634b3eeb7788fdc7caee9de5d6b50349fb8619965c',
 }
 EXPECTED_ENTRIES = {'qushayri': 720, 'qurtubi': 432}
-EXPECTED_PARTS = {'qushayri': 1, 'qurtubi': 4}
+EXPECTED_PARTS = {'qushayri': 2, 'qurtubi': 4}
 PRESENTATION_REVISION = {
     'qushayri': '0106-qushayri-source-semantics-v1',
     'qurtubi': '0106-qurtubi-hide-verse-labels-v1',
