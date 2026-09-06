@@ -14,6 +14,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,7 +26,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
@@ -39,10 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
 import org.brotli.dec.BrotliInputStream
+import kotlin.math.roundToInt
 
 /**
  * Voluntary Qur'an reader used outside Safeguard challenges.
@@ -100,6 +106,9 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 val coroutineScope = rememberCoroutineScope()
                 var page by remember { mutableIntStateOf(initialPage) }
                 var bookmarkPages by remember { mutableStateOf(storedBookmarks) }
+                var quickNavOpen by remember { mutableStateOf(false) }
+                var quickNavPage by remember { mutableIntStateOf(initialPage) }
+                var quickNavInput by remember { mutableStateOf(initialPage.toString()) }
                 var message by remember {
                     mutableStateOf(
                         if (referenceMode) {
@@ -109,6 +118,12 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                 "vers la gauche pour revenir."
                         }
                     )
+                }
+
+                BackHandler(enabled = quickNavOpen && selectedTafsirVerse == null) {
+                    quickNavOpen = false
+                    quickNavPage = page
+                    quickNavInput = page.toString()
                 }
 
                 BackHandler(enabled = selectedTafsirVerse != null) {
@@ -142,6 +157,9 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         return
                     }
                     page = nextPage
+                    quickNavOpen = false
+                    quickNavPage = nextPage
+                    quickNavInput = nextPage.toString()
                     readerPrefs.edit()
                         .putInt(KEY_LAST_PAGE, page)
                         .apply()
@@ -212,12 +230,131 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Mushaf de Médine • Page $page / $LAST_PAGE",
-                                modifier = Modifier.padding(horizontal = 12.dp),
+                                if (referenceMode) {
+                                    "Mushaf de Médine • Page $page / $LAST_PAGE"
+                                } else {
+                                    "Mushaf de Médine • Page $page / $LAST_PAGE ${if (quickNavOpen) "▴" else "▾"}"
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(
+                                        enabled = !referenceMode && selectedTafsirVerse == null
+                                    ) {
+                                        if (quickNavOpen) {
+                                            quickNavOpen = false
+                                        } else {
+                                            quickNavPage = page
+                                            quickNavInput = page.toString()
+                                            quickNavOpen = true
+                                        }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.secondary,
                                 fontWeight = FontWeight.SemiBold
                             )
+
+                            if (quickNavOpen && !referenceMode && selectedTafsirVerse == null) {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                    shape = MaterialTheme.shapes.medium,
+                                    tonalElevation = 2.dp
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            "Navigation rapide • page $quickNavPage",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Slider(
+                                            value = quickNavPage.toFloat(),
+                                            onValueChange = { value ->
+                                                val candidate = value.roundToInt()
+                                                    .coerceIn(FIRST_PAGE, LAST_PAGE)
+                                                quickNavPage = candidate
+                                                quickNavInput = candidate.toString()
+                                            },
+                                            onValueChangeFinished = {
+                                                val target = quickNavPage
+                                                showPage(target)
+                                                message = "Navigation rapide • page $target."
+                                            },
+                                            valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat(),
+                                            steps = LAST_PAGE - FIRST_PAGE - 1,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            SafeguardOutlinedButton(
+                                                enabled = quickNavPage > FIRST_PAGE,
+                                                onClick = {
+                                                    quickNavPage = (quickNavPage - 1)
+                                                        .coerceAtLeast(FIRST_PAGE)
+                                                    quickNavInput = quickNavPage.toString()
+                                                }
+                                            ) {
+                                                Text("−1")
+                                            }
+                                            OutlinedTextField(
+                                                value = quickNavInput,
+                                                onValueChange = { value ->
+                                                    if (
+                                                        value.length <= LAST_PAGE.toString().length &&
+                                                        value.all(Char::isDigit)
+                                                    ) {
+                                                        quickNavInput = value
+                                                        value.toIntOrNull()
+                                                            ?.takeIf { it in FIRST_PAGE..LAST_PAGE }
+                                                            ?.let { quickNavPage = it }
+                                                    }
+                                                },
+                                                modifier = Modifier.weight(1f),
+                                                singleLine = true,
+                                                label = { Text("Page") },
+                                                keyboardOptions = KeyboardOptions(
+                                                    keyboardType = KeyboardType.Number
+                                                )
+                                            )
+                                            SafeguardOutlinedButton(
+                                                enabled = quickNavPage < LAST_PAGE,
+                                                onClick = {
+                                                    quickNavPage = (quickNavPage + 1)
+                                                        .coerceAtMost(LAST_PAGE)
+                                                    quickNavInput = quickNavPage.toString()
+                                                }
+                                            ) {
+                                                Text("+1")
+                                            }
+                                        }
+                                        Spacer(Modifier.height(6.dp))
+                                        val typedPage = quickNavInput.toIntOrNull()
+                                        SafeguardButton(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            enabled = typedPage != null &&
+                                                typedPage in FIRST_PAGE..LAST_PAGE,
+                                            onClick = {
+                                                typedPage
+                                                    ?.takeIf { it in FIRST_PAGE..LAST_PAGE }
+                                                    ?.let { target ->
+                                                        showPage(target)
+                                                        message = "Navigation rapide • page $target."
+                                                    }
+                                            }
+                                        ) {
+                                            Text("Aller à la page $quickNavPage")
+                                        }
+                                    }
+                                }
+                            }
+
                             Text(
                                 if (TafsirEdition.isEnabled) message else
                                     "Lecture libre du Mushaf de Médine.",
@@ -255,13 +392,13 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     FreeMushafPageWebView(
                                         svgContent = svgContent,
                                         pageNumber = pageNumber,
-                                        tafsirOpen = selectedTafsirVerse != null,
+                                        tafsirOpen = selectedTafsirVerse != null || quickNavOpen,
                                         referenceHighlight = reference?.startVerse,
                                         modifier = Modifier.fillMaxSize(),
                                         onSwipePrevious = { showPage(page - 1) },
                                         onSwipeNext = { showPage(page + 1) },
                                         onVerseTapped = { verse ->
-                                            if (!referenceMode) openTafsir(verse)
+                                            if (!referenceMode && !quickNavOpen) openTafsir(verse)
                                         }
                                     )
                                 }
