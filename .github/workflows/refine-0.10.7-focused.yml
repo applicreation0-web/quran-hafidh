@@ -1,0 +1,139 @@
+name: Refine clean 0.10.7 focused UI
+
+on:
+  push:
+    branches:
+      - "release/0.10.7-clean"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/0.10.7-clean
+          fetch-depth: 0
+
+      - name: Apply focused refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def one(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one occurrence, got {count}: {old[:100]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # Complete the neutral palette so no unspecified Material defaults can leak bright colors.
+          theme = 'app/src/main/java/com/quranunlock/guard/MainActivity.kt'
+          one(
+              theme,
+              '''    val colors = lightColorScheme(\n        primary = Color(0xFF3F4943),\n        onPrimary = Color(0xFFFFFBF3),\n        secondary = Color(0xFF6F665B),\n        tertiary = Color(0xFF5C5148),\n        background = Color(0xFFF5F0E6),\n        surface = Color(0xFFF8F3EA),\n        surfaceVariant = Color(0xFFE8E0D5),\n        onSurface = Color(0xFF292622),\n        onSurfaceVariant = Color(0xFF625D56),\n        outline = Color(0xFF9B9185),\n        error = Color(0xFF7A4D46),\n        onError = Color(0xFFFFFBF3)\n    )''',
+              '''    val colors = lightColorScheme(\n        primary = Color(0xFF3F4943),\n        onPrimary = Color(0xFFFFFBF3),\n        primaryContainer = Color(0xFFE1E7E2),\n        onPrimaryContainer = Color(0xFF2F3732),\n        secondary = Color(0xFF6F665B),\n        onSecondary = Color(0xFFFFFBF3),\n        secondaryContainer = Color(0xFFE8E0D5),\n        onSecondaryContainer = Color(0xFF3A352F),\n        tertiary = Color(0xFF5C5148),\n        onTertiary = Color(0xFFFFFBF3),\n        tertiaryContainer = Color(0xFFE9E0D8),\n        onTertiaryContainer = Color(0xFF3E352F),\n        background = Color(0xFFF5F0E6),\n        onBackground = Color(0xFF292622),\n        surface = Color(0xFFF8F3EA),\n        surfaceVariant = Color(0xFFE8E0D5),\n        onSurface = Color(0xFF292622),\n        onSurfaceVariant = Color(0xFF625D56),\n        outline = Color(0xFF9B9185),\n        outlineVariant = Color(0xFFCFC5B8),\n        error = Color(0xFF7A4D46),\n        onError = Color(0xFFFFFBF3),\n        errorContainer = Color(0xFFF0E2DF),\n        onErrorContainer = Color(0xFF5B3934)\n    )'''
+          )
+
+          panel = 'app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt'
+          # Keep the established typography contract; remove blank rows separately, not line-height readability.
+          one(panel, 'private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.36f', 'private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.50f')
+          one(panel, 'private const val NOTE_LINE_HEIGHT_RATIO = 1.34f', 'private const val NOTE_LINE_HEIGHT_RATIO = 1.45f')
+          one(panel, 'private const val POETRY_LINE_HEIGHT_RATIO = 1.46f', 'private const val POETRY_LINE_HEIGHT_RATIO = 1.55f')
+
+          marker = 'private const val QURAN_LINK_TAG = "tafsir_quran"\n'
+          source_helper = '''private const val QURAN_LINK_TAG = "tafsir_quran"\n\nprivate fun tafsirSourceTitle(edition: PrivateTafsirEdition): String = when (edition) {\n    PrivateTafsirEdition.JALALAYN -> "Tafsīr al-Jalālayn"\n    PrivateTafsirEdition.QURTUBI -> "al-Jāmiʿ li-aḥkām al-Qurʾān"\n    PrivateTafsirEdition.QUSHAYRI -> "Laṭāʾif al-ishārāt"\n}\n'''
+          one(panel, marker, source_helper)
+
+          p = Path(panel)
+          text = p.read_text(encoding='utf-8')
+          start_anchor = '''            Column(\n                modifier = Modifier\n                    .fillMaxWidth()\n                    .padding(horizontal = 14.dp, vertical = 4.dp),\n                verticalArrangement = Arrangement.spacedBy(2.dp)\n            ) {'''
+          start = text.find(start_anchor)
+          if start < 0:
+              raise SystemExit('TafsirPanel: compact header start not found')
+          end_anchor = '\n\n            HorizontalDivider()'
+          end = text.find(end_anchor, start)
+          if end < 0:
+              raise SystemExit('TafsirPanel: compact header end not found')
+          new_header = '''            Column(\n                modifier = Modifier\n                    .fillMaxWidth()\n                    .padding(horizontal = 10.dp, vertical = 2.dp),\n                verticalArrangement = Arrangement.spacedBy(0.dp)\n            ) {\n                Row(\n                    modifier = Modifier.fillMaxWidth(),\n                    horizontalArrangement = Arrangement.SpaceBetween\n                ) {\n                    Box(modifier = Modifier.weight(1f)) {\n                        TextButton(\n                            modifier = Modifier.semantics {\n                                contentDescription = "Choisir le Tafsîr"\n                                stateDescription = selectedEdition.displayName\n                            },\n                            enabled = availableEditions.size > 1,\n                            onClick = { menuExpanded = true }\n                        ) {\n                            Text(\n                                if (availableEditions.size > 1) {\n                                    "Tafsîr · ${selectedEdition.displayName} ▾"\n                                } else {\n                                    "Tafsîr · ${selectedEdition.displayName}"\n                                },\n                                color = MaterialTheme.colorScheme.onSurface,\n                                fontWeight = FontWeight.SemiBold\n                            )\n                        }\n                        DropdownMenu(\n                            expanded = menuExpanded && availableEditions.size > 1,\n                            onDismissRequest = { menuExpanded = false }\n                        ) {\n                            availableEditions.forEach { edition ->\n                                DropdownMenuItem(\n                                    text = { Text(edition.displayName) },\n                                    onClick = {\n                                        menuExpanded = false\n                                        onEditionSelected(edition)\n                                    }\n                                )\n                            }\n                        }\n                    }\n                    Row {\n                        TextButton(\n                            modifier = Modifier.semantics {\n                                contentDescription = "Réduire la taille du commentaire"\n                            },\n                            enabled = fontSize > MIN_FONT_SIZE,\n                            onClick = { changeFont(-2f) }\n                        ) {\n                            Text("A−")\n                        }\n                        TextButton(\n                            modifier = Modifier.semantics {\n                                contentDescription = "Agrandir la taille du commentaire"\n                            },\n                            enabled = fontSize < MAX_FONT_SIZE,\n                            onClick = { changeFont(2f) }\n                        ) {\n                            Text("A+")\n                        }\n                    }\n                }\n                Text(\n                    text = "Sourate ${verse.surah}, verset ${verse.ayah} · ${tafsirSourceTitle(selectedEdition)}",\n                    modifier = Modifier\n                        .padding(start = 12.dp, bottom = 2.dp)\n                        .semantics { heading() },\n                    style = MaterialTheme.typography.labelSmall,\n                    color = MaterialTheme.colorScheme.onSurfaceVariant\n                )\n            }'''
+          p.write_text(text[:start] + new_header + text[end:], encoding='utf-8')
+          one(panel, 'Poésie · disposition de l’édition source', 'Poésie · mise en page de la source')
+
+          reader = 'app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt'
+          one(reader, 'val shellSecondary = if (darkShell) Color(0xFFD2AE6C) else MaterialTheme.colorScheme.secondary', 'val shellSecondary = if (darkShell) Color(0xFFBEB6AA) else MaterialTheme.colorScheme.secondary')
+          old_controls = '''                                    if (!referenceMode && selectedTafsirVerse == null) {\n                                        Text(\n                                            "Aa / ☼",\n                                            modifier = Modifier\n                                                .clickable {\n                                                    comfortOpen = !comfortOpen\n                                                    if (comfortOpen) quickNavOpen = false\n                                                }\n                                                .padding(horizontal = 8.dp, vertical = 6.dp),\n                                            style = MaterialTheme.typography.bodyMedium,\n                                            color = shellSecondary,\n                                            fontWeight = FontWeight.Bold\n                                        )\n                                    }'''
+          new_controls = '''                                    if (!referenceMode && selectedTafsirVerse == null) {\n                                        Text(\n                                            "Aa / ☼",\n                                            modifier = Modifier\n                                                .clickable {\n                                                    comfortOpen = !comfortOpen\n                                                    if (comfortOpen) quickNavOpen = false\n                                                }\n                                                .padding(horizontal = 7.dp, vertical = 5.dp),\n                                            style = MaterialTheme.typography.bodyMedium,\n                                            color = shellSecondary,\n                                            fontWeight = FontWeight.SemiBold\n                                        )\n                                        Text(\n                                            "Masquer",\n                                            modifier = Modifier\n                                                .clickable {\n                                                    pureReading = true\n                                                    comfortOpen = false\n                                                    quickNavOpen = false\n                                                }\n                                                .padding(horizontal = 7.dp, vertical = 5.dp),\n                                            style = MaterialTheme.typography.bodySmall,\n                                            color = shellMuted,\n                                            fontWeight = FontWeight.SemiBold\n                                        )\n                                    }'''
+          one(reader, old_controls, new_controls)
+          old_hidden = '''                        if (chromeHidden && !referenceMode && selectedTafsirVerse == null) {\n                            Text(\n                                "Aa / ☼",\n                                modifier = Modifier\n                                    .align(Alignment.TopEnd)\n                                    .padding(8.dp)\n                                    .clickable { comfortOpen = true }\n                                    .padding(horizontal = 9.dp, vertical = 7.dp),\n                                style = MaterialTheme.typography.bodyMedium,\n                                color = Color(0xFFD2AE6C),\n                                fontWeight = FontWeight.Bold\n                            )\n                        }'''
+          new_hidden = '''                        if (chromeHidden && !referenceMode && selectedTafsirVerse == null) {\n                            Text(\n                                "Afficher",\n                                modifier = Modifier\n                                    .align(Alignment.TopEnd)\n                                    .padding(6.dp)\n                                    .clickable { pureReading = false }\n                                    .padding(horizontal = 8.dp, vertical = 5.dp),\n                                style = MaterialTheme.typography.bodySmall,\n                                color = shellMuted,\n                                fontWeight = FontWeight.SemiBold\n                            )\n                        }'''
+          one(reader, old_hidden, new_hidden)
+          # Expanded tools visually merge into the page instead of reading as elevated cards.
+          r = Path(reader)
+          rt = r.read_text(encoding='utf-8')
+          needle = '''                                        shape = MaterialTheme.shapes.medium,\n                                        tonalElevation = 0.dp'''
+          if rt.count(needle) != 2:
+              raise SystemExit(f'FreeQuranReader: expected 2 neutral tool surfaces, got {rt.count(needle)}')
+          rt = rt.replace(needle, '''                                        shape = MaterialTheme.shapes.small,\n                                        color = shellColor,\n                                        tonalElevation = 0.dp''')
+          r.write_text(rt, encoding='utf-8')
+
+          # Compact the Qur'an hub cards while keeping one clear home for each function.
+          hub = 'app/src/main/java/com/quranunlock/guard/QuranHubActivity.kt'
+          one(hub, 'shape = RoundedCornerShape(22.dp),', 'shape = RoundedCornerShape(14.dp),')
+          one(hub, 'MaterialTheme.colorScheme.primaryContainer', 'MaterialTheme.colorScheme.surfaceVariant')
+          one(hub, 'defaultElevation = 1.dp', 'defaultElevation = 0.dp')
+          one(hub, 'modifier = Modifier.padding(horizontal = 18.dp, vertical = 17.dp)', 'modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp)')
+
+          # Focus guardrails.
+          panel_text = Path(panel).read_text(encoding='utf-8')
+          assert 'COMMENTARY_LINE_HEIGHT_RATIO = 1.50f' in panel_text
+          assert 'NOTE_LINE_HEIGHT_RATIO = 1.45f' in panel_text
+          assert 'POETRY_LINE_HEIGHT_RATIO = 1.55f' in panel_text
+          assert 'Tafsîr · ${selectedEdition.displayName}' in panel_text
+          assert 'Laṭāʾif al-ishārāt' in panel_text
+          assert 'Regex("\\\\n{2,}")' in panel_text
+          assert 'tapStart = (linkStart - 2)' in panel_text
+          print('Focused refinement applied')
+          PY
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Fetch canonical Mushaf
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Unit tests
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Commit refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/quranunlock/guard/MainActivity.kt \
+                  app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt \
+                  app/src/main/java/com/quranunlock/guard/QuranHubActivity.kt \
+                  app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt
+          git diff --cached --quiet && exit 0
+          git commit -m "Refine 0.10.7 compact Tafsir and retractable neutral UI [skip ci]"
+          git push origin HEAD:release/0.10.7-clean
