@@ -97,8 +97,35 @@ jobs:
       - name: Qurtubi Unicode verse-label gate
         run: python3 scripts/audit_0106_qurtubi_unicode_labels.py app/src/plus/assets/tafsir
 
-      - name: Existing typography contract
-        run: python3 scripts/verify_0105_tafsir_typography_contract.py
+      - name: 0.10.7 typography compatibility gate
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path('.')
+          renderer=(root/'app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt').read_text(encoding='utf-8')
+          models=(root/'app/src/main/java/com/quranunlock/guard/TafsirModels.kt').read_text(encoding='utf-8')
+          repository=(root/'app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt').read_text(encoding='utf-8')
+          source_rendering=(root/'app/src/plus/java/com/quranunlock/guard/TafsirSourceRendering.kt').read_text(encoding='utf-8')
+          assert 'MIN_FONT_SIZE = 16f' in renderer
+          assert 'MAX_FONT_SIZE = 26f' in renderer
+          assert 'DEFAULT_FONT_SIZE = 18f' in renderer
+          assert 'COMMENTARY_LINE_HEIGHT_RATIO = 1.50f' in renderer
+          assert 'NOTE_LINE_HEIGHT_RATIO = 1.45f' in renderer
+          assert 'POETRY_LINE_HEIGHT_RATIO = 1.55f' in renderer
+          assert 'textAlign = TextAlign.Start' in renderer
+          assert 'TextAlign.Justify' not in renderer
+          assert 'TafsirRunStyle.BOLD_ITALIC' in renderer
+          assert 'TafsirRunStyle.NOTE_REF' in renderer and 'BaselineShift.Superscript' in renderer
+          assert 'TextDecoration.Underline' in renderer
+          assert 'POETRY' in models and 'TECHNICAL_TERM' in models and 'TRANSLITERATION' in models
+          assert 'splitTafsirRenderBlocks' in models and 'run.style == TafsirRunStyle.POETRY' in models
+          assert 'block.kind == TafsirBlockKind.POETRY' in renderer
+          for marker in ('"poetry" -> TafsirRunStyle.POETRY','"technical_term" -> TafsirRunStyle.TECHNICAL_TERM','"transliteration" -> TafsirRunStyle.TRANSLITERATION'):
+              assert marker in repository
+          assert 'TafsirRunStyle.BOLD_ITALIC, row.translation.trim()' in source_rendering
+          print('0.10.7 typography compatibility PASS: established sizes/roles preserved; prose uses Start alignment for narrow/e-reader layouts')
+          PY
 
       - name: Fetch canonical Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
