@@ -162,12 +162,12 @@ internal object MultiTafsirRepository {
         rows: List<LoadedV2Row>
     ): List<TafsirRun> = buildList {
         rows.forEachIndexed { index, row ->
-            if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
+            if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n"))
             val segment = row.segment
             if (segment.translation.isNotBlank()) {
                 add(TafsirRun(TafsirRunStyle.BOLD_ITALIC, segment.translation))
                 if (segment.commentary.isNotBlank()) {
-                    add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
+                    add(TafsirRun(TafsirRunStyle.REGULAR, "\n"))
                 }
             }
 

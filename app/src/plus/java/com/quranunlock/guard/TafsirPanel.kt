@@ -58,9 +58,9 @@ private const val FONT_SIZE_KEY = "commentary_font_size_sp"
 private const val MIN_FONT_SIZE = 16f
 private const val MAX_FONT_SIZE = 26f
 private const val DEFAULT_FONT_SIZE = 18f
-private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.50f
-private const val NOTE_LINE_HEIGHT_RATIO = 1.45f
-private const val POETRY_LINE_HEIGHT_RATIO = 1.55f
+private const val COMMENTARY_LINE_HEIGHT_RATIO = 1.36f
+private const val NOTE_LINE_HEIGHT_RATIO = 1.34f
+private const val POETRY_LINE_HEIGHT_RATIO = 1.46f
 private const val NOTE_LINK_TAG = "tafsir_note"
 private const val QURAN_LINK_TAG = "tafsir_quran"
 
@@ -159,14 +159,14 @@ internal fun TafsirPanel(
             }
             .semantics { paneTitle = "Commentaire du verset" },
         color = SafeguardReadingSurface,
-        tonalElevation = 6.dp,
-        shadowElevation = 8.dp
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                    .padding(horizontal = 14.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Row(
@@ -176,9 +176,9 @@ internal fun TafsirPanel(
                     Text(
                         text = "Sourate ${verse.surah}, verset ${verse.ayah}",
                         modifier = Modifier.semantics { heading() },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Row {
                         TextButton(
@@ -243,8 +243,8 @@ internal fun TafsirPanel(
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(scrollState)
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 when (state) {
                     TafsirLoadState.Closed,
@@ -349,7 +349,21 @@ private fun InteractiveTafsirText(
                 runsToAnnotatedString(block.runs, linkColor, enableQuranLinks)
             }
             val isPoetry = block.kind == TafsirBlockKind.POETRY
+            if (isPoetry) {
+                Text(
+                    text = "Poésie · disposition de l’édition source",
+                    modifier = Modifier.padding(start = 12.dp, top = 3.dp, bottom = 1.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
             ClickableText(
+                modifier = if (isPoetry) {
+                    Modifier.padding(start = 12.dp, end = 4.dp, bottom = 3.dp)
+                } else {
+                    Modifier
+                },
                 text = annotated,
                 style = TextStyle(
                     color = color,
@@ -382,8 +396,13 @@ private fun runsToAnnotatedString(
     enableQuranLinks: Boolean
 ): AnnotatedString = AnnotatedString.Builder().apply {
     runs.forEach { run ->
+        val displayText = if (run.style == TafsirRunStyle.POETRY) {
+            run.text
+        } else {
+            run.text.replace(Regex("\\n{2,}"), "\n")
+        }
         val start = length
-        append(run.text)
+        append(displayText)
         val end = length
         if (start == end) return@forEach
 
@@ -434,14 +453,16 @@ private fun runsToAnnotatedString(
         // BOLD_ITALIC is the source verse translation itself for Qurtubi/Qushayri.
         // Do not turn its structural source anchor into a cross-reference link.
         if (enableQuranLinks && run.style != TafsirRunStyle.BOLD_ITALIC) {
-            TafsirReferenceParser.find(run.text).forEach { match ->
+            TafsirReferenceParser.find(displayText).forEach { match ->
                 val linkStart = start + match.start
                 val linkEnd = start + match.endExclusive
+                val tapStart = (linkStart - 2).coerceAtLeast(start)
+                val tapEnd = (linkEnd + 2).coerceAtMost(end)
                 addStringAnnotation(
                     tag = QURAN_LINK_TAG,
                     annotation = encodeQuranReference(match.reference),
-                    start = linkStart,
-                    end = linkEnd
+                    start = tapStart,
+                    end = tapEnd
                 )
                 addStyle(
                     SpanStyle(

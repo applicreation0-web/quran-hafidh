@@ -59,11 +59,13 @@ internal fun SafeguardButton(
     Button(
         onClick = onClick,
         modifier = modifier
-            .heightIn(min = 52.dp)
-            .sahelianButtonOrnament(gold, enabled),
+            .heightIn(min = 46.dp),
         enabled = enabled,
         shape = shape,
-        border = BorderStroke(1.dp, gold.copy(alpha = if (enabled) 0.95f else 0.35f)),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.62f else 0.30f)
+        ),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -86,11 +88,13 @@ internal fun SafeguardOutlinedButton(
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
-            .heightIn(min = 52.dp)
-            .sahelianButtonOrnament(gold, enabled),
+            .heightIn(min = 46.dp),
         enabled = enabled,
         shape = shape,
-        border = BorderStroke(1.dp, gold.copy(alpha = if (enabled) 0.8f else 0.28f)),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.58f else 0.26f)
+        ),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.primary,
             disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)

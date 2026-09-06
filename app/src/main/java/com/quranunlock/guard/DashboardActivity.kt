@@ -77,13 +77,13 @@ class DashboardActivity : ComponentActivity() {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = MaterialTheme.colorScheme.background,
                     tonalElevation = 0.dp
                 ) {
                     val navColors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,
-                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant
+                        indicatorColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
                     )
                     NavigationBarItem(
                         selected = true,

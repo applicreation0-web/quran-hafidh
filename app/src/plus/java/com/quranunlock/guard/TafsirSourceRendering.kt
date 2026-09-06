@@ -20,11 +20,11 @@ internal fun renderSourceBackedTafsirSegments(
     rows: List<SourceBackedTafsirSegment>
 ): List<TafsirRun> = buildList {
     rows.forEachIndexed { index, row ->
-        if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
+        if (index > 0) add(TafsirRun(TafsirRunStyle.REGULAR, "\n"))
         if (row.translation.isNotBlank()) {
             add(TafsirRun(TafsirRunStyle.BOLD_ITALIC, row.translation.trim()))
             if (row.commentary.isNotBlank()) {
-                add(TafsirRun(TafsirRunStyle.REGULAR, "\n\n"))
+                add(TafsirRun(TafsirRunStyle.REGULAR, "\n"))
             }
         }
         if (row.commentary.isNotBlank()) {

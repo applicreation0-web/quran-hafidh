@@ -245,7 +245,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = if (chromeHidden) 0.dp else 6.dp)
+                                .padding(vertical = if (chromeHidden) 0.dp else 2.dp)
                         ) {
                             if (!chromeHidden) {
                                 Row(
@@ -262,7 +262,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             "Qur’an & Tafsîr"
                                         },
                                         modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.titleLarge,
+                                        style = MaterialTheme.typography.titleMedium,
                                         color = shellPrimary,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -315,7 +315,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp, vertical = 4.dp),
                                         shape = MaterialTheme.shapes.medium,
-                                        tonalElevation = 2.dp
+                                        tonalElevation = 0.dp
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -397,7 +397,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                                         pureReading = true
                                                         comfortOpen = false
                                                     }
-                                                ) { Text("Lecture pure") }
+                                                ) { Text("Masquer les commandes") }
                                             }
                                         }
                                     }
@@ -409,7 +409,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp, vertical = 4.dp),
                                         shape = MaterialTheme.shapes.medium,
-                                        tonalElevation = 2.dp
+                                        tonalElevation = 0.dp
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
@@ -511,7 +511,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     style = MaterialTheme.typography.bodySmall,
                                     color = shellMuted
                                 )
-                                Spacer(Modifier.height(4.dp))
+                                Spacer(Modifier.height(2.dp))
                             }
 
                             AnimatedContent(
@@ -562,7 +562,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                             }
 
                             if (!chromeHidden) {
-                                Spacer(Modifier.height(7.dp))
+                                Spacer(Modifier.height(2.dp))
                                 if (referenceMode) {
                                     SafeguardOutlinedButton(
                                         modifier = Modifier
@@ -594,7 +594,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             Text("Suivante")
                                         }
                                     }
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     SafeguardOutlinedButton(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -604,14 +604,14 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     ) {
                                         Text(
                                             if (page in bookmarkPages) {
-                                                "🔖 Retirer le marque-page • p. $page"
+                                                "Retirer le signet • p. $page"
                                             } else {
-                                                "🔖 Ajouter un marque-page • p. $page"
+                                                "Ajouter un signet • p. $page"
                                             }
                                         )
                                     }
                                     if (bookmarkPages.isNotEmpty()) {
-                                        Spacer(Modifier.height(4.dp))
+                                        Spacer(Modifier.height(2.dp))
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -641,7 +641,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             }
                                         }
                                     }
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     SafeguardOutlinedButton(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -675,7 +675,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     verse = verse,
                                     state = tafsirLoadState,
                                     modifier = Modifier.align(Alignment.BottomCenter),
-                                    maxPanelHeight = maxHeight * 0.5f,
+                                    maxPanelHeight = maxHeight * 0.42f,
                                     onPanelTopInWindow = { top ->
                                         TafsirEdition.revealAbove(top)
                                     },

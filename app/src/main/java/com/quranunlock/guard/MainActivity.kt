@@ -894,16 +894,18 @@ private fun SectionTitle(text: String) {
 @Composable
 fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
-        primary = Color(0xFF214B3B),
-        onPrimary = Color.White,
-        secondary = Color(0xFFB0823F),
-        tertiary = Color(0xFF694936),
-        background = Color(0xFFFBF7EF),
-        surface = Color(0xFFFFFDF8),
-        surfaceVariant = Color(0xFFF0E6D5),
-        onSurface = Color(0xFF2A241F),
-        onSurfaceVariant = Color(0xFF675B50),
-        outline = Color(0xFFB89A68)
+        primary = Color(0xFF3F4943),
+        onPrimary = Color(0xFFFFFBF3),
+        secondary = Color(0xFF6F665B),
+        tertiary = Color(0xFF5C5148),
+        background = Color(0xFFF5F0E6),
+        surface = Color(0xFFF8F3EA),
+        surfaceVariant = Color(0xFFE8E0D5),
+        onSurface = Color(0xFF292622),
+        onSurfaceVariant = Color(0xFF625D56),
+        outline = Color(0xFF9B9185),
+        error = Color(0xFF7A4D46),
+        onError = Color(0xFFFFFBF3)
     )
     MaterialTheme(
         colorScheme = colors,
