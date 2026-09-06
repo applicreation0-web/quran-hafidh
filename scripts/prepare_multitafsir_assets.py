@@ -30,7 +30,9 @@ EXPECTED_QUSHAYRI_STRUCTURE = {
     'grouped_source_range_count': '76',
     'source_soft_hyphen_count': '584',
     'soft_hyphen_policy': 'preserve-marker-then-source-driven-join',
-    'source_honorific_glyph_policy': 'restore-edition-pua-to-source-abbreviations-no-name-inference',
+    'source_honorific_glyph_policy': 'restore-edition-pua-to-full-source-honorifics-no-name-inference',
+    'source_honorific_legend_page': 'xxvi',
+    'source_honorific_revision': '0106-source-authoritative-v1',
     'verified_note_call_count': '928',
     'note_call_display_policy': 'remove-only-source-verified-unexposed-footnote-calls',
     'poetry_index_entry_count': '121',
@@ -81,7 +83,7 @@ def logical_digest(name: str, db: Path) -> str:
         if meta.get('schema_version') != '2' or meta.get('edition_id') != name:
             raise SystemExit(f'{name} source metadata mismatch')
         if meta.get('arabic_included') != 'false':
-            raise SystemExit(f'{name} must contain no Arabic source text')
+            raise SystemExit(f'{name} must contain no Arabic source text outside source-restored honorifics')
         if meta.get('presentation_revision') != PRESENTATION_REVISION[name]:
             raise SystemExit(f'{name} 0.10.6 presentation revision mismatch')
         expected = EXPECTED_ENTRIES[name]
