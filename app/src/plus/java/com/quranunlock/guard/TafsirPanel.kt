@@ -375,7 +375,7 @@ private fun InteractiveTafsirText(
                     lineHeight = (
                         fontSize * if (isPoetry) POETRY_LINE_HEIGHT_RATIO else lineHeightRatio
                     ).sp,
-                    textAlign = TextAlign.Start
+                    textAlign = if (isPoetry) TextAlign.Start else TextAlign.Justify
                 ),
                 onClick = { offset ->
                     annotated.getStringAnnotations(NOTE_LINK_TAG, offset, offset)
