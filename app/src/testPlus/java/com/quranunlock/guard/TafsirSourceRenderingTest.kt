@@ -22,7 +22,7 @@ class TafsirSourceRenderingTest {
 
         assertEquals(TafsirRunStyle.BOLD_ITALIC, runs[0].style)
         assertEquals("They said: Call upon your Lord for us...", runs[0].text)
-        assertEquals("\n\n", runs[1].text)
+        assertEquals("\n", runs[1].text)
         assertEquals(TafsirRunStyle.REGULAR, runs[2].style)
         assertEquals("The source commentary follows the verse translation.", runs[2].text)
 
@@ -30,6 +30,7 @@ class TafsirSourceRenderingTest {
         assertFalse(rendered.startsWith("68"))
         assertFalse(rendered.contains("Verse 68", ignoreCase = true))
         assertFalse(rendered.contains("Ayah 68", ignoreCase = true))
+        assertFalse(rendered.contains("\n\n"))
     }
 
     @Test
