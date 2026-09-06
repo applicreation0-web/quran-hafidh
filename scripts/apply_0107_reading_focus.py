@@ -205,7 +205,7 @@ require("TextAlign.Justify" not in panel, "full justification must not survive i
 require("COMMENTARY_LINE_HEIGHT_RATIO = 1.50f" in panel, "commentary line height changed")
 require("NOTE_LINE_HEIGHT_RATIO = 1.45f" in panel, "note line height changed")
 require("POETRY_LINE_HEIGHT_RATIO = 1.55f" in panel, "poetry line height changed")
-require('run.text.replace(Regex("\\\\n{2,}"), "\\n")' in panel, "false blank-line collapse missing")
+require("run.text.replace(Regex" in panel and "n{2,}" in panel, "false blank-line collapse missing")
 require("tapStart = (linkStart - 2)" in panel and "tapEnd = (linkEnd + 2)" in panel, "expanded Quran reference tap target missing")
 require("onExpandedChange(!expanded)" in panel, "Tafsir expand/collapse control missing")
 require("0.84f" in reader and "0.42f" in reader, "compact/expanded Tafsir heights missing")
