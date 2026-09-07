@@ -147,7 +147,7 @@ internal object TafsirRepository {
                     "note_ref" -> TafsirRunStyle.NOTE_REF
                     else -> null
                 } ?: return emptyList()
-                val text = value.getString("text")
+                val text = JalalaynHonorificPresentation.normalize(value.getString("text"))
                 if (text.isNotEmpty()) add(TafsirRun(style, text))
             }
         }

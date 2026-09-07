@@ -3,6 +3,7 @@ package com.applicreation0.quransafeguard
 import android.content.Context
 import android.view.WindowManager
 
+/** Legacy persisted values from <=0.10.7. They no longer change Quran reader colors. */
 enum class ReaderVisualMode {
     COMFORT,
     LIGHT,
@@ -10,28 +11,27 @@ enum class ReaderVisualMode {
 }
 
 /**
- * Local-only visual preferences for voluntary Qur'an reading.
+ * Shared local comfort settings for every Quran reader.
  *
- * These settings never touch GuardPrefs, SafeguardCyclePrefs or challenge state.
- * They therefore cannot change Juz/Hizb progression, unlock credit or protected-app timing.
+ * 0.10.8 freezes the reader surface to cream. The sun control adjusts only window
+ * brightness and never changes theme, challenge state, Juz/Hizb progression, unlock
+ * credit, or protected-app timing.
  */
 object ReaderComfortPrefs {
+    internal const val READER_CREAM_HEX = "#F7F2E8"
     private const val PREFS = "reader_comfort"
     private const val KEY_VISUAL_MODE = "visual_mode"
     private const val KEY_BRIGHTNESS = "brightness"
     private const val SYSTEM_BRIGHTNESS = -1f
 
-    fun visualMode(context: Context): ReaderVisualMode {
-        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_VISUAL_MODE, ReaderVisualMode.COMFORT.name)
-        return runCatching { ReaderVisualMode.valueOf(raw ?: ReaderVisualMode.COMFORT.name) }
-            .getOrDefault(ReaderVisualMode.COMFORT)
-    }
+    /** Compatibility read: all historical modes now resolve to the single cream mode. */
+    fun visualMode(context: Context): ReaderVisualMode = ReaderVisualMode.COMFORT
 
+    /** Compatibility write: never persist a non-cream visual mode again. */
     fun setVisualMode(context: Context, mode: ReaderVisualMode) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY_VISUAL_MODE, mode.name)
+            .putString(KEY_VISUAL_MODE, ReaderVisualMode.COMFORT.name)
             .apply()
     }
 
@@ -60,9 +60,8 @@ object ReaderComfortPrefs {
         window.attributes = params
     }
 
-    fun pageBackground(mode: ReaderVisualMode): String = when (mode) {
-        ReaderVisualMode.COMFORT -> "#F4F0E6"
-        ReaderVisualMode.LIGHT -> "#FCFBF7"
-        ReaderVisualMode.DARK -> "#E7DFD1"
-    }
+    fun pageBackground(): String = READER_CREAM_HEX
+
+    /** Compatibility overload for <=0.10.7 callers; every mode is cream in 0.10.8. */
+    fun pageBackground(mode: ReaderVisualMode): String = READER_CREAM_HEX
 }

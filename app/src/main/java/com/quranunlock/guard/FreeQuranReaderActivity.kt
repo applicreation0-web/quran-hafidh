@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
+import android.view.WindowManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.brotli.dec.BrotliInputStream
 import kotlin.math.roundToInt
@@ -83,6 +85,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val reference = if (intent.getBooleanExtra(EXTRA_REFERENCE_MODE, false)) {
             val surah = intent.getIntExtra(EXTRA_REFERENCE_SURAH, 0)
@@ -118,36 +121,39 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 var comfortOpen by remember { mutableStateOf(false) }
                 var pureReading by remember { mutableStateOf(false) }
                 var tafsirExpanded by remember { mutableStateOf(false) }
-                var visualMode by remember {
-                    mutableStateOf(ReaderComfortPrefs.visualMode(this@FreeQuranReaderActivity))
-                }
+                var chromeInteraction by remember { mutableIntStateOf(0) }
                 var readerBrightness by remember {
                     mutableFloatStateOf(ReaderComfortPrefs.brightness(this@FreeQuranReaderActivity))
                 }
-                var message by remember {
-                    mutableStateOf(
-                        if (referenceMode) {
-                            "Référence coranique ${reference!!.label} • retour pour reprendre le commentaire."
-                        } else {
-                            "Mushaf arabe : balayez vers la droite pour avancer, " +
-                                "vers la gauche pour revenir."
-                        }
-                    )
-                }
+                var message by remember { mutableStateOf("") }
 
-                val darkShell = visualMode == ReaderVisualMode.DARK
-                val shellColor = when (visualMode) {
-                    ReaderVisualMode.COMFORT -> SafeguardReadingSurface
-                    ReaderVisualMode.LIGHT -> Color(0xFFFCFBF7)
-                    ReaderVisualMode.DARK -> Color(0xFF171A18)
-                }
-                val shellPrimary = if (darkShell) Color(0xFFE8E0D2) else MaterialTheme.colorScheme.primary
-                val shellSecondary = if (darkShell) Color(0xFFBDB5A9) else MaterialTheme.colorScheme.secondary
-                val shellMuted = if (darkShell) Color(0xFFB9B8B2) else MaterialTheme.colorScheme.onSurfaceVariant
+                val shellColor = SafeguardReadingSurface
+                val shellPrimary = MaterialTheme.colorScheme.primary
+                val shellSecondary = MaterialTheme.colorScheme.secondary
+                val shellMuted = MaterialTheme.colorScheme.onSurfaceVariant
                 val chromeHidden = pureReading && !referenceMode && !quickNavOpen && !comfortOpen
 
                 LaunchedEffect(readerBrightness) {
                     ReaderComfortPrefs.applyBrightness(window, readerBrightness)
+                }
+
+                LaunchedEffect(
+                    page,
+                    chromeInteraction,
+                    selectedTafsirVerse,
+                    quickNavOpen,
+                    comfortOpen,
+                    pureReading
+                ) {
+                    if (!referenceMode &&
+                        selectedTafsirVerse == null &&
+                        !quickNavOpen &&
+                        !comfortOpen &&
+                        !pureReading
+                    ) {
+                        delay(2_500L)
+                        pureReading = true
+                    }
                 }
 
                 BackHandler(enabled = comfortOpen && selectedTafsirVerse == null) {
@@ -192,6 +198,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         return
                     }
                     page = nextPage
+                    pureReading = false
+                    chromeInteraction += 1
                     quickNavOpen = false
                     quickNavPage = nextPage
                     quickNavInput = nextPage.toString()
@@ -275,7 +283,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     )
                                     if (!referenceMode && selectedTafsirVerse == null) {
                                         Text(
-                                            "Aa / ☼",
+                                            "☼",
                                             modifier = Modifier
                                                 .clickable {
                                                     comfortOpen = !comfortOpen
@@ -284,19 +292,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                                 .padding(horizontal = 7.dp, vertical = 5.dp),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = shellSecondary,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            "Masquer",
-                                            modifier = Modifier
-                                                .clickable {
-                                                    pureReading = true
-                                                    comfortOpen = false
-                                                    quickNavOpen = false
-                                                }
-                                                .padding(horizontal = 7.dp, vertical = 5.dp),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = shellMuted,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     }
@@ -343,40 +338,11 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             verticalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
                                             Text(
-                                                "Confort de lecture",
+                                                "Luminosité",
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.primary,
                                                 fontWeight = FontWeight.SemiBold
                                             )
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                ReaderVisualMode.entries.forEach { mode ->
-                                                    val label = when (mode) {
-                                                        ReaderVisualMode.COMFORT -> "Confort"
-                                                        ReaderVisualMode.LIGHT -> "Clair"
-                                                        ReaderVisualMode.DARK -> "Sombre"
-                                                    }
-                                                    if (visualMode == mode) {
-                                                        SafeguardButton(
-                                                            modifier = Modifier.weight(1f),
-                                                            onClick = {}
-                                                        ) { Text(label) }
-                                                    } else {
-                                                        SafeguardOutlinedButton(
-                                                            modifier = Modifier.weight(1f),
-                                                            onClick = {
-                                                                visualMode = mode
-                                                                ReaderComfortPrefs.setVisualMode(
-                                                                    this@FreeQuranReaderActivity,
-                                                                    mode
-                                                                )
-                                                            }
-                                                        ) { Text(label) }
-                                                    }
-                                                }
-                                            }
                                             Text(
                                                 if (readerBrightness < 0f) {
                                                     "Luminosité : téléphone"
@@ -522,13 +488,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     }
                                 }
 
-                                Text(
-                                    if (TafsirEdition.isEnabled) message else
-                                        "Lecture libre du Mushaf de Médine.",
-                                    modifier = Modifier.padding(horizontal = 12.dp),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = shellMuted
-                                )
                                 Spacer(Modifier.height(2.dp))
                             }
 
@@ -558,17 +517,21 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         color = shellPrimary
                                     )
                                 } else {
-                                    key(visualMode) {
+                                    key(ReaderComfortPrefs.READER_CREAM_HEX) {
                                         FreeMushafPageWebView(
                                             svgContent = svgContent,
                                             pageNumber = pageNumber,
-                                            pageBackground = ReaderComfortPrefs.pageBackground(visualMode),
+                                            pageBackground = ReaderComfortPrefs.pageBackground(),
                                             tafsirOpen = selectedTafsirVerse != null ||
                                                 quickNavOpen || comfortOpen,
                                             referenceHighlight = reference?.startVerse,
                                             modifier = Modifier.fillMaxSize(),
                                             onSwipePrevious = { showPage(page - 1) },
                                             onSwipeNext = { showPage(page + 1) },
+                                            onReaderTap = {
+                                                pureReading = false
+                                                chromeInteraction += 1
+                                            },
                                             onVerseTapped = { verse ->
                                                 if (!referenceMode && !quickNavOpen && !comfortOpen) {
                                                     openTafsir(verse)
@@ -705,7 +668,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(6.dp)
-                                    .clickable { pureReading = false }
+                                    .clickable {
+                                        pureReading = false
+                                        chromeInteraction += 1
+                                    }
                                     .padding(horizontal = 8.dp, vertical = 5.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = shellMuted,
@@ -782,12 +748,14 @@ private fun FreeMushafPageWebView(
     modifier: Modifier = Modifier,
     onSwipePrevious: () -> Unit,
     onSwipeNext: () -> Unit,
+    onReaderTap: () -> Unit,
     onVerseTapped: (VerseRef) -> Unit
 ) {
     val currentTafsirOpen = rememberUpdatedState(tafsirOpen)
     val currentReferenceHighlight = rememberUpdatedState(referenceHighlight)
     val currentOnSwipePrevious = rememberUpdatedState(onSwipePrevious)
     val currentOnSwipeNext = rememberUpdatedState(onSwipeNext)
+    val currentOnReaderTap = rememberUpdatedState(onReaderTap)
     val currentOnVerseTapped = rememberUpdatedState(onVerseTapped)
 
     AndroidView(
@@ -833,7 +801,7 @@ private fun FreeMushafPageWebView(
                             ) {
                                 ReaderSwipe.NEXT -> currentOnSwipeNext.value()
                                 ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()
-                                null -> Unit
+                                null -> currentOnReaderTap.value()
                             }
                         }
                     }

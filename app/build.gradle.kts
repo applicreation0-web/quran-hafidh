@@ -18,6 +18,11 @@ val verifyHikam264 by tasks.registering(Exec::class) {
     commandLine("python3", "scripts/verify_hikam_264.py")
 }
 
+val verify0108ReaderContract by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("python3", "scripts/verify_0108_reader_contract.py")
+}
+
 val verifyEditionIsolation by tasks.registering {
     doLast {
         val mainAssets = file("src/main/assets")
@@ -399,7 +404,13 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(gate.contains("Filtre matinal • 20 pages"))
         check(gate.contains("Palier de 90 minutes • 10 pages"))
         check(reader.contains("Valider et avancer"))
-        check(reader.contains("Balayez vers la droite pour avancer"))
+        check(
+            reader.contains("onSwipeNext = {") &&
+                reader.contains("ReaderSwipe.NEXT -> currentOnSwipeNext.value()") &&
+                reader.contains("ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()")
+        ) {
+            "Quran reader must retain wired RTL page gestures after helper prose removal."
+        }
         check(
             gestureTests.contains("fun swipeRightAdvancesArabicBook(") &&
                 gestureTests.contains("fun swipeLeftReturnsToPreviousPage(") &&
@@ -408,7 +419,13 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "Arabic-book RTL navigation requires right-next/left-previous regression tests."
         }
         check(reader.contains("READING_QUOTA_REACHED"))
-        check(reader.contains("Quota atteint • sortie libre • lecture facultative"))
+        check(
+            reader.contains("quotaReached") &&
+                reader.contains("Quota atteint • sortie libre") &&
+                reader.contains("continueFreely")
+        ) {
+            "Quota completion must still enter optional free-reading state."
+        }
         check(reader.contains("Ouvrir l’application cible"))
         check(reader.contains("continueFreely"))
         check(reader.contains("Débloquer et ouvrir"))
@@ -1055,6 +1072,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyThoughtOfDayBoundary)
     dependsOn(verifyExperienceBoundary)
     dependsOn(verifyEditionIsolation)
+    dependsOn(verify0108ReaderContract)
 }
 
 android {
@@ -1098,6 +1116,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyThoughtOfDayBoundary)
     dependsOn(verifyExperienceBoundary)
     dependsOn(verifyEditionIsolation)
+    dependsOn(verify0108ReaderContract)
 }
 
 dependencies {

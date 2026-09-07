@@ -78,7 +78,7 @@ enum class ReaderVisualMode {
  * credit, or protected-app timing.
  */
 object ReaderComfortPrefs {
-    internal const val READER_CREAM_HEX = "#F4F0E6"
+    internal const val READER_CREAM_HEX = "#F7F2E8"
     private const val PREFS = "reader_comfort"
     private const val KEY_VISUAL_MODE = "visual_mode"
     private const val KEY_BRIGHTNESS = "brightness"
@@ -688,9 +688,9 @@ import org.junit.Test
 class ReaderComfortPrefsTest {
     @Test
     fun everyLegacyVisualModeNowUsesTheSameCreamBackground() {
-        assertEquals("#F4F0E6", ReaderComfortPrefs.pageBackground())
+        assertEquals("#F7F2E8", ReaderComfortPrefs.pageBackground())
         ReaderVisualMode.entries.forEach { mode ->
-            assertEquals("#F4F0E6", ReaderComfortPrefs.pageBackground(mode))
+            assertEquals("#F7F2E8", ReaderComfortPrefs.pageBackground(mode))
         }
     }
 }
@@ -756,7 +756,7 @@ panel = text("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
 repo = text("app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt")
 honorific = text("app/src/plus/java/com/quranunlock/guard/JalalaynHonorificPresentation.kt")
 
-require('READER_CREAM_HEX = "#F4F0E6"' in comfort, "cream constant missing")
+require('READER_CREAM_HEX = "#F7F2E8"' in comfort, "cream constant missing")
 require("ReaderVisualMode.entries.forEach" not in free, "theme choices remain in free reader UI")
 require('"Clair"' not in free and '"Sombre"' not in free, "light/dark reader choices remain")
 require("ReaderComfortPrefs.pageBackground()" in free, "free reader is not pinned to cream")

@@ -353,15 +353,6 @@ private fun InteractiveTafsirText(
                 runsToAnnotatedString(block.runs, linkColor, enableQuranLinks)
             }
             val isPoetry = block.kind == TafsirBlockKind.POETRY
-            if (isPoetry) {
-                Text(
-                    text = "Poésie · lignes conservées selon l’édition source",
-                    modifier = Modifier.padding(start = 12.dp, top = 3.dp, bottom = 1.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
             ClickableText(
                 modifier = if (isPoetry) {
                     Modifier.padding(start = 12.dp, end = 4.dp, bottom = 3.dp)
