@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import argparse
+import shutil
+import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 NEEDLE = b"taddabur"
+FORBIDDEN_FINAL_PERMISSIONS = (
+    "android.permission.CALL_PHONE",
+    "android.permission.READ_PHONE_STATE",
+)
 
 
 def fail(message: str) -> None:
@@ -24,6 +30,25 @@ def check_source() -> None:
                 fail(f"removed runtime reference remains: {path.relative_to(ROOT)}")
 
 
+def check_final_manifest_permissions(path: Path) -> None:
+    apkanalyzer = shutil.which("apkanalyzer")
+    if not apkanalyzer:
+        fail("apkanalyzer is required to verify final APK permissions")
+    result = subprocess.run(
+        [apkanalyzer, "manifest", "print", str(path)],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        fail(f"cannot inspect final manifest for {path.name}: {detail}")
+    manifest = result.stdout
+    for permission in FORBIDDEN_FINAL_PERMISSIONS:
+        if permission in manifest:
+            fail(f"forbidden final permission remains in {path.name}: {permission}")
+
+
 def check_apk(path: Path) -> None:
     if not path.is_file():
         fail(f"APK not found: {path}")
@@ -33,6 +58,7 @@ def check_apk(path: Path) -> None:
                 fail(f"removed feature entry remains in {path.name}: {info.filename}")
             if info.file_size <= 32 * 1024 * 1024 and NEEDLE in apk.read(info).lower():
                 fail(f"removed feature bytecode/string remains in {path.name}: {info.filename}")
+    check_final_manifest_permissions(path)
 
 
 def main() -> None:
@@ -42,7 +68,10 @@ def main() -> None:
     check_source()
     for raw in args.apk:
         check_apk(Path(raw))
-    print("PASS: removed runtime absent from source" + (" and APKs" if args.apk else ""))
+    print(
+        "PASS: removed runtime absent from source"
+        + (" and APKs; final phone permissions absent" if args.apk else "")
+    )
 
 
 if __name__ == "__main__":
