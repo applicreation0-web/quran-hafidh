@@ -125,6 +125,36 @@ jobs:
             --apk app/build/outputs/apk/light/debug/app-light-debug.apk \
             --apk app/build/outputs/apk/plus/debug/app-plus-debug.apk
 
+      - name: Prepare exact 0.10.8 release metadata
+        if: github.event_name == 'push'
+        run: python3 scripts/prepare_0108_version.py
+
+      - name: Build audited unsigned Light and Plus release APKs
+        if: github.event_name == 'push'
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease --stacktrace
+
+      - name: Verify audited unsigned release edition boundaries
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          python3 scripts/verify_light_apk_no_tafsir.py "${light}"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "${plus}"
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
+
+      - name: Upload audited unsigned 0.10.8 release APKs
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.8-unsigned
+          path: |
+            app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+            app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Preserve generated 0.10.8 source only after all gates pass
         if: github.event_name == 'push'
         shell: bash
