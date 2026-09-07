@@ -7,6 +7,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 NEEDLE = b"taddabur"
+# Release-blocking: neither edition may acquire direct-call/phone-state access via manifest merging.
 FORBIDDEN_FINAL_PERMISSIONS = (
     "android.permission.CALL_PHONE",
     "android.permission.READ_PHONE_STATE",
