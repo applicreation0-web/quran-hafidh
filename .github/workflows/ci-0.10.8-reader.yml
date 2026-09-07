@@ -30,6 +30,9 @@ jobs:
       - name: Apply idempotent 0.10.8 reader migration
         run: python3 scripts/apply_0108_reader_changes.py
 
+      - name: Rewrite syntax-safe generated verifier
+        run: python3 scripts/fix_0108_reader_verifier.py
+
       - name: Verify strict 0.10.8 reader contract
         run: python3 scripts/verify_0108_reader_contract.py
 
