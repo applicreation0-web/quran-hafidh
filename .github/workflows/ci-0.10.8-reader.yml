@@ -53,6 +53,39 @@ jobs:
       - name: Fetch and verify all 604 Medina Mushaf pages
         run: bash scripts/fetch_mushaf_pages.sh
 
+      - name: Set up Python corpus tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Fetch pinned Qushayri and Qurtubi source PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "${src}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+
+      - name: Rebuild Plus Tafsir assets from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_multitafsir_assets_0106.py \
+            --source-dir "${RUNNER_TEMP}/tafsir-src" \
+            --assets-dir app/src/plus/assets/tafsir \
+            --work-dir "${RUNNER_TEMP}/tafsir-work"
+
+      - name: Contradictory Tafsir corpus gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_0106_tafsir_honorifics.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_tafsir_presentation.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_qurtubi_unicode_labels.py app/src/plus/assets/tafsir
+          python3 scripts/verify_0107_tafsir_reading_contract.py
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
