@@ -30,6 +30,9 @@ jobs:
       - name: Apply idempotent 0.10.8 reader migration
         run: python3 scripts/apply_0108_reader_changes.py
 
+      - name: Adapt legacy audit from helper prose to actual gesture wiring
+        run: python3 scripts/fix_0108_release_audit.py
+
       - name: Rewrite syntax-safe generated verifier
         run: python3 scripts/fix_0108_reader_verifier.py
 
