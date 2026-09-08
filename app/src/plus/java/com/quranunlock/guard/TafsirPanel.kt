@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -209,7 +211,8 @@ internal fun TafsirPanel(
                 }
                 Row {
                     TextButton(
-                        modifier = Modifier.semantics {
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(48.dp).semantics {
                             contentDescription = if (expanded) {
                                 "Réduire le panneau du Tafsîr"
                             } else {
@@ -225,14 +228,16 @@ internal fun TafsirPanel(
                         )
                     }
                     TextButton(
-                        modifier = Modifier.semantics {
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(48.dp).semantics {
                             contentDescription = "Réduire la taille du commentaire"
                         },
                         enabled = fontSize > MIN_FONT_SIZE,
                         onClick = { changeFont(-2f) }
                     ) { Text("A−") }
                     TextButton(
-                        modifier = Modifier.semantics {
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(48.dp).semantics {
                             contentDescription = "Agrandir la taille du commentaire"
                         },
                         enabled = fontSize < MAX_FONT_SIZE,
