@@ -3,7 +3,7 @@
 'use strict';
 function balancedBlocks(lines){
  /* Keep blocks close to five real Mushaf lines without pathological tails (5+5+1). */
- const blockCount=lines.length<=7?1:Math.ceil(lines.length/6),base=Math.floor(lines.length/blockCount),extra=lines.length%blockCount;
+ const blockCount=lines.length<=6?1:Math.ceil(lines.length/6),base=Math.floor(lines.length/blockCount),extra=lines.length%blockCount;
  const blocks=[];for(let i=0,offset=0;i<blockCount;i++){const n=base+(i<extra?1:0);blocks.push(lines.slice(offset,offset+n));offset+=n;}
  return blocks;
 }

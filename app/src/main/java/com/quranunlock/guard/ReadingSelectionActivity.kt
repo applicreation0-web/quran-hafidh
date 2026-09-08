@@ -105,13 +105,17 @@ class ReadingSelectionActivity : ComponentActivity() {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "Qur’an & Tafsîr",
+                                if (TafsirEdition.isEnabled) "Qur’an & Tafsîr" else "Lecture du Qur’an",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Ouvrez librement le Mushaf de Médine et le Tafsîr al-Jalalayn, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard.",
+                                if (TafsirEdition.isEnabled) {
+                                    "Ouvrez librement le Mushaf de Médine et les Tafsirs disponibles, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard."
+                                } else {
+                                    "Ouvrez librement le Mushaf de Médine, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard."
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

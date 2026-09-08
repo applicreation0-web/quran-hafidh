@@ -40,16 +40,19 @@ object DisplayProfileManager {
         )
     }
 
-    fun resolve(context: Context): DisplayProfile = when (preference(context)) {
+    fun resolve(context: Context): DisplayProfile = resolvePreference(
+        preference(context),
+        looksLikeEInkDevice(context, Build.MANUFACTURER, Build.BRAND, Build.MODEL)
+    )
+
+    internal fun resolvePreference(
+        preference: DisplayProfilePreference,
+        automaticDetection: Boolean
+    ): DisplayProfile = when (preference) {
         DisplayProfilePreference.STANDARD -> DisplayProfile.STANDARD
         DisplayProfilePreference.EINK -> DisplayProfile.EINK
-        DisplayProfilePreference.AUTOMATIC -> {
-            if (looksLikeEInkDevice(context, Build.MANUFACTURER, Build.BRAND, Build.MODEL)) {
-                DisplayProfile.EINK
-            } else {
-                DisplayProfile.STANDARD
-            }
-        }
+        DisplayProfilePreference.AUTOMATIC ->
+            if (automaticDetection) DisplayProfile.EINK else DisplayProfile.STANDARD
     }
 
     internal fun looksLikeEInkDevice(

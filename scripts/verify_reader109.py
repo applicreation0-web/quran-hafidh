@@ -12,6 +12,8 @@ reader_js=(a/'reader.js').read_text();protocol=(a/'protocol.js').read_text();htm
 display=(src/'main/java/com/quranunlock/guard/DisplayProfile.kt').read_text()
 refresh=(src/'main/java/com/quranunlock/guard/EInkRefreshController.kt').read_text()
 audio=(src/'main/java/com/quranunlock/guard/QuranAudioController.kt').read_text()
+selection=(src/'main/java/com/quranunlock/guard/ReadingSelectionActivity.kt').read_text()
+hub=(src/'main/java/com/quranunlock/guard/QuranHubActivity.kt').read_text()
 assert '!memoryMode&&TafsirEdition.isEnabled' in reader
 assert 'GuardPrefs.' not in reader and 'SafeguardCyclePrefs.' not in reader
 assert 'settings.allowFileAccess = false' in reader and 'settings.blockNetworkLoads = true' in reader
@@ -24,7 +26,12 @@ assert "body.eink" in html and "transition:none" in html and "animation:none" in
 assert all(token in display for token in ('AUTOMATIC','STANDARD','EINK','looksLikeEInkDevice'))
 assert 'profile == DisplayProfile.STANDARD' in refresh and 'FULL_REFRESH_THRESHOLD' in refresh
 assert 'Class.forName("com.onyx.android.sdk' in refresh and 'getOrDefault(false)' in refresh
+assert all(token not in refresh for token in ('counts[','wins[','milestones','success','activeLine','setMode('))
 assert 'if(!available){emit("unavailable");return}' in audio
 assert 'audioCountsProgress' in reader_js
+assert 'visual(' not in reader_js[reader_js.index('window.audioEvent='):reader_js.index('window.setOcclusion=')]
+assert not any('eink' in part.lower() for path in src.rglob('*') if path.is_dir() for part in path.parts[-1:])
+assert 'if (TafsirEdition.isEnabled)' in selection and 'if (TafsirEdition.isEnabled)' in hub
+assert 'Tafsîr al-Jalalayn' not in selection
 subprocess.run(['node',str(r/'scripts/test_reader109_protocol.js')],check=True)
 print('PASS 604 pages, 6236 verses, memory protocol, STANDARD/EINK, Tafsir isolation, no microphone, closed audio gate')

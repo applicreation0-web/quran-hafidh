@@ -433,7 +433,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    "Qur’an & Tafsîr",
+                                    if (TafsirEdition.isEnabled) "Qur’an & Tafsîr" else "Lecture du Qur’an",
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.primary,

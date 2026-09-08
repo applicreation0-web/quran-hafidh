@@ -19,6 +19,18 @@ class DisplayProfilePolicyTest {
         assertEquals(0, DisplayProfileManager.motionDurationMillis(DisplayProfile.EINK))
     }
 
+    @Test fun manualStandardOverridesDetectedEInk() {
+        assertEquals(DisplayProfile.STANDARD, DisplayProfileManager.resolvePreference(
+            DisplayProfilePreference.STANDARD, automaticDetection = true
+        ))
+    }
+
+    @Test fun manualEInkOverridesOrdinaryDevice() {
+        assertEquals(DisplayProfile.EINK, DisplayProfileManager.resolvePreference(
+            DisplayProfilePreference.EINK, automaticDetection = false
+        ))
+    }
+
     @Test fun fullRefreshIsThresholdedRatherThanPerInteraction() {
         assertTrue(EInkRefreshController.FULL_REFRESH_THRESHOLD > VisualChange.MASK_LEVEL.ghostingWeight)
         assertTrue(EInkRefreshController.FULL_REFRESH_THRESHOLD <=

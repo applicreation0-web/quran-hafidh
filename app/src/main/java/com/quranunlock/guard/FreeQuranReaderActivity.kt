@@ -143,7 +143,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
         @JavascriptInterface fun announce(surah:Int,ayah:Int){runOnUiThread { web?.announceForAccessibility("Sourate $surah, verset $ayah") }}
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if(event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+        if(displayProfile == DisplayProfile.EINK && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             val delta = when(event.keyCode) {
                 KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_VOLUME_UP -> -1
                 KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN -> 1

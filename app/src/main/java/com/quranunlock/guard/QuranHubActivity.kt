@@ -42,7 +42,7 @@ class QuranHubActivity : ComponentActivity() {
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        "Lecture, Tafsîr et parcours.",
+                        if (TafsirEdition.isEnabled) "Lecture, Tafsîr et parcours." else "Lecture et parcours.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -136,4 +136,3 @@ private fun QuranHubRow(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
-
