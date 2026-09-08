@@ -37,4 +37,10 @@ class DisplayProfilePolicyTest {
             VisualChange.REVEAL.ghostingWeight + VisualChange.REVEAL_RETURN.ghostingWeight +
                 VisualChange.MASK_LEVEL.ghostingWeight)
     }
+
+    @Test fun temporaryRevealAndReturnCrossTheCleanupThreshold() {
+        assertTrue(VisualChange.REVEAL.ghostingWeight +
+            VisualChange.REVEAL_RETURN.ghostingWeight >=
+            EInkRefreshController.FULL_REFRESH_THRESHOLD)
+    }
 }

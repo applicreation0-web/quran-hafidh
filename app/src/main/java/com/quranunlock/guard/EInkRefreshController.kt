@@ -11,7 +11,8 @@ enum class VisualChange(val ghostingWeight: Int) {
     PAGE(8),
     MASK_LEVEL(3),
     REVEAL(4),
-    REVEAL_RETURN(5),
+    // A temporary reveal can otherwise leave readable ghost text behind the mask.
+    REVEAL_RETURN(6),
     LINE(3),
     MILESTONE(2),
     HIGHLIGHT(1)
