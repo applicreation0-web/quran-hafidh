@@ -1,6 +1,9 @@
 package com.applicreation0.quransafeguard
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,11 +28,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
@@ -52,6 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -107,6 +114,8 @@ internal fun TafsirPanel(
                 .coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
         )
     }
+    var controlsVisible by remember(verse) { mutableStateOf(true) }
+    var controlInteraction by remember { mutableIntStateOf(0) }
     var menuExpanded by remember { mutableStateOf(false) }
     var notesExpanded by remember(verse, selectedEdition) { mutableStateOf(false) }
     var noteReturnScroll by remember(verse, selectedEdition) { mutableStateOf<Int?>(null) }
@@ -123,6 +132,25 @@ internal fun TafsirPanel(
         scrollState.scrollTo(0)
     }
 
+    LaunchedEffect(controlsVisible, controlInteraction, menuExpanded, scrollState.isScrollInProgress) {
+        if (controlsVisible && !menuExpanded && !scrollState.isScrollInProgress) {
+            delay(2_500L)
+            controlsVisible = false
+        }
+    }
+
+    fun revealControls(): Boolean {
+        controlInteraction += 1
+        if (controlsVisible) return false
+        controlsVisible = true
+        return true
+    }
+
+    fun toggleControls() {
+        controlInteraction += 1
+        controlsVisible = !controlsVisible
+    }
+
     LaunchedEffect(requestedNoteNumber, notesExpanded, availableEntry) {
         val number = requestedNoteNumber ?: return@LaunchedEffect
         if (!notesExpanded) return@LaunchedEffect
@@ -130,6 +158,7 @@ internal fun TafsirPanel(
     }
 
     fun changeFont(delta: Float) {
+        controlInteraction += 1
         val next = (fontSize + delta).coerceIn(MIN_FONT_SIZE, MAX_FONT_SIZE)
         fontSize = next
         preferences.edit().putFloat(FONT_SIZE_KEY, next).apply()
@@ -147,6 +176,7 @@ internal fun TafsirPanel(
         val position = noteReturnScroll ?: return
         requestedNoteNumber = null
         noteReturnScroll = null
+        notesExpanded = false
         coroutineScope.launch { scrollState.animateScrollTo(position) }
     }
 
@@ -166,7 +196,16 @@ internal fun TafsirPanel(
         tonalElevation = 0.dp,
         shadowElevation = 0.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    controlInteraction += 1
+                }
+            }
+        ) {
+            if (controlsVisible) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -247,11 +286,15 @@ internal fun TafsirPanel(
             }
 
             HorizontalDivider()
+            }
 
             Column(
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .verticalScroll(scrollState)
+                    .pointerInput(controlsVisible) {
+                        detectTapGestures(onTap = { toggleControls() })
+                    }
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -275,7 +318,9 @@ internal fun TafsirPanel(
                             linkColor = MaterialTheme.colorScheme.primary,
                             enableQuranLinks = onQuranReferenceSelected != null,
                             onNoteSelected = ::openNote,
-                            onQuranReferenceSelected = onQuranReferenceSelected
+                            onQuranReferenceSelected = onQuranReferenceSelected,
+                            onRevealControls = ::revealControls,
+                            onBodyTap = ::toggleControls
                         )
                         if (state.entry.notes.isNotEmpty()) {
                             HorizontalDivider()
@@ -326,7 +371,9 @@ internal fun TafsirPanel(
                                             linkColor = MaterialTheme.colorScheme.primary,
                                             enableQuranLinks = onQuranReferenceSelected != null,
                                             onNoteSelected = ::openNote,
-                                            onQuranReferenceSelected = onQuranReferenceSelected
+                                            onQuranReferenceSelected = onQuranReferenceSelected,
+                                            onRevealControls = ::revealControls,
+                                            onBodyTap = ::toggleControls
                                         )
                                     }
                                 }
@@ -349,7 +396,9 @@ private fun InteractiveTafsirText(
     linkColor: Color,
     enableQuranLinks: Boolean,
     onNoteSelected: (Int) -> Unit,
-    onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)?
+    onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)?,
+    onRevealControls: () -> Boolean,
+    onBodyTap: () -> Unit
 ) {
     val blocks = remember(runs) { splitTafsirRenderBlocks(runs) }
     Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
@@ -374,16 +423,18 @@ private fun InteractiveTafsirText(
                     textAlign = if (isPoetry) TextAlign.Start else TextAlign.Justify
                 ),
                 onClick = { offset ->
-                    annotated.getStringAnnotations(NOTE_LINK_TAG, offset, offset)
-                        .firstOrNull()
-                        ?.item
-                        ?.toIntOrNull()
-                        ?.let(onNoteSelected)
-                        ?: annotated.getStringAnnotations(QURAN_LINK_TAG, offset, offset)
-                            .firstOrNull()
-                            ?.item
-                            ?.let(::decodeQuranReference)
-                            ?.let { reference -> onQuranReferenceSelected?.invoke(reference) }
+                    if (!onRevealControls()) {
+                        val note = annotated.getStringAnnotations(NOTE_LINK_TAG, offset, offset)
+                            .firstOrNull()?.item?.toIntOrNull()
+                        val reference = annotated.getStringAnnotations(QURAN_LINK_TAG, offset, offset)
+                            .firstOrNull()?.item?.let(::decodeQuranReference)
+                        when {
+                            note != null -> onNoteSelected(note)
+                            reference != null && onQuranReferenceSelected != null ->
+                                onQuranReferenceSelected(reference)
+                            else -> onBodyTap()
+                        }
+                    }
                 }
             )
         }

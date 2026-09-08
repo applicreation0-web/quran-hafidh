@@ -19,7 +19,7 @@ object TafsirEdition {
     fun prepareHtml(svgContent: String, pageNumber: Int): String {
         val styledSvg = svgContent + """
             <style>
-              html, body, svg { background: #F4F0E6 !important; }
+              html, body, svg { background: ${ReaderComfortPrefs.READER_CREAM_HEX} !important; }
             </style>
         """.trimIndent()
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
@@ -53,6 +53,7 @@ object TafsirEdition {
                       path.removeAttribute('aria-pressed');
                     });
                     window.qsgTafsir = {
+                      selectOnTap: false,
                       select(surah, ayah) {
                         if (savedPosition === null) savedPosition = { x: window.scrollX, y: window.scrollY };
                         clearHighlight();
@@ -98,7 +99,7 @@ object TafsirEdition {
                         if (pointer !== null) pointer.cancelled = true;
                         return;
                       }
-                      pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, cancelled: false };
+                      pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, startedAt: performance.now(), cancelled: false };
                     }, { passive: true });
                     document.addEventListener('pointermove', (event) => {
                       if (pointer === null || pointer.id !== event.pointerId) return;
@@ -110,7 +111,10 @@ object TafsirEdition {
                       pointer = null;
                       if (candidate === null || candidate.id !== event.pointerId || candidate.cancelled) return;
                       const path = pathAt(event.clientX, event.clientY);
-                      if (path) activate(path);
+                      if (path && (window.qsgTafsir.selectOnTap || performance.now() - candidate.startedAt >= 500)) {
+                        window.qsgTafsir.selectOnTap = false;
+                        activate(path);
+                      }
                     }, { passive: true });
                     const firstByVerse = new Set();
                     polygons().forEach((path) => {
@@ -124,7 +128,10 @@ object TafsirEdition {
                       firstByVerse.add(key);
                       path.setAttribute('role', 'button');
                       path.setAttribute('tabindex', '0');
-                      path.setAttribute('aria-label', 'Sourate ' + surah + ', verset ' + ayah);
+                      path.setAttribute('aria-label', 'Tafsîr : sourate ' + surah + ', verset ' + ayah);
+                      path.addEventListener('click', (event) => {
+                        if (event.detail === 0) activate(path);
+                      });
                       path.addEventListener('keydown', (event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                           event.preventDefault();
@@ -160,6 +167,12 @@ object TafsirEdition {
             if (messagePage != pageNumber || verse !in verseIndex) return@addWebMessageListener
             view.post { onVerseTapped(verse) }
         }
+    }
+
+    fun beginSelection() {
+        currentWebView.get()?.evaluateJavascript(
+            "window.qsgTafsir && (window.qsgTafsir.selectOnTap = true);", null
+        )
     }
 
     fun selectVerse(verse: VerseRef) {
@@ -225,3 +238,4 @@ object TafsirEdition {
         return get(name) as? Int
     }
 }
+

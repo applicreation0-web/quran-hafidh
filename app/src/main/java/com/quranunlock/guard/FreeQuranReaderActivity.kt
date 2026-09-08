@@ -3,6 +3,7 @@ package com.applicreation0.quransafeguard
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.webkit.WebResourceRequest
@@ -131,7 +132,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 val shellPrimary = MaterialTheme.colorScheme.primary
                 val shellSecondary = MaterialTheme.colorScheme.secondary
                 val shellMuted = MaterialTheme.colorScheme.onSurfaceVariant
-                val chromeHidden = pureReading && !referenceMode && !quickNavOpen && !comfortOpen
+                val chromeHidden = (pureReading || selectedTafsirVerse != null) && !quickNavOpen && !comfortOpen
 
                 LaunchedEffect(readerBrightness) {
                     ReaderComfortPrefs.applyBrightness(window, readerBrightness)
@@ -145,8 +146,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                     comfortOpen,
                     pureReading
                 ) {
-                    if (!referenceMode &&
-                        selectedTafsirVerse == null &&
+                    if (selectedTafsirVerse == null &&
                         !quickNavOpen &&
                         !comfortOpen &&
                         !pureReading
@@ -254,12 +254,14 @@ class FreeQuranReaderActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = shellColor
                 ) {
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    BoxWithConstraints(modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .statusBarsPadding()
-                                .navigationBarsPadding()
                                 .padding(vertical = if (chromeHidden) 0.dp else 2.dp)
                         ) {
                             if (!chromeHidden) {
@@ -274,14 +276,25 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         if (referenceMode) {
                                             "Référence Qur’an • ${reference!!.label}"
                                         } else {
-                                            "Qur’an & Tafsîr"
+                                            "Page $page / $LAST_PAGE ▾"
                                         },
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.weight(1f).clickable(
+                                            enabled = !referenceMode && selectedTafsirVerse == null && !comfortOpen
+                                        ) {
+                                            quickNavPage = page
+                                            quickNavInput = page.toString()
+                                            quickNavOpen = !quickNavOpen
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
                                         color = shellPrimary,
                                         fontWeight = FontWeight.Bold
                                     )
                                     if (!referenceMode && selectedTafsirVerse == null) {
+                                    if (TafsirEdition.isEnabled) {
+                                        TextButton(onClick = { TafsirEdition.beginSelection() }) {
+                                            Text("Tafsîr")
+                                        }
+                                    }
                                         Text(
                                             "☼",
                                             modifier = Modifier
@@ -296,33 +309,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         )
                                     }
                                 }
-
-                                Text(
-                                    if (referenceMode) {
-                                        "Mushaf de Médine • Page $page / $LAST_PAGE"
-                                    } else {
-                                        "Mushaf de Médine • Page $page / $LAST_PAGE ${if (quickNavOpen) "▴" else "▾"}"
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(
-                                            enabled = !referenceMode &&
-                                                selectedTafsirVerse == null &&
-                                                !comfortOpen
-                                        ) {
-                                            if (quickNavOpen) {
-                                                quickNavOpen = false
-                                            } else {
-                                                quickNavPage = page
-                                                quickNavInput = page.toString()
-                                                quickNavOpen = true
-                                            }
-                                        }
-                                        .padding(horizontal = 12.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = shellSecondary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
 
                                 if (comfortOpen && !referenceMode && selectedTafsirVerse == null) {
                                     Surface(
@@ -529,8 +515,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             onSwipePrevious = { showPage(page - 1) },
                                             onSwipeNext = { showPage(page + 1) },
                                             onReaderTap = {
-                                                pureReading = false
-                                                chromeInteraction += 1
+                                                if (!quickNavOpen && !comfortOpen && selectedTafsirVerse == null) {
+                                                    pureReading = !pureReading
+                                                    chromeInteraction += 1
+                                                }
                                             },
                                             onVerseTapped = { verse ->
                                                 if (!referenceMode && !quickNavOpen && !comfortOpen) {
@@ -545,7 +533,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                             if (!chromeHidden) {
                                 Spacer(Modifier.height(2.dp))
                                 if (referenceMode) {
-                                    SafeguardOutlinedButton(
+                                    TextButton(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 10.dp),
@@ -554,7 +542,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                         Text("← Retour au commentaire")
                                     }
                                 } else {
-                                    if (selectedTafsirVerse == null) {
+                                    if (quickNavOpen && selectedTafsirVerse == null) {
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -604,23 +592,23 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                             .padding(horizontal = 10.dp),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        SafeguardOutlinedButton(
+                                        TextButton(
                                             modifier = Modifier.weight(1f),
                                             enabled = selectedTafsirVerse == null && page > FIRST_PAGE,
                                             onClick = { showPage(page - 1) }
                                         ) { Text("Préc.") }
-                                        SafeguardOutlinedButton(
+                                        TextButton(
                                             modifier = Modifier.weight(1f),
                                             enabled = selectedTafsirVerse == null,
                                             onClick = { toggleBookmark() }
                                         ) { Text(if (page in bookmarkPages) "Signet ✓" else "Signet") }
-                                        SafeguardOutlinedButton(
+                                        TextButton(
                                             modifier = Modifier.weight(1f),
                                             enabled = selectedTafsirVerse == null && page < LAST_PAGE,
                                             onClick = { showPage(page + 1) }
                                         ) { Text("Suiv.") }
                                     }
-                                    if (bookmarkPages.isNotEmpty()) {
+                                    if (quickNavOpen && bookmarkPages.isNotEmpty()) {
                                         Spacer(Modifier.height(2.dp))
                                         Row(
                                             modifier = Modifier
@@ -637,7 +625,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                             bookmarkPages.sorted().forEach { bookmarkedPage ->
-                                                SafeguardOutlinedButton(
+                                                TextButton(
                                                     enabled = selectedTafsirVerse == null &&
                                                         bookmarkedPage != page,
                                                     onClick = {
@@ -660,23 +648,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                                     ) { Text("Fermer") }
                                 }
                             }
-                        }
-
-                        if (chromeHidden && !referenceMode && selectedTafsirVerse == null) {
-                            Text(
-                                "Afficher",
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(6.dp)
-                                    .clickable {
-                                        pureReading = false
-                                        chromeInteraction += 1
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 5.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = shellMuted,
-                                fontWeight = FontWeight.SemiBold
-                            )
                         }
 
                         if (!referenceMode) {
@@ -775,7 +746,14 @@ private fun FreeMushafPageWebView(
 
                 val swipeThreshold = 72f * resources.displayMetrics.density
                 val gestureClassifier = ReaderGestureClassifier(swipeThreshold)
+                val tapDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onSingleTapUp(event: MotionEvent): Boolean {
+                        currentOnReaderTap.value()
+                        return false
+                    }
+                })
                 setOnTouchListener { _, event ->
+                    tapDetector.onTouchEvent(event)
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN -> gestureClassifier.onDown(
                             event.x,
@@ -801,7 +779,7 @@ private fun FreeMushafPageWebView(
                             ) {
                                 ReaderSwipe.NEXT -> currentOnSwipeNext.value()
                                 ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()
-                                null -> currentOnReaderTap.value()
+                                null -> Unit
                             }
                         }
                     }
@@ -880,3 +858,4 @@ private fun FreeMushafPageWebView(
         }
     )
 }
+

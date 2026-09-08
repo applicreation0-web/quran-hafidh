@@ -9,10 +9,12 @@ import androidx.compose.ui.unit.Dp
 object TafsirEdition {
     const val isEnabled: Boolean = false
 
+    fun beginSelection() = Unit
+
     fun prepareHtml(svgContent: String, pageNumber: Int): String =
         svgContent + """
             <style>
-              html, body, svg { background: #F4F0E6 !important; }
+              html, body, svg { background: ${ReaderComfortPrefs.READER_CREAM_HEX} !important; }
             </style>
         """.trimIndent()
 
@@ -48,3 +50,4 @@ object TafsirEdition {
         onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) = Unit
 }
+

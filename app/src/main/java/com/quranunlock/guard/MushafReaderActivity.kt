@@ -3,6 +3,7 @@ package com.applicreation0.quransafeguard
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.webkit.WebResourceRequest
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -409,15 +411,17 @@ class MushafReaderActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = SafeguardReadingSurface
                 ) {
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    BoxWithConstraints(modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .statusBarsPadding()
-                                .navigationBarsPadding()
                                 .padding(horizontal = 0.dp, vertical = 2.dp)
                         ) {
-                        if (chromeVisible || brightnessOpen) {
+                        if ((chromeVisible || brightnessOpen) && selectedTafsirVerse == null) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -426,12 +430,17 @@ class MushafReaderActivity : ComponentActivity() {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    "Qur’an & Tafsîr",
+                                    "Page $currentDisplayedPage / 604",
                                     modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold
                                 )
+                                if (TafsirEdition.isEnabled) {
+                                    TextButton(onClick = { TafsirEdition.beginSelection() }) {
+                                        Text("Tafsîr")
+                                    }
+                                }
                                 Text(
                                     "☼",
                                     modifier = Modifier
@@ -446,13 +455,6 @@ class MushafReaderActivity : ComponentActivity() {
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
-                            Text(
-                                "Mushaf de Médine • Page $currentDisplayedPage / 604",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.SemiBold
-                            )
                             if (brightnessOpen) {
                                 Surface(
                                     modifier = Modifier
@@ -517,6 +519,7 @@ class MushafReaderActivity : ComponentActivity() {
                             }
                         }
 
+                        if (chromeVisible && selectedTafsirVerse == null) {
                         Text(
                             when {
                                 quotaReached ->
@@ -557,6 +560,8 @@ class MushafReaderActivity : ComponentActivity() {
                             }
                         )
                         Spacer(Modifier.height(3.dp))
+
+                        }
 
                         AnimatedContent(
                             targetState = displayedIndex,
@@ -621,8 +626,10 @@ class MushafReaderActivity : ComponentActivity() {
                                         validateAndAdvance()
                                     },
                                     onReaderTap = {
-                                        chromeVisible = true
-                                        chromeInteraction += 1
+                                        if (!brightnessOpen && selectedTafsirVerse == null) {
+                                            chromeVisible = !chromeVisible
+                                            chromeInteraction += 1
+                                        }
                                     },
                                     onVerseTapped = { verse ->
                                         if (pageNumber == currentDisplayedPage &&
@@ -647,14 +654,15 @@ class MushafReaderActivity : ComponentActivity() {
                             }
                         }
 
-                        Spacer(Modifier.height(7.dp))
+                        if (chromeVisible && selectedTafsirVerse == null) {
+                        Spacer(Modifier.height(2.dp))
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            SafeguardOutlinedButton(
+                            TextButton(
                                 modifier = Modifier.weight(1f),
                                 enabled = selectedTafsirVerse == null && displayedIndex > 0,
                                 onClick = {
@@ -692,7 +700,7 @@ class MushafReaderActivity : ComponentActivity() {
                             activeIndex == planPages.lastIndex &&
                             canValidate
                         ) {
-                            SafeguardOutlinedButton(
+                            TextButton(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 8.dp),
@@ -723,7 +731,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 Text("Ouvrir l’application cible")
                             }
                         } else {
-                            SafeguardOutlinedButton(
+                            TextButton(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 8.dp),
@@ -735,6 +743,7 @@ class MushafReaderActivity : ComponentActivity() {
                             ) {
                                 Text("Quitter sans valider")
                             }
+                        }
                         }
                         }
 
@@ -929,7 +938,14 @@ private fun MushafPageWebView(
 
                 val swipeThreshold = 72f * resources.displayMetrics.density
                 val gestureClassifier = ReaderGestureClassifier(swipeThreshold)
+                val tapDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onSingleTapUp(event: MotionEvent): Boolean {
+                        currentOnReaderTap.value()
+                        return false
+                    }
+                })
                 setOnTouchListener { _, event ->
+                    tapDetector.onTouchEvent(event)
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
                             gestureClassifier.onDown(
@@ -961,7 +977,7 @@ private fun MushafPageWebView(
                             ) {
                                 ReaderSwipe.NEXT -> currentOnSwipeNext.value()
                                 ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()
-                                null -> currentOnReaderTap.value()
+                                null -> Unit
                             }
                         }
                     }
