@@ -70,7 +70,7 @@ class EInkRefreshController(
     private fun tryVendorFullRefresh(view: View): Boolean = runCatching {
         val controller = Class.forName("com.onyx.android.sdk.api.device.epd.EpdController")
         val modeClass = Class.forName("com.onyx.android.sdk.api.device.epd.UpdateMode")
-        val gc = modeClass.enumConstants.firstOrNull {
+        val gc = modeClass.enumConstants?.firstOrNull {
             it.toString().equals("GC", true) || it.toString().contains("FULL", true)
         } ?: return false
         val method = controller.methods.firstOrNull { candidate ->

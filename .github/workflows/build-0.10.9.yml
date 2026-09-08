@@ -27,7 +27,8 @@ jobs:
               apk=next(Path('baseline108').rglob(pat))
               with zipfile.ZipFile(apk) as z:
                   for n in z.namelist():
-                      if n.startswith('assets/') and (ed=='main' or n.startswith('assets/tafsir/')):
+                      if (n.startswith('assets/') and not n.startswith('assets/dexopt/')
+                              and (ed=='main' or n.startswith('assets/tafsir/'))):
                           p=Path('app/src')/ed/n;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(z.read(n))
           PY
       - uses: actions/setup-python@v5
