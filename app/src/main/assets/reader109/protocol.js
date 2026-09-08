@@ -27,16 +27,19 @@ function plan(lines,audio){
 }
 function create(lines,audio=false){return {schema:1,lines,withAudio:audio,step:0,counts:{},wins:{},milestones:[],status:'À apprendre',due:Date.now(),seed:Math.floor(Math.random()*2147483647),complete:false};}
 function current(s){return plan(s.lines,s.withAudio)[s.step]||null;}
-function canValidate(s){const p=current(s);return !!p&&(s.counts[p.id]||0)>=p.min&&(!p.success||(s.wins[p.id]||0)>=3);}
+function assistanceActive(s){const p=current(s);return !!p&&s.assistance?.stepId===p.id;}
+function canValidate(s){const p=current(s);return !!p&&!assistanceActive(s)&&(s.counts[p.id]||0)>=p.min&&(!p.success||(s.wins[p.id]||0)>=3);}
 function record(s,correct=true,source='personal'){
  const p=current(s);if(!p||p.kind==='confirm')return false;
+ if(assistanceActive(s))return false;
  if((p.kind==='passive'||p.kind==='active')&&source!=='audio')return false;
  if(p.kind!=='passive'&&p.kind!=='active'&&source==='audio')return false;
  s.counts[p.id]=(s.counts[p.id]||0)+1;s.wins[p.id]=correct?(s.wins[p.id]||0)+1:0;return true;
 }
-function aid(s){const p=current(s);if(p)s.wins[p.id]=0;}
-function validate(s){if(!canValidate(s))return false;const p=current(s);if(!s.milestones.includes(p.id))s.milestones.push(p.id);s.step++;if(!current(s)){s.complete=true;s.status='Acquis';s.due=Date.now()+86400000;}return true;}
-function redo(s){const p=current(s);if(p){s.counts[p.id]=0;s.wins[p.id]=0;}}
+function aid(s,kind='help',hintWords=0){const p=current(s);if(!p)return false;s.wins[p.id]=0;s.assistance={stepId:p.id,kind,hintWords};return true;}
+function clearAid(s){delete s.assistance;}
+function validate(s){if(!canValidate(s))return false;const p=current(s);if(!s.milestones.includes(p.id))s.milestones.push(p.id);clearAid(s);s.step++;if(!current(s)){s.complete=true;s.status='Acquis';s.due=Date.now()+86400000;}return true;}
+function redo(s){const p=current(s);if(p){s.counts[p.id]=0;s.wins[p.id]=0;}clearAid(s);}
 function rank(seed,id){let h=(seed|0)^2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967296;}
-const api={balancedBlocks,plan,create,current,canValidate,record,aid,validate,redo,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
+const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,record,aid,clearAid,validate,redo,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

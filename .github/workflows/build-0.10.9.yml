@@ -8,7 +8,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - name: Retrieve exact audited 0.10.8 corpus
@@ -50,19 +50,38 @@ jobs:
         run: gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
       - name: Compile both editions
         run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+      - name: Runtime reader, persistence, migration and Safeguard boundaries
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: gradle --no-daemon :app:connectedLightDebugAndroidTest :app:connectedPlusDebugAndroidTest --stacktrace
       - name: Audit compiled edition boundaries
         run: |
           python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
           python3 scripts/verify_plus_apk_multitafsir_0106.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
           python3 scripts/verify_reader109.py
+      - name: Extract candidate APK evidence
+        run: |
+          mkdir -p candidate-evidence
+          aapt dump xmltree app/build/outputs/apk/light/release/app-light-release-unsigned.apk AndroidManifest.xml > candidate-evidence/light-manifest.txt
+          aapt dump xmltree app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk AndroidManifest.xml > candidate-evidence/plus-manifest.txt
+          aapt dump permissions app/build/outputs/apk/light/release/app-light-release-unsigned.apk > candidate-evidence/light-permissions.txt
+          aapt dump permissions app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/plus-permissions.txt
+          python3 scripts/verify_candidate_apks.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/candidate-apks.json
+          sha256sum app/build/outputs/apk/light/release/app-light-release-unsigned.apk app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/SHA256SUMS
       - name: Upload build and reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-safeguard-0.10.9-candidate
+          name: quran-safeguard-0.10.9-astra-re-audit
           path: |
             app/build/outputs/apk/
             app/build/test-results/
             app/build/reports/
+            app/build/outputs/androidTest-results/
+            candidate-evidence/
             geometry-report.json
           retention-days: 7

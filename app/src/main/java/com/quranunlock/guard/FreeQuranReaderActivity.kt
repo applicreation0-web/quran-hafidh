@@ -44,7 +44,14 @@ class FreeQuranReaderActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         ReaderComfortPrefs.applyBrightness(window, ReaderComfortPrefs.brightness(this))
         contextual = intent.getBooleanExtra("contextual", false)
-        memoryMode = intent.getBooleanExtra(EXTRA_MEMORIZATION, false)
+        val persistedMode = runCatching {
+            JSONObject(prefs.getString("state", null) ?: "{}")
+                .optJSONObject("ui")?.optString("mode")
+        }.getOrNull()
+        memoryMode = !contextual && (
+            intent.getBooleanExtra(EXTRA_MEMORIZATION, false) ||
+                persistedMode == "MEMORIZATION"
+            )
         setContent {
             QuranSafeguardTheme {
                 BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {

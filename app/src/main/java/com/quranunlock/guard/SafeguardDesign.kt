@@ -121,3 +121,4 @@ internal fun SafeguardProgressBar(
         )
     }
 }
+

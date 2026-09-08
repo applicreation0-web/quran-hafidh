@@ -80,3 +80,4 @@ object DisplayProfileManager {
     fun motionDurationMillis(profile: DisplayProfile): Int =
         if (profile == DisplayProfile.EINK) 0 else 200
 }
+

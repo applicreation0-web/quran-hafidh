@@ -136,3 +136,4 @@ private fun QuranHubRow(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
+

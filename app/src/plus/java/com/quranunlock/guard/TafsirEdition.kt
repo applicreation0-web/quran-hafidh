@@ -225,3 +225,4 @@ object TafsirEdition {
         return get(name) as? Int
     }
 }
+

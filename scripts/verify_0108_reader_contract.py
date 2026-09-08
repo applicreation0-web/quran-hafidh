@@ -75,3 +75,4 @@ print("- calm immersion + tap reveal; keep-screen-on")
 print("- Tafsir editorial poetry label removed")
 print("- Jalalayn remains English; honorific shorthand normalized at display time")
 print("- 60-second/foreground/unlock structural safeguards retained")
+

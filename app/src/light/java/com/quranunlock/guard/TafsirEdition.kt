@@ -48,3 +48,4 @@ object TafsirEdition {
         onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) = Unit
 }
+

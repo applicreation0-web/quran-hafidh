@@ -1087,6 +1087,7 @@ android {
         targetSdk = 36
         versionCode = 28
         versionName = "0.10.9"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     flavorDimensions += "edition"
@@ -1136,6 +1137,9 @@ dependencies {
     implementation("com.batoulapps.adhan:adhan2:0.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit-ktx:1.2.1")
 }
 
 

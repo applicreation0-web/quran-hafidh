@@ -882,7 +882,6 @@ class MushafReaderActivity : ComponentActivity() {
         pageReady = false
     }
 }
-
 private fun formatReadingDuration(milliseconds: Long): String {
     val seconds = (milliseconds / 1000L).coerceAtLeast(0L)
     val minutesPart = seconds / 60L
