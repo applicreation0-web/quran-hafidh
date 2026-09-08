@@ -56,6 +56,7 @@ jobs:
           api-level: 35
           target: google_apis
           arch: x86_64
+          disk-size: 2048M
           disable-animations: true
           script: gradle --no-daemon :app:connectedLightDebugAndroidTest :app:connectedPlusDebugAndroidTest --stacktrace
       - name: Audit compiled edition boundaries
