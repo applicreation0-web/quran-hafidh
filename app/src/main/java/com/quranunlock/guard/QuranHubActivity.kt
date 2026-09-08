@@ -59,14 +59,15 @@ class QuranHubActivity : ComponentActivity() {
                             startActivity(
                                 Intent(
                                     this@QuranHubActivity,
-                                    if (TafsirEdition.isEnabled) {
-                                        FreeQuranReaderActivity::class.java
-                                    } else {
-                                        ReadingSelectionActivity::class.java
-                                    }
+                                    FreeQuranReaderActivity::class.java
                                 )
                             )
                         }
+                    )
+                    QuranHubRow(
+                        title = "Mémorisation",
+                        subtitle = "Reprendre ou choisir un passage",
+                        onClick = { startActivity(Intent(this@QuranHubActivity, FreeQuranReaderActivity::class.java).putExtra(FreeQuranReaderActivity.EXTRA_MEMORIZATION, true)) }
                     )
                     QuranHubRow(
                         title = "Parcours Juz / Hizb",
@@ -135,3 +136,4 @@ private fun QuranHubRow(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
+

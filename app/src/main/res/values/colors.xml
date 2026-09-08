@@ -1,6 +1,7 @@
 <resources>
-    <color name="launcher_background">#FBF6EA</color>
-    <color name="safeguard_ivory">#FBF7EF</color>
-    <color name="safeguard_green">#214B3B</color>
-    <color name="safeguard_gold">#B0823F</color>
+    <color name="launcher_background">#171715</color>
+    <color name="safeguard_ivory">#F7F2E8</color>
+    <color name="safeguard_green">#171715</color>
+    <color name="safeguard_gold">#171715</color>
 </resources>
+

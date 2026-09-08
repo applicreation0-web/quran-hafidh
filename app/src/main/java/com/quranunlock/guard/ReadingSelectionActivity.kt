@@ -91,7 +91,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                if (TafsirEdition.isEnabled) {
+                if (true) {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
@@ -127,7 +127,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                                     )
                                 }
                             ) {
-                                Text("Ouvrir le Qur’an & Tafsîr")
+                                Text(if (TafsirEdition.isEnabled) "Lecture / Étude" else "Lecture")
                             }
                         }
                     }

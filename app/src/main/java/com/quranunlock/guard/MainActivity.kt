@@ -896,28 +896,28 @@ fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
         primary = SafeguardDeepGreen,
         onPrimary = SafeguardSurface,
-        primaryContainer = Color(0xFFE6EEE9),
+        primaryContainer = Color(0xFFE8E3D9),
         onPrimaryContainer = SafeguardTextGreen,
         secondary = SafeguardSecondaryText,
         onSecondary = SafeguardSurface,
-        secondaryContainer = Color(0xFFEFE8DC),
-        onSecondaryContainer = Color(0xFF3E3832),
+        secondaryContainer = Color(0xFFE8E3D9),
+        onSecondaryContainer = Color(0xFF171715),
         tertiary = SafeguardGold,
         onTertiary = SafeguardSurface,
-        tertiaryContainer = Color(0xFFF3E7D1),
-        onTertiaryContainer = Color(0xFF5A421E),
+        tertiaryContainer = Color(0xFFE8E3D9),
+        onTertiaryContainer = Color(0xFF171715),
         background = SafeguardAppBackground,
         onBackground = SafeguardTextGreen,
         surface = SafeguardSurface,
-        surfaceVariant = Color(0xFFF3EBDD),
+        surfaceVariant = Color(0xFFE8E3D9),
         onSurface = SafeguardTextGreen,
         onSurfaceVariant = SafeguardSecondaryText,
-        outline = Color(0xFFB8AB98),
-        outlineVariant = Color(0xFFDDD3C4),
-        error = Color(0xFF7A4D46),
+        outline = Color(0xFFE8E3D9),
+        outlineVariant = Color(0xFFE8E3D9),
+        error = Color(0xFF171715),
         onError = SafeguardSurface,
-        errorContainer = Color(0xFFF0E2DF),
-        onErrorContainer = Color(0xFF5B3934)
+        errorContainer = Color(0xFFE8E3D9),
+        onErrorContainer = Color(0xFF171715)
     )
     MaterialTheme(
         colorScheme = colors,
@@ -966,3 +966,4 @@ private fun formatAge(ageMs: Long): String {
         else -> "il y a ${seconds / 3600L} h"
     }
 }
+

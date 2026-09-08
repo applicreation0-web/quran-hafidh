@@ -1,0 +1,67 @@
+name: Quran Safeguard 0.10.9 build and audit
+on:
+  push:
+    branches: ["release/0.10.9-work"]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve exact audited 0.10.8 corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.8-unsigned
+          run-id: 34096699893
+          github-token: ${{ github.token }}
+          path: baseline108
+      - name: Restore unchanged corpus bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          for ed,pat in [('main','*light*unsigned.apk'),('plus','*plus*unsigned.apk')]:
+              apk=next(Path('baseline108').rglob(pat))
+              with zipfile.ZipFile(apk) as z:
+                  for n in z.namelist():
+                      if n.startswith('assets/') and (ed=='main' or n.startswith('assets/tafsir/')):
+                          p=Path('app/src')/ed/n;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(z.read(n))
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pymupdf==1.26.7 numpy scipy
+      - run: python3 scripts/build_reader109_geometry.py
+      - run: node scripts/test_reader109_protocol.js
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Full existing release gates and both unit suites
+        run: gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+      - name: Compile both editions
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+      - name: Audit compiled edition boundaries
+        run: |
+          python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+          python3 scripts/verify_plus_apk_multitafsir_0106.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+          python3 scripts/verify_reader109.py
+      - name: Upload build and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-candidate
+          path: |
+            app/build/outputs/apk/
+            app/build/test-results/
+            app/build/reports/
+            geometry-report.json
+          retention-days: 7

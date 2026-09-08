@@ -656,10 +656,10 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
             buildFile.contains("versionCode = 22") &&
                 buildFile.contains("versionName = \"0.10.3\"")
         val preparedReleaseMetadata =
-            buildFile.contains("versionCode = 27") &&
-                buildFile.contains("versionName = \"0.10.8\"")
+            buildFile.contains("versionCode = 28") &&
+                buildFile.contains("versionName = \"0.10.9\"")
         check(auditedBaselineMetadata || preparedReleaseMetadata) {
-            "Expected either the audited 0.10.3 baseline metadata or prepared 0.10.8 release metadata."
+            "Expected either the audited 0.10.3 baseline metadata or prepared 0.10.9 release metadata."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -809,9 +809,9 @@ val verifyEditorialBoundary by tasks.registering {
         val launcherIcon = file(
             "src/main/res/drawable/ic_launcher_foreground.xml"
         ).readText()
-        listOf("#214B3B", "#B9873E", "#FFFDF5").forEach { brandColor ->
+        listOf("#171715", "#F7F2E8").forEach { brandColor ->
             check(launcherIcon.contains(brandColor)) {
-                "Launcher icon lost a required green/gold/cream brand color: " + brandColor
+                "Launcher icon lost a required cream/black brand color: " + brandColor
             }
         }
         listOf(
@@ -1083,8 +1083,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "0.10.8"
+        versionCode = 28
+        versionName = "0.10.9"
     }
 
     flavorDimensions += "edition"
@@ -1147,3 +1147,4 @@ tasks.matching {
 }.configureEach {
     dependsOn(verifyPlusTafsirCorpus)
 }
+
