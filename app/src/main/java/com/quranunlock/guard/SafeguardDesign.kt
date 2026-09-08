@@ -34,9 +34,6 @@ internal val SafeguardTextGreen = Color(0xFF171715)
 internal val SafeguardSecondaryText = Color(0xFF555550)
 internal val SafeguardGold = Color(0xFF171715)
 
-// Legacy verifyReleaseAudit compatibility marker only; never used at runtime:
-// SafeguardReadingSurface = Color(0xFFF4F0E6)
-
 internal val SafeguardShapes = Shapes(
     small = RoundedCornerShape(99.dp),
     medium = RoundedCornerShape(99.dp),
@@ -124,4 +121,3 @@ internal fun SafeguardProgressBar(
         )
     }
 }
-

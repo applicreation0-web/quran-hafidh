@@ -802,7 +802,9 @@ val verifyEditorialBoundary by tasks.registering {
             !safeguardDesign.contains("sahelianButtonOrnament") &&
                 !safeguardDesign.contains("drawDiamond") &&
                 !safeguardDesign.contains("chevron") &&
-                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF4F0E6)")
+                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF7F2E8)") &&
+                !safeguardDesign.contains("#F4F0E6") &&
+                !safeguardDesign.contains("0xFFF4F0E6")
         ) {
             "0.10.7 requires calm cream controls without ornamental button drawing."
         }
@@ -1147,4 +1149,3 @@ tasks.matching {
 }.configureEach {
     dependsOn(verifyPlusTafsirCorpus)
 }
-

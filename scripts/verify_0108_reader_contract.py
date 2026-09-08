@@ -11,6 +11,8 @@ def require(condition: bool, message: str) -> None:
         raise SystemExit("0.10.8 reader contract: " + message)
 
 free = text("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
+free_html = text("app/src/main/assets/reader109/index.html")
+free_js = text("app/src/main/assets/reader109/reader.js")
 challenge = text("app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt")
 comfort = text("app/src/main/java/com/quranunlock/guard/ReaderComfortPrefs.kt")
 panel = text("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
@@ -20,7 +22,8 @@ honorific = text("app/src/plus/java/com/quranunlock/guard/JalalaynHonorificPrese
 require('READER_CREAM_HEX = "#F7F2E8"' in comfort, "cream constant missing")
 require("ReaderVisualMode.entries.forEach" not in free, "theme choices remain in free reader UI")
 require('"Clair"' not in free and '"Sombre"' not in free, "light/dark reader choices remain")
-require("ReaderComfortPrefs.pageBackground()" in free, "free reader is not pinned to cream")
+require('#F7F2E8' in free and '--cream:#F7F2E8' in free_html,
+        "free Kotlin/HTML reader is not pinned to cream")
 require("ReaderComfortPrefs.pageBackground()" in challenge, "challenge reader is not pinned to cream")
 require("android.graphics.Color.WHITE" not in challenge, "challenge WebView still forces white")
 require("background: #ffffff" not in challenge, "challenge HTML still forces white")
@@ -30,9 +33,23 @@ for name, source in (("free", free), ("challenge", challenge)):
     require("FLAG_KEEP_SCREEN_ON" in source, f"{name} reader does not stay awake")
     require("statusBarsPadding()" in source, f"{name} reader does not respect status bar")
     require("navigationBarsPadding()" in source, f"{name} reader does not respect navigation bar")
-    require("delay(2_500L)" in source, f"{name} reader lacks calm auto-hide")
-    require("onReaderTap" in source, f"{name} reader lacks tap-to-reveal")
-    require('"☼"' in source, f"{name} reader lacks brightness control")
+require("delay(2_500L)" in challenge, "challenge reader lacks calm auto-hide")
+require("onReaderTap" in challenge, "challenge reader lacks tap-to-reveal")
+require('"☼"' in challenge, "challenge reader lacks brightness control")
+require("setTimeout" in free_js and "2500" in free_js and "chrome()" in free_js,
+        "free HTML/JS reader lacks calm auto-hide and neutral tap reveal")
+require('id="sun"' in free_html and "setBrightness" in free and "setBrightness" in free_js,
+        "free HTML/JS reader lacks brightness-only sun control")
+require("ReaderComfortPrefs.applyBrightness" in free,
+        "free reader does not apply the persisted brightness")
+
+runtime_sources = "\n".join(
+    path.read_text(encoding="utf-8")
+    for path in (ROOT / "app/src").rglob("*")
+    if path.is_file() and path.suffix in {".kt", ".java", ".html", ".js", ".xml"}
+)
+require("#F4F0E6" not in runtime_sources and "0xFFF4F0E6" not in runtime_sources,
+        "obsolete cream remains in runtime sources")
 
 require("Poésie · lignes conservées selon l’édition source" not in panel,
         "application-authored poetry explanation still rendered")

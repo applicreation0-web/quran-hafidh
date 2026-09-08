@@ -3,6 +3,8 @@ package com.applicreation0.quransafeguard
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -32,11 +34,15 @@ class FreeQuranReaderActivity : ComponentActivity() {
     private var memoryMode = false
     private var contextual = false
     private val prefs by lazy { getSharedPreferences("reader109", MODE_PRIVATE) }
+    private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
+    private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
     private val audio by lazy { QuranAudioController(this) { event -> runOnUiThread { web?.evaluateJavascript("window.audioEvent && window.audioEvent(${event});", null) } } }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        ReaderComfortPrefs.applyBrightness(window, ReaderComfortPrefs.brightness(this))
         contextual = intent.getBooleanExtra("contextual", false)
         memoryMode = intent.getBooleanExtra(EXTRA_MEMORIZATION, false)
         setContent {
@@ -110,12 +116,23 @@ class FreeQuranReaderActivity : ComponentActivity() {
             put("legacyBookmarks",org.json.JSONArray(QuranBookmarkStore.load(this@FreeQuranReaderActivity).sorted()))
             put("memory",memoryMode);put("contextual",contextual);put("surah",intent.getIntExtra("surah",0));put("ayah",intent.getIntExtra("ayah",0))
             put("audio",audio.available)
+            put("displayProfile",displayProfile.name)
+            put("brightness",ReaderComfortPrefs.brightness(this@FreeQuranReaderActivity).toDouble())
         }.toString()
         @JavascriptInterface fun save(data: String): Boolean {
             if(data.length>2_000_000)return false
             return runCatching { val o=JSONObject(data);if(o.optInt("schema")!=1)return false;prefs.edit().putString("state",data).commit() }.getOrDefault(false)
         }
         @JavascriptInterface fun setMode(memory: Boolean){runOnUiThread { memoryMode=memory;if(memory)closeTafsir() }}
+        @JavascriptInterface fun setBrightness(value: Double){runOnUiThread {
+            val adjusted = if(value < 0.0) -1f else value.toFloat().coerceIn(.12f,1f)
+            ReaderComfortPrefs.setBrightness(this@FreeQuranReaderActivity, if(adjusted < 0f) null else adjusted)
+            ReaderComfortPrefs.applyBrightness(window, adjusted)
+        }}
+        @JavascriptInterface fun visualChange(kind: String){runOnUiThread {
+            val change = runCatching { VisualChange.valueOf(kind) }.getOrNull() ?: return@runOnUiThread
+            refreshController.onVisualChange(web, change)
+        }}
         @JavascriptInterface fun tafsir(surah:Int,ayah:Int){runOnUiThread {
             if(!memoryMode&&TafsirEdition.isEnabled&&surah in 1..114 && ayah in 1..286){verse=VerseRef(surah,ayah);expanded=false}
         }}
@@ -125,6 +142,20 @@ class FreeQuranReaderActivity : ComponentActivity() {
         @JavascriptInterface fun resume(){runOnUiThread { audio.resume() }}
         @JavascriptInterface fun announce(surah:Int,ayah:Int){runOnUiThread { web?.announceForAccessibility("Sourate $surah, verset $ayah") }}
     }
-    override fun onPause(){if(isFinishing)audio.pause();super.onPause()}
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if(event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            val delta = when(event.keyCode) {
+                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_VOLUME_UP -> -1
+                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN -> 1
+                else -> 0
+            }
+            if(delta != 0) {
+                web?.evaluateJavascript("window.hardwarePage && window.hardwarePage($delta);", null)
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+    override fun onPause(){audio.pause();super.onPause()}
     override fun onDestroy(){web?.removeJavascriptInterface("QsgNative");web?.destroy();web=null;audio.release();super.onDestroy()}
 }

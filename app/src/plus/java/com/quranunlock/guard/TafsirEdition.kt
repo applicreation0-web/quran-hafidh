@@ -19,7 +19,7 @@ object TafsirEdition {
     fun prepareHtml(svgContent: String, pageNumber: Int): String {
         val styledSvg = svgContent + """
             <style>
-              html, body, svg { background: #F4F0E6 !important; }
+              html, body, svg { background: ${ReaderComfortPrefs.pageBackground()} !important; }
             </style>
         """.trimIndent()
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {

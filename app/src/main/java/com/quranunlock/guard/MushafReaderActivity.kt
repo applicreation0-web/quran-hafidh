@@ -12,9 +12,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -63,6 +66,8 @@ class MushafReaderActivity : ComponentActivity() {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
     private var selectedTafsirVerse by mutableStateOf<VerseRef?>(null)
     private var tafsirLoadState by mutableStateOf<TafsirLoadState>(TafsirLoadState.Closed)
+    private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
+    private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
 
     private fun openTafsir(verse: VerseRef) {
         if (!TafsirEdition.isEnabled) return
@@ -234,6 +239,7 @@ class MushafReaderActivity : ComponentActivity() {
                     pauseActiveReading()
                     displayedIndex = index
                     displayedPage = planPages[index]
+                    refreshController.onVisualChange(window.decorView, VisualChange.PAGE)
                     gestureMessage = when {
                         quotaReached ->
                             "Lecture libre • vous pouvez sortir à tout moment."
@@ -288,6 +294,7 @@ class MushafReaderActivity : ComponentActivity() {
 
                     gestureMessage =
                         "Lecture libre • quota atteint, sortie possible à tout moment."
+                    refreshController.onVisualChange(window.decorView, VisualChange.PAGE)
                 }
 
                 fun validateAndAdvance(continueAfterQuota: Boolean = false) {
@@ -377,7 +384,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 challengeKey,
                                 currentPage
                             )
-                        delay(200L)
+                        delay(if (displayProfile == DisplayProfile.EINK) 1_000L else 200L)
                     }
                 }
 
@@ -564,7 +571,9 @@ class MushafReaderActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .weight(1f),
                             transitionSpec = {
-                                if (targetState > initialState) {
+                                if (displayProfile == DisplayProfile.EINK) {
+                                    fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                                } else if (targetState > initialState) {
                                     slideInHorizontally { width -> -width } togetherWith
                                         slideOutHorizontally { width -> width }
                                 } else {

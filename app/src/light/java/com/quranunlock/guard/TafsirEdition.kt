@@ -12,7 +12,7 @@ object TafsirEdition {
     fun prepareHtml(svgContent: String, pageNumber: Int): String =
         svgContent + """
             <style>
-              html, body, svg { background: #F4F0E6 !important; }
+              html, body, svg { background: ${ReaderComfortPrefs.pageBackground()} !important; }
             </style>
         """.trimIndent()
 

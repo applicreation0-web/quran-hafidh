@@ -8,9 +8,23 @@ for v,pages in g['verses'].items():
 manifest=(src/'main/AndroidManifest.xml').read_text();assert 'RECORD_AUDIO' not in manifest
 assert not json.loads((a/'audio.json').read_text())['redistributionApproved']
 reader=(src/'main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt').read_text()
+reader_js=(a/'reader.js').read_text();protocol=(a/'protocol.js').read_text();html=(a/'index.html').read_text()
+display=(src/'main/java/com/quranunlock/guard/DisplayProfile.kt').read_text()
+refresh=(src/'main/java/com/quranunlock/guard/EInkRefreshController.kt').read_text()
+audio=(src/'main/java/com/quranunlock/guard/QuranAudioController.kt').read_text()
 assert '!memoryMode&&TafsirEdition.isEnabled' in reader
 assert 'GuardPrefs.' not in reader and 'SafeguardCyclePrefs.' not in reader
 assert 'settings.allowFileAccess = false' in reader and 'settings.blockNetworkLoads = true' in reader
 assert 'statusBarsPadding()' in reader and 'navigationBarsPadding()' in reader
+assert 'FLAG_KEEP_SCREEN_ON' in reader and 'ReaderComfortPrefs.applyBrightness' in reader
+assert "'Valider — '" in protocol and 'Valider le bloc mémorisé' in protocol
+assert all(label in reader_js for label in ('Refaire','Afficher brièvement','Réécouter','Indices','Reprise ciblée'))
+assert "memory?'Mémorisation':'Signet',sessionId" in reader_js
+assert "body.eink" in html and "transition:none" in html and "animation:none" in html
+assert all(token in display for token in ('AUTOMATIC','STANDARD','EINK','looksLikeEInkDevice'))
+assert 'profile == DisplayProfile.STANDARD' in refresh and 'FULL_REFRESH_THRESHOLD' in refresh
+assert 'Class.forName("com.onyx.android.sdk' in refresh and 'getOrDefault(false)' in refresh
+assert 'if(!available){emit("unavailable");return}' in audio
+assert 'audioCountsProgress' in reader_js
 subprocess.run(['node',str(r/'scripts/test_reader109_protocol.js')],check=True)
-print('PASS 604 pages, 6236 verses, exact divisions, memory/Tafsir isolation, no microphone, isolated audio gate')
+print('PASS 604 pages, 6236 verses, memory protocol, STANDARD/EINK, Tafsir isolation, no microphone, closed audio gate')

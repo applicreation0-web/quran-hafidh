@@ -176,6 +176,9 @@ class MainActivity : ComponentActivity() {
         var mode by remember(refreshToken) {
             mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
         }
+        var displayPreference by remember(refreshToken) {
+            mutableStateOf(DisplayProfileManager.preference(this@MainActivity))
+        }
         val selectedJuz = remember(refreshToken) {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
@@ -304,13 +307,45 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                if (TafsirEdition.isEnabled) {
+                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Type d’écran", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Automatique est recommandé. Le choix manuel surcharge toujours la détection.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            DisplayProfilePreference.entries.forEach { preference ->
+                                SafeguardOutlinedButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        DisplayProfileManager.setPreference(this@MainActivity, preference)
+                                        displayPreference = preference
+                                    }
+                                ) {
+                                    val label = when (preference) {
+                                        DisplayProfilePreference.AUTOMATIC -> "Automatique"
+                                        DisplayProfilePreference.STANDARD -> "Standard"
+                                        DisplayProfilePreference.EINK -> "E-Ink"
+                                    }
+                                    Text((if (displayPreference == preference) "✓ " else "") + label)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            if (serviceEnabled && serviceAlive) "Protection active ✓" else if (serviceEnabled) "Protection activée • service à confirmer" else "Protection en pause",
+                            if (serviceEnabled && serviceAlive) "Protection active ✓" else if (serviceEnabled) "Protection activée • service à confirmer" else "Protection Safeguard : désactivée",
                             style = MaterialTheme.typography.titleLarge,
                             color = if (serviceEnabled) {
                                 MaterialTheme.colorScheme.primary
@@ -966,4 +1001,3 @@ private fun formatAge(ageMs: Long): String {
         else -> "il y a ${seconds / 3600L} h"
     }
 }
-
