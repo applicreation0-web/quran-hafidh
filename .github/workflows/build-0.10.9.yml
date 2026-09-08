@@ -50,15 +50,6 @@ jobs:
         run: gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
       - name: Compile both editions
         run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
-      - name: Runtime reader, persistence, migration and Safeguard boundaries
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          disk-size: 2048M
-          disable-animations: true
-          script: gradle --no-daemon :app:connectedLightDebugAndroidTest :app:connectedPlusDebugAndroidTest --stacktrace
       - name: Audit compiled edition boundaries
         run: |
           python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
@@ -85,4 +76,61 @@ jobs:
             app/build/outputs/androidTest-results/
             candidate-evidence/
             geometry-report.json
+          retention-days: 7
+
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve exact audited 0.10.8 corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.8-unsigned
+          run-id: 34096699893
+          github-token: ${{ github.token }}
+          path: baseline108
+      - name: Restore unchanged corpus bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          for ed,pat in [('main','*light*unsigned.apk'),('plus','*plus*unsigned.apk')]:
+              apk=next(Path('baseline108').rglob(pat))
+              with zipfile.ZipFile(apk) as z:
+                  for n in z.namelist():
+                      if (n.startswith('assets/') and not n.startswith('assets/dexopt/')
+                              and (ed=='main' or n.startswith('assets/tafsir/'))):
+                          p=Path('app/src')/ed/n;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(z.read(n))
+          PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pymupdf==1.26.7 numpy scipy
+      - run: python3 scripts/build_reader109_geometry.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Runtime reader, persistence, migration and Safeguard boundaries
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disk-size: 2048M
+          disable-animations: true
+          script: gradle --no-daemon :app:connectedLightDebugAndroidTest :app:connectedPlusDebugAndroidTest --stacktrace
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-runtime-evidence
+          path: |
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
           retention-days: 7
