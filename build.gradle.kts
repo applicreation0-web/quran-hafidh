@@ -12,3 +12,9 @@ plugins {
     id("com.android.application") version "9.3.0" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.21" apply false
 }
+
+subprojects {
+    plugins.withId("com.android.application") {
+        dependencies.add("testImplementation", "org.json:json:20240303")
+    }
+}
