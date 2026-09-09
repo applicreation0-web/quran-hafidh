@@ -1,4 +1,4 @@
-/* Quran Safeguard 0.10.9: pure, persisted pedagogical state machine. */
+/* Quran Safeguard 0.10.10: pure, persisted pedagogical state machine. */
 (function(root){
 'use strict';
 function balancedBlocks(lines){
@@ -42,6 +42,20 @@ function aid(s,kind='help',hintWords=0){const p=current(s);if(!p)return false;s.
 function clearAid(s){delete s.assistance;}
 function validate(s){if(!canValidate(s))return false;const p=current(s);if(!s.milestones.includes(p.id))s.milestones.push(p.id);clearAid(s);s.step++;if(!current(s)){s.complete=true;s.status='Acquis';s.due=Date.now()+86400000;}return true;}
 function redo(s){const p=current(s);if(p){s.counts[p.id]=0;s.wins[p.id]=0;}clearAid(s);}
+/*
+ * Audio is an enhancement, never a blocker. If local files disappear or the
+ * phone is offline, rebase the session onto the non-audio plan while keeping
+ * already validated non-audio milestones and counters.
+ */
+function disableAudio(s){
+ if(!s||!s.withAudio)return false;
+ s.withAudio=false;clearAid(s);
+ const steps=plan(s.lines,false);
+ const next=steps.findIndex(p=>!s.milestones.includes(p.id));
+ if(next<0){s.step=steps.length;s.complete=true;s.status='Acquis';}
+ else{s.step=next;s.complete=false;}
+ return true;
+}
 function rank(seed,id){let h=(seed|0)^2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967296;}
-const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,record,aid,clearAid,validate,redo,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
+const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,record,aid,clearAid,validate,redo,disableAudio,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
