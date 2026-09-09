@@ -1,97 +1,59 @@
-# Quran Safeguard 0.10.9 — handoff de re-audit Astra
+# Quran Safeguard 0.10.9 — handoff de re-audit final
 
-## Identité exacte
+## Statut actuel
 
 - Branche : `release/0.10.9-work`
-- `candidate_code_sha` : `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`
-- `validated_artifact_source_sha` : `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde`
-- Parent audité NO-GO : `9846de48794e34eefc66d947e7f18991ad1c3342`
-- Pull request de re-audit : [#78](https://github.com/applicreation0-web/quran-unlock-android/pull/78)
+- Ancien candidat Astra interrompu : `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`
+- Ancien parent NO-GO : `9846de48794e34eefc66d947e7f18991ad1c3342`
+- Ancien artefact validé avant poursuite contradictoire : `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde`
+- Pull request : #78
 
-Le commit qui contient ce document est, par construction, postérieur au SHA validé ci-dessus et ne modifie que ce fichier Markdown. Le HEAD courant exact de la branche est celui affiché par la PR #78 ; le SHA applicatif reste `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`.
+L’audit Astra Light a été interrompu par la limite Work avant verdict final. Avant l’interruption, Astra avait recalculé avec succès les SHA-256 des deux APK alors candidats, confirmé 604 pages dans les deux éditions, confirmé l’absence d’assets Tafsir dans Light et exécuté la suite JavaScript disponible. Astra avait également identifié que le test de restauration Activity ne constituait pas à lui seul une preuve de vrai process death/no-flash.
 
-## Diff depuis le candidat applicatif
+La poursuite contradictoire a ensuite révélé plusieurs faux PASS et écarts de contrat dans le candidat précédent. Ces écarts ont été corrigés directement sur `release/0.10.9-work`. Les anciennes références CI/APK de ce document sont donc SUPERSEDEES et ne doivent plus être utilisées pour une publication. Le HEAD final exact est celui de la branche après ce commit documentaire ; les APK officiels devront provenir du nouveau run 0.10.9 sur ce HEAD final.
 
-Le compare GitHub `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b...3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde` ne contient aucun fichier produit net. Il contient uniquement des tests, gates, outils de reconstruction fail-closed, workflows et ce handoff.
+## Corrections post-Astra intégrées
 
-| Commit | Classification | Contenu |
-|---|---|---|
-| `e089191d` | Documentation | Création du handoff Astra |
-| `4114f6a6` | Gate + documentation | Gate Tafsir adaptée à l’architecture 10.9 |
-| `5ad7951b` | Gate + documentation | Gate d’identité 0.10.3 modernisée |
-| `845d4b65` | Tests/gates | Diagnostics et contrats 0.10.7 ; parseur Qurtubi fail-closed |
-| `9463c0b2` | Outil de gate | Marqueurs de versets Qurtubi avec ellipse |
-| `53b9d1c3` | Produit, annulé | Réintroduction transitoire de couleurs 0.10.7 |
-| `4340ae86` | Outil de gate | Wrapper de reconstruction Tafsir 0.10.6 |
-| `90fef2cd` | CI | Reconstruction Tafsir source-authoritative |
-| `1c272b20` | CI | Diagnostics visuel/Tafsir séparés |
-| `4bf52d4c` | CI | Conservation des diagnostics 0.10.7 |
-| `0382feab` | Gate | Correction de l’assertion de newline |
-| `d555d5b9` | CI | Vérificateur APK Plus 0.10.6 à deux fragments Qushayri |
-| `21572165` | Produit, restauration exacte | Annule intégralement `53b9d1c3` et restaure le fichier depuis le candidat |
-| `568564b7` | Gate | Palette 10.9 crème/noir exigée par le contrat modernisé |
+1. Découpage Mémorisation : 1–3 lignes restent un bloc court valide, 4–7 lignes restent un seul bloc ; 7 lignes ne produit plus `[4,3]`. Cas de contrôle : 4→[4], 5→[5], 6→[6], 7→[7], 8→[4,4], 10→[5,5], 11→[6,5], 15→[5,5,5].
+2. Préparation de bloc ajoutée à la machine pédagogique : lecture attentive ×2 puis, uniquement si audio réellement disponible, écoute passive ×2.
+3. `Afficher brièvement` : génération/cancellation des callbacks, deuxième révélation successive remplaçant proprement la première, callbacks obsolètes neutralisés lors des changements de page/session/mode/étape.
+4. Transition multi-page Mémorisation : attente de `jumpToStep()` avant le rendu du nouvel état afin d’éviter la frame ancienne page/mauvais masque.
+5. Aides : réécoute marquée comme aide ; validation impossible tant qu’une aide de l’étape reste active. Les pseudo-indices `Premier mot/Premiers mots` basés sur des groupes d’encre non linguistiques ont été retirés plutôt que présentés comme des mots authentifiés.
+6. Signets Mémorisation : rattachement uniquement à une session correspondant réellement au passage, sans priorité aveugle à la session courante.
+7. Reprise ciblée : masque 100 %, trois réussites locales exigées pour terminer, jusqu’à deux écoutes de renforcement par ligne si audio est disponible, jalons précédents conservés.
+8. E-Ink : cleanup différé conservé ; `dispose()` ajouté ; callbacks/overlays de fallback suivis et supprimés au lifecycle ; STANDARD reste no-op.
+9. Lecteur E-Ink : PAGE_UP/PAGE_DOWN uniquement pour la pagination physique ; les touches volume ne sont plus capturées. Une sélection de verset n’empêche plus les touches page.
+10. Navigation Tafsir contextuelle : un Back depuis un contexte de renvoi ferme directement l’Activity contextuelle et revient d’un niveau, sans pression supplémentaire.
+11. Safeguard challenge : validation centrale exige maintenant >=60 secondes actives ET `bottomReached`; une page entièrement visible marque automatiquement le bas au chargement, tandis qu’une page scrollable doit réellement atteindre son bas. Le backend `GuardPrefs` applique aussi cette règle fail-closed.
+12. Frontière Tafsir 10.9 : le challenge chronométré ne peut plus ouvrir le Tafsir ; le Tafsir reste réservé à Lecture/Étude Plus. JavaScript du WebView challenge est désactivé.
+13. Cleanup E-Ink du challenge : `refreshController.dispose()` au `onDestroy`.
 
-La paire `53b9d1c3` / `21572165` s’annule intégralement. Le diff produit net depuis `candidate_code_sha` est donc nul : aucun fichier sous `app/` ne diffère au SHA de validation.
+## Exigences de validation finale
 
-## Corrections Astra incluses dans le candidat
+Le nouveau HEAD doit passer intégralement :
 
-1. Nettoyage E-Ink différé garanti après `Afficher brièvement`, y compris lorsque le délai minimal bloque le refresh immédiat ou qu’un refresh survient pendant la révélation.
-2. Fallback E-Ink générique visible au-dessus de la WebView opaque, avec fallback natif, sans modifier le SVG et avec STANDARD strictement no-op.
-3. Toute aide active invalide la série locale ; `2 réussites → Premier mot → tentative correcte` ne valide jamais ; `Refaire` efface l’aide ; `Afficher brièvement` invalide la tentative.
-4. Reprise exacte Lecture → Mémorisation → progression → kill/recreate avant affichage, sans flash initial non masqué.
-5. Preuves APK, manifestes, permissions, migration, persistance, Safeguard OFF/ON et isolation Light/Plus produites par CI et runtime instrumenté.
+- `Quran Safeguard 0.10.9 build and audit` ;
+- tests Node du protocole Mémorisation ;
+- `:app:verifyReleaseAudit` ;
+- unitaires Light et Plus ;
+- builds release/debug Light et Plus ;
+- inspection des frontières Light/Plus ;
+- instrumentation Android Light et Plus ;
+- audits sensibles / Tafsir / Juz-Hizb applicables ;
+- 604 pages exactes ;
+- audio gate `redistributionApproved=false` ;
+- aucune permission de surveillance élargie.
 
-## CI du SHA validé
+Aucun APK antérieur à ces corrections ne doit être signé ou publié.
 
-Toutes les exécutions applicables au SHA `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde` sont terminées avec succès (tentative 2) :
+## Privacy / périmètre
 
-| Workflow | Run | Résultat |
-|---|---:|---|
-| Quran Safeguard 0.10.9 build and audit | [34336797351](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336797351) | PASS build + runtime |
-| Android CI | [34336801580](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801580) | PASS |
-| Android 0.10.5 Tafsir contradictory audit | [34336801575](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801575) | PASS |
-| Android 0.10.5 sensitive-app scope audit | [34336801583](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801583) | PASS |
-| Android 0.10.5 canonical Juz/Hizb audit | [34336801610](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801610) | PASS |
+Les corrections ne doivent introduire ni UsageStats, ni `PACKAGE_USAGE_STATS`, ni `QUERY_ALL_PACKAGES`, ni NotificationListener, ni `packageNames=null`, ni surveillance d’applications banque/sécurité/identité. La confidentialité des applications hors cible reste prioritaire sur une précision de compteur impossible sans élargissement de visibilité.
 
-Le workflow 0.10.9 a exécuté les gates 10.8 modernisées, les vérificateurs 10.9, le protocole Mémorisation (786 transitions), les unitaires Light/Plus, l’isolation des éditions et les compilations debug/release Light/Plus.
+## Limitation matérielle
 
-## Runtime instrumenté réel
+La logique E-Ink peut être validée en tests/emulation. L’efficacité physique du ghosting/full refresh et les API propriétaires BOOX restent une validation matérielle séparée ; aucune preuve logicielle ne doit être présentée comme PASS physique.
 
-Artifact : `quran-safeguard-0.10.9-runtime-evidence`, ID `10098524276`.
+## Publication
 
-- Light : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 15.983 s.
-- Plus : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 9.893 s.
-- Scénarios : restauration Mémorisation sans frame non masquée, fallback E-Ink sur WebView opaque, STANDARD no-op, Safeguard OFF→ON→OFF et migration versionCode 27→28.
-- Les recherches statiques ne sont pas comptées comme tests Android runtime.
-
-## APK candidats exacts
-
-Artifact : `quran-safeguard-0.10.9-astra-re-audit`, ID `10098471284`, produit par le run `34336797351` au SHA `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde`.
-
-| Édition | APK | Application ID | Version | SHA-256 |
-|---|---|---|---|---|
-| Light | `app-light-release-unsigned.apk` | `com.applicreation0.quransafeguard` | `28 / 0.10.9` | `0050bc66b4b0679f54b37c5ad793d25af1e58e9a901d59ff51df99c82a4179a9` |
-| Plus | `app-plus-release-unsigned.apk` | `com.applicreation0.quransafeguard.plus` | `28 / 0.10.9-plus.1` | `f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66` |
-
-Les hashes ont été vérifiés à la fois par `candidate-evidence/SHA256SUMS` dans l’artefact CI et par recalcul indépendant après extraction.
-
-Manifestes/permissions extraits :
-
-- Light et Plus : `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED` et permission dynamique interne non exportée propre à l’applicationId.
-- Aucun élargissement de permissions post-candidat.
-- Light : 604 pages, 0 asset Tafsir.
-- Plus : 604 pages, 10 assets correspondant aux trois corpus Tafsir approuvés.
-- Gate audio : `redistributionApproved=false` dans les deux éditions.
-
-## Invariants préservés
-
-- Mushaf exact de 604 pages, sans recomposition.
-- Protocole 10/5/5/5/7 et aucun Tafsir en Mémorisation.
-- Safeguard 60 secondes, budgets et exclusions banque/sécurité/identité.
-- STANDARD no-op ; un seul APK Plus contient STANDARD et EINK.
-- Aucune requête audio réseau lorsque la gate est fermée.
-- Aucun merge, signature, publication ou audit Astra lancé par Sol.
-
-## Limites matérielles
-
-Le chemin logiciel générique et les invariants pédagogiques sont couverts sur émulateur Android. L’efficacité physique du full refresh, le ghosting résiduel et les API propriétaires facultatives restent à vérifier sur dalles E-Ink/BOOX réelles 7,8 et 10,3 pouces. Ces points ne sont pas déclarés PASS.
+Ne signer et ne publier 0.10.9 qu’après un nouveau CI entièrement vert sur le HEAD final, téléchargement/recalcul des SHA-256 des APK Light/Plus issus de CE run et audit de cohérence final. Ne jamais réutiliser les anciens hashes de ce document.
