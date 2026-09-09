@@ -49,7 +49,7 @@ class SettingsUiScaleRuntimeTest {
             assertSurface(ReadingSelectionActivity::class.java, "Juz / Hizb", scale, scrolls = 4)
             assertSurface(HifzJourneyActivity::class.java, "Parcours Hifz", scale, scrolls = 4)
             assertSurface(AdhkarActivity::class.java, "Adhkâr du matin", scale, scrolls = 3)
-            assertSurface(ReadingHistoryActivity::class.java, "Historique", scale, scrolls = 3)
+            assertSurface(ReadingHistoryActivity::class.java, "HISTORIQUE", scale, scrolls = 3)
             assertSurface(SpiritualLibraryActivity::class.java, "Bibliothèque spirituelle", scale, scrolls = 2)
 
             // Plus-only display-profile controls must also remain reachable.
