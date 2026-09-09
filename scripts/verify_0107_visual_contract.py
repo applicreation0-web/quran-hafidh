@@ -66,7 +66,8 @@ require("ElevatedCard" not in hub and "QuranHubRow" in hub,
         "Qur'an hub must remain a light list rather than elevated-card grid")
 require("if (isPoetry) TextAlign.Start else TextAlign.Justify" in panel,
         "Tafsir prose must be justified while poetry stays start-aligned")
-require("run.text.replace(Regex(\"\\n{2,}\"), \"\\n\")" in panel,
+# Raw Python literal: verify the exact Kotlin source needed to collapse 2+ real newlines to one.
+require(r'run.text.replace(Regex("\\n{2,}"), "\n")' in panel,
         "non-poetry double blank lines must stay collapsed")
 require("stroke: none !important" in edition and "#C8CEC8" in edition,
         "neutral no-outline verse selection changed")
