@@ -118,7 +118,9 @@ jobs:
           gradle-version: '9.5.0'
       - name: Place Android userdata image on the runner data disk
         run: |
-          mkdir -p /mnt/qsg-avd /home/runner/.android
+          sudo mkdir -p /mnt/qsg-avd
+          sudo chown runner /mnt/qsg-avd
+          mkdir -p /home/runner/.android
           if [ -e /home/runner/.android/avd ]; then
             mv /home/runner/.android/avd /mnt/qsg-avd-preexisting
           fi
