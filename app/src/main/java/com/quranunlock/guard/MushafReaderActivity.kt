@@ -69,11 +69,10 @@ class MushafReaderActivity : ComponentActivity() {
     private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
     private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun openTafsir(verse: VerseRef) {
-        if (!TafsirEdition.isEnabled) return
-        selectedTafsirVerse = verse
-        tafsirLoadState = TafsirLoadState.Loading
-        TafsirEdition.selectVerse(verse)
+        // Final 10.9 boundary: Tafsir is available only from voluntary Plus Reading/Study, never from a timed Safeguard challenge.
+        return
     }
 
     private fun closeTafsir() {
@@ -314,7 +313,8 @@ class MushafReaderActivity : ComponentActivity() {
                         currentPage
                     )
                     if (!ReadingValidationPolicy.canValidate(
-                            activeReadingMs = persistedReadingMs
+                            activeReadingMs = persistedReadingMs,
+                            bottomReached = bottomReached
                         )
                     ) {
                         gestureMessage = "Encore " +
@@ -393,7 +393,8 @@ class MushafReaderActivity : ComponentActivity() {
                     quotaReached || displayedIndex < activeIndex
                 val canValidate = !quotaReached &&
                     ReadingValidationPolicy.canValidate(
-                        activeReadingMs = readingMs
+                        activeReadingMs = readingMs,
+                        bottomReached = bottomReached
                     )
                 val sectionDivisions =
                     QuranStructureMetadata.divisionsForPage(
@@ -433,7 +434,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    if (TafsirEdition.isEnabled) "Qur’an & Tafsîr" else "Lecture du Qur’an",
+                                    "Lecture du Qur’an",
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.primary,
@@ -854,6 +855,11 @@ class MushafReaderActivity : ComponentActivity() {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        refreshController.dispose()
+        super.onDestroy()
+    }
+
     private fun markPageReady(page: Int) {
         if (page != activeReadingPage ||
             displayedPage != activeReadingPage
@@ -925,7 +931,7 @@ private fun MushafPageWebView(
                 setBackgroundColor(
                     android.graphics.Color.parseColor(ReaderComfortPrefs.pageBackground())
                 )
-                settings.javaScriptEnabled = TafsirEdition.isEnabled
+                settings.javaScriptEnabled = false
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false

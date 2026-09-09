@@ -31,8 +31,6 @@ internal class EInkRefreshPolicy(
     fun onChange(change: VisualChange, nowMs: Long): RefreshDecision {
         if (change == VisualChange.PAGE) return fullNow(nowMs)
         score += change.ghostingWeight
-        // A mask restored after a temporary reveal needs a clean final frame even
-        // if another refresh happened while the text was still revealed.
         if (change == VisualChange.REVEAL_RETURN || score >= threshold) pendingFull = true
         return if (pendingFull) decide(nowMs) else RefreshDecision(RefreshAction.PARTIAL)
     }
@@ -70,14 +68,29 @@ class EInkRefreshController(
     private var pendingView = WeakReference<View>(null)
     private var scheduledDueAt = Long.MIN_VALUE
     private val deferred = Runnable { runDeferred() }
+    private val overlayCallbacks = mutableSetOf<Runnable>()
+    private val overlayDrawables = mutableListOf<Pair<WeakReference<View>, ColorDrawable>>()
+    private var disposed = false
 
     fun onVisualChange(view: View?, change: VisualChange) {
-        if (profile == DisplayProfile.STANDARD || view == null) return
+        if (disposed || profile == DisplayProfile.STANDARD || view == null) return
         pendingView = WeakReference(view)
         apply(view, policy.onChange(change, clock()))
     }
 
+    fun dispose() {
+        if (disposed) return
+        disposed = true
+        cancelDeferred()
+        overlayCallbacks.toList().forEach(handler::removeCallbacks)
+        overlayCallbacks.clear()
+        overlayDrawables.toList().forEach { (ref, drawable) -> ref.get()?.overlay?.remove(drawable) }
+        overlayDrawables.clear()
+        pendingView.clear()
+    }
+
     private fun apply(view: View, decision: RefreshDecision) {
+        if (disposed) return
         when (decision.action) {
             RefreshAction.NONE -> Unit
             RefreshAction.PARTIAL -> view.postInvalidateOnAnimation()
@@ -90,6 +103,7 @@ class EInkRefreshController(
     }
 
     private fun schedule(view: View, dueAtMs: Long) {
+        if (disposed) return
         pendingView = WeakReference(view)
         if (scheduledDueAt == dueAtMs) return
         handler.removeCallbacks(deferred)
@@ -99,6 +113,7 @@ class EInkRefreshController(
 
     private fun runDeferred() {
         scheduledDueAt = Long.MIN_VALUE
+        if (disposed) return
         val view = pendingView.get() ?: return
         apply(view, policy.onPendingDue(clock()))
     }
@@ -109,31 +124,53 @@ class EInkRefreshController(
     }
 
     private fun requestFullRefresh(view: View) {
-        if (tryVendorFullRefresh(view)) return
-        // This HTML cleaner is rendered above the opaque Mushaf WebView content.
+        if (disposed || tryVendorFullRefresh(view)) return
         if (view is WebView) {
             view.postOnAnimation {
+                if (disposed) return@postOnAnimation
                 view.evaluateJavascript(
                     "window.einkFullRefreshFallback && window.einkFullRefreshFallback()",
-                ) { result -> if (result != "true") nativeOverlay(view) }
+                ) { result -> if (!disposed && result != "true") nativeOverlay(view) }
             }
             return
         }
         nativeOverlay(view)
     }
 
+    private fun postTracked(delayMs: Long, action: () -> Unit) {
+        if (disposed) return
+        lateinit var callback: Runnable
+        callback = Runnable {
+            overlayCallbacks.remove(callback)
+            if (!disposed) action()
+        }
+        overlayCallbacks.add(callback)
+        handler.postDelayed(callback, delayMs)
+    }
+
+    private fun addOverlay(view: View, drawable: ColorDrawable) {
+        if (disposed) return
+        view.overlay.add(drawable)
+        overlayDrawables.add(WeakReference<View>(view) to drawable)
+        view.invalidate()
+    }
+
+    private fun removeOverlay(view: View, drawable: ColorDrawable) {
+        view.overlay.remove(drawable)
+        overlayDrawables.removeAll { it.first.get() === view && it.second === drawable }
+        view.invalidate()
+    }
+
     private fun nativeOverlay(view: View) {
-        val overlay = view.overlay
+        if (disposed) return
         val black = ColorDrawable(Color.BLACK).apply { setBounds(0, 0, view.width, view.height) }
         val cream = ColorDrawable(Color.rgb(247, 242, 232)).apply { setBounds(0, 0, view.width, view.height) }
-        overlay.add(black)
-        view.invalidate()
-        handler.postDelayed({
-            overlay.remove(black)
-            overlay.add(cream)
-            view.invalidate()
-            handler.postDelayed({ overlay.remove(cream); view.invalidate() }, 55L)
-        }, 55L)
+        addOverlay(view, black)
+        postTracked(55L) {
+            removeOverlay(view, black)
+            addOverlay(view, cream)
+            postTracked(55L) { removeOverlay(view, cream) }
+        }
     }
 
     private fun tryVendorFullRefresh(view: View): Boolean = runCatching {
