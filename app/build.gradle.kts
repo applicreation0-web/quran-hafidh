@@ -1081,7 +1081,7 @@ val verifyReleaseAudit by tasks.registering {
 
 android {
     namespace = "com.applicreation0.quransafeguard"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.applicreation0.quransafeguard"
