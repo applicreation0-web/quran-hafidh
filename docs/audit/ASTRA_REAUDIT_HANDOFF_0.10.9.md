@@ -52,6 +52,7 @@ Ce fichier est le seul ajout documentaire postérieur au HEAD applicatif candida
 - Protocole complet : 786 transitions PASS.
 - Gates modernisées 10.8, vérificateurs 10.9, unitaires Light/Plus, builds debug/release Light/Plus et isolation des éditions : PASS.
 - Gate Tafsir 0.10.5 modernisée sans assouplissement : elle reconnaît le `displayText` dérivé de `run.text`, la pile contextuelle Activity/Back et les segments source mappés de l'architecture actuelle, tout en maintenant les mêmes assertions fonctionnelles.
+- Gate contradictoire 0.10.3 modernisée pour reconnaître l'identité courante versionCode 28 / versionName 0.10.9, tout en conservant toutes ses assertions Hikam, RTL, isolation du lecteur libre et Light/Plus.
 
 ## Artefacts issus du HEAD candidat
 

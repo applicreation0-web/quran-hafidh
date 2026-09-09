@@ -20,7 +20,13 @@ entries = json.loads((ROOT / "app/src/main/assets/hikam/al_hikam_verified.json")
 
 # Historical 0.10.3 guarantees are retained inside newer releases; the current
 # release audit owns the active version number.
-require('versionCode = 22' in build and 'versionName = "0.10.3"' in build, "0.10.3 compatibility markers must remain auditable")
+require(
+    (
+        ('versionCode = 22' in build and 'versionName = "0.10.3"' in build)
+        or ('versionCode = 28' in build and 'versionName = "0.10.9"' in build)
+    ),
+    "release identity must be an audited 0.10.3-compatible or current 0.10.9 build",
+)
 require(len(entries) == 264, "Hikam corpus must contain exactly 264 entries")
 require({int(x["source_number"]) for x in entries} == set(range(1, 265)), "Hikam numbering must be exactly 1..264")
 for item in entries:
