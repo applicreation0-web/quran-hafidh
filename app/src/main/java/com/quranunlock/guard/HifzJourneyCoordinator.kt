@@ -10,14 +10,23 @@ package com.applicreation0.quransafeguard
  */
 object HifzJourneyCoordinator {
 
-    fun canCompleteTask(task: HifzTask, progress: HifzTaskProgress?): Boolean =
+    fun canCompleteTask(
+        task: HifzTask,
+        progress: HifzTaskProgress?,
+        segmentCount: Int = 1
+    ): Boolean =
         task.status != HifzTaskStatus.COMPLETED &&
-            progress?.taskId == task.id &&
-            progress.completed
+            progress != null &&
+            progress.completed &&
+            HifzTrainingEngine.isSemanticallyCoherent(task, progress, segmentCount)
 
-    fun completeTask(task: HifzTask, progress: HifzTaskProgress): HifzTask {
-        require(canCompleteTask(task, progress)) {
-            "The Hifz training protocol must be completed before the task can be completed."
+    fun completeTask(
+        task: HifzTask,
+        progress: HifzTaskProgress,
+        segmentCount: Int = 1
+    ): HifzTask {
+        require(canCompleteTask(task, progress, segmentCount)) {
+            "The complete coherent Hifz training protocol is required before task completion."
         }
         return HifzSchedulePolicy.complete(task)
     }
@@ -25,13 +34,17 @@ object HifzJourneyCoordinator {
     /**
      * Returns a complete replacement state. Persistence can commit this state atomically.
      */
-    fun completeTask(state: HifzState, taskId: String): HifzState {
+    fun completeTask(
+        state: HifzState,
+        taskId: String,
+        segmentCount: Int = 1
+    ): HifzState {
         val taskIndex = state.tasks.indexOfFirst { it.id == taskId }
         require(taskIndex >= 0) { "Unknown Hifz task: $taskId" }
         val task = state.tasks[taskIndex]
         val progress = state.progressByTask[taskId]
             ?: error("Missing Hifz training progress for $taskId")
-        val completedTask = completeTask(task, progress)
+        val completedTask = completeTask(task, progress, segmentCount)
         val tasks = state.tasks.toMutableList()
         tasks[taskIndex] = completedTask
         return state.copy(tasks = tasks)
