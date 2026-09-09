@@ -44,20 +44,7 @@ jobs:
         run: |
           pip install pymupdf==1.26.7 numpy scipy
           python3 scripts/build_reader109_geometry.py
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          g=json.loads(Path('app/src/main/assets/reader109/geometry.json').read_text())
-          assert g['schema']==1
-          assert len(g['pages'])==604
-          for verse in ('49:1','2:282'):
-              assert verse in g['verses'] and g['verses'][verse]
-              assert any(
-                  verse in line['verses']
-                  for page in g['verses'][verse]
-                  for line in g['pages'][str(page)]['lines']
-              )
-          PY
+          python3 scripts/verify_hifz_geometry_edges.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
