@@ -2,7 +2,9 @@ name: Quran Safeguard 0.10.10 Hifz foundation
 
 on:
   push:
-    branches: ["work/0.10.10-hifz"]
+    branches:
+      - "work/0.10.10-hifz"
+      - "work/0.10.10-runtime-hifz-final"
   workflow_dispatch:
 
 permissions:
@@ -56,6 +58,8 @@ jobs:
           gradle-version: '9.5.0'
       - name: Run both edition unit suites
         run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+      - name: Build both debug editions
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
       - name: Upload Hifz unit reports and geometry evidence
         if: always()
         uses: actions/upload-artifact@v4
