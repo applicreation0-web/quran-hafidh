@@ -6,18 +6,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,10 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 
-private enum class LibrarySection {
-    HADITH,
-    HIKAM
-}
+private enum class LibrarySection { HADITH, HIKAM }
 
 class SpiritualLibraryActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,10 +35,8 @@ class SpiritualLibraryActivity : ComponentActivity() {
         setContent {
             QuranSafeguardTheme {
                 SpiritualLibraryScreen(
-                    hadiths = ReminderLibrary.all(this)
-                        .filter { it.type == ReminderType.HADITH },
-                    hikamEntries = HikamRepository.entries(this)
-                        .filter { it.displayEligible },
+                    hadiths = ReminderLibrary.all(this).filter { it.type == ReminderType.HADITH },
+                    hikamEntries = HikamRepository.entries(this).filter { it.displayEligible },
                     onOpenHikma = { id ->
                         startActivity(
                             Intent(this, HikamDetailActivity::class.java)
@@ -66,20 +57,15 @@ private fun SpiritualLibraryScreen(
 ) {
     var section by remember { mutableStateOf(LibrarySection.HADITH) }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 18.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 "RAPPEL / TEXTES",
                 style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.tertiary,
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -94,9 +80,9 @@ private fun SpiritualLibraryScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 LibrarySection.entries.forEach { candidate ->
                     val label = when (candidate) {
@@ -105,14 +91,12 @@ private fun SpiritualLibraryScreen(
                     }
                     if (candidate == section) {
                         SafeguardButton(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             onClick = { section = candidate }
-                        ) { Text(label) }
+                        ) { Text("✓ $label") }
                     } else {
                         SafeguardOutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             onClick = { section = candidate }
                         ) { Text(label) }
                     }
@@ -130,9 +114,7 @@ private fun SpiritualLibraryScreen(
                         }
                     }
                 }
-
                 LibrarySection.HIKAM -> {
-                    val entries = hikamEntries
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -144,57 +126,44 @@ private fun SpiritualLibraryScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        items(entries, key = { it.canonicalId }) { hikma ->
+                        items(hikamEntries, key = { it.canonicalId }) { hikma ->
                             ElevatedCard(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(22.dp),
-                                colors = CardDefaults.elevatedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ),
-                                elevation = CardDefaults.elevatedCardElevation(
-                                    defaultElevation = 1.dp
-                                )
+                                shape = SafeguardShapes.large,
+                                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(17.dp),
                                     verticalArrangement = Arrangement.spacedBy(9.dp)
                                 ) {
                                     Text(
-                                        "Hikma " + hikma.sourceNumber,
+                                        "Hikma ${hikma.sourceNumber}",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.secondary
+                                        color = MaterialTheme.colorScheme.tertiary
                                     )
                                     Text(
                                         hikma.arabicText,
                                         modifier = Modifier.fillMaxWidth(),
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            textDirection = TextDirection.Rtl
-                                        ),
+                                        style = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Rtl),
                                         textAlign = TextAlign.Right
                                     )
+                                    Text(hikma.frenchText, style = MaterialTheme.typography.bodyMedium)
                                     Text(
-                                        hikma.frenchText,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Text(
-                                        "Ibn ʿAṭāʾ Allāh • " + hikma.source.locator,
+                                        "Ibn ʿAṭāʾ Allāh • ${hikma.source.locator}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     SafeguardButton(
                                         modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(14.dp),
                                         onClick = { onOpenHikma(hikma.canonicalId) }
-                                    ) {
-                                        Text("Lire")
-                                    }
+                                    ) { Text("Lire") }
                                 }
                             }
                         }
                     }
                 }
-
             }
         }
     }
