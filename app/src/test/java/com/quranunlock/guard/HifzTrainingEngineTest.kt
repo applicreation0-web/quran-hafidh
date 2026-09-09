@@ -51,13 +51,31 @@ class HifzTrainingEngineTest {
     }
 
     @Test
+    fun incorrectMaskedItqanAttemptCannotAdvance() {
+        val task = task(HifzTrack.ITQAN)
+        var progress = HifzTrainingEngine.initial(task)
+
+        repeat(30) {
+            progress = HifzTrainingEngine.attempt(task, progress, correct = true)
+        }
+        progress = HifzTrainingEngine.advanceIfValid(task, progress)
+        assertEquals("itqan-mask-25", HifzTrainingEngine.currentStep(task, progress)?.id)
+
+        progress = HifzTrainingEngine.attempt(task, progress, correct = false)
+        progress = HifzTrainingEngine.advanceIfValid(task, progress)
+
+        assertEquals("itqan-mask-25", HifzTrainingEngine.currentStep(task, progress)?.id)
+        assertEquals(0, progress.stepProgress?.consecutiveSuccesses)
+    }
+
+    @Test
     fun completedTrainingDoesNotMutateScheduleIdentity() {
         val task = task(HifzTrack.ITQAN)
         var progress = HifzTrainingEngine.initial(task)
         val steps = HifzTrainingPolicy.stepsFor(task.track)
 
         steps.forEach { step ->
-            var current = HifzTrainingEngine.currentStep(task, progress)
+            val current = HifzTrainingEngine.currentStep(task, progress)
             assertEquals(step.id, current?.id)
             repeat(step.repetitions) {
                 progress = HifzTrainingEngine.attempt(task, progress, correct = true)
