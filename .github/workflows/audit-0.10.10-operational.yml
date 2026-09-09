@@ -60,10 +60,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - name: Install stable build SDK and emulator image
+      - name: Install proven build SDK and emulator image
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "platforms;android-35" "system-images;android-35;google_apis;x86_64" "emulator"
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-35" "system-images;android-35;google_apis;x86_64" "emulator"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
