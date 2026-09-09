@@ -159,6 +159,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
             put("legacyBookmarks",org.json.JSONArray(QuranBookmarkStore.load(this@FreeQuranReaderActivity).sorted()))
             put("memory",memoryMode);put("contextual",contextual);put("surah",intent.getIntExtra("surah",0));put("ayah",intent.getIntExtra("ayah",0))
             put("audio",audio.available)
+            put("audioReciter",QuranAudioSource.RECITER_NAME)
+            put("audioSource",QuranAudioSource.SOURCE_LABEL)
             put("displayProfile",displayProfile.name)
             put("brightness",ReaderComfortPrefs.brightness(this@FreeQuranReaderActivity).toDouble())
         }.toString()
@@ -183,6 +185,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
         @JavascriptInterface fun play(surah:Int,ayah:Int,repeats:Int){runOnUiThread { audio.playVerse(surah,ayah,repeats.coerceIn(1,100)) }}
         @JavascriptInterface fun pause(){runOnUiThread { audio.pause() }}
         @JavascriptInterface fun resume(){runOnUiThread { audio.resume() }}
+        @JavascriptInterface fun isDownloaded(surah:Int,ayah:Int):Boolean = audio.isDownloaded(surah,ayah)
+        @JavascriptInterface fun downloadVerse(surah:Int,ayah:Int){audio.downloadVerse(surah,ayah)}
+        @JavascriptInterface fun downloadSurah(surah:Int,ayahCount:Int){audio.downloadSurah(surah,ayahCount)}
+        @JavascriptInterface fun deleteSurah(surah:Int,ayahCount:Int){audio.deleteSurah(surah,ayahCount)}
         @JavascriptInterface fun announce(surah:Int,ayah:Int){runOnUiThread { web?.announceForAccessibility("Sourate $surah, verset $ayah") }}
     }
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
