@@ -8,7 +8,7 @@ import java.time.LocalDate
 class HifzStateCodecTest {
 
     @Test
-    fun roundTripPreservesMultipleItqanIntervalsConfigTaskAndSegmentProgress() {
+    fun roundTripPreservesConfigPlanningLedgerTaskAndSegmentMetrics() {
         val task = HifzTask(
             id = "itqan|task-1",
             track = HifzTrack.ITQAN,
@@ -28,7 +28,10 @@ class HifzStateCodecTest {
                 consecutiveSuccesses = 2,
                 revealCount = 1,
                 assistedSinceLastAttempt = true
-            )
+            ),
+            totalRevealCount = 4,
+            totalIncorrectAttempts = 3,
+            activeSeconds = 901
         )
         val config = HifzJourneyConfig(
             bounds = HifzJourneyBounds(
@@ -42,10 +45,16 @@ class HifzStateCodecTest {
                 sabqiMinutesPerPage = 14.5,
                 itqanMinutesPerPage = 5.25,
                 murajaahMinutesPerPage = 2.4
+            ),
+            availableMinutes = HifzAvailableMinutes(
+                sabqi = 30,
+                itqan = 25,
+                murajaah = 45
             )
         )
         val state = HifzState(
             journeyConfig = config,
+            planningDates = setOf(LocalDate.of(2026, 9, 8), LocalDate.of(2026, 9, 9)),
             tasks = listOf(task),
             progressByTask = mapOf(task.id to progress)
         )
@@ -55,6 +64,7 @@ class HifzStateCodecTest {
         assertEquals(state, decoded)
         assertEquals(2, decoded.journeyConfig.bounds?.itqan?.size)
         assertEquals(2, decoded.progressByTask[task.id]?.segmentIndex)
+        assertEquals(901, decoded.progressByTask[task.id]?.activeSeconds)
     }
 
     @Test
@@ -65,30 +75,31 @@ class HifzStateCodecTest {
 
     @Test
     fun legacySchemasFailClosed() {
-        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("1\n") }
-        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("2\n") }
-        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("3\n") }
-        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("4\n") }
+        (1..5).forEach { schema ->
+            assertThrows(IllegalArgumentException::class.java) {
+                HifzStateCodec.decode("$schema\n")
+            }
+        }
     }
 
     @Test
     fun currentSchemaWithoutConfigFailsClosed() {
         assertThrows(IllegalArgumentException::class.java) {
-            HifzStateCodec.decode("5\n")
+            HifzStateCodec.decode("6\n")
         }
     }
 
     @Test
     fun missingItqanIntervalIndexFailsClosed() {
-        val raw = "5\nC|67|1|67|30|-|-|-\nI|1|49|1|114|6\n"
+        val raw = "6\nC|67|1|67|30|-|-|-|-|-|-\nI|1|49|1|114|6\n"
         assertThrows(IllegalArgumentException::class.java) {
             HifzStateCodec.decode(raw)
         }
     }
 
     @Test
-    fun oldProgressRecordWithoutSegmentIndexFailsClosed() {
-        val raw = "5\nC|-|-|-|-|-|-|-\nP|dGFzaw|0|-|0|0|0|false|false\n"
+    fun malformedOldProgressRecordFailsClosed() {
+        val raw = "6\nC|-|-|-|-|-|-|-|-|-|-\nP|dGFzaw|0|0|-|0|0|0|false|false\n"
         assertThrows(IllegalArgumentException::class.java) {
             HifzStateCodec.decode(raw)
         }
