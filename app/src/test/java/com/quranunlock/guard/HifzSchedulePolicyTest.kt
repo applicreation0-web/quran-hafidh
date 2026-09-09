@@ -20,7 +20,7 @@ class HifzSchedulePolicyTest {
     }
 
     @Test
-    fun missedTaskBecomesOverdueWithoutMovingCursorQuotaOrDate() {
+    fun missedTaskBecomesOverdueWithoutMovingCursorQuotaOrDates() {
         val originalDate = LocalDate.of(2026, 9, 7)
         val task = task(
             id = "sabqi-1",
@@ -33,6 +33,7 @@ class HifzSchedulePolicyTest {
         val overdue = HifzSchedulePolicy.markOverdue(task, LocalDate.of(2026, 9, 8))
 
         assertEquals(HifzTaskStatus.OVERDUE, overdue.status)
+        assertEquals(originalDate, overdue.originalScheduledDate)
         assertEquals(originalDate, overdue.scheduledDate)
         assertEquals("2:1-2:5", overdue.cursor)
         assertEquals(5, overdue.quota)
@@ -47,11 +48,12 @@ class HifzSchedulePolicyTest {
     }
 
     @Test
-    fun explicitReplanPreservesCursorAndQuota() {
+    fun explicitReplanPreservesOriginCursorQuotaAndTrack() {
+        val original = LocalDate.of(2026, 9, 8)
         val task = task(
             id = "itqan-1",
             track = HifzTrack.ITQAN,
-            date = LocalDate.of(2026, 9, 8),
+            date = original,
             cursor = "67:1-67:4",
             quota = 4,
             status = HifzTaskStatus.OVERDUE
@@ -60,10 +62,31 @@ class HifzSchedulePolicyTest {
         val replanned = HifzSchedulePolicy.replan(task, LocalDate.of(2026, 9, 10))
 
         assertEquals(HifzTaskStatus.PLANNED, replanned.status)
+        assertEquals(original, replanned.originalScheduledDate)
         assertEquals(LocalDate.of(2026, 9, 10), replanned.scheduledDate)
         assertEquals(task.cursor, replanned.cursor)
         assertEquals(task.quota, replanned.quota)
         assertEquals(task.track, replanned.track)
+    }
+
+    @Test
+    fun suggestReplanUsesNextAvailableDayForSameTrackWithoutMutatingTask() {
+        val task = task(
+            id = "itqan-missed",
+            track = HifzTrack.ITQAN,
+            date = LocalDate.of(2026, 9, 8),
+            status = HifzTaskStatus.OVERDUE
+        )
+
+        val suggested = HifzSchedulePolicy.suggestReplanDate(
+            task = task,
+            after = LocalDate.of(2026, 9, 9),
+            available = { it != LocalDate.of(2026, 9, 10) }
+        )
+
+        assertEquals(LocalDate.of(2026, 9, 15), suggested)
+        assertEquals(LocalDate.of(2026, 9, 8), task.scheduledDate)
+        assertEquals(HifzTaskStatus.OVERDUE, task.status)
     }
 
     @Test
@@ -113,6 +136,7 @@ class HifzSchedulePolicyTest {
         )
 
         assertNull(HifzSchedulePolicy.nextTask(today, listOf(done)))
+        assertNull(HifzSchedulePolicy.suggestReplanDate(done, today))
     }
 
     private fun task(
@@ -125,6 +149,7 @@ class HifzSchedulePolicyTest {
     ) = HifzTask(
         id = id,
         track = track,
+        originalScheduledDate = date,
         scheduledDate = date,
         cursor = cursor,
         quota = quota,
