@@ -41,6 +41,7 @@ class SettingsUiScaleRuntimeTest {
             shell("settings put system font_scale $scale")
             Thread.sleep(350)
 
+            assertSurface(DashboardActivity::class.java, "QURAN SAFEGUARD", scale, scrolls = 4)
             assertSurface(SettingsHubActivity::class.java, "Réglages", scale, scrolls = 4)
             assertSurface(MainActivity::class.java, "Réglages", scale, scrolls = 3)
             assertSurface(ApplicationsActivity::class.java, "Applications", scale, scrolls = 3)
