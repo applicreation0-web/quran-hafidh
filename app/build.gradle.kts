@@ -656,10 +656,12 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
             buildFile.contains("versionCode = 22") &&
                 buildFile.contains("versionName = \"0.10.3\"")
         val preparedReleaseMetadata =
-            buildFile.contains("versionCode = 28") &&
-                buildFile.contains("versionName = \"0.10.9\"")
+            (buildFile.contains("versionCode = 28") &&
+                buildFile.contains("versionName = \"0.10.9\"")) ||
+            (buildFile.contains("versionCode = 29") &&
+                buildFile.contains("versionName = \"0.10.10\""))
         check(auditedBaselineMetadata || preparedReleaseMetadata) {
-            "Expected either the audited 0.10.3 baseline metadata or prepared 0.10.9 release metadata."
+            "Expected the audited baseline or an explicitly prepared 0.10.9/0.10.10 release metadata set."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -1085,8 +1087,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.10.9"
+        versionCode = 29
+        versionName = "0.10.10"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

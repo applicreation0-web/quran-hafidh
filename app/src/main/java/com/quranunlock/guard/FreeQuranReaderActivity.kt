@@ -56,6 +56,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        Reader109StateSanitizer.migrateOnReaderEntry(this)
         ReaderComfortPrefs.applyBrightness(window, ReaderComfortPrefs.brightness(this))
         contextual = intent.getBooleanExtra("contextual", false)
         val persistedMode = runCatching {

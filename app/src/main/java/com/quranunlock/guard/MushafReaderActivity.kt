@@ -585,10 +585,13 @@ class MushafReaderActivity : ComponentActivity() {
                             label = "mushaf-page-swipe"
                         ) { pageIndex ->
                             val pageNumber = planPages[pageIndex]
-                            val svgContent = remember(pageNumber) {
+                            var retryGeneration by remember(pageNumber) {
+                                mutableIntStateOf(0)
+                            }
+                            val svgContent = remember(pageNumber, retryGeneration) {
                                 loadMushafPage(pageNumber)
                             }
-                            var loadFailed by remember(pageNumber) {
+                            var loadFailed by remember(pageNumber, retryGeneration) {
                                 mutableStateOf(svgContent.isNullOrBlank())
                             }
 
@@ -649,11 +652,28 @@ class MushafReaderActivity : ComponentActivity() {
                                     }
                                 )
                             } else {
-                                Text(
-                                    "La page du Mushaf n’est pas disponible. " +
-                                        "La lecture n’est pas comptabilisée.",
-                                    modifier = Modifier.padding(18.dp)
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(18.dp),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        "La page du Mushaf n’est pas visible. " +
+                                            "La lecture n’est pas comptabilisée."
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                    SafeguardOutlinedButton(
+                                        onClick = {
+                                            markPageUnavailable(pageNumber)
+                                            loadFailed = false
+                                            retryGeneration += 1
+                                        }
+                                    ) {
+                                        Text("Réessayer")
+                                    }
+                                }
                             }
                         }
 
@@ -776,6 +796,7 @@ class MushafReaderActivity : ComponentActivity() {
                     .use { it.readText() }
             }
         }.getOrNull()
+            ?.takeIf(MushafRuntimeVisibilityPolicy::sourceLooksRenderable)
     }
 
     override fun onStart() {
@@ -931,7 +952,9 @@ private fun MushafPageWebView(
                 setBackgroundColor(
                     android.graphics.Color.parseColor(ReaderComfortPrefs.pageBackground())
                 )
-                settings.javaScriptEnabled = false
+                // JavaScript is enabled only for a local DOM visibility probe.
+                // No JavaScript interface is exposed and network loads remain blocked.
+                settings.javaScriptEnabled = true
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
@@ -1011,18 +1034,34 @@ private fun MushafPageWebView(
                         view: WebView?,
                         url: String?
                     ) {
-                        currentOnReady.value()
-                        view?.post {
-                            val contentHeightPx =
-                                (view.contentHeight * view.scale).toInt()
-                            if (contentHeightPx > 0 &&
-                                view.height > 0 &&
-                                !ReadingValidationPolicy.requiresScroll(
-                                    contentHeightPx = contentHeightPx,
-                                    viewportHeightPx = view.height
-                                )
-                            ) {
-                                currentOnBottomReached.value()
+                        view ?: run {
+                            currentOnFailure.value()
+                            return
+                        }
+                        view.post {
+                            view.evaluateJavascript(
+                                MushafRuntimeVisibilityPolicy.probeJavascript()
+                            ) { result ->
+                                if (!MushafRuntimeVisibilityPolicy
+                                        .probeResultIsReady(result)
+                                ) {
+                                    currentOnFailure.value()
+                                    return@evaluateJavascript
+                                }
+                                currentOnReady.value()
+                                view.post {
+                                    val contentHeightPx =
+                                        (view.contentHeight * view.scale).toInt()
+                                    if (contentHeightPx > 0 &&
+                                        view.height > 0 &&
+                                        !ReadingValidationPolicy.requiresScroll(
+                                            contentHeightPx = contentHeightPx,
+                                            viewportHeightPx = view.height
+                                        )
+                                    ) {
+                                        currentOnBottomReached.value()
+                                    }
+                                }
                             }
                         }
                     }
