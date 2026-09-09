@@ -18,7 +18,7 @@ class HifzResumePolicyTest {
     }
 
     @Test
-    fun nextDayRestartMarksOverdueWithoutMovingConfigWorkOrProgress() {
+    fun nextDayRestartPreservesAllItqanIntervalsAndProgress() {
         val plannedDate = LocalDate.of(2026, 9, 9)
         val state = state(plannedDate)
         val restored = HifzStateCodec.decode(HifzStateCodec.encode(state))
@@ -31,6 +31,7 @@ class HifzResumePolicyTest {
 
         assertEquals(HifzTaskStatus.OVERDUE, afterTask.status)
         assertEquals(beforeConfig, resumed.state.journeyConfig)
+        assertEquals(2, resumed.state.journeyConfig.bounds?.itqan?.size)
         assertEquals(beforeTask.originalScheduledDate, afterTask.originalScheduledDate)
         assertEquals(beforeTask.scheduledDate, afterTask.scheduledDate)
         assertEquals(beforeTask.cursor, afterTask.cursor)
@@ -80,7 +81,10 @@ class HifzResumePolicyTest {
         val config = HifzJourneyConfig(
             bounds = HifzJourneyBounds(
                 sabqi = HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 20)),
-                itqan = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30))
+                itqan = listOf(
+                    HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 286)),
+                    HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
+                )
             ),
             pace = HifzPaceProfile(sabqiMinutesPerPage = 16.0, itqanMinutesPerPage = 6.0)
         )

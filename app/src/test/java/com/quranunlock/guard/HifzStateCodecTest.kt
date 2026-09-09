@@ -8,7 +8,7 @@ import java.time.LocalDate
 class HifzStateCodecTest {
 
     @Test
-    fun roundTripPreservesConfigTypedTaskCursorAndTrainingProgress() {
+    fun roundTripPreservesMultipleItqanIntervalsConfigTaskAndProgress() {
         val task = HifzTask(
             id = "itqan|task-1",
             track = HifzTrack.ITQAN,
@@ -32,7 +32,10 @@ class HifzStateCodecTest {
         val config = HifzJourneyConfig(
             bounds = HifzJourneyBounds(
                 sabqi = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30)),
-                itqan = HifzVerseRange(QuranVerseRef(78, 1), QuranVerseRef(79, 46))
+                itqan = listOf(
+                    HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 286)),
+                    HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
+                )
             ),
             pace = HifzPaceProfile(
                 sabqiMinutesPerPage = 14.5,
@@ -49,12 +52,12 @@ class HifzStateCodecTest {
         val decoded = HifzStateCodec.decode(HifzStateCodec.encode(state))
 
         assertEquals(state, decoded)
+        assertEquals(2, decoded.journeyConfig.bounds?.itqan?.size)
     }
 
     @Test
     fun emptyPreSetupConfigAlsoRoundTrips() {
         val state = HifzState()
-
         assertEquals(state, HifzStateCodec.decode(HifzStateCodec.encode(state)))
     }
 
@@ -62,19 +65,21 @@ class HifzStateCodecTest {
     fun legacySchemasFailClosed() {
         assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("1\n") }
         assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("2\n") }
+        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("3\n") }
     }
 
     @Test
     fun currentSchemaWithoutConfigFailsClosed() {
         assertThrows(IllegalArgumentException::class.java) {
-            HifzStateCodec.decode("3\n")
+            HifzStateCodec.decode("4\n")
         }
     }
 
     @Test
-    fun unsupportedSchemaFailsClosed() {
+    fun missingItqanIntervalIndexFailsClosed() {
+        val raw = "4\nC|67|1|67|30|-|-|-\nI|1|49|1|114|6\n"
         assertThrows(IllegalArgumentException::class.java) {
-            HifzStateCodec.decode("999\n")
+            HifzStateCodec.decode(raw)
         }
     }
 

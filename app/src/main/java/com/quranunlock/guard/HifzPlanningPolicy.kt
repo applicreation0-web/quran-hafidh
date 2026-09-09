@@ -2,7 +2,10 @@ package com.applicreation0.quransafeguard
 
 import java.time.LocalDate
 
-/** Rare setup bounds: Sabqi and Itqan each keep their own exact Quran start/end. */
+internal fun compareQuranVerseRefs(left: QuranVerseRef, right: QuranVerseRef): Int =
+    compareValuesBy(left, right, QuranVerseRef::surah, QuranVerseRef::ayah)
+
+/** Canonical Quran interval. Verse identity is always the primary Hifz unit. */
 data class HifzVerseRange(
     val start: QuranVerseRef,
     val end: QuranVerseRef
@@ -10,19 +13,83 @@ data class HifzVerseRange(
     init {
         QuranCanonicalBounds.requireValid(start)
         QuranCanonicalBounds.requireValid(end)
-        require(compareRefs(start, end) <= 0) { "Hifz range end cannot precede its start." }
+        require(compareQuranVerseRefs(start, end) <= 0) {
+            "Hifz range end cannot precede its start."
+        }
     }
 
-    companion object {
-        private fun compareRefs(left: QuranVerseRef, right: QuranVerseRef): Int =
-            compareValuesBy(left, right, QuranVerseRef::surah, QuranVerseRef::ayah)
+    fun isStrictlyBefore(other: HifzVerseRange): Boolean =
+        compareQuranVerseRefs(end, other.start) < 0
+}
+
+/**
+ * Rare setup bounds. Sabqi has its own canonical range. Itqan may contain several
+ * independent Quran intervals (for example Al-Baqarah plus Al-Hujurat through An-Nas).
+ * Gaps are intentional and are never silently merged into the Itqan corpus.
+ */
+data class HifzJourneyBounds(
+    val sabqi: HifzVerseRange,
+    val itqan: List<HifzVerseRange>
+) {
+    init {
+        require(itqan.isNotEmpty()) { "At least one Itqan interval is required." }
+        itqan.zipWithNext().forEach { (previous, next) ->
+            require(previous.isStrictlyBefore(next)) {
+                "Itqan intervals must be ordered and non-overlapping."
+            }
+        }
     }
 }
 
-data class HifzJourneyBounds(
-    val sabqi: HifzVerseRange,
-    val itqan: HifzVerseRange
+/**
+ * Optional pedagogical subdivision inside a canonical verse target. Line numbers are
+ * 1-based within a fixed Medina Mushaf page and are never an official progress cursor.
+ */
+data class HifzLineWindow(
+    val page: Int,
+    val firstLine: Int,
+    val lastLine: Int
+) {
+    init {
+        require(page in 1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT)
+        require(firstLine >= 1)
+        require(lastLine >= firstLine)
+    }
+}
+
+data class HifzPedagogicalSegment(
+    val canonicalTarget: HifzVerseRange,
+    val lineWindow: HifzLineWindow
 )
+
+/**
+ * Splits a long passage into line-sized training chunks while keeping the exact same
+ * canonical verse target on every chunk. Completing one chunk cannot move the Hifz
+ * verse cursor; only validation of the canonical target may do that.
+ */
+object HifzLineSegmentationPolicy {
+    fun split(
+        canonicalTarget: HifzVerseRange,
+        page: Int,
+        firstLine: Int,
+        lastLine: Int,
+        maxLinesPerSegment: Int
+    ): List<HifzPedagogicalSegment> {
+        require(maxLinesPerSegment > 0)
+        val whole = HifzLineWindow(page, firstLine, lastLine)
+        val result = mutableListOf<HifzPedagogicalSegment>()
+        var cursor = whole.firstLine
+        while (cursor <= whole.lastLine) {
+            val end = minOf(whole.lastLine, cursor + maxLinesPerSegment - 1)
+            result += HifzPedagogicalSegment(
+                canonicalTarget = canonicalTarget,
+                lineWindow = HifzLineWindow(page, cursor, end)
+            )
+            cursor = end + 1
+        }
+        return result
+    }
+}
 
 /**
  * Observed pace is deliberately separate for each track. Null means Safeguard has not
@@ -70,11 +137,6 @@ enum class MurajaahOrigin {
     CONSOLIDATED_ITQAN
 }
 
-/**
- * Raw adaptive inputs retained for Murajaah ranking. The foundation deliberately does
- * not assign arbitrary weights to them: the adaptive ranking layer must make that choice
- * explicitly and can evolve it from observed performance.
- */
 data class MurajaahCandidate(
     val id: String,
     val cursor: HifzCursor,
@@ -96,11 +158,6 @@ data class MurajaahCandidate(
     }
 }
 
-/**
- * Murajaah covers recent Sabqi and consolidated Itqan without any fixed source ratio.
- * The adaptive scorer/order is intentionally external because no fixed weighting between
- * volume, age, fragility, errors, speed and available time has been approved yet.
- */
 object MurajaahPolicy {
     const val RECITATIONS_PER_PORTION = 1
     const val LOCAL_CORRECTION_ONLY = true
@@ -108,10 +165,6 @@ object MurajaahPolicy {
     const val INITIAL_REFERENCE_MINUTES = 45
     const val INITIAL_MINUTES_PER_PAGE_REFERENCE = 2.25
 
-    /**
-     * Applies an adaptive order produced from the required factors. This method never
-     * inserts, balances or reserves a Sabqi/Itqan ratio on its own.
-     */
     fun takeAdaptiveOrder(
         candidatesInAdaptivePriorityOrder: List<MurajaahCandidate>,
         maxItems: Int

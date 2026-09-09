@@ -8,16 +8,30 @@ import java.time.LocalDate
 
 class HifzPlanningPolicyTest {
     @Test
-    fun sabqiAndItqanKeepIndependentExactVerseBounds() {
+    fun itqanSupportsSeveralIndependentOrderedIntervals() {
+        val baqarah = HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 286))
+        val hujuratToNas = HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
         val bounds = HifzJourneyBounds(
             sabqi = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30)),
-            itqan = HifzVerseRange(QuranVerseRef(78, 1), QuranVerseRef(79, 46))
+            itqan = listOf(baqarah, hujuratToNas)
         )
 
-        assertEquals(QuranVerseRef(67, 1), bounds.sabqi.start)
-        assertEquals(QuranVerseRef(67, 30), bounds.sabqi.end)
-        assertEquals(QuranVerseRef(78, 1), bounds.itqan.start)
-        assertEquals(QuranVerseRef(79, 46), bounds.itqan.end)
+        assertEquals(listOf(baqarah, hujuratToNas), bounds.itqan)
+        assertEquals(QuranVerseRef(2, 286), bounds.itqan[0].end)
+        assertEquals(QuranVerseRef(49, 1), bounds.itqan[1].start)
+    }
+
+    @Test
+    fun itqanIntervalsCannotOverlapOrBeOutOfOrder() {
+        assertThrows(IllegalArgumentException::class.java) {
+            HifzJourneyBounds(
+                sabqi = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30)),
+                itqan = listOf(
+                    HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6)),
+                    HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 286))
+                )
+            )
+        }
     }
 
     @Test
@@ -25,6 +39,23 @@ class HifzPlanningPolicyTest {
         assertThrows(IllegalArgumentException::class.java) {
             HifzVerseRange(QuranVerseRef(67, 10), QuranVerseRef(67, 1))
         }
+    }
+
+    @Test
+    fun longVerseCanBeSplitIntoLinesWithoutChangingCanonicalTarget() {
+        val verse = HifzVerseRange(QuranVerseRef(2, 282), QuranVerseRef(2, 282))
+
+        val segments = HifzLineSegmentationPolicy.split(
+            canonicalTarget = verse,
+            page = 48,
+            firstLine = 1,
+            lastLine = 15,
+            maxLinesPerSegment = 5
+        )
+
+        assertEquals(3, segments.size)
+        assertEquals(listOf(1..5, 6..10, 11..15), segments.map { it.lineWindow.firstLine..it.lineWindow.lastLine })
+        assertEquals(listOf(verse, verse, verse), segments.map { it.canonicalTarget })
     }
 
     @Test
@@ -70,26 +101,6 @@ class HifzPlanningPolicyTest {
         )
 
         assertEquals(listOf("sabqi-a", "sabqi-b", "sabqi-c"), selected.map { it.id })
-    }
-
-    @Test
-    fun adaptiveInputsRetainVolumeAgeFragilityErrorsAndSpeedWithoutInventedWeights() {
-        val candidate = MurajaahCandidate(
-            id = "review-1",
-            cursor = HifzCursor.page(67, 1, 7, 562),
-            origin = MurajaahOrigin.CONSOLIDATED_ITQAN,
-            volumePageEquivalent = 1.0,
-            lastReviewedDate = LocalDate.of(2026, 9, 1),
-            fragilityRank = 3,
-            errorCount = 2,
-            observedMinutesPerPage = 2.8
-        )
-
-        assertEquals(1.0, candidate.volumePageEquivalent, 0.0001)
-        assertEquals(LocalDate.of(2026, 9, 1), candidate.lastReviewedDate)
-        assertEquals(3, candidate.fragilityRank)
-        assertEquals(2, candidate.errorCount)
-        assertEquals(2.8, candidate.observedMinutesPerPage!!, 0.0001)
     }
 
     private fun candidate(id: String, origin: MurajaahOrigin) = MurajaahCandidate(

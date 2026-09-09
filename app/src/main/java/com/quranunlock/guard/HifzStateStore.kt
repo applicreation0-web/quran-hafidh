@@ -45,12 +45,14 @@ data class HifzLoadResult(
 
 /**
  * Deterministic, versioned codec kept independent from reader109 and GuardPrefs.
- * C is the rare journey setup/pace, T records are tasks and P records are progress.
+ * C stores Sabqi bounds + measured paces. I records store ordered Itqan intervals.
+ * T records are schedule tasks and P records are training progress.
  */
 object HifzStateCodec {
-    const val SCHEMA = 3
+    const val SCHEMA = 4
     private const val SEP = "|"
     private const val CONFIG = "C"
+    private const val ITQAN_INTERVAL = "I"
     private const val TASK = "T"
     private const val PROGRESS = "P"
     private const val NONE = "-"
@@ -90,25 +92,27 @@ object HifzStateCodec {
 
     private fun StringBuilder.appendConfig(config: HifzJourneyConfig) {
         append(CONFIG).append(SEP)
-        val bounds = config.bounds
-        val boundFields = if (bounds == null) {
-            List(8) { NONE }
-        } else {
+        val sabqiFields = config.bounds?.sabqi?.let { range ->
             listOf(
-                bounds.sabqi.start.surah.toString(),
-                bounds.sabqi.start.ayah.toString(),
-                bounds.sabqi.end.surah.toString(),
-                bounds.sabqi.end.ayah.toString(),
-                bounds.itqan.start.surah.toString(),
-                bounds.itqan.start.ayah.toString(),
-                bounds.itqan.end.surah.toString(),
-                bounds.itqan.end.ayah.toString()
+                range.start.surah.toString(),
+                range.start.ayah.toString(),
+                range.end.surah.toString(),
+                range.end.ayah.toString()
             )
-        }
-        boundFields.forEach { append(it).append(SEP) }
+        } ?: List(4) { NONE }
+        sabqiFields.forEach { append(it).append(SEP) }
         append(encodeOptionalDouble(config.pace.sabqiMinutesPerPage)).append(SEP)
         append(encodeOptionalDouble(config.pace.itqanMinutesPerPage)).append(SEP)
         append(encodeOptionalDouble(config.pace.murajaahMinutesPerPage)).append('\n')
+
+        config.bounds?.itqan.orEmpty().forEachIndexed { index, range ->
+            append(ITQAN_INTERVAL).append(SEP)
+            append(index).append(SEP)
+            append(range.start.surah).append(SEP)
+            append(range.start.ayah).append(SEP)
+            append(range.end.surah).append(SEP)
+            append(range.end.ayah).append('\n')
+        }
     }
 
     fun decode(raw: String): HifzState {
@@ -116,7 +120,11 @@ object HifzStateCodec {
         require(lines.isNotEmpty()) { "Missing Hifz state." }
         require(lines.first().toIntOrNull() == SCHEMA) { "Unsupported Hifz state schema." }
 
-        var journeyConfig: HifzJourneyConfig? = null
+        var configSeen = false
+        var declaredSabqi: HifzVerseRange? = null
+        var boundsDeclared: Boolean? = null
+        var pace: HifzPaceProfile? = null
+        val itqanIntervals = sortedMapOf<Int, HifzVerseRange>()
         val tasks = mutableListOf<HifzTask>()
         val progress = linkedMapOf<String, HifzTaskProgress>()
 
@@ -124,30 +132,36 @@ object HifzStateCodec {
             val fields = line.split(SEP)
             when (fields.firstOrNull()) {
                 CONFIG -> {
-                    require(journeyConfig == null) { "Duplicate Hifz config record." }
-                    require(fields.size == 12) { "Malformed Hifz config." }
-                    val rawBounds = fields.subList(1, 9)
-                    val bounds = when {
-                        rawBounds.all { it == NONE } -> null
-                        rawBounds.any { it == NONE } -> error("Incomplete Hifz journey bounds.")
-                        else -> HifzJourneyBounds(
-                            sabqi = HifzVerseRange(
-                                QuranVerseRef(rawBounds[0].toInt(), rawBounds[1].toInt()),
-                                QuranVerseRef(rawBounds[2].toInt(), rawBounds[3].toInt())
-                            ),
-                            itqan = HifzVerseRange(
-                                QuranVerseRef(rawBounds[4].toInt(), rawBounds[5].toInt()),
-                                QuranVerseRef(rawBounds[6].toInt(), rawBounds[7].toInt())
+                    require(!configSeen) { "Duplicate Hifz config record." }
+                    require(fields.size == 8) { "Malformed Hifz config." }
+                    configSeen = true
+                    val rawSabqi = fields.subList(1, 5)
+                    boundsDeclared = when {
+                        rawSabqi.all { it == NONE } -> false
+                        rawSabqi.any { it == NONE } -> error("Incomplete Sabqi journey bounds.")
+                        else -> {
+                            declaredSabqi = HifzVerseRange(
+                                QuranVerseRef(rawSabqi[0].toInt(), rawSabqi[1].toInt()),
+                                QuranVerseRef(rawSabqi[2].toInt(), rawSabqi[3].toInt())
                             )
-                        )
+                            true
+                        }
                     }
-                    journeyConfig = HifzJourneyConfig(
-                        bounds = bounds,
-                        pace = HifzPaceProfile(
-                            sabqiMinutesPerPage = decodeOptionalDouble(fields[9]),
-                            itqanMinutesPerPage = decodeOptionalDouble(fields[10]),
-                            murajaahMinutesPerPage = decodeOptionalDouble(fields[11])
-                        )
+                    pace = HifzPaceProfile(
+                        sabqiMinutesPerPage = decodeOptionalDouble(fields[5]),
+                        itqanMinutesPerPage = decodeOptionalDouble(fields[6]),
+                        murajaahMinutesPerPage = decodeOptionalDouble(fields[7])
+                    )
+                }
+
+                ITQAN_INTERVAL -> {
+                    require(fields.size == 6) { "Malformed Itqan interval." }
+                    val index = fields[1].toInt()
+                    require(index >= 0) { "Invalid Itqan interval index." }
+                    require(index !in itqanIntervals) { "Duplicate Itqan interval index." }
+                    itqanIntervals[index] = HifzVerseRange(
+                        QuranVerseRef(fields[2].toInt(), fields[3].toInt()),
+                        QuranVerseRef(fields[4].toInt(), fields[5].toInt())
                     )
                 }
 
@@ -192,8 +206,29 @@ object HifzStateCodec {
             }
         }
 
+        require(configSeen) { "Missing Hifz config record." }
+        val expectedIndexes = (0 until itqanIntervals.size).toList()
+        require(itqanIntervals.keys.toList() == expectedIndexes) {
+            "Itqan interval indexes must be contiguous and ordered."
+        }
+        val bounds = when (requireNotNull(boundsDeclared)) {
+            false -> {
+                require(itqanIntervals.isEmpty()) {
+                    "Itqan intervals cannot exist without declared journey bounds."
+                }
+                null
+            }
+            true -> HifzJourneyBounds(
+                sabqi = requireNotNull(declaredSabqi),
+                itqan = itqanIntervals.values.toList()
+            )
+        }
+
         return HifzState(
-            journeyConfig = requireNotNull(journeyConfig) { "Missing Hifz config record." },
+            journeyConfig = HifzJourneyConfig(
+                bounds = bounds,
+                pace = requireNotNull(pace)
+            ),
             tasks = tasks,
             progressByTask = progress
         )
@@ -211,13 +246,10 @@ object HifzStateCodec {
         String(Base64.getUrlDecoder().decode(value), Charsets.UTF_8)
 }
 
-/**
- * Hifz uses its own SharedPreferences file. Free reader memorisation state is never read
- * or written here, which prevents either feature from silently changing the other.
- */
 object HifzStateStore {
     internal const val FILE = QuranPersistenceNamespaces.HIFZ
-    private const val KEY_STATE = "state_v3"
+    private const val KEY_STATE = "state_v4"
+    private const val LEGACY_KEY_STATE_V3 = "state_v3"
     private const val LEGACY_KEY_STATE_V2 = "state_v2"
     private const val LEGACY_KEY_STATE_V1 = "state_v1"
 
@@ -225,7 +257,11 @@ object HifzStateStore {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val raw = prefs.getString(KEY_STATE, null)
         if (raw == null) {
-            if (prefs.contains(LEGACY_KEY_STATE_V2) || prefs.contains(LEGACY_KEY_STATE_V1)) {
+            if (
+                prefs.contains(LEGACY_KEY_STATE_V3) ||
+                prefs.contains(LEGACY_KEY_STATE_V2) ||
+                prefs.contains(LEGACY_KEY_STATE_V1)
+            ) {
                 return HifzLoadResult(HifzState(), corrupted = true)
             }
             return HifzLoadResult(HifzState(), corrupted = false)
@@ -314,10 +350,6 @@ object HifzStateStore {
         return save(context, loaded.state.copy(progressByTask = updated))
     }
 
-    /**
-     * Persists the explicit training-complete -> schedule-complete transition as one
-     * complete state replacement. Corrupted or incomplete state is never overwritten.
-     */
     @Synchronized
     fun completeTask(context: Context, taskId: String): Boolean {
         val loaded = load(context)
