@@ -8,7 +8,7 @@ import java.time.LocalDate
 class HifzStateCodecTest {
 
     @Test
-    fun roundTripPreservesTaskIdentityDatesCursorQuotaAndStatus() {
+    fun roundTripPreservesTaskAndTrainingProgress() {
         val task = HifzTask(
             id = "itqan|task-1",
             track = HifzTrack.ITQAN,
@@ -18,7 +18,21 @@ class HifzStateCodecTest {
             quota = 30,
             status = HifzTaskStatus.OVERDUE
         )
-        val state = HifzState(tasks = listOf(task))
+        val progress = HifzTaskProgress(
+            taskId = task.id,
+            stepIndex = 3,
+            stepProgress = HifzStepProgress(
+                stepId = "itqan-mask-50",
+                repetitions = 4,
+                consecutiveSuccesses = 2,
+                revealCount = 1,
+                assistedSinceLastAttempt = true
+            )
+        )
+        val state = HifzState(
+            tasks = listOf(task),
+            progressByTask = mapOf(task.id to progress)
+        )
 
         val decoded = HifzStateCodec.decode(HifzStateCodec.encode(state))
 
@@ -40,6 +54,18 @@ class HifzStateCodecTest {
 
         assertThrows(IllegalArgumentException::class.java) {
             HifzState(tasks = listOf(a, b))
+        }
+    }
+
+    @Test
+    fun progressCannotReferenceUnknownTask() {
+        assertThrows(IllegalArgumentException::class.java) {
+            HifzState(
+                tasks = emptyList(),
+                progressByTask = mapOf(
+                    "missing" to HifzTaskProgress(taskId = "missing")
+                )
+            )
         }
     }
 }
