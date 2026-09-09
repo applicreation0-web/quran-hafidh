@@ -15,16 +15,24 @@ private const val MULTI_EDITION_KEY = "selected_edition"
 
 /**
  * Loading/controller layer for the single TafsirPanel renderer.
- * Keeps edition persistence and stale-request protection outside the UI renderer.
+ *
+ * Availability is resolved from real source-backed rows for the tapped verse.
+ * A remembered edition that does not cover the verse is never left selected:
+ * Jalalayn is the first fallback, then the first genuinely available edition.
+ * Primary reader labels stay author-based: Jalalayn, Qurtubi and Qushayri.
  */
 @Composable
 internal fun MultiTafsirPanel(
     verse: VerseRef,
     modifier: Modifier,
     maxPanelHeight: Dp,
-    onPanelTopInWindow: (Int) -> Unit
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onPanelTopInWindow: (Int) -> Unit,
+    onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val contextual = (context as? android.app.Activity)?.intent?.getBooleanExtra("contextual", false) == true
     val prefs = remember {
         context.getSharedPreferences(
             MULTI_TAFSIR_PREFS,
@@ -33,7 +41,7 @@ internal fun MultiTafsirPanel(
     }
     var selectedEdition by remember {
         mutableStateOf(
-            PrivateTafsirEdition.fromStorage(
+            if (contextual) PrivateTafsirEdition.JALALAYN else PrivateTafsirEdition.fromStorage(
                 prefs.getString(
                     MULTI_EDITION_KEY,
                     PrivateTafsirEdition.JALALAYN.storageValue
@@ -41,46 +49,52 @@ internal fun MultiTafsirPanel(
             )
         )
     }
-    var state by remember(verse, selectedEdition) {
-        mutableStateOf<TafsirLoadState>(TafsirLoadState.Loading)
+    var availability by remember(verse) {
+        mutableStateOf<MultiTafsirAvailability?>(null)
     }
-    val requestKey = remember(verse, selectedEdition) {
-        MultiTafsirRequestKey(verse, selectedEdition)
-    }
-    var activeRequest by remember { mutableStateOf(requestKey) }
 
-    LaunchedEffect(requestKey) {
-        activeRequest = requestKey
-        state = TafsirLoadState.Loading
-        val entry = MultiTafsirRepository.load(
-            context,
-            verse,
-            selectedEdition
-        )
-        if (activeRequest == requestKey) {
-            state = if (entry == null) {
-                TafsirLoadState.Unavailable
-            } else {
-                TafsirLoadState.Available(entry)
-            }
+    LaunchedEffect(verse) {
+        availability = null
+        val loaded = MultiTafsirRepository.loadAvailable(context, verse)
+        val resolved = loaded.resolveEdition(selectedEdition)
+        if (resolved != null && resolved != selectedEdition) {
+            if (!contextual) prefs.edit()
+                .putString(MULTI_EDITION_KEY, resolved.storageValue)
+                .apply()
+            selectedEdition = resolved
         }
+        availability = loaded
     }
 
     fun choose(edition: PrivateTafsirEdition) {
-        if (edition == selectedEdition) return
-        prefs.edit()
+        val available = availability ?: return
+        if (edition !in available.editions || edition == selectedEdition) return
+        if (!contextual) prefs.edit()
             .putString(MULTI_EDITION_KEY, edition.storageValue)
             .apply()
         selectedEdition = edition
+    }
+
+    val loaded = availability
+    val state = when {
+        loaded == null -> TafsirLoadState.Loading
+        loaded.entries[selectedEdition] != null ->
+            TafsirLoadState.Available(loaded.entries.getValue(selectedEdition))
+        else -> TafsirLoadState.Unavailable
     }
 
     TafsirPanel(
         verse = verse,
         state = state,
         selectedEdition = selectedEdition,
+        availableEditions = loaded?.editions.orEmpty(),
         onEditionSelected = ::choose,
+        onQuranReferenceSelected = onQuranReferenceSelected,
         modifier = modifier,
         maxPanelHeight = maxPanelHeight,
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
         onPanelTopInWindow = onPanelTopInWindow
     )
 }
+

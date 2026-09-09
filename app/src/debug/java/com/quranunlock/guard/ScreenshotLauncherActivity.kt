@@ -13,6 +13,8 @@ class ScreenshotLauncherActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         val target = when (intent.getStringExtra(EXTRA_SCREEN)) {
+            "free" -> Intent(this, FreeQuranReaderActivity::class.java).putExtra(FreeQuranReaderActivity.EXTRA_PAGE, 12)
+            "memory" -> Intent(this, FreeQuranReaderActivity::class.java).putExtra(FreeQuranReaderActivity.EXTRA_PAGE, 12).putExtra(FreeQuranReaderActivity.EXTRA_MEMORIZATION, true)
             "dashboard" -> Intent(this, DashboardActivity::class.java)
             "settings" -> {
                 GuardPrefs.saveAccessibilityConsent(this)
@@ -39,3 +41,4 @@ class ScreenshotLauncherActivity : Activity() {
         const val EXTRA_SCREEN = "screenshot_screen"
     }
 }
+

@@ -1,7 +1,6 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TargetPresenceScopePolicyTest {
@@ -13,7 +12,9 @@ class TargetPresenceScopePolicyTest {
 
     @Test
     fun runningSelectedTargetRequiresOneAnonymousExitSignal() {
-        assertTrue(
+        // Historical test name retained for the 0.10.4 source gate. In 0.10.5
+        // the correct privacy-first expectation is the opposite: no broad signal.
+        assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = true,
                 foregroundPackage = "com.android.chrome",
@@ -49,11 +50,24 @@ class TargetPresenceScopePolicyTest {
 
     @Test
     fun narrowScopeIsRestoredAfterTheExitSignal() {
+        // There is no exit sentinel anymore; the scope is narrow continuously.
         assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = false,
                 foregroundPackage = null,
                 runningBudgetPackage = null,
+                selectedTargets = targets
+            )
+        )
+    }
+
+    @Test
+    fun runningSelectedTargetNeverEnablesAnonymousExitSentinel() {
+        assertFalse(
+            TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
+                broadRequested = true,
+                foregroundPackage = "com.android.chrome",
+                runningBudgetPackage = "com.android.chrome",
                 selectedTargets = targets
             )
         )

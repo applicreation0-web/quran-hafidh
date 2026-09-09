@@ -1,0 +1,244 @@
+name: Publish Quran Safeguard 0.10.9 Light and Plus
+
+on:
+  push:
+    branches:
+      - "release/0.10.9-work"
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    if: startsWith(github.event.head_commit.message, 'Release Quran Safeguard 0.10.9')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LIGHT_KEYSTORE_B64: ${{ secrets.LIGHT_KEYSTORE_B64 }}
+      LIGHT_KEYSTORE_PASSWORD: ${{ secrets.LIGHT_KEYSTORE_PASSWORD }}
+      PLUS_KEYSTORE_B64: ${{ secrets.PLUS_KEYSTORE_B64 }}
+      PLUS_KEYSTORE_PASSWORD: ${{ secrets.PLUS_KEYSTORE_PASSWORD }}
+      AUDITED_SHA: d493fedfa36951a73cf0ac6142a77180a84abf0e
+      AUDITED_RUN: "34384468151"
+      AUDITED_ARTIFACT_ID: "10117551649"
+      LIGHT_UNSIGNED_SHA: 89266c4d8d77c22056babdaa80036dfb04e7ccb174beb48a49548d9f16247f82
+      PLUS_UNSIGNED_SHA: 3e1570b92935b344266506eda4ab174b2f1b1a82e7d8dc120b47e21e62dd5632
+    steps:
+      - name: Refuse an existing v0.10.9 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.10.9 --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release v0.10.9 already exists; refusing to overwrite it."
+            exit 1
+          fi
+
+      - name: Download exact audited candidate artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          path: candidate
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 34384468151
+
+      - name: Pin exact audited unsigned APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          test -f "${light}"
+          test -f "${plus}"
+          echo "${LIGHT_UNSIGNED_SHA}  ${light}" | sha256sum -c -
+          echo "${PLUS_UNSIGNED_SHA}  ${plus}" | sha256sum -c -
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Reinspect exact audited unsigned APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools="${ANDROID_HOME}/build-tools/36.0.0"
+          light="candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+
+          test "$(apkanalyzer manifest application-id "${light}")" = "com.applicreation0.quransafeguard"
+          test "$(apkanalyzer manifest application-id "${plus}")" = "com.applicreation0.quransafeguard.plus"
+          test "$(apkanalyzer manifest version-code "${light}")" = "28"
+          test "$(apkanalyzer manifest version-code "${plus}")" = "28"
+          test "$(apkanalyzer manifest version-name "${light}")" = "0.10.9"
+          test "$(apkanalyzer manifest version-name "${plus}")" = "0.10.9-plus.1"
+
+          for apk in "${light}" "${plus}"; do
+            perms="$(${tools}/aapt dump permissions "${apk}")"
+            ! grep -Fq 'android.permission.INTERNET' <<<"${perms}"
+            ! grep -Fq 'android.permission.RECORD_AUDIO' <<<"${perms}"
+            ! grep -Fq 'android.permission.PACKAGE_USAGE_STATS' <<<"${perms}"
+            ! grep -Fq 'android.permission.QUERY_ALL_PACKAGES' <<<"${perms}"
+          done
+
+          python3 - <<'PY'
+          import zipfile
+          light='candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk'
+          plus='candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk'
+          mushaf_prefix='assets/mushaf/hafs/kfqc/svg-br/'
+          for path in (light, plus):
+              with zipfile.ZipFile(path) as z:
+                  names=z.namelist()
+                  pages=[n for n in names if n.startswith(mushaf_prefix) and n.endswith('.svg.br')]
+                  assert len(pages)==604, (path, len(pages))
+                  assert mushaf_prefix + '001.svg.br' in names
+                  assert mushaf_prefix + '604.svg.br' in names
+          with zipfile.ZipFile(light) as z:
+              assert not any(n.startswith('assets/tafsir/') for n in z.namelist())
+          with zipfile.ZipFile(plus) as z:
+              taf=[n for n in z.namelist() if n.startswith('assets/tafsir/')]
+              assert len(taf)==10, len(taf)
+              assert any('al_jalalayn_en' in n for n in taf)
+              assert any('qurtubi_en' in n for n in taf)
+              assert any('qushayri_en' in n for n in taf)
+          print('Exact audited APK boundaries PASS: 604 pages each; Light no Tafsir; Plus 10 Tafsir parts')
+          PY
+
+      - name: Sign verify and package exact 0.10.9 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${LIGHT_KEYSTORE_B64}"
+          test -n "${LIGHT_KEYSTORE_PASSWORD}"
+          test -n "${PLUS_KEYSTORE_B64}"
+          test -n "${PLUS_KEYSTORE_PASSWORD}"
+
+          release_dir="${RUNNER_TEMP}/quran-safeguard-0.10.9"
+          mkdir -p "${release_dir}"
+          printf '%s' "${LIGHT_KEYSTORE_B64}" | base64 --decode > "${RUNNER_TEMP}/light.p12"
+          printf '%s' "${PLUS_KEYSTORE_B64}" | base64 --decode > "${RUNNER_TEMP}/plus.p12"
+          tools="${ANDROID_HOME}/build-tools/36.0.0"
+          light_unsigned="candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus_unsigned="candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          light_aligned="${RUNNER_TEMP}/light-aligned.apk"
+          plus_aligned="${RUNNER_TEMP}/plus-aligned.apk"
+          light_apk="${release_dir}/Quran-Safeguard-0.10.9-Light-release.apk"
+          plus_apk="${release_dir}/Quran-Safeguard-Plus-0.10.9-release.apk"
+
+          "${tools}/zipalign" -p -f 4 "${light_unsigned}" "${light_aligned}"
+          "${tools}/zipalign" -p -f 4 "${plus_unsigned}" "${plus_aligned}"
+          "${tools}/apksigner" sign --ks "${RUNNER_TEMP}/light.p12" --ks-type PKCS12 --ks-key-alias quran-safeguard --ks-pass env:LIGHT_KEYSTORE_PASSWORD --key-pass env:LIGHT_KEYSTORE_PASSWORD --out "${light_apk}" "${light_aligned}"
+          "${tools}/apksigner" sign --ks "${RUNNER_TEMP}/plus.p12" --ks-type PKCS12 --ks-key-alias quran-safeguard-plus --ks-pass env:PLUS_KEYSTORE_PASSWORD --key-pass env:PLUS_KEYSTORE_PASSWORD --out "${plus_apk}" "${plus_aligned}"
+
+          "${tools}/zipalign" -c -p 4 "${light_apk}"
+          "${tools}/zipalign" -c -p 4 "${plus_apk}"
+          "${tools}/apksigner" verify --verbose --print-certs "${light_apk}" | tee "${release_dir}/light-signature.txt"
+          "${tools}/apksigner" verify --verbose --print-certs "${plus_apk}" | tee "${release_dir}/plus-signature.txt"
+
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "${release_dir}/light-signature.txt"
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "${release_dir}/light-signature.txt"
+          grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' "${release_dir}/plus-signature.txt"
+          grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' "${release_dir}/plus-signature.txt"
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 6c706f4ea44ef667d0b9698c07a39e929b1e286d2397665504411dedb37457ac' "${release_dir}/light-signature.txt"
+          grep -Fq 'Signer #1 certificate SHA-256 digest: 1843d245832549afc6333ab77a587649a14fedb1f4acc9c08f367c3f0301d989' "${release_dir}/plus-signature.txt"
+
+          test "$(apkanalyzer manifest application-id "${light_apk}")" = "com.applicreation0.quransafeguard"
+          test "$(apkanalyzer manifest application-id "${plus_apk}")" = "com.applicreation0.quransafeguard.plus"
+          test "$(apkanalyzer manifest version-code "${light_apk}")" = "28"
+          test "$(apkanalyzer manifest version-code "${plus_apk}")" = "28"
+          test "$(apkanalyzer manifest version-name "${light_apk}")" = "0.10.9"
+          test "$(apkanalyzer manifest version-name "${plus_apk}")" = "0.10.9-plus.1"
+
+          for apk in "${light_apk}" "${plus_apk}"; do
+            perms="$(${tools}/aapt dump permissions "${apk}")"
+            ! grep -Fq 'android.permission.INTERNET' <<<"${perms}"
+            ! grep -Fq 'android.permission.RECORD_AUDIO' <<<"${perms}"
+            ! grep -Fq 'android.permission.PACKAGE_USAGE_STATS' <<<"${perms}"
+            ! grep -Fq 'android.permission.QUERY_ALL_PACKAGES' <<<"${perms}"
+          done
+
+          sha256sum "${light_apk}" "${plus_apk}" > "${release_dir}/Quran-Safeguard-0.10.9-SHA256.txt"
+
+          cat > "${release_dir}/INSTALLATION-Light.txt" <<'GUIDE'
+          Quran Safeguard 0.10.9 Light
+          - Installer Quran-Safeguard-0.10.9-Light-release.apk.
+          - Identifiant Android : com.applicreation0.quransafeguard.
+          - versionCode 28 / versionName 0.10.9.
+          - Mise à jour avec le certificat historique Light.
+          - La version Light ne contient aucun corpus Tafsir Plus.
+          GUIDE
+          cat > "${release_dir}/INSTALLATION-Plus.txt" <<'GUIDE'
+          Quran Safeguard Plus 0.10.9
+          - Installer Quran-Safeguard-Plus-0.10.9-release.apk.
+          - Identifiant Android : com.applicreation0.quransafeguard.plus.
+          - versionCode 28 / versionName 0.10.9-plus.1.
+          - Mise à jour avec le certificat historique Plus.
+          - Edition privée Plus avec les corpus Tafsir vérifiés.
+          GUIDE
+
+          (cd "${release_dir}" && zip -9 "Quran-Safeguard-0.10.9-Light-backup.zip" \
+            "Quran-Safeguard-0.10.9-Light-release.apk" \
+            "Quran-Safeguard-0.10.9-SHA256.txt" \
+            "light-signature.txt" \
+            "INSTALLATION-Light.txt")
+          (cd "${release_dir}" && zip -9 "Quran-Safeguard-Plus-0.10.9-backup.zip" \
+            "Quran-Safeguard-Plus-0.10.9-release.apk" \
+            "Quran-Safeguard-0.10.9-SHA256.txt" \
+            "plus-signature.txt" \
+            "INSTALLATION-Plus.txt")
+
+          cat > "${release_dir}/release-notes.md" <<'NOTES'
+          ## Quran Safeguard 0.10.9 — Light & Plus
+
+          Candidat applicatif exact : `d493fedfa36951a73cf0ac6142a77180a84abf0e`  
+          CI d'audit : `34384468151` — SUCCESS.  
+          Artefact audité : `10117551649`.
+
+          ### Principales évolutions
+          - mode Mémorisation 10.9 avec progression par vraies lignes du Mushaf, masques stables et validations non aidées ;
+          - restauration de session Mémorisation et garde-fous contre les révélations temporaires périmées ;
+          - profil E-Ink centralisé avec cleanup logiciel et STANDARD no-op ;
+          - règle Safeguard : 60 secondes actives et bas de page lorsque la page nécessite réellement un défilement ;
+          - Tafsir absent de Mémorisation et du challenge, disponible uniquement dans Lecture/Étude Plus ;
+          - confidentialité conservée : aucune permission INTERNET, RECORD_AUDIO, PACKAGE_USAGE_STATS ou QUERY_ALL_PACKAGES.
+
+          ### Intégrité
+          - Mushaf de Médine : 604 pages dans Light et Plus, sans reflow ;
+          - Light : aucun asset Tafsir ;
+          - Plus : corpus Tafsir privé conservé ;
+          - signatures historiques Light et Plus vérifiées avant publication.
+
+          La validation physique du ghosting BOOX reste distincte des preuves logicielles E-Ink. Aucun comportement matériel non testé n'est revendiqué.
+
+          **Quran Safeguard Plus et ses corpus Tafsir restent réservés à l'usage privé du propriétaire du dépôt.**
+          NOTES
+
+      - name: Upload signed 0.10.9 release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-signed
+          path: ${{ runner.temp }}/quran-safeguard-0.10.9/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish private GitHub release v0.10.9
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/quran-safeguard-0.10.9"
+          gh release create v0.10.9 \
+            "${release_dir}/Quran-Safeguard-0.10.9-Light-release.apk" \
+            "${release_dir}/Quran-Safeguard-Plus-0.10.9-release.apk" \
+            "${release_dir}/Quran-Safeguard-0.10.9-SHA256.txt" \
+            "${release_dir}/Quran-Safeguard-0.10.9-Light-backup.zip" \
+            "${release_dir}/Quran-Safeguard-Plus-0.10.9-backup.zip" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${AUDITED_SHA}" \
+            --title "Quran Safeguard 0.10.9 — Light & Plus" \
+            --notes-file "${release_dir}/release-notes.md"

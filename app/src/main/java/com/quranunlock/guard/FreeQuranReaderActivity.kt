@@ -1,392 +1,203 @@
 package com.applicreation0.quransafeguard
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
-import android.view.MotionEvent
+import android.view.KeyEvent
+import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import org.brotli.dec.BrotliInputStream
+import org.json.JSONObject
+import java.io.ByteArrayInputStream
 
-/**
- * Voluntary Qur'an reader used outside Safeguard challenges.
- *
- * This activity deliberately has no challenge key and never calls GuardPrefs reading
- * validation or unlock APIs. Reading here therefore cannot credit an app-unlock quota.
- */
+/** Voluntary reader. No protection, budget or unlock API is reachable from its bridge. */
 class FreeQuranReaderActivity : ComponentActivity() {
-    companion object {
-        const val EXTRA_PAGE = "page"
-        private const val PREFS = "free_quran_reader"
-        private const val KEY_LAST_PAGE = "last_page"
-        private const val FIRST_PAGE = 1
-        private const val LAST_PAGE = 604
+    companion object { const val EXTRA_PAGE = "page"; const val EXTRA_MEMORIZATION = "memorization" }
+    private var web: WebView? = null
+    private var verse by mutableStateOf<VerseRef?>(null)
+    private var expanded by mutableStateOf(false)
+    private var memoryMode = false
+    private var contextual = false
+    private var nativeZoomBaseline = 0f
+    private var nativeZoomed = false
+    private val prefs by lazy { getSharedPreferences("reader109", MODE_PRIVATE) }
+    private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
+    private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
+    private val audio by lazy { QuranAudioController(this) { event -> runOnUiThread { web?.evaluateJavascript("window.audioEvent && window.audioEvent(${event});", null) } } }
+
+    private fun publishNativeZoomState(view: WebView, currentScale: Float) {
+        if (currentScale <= 0f) return
+        if (nativeZoomBaseline <= 0f) nativeZoomBaseline = currentScale
+        val zoomed = kotlin.math.abs(currentScale / nativeZoomBaseline - 1f) > 0.03f
+        if (zoomed == nativeZoomed) return
+        nativeZoomed = zoomed
+        view.evaluateJavascript(
+            "window.nativeZoomChanged && window.nativeZoomChanged($zoomed);",
+            null
+        )
     }
 
-    private var selectedTafsirVerse by mutableStateOf<VerseRef?>(null)
-    private var tafsirLoadState by mutableStateOf<TafsirLoadState>(TafsirLoadState.Closed)
-
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val requestedPage = intent.getIntExtra(EXTRA_PAGE, 0)
-        val storedPage = getSharedPreferences(PREFS, MODE_PRIVATE)
-            .getInt(KEY_LAST_PAGE, FIRST_PAGE)
-        val initialPage = when {
-            requestedPage in FIRST_PAGE..LAST_PAGE -> requestedPage
-            storedPage in FIRST_PAGE..LAST_PAGE -> storedPage
-            else -> FIRST_PAGE
-        }
-
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        ReaderComfortPrefs.applyBrightness(window, ReaderComfortPrefs.brightness(this))
+        contextual = intent.getBooleanExtra("contextual", false)
+        val persistedMode = runCatching {
+            JSONObject(prefs.getString("state", null) ?: "{}")
+                .optJSONObject("ui")?.optString("mode")
+        }.getOrNull()
+        memoryMode = !contextual && (
+            intent.getBooleanExtra(EXTRA_MEMORIZATION, false) ||
+                persistedMode == "MEMORIZATION"
+            )
         setContent {
             QuranSafeguardTheme {
-                var page by remember { mutableIntStateOf(initialPage) }
-                var message by remember {
-                    mutableStateOf(
-                        "Mushaf arabe : balayez vers la droite pour avancer, " +
-                            "vers la gauche pour revenir."
-                    )
-                }
-
-                BackHandler(enabled = selectedTafsirVerse != null) {
-                    closeTafsir()
-                }
-
-                LaunchedEffect(selectedTafsirVerse) {
-                    val requestedVerse = selectedTafsirVerse ?: return@LaunchedEffect
-                    tafsirLoadState = TafsirLoadState.Loading
-                    val entry = TafsirEdition.load(
-                        this@FreeQuranReaderActivity,
-                        requestedVerse
-                    )
-                    if (selectedTafsirVerse == requestedVerse) {
-                        tafsirLoadState = if (entry == null) {
-                            TafsirLoadState.Unavailable
-                        } else {
-                            TafsirLoadState.Available(entry)
-                        }
-                    }
-                }
-
-                fun showPage(nextPage: Int) {
-                    if (selectedTafsirVerse != null) return
-                    if (nextPage !in FIRST_PAGE..LAST_PAGE) {
-                        message = if (nextPage < FIRST_PAGE) {
-                            "Vous êtes sur la première page du Mushaf."
-                        } else {
-                            "Vous êtes sur la dernière page du Mushaf."
-                        }
-                        return
-                    }
-                    page = nextPage
-                    getSharedPreferences(PREFS, MODE_PRIVATE)
-                        .edit()
-                        .putInt(KEY_LAST_PAGE, page)
-                        .apply()
-                    message =
-                        "Lecture libre • appuyez sur un verset pour ouvrir le Tafsîr."
-                }
-
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = SafeguardReadingSurface
-                ) {
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(vertical = 6.dp)
-                        ) {
-                            Text(
-                                "Qur’an & Tafsîr",
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Mushaf de Médine • Page $page / $LAST_PAGE",
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                if (TafsirEdition.isEnabled) message else
-                                    "Lecture libre du Mushaf de Médine.",
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(4.dp))
-
-                            AnimatedContent(
-                                targetState = page,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
-                                transitionSpec = {
-                                    if (targetState > initialState) {
-                                        slideInHorizontally { width -> -width } togetherWith
-                                            slideOutHorizontally { width -> width }
-                                    } else {
-                                        slideInHorizontally { width -> width } togetherWith
-                                            slideOutHorizontally { width -> -width }
+                BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                    val availableHeight = maxHeight
+                    AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
+                        WebView(context).apply {
+                            web = this
+                            setBackgroundColor(android.graphics.Color.parseColor("#F7F2E8"))
+                            settings.javaScriptEnabled = true
+                            settings.allowFileAccess = false
+                            settings.allowContentAccess = false
+                            settings.domStorageEnabled = false
+                            settings.blockNetworkLoads = true
+                            settings.builtInZoomControls = true
+                            settings.displayZoomControls = false
+                            addJavascriptInterface(ReaderBridge(), "QsgNative")
+                            webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    view?.post {
+                                        nativeZoomBaseline = view.scale.takeIf { it > 0f } ?: 1f
+                                        nativeZoomed = false
+                                        view.evaluateJavascript(
+                                            "window.nativeZoomChanged && window.nativeZoomChanged(false);",
+                                            null
+                                        )
                                     }
-                                },
-                                label = "free-mushaf-rtl-page"
-                            ) { pageNumber ->
-                                val svgContent = remember(pageNumber) {
-                                    loadMushafPage(pageNumber)
                                 }
-                                if (svgContent.isNullOrBlank()) {
-                                    Text(
-                                        "La page du Mushaf n’est pas disponible.",
-                                        modifier = Modifier.padding(18.dp)
-                                    )
-                                } else {
-                                    FreeMushafPageWebView(
-                                        svgContent = svgContent,
-                                        pageNumber = pageNumber,
-                                        tafsirOpen = selectedTafsirVerse != null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        onSwipePrevious = { showPage(page - 1) },
-                                        onSwipeNext = { showPage(page + 1) },
-                                        onVerseTapped = { verse -> openTafsir(verse) }
-                                    )
+                                override fun onScaleChanged(view: WebView?, oldScale: Float, newScale: Float) {
+                                    super.onScaleChanged(view, oldScale, newScale)
+                                    view ?: return
+                                    if (nativeZoomBaseline <= 0f) {
+                                        nativeZoomBaseline = oldScale.takeIf { it > 0f } ?: newScale
+                                    }
+                                    publishNativeZoomState(view, newScale)
                                 }
-                            }
-
-                            Spacer(Modifier.height(7.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 10.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                SafeguardOutlinedButton(
-                                    modifier = Modifier.weight(1f),
-                                    enabled = selectedTafsirVerse == null && page > FIRST_PAGE,
-                                    onClick = { showPage(page - 1) }
-                                ) {
-                                    Text("Précédente")
-                                }
-                                SafeguardButton(
-                                    modifier = Modifier.weight(1f),
-                                    enabled = selectedTafsirVerse == null && page < LAST_PAGE,
-                                    onClick = { showPage(page + 1) }
-                                ) {
-                                    Text("Suivante")
+                                override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse {
+                                    val uri = request?.url
+                                    if(uri?.scheme != "https" || uri.host != "quran-safeguard.local") return denied()
+                                    val path = uri.path.orEmpty().removePrefix("/")
+                                    return try {
+                                        when {
+                                            path.matches(Regex("reader109/[a-z0-9_.-]+")) -> WebResourceResponse(if(path.endsWith(".js")) "application/javascript" else if(path.endsWith(".json")) "application/json" else "text/html", "UTF-8", assets.open(path))
+                                            path.matches(Regex("page/[0-9]{1,3}")) -> {
+                                                val p = path.substringAfter('/').toInt(); require(p in 1..604)
+                                                WebResourceResponse("image/svg+xml", "UTF-8", BrotliInputStream(assets.open("mushaf/hafs/kfqc/svg-br/%03d.svg.br".format(p))))
+                                            }
+                                            else -> denied()
+                                        }
+                                    } catch (_: Exception) { denied() }
                                 }
                             }
-                            Spacer(Modifier.height(4.dp))
-                            SafeguardOutlinedButton(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 10.dp),
-                                enabled = selectedTafsirVerse == null,
-                                onClick = { finish() }
-                            ) {
-                                Text("Fermer la lecture")
-                            }
+                            loadUrl("https://quran-safeguard.local/reader109/index.html")
                         }
-
-                        selectedTafsirVerse?.let { verse ->
-                            TafsirEdition.Panel(
-                                verse = verse,
-                                state = tafsirLoadState,
-                                modifier = Modifier.align(Alignment.BottomCenter),
-                                maxPanelHeight = maxHeight * 0.5f,
+                    })
+                    val selected = verse
+                    if(selected != null && !memoryMode && TafsirEdition.isEnabled) {
+                        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+                            TextButton(onClick = { closeTafsir() }) { Text("Fermer") }
+                            TafsirEdition.Panel(selected, TafsirLoadState.Closed, Modifier.fillMaxWidth(),
+                                maxPanelHeight = availableHeight * if(expanded) .88f else .58f,
+                                expanded = expanded, onExpandedChange = { expanded = it },
                                 onPanelTopInWindow = { top ->
-                                    TafsirEdition.revealAbove(top)
-                                }
-                            )
+                                    val loc = IntArray(2);web?.getLocationInWindow(loc)
+                                    val overlap = ((web?.height ?: 0)+loc[1]-top).coerceAtLeast(0)
+                                    web?.evaluateJavascript("window.setOcclusion($overlap);",null)
+                                }, onQuranReferenceSelected = { ref ->
+                                    if(!memoryMode) startActivity(Intent(this@FreeQuranReaderActivity, FreeQuranReaderActivity::class.java).apply {
+                                        putExtra("contextual",true);putExtra("surah",ref.surah);putExtra("ayah",ref.startAyah)
+                                    })
+                                })
                         }
+                    }
+                    BackHandler {
+                        if(verse != null) {
+                            if(contextual) finish() else closeTafsir()
+                        } else web?.evaluateJavascript("window.handleBack();", null)
                     }
                 }
             }
         }
     }
-
-    private fun openTafsir(verse: VerseRef) {
-        if (!TafsirEdition.isEnabled) return
-        selectedTafsirVerse = verse
-        tafsirLoadState = TafsirLoadState.Loading
-        TafsirEdition.selectVerse(verse)
+    private fun denied() = WebResourceResponse("text/plain", "UTF-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+    private fun closeTafsir(){verse=null;expanded=false;web?.evaluateJavascript("window.setOcclusion(0);",null)}
+    inner class ReaderBridge {
+        @JavascriptInterface fun initial(): String = JSONObject().apply {
+            put("state",prefs.getString("state",null));put("plus",TafsirEdition.isEnabled)
+            put("page",intent.getIntExtra(EXTRA_PAGE,getSharedPreferences("free_quran_reader",MODE_PRIVATE).getInt("last_page",1)).coerceIn(1,604))
+            put("legacyBookmarks",org.json.JSONArray(QuranBookmarkStore.load(this@FreeQuranReaderActivity).sorted()))
+            put("memory",memoryMode);put("contextual",contextual);put("surah",intent.getIntExtra("surah",0));put("ayah",intent.getIntExtra("ayah",0))
+            put("audio",audio.available)
+            put("displayProfile",displayProfile.name)
+            put("brightness",ReaderComfortPrefs.brightness(this@FreeQuranReaderActivity).toDouble())
+        }.toString()
+        @JavascriptInterface fun save(data: String): Boolean {
+            if(data.length>2_000_000)return false
+            return runCatching { val o=JSONObject(data);if(o.optInt("schema")!=1)return false;prefs.edit().putString("state",data).commit() }.getOrDefault(false)
+        }
+        @JavascriptInterface fun setMode(memory: Boolean){runOnUiThread { memoryMode=memory;if(memory)closeTafsir() }}
+        @JavascriptInterface fun setBrightness(value: Double){runOnUiThread {
+            val adjusted = if(value < 0.0) -1f else value.toFloat().coerceIn(.12f,1f)
+            ReaderComfortPrefs.setBrightness(this@FreeQuranReaderActivity, if(adjusted < 0f) null else adjusted)
+            ReaderComfortPrefs.applyBrightness(window, adjusted)
+        }}
+        @JavascriptInterface fun visualChange(kind: String){runOnUiThread {
+            val change = runCatching { VisualChange.valueOf(kind) }.getOrNull() ?: return@runOnUiThread
+            refreshController.onVisualChange(web, change)
+        }}
+        @JavascriptInterface fun tafsir(surah:Int,ayah:Int){runOnUiThread {
+            if(!memoryMode&&TafsirEdition.isEnabled&&surah in 1..114 && ayah in 1..286){verse=VerseRef(surah,ayah);expanded=false}
+        }}
+        @JavascriptInterface fun exit(){runOnUiThread { finish() }}
+        @JavascriptInterface fun play(surah:Int,ayah:Int,repeats:Int){runOnUiThread { audio.playVerse(surah,ayah,repeats.coerceIn(1,100)) }}
+        @JavascriptInterface fun pause(){runOnUiThread { audio.pause() }}
+        @JavascriptInterface fun resume(){runOnUiThread { audio.resume() }}
+        @JavascriptInterface fun announce(surah:Int,ayah:Int){runOnUiThread { web?.announceForAccessibility("Sourate $surah, verset $ayah") }}
     }
-
-    private fun closeTafsir() {
-        if (selectedTafsirVerse == null) return
-        TafsirEdition.closeAndRestore()
-        selectedTafsirVerse = null
-        tafsirLoadState = TafsirLoadState.Closed
-    }
-
-    override fun onPause() {
-        closeTafsir()
-        super.onPause()
-    }
-
-    private fun loadMushafPage(page: Int): String? {
-        if (page !in FIRST_PAGE..LAST_PAGE) return null
-        val assetPath = "mushaf/hafs/kfqc/svg-br/%03d.svg.br".format(page)
-        return runCatching {
-            assets.open(assetPath).use { compressed ->
-                BrotliInputStream(compressed)
-                    .bufferedReader(Charsets.UTF_8)
-                    .use { it.readText() }
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if(displayProfile == DisplayProfile.EINK && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            val delta = when(event.keyCode) {
+                KeyEvent.KEYCODE_PAGE_UP -> -1
+                KeyEvent.KEYCODE_PAGE_DOWN -> 1
+                else -> 0
             }
-        }.getOrNull()
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
-@androidx.compose.runtime.Composable
-private fun FreeMushafPageWebView(
-    svgContent: String,
-    pageNumber: Int,
-    tafsirOpen: Boolean,
-    modifier: Modifier = Modifier,
-    onSwipePrevious: () -> Unit,
-    onSwipeNext: () -> Unit,
-    onVerseTapped: (VerseRef) -> Unit
-) {
-    val currentTafsirOpen = rememberUpdatedState(tafsirOpen)
-    val currentOnSwipePrevious = rememberUpdatedState(onSwipePrevious)
-    val currentOnSwipeNext = rememberUpdatedState(onSwipeNext)
-    val currentOnVerseTapped = rememberUpdatedState(onVerseTapped)
-
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.rgb(244, 240, 230))
-                settings.javaScriptEnabled = TafsirEdition.isEnabled
-                settings.domStorageEnabled = false
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
-                settings.blockNetworkLoads = true
-                settings.builtInZoomControls = true
-                settings.displayZoomControls = false
-                settings.useWideViewPort = true
-                settings.loadWithOverviewMode = true
-
-                val swipeThreshold = 72f * resources.displayMetrics.density
-                val gestureClassifier = ReaderGestureClassifier(swipeThreshold)
-                setOnTouchListener { _, event ->
-                    when (event.actionMasked) {
-                        MotionEvent.ACTION_DOWN -> gestureClassifier.onDown(
-                            event.x,
-                            event.y,
-                            event.pointerCount
-                        )
-                        MotionEvent.ACTION_MOVE -> gestureClassifier.onMove(
-                            event.x,
-                            event.y,
-                            event.pointerCount
-                        )
-                        MotionEvent.ACTION_POINTER_DOWN ->
-                            gestureClassifier.onAdditionalPointer()
-                        MotionEvent.ACTION_CANCEL -> gestureClassifier.onCancel()
-                        MotionEvent.ACTION_UP -> {
-                            when (
-                                gestureClassifier.onUp(
-                                    event.x,
-                                    event.y,
-                                    gesturesEnabled = !currentTafsirOpen.value
-                                )
-                            ) {
-                                ReaderSwipe.NEXT -> currentOnSwipeNext.value()
-                                ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()
-                                null -> Unit
-                            }
-                        }
-                    }
-                    false
-                }
-
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): Boolean = true
-                }
-
-                val html = """
-                    <!doctype html>
-                    <html dir="rtl">
-                    <head>
-                      <meta name="viewport"
-                            content="width=device-width, initial-scale=1.0">
-                      <style>
-                        html, body {
-                          margin: 0;
-                          padding: 0;
-                          background: #F4F0E6;
-                          width: 100%;
-                          min-height: 100%;
-                          overflow-x: hidden;
-                        }
-                        svg {
-                          display: block;
-                          width: 100%;
-                          height: auto;
-                          max-width: 100%;
-                        }
-                      </style>
-                    </head>
-                    <body>
-                      ${TafsirEdition.prepareHtml(svgContent, pageNumber)}
-                    </body>
-                    </html>
-                """.trimIndent()
-
-                TafsirEdition.configureWebView(
-                    webView = this,
-                    pageNumber = pageNumber,
-                    verseIndex = MushafVerseIndex.fromSvg(svgContent),
-                    onVerseTapped = { verse -> currentOnVerseTapped.value(verse) }
-                )
-
-                loadDataWithBaseURL(
-                    "https://quran-safeguard.local/",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null
-                )
+            if(delta != 0) {
+                web?.evaluateJavascript("window.hardwarePage && window.hardwarePage($delta);", null)
+                return true
             }
         }
-    )
+        return super.dispatchKeyEvent(event)
+    }
+    override fun onPause(){audio.pause();super.onPause()}
+    override fun onDestroy(){refreshController.dispose();web?.removeJavascriptInterface("QsgNative");web?.destroy();web=null;audio.release();super.onDestroy()}
 }

@@ -2,8 +2,6 @@
     <style name="Theme.QuranSafeguard" parent="@android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="android:statusBarColor">@color/safeguard_ivory</item>
-        <item name="android:navigationBarColor">@color/safeguard_ivory</item>
         <item name="android:colorAccent">@color/safeguard_gold</item>
         <item name="android:windowAnimationStyle">@style/Animation.QuranSafeguard</item>
     </style>
@@ -15,3 +13,4 @@
         <item name="android:activityCloseExitAnimation">@anim/safeguard_close_exit</item>
     </style>
 </resources>
+

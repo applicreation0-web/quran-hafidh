@@ -87,11 +87,11 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez avec les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf.",
+                    "Choisissez selon les limites canoniques, c’est-à-dire les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf ; cette page de frontière appartient alors visuellement aux deux sections voisines.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                if (TafsirEdition.isEnabled) {
+                if (true) {
                     ElevatedCard(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
@@ -105,13 +105,17 @@ class ReadingSelectionActivity : ComponentActivity() {
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                "Qur’an & Tafsîr",
+                                if (TafsirEdition.isEnabled) "Qur’an & Tafsîr" else "Lecture du Qur’an",
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Ouvrez librement le Mushaf de Médine et le Tafsîr al-Jalalayn, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard.",
+                                if (TafsirEdition.isEnabled) {
+                                    "Ouvrez librement le Mushaf de Médine et les Tafsirs disponibles, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard."
+                                } else {
+                                    "Ouvrez librement le Mushaf de Médine, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard."
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -127,7 +131,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                                     )
                                 }
                             ) {
-                                Text("Ouvrir le Qur’an & Tafsîr")
+                                Text(if (TafsirEdition.isEnabled) "Lecture / Étude" else "Lecture")
                             }
                         }
                     }
@@ -169,7 +173,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                             Text("Choisir par Hizb")
                         }
                         Text(
-                            "Les pages de frontière peuvent appartenir à deux sections voisines. Le quota reste de 20 pages le matin et 10 pages au palier de 90 minutes ; une lecture libre est ensuite proposée.",
+                            "Les Juz/Hizb définissent strictement les pages autorisées. Safeguard demande jusqu’à 20 pages le matin et jusqu’à 10 pages au palier de 90 minutes, sans sortir d’une section sélectionnée ni répéter une page si le pool canonique choisi est plus court.",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

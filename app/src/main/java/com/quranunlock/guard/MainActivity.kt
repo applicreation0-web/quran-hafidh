@@ -176,6 +176,9 @@ class MainActivity : ComponentActivity() {
         var mode by remember(refreshToken) {
             mutableStateOf(GuardPrefs.selectionMode(this@MainActivity))
         }
+        var displayPreference by remember(refreshToken) {
+            mutableStateOf(DisplayProfileManager.preference(this@MainActivity))
+        }
         val selectedJuz = remember(refreshToken) {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedJuz(this@MainActivity).sorted())
@@ -304,13 +307,45 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                if (TafsirEdition.isEnabled) {
+                    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("Type d’écran", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Automatique est recommandé. Le choix manuel surcharge toujours la détection.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            DisplayProfilePreference.entries.forEach { preference ->
+                                SafeguardOutlinedButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = {
+                                        DisplayProfileManager.setPreference(this@MainActivity, preference)
+                                        displayPreference = preference
+                                    }
+                                ) {
+                                    val label = when (preference) {
+                                        DisplayProfilePreference.AUTOMATIC -> "Automatique"
+                                        DisplayProfilePreference.STANDARD -> "Standard"
+                                        DisplayProfilePreference.EINK -> "E-Ink"
+                                    }
+                                    Text((if (displayPreference == preference) "✓ " else "") + label)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            if (serviceEnabled && serviceAlive) "Protection active ✓" else if (serviceEnabled) "Protection activée • service à confirmer" else "Protection en pause",
+                            if (serviceEnabled && serviceAlive) "Protection active ✓" else if (serviceEnabled) "Protection activée • service à confirmer" else "Protection Safeguard : désactivée",
                             style = MaterialTheme.typography.titleLarge,
                             color = if (serviceEnabled) {
                                 MaterialTheme.colorScheme.primary
@@ -894,16 +929,30 @@ private fun SectionTitle(text: String) {
 @Composable
 fun QuranSafeguardTheme(content: @Composable () -> Unit) {
     val colors = lightColorScheme(
-        primary = Color(0xFF214B3B),
-        onPrimary = Color.White,
-        secondary = Color(0xFFB0823F),
-        tertiary = Color(0xFF694936),
-        background = Color(0xFFFBF7EF),
-        surface = Color(0xFFFFFDF8),
-        surfaceVariant = Color(0xFFF0E6D5),
-        onSurface = Color(0xFF2A241F),
-        onSurfaceVariant = Color(0xFF675B50),
-        outline = Color(0xFFB89A68)
+        primary = SafeguardDeepGreen,
+        onPrimary = SafeguardSurface,
+        primaryContainer = Color(0xFFE8E3D9),
+        onPrimaryContainer = SafeguardTextGreen,
+        secondary = SafeguardSecondaryText,
+        onSecondary = SafeguardSurface,
+        secondaryContainer = Color(0xFFE8E3D9),
+        onSecondaryContainer = Color(0xFF171715),
+        tertiary = SafeguardGold,
+        onTertiary = SafeguardSurface,
+        tertiaryContainer = Color(0xFFE8E3D9),
+        onTertiaryContainer = Color(0xFF171715),
+        background = SafeguardAppBackground,
+        onBackground = SafeguardTextGreen,
+        surface = SafeguardSurface,
+        surfaceVariant = Color(0xFFE8E3D9),
+        onSurface = SafeguardTextGreen,
+        onSurfaceVariant = SafeguardSecondaryText,
+        outline = Color(0xFFE8E3D9),
+        outlineVariant = Color(0xFFE8E3D9),
+        error = Color(0xFF171715),
+        onError = SafeguardSurface,
+        errorContainer = Color(0xFFE8E3D9),
+        onErrorContainer = Color(0xFF171715)
     )
     MaterialTheme(
         colorScheme = colors,
@@ -952,3 +1001,4 @@ private fun formatAge(ageMs: Long): String {
         else -> "il y a ${seconds / 3600L} h"
     }
 }
+

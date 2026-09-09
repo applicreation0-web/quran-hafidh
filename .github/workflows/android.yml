@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "release/0.10.7-clean" ]
 
 jobs:
   build:
@@ -36,33 +36,51 @@ jobs:
           gradle-version: "9.5.0"
 
       - name: Verify total release audit
-        run: gradle --no-daemon :app:verifyReleaseAudit
+        run: gradle --no-daemon :app:verifyReleaseAudit --stacktrace
 
       - name: Verify 0.10.3 contradictory update audit
         run: python3 scripts/verify_0103_update.py
+
+      - name: Verify 0.10.7 visual contract
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/verify_0107_visual_contract.py 2>&1 | tee visual-contract.log
+
+      - name: Verify 0.10.7 Tafsir reading contract
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/verify_0107_tafsir_reading_contract.py 2>&1 | tee tafsir-reading-contract.log
+
+      - name: Upload 0.10.7 contract diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-ci-0107-contract-diagnostics
+          path: |
+            visual-contract.log
+            tafsir-reading-contract.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Run unit tests
         shell: bash
         run: |
           set -o pipefail
-          gradle --no-daemon :app:testLightDebugUnitTest 2>&1 | tee unit-test.log
+          gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest 2>&1 | tee unit-test.log
 
-      - name: Build debug APK
-        run: gradle --no-daemon :app:assembleLightDebug
+      - name: Build debug APKs
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug
 
-      - name: Compile private Plus APK (not uploaded)
-        run: gradle --no-daemon :app:assemblePlusDebug
-
-      - name: Build unsigned release APK
-        run: gradle --no-daemon :app:assembleLightRelease
+      - name: Build unsigned release APKs
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
 
       - name: Prove Light contains no Plus tafsir material
         run: >-
           python3 scripts/verify_light_apk_no_tafsir.py
           app/build/outputs/apk/light/release/app-light-release-unsigned.apk
-
-      - name: Build private Plus unsigned release APK
-        run: gradle --no-daemon :app:assemblePlusRelease
 
       - name: Verify private Plus release corpus
         run: >-

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
+import android.view.WindowManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -11,9 +12,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -23,11 +28,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,12 +66,13 @@ class MushafReaderActivity : ComponentActivity() {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
     private var selectedTafsirVerse by mutableStateOf<VerseRef?>(null)
     private var tafsirLoadState by mutableStateOf<TafsirLoadState>(TafsirLoadState.Closed)
+    private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
+    private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun openTafsir(verse: VerseRef) {
-        if (!TafsirEdition.isEnabled) return
-        selectedTafsirVerse = verse
-        tafsirLoadState = TafsirLoadState.Loading
-        TafsirEdition.selectVerse(verse)
+        // Final 10.9 boundary: Tafsir is available only from voluntary Plus Reading/Study, never from a timed Safeguard challenge.
+        return
     }
 
     private fun closeTafsir() {
@@ -79,6 +89,7 @@ class MushafReaderActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         challengeKey = intent.getStringExtra(EXTRA_CHALLENGE_KEY).orEmpty()
         if (challengeKey.isBlank()) {
@@ -147,6 +158,12 @@ class MushafReaderActivity : ComponentActivity() {
                 var quotaReached by remember {
                     mutableStateOf(false)
                 }
+                var brightnessOpen by remember { mutableStateOf(false) }
+                var chromeVisible by remember { mutableStateOf(true) }
+                var chromeInteraction by remember { mutableIntStateOf(0) }
+                var readerBrightness by remember {
+                    mutableFloatStateOf(ReaderComfortPrefs.brightness(this@MushafReaderActivity))
+                }
                 val quotaPageCount = remember { initialPages.size }
                 val level = remember {
                     GuardPrefs.challengeLevel(this@MushafReaderActivity)
@@ -157,6 +174,26 @@ class MushafReaderActivity : ComponentActivity() {
                     } else {
                         QuranSelectionMode.HIZB
                     }
+                }
+
+                LaunchedEffect(readerBrightness) {
+                    ReaderComfortPrefs.applyBrightness(window, readerBrightness)
+                }
+
+                LaunchedEffect(
+                    chromeVisible,
+                    chromeInteraction,
+                    brightnessOpen,
+                    selectedTafsirVerse
+                ) {
+                    if (chromeVisible && !brightnessOpen && selectedTafsirVerse == null) {
+                        delay(2_500L)
+                        chromeVisible = false
+                    }
+                }
+
+                BackHandler(enabled = brightnessOpen && selectedTafsirVerse == null) {
+                    brightnessOpen = false
                 }
 
                 BackHandler(enabled = selectedTafsirVerse != null) {
@@ -201,6 +238,7 @@ class MushafReaderActivity : ComponentActivity() {
                     pauseActiveReading()
                     displayedIndex = index
                     displayedPage = planPages[index]
+                    refreshController.onVisualChange(window.decorView, VisualChange.PAGE)
                     gestureMessage = when {
                         quotaReached ->
                             "Lecture libre • vous pouvez sortir à tout moment."
@@ -255,6 +293,7 @@ class MushafReaderActivity : ComponentActivity() {
 
                     gestureMessage =
                         "Lecture libre • quota atteint, sortie possible à tout moment."
+                    refreshController.onVisualChange(window.decorView, VisualChange.PAGE)
                 }
 
                 fun validateAndAdvance(continueAfterQuota: Boolean = false) {
@@ -274,7 +313,8 @@ class MushafReaderActivity : ComponentActivity() {
                         currentPage
                     )
                     if (!ReadingValidationPolicy.canValidate(
-                            activeReadingMs = persistedReadingMs
+                            activeReadingMs = persistedReadingMs,
+                            bottomReached = bottomReached
                         )
                     ) {
                         gestureMessage = "Encore " +
@@ -344,7 +384,7 @@ class MushafReaderActivity : ComponentActivity() {
                                 challengeKey,
                                 currentPage
                             )
-                        delay(200L)
+                        delay(if (displayProfile == DisplayProfile.EINK) 1_000L else 200L)
                     }
                 }
 
@@ -353,7 +393,8 @@ class MushafReaderActivity : ComponentActivity() {
                     quotaReached || displayedIndex < activeIndex
                 val canValidate = !quotaReached &&
                     ReadingValidationPolicy.canValidate(
-                        activeReadingMs = readingMs
+                        activeReadingMs = readingMs,
+                        bottomReached = bottomReached
                     )
                 val sectionDivisions =
                     QuranStructureMetadata.divisionsForPage(
@@ -372,34 +413,130 @@ class MushafReaderActivity : ComponentActivity() {
                     )
                 }.joinToString(" ")
 
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = SafeguardReadingSurface
+                ) {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 0.dp, vertical = 4.dp)
+                                .statusBarsPadding()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 0.dp, vertical = 2.dp)
                         ) {
-                        Text(
-                            "Mushaf de Médine • Page $currentDisplayedPage",
-                            modifier = Modifier.padding(horizontal = 10.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (chromeVisible || brightnessOpen) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "Lecture du Qur’an",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "☼",
+                                    modifier = Modifier
+                                        .clickable {
+                                            brightnessOpen = !brightnessOpen
+                                            chromeVisible = true
+                                            chromeInteraction += 1
+                                        }
+                                        .padding(horizontal = 7.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Text(
+                                "Mushaf de Médine • Page $currentDisplayedPage / 604",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (brightnessOpen) {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    color = SafeguardReadingSurface,
+                                    tonalElevation = 0.dp
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            "Luminosité",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            if (readerBrightness < 0f) {
+                                                "Luminosité : téléphone"
+                                            } else {
+                                                "Luminosité : ${(readerBrightness * 100).toInt()} %"
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Slider(
+                                            value = if (readerBrightness < 0f) 0.72f else readerBrightness,
+                                            onValueChange = { value ->
+                                                readerBrightness = value.coerceIn(0.12f, 1f)
+                                                ReaderComfortPrefs.setBrightness(
+                                                    this@MushafReaderActivity,
+                                                    readerBrightness
+                                                )
+                                            },
+                                            valueRange = 0.12f..1f,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            SafeguardOutlinedButton(
+                                                modifier = Modifier.weight(1f),
+                                                onClick = {
+                                                    readerBrightness = -1f
+                                                    ReaderComfortPrefs.setBrightness(
+                                                        this@MushafReaderActivity,
+                                                        null
+                                                    )
+                                                }
+                                            ) { Text("Auto") }
+                                            SafeguardOutlinedButton(
+                                                modifier = Modifier.weight(1f),
+                                                onClick = { brightnessOpen = false }
+                                            ) { Text("Fermer") }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         Text(
                             when {
                                 quotaReached ->
                                     "Quota de $quotaPageCount pages atteint • lecture libre"
                                 level == ChallengeLevel.MORNING ->
-                                    "Filtre matinal • page " +
-                                        "${displayedIndex + 1}/$quotaPageCount"
+                                    "Filtre matinal • page ${displayedIndex + 1}/$quotaPageCount"
                                 level == ChallengeLevel.MICRO ->
                                     "Pause 15 minutes • page 1/1"
                                 else ->
-                                    "Palier 90 minutes • page " +
-                                        "${displayedIndex + 1}/$quotaPageCount"
+                                    "Palier 90 minutes • page ${displayedIndex + 1}/$quotaPageCount"
                             },
-                            modifier = Modifier.padding(horizontal = 10.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.SemiBold
@@ -407,49 +544,25 @@ class MushafReaderActivity : ComponentActivity() {
                         if (sectionContext.isNotBlank()) {
                             Text(
                                 sectionContext,
-                                modifier = Modifier.padding(horizontal = 10.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        if (boundaryContext.isNotBlank()) {
-                            Text(
-                                boundaryContext,
-                                modifier = Modifier.padding(horizontal = 10.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                        }
                         Text(
                             when {
-                                quotaReached ->
-                                    "Quota atteint • sortie libre • lecture facultative"
-                                viewingCompletedPage ->
-                                    "Page validée • retour libre"
-                                readingMs >= GuardPrefs.MIN_READING_MS ->
-                                    "01:00 atteint • balayez vers la droite pour valider"
-                                bottomReached ->
-                                    "Page parcourue • " +
-                                        formatReadingDuration(readingMs) +
-                                        " / 01:00"
-                                else ->
-                                    "Lecture active • " +
-                                        formatReadingDuration(readingMs) +
-                                        " / 01:00"
+                                quotaReached -> "Quota atteint • sortie libre"
+                                viewingCompletedPage -> "Page validée"
+                                readingMs >= GuardPrefs.MIN_READING_MS -> "01:00 atteint • prêt à valider"
+                                else -> formatReadingDuration(readingMs) + " / 01:00"
                             },
-                            modifier = Modifier.padding(horizontal = 10.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (viewingCompletedPage || canValidate) {
                                 MaterialTheme.colorScheme.secondary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
-                        )
-                        Text(
-                            gestureMessage,
-                            modifier = Modifier.padding(horizontal = 10.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(3.dp))
 
@@ -459,7 +572,9 @@ class MushafReaderActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .weight(1f),
                             transitionSpec = {
-                                if (targetState > initialState) {
+                                if (displayProfile == DisplayProfile.EINK) {
+                                    fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                                } else if (targetState > initialState) {
                                     slideInHorizontally { width -> -width } togetherWith
                                         slideOutHorizontally { width -> width }
                                 } else {
@@ -514,6 +629,10 @@ class MushafReaderActivity : ComponentActivity() {
                                     },
                                     onSwipeNext = {
                                         validateAndAdvance()
+                                    },
+                                    onReaderTap = {
+                                        chromeVisible = true
+                                        chromeInteraction += 1
                                     },
                                     onVerseTapped = { verse ->
                                         if (pageNumber == currentDisplayedPage &&
@@ -736,6 +855,11 @@ class MushafReaderActivity : ComponentActivity() {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        refreshController.dispose()
+        super.onDestroy()
+    }
+
     private fun markPageReady(page: Int) {
         if (page != activeReadingPage ||
             displayedPage != activeReadingPage
@@ -764,7 +888,6 @@ class MushafReaderActivity : ComponentActivity() {
         pageReady = false
     }
 }
-
 private fun formatReadingDuration(milliseconds: Long): String {
     val seconds = (milliseconds / 1000L).coerceAtLeast(0L)
     val minutesPart = seconds / 60L
@@ -788,6 +911,7 @@ private fun MushafPageWebView(
     onBottomReached: () -> Unit,
     onSwipePrevious: () -> Unit,
     onSwipeNext: () -> Unit,
+    onReaderTap: () -> Unit,
     onVerseTapped: (VerseRef) -> Unit,
     onFailure: () -> Unit
 ) {
@@ -796,6 +920,7 @@ private fun MushafPageWebView(
     val currentOnBottomReached = rememberUpdatedState(onBottomReached)
     val currentOnSwipePrevious = rememberUpdatedState(onSwipePrevious)
     val currentOnSwipeNext = rememberUpdatedState(onSwipeNext)
+    val currentOnReaderTap = rememberUpdatedState(onReaderTap)
     val currentOnVerseTapped = rememberUpdatedState(onVerseTapped)
     val currentOnFailure = rememberUpdatedState(onFailure)
 
@@ -803,8 +928,10 @@ private fun MushafPageWebView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
-                setBackgroundColor(android.graphics.Color.WHITE)
-                settings.javaScriptEnabled = TafsirEdition.isEnabled
+                setBackgroundColor(
+                    android.graphics.Color.parseColor(ReaderComfortPrefs.pageBackground())
+                )
+                settings.javaScriptEnabled = false
                 settings.domStorageEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
@@ -848,7 +975,7 @@ private fun MushafPageWebView(
                             ) {
                                 ReaderSwipe.NEXT -> currentOnSwipeNext.value()
                                 ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()
-                                null -> Unit
+                                null -> currentOnReaderTap.value()
                             }
                         }
                     }
@@ -921,7 +1048,7 @@ private fun MushafPageWebView(
                         html, body {
                           margin: 0;
                           padding: 0;
-                          background: #ffffff;
+                          background: ${ReaderComfortPrefs.READER_CREAM_HEX};
                           width: 100%;
                           min-height: 100%;
                           overflow-x: hidden;
