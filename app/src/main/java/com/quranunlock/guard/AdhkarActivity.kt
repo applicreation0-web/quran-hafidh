@@ -2,7 +2,6 @@ package com.applicreation0.quransafeguard
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.compose.animation.Crossfade
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,21 +31,14 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 
 class AdhkarActivity : ComponentActivity() {
-    companion object {
-        const val EXTRA_PERIOD = "period"
-    }
+    companion object { const val EXTRA_PERIOD = "period" }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val period = runCatching {
             AdhkarPeriod.valueOf(intent.getStringExtra(EXTRA_PERIOD).orEmpty())
         }.getOrDefault(AdhkarPeriod.MORNING)
-
-        setContent {
-            QuranSafeguardTheme {
-                AdhkarScreen(period)
-            }
-        }
+        setContent { QuranSafeguardTheme { AdhkarScreen(period) } }
     }
 }
 
@@ -58,6 +50,7 @@ private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
     var showTransliteration by remember {
         mutableStateOf(ReminderPrefs.adhkarTransliterationEnabled(context))
     }
+
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -66,33 +59,31 @@ private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
                 .padding(horizontal = 18.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Crossfade(
-                targetState = activePeriod,
-                label = "adhkar-period-title"
-            ) { period ->
-                Text(
-                    if (period == AdhkarPeriod.MORNING) "Adhkâr du matin 🌿" else "Adhkâr du soir 🌿",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Row(
+            Text(
+                if (activePeriod == AdhkarPeriod.MORNING) "Adhkâr du matin 🌿" else "Adhkâr du soir 🌿",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 FilterChip(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     selected = activePeriod == AdhkarPeriod.MORNING,
                     onClick = { activePeriod = AdhkarPeriod.MORNING },
-                    label = { Text("Matin") }
+                    label = { Text(if (activePeriod == AdhkarPeriod.MORNING) "✓ Matin" else "Matin") }
                 )
                 FilterChip(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     selected = activePeriod == AdhkarPeriod.EVENING,
                     onClick = { activePeriod = AdhkarPeriod.EVENING },
-                    label = { Text("Soir") }
+                    label = { Text(if (activePeriod == AdhkarPeriod.EVENING) "✓ Soir" else "Soir") }
                 )
             }
+
             Text(
                 if (activePeriod == AdhkarPeriod.MORNING) {
                     "Fenêtre recommandée : de Fajr au lever du soleil."
@@ -119,19 +110,23 @@ private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
                 )
                 Text(
                     "Afficher la translittération",
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             items.forEach { item ->
-                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = SafeguardShapes.large
+                ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(9.dp)
                     ) {
                         Text(
-                            if (item.repeatCount > 1) "À réciter ×" + item.repeatCount else "À réciter",
+                            if (item.repeatCount > 1) "À réciter ×${item.repeatCount}" else "À réciter",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
@@ -139,9 +134,7 @@ private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
                         Text(
                             item.arabicText,
                             modifier = Modifier.fillMaxWidth(),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                textDirection = TextDirection.Rtl
-                            ),
+                            style = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Rtl),
                             textAlign = TextAlign.Right
                         )
                         if (showTransliteration) {
