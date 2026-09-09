@@ -63,10 +63,12 @@ require(probe_pos >= 0 and onready_pos > probe_pos,
 for token in ('getBoundingClientRect', 'getBBox', 'visibility', 'opacity', 'count >= 8'):
     require(token in visibility, f"timed reader visibility policy missing {token}")
 
-# Memorization / Tafsir boundary.
+# Memorization / Tafsir boundary. Check both the JS presentation gate and the
+# separate native bridge gate. The latter deliberately uses memoryMode, the
+# Activity-owned state, rather than trusting a JavaScript argument.
 require("$('tafsir').hidden=!initial.plus||memory" in reader,
         "reader must hide Tafsir in Memorization and all Light journeys")
-require("if(!memory&&TafsirEdition.isEnabled" in free_reader,
+require("if(!memoryMode&&TafsirEdition.isEnabled" in free_reader.replace(" ", ""),
         "native Tafsir bridge must refuse Memorization")
 
 # Audio must stay honest while redistribution is unapproved.
