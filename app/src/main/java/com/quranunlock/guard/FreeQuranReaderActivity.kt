@@ -179,7 +179,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
             refreshController.onVisualChange(web, change)
         }}
         @JavascriptInterface fun tafsir(surah:Int,ayah:Int){runOnUiThread {
-            if(!memoryMode&&TafsirEdition.isEnabled&&surah in 1..114 && ayah in 1..286){verse=VerseRef(surah,ayah);expanded=false}
+            val ref = QuranVerseRef(surah, ayah)
+            if(!memoryMode && TafsirEdition.isEnabled && QuranCanonicalBounds.isValid(ref)) {
+                verse=VerseRef(surah,ayah);expanded=false
+            }
         }}
         @JavascriptInterface fun exit(){runOnUiThread { finish() }}
         @JavascriptInterface fun play(surah:Int,ayah:Int,repeats:Int){runOnUiThread { audio.playVerse(surah,ayah,repeats.coerceIn(1,100)) }}
