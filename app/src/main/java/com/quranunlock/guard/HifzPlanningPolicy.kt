@@ -18,14 +18,16 @@ data class HifzVerseRange(
         }
     }
 
+    fun contains(ref: QuranVerseRef): Boolean =
+        compareQuranVerseRefs(start, ref) <= 0 && compareQuranVerseRefs(ref, end) <= 0
+
     fun isStrictlyBefore(other: HifzVerseRange): Boolean =
         compareQuranVerseRefs(end, other.start) < 0
 }
 
 /**
  * Rare setup bounds. Sabqi has its own canonical range. Itqan may contain several
- * independent Quran intervals (for example Al-Baqarah plus Al-Hujurat through An-Nas).
- * Gaps are intentional and are never silently merged into the Itqan corpus.
+ * independent Quran intervals. Gaps are intentional and are never silently merged.
  */
 data class HifzJourneyBounds(
     val sabqi: HifzVerseRange,
@@ -38,56 +40,6 @@ data class HifzJourneyBounds(
                 "Itqan intervals must be ordered and non-overlapping."
             }
         }
-    }
-}
-
-/**
- * Optional pedagogical subdivision inside a canonical verse target. Line numbers are
- * 1-based within a fixed Medina Mushaf page and are never an official progress cursor.
- */
-data class HifzLineWindow(
-    val page: Int,
-    val firstLine: Int,
-    val lastLine: Int
-) {
-    init {
-        require(page in 1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT)
-        require(firstLine >= 1)
-        require(lastLine >= firstLine)
-    }
-}
-
-data class HifzPedagogicalSegment(
-    val canonicalTarget: HifzVerseRange,
-    val lineWindow: HifzLineWindow
-)
-
-/**
- * Splits a long passage into line-sized training chunks while keeping the exact same
- * canonical verse target on every chunk. Completing one chunk cannot move the Hifz
- * verse cursor; only validation of the canonical target may do that.
- */
-object HifzLineSegmentationPolicy {
-    fun split(
-        canonicalTarget: HifzVerseRange,
-        page: Int,
-        firstLine: Int,
-        lastLine: Int,
-        maxLinesPerSegment: Int
-    ): List<HifzPedagogicalSegment> {
-        require(maxLinesPerSegment > 0)
-        val whole = HifzLineWindow(page, firstLine, lastLine)
-        val result = mutableListOf<HifzPedagogicalSegment>()
-        var cursor = whole.firstLine
-        while (cursor <= whole.lastLine) {
-            val end = minOf(whole.lastLine, cursor + maxLinesPerSegment - 1)
-            result += HifzPedagogicalSegment(
-                canonicalTarget = canonicalTarget,
-                lineWindow = HifzLineWindow(page, cursor, end)
-            )
-            cursor = end + 1
-        }
-        return result
     }
 }
 
@@ -129,6 +81,36 @@ object HifzTimeQuotaPolicy {
         }
         val minutesPerPage = pace.minutesPerPage(track) ?: return null
         return availableMinutes / minutesPerPage
+    }
+}
+
+/** Verse-first traversal across a possibly discontinuous Itqan corpus. */
+object HifzItqanTraversalPolicy {
+    fun nextAfter(intervals: List<HifzVerseRange>, current: QuranVerseRef): QuranVerseRef? {
+        require(intervals.isNotEmpty())
+        intervals.zipWithNext().forEach { (previous, next) ->
+            require(previous.isStrictlyBefore(next))
+        }
+
+        val containingIndex = intervals.indexOfFirst { it.contains(current) }
+        if (containingIndex >= 0) {
+            val interval = intervals[containingIndex]
+            val nextVerse = nextCanonicalVerse(current)
+            if (nextVerse != null && interval.contains(nextVerse)) return nextVerse
+            return intervals.getOrNull(containingIndex + 1)?.start
+        }
+
+        return intervals.firstOrNull { compareQuranVerseRefs(current, it.start) < 0 }?.start
+    }
+
+    internal fun nextCanonicalVerse(ref: QuranVerseRef): QuranVerseRef? {
+        QuranCanonicalBounds.requireValid(ref)
+        val ayahCount = requireNotNull(QuranCanonicalBounds.ayahCount(ref.surah))
+        return when {
+            ref.ayah < ayahCount -> QuranVerseRef(ref.surah, ref.ayah + 1)
+            ref.surah < QuranCanonicalBounds.SURAH_COUNT -> QuranVerseRef(ref.surah + 1, 1)
+            else -> null
+        }
     }
 }
 

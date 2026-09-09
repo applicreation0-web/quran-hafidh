@@ -12,7 +12,7 @@ permissions:
 jobs:
   hifz-unit:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Retrieve exact audited 0.10.8 corpus
@@ -37,6 +37,27 @@ jobs:
                           p.parent.mkdir(parents=True,exist_ok=True)
                           p.write_bytes(z.read(n))
           PY
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate exact reader/Hifz Mushaf geometry
+        run: |
+          pip install pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          g=json.loads(Path('app/src/main/assets/reader109/geometry.json').read_text())
+          assert g['schema']==1
+          assert len(g['pages'])==604
+          for verse in ('49:1','2:282'):
+              assert verse in g['verses'] and g['verses'][verse]
+              assert any(
+                  verse in line['verses']
+                  for page in g['verses'][verse]
+                  for line in g['pages'][str(page)]['lines']
+              )
+          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -48,7 +69,7 @@ jobs:
           gradle-version: '9.5.0'
       - name: Run both edition unit suites
         run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
-      - name: Upload Hifz unit reports
+      - name: Upload Hifz unit reports and geometry evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -56,4 +77,5 @@ jobs:
           path: |
             app/build/test-results/
             app/build/reports/tests/
+            geometry-report.json
           retention-days: 7
