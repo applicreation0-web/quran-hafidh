@@ -1,76 +1,300 @@
 package com.applicreation0.quransafeguard
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.BroadcastReceiver
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
-import android.os.Handler
-import android.os.Looper
-import org.json.JSONObject
+import androidx.core.content.ContextCompat
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
 import java.net.URL
-import java.security.MessageDigest
+import java.util.concurrent.Executors
+import org.json.JSONObject
 
-/** Isolated audio only. A closed rights gate cannot issue any network request. */
-class QuranAudioController(private val context: Context, private val event: (String)->Unit) {
-    private val catalogue = runCatching { JSONObject(context.assets.open("reader109/audio.json").bufferedReader().readText()) }.getOrDefault(JSONObject())
-    val available: Boolean get() = catalogue.optBoolean("redistributionApproved", false) && catalogue.optJSONArray("surahs")?.length()==114
-    private val handler=Handler(Looper.getMainLooper())
-    private val manager=context.getSystemService(AudioManager::class.java)
-    private var player:MediaPlayer?=null
-    private var start=0;private var end=0;private var remaining=1;private var surah=0;private var ayah=0
-    private var ready=false
-    private val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-    private val focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attrs).setOnAudioFocusChangeListener { change -> if(change != AudioManager.AUDIOFOCUS_GAIN)pause() }.build()
-    private val noisy=object:BroadcastReceiver(){override fun onReceive(c:Context?,i:Intent?){pause()}}
-    init { androidx.core.content.ContextCompat.registerReceiver(context,noisy,IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED) }
-    private fun emit(state:String){event(JSONObject().put("state",state).put("surah",surah).put("ayah",ayah).toString())}
-    fun playVerse(s:Int,a:Int,repeats:Int){
-        if(!available){emit("unavailable");return}
-        val record=catalogue.getJSONArray("surahs").getJSONObject(s-1)
-        val interval=record.optJSONObject("verses")?.optJSONObject(a.toString()) ?: run {emit("timing_missing");return}
-        val from=interval.optInt("timestamp_from",-1);val to=interval.optInt("timestamp_to",-1)
-        if(from<0||to<=from){emit("timing_invalid");return}
-        val file=File(context.filesDir,"quran-audio/"+catalogue.getString("version")+"/$s.mp3")
-        if(!file.isFile){emit("download_required");return}
-        releasePlayer();surah=s;ayah=a;start=from;end=to;remaining=repeats;ready=false
-        player=MediaPlayer().apply {
-            setAudioAttributes(attrs);setDataSource(file.absolutePath)
-            setOnErrorListener{_,_,_->emit("error");releasePlayer();true}
-            setOnPreparedListener { p -> ready=true;p.seekTo(start.toLong(),MediaPlayer.SEEK_CLOSEST);resume() }
+/**
+ * Al-Husary Muʿallim playback backed only by files downloaded by this app.
+ * Nothing is bundled in the APK and playback never streams directly.
+ */
+class QuranAudioController(
+    private val context: Context,
+    private val event: (String) -> Unit
+) {
+    val available: Boolean = true
+
+    private val manager = context.getSystemService(AudioManager::class.java)
+    private val executor = Executors.newSingleThreadExecutor()
+    private var player: MediaPlayer? = null
+    private var ready = false
+    private var remainingRepeats = 1
+    private var currentSurah = 0
+    private var currentAyah = 0
+
+    private val attrs = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+        .build()
+
+    private val focus = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+        .setAudioAttributes(attrs)
+        .setOnAudioFocusChangeListener { change ->
+            if (change != AudioManager.AUDIOFOCUS_GAIN) pause()
+        }
+        .build()
+
+    private val noisy = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            pause()
+        }
+    }
+
+    init {
+        ContextCompat.registerReceiver(
+            context,
+            noisy,
+            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    private fun audioDir(): File =
+        File(context.filesDir, "quran-audio/${QuranAudioSource.STORAGE_VERSION}")
+            .apply { mkdirs() }
+
+    private fun localFile(surah: Int, ayah: Int): File =
+        File(audioDir(), QuranAudioSource.fileName(surah, ayah))
+
+    private fun emit(
+        state: String,
+        surah: Int = currentSurah,
+        ayah: Int = currentAyah,
+        done: Int? = null,
+        total: Int? = null,
+        message: String? = null
+    ) {
+        val payload = JSONObject()
+            .put("state", state)
+            .put("surah", surah)
+            .put("ayah", ayah)
+        done?.let { payload.put("done", it) }
+        total?.let { payload.put("total", it) }
+        message?.let { payload.put("message", it) }
+        event(payload.toString())
+    }
+
+    fun isDownloaded(surah: Int, ayah: Int): Boolean {
+        if (!QuranAudioSource.isValidReference(surah, ayah)) return false
+        val file = localFile(surah, ayah)
+        return file.isFile && file.length() > MIN_AUDIO_BYTES && looksLikeMp3(file)
+    }
+
+    fun playVerse(surah: Int, ayah: Int, repeats: Int) {
+        if (!QuranAudioSource.isValidReference(surah, ayah)) {
+            emit("error", surah, ayah, message = "Référence audio invalide")
+            return
+        }
+        val file = localFile(surah, ayah)
+        if (!isDownloaded(surah, ayah)) {
+            emit("download_required", surah, ayah)
+            return
+        }
+
+        releasePlayer()
+        currentSurah = surah
+        currentAyah = ayah
+        remainingRepeats = repeats.coerceIn(1, 100)
+        ready = false
+
+        player = MediaPlayer().apply {
+            setAudioAttributes(attrs)
+            setDataSource(file.absolutePath)
+            setOnErrorListener { _, _, _ ->
+                emit("error", message = "Lecture audio impossible")
+                releasePlayer()
+                true
+            }
+            setOnPreparedListener {
+                ready = true
+                resume()
+            }
+            setOnCompletionListener { completed ->
+                emit("cycle_complete")
+                remainingRepeats -= 1
+                if (remainingRepeats > 0) {
+                    runCatching {
+                        completed.seekTo(0)
+                        completed.start()
+                        emit("playing")
+                    }.onFailure {
+                        emit("error", message = "Répétition audio impossible")
+                        releasePlayer()
+                    }
+                } else {
+                    manager.abandonAudioFocusRequest(focus)
+                    emit("paused")
+                }
+            }
             prepareAsync()
         }
     }
-    private val tick=object:Runnable {override fun run(){val p=player?:return;if(!ready)return
-        if(p.isPlaying&&p.currentPosition>=end){p.pause();emit("cycle_complete");remaining--;if(remaining>0){p.seekTo(start.toLong(),MediaPlayer.SEEK_CLOSEST);p.start()}else{emit("paused");return}}
-        handler.postDelayed(this,40)
-    }}
-    fun pause(){if(ready)runCatching{player?.pause()};handler.removeCallbacks(tick);manager.abandonAudioFocusRequest(focus);emit("paused")}
-    fun resume(){if(!ready||player==null)return;if(manager.requestAudioFocus(focus)==AudioManager.AUDIOFOCUS_REQUEST_GRANTED){player?.start();handler.removeCallbacks(tick);handler.post(tick);emit("playing")}}
-    private fun releasePlayer(){handler.removeCallbacks(tick);player?.release();player=null;ready=false}
-    fun release(){pause();releasePlayer();runCatching{context.unregisterReceiver(noisy)}}
-    /** Resumable download; catalogue audio/timings share a version and SHA-256. Call off the UI thread. */
-    fun download(s:Int):Boolean {
-        if(!available||s !in 1..114)return false
-        val row=catalogue.getJSONArray("surahs").getJSONObject(s-1)
-        val url=URL(row.getString("url"));require(url.protocol=="https"&&url.host==catalogue.getString("productionHost"))
-        val dir=File(context.filesDir,"quran-audio/"+catalogue.getString("version"));dir.mkdirs()
-        val part=File(dir,"$s.part");val target=File(dir,"$s.mp3")
-        val conn=url.openConnection() as java.net.HttpURLConnection
-        conn.instanceFollowRedirects=false;conn.connectTimeout=15000;conn.readTimeout=15000
-        if(part.length()>0)conn.setRequestProperty("Range","bytes=${part.length()}-")
-        return try {
-            val code=conn.responseCode;require(code==200||code==206)
-            if(code==206)require(conn.getHeaderField("Content-Range").startsWith("bytes ${part.length()}-"))
-            java.io.FileOutputStream(part,code==206).use { output->conn.inputStream.use{it.copyTo(output)} }
-            val md=MessageDigest.getInstance("SHA-256");part.inputStream().use { input->val b=ByteArray(65536);while(true){val n=input.read(b);if(n<0)break;md.update(b,0,n)} }
-            val hash=md.digest().joinToString(""){"%02x".format(it)}
-            if(hash!=row.getString("sha256")){part.delete();false}else part.renameTo(target)
-        } finally {conn.disconnect()}
+
+    fun pause() {
+        val active = player ?: return
+        if (ready) runCatching { active.pause() }
+        manager.abandonAudioFocusRequest(focus)
+        emit("paused")
     }
-    fun delete(s:Int){if(s==surah)pause();File(context.filesDir,"quran-audio/"+catalogue.optString("version")+"/$s.mp3").delete()}
+
+    fun resume() {
+        val active = player ?: return
+        if (!ready) return
+        if (manager.requestAudioFocus(focus) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            runCatching { active.start() }
+                .onSuccess { emit("playing") }
+                .onFailure { emit("error", message = "Reprise audio impossible") }
+        }
+    }
+
+    fun downloadVerse(surah: Int, ayah: Int) {
+        if (!QuranAudioSource.isValidReference(surah, ayah)) {
+            emit("download_error", surah, ayah, message = "Référence audio invalide")
+            return
+        }
+        executor.execute {
+            emit("download_start", surah, ayah, done = 0, total = 1)
+            val ok = downloadOne(surah, ayah)
+            if (ok) {
+                emit("download_progress", surah, ayah, done = 1, total = 1)
+                emit("download_complete", surah, ayah, done = 1, total = 1)
+            } else {
+                emit("download_error", surah, ayah, message = "Téléchargement du verset impossible")
+            }
+        }
+    }
+
+    fun downloadSurah(surah: Int, ayahCount: Int) {
+        if (surah !in 1..114 || ayahCount !in 1..286) {
+            emit("download_error", surah, 0, message = "Sourate ou nombre de versets invalide")
+            return
+        }
+        executor.execute {
+            emit("download_start", surah, 0, done = 0, total = ayahCount)
+            for (ayah in 1..ayahCount) {
+                if (!downloadOne(surah, ayah)) {
+                    emit(
+                        "download_error",
+                        surah,
+                        ayah,
+                        done = ayah - 1,
+                        total = ayahCount,
+                        message = "Téléchargement interrompu au verset $ayah"
+                    )
+                    return@execute
+                }
+                emit("download_progress", surah, ayah, done = ayah, total = ayahCount)
+            }
+            emit("download_complete", surah, ayahCount, done = ayahCount, total = ayahCount)
+        }
+    }
+
+    fun deleteSurah(surah: Int, ayahCount: Int) {
+        if (surah !in 1..114 || ayahCount !in 1..286) return
+        if (currentSurah == surah) {
+            pause()
+            releasePlayer()
+        }
+        var deleted = 0
+        for (ayah in 1..ayahCount) {
+            val target = localFile(surah, ayah)
+            val part = File(target.parentFile, target.name + ".part")
+            if (target.delete()) deleted += 1
+            part.delete()
+        }
+        emit("delete_complete", surah, 0, done = deleted, total = ayahCount)
+    }
+
+    private fun downloadOne(surah: Int, ayah: Int): Boolean {
+        if (isDownloaded(surah, ayah)) return true
+
+        val target = localFile(surah, ayah)
+        val part = File(target.parentFile, target.name + ".part")
+        var connection: HttpURLConnection? = null
+        return try {
+            val url = URL(QuranAudioSource.url(surah, ayah))
+            require(QuranAudioSource.isAllowedHttpsUrl(url.protocol, url.host))
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                instanceFollowRedirects = true
+                connectTimeout = 15_000
+                readTimeout = 30_000
+                setRequestProperty("User-Agent", "Quran-Safeguard/0.10.10 private-local-audio")
+                if (part.length() > 0L) {
+                    setRequestProperty("Range", "bytes=${part.length()}-")
+                }
+            }
+            val code = connection.responseCode
+            require(code == HttpURLConnection.HTTP_OK || code == HttpURLConnection.HTTP_PARTIAL)
+            require(
+                QuranAudioSource.isAllowedHttpsUrl(
+                    connection.url.protocol,
+                    connection.url.host
+                )
+            )
+
+            val append = code == HttpURLConnection.HTTP_PARTIAL && part.length() > 0L
+            if (code == HttpURLConnection.HTTP_OK && part.exists()) part.delete()
+            FileOutputStream(part, append).use { output ->
+                connection.inputStream.use { input -> input.copyTo(output) }
+            }
+
+            if (part.length() <= MIN_AUDIO_BYTES || !looksLikeMp3(part)) {
+                part.delete()
+                return false
+            }
+            if (target.exists() && !target.delete()) return false
+            if (!part.renameTo(target)) {
+                part.copyTo(target, overwrite = true)
+                part.delete()
+            }
+            isDownloaded(surah, ayah)
+        } catch (_: Exception) {
+            false
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    private fun looksLikeMp3(file: File): Boolean = runCatching {
+        file.inputStream().use { input ->
+            val header = ByteArray(3)
+            if (input.read(header) < 2) return@use false
+            val id3 = header.size >= 3 &&
+                header[0] == 'I'.code.toByte() &&
+                header[1] == 'D'.code.toByte() &&
+                header[2] == '3'.code.toByte()
+            val frame = (header[0].toInt() and 0xFF) == 0xFF &&
+                (header[1].toInt() and 0xE0) == 0xE0
+            id3 || frame
+        }
+    }.getOrDefault(false)
+
+    private fun releasePlayer() {
+        runCatching { player?.release() }
+        player = null
+        ready = false
+    }
+
+    fun release() {
+        pause()
+        releasePlayer()
+        executor.shutdownNow()
+        runCatching { context.unregisterReceiver(noisy) }
+    }
+
+    companion object {
+        private const val MIN_AUDIO_BYTES = 1_024L
+    }
 }
