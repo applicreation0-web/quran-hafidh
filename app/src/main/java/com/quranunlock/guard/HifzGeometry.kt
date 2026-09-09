@@ -30,9 +30,13 @@ data class HifzGeometryIndex(
     val linesByPage: Map<Int, List<HifzGeometryLine>>
 ) {
     init {
+        require(linesByPage.keys.sorted() == (1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT).toList()) {
+            "Hifz geometry must contain exactly the canonical 604 Mushaf pages."
+        }
         val ids = mutableSetOf<String>()
         linesByPage.forEach { (page, lines) ->
             require(page in 1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT)
+            require(lines.isNotEmpty()) { "Every Mushaf page must expose Hifz geometry lines." }
             lines.forEachIndexed { index, line ->
                 require(line.ref.page == page)
                 require(line.ref.ordinal == index + 1) {
@@ -116,10 +120,14 @@ object HifzGeometryAssetLoader {
         val root = JSONObject(raw)
         require(root.getInt("schema") == 1) { "Unsupported reader geometry schema." }
         val pages = root.getJSONObject("pages")
-        val linesByPage = linkedMapOf<Int, List<HifzGeometryLine>>()
         val pageKeys = pages.keys().asSequence().map { it.toInt() }.sorted().toList()
+        require(pageKeys == (1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT).toList()) {
+            "Reader geometry is not the complete 604-page Mushaf corpus."
+        }
+        val linesByPage = linkedMapOf<Int, List<HifzGeometryLine>>()
         pageKeys.forEach { page ->
             val sourceLines = pages.getJSONObject(page.toString()).getJSONArray("lines")
+            require(sourceLines.length() > 0) { "Missing geometry lines for Mushaf page $page." }
             val lines = (0 until sourceLines.length()).map { index ->
                 val source = sourceLines.getJSONObject(index)
                 val sourceVerses = source.getJSONArray("verses")
