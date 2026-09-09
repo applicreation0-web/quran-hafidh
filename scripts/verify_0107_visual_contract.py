@@ -39,13 +39,13 @@ require("maxPanelHeight = availableHeight * if(expanded) .88f else .58f" in read
         "Tafsir compact/expanded reading states missing")
 
 for marker in (
-    "SafeguardAppBackground = Color(0xFFFBF7EF)",
-    "SafeguardSurface = Color(0xFFFFFDF8)",
+    "SafeguardAppBackground = Color(0xFFF7F2E8)",
+    "SafeguardSurface = Color(0xFFF7F2E8)",
     "SafeguardReadingSurface = Color(0xFFF7F2E8)",
-    "SafeguardDeepGreen = Color(0xFF214B3B)",
-    "SafeguardTextGreen = Color(0xFF18392E)",
-    "SafeguardSecondaryText = Color(0xFF514A43)",
-    "SafeguardGold = Color(0xFFB0823F)",
+    "SafeguardDeepGreen = Color(0xFF171715)",
+    "SafeguardTextGreen = Color(0xFF171715)",
+    "SafeguardSecondaryText = Color(0xFF555550)",
+    "SafeguardGold = Color(0xFF171715)",
 ):
     require(marker in design, "0.10.7 palette token missing: " + marker)
 
