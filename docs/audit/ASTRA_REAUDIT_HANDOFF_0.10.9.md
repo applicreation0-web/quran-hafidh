@@ -4,7 +4,7 @@
 
 - Branche : `release/0.10.9-work`
 - `candidate_code_sha` : `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`
-- `validated_handoff_sha` : `568564b7dd0b091330067ba35e2a1f6e6c594987`
+- `validated_artifact_source_sha` : `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde`
 - Parent audité NO-GO : `9846de48794e34eefc66d947e7f18991ad1c3342`
 - Pull request de re-audit : [#78](https://github.com/applicreation0-web/quran-unlock-android/pull/78)
 
@@ -12,7 +12,7 @@ Le commit qui contient ce document est, par construction, postérieur au SHA val
 
 ## Diff depuis le candidat applicatif
 
-Le compare GitHub `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b...568564b7dd0b091330067ba35e2a1f6e6c594987` ne contient aucun fichier produit net. Il contient uniquement des tests, gates, outils de reconstruction fail-closed, workflows et ce handoff.
+Le compare GitHub `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b...3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde` ne contient aucun fichier produit net. Il contient uniquement des tests, gates, outils de reconstruction fail-closed, workflows et ce handoff.
 
 | Commit | Classification | Contenu |
 |---|---|---|
@@ -43,35 +43,35 @@ La paire `53b9d1c3` / `21572165` s’annule intégralement. Le diff produit net 
 
 ## CI du SHA validé
 
-Toutes les exécutions applicables au SHA `568564b7dd0b091330067ba35e2a1f6e6c594987` sont terminées avec succès :
+Toutes les exécutions applicables au SHA `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde` sont terminées avec succès (tentative 2) :
 
 | Workflow | Run | Résultat |
 |---|---:|---|
-| Quran Safeguard 0.10.9 build and audit | [34335381151](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335381151) | PASS build + runtime |
-| Android CI | [34335385394](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385394) | PASS |
-| Android 0.10.5 Tafsir contradictory audit | [34335385387](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385387) | PASS |
-| Android 0.10.5 sensitive-app scope audit | [34335385433](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385433) | PASS |
-| Android 0.10.5 canonical Juz/Hizb audit | [34335385450](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385450) | PASS |
+| Quran Safeguard 0.10.9 build and audit | [34336797351](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336797351) | PASS build + runtime |
+| Android CI | [34336801580](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801580) | PASS |
+| Android 0.10.5 Tafsir contradictory audit | [34336801575](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801575) | PASS |
+| Android 0.10.5 sensitive-app scope audit | [34336801583](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801583) | PASS |
+| Android 0.10.5 canonical Juz/Hizb audit | [34336801610](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34336801610) | PASS |
 
 Le workflow 0.10.9 a exécuté les gates 10.8 modernisées, les vérificateurs 10.9, le protocole Mémorisation (786 transitions), les unitaires Light/Plus, l’isolation des éditions et les compilations debug/release Light/Plus.
 
 ## Runtime instrumenté réel
 
-Artifact : `quran-safeguard-0.10.9-runtime-evidence`, ID `10097882321`.
+Artifact : `quran-safeguard-0.10.9-runtime-evidence`, ID `10098524276`.
 
-- Light : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 13.211 s.
-- Plus : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 9.947 s.
+- Light : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 15.983 s.
+- Plus : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 9.893 s.
 - Scénarios : restauration Mémorisation sans frame non masquée, fallback E-Ink sur WebView opaque, STANDARD no-op, Safeguard OFF→ON→OFF et migration versionCode 27→28.
 - Les recherches statiques ne sont pas comptées comme tests Android runtime.
 
 ## APK candidats exacts
 
-Artifact : `quran-safeguard-0.10.9-astra-re-audit`, ID `10097860965`, produit par le run `34335381151` au SHA `568564b7dd0b091330067ba35e2a1f6e6c594987`.
+Artifact : `quran-safeguard-0.10.9-astra-re-audit`, ID `10098471284`, produit par le run `34336797351` au SHA `3d63bb1045d8e7489b4b43fd8c65c22fa91b6bde`.
 
 | Édition | APK | Application ID | Version | SHA-256 |
 |---|---|---|---|---|
-| Light | `app-light-release-unsigned.apk` | `com.applicreation0.quransafeguard` | `28 / 0.10.9` | `0c3a7a9af6ebc65a844ec55f89daed80e9c8b588fa0bf5db3f228aa03ebe691d` |
-| Plus | `app-plus-release-unsigned.apk` | `com.applicreation0.quransafeguard.plus` | `28 / 0.10.9-plus.1` | `db3b97bb41b76484e812a38aeca700bda85e7b15db2903c1eea0fdfd1f205173` |
+| Light | `app-light-release-unsigned.apk` | `com.applicreation0.quransafeguard` | `28 / 0.10.9` | `0050bc66b4b0679f54b37c5ad793d25af1e58e9a901d59ff51df99c82a4179a9` |
+| Plus | `app-plus-release-unsigned.apk` | `com.applicreation0.quransafeguard.plus` | `28 / 0.10.9-plus.1` | `f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66` |
 
 Les hashes ont été vérifiés à la fois par `candidate-evidence/SHA256SUMS` dans l’artefact CI et par recalcul indépendant après extraction.
 
