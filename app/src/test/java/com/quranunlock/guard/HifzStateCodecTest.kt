@@ -64,7 +64,7 @@ class HifzStateCodecTest {
         assertEquals(state, decoded)
         assertEquals(2, decoded.journeyConfig.bounds?.itqan?.size)
         assertEquals(2, decoded.progressByTask[task.id]?.segmentIndex)
-        assertEquals(901, decoded.progressByTask[task.id]?.activeSeconds)
+        assertEquals(901L, decoded.progressByTask[task.id]?.activeSeconds)
     }
 
     @Test
