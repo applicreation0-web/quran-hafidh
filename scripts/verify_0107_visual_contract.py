@@ -11,6 +11,8 @@ def require(ok, message):
         raise SystemExit("0.10.7 VISUAL CONTRACT FAILURE: " + message)
 
 reader = read("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
+reader_html = read("app/src/main/assets/reader109/index.html")
+reader_js = read("app/src/main/assets/reader109/reader.js")
 design = read("app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt")
 theme = read("app/src/main/java/com/quranunlock/guard/MainActivity.kt")
 hub = read("app/src/main/java/com/quranunlock/guard/QuranHubActivity.kt")
@@ -21,19 +23,19 @@ contract = read("docs/VISUAL_CONTRACT_0.10.7.md")
 
 require("statusBarsPadding()" in reader and "navigationBarsPadding()" in reader,
         "reader must respect Android system bars")
-require("Navigation • page $quickNavPage / $LAST_PAGE" in reader,
-        "persistent free-reading page slider label missing")
-require(reader.count("valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat()") >= 2,
-        "both quick and persistent page navigation must cover 1..604")
-require("onValueChangeFinished" in reader,
-        "page navigation must commit on drag finish")
-require("steps = LAST_PAGE - FIRST_PAGE - 1" not in reader,
-        "hundreds of slider tick marks must not clutter the reader")
-require(".height(28.dp)" in reader,
+require('id="progress"' in reader_html and 'max="604"' in reader_html and 'step="1"' in reader_html,
+        "persistent free-reading page slider 1..604 missing")
+require("#progress{flex:1;height:28px" in reader_html,
         "persistent page slider must stay visually compact")
-require("chromeHidden" in reader and "pureReading" in reader,
+require("$('progress').oninput" in reader_js and "$('progress').onchange=()=>showPage(Number($('progress').value))" in reader_js,
+        "page slider must preview during drag and commit only on change completion")
+require("$('pageCount').textContent=p+' / 604'" in reader_js,
+        "persistent page counter missing")
+require("type.value='Page'" in reader_js and "n>=1&&n<=604" in reader_js,
+        "exact page navigation must remain available for 1..604")
+require("body.hidden #top,body.hidden #bottom" in reader_html and "document.body.classList.add('hidden')" in reader_js,
         "clean reading mode must remain available")
-require("0.84f" in reader and "0.42f" in reader,
+require("maxPanelHeight = availableHeight * if(expanded) .88f else .58f" in reader,
         "Tafsir compact/expanded reading states missing")
 
 for marker in (
@@ -64,7 +66,7 @@ require("ElevatedCard" not in hub and "QuranHubRow" in hub,
         "Qur'an hub must remain a light list rather than elevated-card grid")
 require("if (isPoetry) TextAlign.Start else TextAlign.Justify" in panel,
         "Tafsir prose must be justified while poetry stays start-aligned")
-require("run.text.replace(Regex(\"\\\\n{2,}\"), \"\\n\")" in panel,
+require("run.text.replace(Regex(\"\\n{2,}\"), \"\\n\")" in panel,
         "non-poetry double blank lines must stay collapsed")
 require("stroke: none !important" in edition and "#C8CEC8" in edition,
         "neutral no-outline verse selection changed")
