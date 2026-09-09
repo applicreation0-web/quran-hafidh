@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -33,12 +34,27 @@ class FreeQuranReaderActivity : ComponentActivity() {
     private var expanded by mutableStateOf(false)
     private var memoryMode = false
     private var contextual = false
+    private var nativeZoomBaseline = 0f
+    private var nativeZoomed = false
     private val prefs by lazy { getSharedPreferences("reader109", MODE_PRIVATE) }
     private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
     private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
     private val audio by lazy { QuranAudioController(this) { event -> runOnUiThread { web?.evaluateJavascript("window.audioEvent && window.audioEvent(${event});", null) } } }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    private fun syncNativeZoomState(view: WebView) {
+        val current = view.scale
+        if (current <= 0f) return
+        if (nativeZoomBaseline <= 0f) nativeZoomBaseline = current
+        val zoomed = kotlin.math.abs(current / nativeZoomBaseline - 1f) > 0.03f
+        if (zoomed == nativeZoomed) return
+        nativeZoomed = zoomed
+        view.evaluateJavascript(
+            "window.nativeZoomChanged && window.nativeZoomChanged($zoomed);",
+            null
+        )
+    }
+
+    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -57,13 +73,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                     val availableHeight = maxHeight
                     AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
-                        object : WebView(context) {
-                            override fun onScaleChanged(oldScale: Float, newScale: Float) {
-                                super.onScaleChanged(oldScale, newScale)
-                                val zoomed = kotlin.math.abs(newScale - 1f) > 0.03f
-                                post { evaluateJavascript("window.nativeZoomChanged && window.nativeZoomChanged($zoomed);", null) }
-                            }
-                        }.apply {
+                        WebView(context).apply {
                             web = this
                             setBackgroundColor(android.graphics.Color.parseColor("#F7F2E8"))
                             settings.javaScriptEnabled = true
@@ -73,9 +83,33 @@ class FreeQuranReaderActivity : ComponentActivity() {
                             settings.blockNetworkLoads = true
                             settings.builtInZoomControls = true
                             settings.displayZoomControls = false
+                            setOnTouchListener { touched, event ->
+                                if (
+                                    event.pointerCount > 1 ||
+                                    event.actionMasked == MotionEvent.ACTION_POINTER_DOWN ||
+                                    event.actionMasked == MotionEvent.ACTION_POINTER_UP ||
+                                    event.actionMasked == MotionEvent.ACTION_UP
+                                ) {
+                                    (touched as WebView).post {
+                                        syncNativeZoomState(touched)
+                                    }
+                                }
+                                false
+                            }
                             addJavascriptInterface(ReaderBridge(), "QsgNative")
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    view?.post {
+                                        nativeZoomBaseline = view.scale.takeIf { it > 0f } ?: 1f
+                                        nativeZoomed = false
+                                        view.evaluateJavascript(
+                                            "window.nativeZoomChanged && window.nativeZoomChanged(false);",
+                                            null
+                                        )
+                                    }
+                                }
                                 override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse {
                                     val uri = request?.url
                                     if(uri?.scheme != "https" || uri.host != "quran-safeguard.local") return denied()
