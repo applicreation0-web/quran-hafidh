@@ -26,13 +26,14 @@ data class HifzTrainingStep(
 }
 
 /**
- * Pedagogical contract for the structured Hifz journey. Audio steps are part of the
- * complete Sabqi protocol but are removed from the effective protocol when the release
- * audio gate is closed. No fake/manual repetition can stand in for unavailable audio.
+ * Pedagogical contract for the structured Hifz journey. Sabqi starts with the audio
+ * phases when the private/local audio capability is available. Callers that have
+ * positively established audio unavailability may pass audioAvailable=false; the
+ * canonical protocol itself must not silently erase its two opening audio phases.
  */
 object HifzTrainingPolicy {
 
-    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = false): List<HifzTrainingStep> =
+    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = true): List<HifzTrainingStep> =
         rawStepsFor(track).filter { !it.requiresAudio || audioAvailable }
 
     private fun rawStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
