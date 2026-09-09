@@ -208,4 +208,18 @@ object HifzStateStore {
         updated[taskId] = after
         return save(context, loaded.state.copy(progressByTask = updated))
     }
+
+    /**
+     * Persists the explicit training-complete -> schedule-complete transition as one
+     * complete state replacement. Corrupted or incomplete state is never overwritten.
+     */
+    @Synchronized
+    fun completeTask(context: Context, taskId: String): Boolean {
+        val loaded = load(context)
+        if (loaded.corrupted) return false
+        val completed = runCatching {
+            HifzJourneyCoordinator.completeTask(loaded.state, taskId)
+        }.getOrNull() ?: return false
+        return save(context, completed)
+    }
 }
