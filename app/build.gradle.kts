@@ -197,8 +197,22 @@ val verifyPrivacyBoundary by tasks.registering {
         check(manifest.contains("android:name=\".QuranSafeguardApp\""))
         check(migrationSource.contains("class QuranSafeguardApp"))
         check(migrationSource.contains("AppMigrations.run(this)"))
-        check(!manifest.contains("android.permission.INTERNET")) {
-            "Quran Safeguard must remain offline."
+        check(manifest.contains("android.permission.INTERNET")) {
+            "Private local Al-Husary downloads require Android's normal INTERNET permission."
+        }
+        val audioController = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioController.kt"
+        ).readText()
+        val audioSource = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioSource.kt"
+        ).readText()
+        check(
+            audioController.contains("QuranAudioSource.url") &&
+                audioController.contains("downloadSurah(") &&
+                audioController.contains("looksLikeMp3") &&
+                audioSource.contains("Husary_Muallim_128kbps")
+        ) {
+            "INTERNET may only support the explicit private local Quran-audio path."
         }
         check(!manifest.contains("android.permission.QUERY_ALL_PACKAGES")) {
             "Broad package visibility is forbidden."
@@ -789,13 +803,11 @@ val verifyEditorialBoundary by tasks.registering {
         check(
             adhkarUi.contains("AdhkarPeriod.MORNING") &&
                 adhkarUi.contains("AdhkarPeriod.EVENING") &&
-                adhkarUi.contains("Text(\"Matin\")") &&
-                adhkarUi.contains("Text(\"Soir\")")
+                adhkarUi.contains("FilterChip(") &&
+                adhkarUi.contains("✓ Matin") &&
+                adhkarUi.contains("✓ Soir")
         ) {
-            "Morning and evening Adhkar must both be selectable in-app."
-        }
-        check(adhkarUi.contains("Crossfade(")) {
-            "Morning/evening changes require a calm in-app transition."
+            "Morning and evening Adhkar must both be visible and selectable in-app."
         }
         val safeguardDesign = file(
             "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
@@ -813,9 +825,9 @@ val verifyEditorialBoundary by tasks.registering {
         val launcherIcon = file(
             "src/main/res/drawable/ic_launcher_foreground.xml"
         ).readText()
-        listOf("#171715", "#F7F2E8").forEach { brandColor ->
+        listOf("#1D5B47", "#B48A3C", "#76563C", "#FFF8EA").forEach { brandColor ->
             check(launcherIcon.contains(brandColor)) {
-                "Launcher icon lost a required cream/black brand color: " + brandColor
+                "Launcher icon lost a required green/gold/brown/ivory brand color: " + brandColor
             }
         }
         listOf(
