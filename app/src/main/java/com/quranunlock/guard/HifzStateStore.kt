@@ -9,6 +9,9 @@ data class HifzTaskProgress(
     val segmentIndex: Int = 0,
     val stepIndex: Int = 0,
     val stepProgress: HifzStepProgress? = null,
+    val totalRevealCount: Int = 0,
+    val totalIncorrectAttempts: Int = 0,
+    val activeSeconds: Long = 0L,
     val completed: Boolean = false
 ) {
     init {
@@ -16,12 +19,16 @@ data class HifzTaskProgress(
         require(segmentIndex >= 0)
         require(stepIndex >= 0)
         require(stepProgress == null || stepProgress.stepId.isNotBlank())
+        require(totalRevealCount >= 0)
+        require(totalIncorrectAttempts >= 0)
+        require(activeSeconds >= 0L)
     }
 }
 
 data class HifzState(
     val schema: Int = HifzStateCodec.SCHEMA,
     val journeyConfig: HifzJourneyConfig = HifzJourneyConfig(),
+    val planningDates: Set<LocalDate> = emptySet(),
     val tasks: List<HifzTask> = emptyList(),
     val progressByTask: Map<String, HifzTaskProgress> = emptyMap()
 ) {
@@ -47,14 +54,16 @@ data class HifzLoadResult(
 
 /**
  * Deterministic, versioned codec kept independent from reader109 and GuardPrefs.
- * C stores Sabqi bounds + measured paces. I records store ordered Itqan intervals.
- * T records are schedule tasks and P records are segment-aware training progress.
+ * C stores Sabqi bounds, measured paces and available time. I records ordered Itqan
+ * intervals. D records dates already considered by the daily planner. T records schedule
+ * tasks and P records segment-aware training progress plus local training metrics.
  */
 object HifzStateCodec {
-    const val SCHEMA = 5
+    const val SCHEMA = 6
     private const val SEP = "|"
     private const val CONFIG = "C"
     private const val ITQAN_INTERVAL = "I"
+    private const val PLANNING_DATE = "D"
     private const val TASK = "T"
     private const val PROGRESS = "P"
     private const val NONE = "-"
@@ -62,6 +71,9 @@ object HifzStateCodec {
     fun encode(state: HifzState): String = buildString {
         append(SCHEMA).append('\n')
         appendConfig(state.journeyConfig)
+        state.planningDates.sorted().forEach { date ->
+            append(PLANNING_DATE).append(SEP).append(date.toEpochDay()).append('\n')
+        }
         state.tasks.sortedBy { it.id }.forEach { task ->
             val cursor = task.cursor
             append(TASK).append(SEP)
@@ -89,6 +101,9 @@ object HifzStateCodec {
             append(step?.consecutiveSuccesses ?: 0).append(SEP)
             append(step?.revealCount ?: 0).append(SEP)
             append(step?.assistedSinceLastAttempt ?: false).append(SEP)
+            append(progress.totalRevealCount).append(SEP)
+            append(progress.totalIncorrectAttempts).append(SEP)
+            append(progress.activeSeconds).append(SEP)
             append(progress.completed).append('\n')
         }
     }
@@ -106,7 +121,10 @@ object HifzStateCodec {
         sabqiFields.forEach { append(it).append(SEP) }
         append(encodeOptionalDouble(config.pace.sabqiMinutesPerPage)).append(SEP)
         append(encodeOptionalDouble(config.pace.itqanMinutesPerPage)).append(SEP)
-        append(encodeOptionalDouble(config.pace.murajaahMinutesPerPage)).append('\n')
+        append(encodeOptionalDouble(config.pace.murajaahMinutesPerPage)).append(SEP)
+        append(encodeOptionalInt(config.availableMinutes.sabqi)).append(SEP)
+        append(encodeOptionalInt(config.availableMinutes.itqan)).append(SEP)
+        append(encodeOptionalInt(config.availableMinutes.murajaah)).append('\n')
 
         config.bounds?.itqan.orEmpty().forEachIndexed { index, range ->
             append(ITQAN_INTERVAL).append(SEP)
@@ -127,7 +145,9 @@ object HifzStateCodec {
         var declaredSabqi: HifzVerseRange? = null
         var boundsDeclared: Boolean? = null
         var pace: HifzPaceProfile? = null
+        var availableMinutes: HifzAvailableMinutes? = null
         val itqanIntervals = sortedMapOf<Int, HifzVerseRange>()
+        val planningDates = linkedSetOf<LocalDate>()
         val tasks = mutableListOf<HifzTask>()
         val progress = linkedMapOf<String, HifzTaskProgress>()
 
@@ -136,7 +156,7 @@ object HifzStateCodec {
             when (fields.firstOrNull()) {
                 CONFIG -> {
                     require(!configSeen) { "Duplicate Hifz config record." }
-                    require(fields.size == 8) { "Malformed Hifz config." }
+                    require(fields.size == 11) { "Malformed Hifz config." }
                     configSeen = true
                     val rawSabqi = fields.subList(1, 5)
                     boundsDeclared = when {
@@ -155,6 +175,11 @@ object HifzStateCodec {
                         itqanMinutesPerPage = decodeOptionalDouble(fields[6]),
                         murajaahMinutesPerPage = decodeOptionalDouble(fields[7])
                     )
+                    availableMinutes = HifzAvailableMinutes(
+                        sabqi = decodeOptionalInt(fields[8]),
+                        itqan = decodeOptionalInt(fields[9]),
+                        murajaah = decodeOptionalInt(fields[10])
+                    )
                 }
 
                 ITQAN_INTERVAL -> {
@@ -166,6 +191,12 @@ object HifzStateCodec {
                         QuranVerseRef(fields[2].toInt(), fields[3].toInt()),
                         QuranVerseRef(fields[4].toInt(), fields[5].toInt())
                     )
+                }
+
+                PLANNING_DATE -> {
+                    require(fields.size == 2) { "Malformed Hifz planning-date record." }
+                    val date = LocalDate.ofEpochDay(fields[1].toLong())
+                    require(planningDates.add(date)) { "Duplicate Hifz planning date." }
                 }
 
                 TASK -> {
@@ -187,7 +218,7 @@ object HifzStateCodec {
                 }
 
                 PROGRESS -> {
-                    require(fields.size == 10) { "Malformed Hifz progress." }
+                    require(fields.size == 13) { "Malformed Hifz progress." }
                     val taskId = decodeText(fields[1])
                     val step = if (fields[4] == NONE) null else HifzStepProgress(
                         stepId = decodeText(fields[4]),
@@ -202,7 +233,10 @@ object HifzStateCodec {
                         segmentIndex = fields[2].toInt(),
                         stepIndex = fields[3].toInt(),
                         stepProgress = step,
-                        completed = fields[9].toBooleanStrict()
+                        totalRevealCount = fields[9].toInt(),
+                        totalIncorrectAttempts = fields[10].toInt(),
+                        activeSeconds = fields[11].toLong(),
+                        completed = fields[12].toBooleanStrict()
                     )
                 }
 
@@ -231,17 +265,23 @@ object HifzStateCodec {
         return HifzState(
             journeyConfig = HifzJourneyConfig(
                 bounds = bounds,
-                pace = requireNotNull(pace)
+                pace = requireNotNull(pace),
+                availableMinutes = requireNotNull(availableMinutes)
             ),
+            planningDates = planningDates,
             tasks = tasks,
             progressByTask = progress
         )
     }
 
     private fun encodeOptionalDouble(value: Double?): String = value?.toString() ?: NONE
+    private fun encodeOptionalInt(value: Int?): String = value?.toString() ?: NONE
 
     private fun decodeOptionalDouble(value: String): Double? =
         if (value == NONE) null else value.toDouble()
+
+    private fun decodeOptionalInt(value: String): Int? =
+        if (value == NONE) null else value.toInt()
 
     private fun encodeText(value: String): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(value.toByteArray(Charsets.UTF_8))
@@ -252,7 +292,8 @@ object HifzStateCodec {
 
 object HifzStateStore {
     internal const val FILE = QuranPersistenceNamespaces.HIFZ
-    private const val KEY_STATE = "state_v5"
+    private const val KEY_STATE = "state_v6"
+    private const val LEGACY_KEY_STATE_V5 = "state_v5"
     private const val LEGACY_KEY_STATE_V4 = "state_v4"
     private const val LEGACY_KEY_STATE_V3 = "state_v3"
     private const val LEGACY_KEY_STATE_V2 = "state_v2"
@@ -263,6 +304,7 @@ object HifzStateStore {
         val raw = prefs.getString(KEY_STATE, null)
         if (raw == null) {
             if (
+                prefs.contains(LEGACY_KEY_STATE_V5) ||
                 prefs.contains(LEGACY_KEY_STATE_V4) ||
                 prefs.contains(LEGACY_KEY_STATE_V3) ||
                 prefs.contains(LEGACY_KEY_STATE_V2) ||
@@ -289,7 +331,7 @@ object HifzStateStore {
             )
     }
 
-    private fun save(context: Context, state: HifzState): Boolean {
+    internal fun save(context: Context, state: HifzState): Boolean {
         if (!HifzMushafCursorVerifier.allCoherent(context, state.tasks.map { it.cursor })) {
             return false
         }
@@ -356,9 +398,12 @@ object HifzStateStore {
         if (loaded.corrupted) return false
         val task = loaded.state.tasks.firstOrNull { it.id == taskId } ?: return false
         if (task.status == HifzTaskStatus.COMPLETED) return false
-        val before = loaded.state.progressByTask[taskId] ?: HifzTaskProgress(taskId = taskId)
+        val segmentCount = segmentCount(context, task) ?: return false
+        val before = loaded.state.progressByTask[taskId]
+            ?: HifzTrainingEngine.initial(task, segmentCount)
         val after = transform(before)
         require(after.taskId == taskId) { "Hifz progress cannot change task identity." }
+        if (!HifzTrainingEngine.isSemanticallyCoherent(task, after, segmentCount)) return false
         val updated = loaded.state.progressByTask.toMutableMap()
         updated[taskId] = after
         return save(context, loaded.state.copy(progressByTask = updated))
@@ -368,11 +413,28 @@ object HifzStateStore {
     fun completeTask(context: Context, taskId: String): Boolean {
         val loaded = load(context)
         if (loaded.corrupted) return false
+        val task = loaded.state.tasks.firstOrNull { it.id == taskId } ?: return false
+        val segmentCount = segmentCount(context, task) ?: return false
         val completed = runCatching {
-            HifzJourneyCoordinator.completeTask(loaded.state, taskId)
+            HifzJourneyCoordinator.completeTask(loaded.state, taskId, segmentCount)
         }.getOrNull() ?: return false
         return save(context, completed)
     }
+
+    @Synchronized
+    fun replaceState(context: Context, transform: (HifzState) -> HifzState): Boolean {
+        val loaded = load(context)
+        if (loaded.corrupted) return false
+        return save(context, transform(loaded.state))
+    }
+
+    internal fun segmentCount(context: Context, task: HifzTask): Int? = runCatching {
+        val geometry = HifzGeometryAssetLoader.load(context)
+        HifzGeometryPolicy.segment(
+            geometry,
+            HifzVerseRange(task.cursor.start, task.cursor.end)
+        ).size.also { require(it > 0) }
+    }.getOrNull()
 
     private fun isSemanticallyCoherent(context: Context, state: HifzState): Boolean = runCatching {
         val bounds = state.journeyConfig.bounds
