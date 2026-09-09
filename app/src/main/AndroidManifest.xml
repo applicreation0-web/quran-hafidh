@@ -55,6 +55,12 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".HifzJourneyActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".FreeQuranReaderActivity"
             android:excludeFromRecents="false"
             android:exported="false"
