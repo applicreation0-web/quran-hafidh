@@ -79,7 +79,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez selon les limites canoniques réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Muṣḥaf ; cette page de frontière appartient alors visuellement aux deux sections voisines.",
+                    "Choisissez selon les limites réelles des versets et les repères canoniques. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Muṣḥaf ; cette page de frontière appartient alors visuellement aux deux sections voisines.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
