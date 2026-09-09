@@ -1,84 +1,97 @@
 # Quran Safeguard 0.10.9 — handoff de re-audit Astra
 
-## Candidat vérifié
+## Identité exacte
 
 - Branche : `release/0.10.9-work`
-- HEAD applicatif candidat : `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`
+- `candidate_code_sha` : `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`
+- `validated_handoff_sha` : `568564b7dd0b091330067ba35e2a1f6e6c594987`
 - Parent audité NO-GO : `9846de48794e34eefc66d947e7f18991ad1c3342`
-- Workflow vert : [run 34312527559](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34312527559)
-- Job build : PASS
-- Runtime instrumenté Light : 5/5 PASS, 0 échec, 0 erreur
-- Runtime instrumenté Plus : 5/5 PASS, 0 échec, 0 erreur
+- Pull request de re-audit : [#78](https://github.com/applicreation0-web/quran-unlock-android/pull/78)
 
-Ce fichier est le seul ajout documentaire postérieur au HEAD applicatif candidat ci-dessus. Aucun code, test, gate ou artefact applicatif n'est modifié par ce handoff.
+Le commit qui contient ce document est, par construction, postérieur au SHA validé ci-dessus et ne modifie que ce fichier Markdown. Le HEAD courant exact de la branche est celui affiché par la PR #78 ; le SHA applicatif reste `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b`.
 
-## Corrections bloquantes depuis le NO-GO
+## Diff depuis le candidat applicatif
 
-1. **Nettoyage E-Ink différé après Afficher brièvement**
-   - `EInkRefreshPolicy` conserve un nettoyage complet pending lorsque le délai minimal interdit le refresh immédiat.
-   - Le nettoyage est exécuté au premier instant admissible, y compris si un refresh est survenu pendant la révélation.
-   - Les timers obsolètes sont annulés lors d'un refresh complet ou d'un changement de page.
-   - Le refresh reste purement visuel et ne modifie aucun compteur, ligne, jalon, win, masque ou état pédagogique.
+Le compare GitHub `df0be3ce9521e0bf0ecb6a62bbb4e393f1261a4b...568564b7dd0b091330067ba35e2a1f6e6c594987` ne contient aucun fichier produit net. Il contient uniquement des tests, gates, outils de reconstruction fail-closed, workflows et ce handoff.
 
-2. **Fallback E-Ink générique réellement visible**
-   - Le fallback est déclenché dans la WebView au-dessus de la page HTML opaque par `window.einkFullRefreshFallback()`.
-   - La zone de lecture reçoit une transition noir/crème synchronisée avec le masque ; si le hook WebView est absent, un overlay natif prend le relais.
-   - Aucun SVG coranique n'est modifié, aucune API BOOX n'est obligatoire et STANDARD reste strictement no-op.
+| Commit | Classification | Contenu |
+|---|---|---|
+| `e089191d` | Documentation | Création du handoff Astra |
+| `4114f6a6` | Gate + documentation | Gate Tafsir adaptée à l’architecture 10.9 |
+| `5ad7951b` | Gate + documentation | Gate d’identité 0.10.3 modernisée |
+| `845d4b65` | Tests/gates | Diagnostics et contrats 0.10.7 ; parseur Qurtubi fail-closed |
+| `9463c0b2` | Outil de gate | Marqueurs de versets Qurtubi avec ellipse |
+| `53b9d1c3` | Produit, annulé | Réintroduction transitoire de couleurs 0.10.7 |
+| `4340ae86` | Outil de gate | Wrapper de reconstruction Tafsir 0.10.6 |
+| `90fef2cd` | CI | Reconstruction Tafsir source-authoritative |
+| `1c272b20` | CI | Diagnostics visuel/Tafsir séparés |
+| `4bf52d4c` | CI | Conservation des diagnostics 0.10.7 |
+| `0382feab` | Gate | Correction de l’assertion de newline |
+| `d555d5b9` | CI | Vérificateur APK Plus 0.10.6 à deux fragments Qushayri |
+| `21572165` | Produit, restauration exacte | Annule intégralement `53b9d1c3` et restaure le fichier depuis le candidat |
+| `568564b7` | Gate | Palette 10.9 crème/noir exigée par le contrat modernisé |
 
-3. **Validation impossible avec un indice actif**
-   - Toute aide remet immédiatement la série locale de réussites à zéro.
-   - Une réussite sans aide ne peut pas être enregistrée tant que l'aide reste active.
-   - `Refaire` efface l'aide de la tentative courante sans effacer les jalons antérieurs.
-   - `Afficher brièvement` invalide également la tentative et la série locale.
+La paire `53b9d1c3` / `21572165` s’annule intégralement. Le diff produit net depuis `candidate_code_sha` est donc nul : aucun fichier sous `app/` ne diffère au SHA de validation.
 
-4. **Reprise exacte après kill/restart**
-   - Le mode Lecture/Mémorisation et la sélection sont persistés avec la session complète.
-   - L'activité lit le mode persistant avant la création de la WebView.
-   - Sous-bloc, ligne, étape, masque déterministe, compteurs, wins, jalons et aides sont restaurés.
-   - Le Mushaf reste caché pendant le premier rendu jusqu'à l'application du masque restauré, empêchant le flash de texte non masqué.
+## Corrections Astra incluses dans le candidat
 
-5. **Preuves runtime et APK**
-   - Les manifestes, permissions, identifiants, versions, frontières Light/Plus, 604 pages et état fermé de la gate audio sont extraits des APK produits.
-   - L'émulateur API 35 exécute réellement les mêmes tests instrumentés sur Light et Plus.
-   - La CI prépare explicitement la capacité disque et KVM sans remplacer les tests runtime par des recherches statiques.
+1. Nettoyage E-Ink différé garanti après `Afficher brièvement`, y compris lorsque le délai minimal bloque le refresh immédiat ou qu’un refresh survient pendant la révélation.
+2. Fallback E-Ink générique visible au-dessus de la WebView opaque, avec fallback natif, sans modifier le SVG et avec STANDARD strictement no-op.
+3. Toute aide active invalide la série locale ; `2 réussites → Premier mot → tentative correcte` ne valide jamais ; `Refaire` efface l’aide ; `Afficher brièvement` invalide la tentative.
+4. Reprise exacte Lecture → Mémorisation → progression → kill/recreate avant affichage, sans flash initial non masqué.
+5. Preuves APK, manifestes, permissions, migration, persistance, Safeguard OFF/ON et isolation Light/Plus produites par CI et runtime instrumenté.
 
-## Tests de non-régression
+## CI du SHA validé
 
-- Politique E-Ink : page à t=0, révélation à t=100 ms, retour au masque à t=1000 ms, rattrapage différé ; refresh pendant révélation ; coalescence des révélations.
-- Protocole : `2 réussites → Premier mot → tentative correcte` ne donne jamais `wins=3` et ne permet jamais la validation ; même invariant pour Afficher brièvement ; Refaire efface l'aide.
-- Cycle de vie Android : Lecture → Mémorisation → progression → destruction Activity/WebView → relance depuis une intention Lecture → restauration exacte et masque présent sans frame initiale non masquée.
-- Fallback E-Ink runtime : overlay visible sur WebView opaque en EINK, changement matériel de page compris ; strict no-op en STANDARD.
-- Safeguard runtime : OFF → ON → OFF observable et absence d'état de cible hors service ; migration versionCode 27 → 28 conservant applications protégées et total de lecture.
-- Protocole complet : 786 transitions PASS.
-- Gates modernisées 10.8, vérificateurs 10.9, unitaires Light/Plus, builds debug/release Light/Plus et isolation des éditions : PASS.
-- Gate Tafsir 0.10.5 modernisée sans assouplissement : elle reconnaît le `displayText` dérivé de `run.text`, la pile contextuelle Activity/Back et les segments source mappés de l'architecture actuelle, tout en maintenant les mêmes assertions fonctionnelles.
-- Gate contradictoire 0.10.3 modernisée pour reconnaître l'identité courante versionCode 28 / versionName 0.10.9, tout en conservant toutes ses assertions Hikam, RTL, isolation du lecteur libre et Light/Plus.
+Toutes les exécutions applicables au SHA `568564b7dd0b091330067ba35e2a1f6e6c594987` sont terminées avec succès :
 
-## Artefacts issus du HEAD candidat
+| Workflow | Run | Résultat |
+|---|---:|---|
+| Quran Safeguard 0.10.9 build and audit | [34335381151](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335381151) | PASS build + runtime |
+| Android CI | [34335385394](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385394) | PASS |
+| Android 0.10.5 Tafsir contradictory audit | [34335385387](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385387) | PASS |
+| Android 0.10.5 sensitive-app scope audit | [34335385433](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385433) | PASS |
+| Android 0.10.5 canonical Juz/Hizb audit | [34335385450](https://github.com/applicreation0-web/quran-unlock-android/actions/runs/34335385450) | PASS |
 
-- Artifact build : `quran-safeguard-0.10.9-astra-re-audit`, ID `10089043591`
-- Artifact runtime : `quran-safeguard-0.10.9-runtime-evidence`, ID `10089112961`
-- Light : `app-light-release-unsigned.apk`
-  - SHA-256 : `385c52b0c338845e43e90226db955b4eac07c1d3cc45597250690abd3cbe9782`
-  - applicationId : `com.applicreation0.quransafeguard`
-  - versionCode/versionName : `28` / `0.10.9`
-- Plus : `app-plus-release-unsigned.apk`
-  - SHA-256 : `7144c577db68102a271bdb99d26ad231ea72ea63b7142f4f4b0c5a65b7a9ef82`
-  - applicationId : `com.applicreation0.quransafeguard.plus`
-  - versionCode/versionName : `28` / `0.10.9-plus.1`
+Le workflow 0.10.9 a exécuté les gates 10.8 modernisées, les vérificateurs 10.9, le protocole Mémorisation (786 transitions), les unitaires Light/Plus, l’isolation des éditions et les compilations debug/release Light/Plus.
 
-Les deux APK proviennent du même run et du même HEAD. Ils sont non signés ; aucune signature ni publication n'a été effectuée.
+## Runtime instrumenté réel
+
+Artifact : `quran-safeguard-0.10.9-runtime-evidence`, ID `10097882321`.
+
+- Light : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 13.211 s.
+- Plus : 5/5 tests PASS, 0 échec, 0 erreur, 0 ignoré, 9.947 s.
+- Scénarios : restauration Mémorisation sans frame non masquée, fallback E-Ink sur WebView opaque, STANDARD no-op, Safeguard OFF→ON→OFF et migration versionCode 27→28.
+- Les recherches statiques ne sont pas comptées comme tests Android runtime.
+
+## APK candidats exacts
+
+Artifact : `quran-safeguard-0.10.9-astra-re-audit`, ID `10097860965`, produit par le run `34335381151` au SHA `568564b7dd0b091330067ba35e2a1f6e6c594987`.
+
+| Édition | APK | Application ID | Version | SHA-256 |
+|---|---|---|---|---|
+| Light | `app-light-release-unsigned.apk` | `com.applicreation0.quransafeguard` | `28 / 0.10.9` | `0c3a7a9af6ebc65a844ec55f89daed80e9c8b588fa0bf5db3f228aa03ebe691d` |
+| Plus | `app-plus-release-unsigned.apk` | `com.applicreation0.quransafeguard.plus` | `28 / 0.10.9-plus.1` | `db3b97bb41b76484e812a38aeca700bda85e7b15db2903c1eea0fdfd1f205173` |
+
+Les hashes ont été vérifiés à la fois par `candidate-evidence/SHA256SUMS` dans l’artefact CI et par recalcul indépendant après extraction.
+
+Manifestes/permissions extraits :
+
+- Light et Plus : `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED` et permission dynamique interne non exportée propre à l’applicationId.
+- Aucun élargissement de permissions post-candidat.
+- Light : 604 pages, 0 asset Tafsir.
+- Plus : 604 pages, 10 assets correspondant aux trois corpus Tafsir approuvés.
+- Gate audio : `redistributionApproved=false` dans les deux éditions.
 
 ## Invariants préservés
 
 - Mushaf exact de 604 pages, sans recomposition.
 - Protocole 10/5/5/5/7 et aucun Tafsir en Mémorisation.
-- Safeguard 60 secondes, budgets et exclusions sensibles conservés.
-- STANDARD no-op pour E-Ink.
-- Un seul APK Plus contenant STANDARD et EINK.
-- Gate audio fermée (`redistributionApproved=false`) et aucune requête audio réseau.
-- Aucun contournement, suppression ou assouplissement de gate n'a été introduit.
+- Safeguard 60 secondes, budgets et exclusions banque/sécurité/identité.
+- STANDARD no-op ; un seul APK Plus contient STANDARD et EINK.
+- Aucune requête audio réseau lorsque la gate est fermée.
+- Aucun merge, signature, publication ou audit Astra lancé par Sol.
 
-## Limites restant matérielles
+## Limites matérielles
 
-Le chemin logiciel générique et les invariants pédagogiques sont couverts sur émulateur Android. L'efficacité physique du full refresh, le niveau résiduel réel de ghosting et les éventuelles API propriétaires doivent encore être vérifiés sur dalles E-Ink 7,8 pouces et 10,3 pouces/BOOX réelles. Ces vérifications matérielles ne sont pas déclarées PASS dans ce handoff.
+Le chemin logiciel générique et les invariants pédagogiques sont couverts sur émulateur Android. L’efficacité physique du full refresh, le ghosting résiduel et les API propriétaires facultatives restent à vérifier sur dalles E-Ink/BOOX réelles 7,8 et 10,3 pouces. Ces points ne sont pas déclarés PASS.
