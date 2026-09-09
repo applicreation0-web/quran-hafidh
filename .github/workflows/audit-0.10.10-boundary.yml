@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+      - name: Apply 0.10.10 hardening idempotently
+        run: python3 scripts/apply_01010_runtime_hardening.py
       - name: Restore audited Mushaf and Plus corpus
         uses: actions/download-artifact@v4
         with:
@@ -22,20 +24,25 @@ jobs:
           run-id: 34096699893
           github-token: ${{ github.token }}
           path: baseline108
-      - name: Restore corpus bytes
+      - name: Restore immutable corpus bytes only — never overwrite reader109
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import zipfile
-          for ed,pat in [('main','*light*unsigned.apk'),('plus','*plus*unsigned.apk')]:
-              apk=next(Path('baseline108').rglob(pat))
-              with zipfile.ZipFile(apk) as z:
-                  for n in z.namelist():
-                      if (n.startswith('assets/') and not n.startswith('assets/dexopt/')
-                              and (ed=='main' or n.startswith('assets/tafsir/'))):
-                          p=Path('app/src')/ed/n
-                          p.parent.mkdir(parents=True,exist_ok=True)
-                          p.write_bytes(z.read(n))
+          light=next(Path('baseline108').rglob('*light*unsigned.apk'))
+          plus=next(Path('baseline108').rglob('*plus*unsigned.apk'))
+          with zipfile.ZipFile(light) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/mushaf/') and not n.endswith('/'):
+                      p=Path('app/src/main')/n
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      p.write_bytes(z.read(n))
+          with zipfile.ZipFile(plus) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/tafsir/') and not n.endswith('/'):
+                      p=Path('app/src/plus')/n
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      p.write_bytes(z.read(n))
           PY
       - uses: actions/setup-python@v5
         with:
@@ -46,12 +53,16 @@ jobs:
           python3 scripts/build_reader109_geometry.py
           python3 scripts/verify_hifz_geometry_edges.py
           python3 scripts/verify_reader109.py
+          python3 scripts/audit_01010_release_contract.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - run: sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-35" "system-images;android-35;google_apis;x86_64" "emulator"
+      - name: Install stable build SDK and emulator image
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "platforms;android-35" "system-images;android-35;google_apis;x86_64" "emulator"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
