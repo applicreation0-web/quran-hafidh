@@ -162,7 +162,16 @@ class TargetPresenceStressTest {
             assertEquals(expectedRemaining, ReadingValidationPolicy.remainingMs(elapsed.toLong()))
             assertEquals(
                 elapsed >= 60_000,
-                ReadingValidationPolicy.canValidate(elapsed.toLong())
+                ReadingValidationPolicy.canValidate(
+                    activeReadingMs = elapsed.toLong(),
+                    bottomReached = true
+                )
+            )
+            assertFalse(
+                ReadingValidationPolicy.canValidate(
+                    activeReadingMs = elapsed.toLong(),
+                    bottomReached = false
+                )
             )
         }
     }
