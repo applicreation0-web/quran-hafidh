@@ -51,6 +51,7 @@ Ce fichier est le seul ajout documentaire postérieur au HEAD applicatif candida
 - Safeguard runtime : OFF → ON → OFF observable et absence d'état de cible hors service ; migration versionCode 27 → 28 conservant applications protégées et total de lecture.
 - Protocole complet : 786 transitions PASS.
 - Gates modernisées 10.8, vérificateurs 10.9, unitaires Light/Plus, builds debug/release Light/Plus et isolation des éditions : PASS.
+- Gate Tafsir 0.10.5 modernisée sans assouplissement : elle reconnaît le `displayText` dérivé de `run.text`, la pile contextuelle Activity/Back et les segments source mappés de l'architecture actuelle, tout en maintenant les mêmes assertions fonctionnelles.
 
 ## Artefacts issus du HEAD candidat
 

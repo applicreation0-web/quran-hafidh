@@ -94,8 +94,17 @@ for impossible in ("21:480", "2:293", "4:181", "58:29", "4:186"):
     # not contain a hand-written correction for any one of them.
     require(impossible not in reference_parser,
             f"source anomaly must not be hard-corrected in parser: {impossible}")
-require("TafsirReferenceParser.find(run.text)" in renderer,
-        "explicit source Quran references are not annotated by the shared renderer")
+require(
+    (
+        "TafsirReferenceParser.find(run.text)" in renderer
+        or (
+            "val displayText = if (run.style" in renderer
+            and "run.text.replace(" in renderer
+            and "TafsirReferenceParser.find(displayText)" in renderer
+        )
+    ),
+    "explicit source Quran references are not annotated by the shared renderer",
+)
 require("run.style != TafsirRunStyle.BOLD_ITALIC" in renderer,
         "source verse-translation anchors must not be reinterpreted as commentary cross-references")
 require("onQuranReferenceSelected" in controller and "onQuranReferenceSelected" in plus_edition,
@@ -106,12 +115,22 @@ require("QuranStructureMetadata.division(QuranSelectionMode.JUZ" in reference_na
         "reference page lookup must constrain scanning to the canonical Juz page window")
 require("MushafVerseIndex.fromSvg" in reference_navigation,
         "reference page lookup must prove the target verse exists on the exact pinned SVG page")
-require("EXTRA_REFERENCE_MODE" in free_reader and "← Retour au commentaire" in free_reader,
-        "free Quran/Tafsir reader must open an internal reference view with explicit return")
-require("preserveTafsirOnNextPause" in free_reader,
-        "opening an internal reference must preserve the original Tafsir composition/scroll state")
-require("referenceHighlight == null" in free_reader,
-        "reference preview must not replace the original interactive Tafsir WebView binding")
+legacy_reference_stack = (
+    "EXTRA_REFERENCE_MODE" in free_reader
+    and "← Retour au commentaire" in free_reader
+    and "preserveTafsirOnNextPause" in free_reader
+    and "referenceHighlight == null" in free_reader
+)
+activity_reference_stack = (
+    'putExtra("contextual",true)' in free_reader
+    and "startActivity(Intent(this@FreeQuranReaderActivity" in free_reader
+    and "BackHandler" in free_reader
+    and "if(!memoryMode)" in free_reader
+)
+require(
+    legacy_reference_stack or activity_reference_stack,
+    "free Quran/Tafsir reader must use an internal Back-restorable reference stack",
+)
 require("settings.blockNetworkLoads = true" in free_reader,
         "Quran/Tafsir reference navigation must remain offline")
 
@@ -123,9 +142,17 @@ require("TafsirRunStyle.BOLD_ITALIC, row.translation.trim()" in source_rendering
         "source English verse translation must remain first and visually distinct")
 require("TafsirRunStyle.REGULAR, row.commentary.trim()" in source_rendering,
         "source commentary rendering missing")
-require("renderSourceBackedTafsirSegments(rows)" in repo,
+require(
+    (
+        "renderSourceBackedTafsirSegments(rows)" in repo
+        or "renderSourceBackedTafsirSegments(rows.map { it.segment })" in repo
+    ),
         "Qurtubi/Qushayri runtime must use the source-only renderer")
-require('value("arabic_included") == "false"' in repo,
+require(
+    (
+        'value("arabic_included") == "false"' in repo
+        or 'metadataValue(database, "arabic_included") == "false"' in repo
+    ),
         "Qurtubi/Qushayri runtime must reject a corpus that injects Arabic verse text")
 for forbidden in ("Commentary on ${verse.surah}", "Verse ${", "Ayah ${"):
     require(forbidden not in repo and forbidden not in source_rendering,
