@@ -42,10 +42,28 @@ jobs:
         run: python3 scripts/verify_0103_update.py
 
       - name: Verify 0.10.7 visual contract
-        run: python3 scripts/verify_0107_visual_contract.py
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/verify_0107_visual_contract.py 2>&1 | tee visual-contract.log
 
       - name: Verify 0.10.7 Tafsir reading contract
-        run: python3 scripts/verify_0107_tafsir_reading_contract.py
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/verify_0107_tafsir_reading_contract.py 2>&1 | tee tafsir-reading-contract.log
+
+      - name: Upload 0.10.7 contract diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-ci-0107-contract-diagnostics
+          path: |
+            visual-contract.log
+            tafsir-reading-contract.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Run unit tests
         shell: bash
