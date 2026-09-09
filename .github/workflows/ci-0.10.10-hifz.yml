@@ -1,0 +1,36 @@
+name: Quran Safeguard 0.10.10 Hifz foundation
+
+on:
+  push:
+    branches: ["work/0.10.10-hifz"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hifz-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Run both edition unit suites
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+      - name: Upload Hifz unit reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hifz-0.10.10-unit-reports
+          path: |
+            app/build/test-results/
+            app/build/reports/tests/
+          retention-days: 7
