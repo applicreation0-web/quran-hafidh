@@ -177,51 +177,55 @@ class QuranAudioController(
     }
 
     fun downloadSurah(surah: Int, ayahCount: Int) {
-        if (surah !in 1..114 || ayahCount !in 1..286) {
+        val canonicalCount = runCatching { QuranAudioSource.ayahCount(surah) }.getOrNull()
+        if (canonicalCount == null || ayahCount != canonicalCount) {
             emit("download_error", surah, 0, message = "Sourate ou nombre de versets invalide")
             return
         }
         executor.execute {
-            emit("download_start", surah, 0, done = 0, total = ayahCount)
-            for (ayah in 1..ayahCount) {
+            emit("download_start", surah, 0, done = 0, total = canonicalCount)
+            for (ayah in 1..canonicalCount) {
                 if (!downloadOne(surah, ayah)) {
                     emit(
                         "download_error",
                         surah,
                         ayah,
                         done = ayah - 1,
-                        total = ayahCount,
+                        total = canonicalCount,
                         message = "Téléchargement interrompu au verset $ayah"
                     )
                     return@execute
                 }
-                emit("download_progress", surah, ayah, done = ayah, total = ayahCount)
+                emit("download_progress", surah, ayah, done = ayah, total = canonicalCount)
             }
-            emit("download_complete", surah, ayahCount, done = ayahCount, total = ayahCount)
+            emit("download_complete", surah, canonicalCount, done = canonicalCount, total = canonicalCount)
         }
     }
 
     fun deleteSurah(surah: Int, ayahCount: Int) {
-        if (surah !in 1..114 || ayahCount !in 1..286) return
+        val canonicalCount = runCatching { QuranAudioSource.ayahCount(surah) }.getOrNull() ?: return
+        if (ayahCount != canonicalCount) return
         if (currentSurah == surah) {
             pause()
             releasePlayer()
         }
         var deleted = 0
-        for (ayah in 1..ayahCount) {
+        for (ayah in 1..canonicalCount) {
             val target = localFile(surah, ayah)
             val part = File(target.parentFile, target.name + ".part")
             if (target.delete()) deleted += 1
             part.delete()
         }
-        emit("delete_complete", surah, 0, done = deleted, total = ayahCount)
+        emit("delete_complete", surah, 0, done = deleted, total = canonicalCount)
     }
 
     private fun downloadOne(surah: Int, ayah: Int): Boolean {
+        if (!QuranAudioSource.isValidReference(surah, ayah)) return false
         if (isDownloaded(surah, ayah)) return true
 
         val target = localFile(surah, ayah)
         val part = File(target.parentFile, target.name + ".part")
+        val resumeFrom = part.length().coerceAtLeast(0L)
         var connection: HttpURLConnection? = null
         return try {
             val url = URL(QuranAudioSource.url(surah, ayah))
@@ -231,8 +235,8 @@ class QuranAudioController(
                 connectTimeout = 15_000
                 readTimeout = 30_000
                 setRequestProperty("User-Agent", "Quran-Safeguard/0.10.10 private-local-audio")
-                if (part.length() > 0L) {
-                    setRequestProperty("Range", "bytes=${part.length()}-")
+                if (resumeFrom > 0L) {
+                    setRequestProperty("Range", "bytes=$resumeFrom-")
                 }
             }
             val code = connection.responseCode
@@ -244,12 +248,29 @@ class QuranAudioController(
                 )
             )
 
-            val append = code == HttpURLConnection.HTTP_PARTIAL && part.length() > 0L
-            if (code == HttpURLConnection.HTTP_OK && part.exists()) part.delete()
+            val expectedCompleteLength = when (code) {
+                HttpURLConnection.HTTP_OK -> {
+                    if (part.exists()) part.delete()
+                    connection.contentLengthLong.takeIf { it > 0L }
+                }
+                HttpURLConnection.HTTP_PARTIAL -> {
+                    require(resumeFrom > 0L)
+                    val contentRange = connection.getHeaderField("Content-Range")
+                        ?: error("Content-Range manquant")
+                    parseContentRange(contentRange, resumeFrom)
+                }
+                else -> null
+            }
+
+            val append = code == HttpURLConnection.HTTP_PARTIAL
             FileOutputStream(part, append).use { output ->
                 connection.inputStream.use { input -> input.copyTo(output) }
             }
 
+            if (expectedCompleteLength != null && part.length() != expectedCompleteLength) {
+                // Keep the .part file so a later explicit retry can resume safely.
+                return false
+            }
             if (part.length() <= MIN_AUDIO_BYTES || !looksLikeMp3(part)) {
                 part.delete()
                 return false
@@ -265,6 +286,23 @@ class QuranAudioController(
         } finally {
             connection?.disconnect()
         }
+    }
+
+    /**
+     * Validates a resume response such as "bytes 124000-248999/249000" and
+     * returns the authoritative complete object size. A server that resumes at
+     * another offset is rejected rather than corrupting the local MP3.
+     */
+    private fun parseContentRange(value: String, expectedStart: Long): Long {
+        val match = CONTENT_RANGE.matchEntire(value.trim())
+            ?: error("Content-Range invalide")
+        val start = match.groupValues[1].toLong()
+        val end = match.groupValues[2].toLong()
+        val total = match.groupValues[3].toLong()
+        require(start == expectedStart)
+        require(end >= start)
+        require(total > end)
+        return total
     }
 
     private fun looksLikeMp3(file: File): Boolean = runCatching {
@@ -296,5 +334,6 @@ class QuranAudioController(
 
     companion object {
         private const val MIN_AUDIO_BYTES = 1_024L
+        private val CONTENT_RANGE = Regex("bytes\\s+(\\d+)-(\\d+)/(\\d+)", RegexOption.IGNORE_CASE)
     }
 }
