@@ -6,17 +6,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,14 +28,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 
-/**
- * User surface for the structured 0.10.10 Hifz journey.
- *
- * Free Memorisation remains a separate reader state. This Activity owns only structured
- * Hifz configuration, schedule and training transitions. Opening the Mushaf launches the
- * common reader in Memorisation interaction mode but never imports reader109 sessions into
- * Hifz state and never completes a Hifz task from a reader callback.
- */
+/** Structured Hifz surface, independent from free Memorisation. */
 class HifzJourneyActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +49,12 @@ class HifzJourneyActivity : ComponentActivity() {
                 .padding(horizontal = 18.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Parcours Hifz", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Parcours Hifz",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
             Text(
                 "Sabqi lundi/mercredi/vendredi • Itqān mardi/jeudi • Murājaʿah samedi/dimanche",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -71,7 +66,7 @@ class HifzJourneyActivity : ComponentActivity() {
             )
 
             if (load.corrupted) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = SafeguardShapes.large) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("État Hifz non exploitable", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                         Text("Safeguard n’a ni validé ni déplacé de séance. Reconfigurez le parcours avant de continuer.")
@@ -80,9 +75,10 @@ class HifzJourneyActivity : ComponentActivity() {
             }
 
             val config = load.state.journeyConfig
-            if (config.bounds == null || config.pace.sabqiMinutesPerPage == null || config.pace.itqanMinutesPerPage == null ||
-                config.pace.murajaahMinutesPerPage == null || config.availableMinutes.sabqi == null ||
-                config.availableMinutes.itqan == null || config.availableMinutes.murajaah == null
+            if (config.bounds == null || config.pace.sabqiMinutesPerPage == null ||
+                config.pace.itqanMinutesPerPage == null || config.pace.murajaahMinutesPerPage == null ||
+                config.availableMinutes.sabqi == null || config.availableMinutes.itqan == null ||
+                config.availableMinutes.murajaah == null
             ) {
                 SetupCard(
                     existing = config,
@@ -100,8 +96,7 @@ class HifzJourneyActivity : ComponentActivity() {
                     }.getOrNull()
                 }
                 if (plannedState != null && plannedState != load.state) {
-                    val saved = HifzStateStore.replaceState(this) { plannedState }
-                    if (saved) {
+                    if (HifzStateStore.replaceState(this) { plannedState }) {
                         refresh++
                         return@Column
                     }
@@ -109,8 +104,7 @@ class HifzJourneyActivity : ComponentActivity() {
 
                 val normalizedTasks = load.state.tasks.map { HifzSchedulePolicy.markOverdue(it, today) }
                 if (normalizedTasks != load.state.tasks) {
-                    val saved = HifzStateStore.replaceState(this) { it.copy(tasks = normalizedTasks) }
-                    if (saved) {
+                    if (HifzStateStore.replaceState(this) { it.copy(tasks = normalizedTasks) }) {
                         refresh++
                         return@Column
                     }
@@ -118,7 +112,7 @@ class HifzJourneyActivity : ComponentActivity() {
 
                 val task = HifzSchedulePolicy.nextTask(today, normalizedTasks)
                 if (task == null) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth(), shape = SafeguardShapes.large) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("Aucune séance à effectuer maintenant", fontWeight = FontWeight.SemiBold)
                             Text("Aucune charge supplémentaire n’est créée automatiquement.")
@@ -135,8 +129,7 @@ class HifzJourneyActivity : ComponentActivity() {
             }
 
             message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-
-            OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { finish() }) {
+            SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = { finish() }) {
                 Text("Retour")
             }
         }
@@ -161,10 +154,13 @@ class HifzJourneyActivity : ComponentActivity() {
         var murajaahMinutes by remember { mutableStateOf(existing.availableMinutes.murajaah?.toString() ?: "") }
         var localError by remember { mutableStateOf<String?>(null) }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Configuration requise", fontWeight = FontWeight.Bold)
-                Text("Aucune vitesse ni durée n’est inventée. Indiquez vos bornes, votre rythme observé et votre temps disponible.", style = MaterialTheme.typography.bodySmall)
+        Card(modifier = Modifier.fillMaxWidth(), shape = SafeguardShapes.large) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Configuration requise", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    "Aucune vitesse ni durée n’est inventée. Indiquez vos bornes, votre rythme observé et votre temps disponible.",
+                    style = MaterialTheme.typography.bodySmall
+                )
                 VersePair("Début Sabqi", sabqiStartS, sabqiStartA, { sabqiStartS = it }, { sabqiStartA = it })
                 VersePair("Fin Sabqi", sabqiEndS, sabqiEndA, { sabqiEndS = it }, { sabqiEndA = it })
                 VersePair("Début Itqān", itqanStartS, itqanStartA, { itqanStartS = it }, { itqanStartA = it })
@@ -176,7 +172,7 @@ class HifzJourneyActivity : ComponentActivity() {
                 NumberField("Minutes disponibles Itqān", itqanMinutes) { itqanMinutes = it }
                 NumberField("Minutes disponibles Murājaʿah", murajaahMinutes) { murajaahMinutes = it }
                 localError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
                     val candidate = runCatching {
                         HifzJourneyConfig(
                             bounds = HifzJourneyBounds(
@@ -204,7 +200,7 @@ class HifzJourneyActivity : ComponentActivity() {
                         )
                     }.getOrElse {
                         localError = "Valeurs invalides. Vérifiez les sourates, versets, durées et l’ordre des bornes."
-                        return@Button
+                        return@SafeguardButton
                     }
                     localError = null
                     onSaved(candidate)
@@ -227,16 +223,19 @@ class HifzJourneyActivity : ComponentActivity() {
             HifzSchedulePolicy.suggestReplanDate(task, LocalDate.now(), state.tasks)
         } else null
 
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(trackLabel(task.track), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Card(modifier = Modifier.fillMaxWidth(), shape = SafeguardShapes.large) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text(trackLabel(task.track), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Text("${task.cursor.start.surah}:${task.cursor.start.ayah} → ${task.cursor.end.surah}:${task.cursor.end.ayah}")
                 Text("Pages ${task.cursor.startPage}–${task.cursor.endPage} • quota ${task.quota} min")
                 Text(if (task.status == HifzTaskStatus.OVERDUE) "En retard — aucune charge doublée" else "Séance du ${task.scheduledDate}")
                 step?.let { Text("Étape : ${it.label}", fontWeight = FontWeight.SemiBold) }
-                Text("Segment ${progress.segmentIndex + 1} • temps actif ${progress.activeSeconds}s • aides ${progress.totalRevealCount} • erreurs ${progress.totalIncorrectAttempts}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Segment ${progress.segmentIndex + 1} • temps actif ${progress.activeSeconds}s • aides ${progress.totalRevealCount} • erreurs ${progress.totalIncorrectAttempts}",
+                    style = MaterialTheme.typography.bodySmall
+                )
 
-                Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
                     startActivity(
                         Intent(this@HifzJourneyActivity, FreeQuranReaderActivity::class.java)
                             .putExtra(FreeQuranReaderActivity.EXTRA_PAGE, task.cursor.startPage)
@@ -245,30 +244,28 @@ class HifzJourneyActivity : ComponentActivity() {
                 }) { Text("Ouvrir le Muṣḥaf de séance") }
 
                 if (!progress.completed) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(modifier = Modifier.weight(1f), onClick = {
-                            val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
-                                HifzTrainingEngine.attempt(task, it, false, segmentCount)
-                            }
-                            onMessage(if (ok) "Essai incorrect enregistré localement." else "Progression refusée.")
-                            if (ok) onRefresh()
-                        }) { Text("Incorrect") }
-                        OutlinedButton(modifier = Modifier.weight(1f), onClick = {
-                            val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
-                                HifzTrainingEngine.attempt(task, it, true, segmentCount)
-                            }
-                            onMessage(if (ok) "Essai correct enregistré localement." else "Progression refusée.")
-                            if (ok) onRefresh()
-                        }) { Text("Correct") }
-                    }
-                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
+                            HifzTrainingEngine.attempt(task, it, false, segmentCount)
+                        }
+                        onMessage(if (ok) "Essai incorrect enregistré localement." else "Progression refusée.")
+                        if (ok) onRefresh()
+                    }) { Text("Incorrect") }
+                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                        val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
+                            HifzTrainingEngine.attempt(task, it, true, segmentCount)
+                        }
+                        onMessage(if (ok) "Essai correct enregistré localement." else "Progression refusée.")
+                        if (ok) onRefresh()
+                    }) { Text("Correct") }
+                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
                             HifzTrainingEngine.reveal(task, it, segmentCount)
                         }
                         onMessage(if (ok) "Aide/reveal comptabilisé." else "Aide non enregistrée.")
                         if (ok) onRefresh()
                     }) { Text("J’ai utilisé une aide / reveal") }
-                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                    SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
                             HifzTrainingEngine.advanceIfValid(task, it, segmentCount)
                         }
@@ -276,7 +273,7 @@ class HifzJourneyActivity : ComponentActivity() {
                         if (ok) onRefresh()
                     }) { Text("Valider l’étape") }
                 } else {
-                    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+                    SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         val ok = HifzStateStore.completeTask(this@HifzJourneyActivity, task.id)
                         onMessage(if (ok) "Séance Hifz terminée." else "La séance ne peut pas être clôturée.")
                         if (ok) onRefresh()
@@ -284,7 +281,7 @@ class HifzJourneyActivity : ComponentActivity() {
                 }
 
                 if (suggested != null) {
-                    OutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         val ok = HifzStateStore.updateTask(this@HifzJourneyActivity, task.id) {
                             HifzSchedulePolicy.replan(it, suggested)
                         }
@@ -305,15 +302,24 @@ class HifzJourneyActivity : ComponentActivity() {
         onAyah: (String) -> Unit
     ) {
         Text(label, fontWeight = FontWeight.SemiBold)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             OutlinedTextField(
-                modifier = Modifier.weight(1f), value = surah, onValueChange = onSurah,
-                label = { Text("Sourate") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                value = surah,
+                onValueChange = onSurah,
+                label = { Text("Sourate") },
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
             OutlinedTextField(
-                modifier = Modifier.weight(1f), value = ayah, onValueChange = onAyah,
-                label = { Text("Verset") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                value = ayah,
+                onValueChange = onAyah,
+                label = { Text("Verset") },
+                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
@@ -322,8 +328,11 @@ class HifzJourneyActivity : ComponentActivity() {
     @Composable
     private fun NumberField(label: String, value: String, onValue: (String) -> Unit) {
         OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(), value = value, onValueChange = onValue,
-            label = { Text(label) }, singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            value = value,
+            onValueChange = onValue,
+            label = { Text(label) },
+            singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
     }
