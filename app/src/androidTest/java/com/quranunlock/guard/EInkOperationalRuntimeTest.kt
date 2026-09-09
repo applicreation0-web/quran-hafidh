@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -70,7 +71,7 @@ class EInkOperationalRuntimeTest {
             assertTrue(js(scenario, "Number(window.einkCleanerRuns||0)")!!.toInt() > 0)
 
             scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-            eventually { scenario.state.name != "RESUMED" || scenario.state.name == "DESTROYED" }
+            eventually { scenario.state.name != "RESUMED" }
         }
     }
 
@@ -95,17 +96,23 @@ class EInkOperationalRuntimeTest {
             val hidden = js(scenario, "document.getElementById('tafsir').hidden") == "true"
             if (TafsirEdition.isEnabled) {
                 assertFalse(hidden)
+
+                // Native bridge must reject an impossible Al-Fatiha reference before any panel opens.
+                js(scenario, "QsgNative.tafsir(1,8);true")
+                Thread.sleep(250)
+                assertFalse(device.hasObject(By.text("Fermer")))
+
                 js(scenario, "document.querySelector('.ayahPolygon[data-verse]').dispatchEvent(new Event('click',{bubbles:true}));true")
                 assertEquals("false", js(scenario, "document.getElementById('tafsir').disabled"))
                 js(scenario, "document.getElementById('tafsir').click();true")
-                assertTrue(device.wait({ device.hasObject(By.text("Fermer")) }, 5_000))
+                assertNotNull(device.wait(Until.findObject(By.text("Fermer")), 5_000))
             } else {
                 assertTrue(hidden)
             }
         }
 
         ActivityScenario.launch(HifzJourneyActivity::class.java).use {
-            assertTrue(device.wait({ device.hasObject(By.text("Parcours Hifz")) }, 5_000))
+            assertNotNull(device.wait(Until.findObject(By.text("Parcours Hifz")), 5_000))
         }
     }
 
