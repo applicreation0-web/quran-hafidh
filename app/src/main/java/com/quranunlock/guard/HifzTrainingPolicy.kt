@@ -26,14 +26,14 @@ data class HifzTrainingStep(
 }
 
 /**
- * Pedagogical contract for the structured Hifz journey. Sabqi starts with the audio
- * phases when the private/local audio capability is available. Callers that have
- * positively established audio unavailability may pass audioAvailable=false; the
- * canonical protocol itself must not silently erase its two opening audio phases.
+ * Stable structured-Hifz protocol. The persisted journey must remain usable without
+ * network or downloaded audio, so the default excludes optional audio phases. A caller
+ * that has positively established usable local audio may request the richer Sabqi
+ * sequence explicitly with audioAvailable=true.
  */
 object HifzTrainingPolicy {
 
-    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = true): List<HifzTrainingStep> =
+    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = false): List<HifzTrainingStep> =
         rawStepsFor(track).filter { !it.requiresAudio || audioAvailable }
 
     private fun rawStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
@@ -42,11 +42,6 @@ object HifzTrainingPolicy {
         HifzTrack.MURAJAAH -> murajaahSteps()
     }
 
-    /**
-     * When a Sabqi canonical passage had to be split into real Mushaf-line segments,
-     * the segments are only preparation. A final whole-passage recall is mandatory
-     * before the canonical task can be completed.
-     */
     fun assemblyStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
         HifzTrack.SABQI -> listOf(
             HifzTrainingStep(
