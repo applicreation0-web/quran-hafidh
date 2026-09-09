@@ -90,6 +90,36 @@ class HifzSchedulePolicyTest {
     }
 
     @Test
+    fun backlogAwareSuggestionSkipsOccupiedHifzDates() {
+        val missed = task(
+            id = "itqan-missed",
+            track = HifzTrack.ITQAN,
+            date = LocalDate.of(2026, 9, 8),
+            status = HifzTaskStatus.OVERDUE
+        )
+        val occupiedThursday = task(
+            id = "itqan-thursday",
+            track = HifzTrack.ITQAN,
+            date = LocalDate.of(2026, 9, 10)
+        )
+        val occupiedTuesday = task(
+            id = "itqan-tuesday",
+            track = HifzTrack.ITQAN,
+            date = LocalDate.of(2026, 9, 15)
+        )
+
+        val suggested = HifzSchedulePolicy.suggestReplanDate(
+            task = missed,
+            after = LocalDate.of(2026, 9, 9),
+            existingTasks = listOf(missed, occupiedThursday, occupiedTuesday)
+        )
+
+        assertEquals(LocalDate.of(2026, 9, 17), suggested)
+        assertEquals(LocalDate.of(2026, 9, 8), missed.scheduledDate)
+        assertEquals(5, missed.quota)
+    }
+
+    @Test
     fun overdueTaskHasPriorityButDoesNotDoubleTodaysQuota() {
         val today = LocalDate.of(2026, 9, 9)
         val missed = task(
