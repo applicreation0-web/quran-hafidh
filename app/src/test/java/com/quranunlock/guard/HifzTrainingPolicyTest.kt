@@ -8,25 +8,25 @@ import org.junit.Test
 class HifzTrainingPolicyTest {
 
     @Test
-    fun sabqiStartsWithAudioAndEndsFullyMasked() {
+    fun defaultSabqiNeverDependsOnAudioAndEndsFullyMasked() {
         val steps = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI)
 
-        assertEquals(HifzTrainingKind.AUDIO_PASSIVE, steps.first().kind)
-        assertTrue(steps.first().requiresAudio)
-        assertEquals(HifzTrainingKind.AUDIO_ACTIVE, steps[1].kind)
-        assertTrue(steps[1].requiresAudio)
+        assertFalse(steps.any { it.requiresAudio })
+        assertEquals("sabqi-visible", steps.first().id)
         assertEquals(listOf(25, 50, 75, 100), steps.filter { it.kind == HifzTrainingKind.MASKED }.map { it.maskPercent })
         assertEquals(HifzTrainingKind.FINAL_TEST, steps.last().kind)
         assertEquals(100, steps.last().maskPercent)
     }
 
     @Test
-    fun sabqiCanExplicitlyFallBackToNonAudioStepsWhenAudioIsUnavailable() {
-        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI, audioAvailable = false)
+    fun sabqiExposesOptionalAudioPhasesOnlyWhenExplicitlyAvailable() {
+        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI, audioAvailable = true)
 
-        assertFalse(steps.any { it.requiresAudio })
-        assertEquals("sabqi-visible", steps.first().id)
-        assertEquals(HifzTrainingKind.FINAL_TEST, steps.last().kind)
+        assertEquals(HifzTrainingKind.AUDIO_PASSIVE, steps.first().kind)
+        assertTrue(steps.first().requiresAudio)
+        assertEquals(HifzTrainingKind.AUDIO_ACTIVE, steps[1].kind)
+        assertTrue(steps[1].requiresAudio)
+        assertEquals("sabqi-visible", steps[2].id)
     }
 
     @Test
