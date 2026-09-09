@@ -57,7 +57,13 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
                     val availableHeight = maxHeight
                     AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
-                        WebView(context).apply {
+                        object : WebView(context) {
+                            override fun onScaleChanged(oldScale: Float, newScale: Float) {
+                                super.onScaleChanged(oldScale, newScale)
+                                val zoomed = kotlin.math.abs(newScale - 1f) > 0.03f
+                                post { evaluateJavascript("window.nativeZoomChanged && window.nativeZoomChanged($zoomed);", null) }
+                            }
+                        }.apply {
                             web = this
                             setBackgroundColor(android.graphics.Color.parseColor("#F7F2E8"))
                             settings.javaScriptEnabled = true
