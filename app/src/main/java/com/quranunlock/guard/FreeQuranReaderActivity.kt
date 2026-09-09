@@ -108,7 +108,9 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         }
                     }
                     BackHandler {
-                        if(verse != null) closeTafsir() else web?.evaluateJavascript("window.handleBack();", null)
+                        if(verse != null) {
+                            if(contextual) finish() else closeTafsir()
+                        } else web?.evaluateJavascript("window.handleBack();", null)
                     }
                 }
             }
@@ -152,8 +154,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if(displayProfile == DisplayProfile.EINK && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             val delta = when(event.keyCode) {
-                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_VOLUME_UP -> -1
-                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN -> 1
+                KeyEvent.KEYCODE_PAGE_UP -> -1
+                KeyEvent.KEYCODE_PAGE_DOWN -> 1
                 else -> 0
             }
             if(delta != 0) {
@@ -164,5 +166,5 @@ class FreeQuranReaderActivity : ComponentActivity() {
         return super.dispatchKeyEvent(event)
     }
     override fun onPause(){audio.pause();super.onPause()}
-    override fun onDestroy(){web?.removeJavascriptInterface("QsgNative");web?.destroy();web=null;audio.release();super.onDestroy()}
+    override fun onDestroy(){refreshController.dispose();web?.removeJavascriptInterface("QsgNative");web?.destroy();web=null;audio.release();super.onDestroy()}
 }
