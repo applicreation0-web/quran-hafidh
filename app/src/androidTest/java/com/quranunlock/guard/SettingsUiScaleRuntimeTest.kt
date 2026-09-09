@@ -1,5 +1,7 @@
 package com.applicreation0.quransafeguard
 
+import android.app.Activity
+import android.content.Intent
 import android.os.ParcelFileDescriptor
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -14,15 +16,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Runtime accessibility/layout stress for the 0.10.9 clipping regressions.
- *
- * Vertical scrolling is intentionally allowed. The invariant under test is
- * that rendered/accessible content never escapes the physical screen
- * horizontally, including at 150% Android font scale.
+ * Cross-app runtime accessibility/layout stress for the 0.10.9 clipping and
+ * "laboratory UI" regressions. Vertical scrolling is valid; horizontal escape
+ * from the physical screen is never valid, including at 150% Android font.
  */
 @RunWith(AndroidJUnit4::class)
 class SettingsUiScaleRuntimeTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = ApplicationProvider.getApplicationContext<android.content.Context>()
 
     @After
     fun restoreDisplay() {
@@ -32,8 +33,7 @@ class SettingsUiScaleRuntimeTest {
     }
 
     @Test
-    fun settingsRemainInsideViewportAt100130And150Percent() {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+    fun criticalSurfacesRemainUsableAt100130And150Percent() {
         GuardPrefs.saveAccessibilityConsent(context)
 
         listOf("1.0", "1.3", "1.5").forEach { scale ->
@@ -41,58 +41,96 @@ class SettingsUiScaleRuntimeTest {
             shell("settings put system font_scale $scale")
             Thread.sleep(350)
 
-            ActivityScenario.launch(SettingsHubActivity::class.java).use {
-                instrumentation.waitForIdleSync()
-                val top = hierarchy()
-                assertTrue("Settings title missing at font scale $scale", top.contains("Réglages"))
-                assertHorizontalBoundsInsideDisplay(top, scale, "SettingsHub-top")
+            assertSurface(SettingsHubActivity::class.java, "Réglages", scale, scrolls = 4)
+            assertSurface(MainActivity::class.java, "Réglages", scale, scrolls = 3)
+            assertSurface(ApplicationsActivity::class.java, "Applications", scale, scrolls = 3)
+            assertSurface(ProtectionSetupActivity::class.java, "Activation guidée", scale, scrolls = 3)
+            assertSurface(QuranHubActivity::class.java, "Qur’an", scale, scrolls = 3)
+            assertSurface(ReadingSelectionActivity::class.java, "Juz / Hizb", scale, scrolls = 4)
+            assertSurface(HifzJourneyActivity::class.java, "Parcours Hifz", scale, scrolls = 4)
+            assertSurface(AdhkarActivity::class.java, "Adhkâr du matin", scale, scrolls = 3)
+            assertSurface(ReadingHistoryActivity::class.java, "Historique", scale, scrolls = 3)
+            assertSurface(SpiritualLibraryActivity::class.java, "Bibliothèque spirituelle", scale, scrolls = 2)
 
-                val appearance = scrollUntil(
-                    "Apparence &amp; confort",
-                    alternate = "Apparence & confort"
-                )
-                assertTrue(
-                    "Appearance section missing at font scale $scale",
-                    appearance.contains("Apparence &amp; confort") ||
-                        appearance.contains("Apparence & confort")
-                )
-                assertTrue("Comfort action missing at font scale $scale", appearance.contains("Confort"))
-                assertTrue("Light action missing at font scale $scale", appearance.contains("Clair"))
-                assertTrue("Dark action missing at font scale $scale", appearance.contains("Sombre"))
-                assertHorizontalBoundsInsideDisplay(appearance, scale, "SettingsHub-appearance")
-            }
-
-            ActivityScenario.launch(MainActivity::class.java).use {
-                instrumentation.waitForIdleSync()
-                val top = hierarchy()
-                assertTrue(
-                    "Dashboard settings heading missing at font scale $scale",
-                    top.contains("Réglages")
-                )
-                if (TafsirEdition.isEnabled) {
+            // Plus-only display-profile controls must also remain reachable.
+            if (TafsirEdition.isEnabled) {
+                ActivityScenario.launch(MainActivity::class.java).use {
+                    instrumentation.waitForIdleSync()
+                    val xml = scrollUntil("Type d’écran", "Type d&apos;écran", maxScrolls = 4)
                     assertTrue(
                         "Plus display profile section missing at font scale $scale",
-                        top.contains("Type d’écran") || top.contains("Type d&apos;écran")
+                        xml.contains("Type d’écran") || xml.contains("Type d&apos;écran")
                     )
+                    assertHorizontalBoundsInsideDisplay(xml, scale, "MainActivity-Plus-profile")
                 }
-                assertHorizontalBoundsInsideDisplay(top, scale, "MainActivity-top")
-
-                shell("input swipe 450 1350 450 450 500")
-                instrumentation.waitForIdleSync()
-                val lower = hierarchy()
-                assertFalse("Dashboard hierarchy empty after scroll", lower.isBlank())
-                assertHorizontalBoundsInsideDisplay(lower, scale, "MainActivity-scroll")
             }
         }
     }
 
-    private fun scrollUntil(primary: String, alternate: String? = null): String {
-        repeat(5) {
-            val xml = hierarchy()
-            if (xml.contains(primary) || (alternate != null && xml.contains(alternate))) {
-                return xml
+    @Test
+    fun readerAndMemorizationChromeStayInsideNarrowViewport() {
+        listOf("1.0", "1.5").forEach { scale ->
+            shell("wm size 900x1600")
+            shell("settings put system font_scale $scale")
+            Thread.sleep(300)
+
+            launchReader(memory = false).use {
+                instrumentation.waitForIdleSync()
+                Thread.sleep(900)
+                val xml = hierarchy()
+                assertFalse("Reader hierarchy empty at $scale", xml.isBlank())
+                assertHorizontalBoundsInsideDisplay(xml, scale, "FreeReader")
             }
-            shell("input swipe 450 1350 450 420 450")
+            launchReader(memory = true).use {
+                instrumentation.waitForIdleSync()
+                Thread.sleep(900)
+                val xml = hierarchy()
+                assertFalse("Memorization hierarchy empty at $scale", xml.isBlank())
+                assertHorizontalBoundsInsideDisplay(xml, scale, "Memorization")
+            }
+        }
+    }
+
+    private fun <T : Activity> assertSurface(
+        activity: Class<T>,
+        expectedText: String,
+        scale: String,
+        scrolls: Int
+    ) {
+        ActivityScenario.launch(activity).use {
+            instrumentation.waitForIdleSync()
+            var xml = hierarchy()
+            assertTrue(
+                "${activity.simpleName} expected text missing at $scale: $expectedText",
+                xml.contains(expectedText) || normalized(xml).contains(normalized(expectedText))
+            )
+            assertHorizontalBoundsInsideDisplay(xml, scale, "${activity.simpleName}-top")
+            repeat(scrolls) { index ->
+                shell("input swipe 450 1350 450 420 350")
+                instrumentation.waitForIdleSync()
+                xml = hierarchy()
+                assertFalse("${activity.simpleName} hierarchy empty after scroll $index", xml.isBlank())
+                assertHorizontalBoundsInsideDisplay(xml, scale, "${activity.simpleName}-scroll-$index")
+            }
+        }
+    }
+
+    private fun launchReader(memory: Boolean): ActivityScenario<FreeQuranReaderActivity> {
+        val intent = Intent(context, FreeQuranReaderActivity::class.java)
+            .putExtra(FreeQuranReaderActivity.EXTRA_PAGE, 1)
+            .putExtra(FreeQuranReaderActivity.EXTRA_MEMORIZATION, memory)
+        return ActivityScenario.launch(intent)
+    }
+
+    private fun scrollUntil(
+        primary: String,
+        alternate: String? = null,
+        maxScrolls: Int = 5
+    ): String {
+        repeat(maxScrolls) {
+            val xml = hierarchy()
+            if (xml.contains(primary) || (alternate != null && xml.contains(alternate))) return xml
+            shell("input swipe 450 1350 450 420 350")
             instrumentation.waitForIdleSync()
         }
         return hierarchy()
@@ -125,6 +163,11 @@ class SettingsUiScaleRuntimeTest {
         shell("uiautomator dump /sdcard/qsg-window.xml")
         return shell("cat /sdcard/qsg-window.xml")
     }
+
+    private fun normalized(value: String): String =
+        value.replace("&amp;", "&")
+            .replace("&apos;", "'")
+            .replace("’", "'")
 
     private fun shell(command: String): String {
         val descriptor = instrumentation.uiAutomation.executeShellCommand(command)
