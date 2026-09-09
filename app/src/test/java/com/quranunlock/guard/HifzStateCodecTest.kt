@@ -8,7 +8,7 @@ import java.time.LocalDate
 class HifzStateCodecTest {
 
     @Test
-    fun roundTripPreservesMultipleItqanIntervalsConfigTaskAndProgress() {
+    fun roundTripPreservesMultipleItqanIntervalsConfigTaskAndSegmentProgress() {
         val task = HifzTask(
             id = "itqan|task-1",
             track = HifzTrack.ITQAN,
@@ -20,6 +20,7 @@ class HifzStateCodecTest {
         )
         val progress = HifzTaskProgress(
             taskId = task.id,
+            segmentIndex = 2,
             stepIndex = 3,
             stepProgress = HifzStepProgress(
                 stepId = "itqan-mask-50",
@@ -53,6 +54,7 @@ class HifzStateCodecTest {
 
         assertEquals(state, decoded)
         assertEquals(2, decoded.journeyConfig.bounds?.itqan?.size)
+        assertEquals(2, decoded.progressByTask[task.id]?.segmentIndex)
     }
 
     @Test
@@ -66,18 +68,27 @@ class HifzStateCodecTest {
         assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("1\n") }
         assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("2\n") }
         assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("3\n") }
+        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("4\n") }
     }
 
     @Test
     fun currentSchemaWithoutConfigFailsClosed() {
         assertThrows(IllegalArgumentException::class.java) {
-            HifzStateCodec.decode("4\n")
+            HifzStateCodec.decode("5\n")
         }
     }
 
     @Test
     fun missingItqanIntervalIndexFailsClosed() {
-        val raw = "4\nC|67|1|67|30|-|-|-\nI|1|49|1|114|6\n"
+        val raw = "5\nC|67|1|67|30|-|-|-\nI|1|49|1|114|6\n"
+        assertThrows(IllegalArgumentException::class.java) {
+            HifzStateCodec.decode(raw)
+        }
+    }
+
+    @Test
+    fun oldProgressRecordWithoutSegmentIndexFailsClosed() {
+        val raw = "5\nC|-|-|-|-|-|-|-\nP|dGFzaw|0|-|0|0|0|false|false\n"
         assertThrows(IllegalArgumentException::class.java) {
             HifzStateCodec.decode(raw)
         }
