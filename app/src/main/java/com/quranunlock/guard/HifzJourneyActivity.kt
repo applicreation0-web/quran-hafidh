@@ -81,7 +81,8 @@ class HifzJourneyActivity : ComponentActivity() {
 
             val config = load.state.journeyConfig
             if (config.bounds == null || config.pace.sabqiMinutesPerPage == null || config.pace.itqanMinutesPerPage == null ||
-                config.availableMinutes.sabqi == null || config.availableMinutes.itqan == null || config.availableMinutes.murajaah == null
+                config.pace.murajaahMinutesPerPage == null || config.availableMinutes.sabqi == null ||
+                config.availableMinutes.itqan == null || config.availableMinutes.murajaah == null
             ) {
                 SetupCard(
                     existing = config,
@@ -154,23 +155,23 @@ class HifzJourneyActivity : ComponentActivity() {
         var itqanEndA by remember { mutableStateOf(bounds?.itqan?.firstOrNull()?.end?.ayah?.toString() ?: "") }
         var sabqiPace by remember { mutableStateOf(existing.pace.sabqiMinutesPerPage?.toString() ?: "") }
         var itqanPace by remember { mutableStateOf(existing.pace.itqanMinutesPerPage?.toString() ?: "") }
-        var murajaahPace by remember { mutableStateOf(existing.pace.murajaahMinutesPerPage?.toString() ?: "2.25") }
+        var murajaahPace by remember { mutableStateOf(existing.pace.murajaahMinutesPerPage?.toString() ?: "") }
         var sabqiMinutes by remember { mutableStateOf(existing.availableMinutes.sabqi?.toString() ?: "") }
         var itqanMinutes by remember { mutableStateOf(existing.availableMinutes.itqan?.toString() ?: "") }
-        var murajaahMinutes by remember { mutableStateOf(existing.availableMinutes.murajaah?.toString() ?: "45") }
+        var murajaahMinutes by remember { mutableStateOf(existing.availableMinutes.murajaah?.toString() ?: "") }
         var localError by remember { mutableStateOf<String?>(null) }
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Configuration requise", fontWeight = FontWeight.Bold)
-                Text("Aucune vitesse de Sabqi/Itqān n’est inventée. Indiquez vos bornes et votre rythme observé.", style = MaterialTheme.typography.bodySmall)
+                Text("Aucune vitesse ni durée n’est inventée. Indiquez vos bornes, votre rythme observé et votre temps disponible.", style = MaterialTheme.typography.bodySmall)
                 VersePair("Début Sabqi", sabqiStartS, sabqiStartA, { sabqiStartS = it }, { sabqiStartA = it })
                 VersePair("Fin Sabqi", sabqiEndS, sabqiEndA, { sabqiEndS = it }, { sabqiEndA = it })
                 VersePair("Début Itqān", itqanStartS, itqanStartA, { itqanStartS = it }, { itqanStartA = it })
                 VersePair("Fin Itqān", itqanEndS, itqanEndA, { itqanEndS = it }, { itqanEndA = it })
                 NumberField("Sabqi min/page observées", sabqiPace) { sabqiPace = it }
                 NumberField("Itqān min/page observées", itqanPace) { itqanPace = it }
-                NumberField("Murājaʿah min/page", murajaahPace) { murajaahPace = it }
+                NumberField("Murājaʿah min/page observées", murajaahPace) { murajaahPace = it }
                 NumberField("Minutes disponibles Sabqi", sabqiMinutes) { sabqiMinutes = it }
                 NumberField("Minutes disponibles Itqān", itqanMinutes) { itqanMinutes = it }
                 NumberField("Minutes disponibles Murājaʿah", murajaahMinutes) { murajaahMinutes = it }
