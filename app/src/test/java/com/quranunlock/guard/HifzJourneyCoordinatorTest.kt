@@ -12,7 +12,7 @@ class HifzJourneyCoordinatorTest {
     @Test
     fun unfinishedTrainingCannotCompleteScheduleTask() {
         val task = task()
-        val progress = HifzTaskProgress(taskId = task.id, completed = false)
+        val progress = HifzTrainingEngine.initial(task)
 
         assertFalse(HifzJourneyCoordinator.canCompleteTask(task, progress))
         assertThrows(IllegalArgumentException::class.java) {
@@ -21,9 +21,20 @@ class HifzJourneyCoordinatorTest {
     }
 
     @Test
-    fun completedTrainingStillRequiresExplicitCompletionTransition() {
+    fun forgedCompletedFlagCannotCompleteScheduleTask() {
         val task = task()
-        val progress = HifzTaskProgress(taskId = task.id, completed = true)
+        val forged = HifzTaskProgress(taskId = task.id, completed = true)
+
+        assertFalse(HifzJourneyCoordinator.canCompleteTask(task, forged))
+        assertThrows(IllegalArgumentException::class.java) {
+            HifzJourneyCoordinator.completeTask(task, forged)
+        }
+    }
+
+    @Test
+    fun completedCoherentTrainingStillRequiresExplicitCompletionTransition() {
+        val task = task()
+        val progress = completeTraining(task)
 
         assertTrue(HifzJourneyCoordinator.canCompleteTask(task, progress))
         assertEquals(HifzTaskStatus.PLANNED, task.status)
@@ -42,14 +53,16 @@ class HifzJourneyCoordinatorTest {
     fun stateCompletionChangesOnlyRequestedTask() {
         val first = task("first")
         val second = task("second").copy(
-            scheduledDate = LocalDate.of(2026, 9, 10),
-            originalScheduledDate = LocalDate.of(2026, 9, 10)
+            scheduledDate = LocalDate.of(2026, 9, 11),
+            originalScheduledDate = LocalDate.of(2026, 9, 11)
         )
+        val firstProgress = completeTraining(first)
+        val secondProgress = HifzTrainingEngine.initial(second)
         val state = HifzState(
             tasks = listOf(first, second),
             progressByTask = mapOf(
-                first.id to HifzTaskProgress(first.id, completed = true),
-                second.id to HifzTaskProgress(second.id, completed = false)
+                first.id to firstProgress,
+                second.id to secondProgress
             )
         )
 
@@ -66,6 +79,21 @@ class HifzJourneyCoordinatorTest {
         val foreign = HifzTaskProgress(taskId = "foreign", completed = true)
 
         assertFalse(HifzJourneyCoordinator.canCompleteTask(task, foreign))
+    }
+
+    private fun completeTraining(task: HifzTask): HifzTaskProgress {
+        var progress = HifzTrainingEngine.initial(task)
+        while (!progress.completed) {
+            val step = requireNotNull(HifzTrainingEngine.currentStep(task, progress))
+            repeat(step.repetitions) {
+                progress = HifzTrainingEngine.attempt(task, progress, correct = true)
+            }
+            while ((progress.stepProgress?.consecutiveSuccesses ?: 0) < step.requiresConsecutiveSuccesses) {
+                progress = HifzTrainingEngine.attempt(task, progress, correct = true)
+            }
+            progress = HifzTrainingEngine.advanceIfValid(task, progress)
+        }
+        return progress
     }
 
     private fun task(id: String = "sabqi-1") = HifzTask(
