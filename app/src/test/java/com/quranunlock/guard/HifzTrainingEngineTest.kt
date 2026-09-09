@@ -10,12 +10,12 @@ import java.time.LocalDate
 class HifzTrainingEngineTest {
 
     @Test
-    fun sabqiStartsAtPassiveAudio() {
+    fun sabqiEngineStartsWithoutAudioDependency() {
         val task = task(HifzTrack.SABQI)
         val progress = HifzTrainingEngine.initial(task)
 
-        assertEquals("sabqi-audio-passive", progress.stepProgress?.stepId)
-        assertEquals(HifzTrainingKind.AUDIO_PASSIVE, HifzTrainingEngine.currentStep(task, progress)?.kind)
+        assertEquals("sabqi-visible", progress.stepProgress?.stepId)
+        assertEquals(HifzTrainingKind.VISIBLE, HifzTrainingEngine.currentStep(task, progress)?.kind)
     }
 
     @Test
@@ -84,7 +84,7 @@ class HifzTrainingEngineTest {
             if (expectedSegment < segmentCount - 1) {
                 assertFalse(progress.completed)
                 assertEquals(expectedSegment + 1, progress.segmentIndex)
-                assertEquals("sabqi-audio-passive", progress.stepProgress?.stepId)
+                assertEquals("sabqi-visible", progress.stepProgress?.stepId)
             }
         }
 
