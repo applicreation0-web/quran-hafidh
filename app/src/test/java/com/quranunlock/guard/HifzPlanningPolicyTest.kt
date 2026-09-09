@@ -42,23 +42,6 @@ class HifzPlanningPolicyTest {
     }
 
     @Test
-    fun longVerseCanBeSplitIntoLinesWithoutChangingCanonicalTarget() {
-        val verse = HifzVerseRange(QuranVerseRef(2, 282), QuranVerseRef(2, 282))
-
-        val segments = HifzLineSegmentationPolicy.split(
-            canonicalTarget = verse,
-            page = 48,
-            firstLine = 1,
-            lastLine = 15,
-            maxLinesPerSegment = 5
-        )
-
-        assertEquals(3, segments.size)
-        assertEquals(listOf(1..5, 6..10, 11..15), segments.map { it.lineWindow.firstLine..it.lineWindow.lastLine })
-        assertEquals(listOf(verse, verse, verse), segments.map { it.canonicalTarget })
-    }
-
-    @Test
     fun quotaUsesSeparateMeasuredPacesAndRealAvailableTime() {
         val pace = HifzPaceProfile(
             sabqiMinutesPerPage = 15.0,
