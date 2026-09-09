@@ -71,7 +71,7 @@ require("$('tafsir').hidden=!initial.plus||memory" in reader,
 require("if(!memoryMode&&TafsirEdition.isEnabled" in free_reader.replace(" ", ""),
         "native Tafsir bridge must refuse Memorization")
 
-# Audio must stay honest while redistribution is unapproved.
+# Audio must stay honest while a real downloadable catalogue is not yet validated.
 audio_path = ROOT / "app/src/main/assets/reader109/audio.json"
 try:
     audio = json.loads(audio_path.read_text(encoding="utf-8"))
@@ -99,10 +99,20 @@ for day_kind in ('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURD
 for track in ('SABQI', 'ITQAN', 'MURAJAAH'):
     require(track in schedule.upper(), f"Hifz schedule missing {track}")
 
-# Sensitive apps are a permanent no-intercept boundary. We require the policy source to
-# retain an explicit deny mechanism; compiled/runtime tests cover its behaviour.
-require('shouldNeverPersist' in protected or 'isPermanentlyExcluded' in protected or 'never' in protected.lower(),
-        "sensitive-app exclusion policy is not explicit")
+# Protection boundary: preserve the proven 0.10.8 target-only methodology.
+# Safeguard observes/protects only explicitly selectable social/browser targets;
+# do not introduce a second classifier for banking/security/identity applications.
+compact_protected = re.sub(r"\s+", "", protected)
+require('enumclassSafeguardTargetCategory{SOCIAL,BROWSER}' in compact_protected,
+        "0.10.8 target categories must remain SOCIAL/BROWSER only")
+require('selectableTargets:List<SafeguardTarget>=socialTargets+browserTargets' in compact_protected,
+        "0.10.8 selectable target boundary changed")
+require('isSelectableTarget(packageName)' in protected,
+        "protection must remain gated by the explicit target list")
+require('packageNameinGuardPrefs.protectedPackages(context)' in compact_protected,
+        "protection must remain gated by the user's selected targets")
+require('SENSITIVE' not in protected and 'BANKING' not in protected,
+        "do not add a separate sensitive/banking target category")
 
 # If corpus has been restored in CI, require all sentinel assets and exactly 604 pages.
 corpus = ROOT / "app/src/main/assets/mushaf/hafs/kfqc/svg-br"
@@ -124,4 +134,4 @@ if errors:
     sys.exit(1)
 
 print("0.10.10 RELEASE CONTRACT: PASS")
-print("Runtime visibility, 10.9 migration, Hifz separation, audio honesty and edition source boundaries verified.")
+print("Runtime visibility, 10.9 migration, Hifz separation, audio honesty, 0.10.8 target-only protection and edition source boundaries verified.")
