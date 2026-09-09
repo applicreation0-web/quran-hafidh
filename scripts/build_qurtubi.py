@@ -12,9 +12,11 @@ EXPECTED_COVERAGE={1:7,2:286,3:200,4:22}
 ARABIC_SCRIPT=re.compile(r'[\u0600-\u06ff\u0750-\u077f\u0870-\u089f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]')
 NUM_START=re.compile(r'^(\d{1,3})\.?\s+')
 # Source translations use Latin transliteration with precomposed diacritics
-# (for example "158 Ṣafā..."). Preserve the historical ASCII/quote behavior
-# while recognizing Latin Extended source letters as valid verse-text starts.
-INLINE_NUM=re.compile(r'\b(\d{1,3})\.?\s+(?=[A-Za-z\u00c0-\u024f\u1e00-\u1eff\u2018\u201c])')
+# (for example "158 Ṣafā...") and can resume a carried-over verse with a
+# Unicode ellipsis (for example "220 …on this world..."). Preserve the
+# historical ASCII/quote behavior while recognizing only these verified
+# source starts as verse-label continuations.
+INLINE_NUM=re.compile(r'\b(\d{1,3})\.?\s+(?=[A-Za-z\u00c0-\u024f\u1e00-\u1eff\u2018\u201c\u2026])')
 SYMBOL_FONT='KFGQPCArabicSymbols01'
 
 SOURCE_SYMBOL_MAP={
@@ -150,12 +152,14 @@ def strip_display_verse_markers(text, verse_numbers, *, strict=True):
     value=re.sub(r' *\n\n *','\n\n',value)
     return value.strip()
 
-# Regression for the exact pinned-source counterexample that previously broke
-# the contradictory rebuild on v2: the verse marker precedes a Latin Extended
-# transliteration letter rather than ASCII.
+# Regressions for exact pinned-source counterexamples that previously broke
+# the contradictory rebuild on v2.
 _marker_regression='158 Ṣafā and Marwah are among the Landmarks of Allah'
 if strip_display_verse_markers(_marker_regression,[158])!='Ṣafā and Marwah are among the Landmarks of Allah':
     raise RuntimeError('Qurtubi Unicode verse-marker regression: 2:158')
+_marker_ellipsis_regression='220 …on this world and the Next'
+if strip_display_verse_markers(_marker_ellipsis_regression,[220])!='…on this world and the Next':
+    raise RuntimeError('Qurtubi ellipsis verse-marker regression: 2:220')
 
 def parse_volume(tag,path):
     doc=fitz.open(path); ls=lines(doc,tag)
