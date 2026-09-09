@@ -33,6 +33,11 @@ META_NEW = (
     "'verse_marker_display_policy':'indexed-source-verse-labels-hidden-in-translation',"
     "'presentation_revision':'0106-qurtubi-hide-verse-labels-v1'}"
 )
+# 0.10.9 permanently integrated the two exact Qurtubi Unicode counterexamples
+# (Latin Extended 2:158 and leading ellipsis 2:220) into the canonical builder.
+# In that case the temporary 0.10.6 Qurtubi patch is intentionally a no-op;
+# prepare_multitafsir_assets.py still stamps the same presentation revision.
+QURTUBI_CANONICAL_UNICODE_MARKER = "_marker_ellipsis_regression='220 …on this world and the Next'"
 
 QSH_MAP_OLD = '''SOURCE_PUA_MAP = {
     "\\uf063": "(swt)",
@@ -100,6 +105,8 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def patch_qurtubi(original: str) -> str:
+    if QURTUBI_CANONICAL_UNICODE_MARKER in original:
+        return original
     patched = replace_once(
         original, INLINE_LINE, INLINE_LINE + "\n" + DISPLAY_LINE, "Qurtubi INLINE_NUM declaration"
     )
@@ -130,8 +137,13 @@ def main() -> None:
     qushayri_original = QUSHAYRI_BUILDER.read_text(encoding="utf-8")
     qurtubi_patched = patch_qurtubi(qurtubi_original)
     qushayri_patched = patch_qushayri(qushayri_original)
-    if qurtubi_patched == qurtubi_original or qushayri_patched == qushayri_original:
-        raise SystemExit("0.10.6 source-authoritative presentation patch made no change")
+    if qushayri_patched == qushayri_original:
+        raise SystemExit("0.10.6 source-authoritative Qushayri patch made no change")
+    if (
+        qurtubi_patched == qurtubi_original
+        and QURTUBI_CANONICAL_UNICODE_MARKER not in qurtubi_original
+    ):
+        raise SystemExit("0.10.6 source-authoritative Qurtubi patch made no change")
 
     QURTUBI_BUILDER.write_text(qurtubi_patched, encoding="utf-8")
     QUSHAYRI_BUILDER.write_text(qushayri_patched, encoding="utf-8")
@@ -149,7 +161,7 @@ def main() -> None:
         raise SystemExit("Qurtubi canonical builder was not restored after 0.10.6 build")
     if QUSHAYRI_BUILDER.read_text(encoding="utf-8") != qushayri_original:
         raise SystemExit("Qushayri canonical builder was not restored after 0.10.6 build")
-    print("Qurtubi 0.10.6 verse-label cleanup applied without source-indexing change")
+    print("Qurtubi 0.10.6 verse-label cleanup applied or already canonical; no source-indexing change")
     print("Qushayri 0.10.6 honorific glyphs restored from the edition legend; no shorthand leakage")
 
 
