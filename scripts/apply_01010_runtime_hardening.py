@@ -64,4 +64,18 @@ replace_once(
     "timed reader SVG source validation",
 )
 
+build = "app/build.gradle.kts"
+replace_once(
+    build,
+    """        val preparedReleaseMetadata =\n            buildFile.contains(\"versionCode = 28\") &&\n                buildFile.contains(\"versionName = \\\"0.10.9\\\"\")\n        check(auditedBaselineMetadata || preparedReleaseMetadata) {\n            \"Expected either the audited 0.10.3 baseline metadata or prepared 0.10.9 release metadata.\"\n        }""",
+    """        val preparedReleaseMetadata =\n            (buildFile.contains(\"versionCode = 28\") &&\n                buildFile.contains(\"versionName = \\\"0.10.9\\\"\")) ||\n            (buildFile.contains(\"versionCode = 29\") &&\n                buildFile.contains(\"versionName = \\\"0.10.10\\\"\"))\n        check(auditedBaselineMetadata || preparedReleaseMetadata) {\n            \"Expected the audited baseline or an explicitly prepared 0.10.9/0.10.10 release metadata set.\"\n        }""",
+    "10.10 migration metadata verifier",
+)
+replace_once(
+    build,
+    """        versionCode = 28\n        versionName = \"0.10.9\"""",
+    """        versionCode = 29\n        versionName = \"0.10.10\"""",
+    "0.10.10 version metadata",
+)
+
 print("0.10.10 runtime hardening is applied")
