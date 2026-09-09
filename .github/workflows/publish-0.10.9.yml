@@ -91,13 +91,14 @@ jobs:
           import zipfile
           light='candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk'
           plus='candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk'
+          mushaf_prefix='assets/mushaf/hafs/kfqc/svg-br/'
           for path in (light, plus):
               with zipfile.ZipFile(path) as z:
                   names=z.namelist()
-                  pages=[n for n in names if n.startswith('assets/mushaf/medina/pages/') and n.endswith('.svg.br')]
+                  pages=[n for n in names if n.startswith(mushaf_prefix) and n.endswith('.svg.br')]
                   assert len(pages)==604, (path, len(pages))
-                  assert any(n.endswith('/001.svg.br') for n in pages)
-                  assert any(n.endswith('/604.svg.br') for n in pages)
+                  assert mushaf_prefix + '001.svg.br' in names
+                  assert mushaf_prefix + '604.svg.br' in names
           with zipfile.ZipFile(light) as z:
               assert not any(n.startswith('assets/tafsir/') for n in z.namelist())
           with zipfile.ZipFile(plus) as z:
