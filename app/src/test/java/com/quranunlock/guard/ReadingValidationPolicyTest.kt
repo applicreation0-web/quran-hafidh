@@ -12,7 +12,7 @@ class ReadingValidationPolicyTest {
     }
 
     @Test
-    fun sixtySecondsWithBottomCanValidate() {
+    fun sixtyActiveSecondsCanValidate() {
         assertTrue(ReadingValidationPolicy.canValidate(60_000L, bottomReached = true))
     }
 
