@@ -83,7 +83,7 @@ object HifzPassagePlanningPolicy {
             .toSortedMap()
             .map { (page, lines) ->
                 val verses = lines.flatMap { it.targetVerses }.distinct()
-                    .sortedWith(::compareQuranVerseRefs)
+                    .sortedWith(Comparator(::compareQuranVerseRefs))
                 require(verses.isNotEmpty())
                 val range = HifzVerseRange(verses.first(), verses.last())
                 HifzPlannedPassage(
@@ -102,9 +102,9 @@ object HifzPassagePlanningPolicy {
 }
 
 /**
- * Idempotent daily planner. A date is recorded even when backlog or missing measurements
- * prevent new work, so reopening the app later the same day can never create a second
- * automatic quota after an overdue task was completed.
+ * Idempotent daily planner. A date is recorded only when a daily load was actually
+ * created/consumed (including an existing backlog). Missing setup or missing measured
+ * pace remains retryable later the same day after the user completes configuration.
  */
 object HifzDailyPlanner {
     fun planDate(
@@ -115,30 +115,32 @@ object HifzDailyPlanner {
         if (today in state.planningDates) return state
 
         val resumed = HifzResumePolicy.resume(state, today).state
-        val considered = resumed.copy(planningDates = resumed.planningDates + today)
-        val bounds = considered.journeyConfig.bounds ?: return considered
+        val bounds = resumed.journeyConfig.bounds ?: return resumed
 
-        // Existing backlog/today work has priority. Never create an automatic double load.
-        if (HifzSchedulePolicy.nextTask(today, considered.tasks) != null) return considered
+        // Existing backlog/today work consumes today's automatic slot. Never create a
+        // second quota later the same day after that work is completed.
+        if (HifzSchedulePolicy.nextTask(today, resumed.tasks) != null) {
+            return markConsidered(resumed, today)
+        }
 
         val track = HifzSchedulePolicy.defaultTrackFor(today.dayOfWeek)
-        if (considered.tasks.any { it.track == track && it.status != HifzTaskStatus.COMPLETED }) {
-            return considered
+        if (resumed.tasks.any { it.track == track && it.status != HifzTaskStatus.COMPLETED }) {
+            return markConsidered(resumed, today)
         }
-        val availableMinutes = considered.journeyConfig.availableMinutes.forTrack(track)
-            ?: return considered
+        val availableMinutes = resumed.journeyConfig.availableMinutes.forTrack(track)
+            ?: return resumed
         val capacity = HifzTimeQuotaPolicy.pageEquivalentCapacity(
             track,
             availableMinutes.toDouble(),
-            considered.journeyConfig.pace
-        ) ?: return considered
-        if (capacity <= 0.0) return considered
+            resumed.journeyConfig.pace
+        ) ?: return resumed
+        if (capacity <= 0.0) return resumed
 
         val passage = when (track) {
-            HifzTrack.SABQI -> planSabqi(considered, bounds, geometry, capacity)
-            HifzTrack.ITQAN -> planItqan(considered, bounds, geometry, capacity)
-            HifzTrack.MURAJAAH -> planMurajaah(considered, geometry, capacity)
-        } ?: return considered
+            HifzTrack.SABQI -> planSabqi(resumed, bounds, geometry, capacity)
+            HifzTrack.ITQAN -> planItqan(resumed, bounds, geometry, capacity)
+            HifzTrack.MURAJAAH -> planMurajaah(resumed, geometry, capacity)
+        } ?: return markConsidered(resumed, today)
 
         val task = HifzTask(
             id = stableTaskId(track, today, passage.cursor),
@@ -149,7 +151,10 @@ object HifzDailyPlanner {
             quota = availableMinutes,
             status = HifzTaskStatus.PLANNED
         )
-        return considered.copy(tasks = (considered.tasks + task).sortedBy { it.id })
+        return markConsidered(
+            resumed.copy(tasks = (resumed.tasks + task).sortedBy { it.id }),
+            today
+        )
     }
 
     private fun planSabqi(
@@ -230,17 +235,21 @@ object HifzDailyPlanner {
         }
 
         // No arbitrary weighted score and no fixed Sabqi/Itqan ratio: explicit lexicographic
-        // priorities use the observed fragility signals, then least-recent review and age.
-        return candidates.sortedWith(
+        // priorities use observed fragility, then least-recent review and source age.
+        val ranked = candidates.sortedWith(
             compareByDescending<Ranked> { it.errors }
                 .thenByDescending { it.reveals }
                 .thenBy { it.lastReviewed ?: LocalDate.MIN }
                 .thenBy { it.sourceDate }
                 .thenBy { it.stable }
-        ).firstOrNull { it.passage.pageEquivalent <= capacity + 1e-9 }
+        )
+        return ranked.firstOrNull { it.passage.pageEquivalent <= capacity + 1e-9 }
             ?.passage
-            ?: candidates.firstOrNull()?.passage
+            ?: ranked.firstOrNull()?.passage
     }
+
+    private fun markConsidered(state: HifzState, date: LocalDate): HifzState =
+        state.copy(planningDates = state.planningDates + date)
 
     private fun stableTaskId(track: HifzTrack, date: LocalDate, cursor: HifzCursor): String =
         buildString {
