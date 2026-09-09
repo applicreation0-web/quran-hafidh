@@ -116,16 +116,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Place Android userdata image on the runner data disk
+      - name: Prepare capacity and acceleration for the Android runtime
         run: |
-          sudo mkdir -p /mnt/qsg-avd
-          sudo chown runner /mnt/qsg-avd
-          mkdir -p /home/runner/.android
-          if [ -e /home/runner/.android/avd ]; then
-            mv /home/runner/.android/avd /mnt/qsg-avd-preexisting
+          if [ -d /usr/share/dotnet ]; then
+            sudo rm -rf /usr/share/dotnet
           fi
-          ln -s /mnt/qsg-avd /home/runner/.android/avd
-          df -h /mnt/qsg-avd /home/runner
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+          fi
+          df -h /home/runner
       - name: Runtime reader, persistence, migration and Safeguard boundaries
         uses: reactivecircus/android-emulator-runner@v2
         with:
