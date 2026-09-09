@@ -41,6 +41,8 @@ Le curseur du Parcours Hifz n'est plus une chaîne de texte libre. Il est typé 
 
 Les références sont validées sur les 114 sourates et les 6236 āyāt canoniques. Les pages sont limitées au Muṣḥaf de Médine fixe de 604 pages. Une référence impossible, une plage inversée ou une page hors 1–604 est rejetée.
 
+La cohérence `āyah ↔ page` est en plus vérifiée directement contre les éléments `ayahPolygon` des SVG du Muṣḥaf de Médine embarqué. Un couple individuellement valide mais incohérent (par exemple un verset associé à une mauvaise page) est refusé. Une page Muṣḥaf absente ou illisible fait échouer la lecture/écriture de l'état Hifz de manière fermée.
+
 ## Sabqi
 
 Le Sabqi utilise l'audio et le masquage progressif.

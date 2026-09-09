@@ -170,16 +170,26 @@ object HifzStateStore {
 
         return runCatching { HifzStateCodec.decode(raw) }
             .fold(
-                onSuccess = { HifzLoadResult(it, corrupted = false) },
+                onSuccess = { state ->
+                    if (HifzMushafCursorVerifier.allCoherent(context, state.tasks.map(HifzTask::cursor))) {
+                        HifzLoadResult(state, corrupted = false)
+                    } else {
+                        HifzLoadResult(HifzState(), corrupted = true)
+                    }
+                },
                 onFailure = { HifzLoadResult(HifzState(), corrupted = true) }
             )
     }
 
-    private fun save(context: Context, state: HifzState): Boolean =
-        context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    private fun save(context: Context, state: HifzState): Boolean {
+        if (!HifzMushafCursorVerifier.allCoherent(context, state.tasks.map(HifzTask::cursor))) {
+            return false
+        }
+        return context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_STATE, HifzStateCodec.encode(state))
             .commit()
+    }
 
     @Synchronized
     fun upsertTask(context: Context, task: HifzTask): Boolean {
