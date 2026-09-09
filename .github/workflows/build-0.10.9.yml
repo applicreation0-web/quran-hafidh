@@ -1,7 +1,7 @@
 name: Quran Safeguard 0.10.9 build and audit
 on:
   push:
-    branches: ["release/0.10.9-work"]
+    branches: ["release/0.10.9-work", "fix/0.10.9-mushaf-visible"]
 permissions:
   contents: read
   actions: read
