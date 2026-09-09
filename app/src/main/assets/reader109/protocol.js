@@ -2,8 +2,8 @@
 (function(root){
 'use strict';
 function balancedBlocks(lines){
- /* Keep blocks close to five real Mushaf lines without pathological tails (5+5+1). */
- const blockCount=lines.length<=6?1:Math.ceil(lines.length/6),base=Math.floor(lines.length/blockCount),extra=lines.length%blockCount;
+ /* 1–3 lines remain a valid short block; 4–7 are one normal block. Above 7, keep blocks close to five real Mushaf lines without pathological tails (5+5+1). */
+ const blockCount=lines.length<=7?1:Math.ceil(lines.length/6),base=Math.floor(lines.length/blockCount),extra=lines.length%blockCount;
  const blocks=[];for(let i=0,offset=0;i<blockCount;i++){const n=base+(i<extra?1:0);blocks.push(lines.slice(offset,offset+n));offset+=n;}
  return blocks;
 }
@@ -13,6 +13,8 @@ function plan(lines,audio){
  const steps=[],add=(id,label,ls,min,mask,kind='personal',success=false)=>steps.push({id,label,lines:ls,min,mask,kind,success});
  blocks.forEach((b,bi)=>{
   const prefix='B'+bi,offset=lines.indexOf(b[0]);
+  add(prefix+'prepRead','Préparation · Lecture attentive',b,2,0,'read');
+  if(audio)add(prefix+'prepPassive','Préparation · Écoute passive',b,2,0,'passive');
   b.forEach((line,li)=>{
    const lid=prefix+'L'+li, label='L'+(offset+li+1);
    if(audio){add(lid+'passive',label+' · Écoute passive',[line],2,0,'passive');add(lid+'active',label+' · Écoute active',[line],3,0,'active');}
