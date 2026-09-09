@@ -26,15 +26,16 @@ data class HifzTrainingStep(
 }
 
 /**
- * Pedagogical contract for the structured Hifz journey.
- *
- * This does not replace reader109's free Memorisation protocol. It describes what a
- * structured Hifz task expects so the reader can execute the task without owning the
- * Hifz schedule or persistence.
+ * Pedagogical contract for the structured Hifz journey. Audio steps are part of the
+ * complete Sabqi protocol but are removed from the effective protocol when the release
+ * audio gate is closed. No fake/manual repetition can stand in for unavailable audio.
  */
 object HifzTrainingPolicy {
 
-    fun stepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
+    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = false): List<HifzTrainingStep> =
+        rawStepsFor(track).filter { !it.requiresAudio || audioAvailable }
+
+    private fun rawStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
         HifzTrack.SABQI -> sabqiSteps()
         HifzTrack.ITQAN -> itqanSteps()
         HifzTrack.MURAJAAH -> murajaahSteps()
@@ -60,10 +61,6 @@ object HifzTrainingPolicy {
         HifzTrack.MURAJAAH -> emptyList()
     }
 
-    /**
-     * Sabqi keeps the 0.10.9 memorisation principles: audio preparation followed by
-     * progressive masking. The final step is fully masked and requires successful recall.
-     */
     private fun sabqiSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
             id = "sabqi-audio-passive",
@@ -96,12 +93,6 @@ object HifzTrainingPolicy {
         )
     )
 
-    /**
-     * Itqan is consolidation, not new learning. The selected portion is repeated thirty
-     * times before progressive masking. Each masked stage needs one clean, unassisted
-     * success; an incorrect or assisted attempt cannot advance the stage. Audio is not
-     * required by this contract.
-     */
     private fun itqanSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
             id = "itqan-visible-30",
@@ -124,11 +115,6 @@ object HifzTrainingPolicy {
         )
     )
 
-    /**
-     * Murajaah follows the approved one-recitation-per-page/portion rule. It is a recall
-     * exercise: one clean, unassisted recitation completes the portion; any correction is
-     * handled locally by the caller and does not silently credit the failed attempt.
-     */
     private fun murajaahSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
             id = "murajaah-recall",
