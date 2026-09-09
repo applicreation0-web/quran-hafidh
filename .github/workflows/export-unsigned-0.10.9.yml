@@ -1,0 +1,148 @@
+name: Export audited Quran Safeguard 0.10.9 unsigned APKs
+
+on:
+  push:
+    branches:
+      - "build/0.10.9-unsigned-export"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      AUDITED_SHA: d493fedfa36951a73cf0ac6142a77180a84abf0e
+      AUDITED_RUN: "34384468151"
+      AUDITED_ARTIFACT_ID: "10117551649"
+      LIGHT_UNSIGNED_SHA: 89266c4d8d77c22056babdaa80036dfb04e7ccb174beb48a49548d9f16247f82
+      PLUS_UNSIGNED_SHA: 3e1570b92935b344266506eda4ab174b2f1b1a82e7d8dc120b47e21e62dd5632
+    steps:
+      - name: Checkout export branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove application source unchanged from audited candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${AUDITED_SHA}^{commit}"
+          echo "app_source_diff_vs_audited_candidate:" > "${RUNNER_TEMP}/APP-SOURCE-DIFF.txt"
+          git diff --name-only "${AUDITED_SHA}"..HEAD -- app | tee -a "${RUNNER_TEMP}/APP-SOURCE-DIFF.txt"
+          test -z "$(git diff --name-only "${AUDITED_SHA}"..HEAD -- app)"
+
+      - name: Download exact Astra audited candidate artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          path: candidate
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 34384468151
+
+      - name: Pin exact audited unsigned APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          test -f "${light}"
+          test -f "${plus}"
+          echo "${LIGHT_UNSIGNED_SHA}  ${light}" | sha256sum -c -
+          echo "${PLUS_UNSIGNED_SHA}  ${plus}" | sha256sum -c -
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Inspect unsigned APK boundaries and payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools="${ANDROID_HOME}/build-tools/36.0.0"
+          light="candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+
+          test "$(apkanalyzer manifest application-id "${light}")" = "com.applicreation0.quransafeguard"
+          test "$(apkanalyzer manifest application-id "${plus}")" = "com.applicreation0.quransafeguard.plus"
+          test "$(apkanalyzer manifest version-code "${light}")" = "28"
+          test "$(apkanalyzer manifest version-code "${plus}")" = "28"
+          test "$(apkanalyzer manifest version-name "${light}")" = "0.10.9"
+          test "$(apkanalyzer manifest version-name "${plus}")" = "0.10.9-plus.1"
+
+          for apk in "${light}" "${plus}"; do
+            perms="$(${tools}/aapt dump permissions "${apk}")"
+            ! grep -Fq 'android.permission.INTERNET' <<<"${perms}"
+            ! grep -Fq 'android.permission.RECORD_AUDIO' <<<"${perms}"
+            ! grep -Fq 'android.permission.PACKAGE_USAGE_STATS' <<<"${perms}"
+            ! grep -Fq 'android.permission.QUERY_ALL_PACKAGES' <<<"${perms}"
+          done
+
+          python3 - <<'PY'
+          import zipfile
+          light='candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk'
+          plus='candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk'
+          mushaf_prefix='assets/mushaf/hafs/kfqc/svg-br/'
+          for path in (light, plus):
+              with zipfile.ZipFile(path) as z:
+                  names=z.namelist()
+                  pages=[n for n in names if n.startswith(mushaf_prefix) and n.endswith('.svg.br')]
+                  assert len(pages)==604, (path, len(pages))
+                  assert mushaf_prefix + '001.svg.br' in names
+                  assert mushaf_prefix + '604.svg.br' in names
+          with zipfile.ZipFile(light) as z:
+              assert not any(n.startswith('assets/tafsir/') for n in z.namelist())
+          with zipfile.ZipFile(plus) as z:
+              taf=[n for n in z.namelist() if n.startswith('assets/tafsir/')]
+              assert len(taf)==10, len(taf)
+              assert any('al_jalalayn_en' in n for n in taf)
+              assert any('qurtubi_en' in n for n in taf)
+              assert any('qushayri_en' in n for n in taf)
+          print('Exact audited APK boundaries PASS: 604 pages each; Light no Tafsir; Plus 10 Tafsir parts')
+          PY
+
+      - name: Package exact audited APKs for offline signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="candidate/app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="candidate/app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          out="${RUNNER_TEMP}/quran-safeguard-0.10.9-unsigned"
+          mkdir -p "${out}"
+          cp "${light}" "${out}/Quran-Safeguard-0.10.9-Light-unsigned.apk"
+          cp "${plus}" "${out}/Quran-Safeguard-Plus-0.10.9-unsigned.apk"
+          sha256sum "${out}"/*.apk > "${out}/UNSIGNED-SHA256.txt"
+          {
+            echo "audited_candidate_sha=${AUDITED_SHA}"
+            echo "audited_run=${AUDITED_RUN}"
+            echo "audited_artifact_id=${AUDITED_ARTIFACT_ID}"
+            echo "export_workflow_commit=$(git rev-parse HEAD)"
+            echo "app_source_diff_vs_audited_candidate:"
+            git diff --name-only "${AUDITED_SHA}"..HEAD -- app
+          } > "${out}/BUILD-PROVENANCE.txt"
+          cat > "${out}/OFFLINE-SIGNING.txt" <<'GUIDE'
+          Quran Safeguard 0.10.9 — audited unsigned export
+
+          These APKs are the exact unsigned Light and Plus APKs from the Astra-audited artifact.
+          They are intentionally NOT signed by this workflow.
+
+          For installable/update-compatible APKs, sign them offline with the historical Light and Plus signing identities respectively, then verify package IDs, version metadata, certificate digests, zip alignment and APK Signature Scheme v2/v3 before distribution.
+
+          Do not generate replacement signing identities: that would break update compatibility with existing installations.
+          GUIDE
+
+      - name: Upload audited unsigned APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-unsigned-for-offline-signing
+          path: ${{ runner.temp }}/quran-safeguard-0.10.9-unsigned/
+          if-no-files-found: error
+          retention-days: 7
