@@ -42,7 +42,7 @@ class QuranHubActivity : ComponentActivity() {
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        if (TafsirEdition.isEnabled) "Lecture, Tafsîr et parcours." else "Lecture et parcours.",
+                        if (TafsirEdition.isEnabled) "Lecture, Tafsîr, mémorisation et Hifz." else "Lecture, mémorisation et Hifz.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -56,18 +56,25 @@ class QuranHubActivity : ComponentActivity() {
                         title = if (TafsirEdition.isEnabled) "Lecture libre & Tafsîr" else "Lecture du Qur’an",
                         subtitle = "Muṣḥaf de Médine • signets • navigation",
                         onClick = {
-                            startActivity(
-                                Intent(
-                                    this@QuranHubActivity,
-                                    FreeQuranReaderActivity::class.java
-                                )
-                            )
+                            startActivity(Intent(this@QuranHubActivity, FreeQuranReaderActivity::class.java))
                         }
                     )
                     QuranHubRow(
                         title = "Mémorisation",
-                        subtitle = "Reprendre ou choisir un passage",
-                        onClick = { startActivity(Intent(this@QuranHubActivity, FreeQuranReaderActivity::class.java).putExtra(FreeQuranReaderActivity.EXTRA_MEMORIZATION, true)) }
+                        subtitle = "Mode libre et ponctuel • sourate, page ou passage",
+                        onClick = {
+                            startActivity(
+                                Intent(this@QuranHubActivity, FreeQuranReaderActivity::class.java)
+                                    .putExtra(FreeQuranReaderActivity.EXTRA_MEMORIZATION, true)
+                            )
+                        }
+                    )
+                    QuranHubRow(
+                        title = "Parcours Hifz",
+                        subtitle = "Sabqi • Itqān • Murājaʿah • suivi structuré indépendant",
+                        onClick = {
+                            startActivity(Intent(this@QuranHubActivity, HifzJourneyActivity::class.java))
+                        }
                     )
                     QuranHubRow(
                         title = "Parcours Juz / Hizb",
@@ -85,7 +92,7 @@ class QuranHubActivity : ComponentActivity() {
                     )
 
                     Text(
-                        "La lecture libre reste séparée du parcours quotidien et ne crédite aucun déblocage.",
+                        "Lecture libre, Mémorisation, Parcours Hifz et Challenge gardent des états séparés : aucune lecture libre ne crédite un déblocage ni ne déplace le planning Hifz.",
                         modifier = Modifier.padding(top = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -136,4 +143,3 @@ private fun QuranHubRow(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
-
