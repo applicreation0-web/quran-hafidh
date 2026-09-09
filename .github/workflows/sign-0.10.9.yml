@@ -1,0 +1,129 @@
+name: Quran Safeguard 0.10.9 sign audited APKs
+on:
+  push:
+    branches: ["release/0.10.9-signing"]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      AUDITED_RUN_ID: "34384468151"
+      AUDITED_LIGHT_SHA256: "89266c4d8d77c22056babdaa80036dfb04e7ccb174beb48a49548d9f16247f82"
+      AUDITED_PLUS_SHA256: "3e1570b92935b344266506eda4ab174b2f1b1a82e7d8dc120b47e21e62dd5632"
+      EXPECTED_LIGHT_CERT_SHA256: "6C706F4EA44EF667D0B9698C07A39E929B1E286D2397665504411DEDB37457AC"
+      EXPECTED_PLUS_CERT_SHA256: "1843D245832549AFC6333AB77A587649A14FEDB1F4ACC9C08F367C3F0301D989"
+      LIGHT_ALIAS: "quran-safeguard"
+      PLUS_ALIAS: "quran-safeguard-plus"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact independently audited unsigned artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: ${{ env.AUDITED_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: audited
+      - name: Locate and hash-lock exact unsigned APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          light=$(find audited -type f -name 'app-light-release-unsigned.apk' -print -quit)
+          plus=$(find audited -type f -name 'app-plus-release-unsigned.apk' -print -quit)
+          test -n "$light" && test -n "$plus"
+          echo "LIGHT_UNSIGNED=$light" >> "$GITHUB_ENV"
+          echo "PLUS_UNSIGNED=$plus" >> "$GITHUB_ENV"
+          echo "$AUDITED_LIGHT_SHA256  $light" | sha256sum -c -
+          echo "$AUDITED_PLUS_SHA256  $plus" | sha256sum -c -
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install official Android Build Tools 36
+        run: sdkmanager "build-tools;36.0.0"
+      - name: Require repository signing secrets without printing them
+        shell: bash
+        env:
+          LIGHT_KEYSTORE_B64: ${{ secrets.LIGHT_KEYSTORE_B64 }}
+          PLUS_KEYSTORE_B64: ${{ secrets.PLUS_KEYSTORE_B64 }}
+          LIGHT_KEYSTORE_PASSWORD: ${{ secrets.LIGHT_KEYSTORE_PASSWORD }}
+          PLUS_KEYSTORE_PASSWORD: ${{ secrets.PLUS_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$LIGHT_KEYSTORE_B64" || { echo 'Missing LIGHT_KEYSTORE_B64'; exit 2; }
+          test -n "$PLUS_KEYSTORE_B64" || { echo 'Missing PLUS_KEYSTORE_B64'; exit 2; }
+          test -n "$LIGHT_KEYSTORE_PASSWORD" || { echo 'Missing LIGHT_KEYSTORE_PASSWORD'; exit 2; }
+          test -n "$PLUS_KEYSTORE_PASSWORD" || { echo 'Missing PLUS_KEYSTORE_PASSWORD'; exit 2; }
+          umask 077
+          printf '%s' "$LIGHT_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/light.p12"
+          printf '%s' "$PLUS_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/plus.p12"
+          echo "LIGHT_KEYSTORE=$RUNNER_TEMP/light.p12" >> "$GITHUB_ENV"
+          echo "PLUS_KEYSTORE=$RUNNER_TEMP/plus.p12" >> "$GITHUB_ENV"
+      - name: Sign exact audited Light and Plus APKs
+        shell: bash
+        env:
+          LIGHT_KEYSTORE_PASSWORD: ${{ secrets.LIGHT_KEYSTORE_PASSWORD }}
+          PLUS_KEYSTORE_PASSWORD: ${{ secrets.PLUS_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p signed
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/zipalign" -p -f 4 "$LIGHT_UNSIGNED" signed/Quran-Safeguard-0.10.9-Light-aligned.apk
+          "$BT/zipalign" -p -f 4 "$PLUS_UNSIGNED" signed/Quran-Safeguard-Plus-0.10.9-aligned.apk
+          LIGHT_PASS="$LIGHT_KEYSTORE_PASSWORD" "$BT/apksigner" sign \
+            --ks "$LIGHT_KEYSTORE" --ks-type PKCS12 --ks-key-alias "$LIGHT_ALIAS" \
+            --ks-pass env:LIGHT_PASS --key-pass env:LIGHT_PASS \
+            --out signed/Quran-Safeguard-0.10.9-Light-release.apk \
+            signed/Quran-Safeguard-0.10.9-Light-aligned.apk
+          PLUS_PASS="$PLUS_KEYSTORE_PASSWORD" "$BT/apksigner" sign \
+            --ks "$PLUS_KEYSTORE" --ks-type PKCS12 --ks-key-alias "$PLUS_ALIAS" \
+            --ks-pass env:PLUS_PASS --key-pass env:PLUS_PASS \
+            --out signed/Quran-Safeguard-Plus-0.10.9-release.apk \
+            signed/Quran-Safeguard-Plus-0.10.9-aligned.apk
+          rm -f signed/*-aligned.apk
+      - name: Verify signatures, certificate continuity and ZIP alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          for apk in signed/*release.apk; do
+            "$BT/zipalign" -c -v 4 "$apk" >/dev/null
+            "$BT/apksigner" verify --verbose --print-certs "$apk"
+          done
+          light_cert=$($BT/apksigner verify --print-certs signed/Quran-Safeguard-0.10.9-Light-release.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+          plus_cert=$($BT/apksigner verify --print-certs signed/Quran-Safeguard-Plus-0.10.9-release.apk | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+          test "$light_cert" = "$EXPECTED_LIGHT_CERT_SHA256"
+          test "$plus_cert" = "$EXPECTED_PLUS_CERT_SHA256"
+      - name: Produce private release report
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo 'Quran Safeguard 0.10.9 — signed private release'
+            echo
+            echo 'Audited source HEAD: d493fedfa36951a73cf0ac6142a77180a84abf0e'
+            echo 'Audited unsigned run: 34384468151'
+            echo 'Audited unsigned artifact: 10117551649'
+            echo
+            echo 'Unsigned SHA-256:'
+            echo "Light: $AUDITED_LIGHT_SHA256"
+            echo "Plus:  $AUDITED_PLUS_SHA256"
+            echo
+            echo 'Signed SHA-256:'
+            sha256sum signed/Quran-Safeguard-0.10.9-Light-release.apk
+            sha256sum signed/Quran-Safeguard-Plus-0.10.9-release.apk
+            echo
+            echo 'Signing certificate continuity verified against established Light/Plus identities.'
+            echo 'APK Signature Scheme and ZIP alignment verified with Android Build Tools 36.'
+            echo 'No product source is modified by this signing branch; it signs the exact hash-locked audited unsigned APKs.'
+          } > signed/Quran-Safeguard-0.10.9-RELEASE-REPORT.txt
+          sha256sum signed/*release.apk > signed/Quran-Safeguard-0.10.9-SHA256.txt
+      - name: Upload signed private release
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-signed-private-release
+          path: signed/
+          retention-days: 30
