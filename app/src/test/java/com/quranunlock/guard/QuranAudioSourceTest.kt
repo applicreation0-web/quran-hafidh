@@ -35,11 +35,19 @@ class QuranAudioSourceTest {
     }
 
     @Test
-    fun invalidQuranReferencesAreRejected() {
+    fun canonicalSurahSpecificAyahLimitsAreEnforced() {
+        assertEquals(7, QuranAudioSource.ayahCount(1))
+        assertEquals(286, QuranAudioSource.ayahCount(2))
+        assertEquals(6, QuranAudioSource.ayahCount(114))
+
         assertFalse(QuranAudioSource.isValidReference(0, 1))
         assertFalse(QuranAudioSource.isValidReference(115, 1))
         assertFalse(QuranAudioSource.isValidReference(1, 0))
+        assertFalse(QuranAudioSource.isValidReference(1, 8))
         assertFalse(QuranAudioSource.isValidReference(2, 287))
+        assertFalse(QuranAudioSource.isValidReference(114, 7))
+        assertTrue(QuranAudioSource.isValidReference(1, 7))
         assertTrue(QuranAudioSource.isValidReference(2, 286))
+        assertTrue(QuranAudioSource.isValidReference(114, 6))
     }
 }
