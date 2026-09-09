@@ -6,12 +6,14 @@ import java.util.Base64
 
 data class HifzTaskProgress(
     val taskId: String,
+    val segmentIndex: Int = 0,
     val stepIndex: Int = 0,
     val stepProgress: HifzStepProgress? = null,
     val completed: Boolean = false
 ) {
     init {
         require(taskId.isNotBlank())
+        require(segmentIndex >= 0)
         require(stepIndex >= 0)
         require(stepProgress == null || stepProgress.stepId.isNotBlank())
     }
@@ -46,10 +48,10 @@ data class HifzLoadResult(
 /**
  * Deterministic, versioned codec kept independent from reader109 and GuardPrefs.
  * C stores Sabqi bounds + measured paces. I records store ordered Itqan intervals.
- * T records are schedule tasks and P records are training progress.
+ * T records are schedule tasks and P records are segment-aware training progress.
  */
 object HifzStateCodec {
-    const val SCHEMA = 4
+    const val SCHEMA = 5
     private const val SEP = "|"
     private const val CONFIG = "C"
     private const val ITQAN_INTERVAL = "I"
@@ -80,6 +82,7 @@ object HifzStateCodec {
             val step = progress.stepProgress
             append(PROGRESS).append(SEP)
             append(encodeText(progress.taskId)).append(SEP)
+            append(progress.segmentIndex).append(SEP)
             append(progress.stepIndex).append(SEP)
             append(step?.stepId?.let(::encodeText) ?: NONE).append(SEP)
             append(step?.repetitions ?: 0).append(SEP)
@@ -184,21 +187,22 @@ object HifzStateCodec {
                 }
 
                 PROGRESS -> {
-                    require(fields.size == 9) { "Malformed Hifz progress." }
+                    require(fields.size == 10) { "Malformed Hifz progress." }
                     val taskId = decodeText(fields[1])
-                    val step = if (fields[3] == NONE) null else HifzStepProgress(
-                        stepId = decodeText(fields[3]),
-                        repetitions = fields[4].toInt(),
-                        consecutiveSuccesses = fields[5].toInt(),
-                        revealCount = fields[6].toInt(),
-                        assistedSinceLastAttempt = fields[7].toBooleanStrict()
+                    val step = if (fields[4] == NONE) null else HifzStepProgress(
+                        stepId = decodeText(fields[4]),
+                        repetitions = fields[5].toInt(),
+                        consecutiveSuccesses = fields[6].toInt(),
+                        revealCount = fields[7].toInt(),
+                        assistedSinceLastAttempt = fields[8].toBooleanStrict()
                     )
                     require(taskId !in progress) { "Duplicate Hifz progress record." }
                     progress[taskId] = HifzTaskProgress(
                         taskId = taskId,
-                        stepIndex = fields[2].toInt(),
+                        segmentIndex = fields[2].toInt(),
+                        stepIndex = fields[3].toInt(),
                         stepProgress = step,
-                        completed = fields[8].toBooleanStrict()
+                        completed = fields[9].toBooleanStrict()
                     )
                 }
 
@@ -248,7 +252,8 @@ object HifzStateCodec {
 
 object HifzStateStore {
     internal const val FILE = QuranPersistenceNamespaces.HIFZ
-    private const val KEY_STATE = "state_v4"
+    private const val KEY_STATE = "state_v5"
+    private const val LEGACY_KEY_STATE_V4 = "state_v4"
     private const val LEGACY_KEY_STATE_V3 = "state_v3"
     private const val LEGACY_KEY_STATE_V2 = "state_v2"
     private const val LEGACY_KEY_STATE_V1 = "state_v1"
@@ -258,6 +263,7 @@ object HifzStateStore {
         val raw = prefs.getString(KEY_STATE, null)
         if (raw == null) {
             if (
+                prefs.contains(LEGACY_KEY_STATE_V4) ||
                 prefs.contains(LEGACY_KEY_STATE_V3) ||
                 prefs.contains(LEGACY_KEY_STATE_V2) ||
                 prefs.contains(LEGACY_KEY_STATE_V1)
@@ -270,7 +276,10 @@ object HifzStateStore {
         return runCatching { HifzStateCodec.decode(raw) }
             .fold(
                 onSuccess = { state ->
-                    if (HifzMushafCursorVerifier.allCoherent(context, state.tasks.map { it.cursor })) {
+                    if (
+                        HifzMushafCursorVerifier.allCoherent(context, state.tasks.map { it.cursor }) &&
+                        isSemanticallyCoherent(context, state)
+                    ) {
                         HifzLoadResult(state, corrupted = false)
                     } else {
                         HifzLoadResult(HifzState(), corrupted = true)
@@ -284,6 +293,7 @@ object HifzStateStore {
         if (!HifzMushafCursorVerifier.allCoherent(context, state.tasks.map { it.cursor })) {
             return false
         }
+        if (!isSemanticallyCoherent(context, state)) return false
         return context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_STATE, HifzStateCodec.encode(state))
@@ -308,6 +318,8 @@ object HifzStateStore {
         val loaded = load(context)
         if (loaded.corrupted) return false
         val existing = loaded.state.tasks.associateBy { it.id }.toMutableMap()
+        val previous = existing[task.id]
+        if (previous?.status == HifzTaskStatus.COMPLETED && task != previous) return false
         existing[task.id] = task
         return save(
             context,
@@ -329,6 +341,7 @@ object HifzStateStore {
         val before = updated[index]
         val after = transform(before)
         require(after.id == before.id) { "A Hifz task update cannot change its identity." }
+        if (before.status == HifzTaskStatus.COMPLETED && after != before) return false
         updated[index] = after
         return save(context, loaded.state.copy(tasks = updated))
     }
@@ -341,7 +354,8 @@ object HifzStateStore {
     ): Boolean {
         val loaded = load(context)
         if (loaded.corrupted) return false
-        if (loaded.state.tasks.none { it.id == taskId }) return false
+        val task = loaded.state.tasks.firstOrNull { it.id == taskId } ?: return false
+        if (task.status == HifzTaskStatus.COMPLETED) return false
         val before = loaded.state.progressByTask[taskId] ?: HifzTaskProgress(taskId = taskId)
         val after = transform(before)
         require(after.taskId == taskId) { "Hifz progress cannot change task identity." }
@@ -358,5 +372,57 @@ object HifzStateStore {
             HifzJourneyCoordinator.completeTask(loaded.state, taskId)
         }.getOrNull() ?: return false
         return save(context, completed)
+    }
+
+    private fun isSemanticallyCoherent(context: Context, state: HifzState): Boolean = runCatching {
+        val bounds = state.journeyConfig.bounds
+        require(state.tasks.isEmpty() || bounds != null) {
+            "Hifz tasks cannot exist before journey bounds are configured."
+        }
+        val geometry = HifzGeometryAssetLoader.load(context)
+
+        state.tasks.forEach { task ->
+            require(HifzSchedulePolicy.defaultTrackFor(task.originalScheduledDate.dayOfWeek) == task.track) {
+                "Hifz task original date does not match its track."
+            }
+            require(HifzSchedulePolicy.defaultTrackFor(task.scheduledDate.dayOfWeek) == task.track) {
+                "Hifz task scheduled date does not match its track."
+            }
+            require(taskRangeIsInsideConfiguredCorpus(task, requireNotNull(bounds))) {
+                "Hifz task lies outside configured journey bounds."
+            }
+
+            val target = HifzVerseRange(task.cursor.start, task.cursor.end)
+            val segmentCount = HifzGeometryPolicy.segment(geometry, target).size
+            require(segmentCount > 0) { "Hifz task has no real Mushaf geometry segment." }
+
+            val progress = state.progressByTask[task.id]
+            if (progress != null) {
+                require(HifzTrainingEngine.isSemanticallyCoherent(task, progress, segmentCount)) {
+                    "Hifz training progress is inconsistent with its task protocol."
+                }
+            }
+            if (task.status == HifzTaskStatus.COMPLETED) {
+                require(progress?.completed == true) {
+                    "A completed Hifz task requires completed coherent training progress."
+                }
+            }
+        }
+        true
+    }.getOrDefault(false)
+
+    private fun taskRangeIsInsideConfiguredCorpus(
+        task: HifzTask,
+        bounds: HifzJourneyBounds
+    ): Boolean {
+        val target = HifzVerseRange(task.cursor.start, task.cursor.end)
+        fun inside(container: HifzVerseRange): Boolean =
+            container.contains(target.start) && container.contains(target.end)
+
+        return when (task.track) {
+            HifzTrack.SABQI -> inside(bounds.sabqi)
+            HifzTrack.ITQAN -> bounds.itqan.any(::inside)
+            HifzTrack.MURAJAAH -> inside(bounds.sabqi) || bounds.itqan.any(::inside)
+        }
     }
 }
