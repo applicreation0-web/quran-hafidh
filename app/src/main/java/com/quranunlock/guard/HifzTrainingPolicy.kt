@@ -78,7 +78,9 @@ object HifzTrainingPolicy {
 
     /**
      * Itqan is consolidation, not new learning. One already learnt page is repeated
-     * thirty times before progressive masking. No audio step is required by this contract.
+     * thirty times before progressive masking. Each masked stage needs one clean,
+     * unassisted success; an incorrect or assisted attempt cannot advance the stage.
+     * No audio step is required by this contract.
      */
     private fun itqanSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
@@ -88,10 +90,10 @@ object HifzTrainingPolicy {
             repetitions = 30,
             maskPercent = 0
         ),
-        HifzTrainingStep("itqan-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 1, 25),
-        HifzTrainingStep("itqan-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 1, 50),
-        HifzTrainingStep("itqan-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 1, 75),
-        HifzTrainingStep("itqan-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 1, 100),
+        HifzTrainingStep("itqan-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 1, 25, requiresConsecutiveSuccesses = 1),
+        HifzTrainingStep("itqan-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 1, 50, requiresConsecutiveSuccesses = 1),
+        HifzTrainingStep("itqan-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 1, 75, requiresConsecutiveSuccesses = 1),
+        HifzTrainingStep("itqan-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 1, 100, requiresConsecutiveSuccesses = 1),
         HifzTrainingStep(
             id = "itqan-final",
             label = "Test final entièrement masqué",
