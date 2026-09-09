@@ -6,12 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -27,11 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/**
- * Stable top-level settings architecture.
- * Existing detailed screens remain available behind these categories while the
- * dashboard no longer duplicates every destination.
- */
+/** Stable top-level settings architecture with large-text-safe controls. */
 class SettingsHubActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,77 +52,60 @@ class SettingsHubActivity : ComponentActivity() {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Chaque fonction a maintenant une seule place principale.",
+                        "Chaque fonction a une seule place principale.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    SettingsSection(
-                        title = "Protection",
-                        subtitle = "Activation, règles 15 / 90 min et diagnostic"
-                    ) {
+                    SettingsSection("Protection", "Activation, règles 15 / 90 min et diagnostic") {
                         SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java)) }
                         ) { Text("Protection & règles") }
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, ApplicationsActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, ApplicationsActivity::class.java)) }
                         ) { Text("Applications protégées") }
                     }
 
-                    SettingsSection(
-                        title = "Qur’an",
-                        subtitle = "Parcours quotidien et historique"
-                    ) {
+                    SettingsSection("Qur’an", "Parcours quotidien et historique") {
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, ReadingSelectionActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, QuranHubActivity::class.java)) }
+                        ) { Text("Lecture, Mémorisation & Hifz") }
+                        SafeguardOutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, ReadingSelectionActivity::class.java)) }
                         ) { Text("Choix Juz / Hizb") }
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, ReadingHistoryActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, ReadingHistoryActivity::class.java)) }
                         ) { Text("Historique de lecture") }
                     }
 
-                    SettingsSection(
-                        title = "Rappels",
-                        subtitle = "Pensée du jour, adhkâr et horaires locaux"
-                    ) {
+                    SettingsSection("Rappels", "Pensée du jour, adhkâr et horaires locaux") {
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java)) }
                         ) { Text("Rappels & horaires") }
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, AdhkarActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, AdhkarActivity::class.java)) }
                         ) { Text("Voir les adhkâr") }
                     }
 
                     SettingsSection(
-                        title = "Apparence & confort",
-                        subtitle = "Le Muṣḥaf n’est jamais inversé ni recoloré artificiellement"
+                        "Apparence & confort",
+                        "Le Muṣḥaf n’est jamais inversé ni recoloré artificiellement"
                     ) {
                         Text(
                             "Ambiance de lecture",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Row(
+                        Column(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             ReaderVisualMode.entries.forEach { mode ->
                                 val label = when (mode) {
@@ -136,21 +113,17 @@ class SettingsHubActivity : ComponentActivity() {
                                     ReaderVisualMode.LIGHT -> "Clair"
                                     ReaderVisualMode.DARK -> "Sombre"
                                 }
-                                val selected = visualMode == mode
-                                if (selected) {
+                                if (visualMode == mode) {
                                     SafeguardButton(
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.fillMaxWidth(),
                                         onClick = {}
-                                    ) { Text(label) }
+                                    ) { Text("✓ $label") }
                                 } else {
                                     SafeguardOutlinedButton(
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.fillMaxWidth(),
                                         onClick = {
                                             visualMode = mode
-                                            ReaderComfortPrefs.setVisualMode(
-                                                this@SettingsHubActivity,
-                                                mode
-                                            )
+                                            ReaderComfortPrefs.setVisualMode(this@SettingsHubActivity, mode)
                                         }
                                     ) { Text(label) }
                                 }
@@ -158,21 +131,15 @@ class SettingsHubActivity : ComponentActivity() {
                         }
 
                         Text(
-                            if (brightness < 0f) {
-                                "Luminosité : suivre le téléphone"
-                            } else {
-                                "Luminosité de la lecture : ${(brightness * 100).toInt()} %"
-                            },
+                            if (brightness < 0f) "Luminosité : suivre le téléphone"
+                            else "Luminosité de la lecture : ${(brightness * 100).toInt()} %",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Slider(
                             value = if (brightness < 0f) 0.72f else brightness,
                             onValueChange = { value ->
                                 brightness = value.coerceIn(0.12f, 1f)
-                                ReaderComfortPrefs.setBrightness(
-                                    this@SettingsHubActivity,
-                                    brightness
-                                )
+                                ReaderComfortPrefs.setBrightness(this@SettingsHubActivity, brightness)
                                 ReaderComfortPrefs.applyBrightness(window, brightness)
                             },
                             valueRange = 0.12f..1f,
@@ -186,34 +153,19 @@ class SettingsHubActivity : ComponentActivity() {
                                 ReaderComfortPrefs.applyBrightness(window, -1f)
                             }
                         ) { Text("Suivre la luminosité du téléphone") }
-                        Text(
-                            "Ces réglages concernent la lecture libre. Aucun rappel de repos visuel n’est ajouté.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
 
-                    SettingsSection(
-                        title = "Textes & contenu",
-                        subtitle = "Hadiths, Ḥikam et autres textes vérifiés"
-                    ) {
+                    SettingsSection("Textes & contenu", "Hadiths, Ḥikam et autres textes vérifiés") {
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, SpiritualLibraryActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, SpiritualLibraryActivity::class.java)) }
                         ) { Text("Bibliothèque") }
                     }
 
-                    SettingsSection(
-                        title = "À propos",
-                        subtitle = "Installation privée, version et informations techniques"
-                    ) {
+                    SettingsSection("À propos", "Installation privée, version et informations techniques") {
                         SafeguardOutlinedButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = {
-                                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java))
-                            }
+                            onClick = { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java)) }
                         ) { Text("Informations & réglages détaillés") }
                     }
                 }
@@ -230,10 +182,8 @@ private fun SettingsSection(
 ) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        shape = SafeguardShapes.large,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
     ) {
         Column(
