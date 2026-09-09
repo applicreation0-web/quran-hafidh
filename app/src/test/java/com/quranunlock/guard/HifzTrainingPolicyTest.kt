@@ -21,6 +21,15 @@ class HifzTrainingPolicyTest {
     }
 
     @Test
+    fun sabqiCanExplicitlyFallBackToNonAudioStepsWhenAudioIsUnavailable() {
+        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI, audioAvailable = false)
+
+        assertFalse(steps.any { it.requiresAudio })
+        assertEquals("sabqi-visible", steps.first().id)
+        assertEquals(HifzTrainingKind.FINAL_TEST, steps.last().kind)
+    }
+
+    @Test
     fun itqanUsesThirtyVisibleRepetitionsThenProgressiveMasking() {
         val steps = HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN)
         val masked = steps.filter { it.kind == HifzTrainingKind.MASKED }
@@ -36,7 +45,15 @@ class HifzTrainingPolicyTest {
     }
 
     @Test
-    fun murajaahIsIntentionallyNotInventedYet() {
-        assertTrue(HifzTrainingPolicy.stepsFor(HifzTrack.MURAJAAH).isEmpty())
+    fun murajaahUsesOneExplicitFullyMaskedRecallStep() {
+        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.MURAJAAH)
+
+        assertEquals(1, steps.size)
+        assertEquals("murajaah-recall", steps.single().id)
+        assertEquals(HifzTrainingKind.FINAL_TEST, steps.single().kind)
+        assertEquals(100, steps.single().maskPercent)
+        assertEquals(MurajaahPolicy.RECITATIONS_PER_PORTION, steps.single().repetitions)
+        assertEquals(1, steps.single().requiresConsecutiveSuccesses)
+        assertFalse(steps.single().requiresAudio)
     }
 }
