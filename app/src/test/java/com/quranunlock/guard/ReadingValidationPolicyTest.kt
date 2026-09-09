@@ -17,7 +17,7 @@ class ReadingValidationPolicyTest {
     }
 
     @Test
-    fun sixtySecondsWithoutBottomCannotValidate() {
+    fun missingScrollSignalCannotKeepSixtySecondPageLocked() {
         assertFalse(ReadingValidationPolicy.canValidate(60_000L, bottomReached = false))
     }
 
