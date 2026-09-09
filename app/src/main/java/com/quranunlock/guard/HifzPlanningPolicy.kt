@@ -63,6 +63,18 @@ data class HifzPaceProfile(
         HifzTrack.MURAJAAH -> murajaahMinutesPerPage
             ?: MurajaahPolicy.INITIAL_MINUTES_PER_PAGE_REFERENCE
     }
+
+    /** Stores only an actually observed pace; no fallback is persisted as a measurement. */
+    fun withObserved(track: HifzTrack, minutesPerPage: Double): HifzPaceProfile {
+        require(minutesPerPage > 0.0 && minutesPerPage.isFinite()) {
+            "Observed Hifz pace must be positive and finite."
+        }
+        return when (track) {
+            HifzTrack.SABQI -> copy(sabqiMinutesPerPage = minutesPerPage)
+            HifzTrack.ITQAN -> copy(itqanMinutesPerPage = minutesPerPage)
+            HifzTrack.MURAJAAH -> copy(murajaahMinutesPerPage = minutesPerPage)
+        }
+    }
 }
 
 /**
