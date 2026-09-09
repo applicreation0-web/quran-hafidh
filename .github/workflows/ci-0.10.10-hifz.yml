@@ -7,13 +7,36 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   hifz-unit:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Retrieve exact audited 0.10.8 corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.8-unsigned
+          run-id: 34096699893
+          github-token: ${{ github.token }}
+          path: baseline108
+      - name: Restore unchanged corpus bytes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          for ed,pat in [('main','*light*unsigned.apk'),('plus','*plus*unsigned.apk')]:
+              apk=next(Path('baseline108').rglob(pat))
+              with zipfile.ZipFile(apk) as z:
+                  for n in z.namelist():
+                      if (n.startswith('assets/') and not n.startswith('assets/dexopt/')
+                              and (ed=='main' or n.startswith('assets/tafsir/'))):
+                          p=Path('app/src')/ed/n
+                          p.parent.mkdir(parents=True,exist_ok=True)
+                          p.write_bytes(z.read(n))
+          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
