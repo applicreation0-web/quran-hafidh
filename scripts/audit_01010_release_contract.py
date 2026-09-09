@@ -24,12 +24,17 @@ def require(condition: bool, message: str) -> None:
 index = text("app/src/main/assets/reader109/index.html")
 guard = text("app/src/main/assets/reader109/runtime_guard.js")
 reader = text("app/src/main/assets/reader109/reader.js")
+protocol = text("app/src/main/assets/reader109/protocol.js")
 free_reader = text("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
 timed_reader = text("app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt")
 visibility = text("app/src/main/java/com/quranunlock/guard/MushafRuntimeVisibilityPolicy.kt")
 namespaces = text("app/src/main/java/com/quranunlock/guard/QuranPersistenceNamespaces.kt")
 protected = text("app/src/main/java/com/quranunlock/guard/ProtectedApps.kt")
 schedule = text("app/src/main/java/com/quranunlock/guard/HifzSchedulePolicy.kt")
+audio_controller = text("app/src/main/java/com/quranunlock/guard/QuranAudioController.kt")
+audio_source = text("app/src/main/java/com/quranunlock/guard/QuranAudioSource.kt")
+manifest = text("app/src/main/AndroidManifest.xml")
+design = text("app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt")
 
 # Reader boot/rendition must be a runtime proof, not an asset-presence assertion.
 require('runtime_guard.js' in index and index.index('runtime_guard.js') < index.index('reader.js'),
@@ -63,29 +68,53 @@ require(probe_pos >= 0 and onready_pos > probe_pos,
 for token in ('getBoundingClientRect', 'getBBox', 'visibility', 'opacity', 'count >= 8'):
     require(token in visibility, f"timed reader visibility policy missing {token}")
 
-# Memorization / Tafsir boundary. Check both the JS presentation gate and the
-# separate native bridge gate. The latter deliberately uses memoryMode, the
-# Activity-owned state, rather than trusting a JavaScript argument.
+# Memorization / Tafsir boundary.
 require("$('tafsir').hidden=!initial.plus||memory" in reader,
         "reader must hide Tafsir in Memorization and all Light journeys")
 require("if(!memoryMode&&TafsirEdition.isEnabled" in free_reader.replace(" ", ""),
         "native Tafsir bridge must refuse Memorization")
 
-# Audio must stay honest while a real downloadable catalogue is not yet validated.
+# Private audio contract: no audio is bundled in the APK. Safeguard downloads
+# original Al-Husary Muallim ayah files only on explicit user action, stores
+# them privately, and never makes audio a mandatory memorization dependency.
 audio_path = ROOT / "app/src/main/assets/reader109/audio.json"
 try:
     audio = json.loads(audio_path.read_text(encoding="utf-8"))
 except Exception as exc:
     errors.append(f"invalid audio.json: {exc}")
     audio = {}
+require(audio.get('bundledInApk') is False,
+        "audio files must never be bundled in the APK")
 require(audio.get('redistributionApproved') is False,
-        "audio redistribution must not be marked approved without evidence")
-require(audio.get('productionHost', '') == '',
-        "pending audio must not invent a production host")
-require(audio.get('surahs', []) == [],
-        "pending audio must not invent a 114-surah catalogue")
-require('source de diffusion non encore validée' in reader,
-        "pending audio state must be explicit in the user-facing reader")
+        "local-download mode must not falsely claim redistribution rights")
+require(audio.get('delivery') == 'user-initiated-local-download',
+        "audio delivery must be explicit user-initiated local download")
+require(audio.get('baseUrl') == 'https://everyayah.com/data/Husary_Muallim_128kbps',
+        "Al-Husary Muallim source path changed unexpectedly")
+require('android.permission.INTERNET' in manifest,
+        "explicit HTTPS audio download requires the normal INTERNET permission")
+for token in (
+    'Husary_Muallim_128kbps', 'isAllowedHttpsUrl', 'fileName(', 'STORAGE_VERSION'
+):
+    require(token in audio_source, f"audio source policy missing {token}")
+for token in (
+    'MediaPlayer', 'downloadVerse(', 'downloadSurah(', 'deleteSurah(',
+    'isDownloaded(', '.part', 'looksLikeMp3', 'QuranAudioSource.url'
+):
+    require(token in audio_controller, f"local audio controller missing {token}")
+for token in (
+    'downloadVerse(surah:Int,ayah:Int)', 'downloadSurah(surah:Int,ayahCount:Int)',
+    'deleteSurah(surah:Int,ayahCount:Int)', 'isDownloaded(surah:Int,ayah:Int)'
+):
+    require(token in free_reader.replace(' ', ''), f"reader bridge missing audio API {token}")
+require('Audio Al-Husary Muʿallim' in reader and 'Télécharger la sourate' in reader,
+        "reader must expose in-app audio download management")
+require("classList.toggle('audio',playing&&p.dataset.verse===e.surah+':'+e.ayah)" in reader,
+        "audio highlighting must stay at whole-verse polygon level")
+require('localAudioReady' in reader and 'P.disableAudio(s)' in reader,
+        "missing local audio must not block Memorization/Hifz")
+require('function disableAudio(s)' in protocol,
+        "pedagogical protocol lacks non-blocking audio downgrade")
 
 # Hifz and free memorization persistence must remain separate.
 for name in ('FREE_READER_MEMORIZATION', 'FREE_READER_LAST_PAGE', 'HIFZ'):
@@ -100,8 +129,6 @@ for track in ('SABQI', 'ITQAN', 'MURAJAAH'):
     require(track in schedule.upper(), f"Hifz schedule missing {track}")
 
 # Protection boundary: preserve the proven 0.10.8 target-only methodology.
-# Safeguard observes/protects only explicitly selectable social/browser targets;
-# do not introduce a second classifier for banking/security/identity applications.
 compact_protected = re.sub(r"\s+", "", protected)
 require('enumclassSafeguardTargetCategory{SOCIAL,BROWSER}' in compact_protected,
         "0.10.8 target categories must remain SOCIAL/BROWSER only")
@@ -113,6 +140,10 @@ require('packageNameinGuardPrefs.protectedPackages(context)' in compact_protecte
         "protection must remain gated by the user's selected targets")
 require('SENSITIVE' not in protected and 'BANKING' not in protected,
         "do not add a separate sensitive/banking target category")
+
+# Visual identity requested for 10.10.
+for token in ('0xFF1D5B47', '0xFFB48A3C', '0xFF76563C', 'SafeguardShapes'):
+    require(token in design, f"Safeguard visual identity missing {token}")
 
 # If corpus has been restored in CI, require all sentinel assets and exactly 604 pages.
 corpus = ROOT / "app/src/main/assets/mushaf/hafs/kfqc/svg-br"
@@ -134,4 +165,4 @@ if errors:
     sys.exit(1)
 
 print("0.10.10 RELEASE CONTRACT: PASS")
-print("Runtime visibility, 10.9 migration, Hifz separation, audio honesty, 0.10.8 target-only protection and edition source boundaries verified.")
+print("Runtime visibility, 10.9 migration, Hifz separation, private local audio, 0.10.8 target-only protection, visual identity and edition boundaries verified.")
