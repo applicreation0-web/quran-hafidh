@@ -17,7 +17,7 @@ Le réglage rare du Parcours Hifz conserve séparément :
 - début et fin Sabqi en sourate + verset ;
 - début et fin Itqān en sourate + verset.
 
-Sabqi et Itqān restent indépendants : aucune borne de l'un ne déplace implicitement la borne de l'autre.
+Sabqi et Itqān restent indépendants : aucune borne de l'un ne déplace implicitement la borne de l'autre. Ces bornes font partie de la configuration Hifz persistante et survivent au redémarrage.
 
 ## Rythme hebdomadaire par défaut
 
@@ -37,13 +37,14 @@ Sabqi et Itqān restent indépendants : aucune borne de l'un ne déplace implici
 - Aucun déplacement silencieux des bornes.
 - Aucun doublement automatique du quota.
 - Le système peut suggérer le prochain créneau disponible de la même piste, mais le report est explicite.
-- Après redémarrage ou changement de jour, la normalisation peut uniquement passer une tâche `PLANNED` passée en `OVERDUE` ; elle ne modifie ni date, ni quota, ni progression d'entraînement, ni curseur.
+- Après redémarrage ou changement de jour, la normalisation peut uniquement passer une tâche `PLANNED` passée en `OVERDUE` ; elle ne modifie ni configuration, ni date, ni quota, ni progression d'entraînement, ni curseur.
 
 ## Quotas et temps réel
 
 Les quotas sont dimensionnés sur le temps réellement disponible et sur une vitesse distincte pour Sabqi, Itqān et Murājaʿah.
 
 - Les vitesses Sabqi et Itqān ne sont pas inventées : tant qu'elles ne sont pas mesurées, le moteur ne fabrique pas de valeur de remplacement.
+- Les vitesses observées font partie de la configuration persistante du parcours.
 - La capacité calculée reste fractionnaire en équivalent-page ; une capacité partielle peut ensuite être traduite en portion exacte sans arrondir silencieusement à une page supplémentaire.
 - Pour Murājaʿah seulement, la référence initiale acceptée est `1 juz ≈ 20 pages ≈ 45 min`, soit 2,25 min/page. Cette référence est remplacée/ajustée par la vitesse observée dès qu'elle existe.
 
@@ -119,10 +120,13 @@ Une session Murājaʿah utilise une récitation par page/portion et la correctio
 
 ## Persistance
 
-Le Parcours Hifz utilise un stockage séparé (`hifz_01010`) avec schéma versionné **2**.
+Le Parcours Hifz utilise un stockage séparé (`hifz_01010`) avec schéma versionné **3**.
 
 Sont persistés séparément du lecteur libre :
 
+- configuration du parcours ;
+- bornes Sabqi et Itqān ;
+- vitesses observées séparées ;
 - tâches Hifz ;
 - piste Sabqi / Itqān / Murājaʿah ;
 - date d'origine ;
@@ -137,4 +141,4 @@ Sont persistés séparément du lecteur libre :
 - état assisté ;
 - fin du protocole d'entraînement.
 
-Toute corruption du stockage Hifz doit échouer de manière fermée et ne doit pas écraser automatiquement l'état par un état vide. Un ancien état de schéma 1 à curseur texte libre n'est pas interprété silencieusement par le schéma 2.
+Toute corruption du stockage Hifz doit échouer de manière fermée et ne doit pas écraser automatiquement l'état par un état vide. Les anciens états de schéma 1 ou 2 ne sont pas interprétés silencieusement par le schéma 3.

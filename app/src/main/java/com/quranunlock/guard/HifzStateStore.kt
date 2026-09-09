@@ -19,6 +19,7 @@ data class HifzTaskProgress(
 
 data class HifzState(
     val schema: Int = HifzStateCodec.SCHEMA,
+    val journeyConfig: HifzJourneyConfig = HifzJourneyConfig(),
     val tasks: List<HifzTask> = emptyList(),
     val progressByTask: Map<String, HifzTaskProgress> = emptyMap()
 ) {
@@ -44,17 +45,19 @@ data class HifzLoadResult(
 
 /**
  * Deterministic, versioned codec kept independent from reader109 and GuardPrefs.
- * T records contain a typed Quran cursor; P records contain training progress.
+ * C is the rare journey setup/pace, T records are tasks and P records are progress.
  */
 object HifzStateCodec {
-    const val SCHEMA = 2
+    const val SCHEMA = 3
     private const val SEP = "|"
+    private const val CONFIG = "C"
     private const val TASK = "T"
     private const val PROGRESS = "P"
     private const val NONE = "-"
 
     fun encode(state: HifzState): String = buildString {
         append(SCHEMA).append('\n')
+        appendConfig(state.journeyConfig)
         state.tasks.sortedBy { it.id }.forEach { task ->
             val cursor = task.cursor
             append(TASK).append(SEP)
@@ -85,17 +88,69 @@ object HifzStateCodec {
         }
     }
 
+    private fun StringBuilder.appendConfig(config: HifzJourneyConfig) {
+        append(CONFIG).append(SEP)
+        val bounds = config.bounds
+        val boundFields = if (bounds == null) {
+            List(8) { NONE }
+        } else {
+            listOf(
+                bounds.sabqi.start.surah.toString(),
+                bounds.sabqi.start.ayah.toString(),
+                bounds.sabqi.end.surah.toString(),
+                bounds.sabqi.end.ayah.toString(),
+                bounds.itqan.start.surah.toString(),
+                bounds.itqan.start.ayah.toString(),
+                bounds.itqan.end.surah.toString(),
+                bounds.itqan.end.ayah.toString()
+            )
+        }
+        boundFields.forEach { append(it).append(SEP) }
+        append(encodeOptionalDouble(config.pace.sabqiMinutesPerPage)).append(SEP)
+        append(encodeOptionalDouble(config.pace.itqanMinutesPerPage)).append(SEP)
+        append(encodeOptionalDouble(config.pace.murajaahMinutesPerPage)).append('\n')
+    }
+
     fun decode(raw: String): HifzState {
         val lines = raw.lineSequence().filter { it.isNotBlank() }.toList()
         require(lines.isNotEmpty()) { "Missing Hifz state." }
         require(lines.first().toIntOrNull() == SCHEMA) { "Unsupported Hifz state schema." }
 
+        var journeyConfig: HifzJourneyConfig? = null
         val tasks = mutableListOf<HifzTask>()
         val progress = linkedMapOf<String, HifzTaskProgress>()
 
         lines.drop(1).forEach { line ->
             val fields = line.split(SEP)
             when (fields.firstOrNull()) {
+                CONFIG -> {
+                    require(journeyConfig == null) { "Duplicate Hifz config record." }
+                    require(fields.size == 12) { "Malformed Hifz config." }
+                    val rawBounds = fields.subList(1, 9)
+                    val bounds = when {
+                        rawBounds.all { it == NONE } -> null
+                        rawBounds.any { it == NONE } -> error("Incomplete Hifz journey bounds.")
+                        else -> HifzJourneyBounds(
+                            sabqi = HifzVerseRange(
+                                QuranVerseRef(rawBounds[0].toInt(), rawBounds[1].toInt()),
+                                QuranVerseRef(rawBounds[2].toInt(), rawBounds[3].toInt())
+                            ),
+                            itqan = HifzVerseRange(
+                                QuranVerseRef(rawBounds[4].toInt(), rawBounds[5].toInt()),
+                                QuranVerseRef(rawBounds[6].toInt(), rawBounds[7].toInt())
+                            )
+                        )
+                    }
+                    journeyConfig = HifzJourneyConfig(
+                        bounds = bounds,
+                        pace = HifzPaceProfile(
+                            sabqiMinutesPerPage = decodeOptionalDouble(fields[9]),
+                            itqanMinutesPerPage = decodeOptionalDouble(fields[10]),
+                            murajaahMinutesPerPage = decodeOptionalDouble(fields[11])
+                        )
+                    )
+                }
+
                 TASK -> {
                     require(fields.size == 13) { "Malformed Hifz task." }
                     tasks += HifzTask(
@@ -137,8 +192,17 @@ object HifzStateCodec {
             }
         }
 
-        return HifzState(tasks = tasks, progressByTask = progress)
+        return HifzState(
+            journeyConfig = requireNotNull(journeyConfig) { "Missing Hifz config record." },
+            tasks = tasks,
+            progressByTask = progress
+        )
     }
+
+    private fun encodeOptionalDouble(value: Double?): String = value?.toString() ?: NONE
+
+    private fun decodeOptionalDouble(value: String): Double? =
+        if (value == NONE) null else value.toDouble()
 
     private fun encodeText(value: String): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(value.toByteArray(Charsets.UTF_8))
@@ -153,16 +217,15 @@ object HifzStateCodec {
  */
 object HifzStateStore {
     internal const val FILE = QuranPersistenceNamespaces.HIFZ
-    private const val KEY_STATE = "state_v2"
-    private const val LEGACY_KEY_STATE = "state_v1"
+    private const val KEY_STATE = "state_v3"
+    private const val LEGACY_KEY_STATE_V2 = "state_v2"
+    private const val LEGACY_KEY_STATE_V1 = "state_v1"
 
     fun load(context: Context): HifzLoadResult {
         val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         val raw = prefs.getString(KEY_STATE, null)
         if (raw == null) {
-            // An unreleased schema-1 state is ambiguous because its cursor was free text.
-            // Never silently replace it with an empty schema-2 state.
-            if (prefs.contains(LEGACY_KEY_STATE)) {
+            if (prefs.contains(LEGACY_KEY_STATE_V2) || prefs.contains(LEGACY_KEY_STATE_V1)) {
                 return HifzLoadResult(HifzState(), corrupted = true)
             }
             return HifzLoadResult(HifzState(), corrupted = false)
@@ -171,7 +234,7 @@ object HifzStateStore {
         return runCatching { HifzStateCodec.decode(raw) }
             .fold(
                 onSuccess = { state ->
-                    if (HifzMushafCursorVerifier.allCoherent(context, state.tasks.map(HifzTask::cursor))) {
+                    if (HifzMushafCursorVerifier.allCoherent(context, state.tasks.map { it.cursor })) {
                         HifzLoadResult(state, corrupted = false)
                     } else {
                         HifzLoadResult(HifzState(), corrupted = true)
@@ -182,13 +245,26 @@ object HifzStateStore {
     }
 
     private fun save(context: Context, state: HifzState): Boolean {
-        if (!HifzMushafCursorVerifier.allCoherent(context, state.tasks.map(HifzTask::cursor))) {
+        if (!HifzMushafCursorVerifier.allCoherent(context, state.tasks.map { it.cursor })) {
             return false
         }
         return context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_STATE, HifzStateCodec.encode(state))
             .commit()
+    }
+
+    @Synchronized
+    fun updateJourneyConfig(
+        context: Context,
+        transform: (HifzJourneyConfig) -> HifzJourneyConfig
+    ): Boolean {
+        val loaded = load(context)
+        if (loaded.corrupted) return false
+        return save(
+            context,
+            loaded.state.copy(journeyConfig = transform(loaded.state.journeyConfig))
+        )
     }
 
     @Synchronized

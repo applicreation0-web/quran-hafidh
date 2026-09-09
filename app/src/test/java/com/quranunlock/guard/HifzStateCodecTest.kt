@@ -8,7 +8,7 @@ import java.time.LocalDate
 class HifzStateCodecTest {
 
     @Test
-    fun roundTripPreservesTypedTaskCursorAndTrainingProgress() {
+    fun roundTripPreservesConfigTypedTaskCursorAndTrainingProgress() {
         val task = HifzTask(
             id = "itqan|task-1",
             track = HifzTrack.ITQAN,
@@ -29,7 +29,19 @@ class HifzStateCodecTest {
                 assistedSinceLastAttempt = true
             )
         )
+        val config = HifzJourneyConfig(
+            bounds = HifzJourneyBounds(
+                sabqi = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30)),
+                itqan = HifzVerseRange(QuranVerseRef(78, 1), QuranVerseRef(79, 46))
+            ),
+            pace = HifzPaceProfile(
+                sabqiMinutesPerPage = 14.5,
+                itqanMinutesPerPage = 5.25,
+                murajaahMinutesPerPage = 2.4
+            )
+        )
         val state = HifzState(
+            journeyConfig = config,
             tasks = listOf(task),
             progressByTask = mapOf(task.id to progress)
         )
@@ -40,9 +52,22 @@ class HifzStateCodecTest {
     }
 
     @Test
-    fun legacySchemaFailsClosedInsteadOfParsingFreeTextCursor() {
+    fun emptyPreSetupConfigAlsoRoundTrips() {
+        val state = HifzState()
+
+        assertEquals(state, HifzStateCodec.decode(HifzStateCodec.encode(state)))
+    }
+
+    @Test
+    fun legacySchemasFailClosed() {
+        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("1\n") }
+        assertThrows(IllegalArgumentException::class.java) { HifzStateCodec.decode("2\n") }
+    }
+
+    @Test
+    fun currentSchemaWithoutConfigFailsClosed() {
         assertThrows(IllegalArgumentException::class.java) {
-            HifzStateCodec.decode("1\n")
+            HifzStateCodec.decode("3\n")
         }
     }
 

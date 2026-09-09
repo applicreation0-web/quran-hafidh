@@ -18,17 +18,19 @@ class HifzResumePolicyTest {
     }
 
     @Test
-    fun nextDayRestartMarksOverdueWithoutMovingWorkOrProgress() {
+    fun nextDayRestartMarksOverdueWithoutMovingConfigWorkOrProgress() {
         val plannedDate = LocalDate.of(2026, 9, 9)
         val state = state(plannedDate)
         val restored = HifzStateCodec.decode(HifzStateCodec.encode(state))
         val beforeTask = restored.tasks.single()
         val beforeProgress = restored.progressByTask.getValue(beforeTask.id)
+        val beforeConfig = restored.journeyConfig
 
         val resumed = HifzResumePolicy.resume(restored, LocalDate.of(2026, 9, 10))
         val afterTask = resumed.state.tasks.single()
 
         assertEquals(HifzTaskStatus.OVERDUE, afterTask.status)
+        assertEquals(beforeConfig, resumed.state.journeyConfig)
         assertEquals(beforeTask.originalScheduledDate, afterTask.originalScheduledDate)
         assertEquals(beforeTask.scheduledDate, afterTask.scheduledDate)
         assertEquals(beforeTask.cursor, afterTask.cursor)
@@ -75,7 +77,15 @@ class HifzResumePolicyTest {
                 assistedSinceLastAttempt = false
             )
         )
+        val config = HifzJourneyConfig(
+            bounds = HifzJourneyBounds(
+                sabqi = HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 20)),
+                itqan = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30))
+            ),
+            pace = HifzPaceProfile(sabqiMinutesPerPage = 16.0, itqanMinutesPerPage = 6.0)
+        )
         return HifzState(
+            journeyConfig = config,
             tasks = listOf(task),
             progressByTask = mapOf(task.id to progress)
         )
