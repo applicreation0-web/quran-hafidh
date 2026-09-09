@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,6 +21,18 @@ class TafsirInteractionTest {
             setOf(VerseRef(2, 13), VerseRef(2, 14)),
             MushafVerseIndex.fromSvg(svg)
         )
+    }
+
+    @Test
+    fun tafsirBridgeCanonicalBoundsRejectImpossibleAyahs() {
+        assertTrue(QuranCanonicalBounds.isValid(QuranVerseRef(1, 7)))
+        assertFalse(QuranCanonicalBounds.isValid(QuranVerseRef(1, 8)))
+        assertTrue(QuranCanonicalBounds.isValid(QuranVerseRef(2, 286)))
+        assertFalse(QuranCanonicalBounds.isValid(QuranVerseRef(2, 287)))
+        assertTrue(QuranCanonicalBounds.isValid(QuranVerseRef(114, 6)))
+        assertFalse(QuranCanonicalBounds.isValid(QuranVerseRef(114, 7)))
+        assertFalse(QuranCanonicalBounds.isValid(QuranVerseRef(0, 1)))
+        assertFalse(QuranCanonicalBounds.isValid(QuranVerseRef(115, 1)))
     }
 
     @Test
