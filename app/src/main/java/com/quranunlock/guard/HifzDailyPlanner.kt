@@ -164,7 +164,10 @@ object HifzDailyPlanner {
         capacity: Double
     ): HifzPlannedPassage? {
         val last = state.tasks.filter { it.track == HifzTrack.SABQI }
-            .maxWithOrNull(compareBy { it.cursor.end.surah }.thenBy { it.cursor.end.ayah })
+            .maxWithOrNull(
+                compareBy<HifzTask> { it.cursor.end.surah }
+                    .thenBy { it.cursor.end.ayah }
+            )
         val start = if (last == null) {
             bounds.sabqi.start
         } else {
@@ -183,7 +186,10 @@ object HifzDailyPlanner {
         capacity: Double
     ): HifzPlannedPassage? {
         val last = state.tasks.filter { it.track == HifzTrack.ITQAN }
-            .maxWithOrNull(compareBy { it.cursor.end.surah }.thenBy { it.cursor.end.ayah })
+            .maxWithOrNull(
+                compareBy<HifzTask> { it.cursor.end.surah }
+                    .thenBy { it.cursor.end.ayah }
+            )
         val start = if (last == null) {
             bounds.itqan.first().start
         } else {
