@@ -38,7 +38,7 @@ class HifzJourneyActivity : ComponentActivity() {
     @Composable
     private fun HifzJourneyScreen() {
         var refresh by remember { mutableIntStateOf(0) }
-        val load = remember(refresh) { HifzStateStore.load(this) }
+        val load = remember(refresh) { HifzStateStore.load(this@HifzJourneyActivity) }
         val today = LocalDate.now()
         var message by remember { mutableStateOf<String?>(null) }
 
@@ -83,7 +83,7 @@ class HifzJourneyActivity : ComponentActivity() {
                 SetupCard(
                     existing = config,
                     onSaved = { newConfig ->
-                        val ok = if (load.corrupted) false else HifzStateStore.updateJourneyConfig(this) { newConfig }
+                        val ok = if (load.corrupted) false else HifzStateStore.updateJourneyConfig(this@HifzJourneyActivity) { newConfig }
                         message = if (ok) "Configuration Hifz enregistrée." else "Configuration refusée : état ou bornes invalides."
                         if (ok) refresh++
                     }
@@ -91,12 +91,12 @@ class HifzJourneyActivity : ComponentActivity() {
             } else {
                 val plannedState = remember(refresh, today) {
                     runCatching {
-                        val geometry = HifzGeometryAssetLoader.load(this)
+                        val geometry = HifzGeometryAssetLoader.load(this@HifzJourneyActivity)
                         HifzDailyPlanner.planDate(load.state, today, geometry)
                     }.getOrNull()
                 }
                 if (plannedState != null && plannedState != load.state) {
-                    if (HifzStateStore.replaceState(this) { plannedState }) {
+                    if (HifzStateStore.replaceState(this@HifzJourneyActivity) { plannedState }) {
                         refresh++
                         return@Column
                     }
@@ -104,7 +104,7 @@ class HifzJourneyActivity : ComponentActivity() {
 
                 val normalizedTasks = load.state.tasks.map { HifzSchedulePolicy.markOverdue(it, today) }
                 if (normalizedTasks != load.state.tasks) {
-                    if (HifzStateStore.replaceState(this) { it.copy(tasks = normalizedTasks) }) {
+                    if (HifzStateStore.replaceState(this@HifzJourneyActivity) { it.copy(tasks = normalizedTasks) }) {
                         refresh++
                         return@Column
                     }
@@ -216,7 +216,7 @@ class HifzJourneyActivity : ComponentActivity() {
         onRefresh: () -> Unit,
         onMessage: (String) -> Unit
     ) {
-        val segmentCount = remember(task.id) { HifzStateStore.segmentCount(this, task) ?: 1 }
+        val segmentCount = remember(task.id) { HifzStateStore.segmentCount(this@HifzJourneyActivity, task) ?: 1 }
         val progress = state.progressByTask[task.id] ?: HifzTrainingEngine.initial(task, segmentCount)
         val step = HifzTrainingEngine.currentStep(task, progress, segmentCount)
         val suggested = if (task.status == HifzTaskStatus.OVERDUE) {
