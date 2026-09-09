@@ -29,14 +29,34 @@ data class HifzTrainingStep(
  * Pedagogical contract for the structured Hifz journey.
  *
  * This does not replace reader109's free Memorisation protocol. It describes what a
- * structured Hifz task expects so the reader can later execute the task without owning
- * the Hifz schedule or persistence.
+ * structured Hifz task expects so the reader can execute the task without owning the
+ * Hifz schedule or persistence.
  */
 object HifzTrainingPolicy {
 
     fun stepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
         HifzTrack.SABQI -> sabqiSteps()
         HifzTrack.ITQAN -> itqanSteps()
+        HifzTrack.MURAJAAH -> murajaahSteps()
+    }
+
+    /**
+     * When a Sabqi canonical passage had to be split into real Mushaf-line segments,
+     * the segments are only preparation. A final whole-passage recall is mandatory
+     * before the canonical task can be completed.
+     */
+    fun assemblyStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
+        HifzTrack.SABQI -> listOf(
+            HifzTrainingStep(
+                id = "sabqi-assembly-final",
+                label = "Assemblage final du passage",
+                kind = HifzTrainingKind.FINAL_TEST,
+                repetitions = 3,
+                maskPercent = 100,
+                requiresConsecutiveSuccesses = 3
+            )
+        )
+        HifzTrack.ITQAN,
         HifzTrack.MURAJAAH -> emptyList()
     }
 
@@ -68,7 +88,7 @@ object HifzTrainingPolicy {
         HifzTrainingStep("sabqi-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 7, 100),
         HifzTrainingStep(
             id = "sabqi-final",
-            label = "Test final entièrement masqué",
+            label = "Test final du segment entièrement masqué",
             kind = HifzTrainingKind.FINAL_TEST,
             repetitions = 3,
             maskPercent = 100,
@@ -77,10 +97,10 @@ object HifzTrainingPolicy {
     )
 
     /**
-     * Itqan is consolidation, not new learning. One already learnt page is repeated
-     * thirty times before progressive masking. Each masked stage needs one clean,
-     * unassisted success; an incorrect or assisted attempt cannot advance the stage.
-     * No audio step is required by this contract.
+     * Itqan is consolidation, not new learning. The selected portion is repeated thirty
+     * times before progressive masking. Each masked stage needs one clean, unassisted
+     * success; an incorrect or assisted attempt cannot advance the stage. Audio is not
+     * required by this contract.
      */
     private fun itqanSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
@@ -99,6 +119,22 @@ object HifzTrainingPolicy {
             label = "Test final entièrement masqué",
             kind = HifzTrainingKind.FINAL_TEST,
             repetitions = 1,
+            maskPercent = 100,
+            requiresConsecutiveSuccesses = 1
+        )
+    )
+
+    /**
+     * Murajaah follows the approved one-recitation-per-page/portion rule. It is a recall
+     * exercise: one clean, unassisted recitation completes the portion; any correction is
+     * handled locally by the caller and does not silently credit the failed attempt.
+     */
+    private fun murajaahSteps(): List<HifzTrainingStep> = listOf(
+        HifzTrainingStep(
+            id = "murajaah-recall",
+            label = "Récitation de révision",
+            kind = HifzTrainingKind.FINAL_TEST,
+            repetitions = MurajaahPolicy.RECITATIONS_PER_PORTION,
             maskPercent = 100,
             requiresConsecutiveSuccesses = 1
         )
