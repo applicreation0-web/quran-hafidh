@@ -4,100 +4,101 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def replace_once(path: str, old: str, new: str, marker: str) -> None:
-    p = ROOT / path
-    text = p.read_text(encoding="utf-8")
-    if new in text:
+def patch(path: str, old: str, new: str, marker: str) -> None:
+    target = ROOT / path
+    source = target.read_text(encoding="utf-8")
+    if new in source:
         return
-    if old not in text:
-        raise SystemExit(f"{path}: expected {marker} source block not found")
-    p.write_text(text.replace(old, new, 1), encoding="utf-8")
+    if old not in source:
+        raise SystemExit(f"{path}: cannot find old or new block for {marker}")
+    target.write_text(source.replace(old, new, 1), encoding="utf-8")
 
 
-replace_once(
-    "app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt",
-    """        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)\n        ReaderComfortPrefs.applyBrightness(window, ReaderComfortPrefs.brightness(this))""",
-    """        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)\n        Reader109StateSanitizer.migrateOnReaderEntry(this)\n        ReaderComfortPrefs.applyBrightness(window, ReaderComfortPrefs.brightness(this))""",
-    "reader109 migration hook",
-)
+def require(path: str, token: str, marker: str) -> None:
+    source = (ROOT / path).read_text(encoding="utf-8")
+    if token not in source:
+        raise SystemExit(f"{path}: missing {marker}: {token}")
 
-replace_once(
-    "app/src/main/assets/reader109/reader.js",
-    "Audio Al-Husary indisponible : droits et hébergement à valider.",
-    "Audio Al-Husary indisponible actuellement — source de diffusion non encore validée.",
-    "explicit audio unavailable copy",
-)
-
-mushaf = "app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt"
-replace_once(
-    mushaf,
-    "settings.javaScriptEnabled = false",
-    """// JavaScript is enabled only for a local DOM visibility probe.\n                // No JavaScript interface is exposed and network loads remain blocked.\n                settings.javaScriptEnabled = true""",
-    "timed reader DOM probe JavaScript",
-)
-
-replace_once(
-    mushaf,
-    """                            val svgContent = remember(pageNumber) {\n                                loadMushafPage(pageNumber)\n                            }\n                            var loadFailed by remember(pageNumber) {\n                                mutableStateOf(svgContent.isNullOrBlank())\n                            }""",
-    """                            var retryGeneration by remember(pageNumber) {\n                                mutableIntStateOf(0)\n                            }\n                            val svgContent = remember(pageNumber, retryGeneration) {\n                                loadMushafPage(pageNumber)\n                            }\n                            var loadFailed by remember(pageNumber, retryGeneration) {\n                                mutableStateOf(svgContent.isNullOrBlank())\n                            }""",
-    "challenge retry generation",
-)
-
-replace_once(
-    mushaf,
-    """                            } else {\n                                Text(\n                                    \"La page du Mushaf n’est pas disponible. \" +\n                                        \"La lecture n’est pas comptabilisée.\",\n                                    modifier = Modifier.padding(18.dp)\n                                )\n                            }""",
-    """                            } else {\n                                Column(\n                                    modifier = Modifier\n                                        .fillMaxSize()\n                                        .padding(18.dp),\n                                    verticalArrangement = Arrangement.Center,\n                                    horizontalAlignment = Alignment.CenterHorizontally\n                                ) {\n                                    Text(\n                                        \"La page du Mushaf n’est pas visible. \" +\n                                            \"La lecture n’est pas comptabilisée.\"\n                                    )\n                                    Spacer(Modifier.height(12.dp))\n                                    SafeguardOutlinedButton(\n                                        onClick = {\n                                            markPageUnavailable(pageNumber)\n                                            loadFailed = false\n                                            retryGeneration += 1\n                                        }\n                                    ) {\n                                        Text(\"Réessayer\")\n                                    }\n                                }\n                            }""",
-    "challenge retry UI",
-)
-
-replace_once(
-    mushaf,
-    """                    override fun onPageFinished(\n                        view: WebView?,\n                        url: String?\n                    ) {\n                        currentOnReady.value()\n                        view?.post {\n                            val contentHeightPx =\n                                (view.contentHeight * view.scale).toInt()\n                            if (contentHeightPx > 0 &&\n                                view.height > 0 &&\n                                !ReadingValidationPolicy.requiresScroll(\n                                    contentHeightPx = contentHeightPx,\n                                    viewportHeightPx = view.height\n                                )\n                            ) {\n                                currentOnBottomReached.value()\n                            }\n                        }\n                    }""",
-    """                    override fun onPageFinished(\n                        view: WebView?,\n                        url: String?\n                    ) {\n                        view ?: run {\n                            currentOnFailure.value()\n                            return\n                        }\n                        view.post {\n                            view.evaluateJavascript(\n                                MushafRuntimeVisibilityPolicy.probeJavascript()\n                            ) { result ->\n                                if (!MushafRuntimeVisibilityPolicy\n                                        .probeResultIsReady(result)\n                                ) {\n                                    currentOnFailure.value()\n                                    return@evaluateJavascript\n                                }\n                                currentOnReady.value()\n                                view.post {\n                                    val contentHeightPx =\n                                        (view.contentHeight * view.scale).toInt()\n                                    if (contentHeightPx > 0 &&\n                                        view.height > 0 &&\n                                        !ReadingValidationPolicy.requiresScroll(\n                                            contentHeightPx = contentHeightPx,\n                                            viewportHeightPx = view.height\n                                        )\n                                    ) {\n                                        currentOnBottomReached.value()\n                                    }\n                                }\n                            }\n                        }\n                    }""",
-    "timed reader DOM readiness assertion",
-)
-
-replace_once(
-    mushaf,
-    """        return runCatching {\n            assets.open(assetPath).use { compressed ->\n                BrotliInputStream(compressed)\n                    .bufferedReader(Charsets.UTF_8)\n                    .use { it.readText() }\n            }\n        }.getOrNull()""",
-    """        return runCatching {\n            assets.open(assetPath).use { compressed ->\n                BrotliInputStream(compressed)\n                    .bufferedReader(Charsets.UTF_8)\n                    .use { it.readText() }\n            }\n        }.getOrNull()\n            ?.takeIf(MushafRuntimeVisibilityPolicy::sourceLooksRenderable)""",
-    "timed reader SVG source validation",
-)
-
-# Large-text/narrow-screen hardening.  Critical actions stay full-width so
-# labels wrap naturally instead of being squeezed into equal-width rows.
-replace_once(
-    "app/src/main/java/com/quranunlock/guard/SettingsHubActivity.kt",
-    """                        Row(\n                            modifier = Modifier.fillMaxWidth(),\n                            horizontalArrangement = Arrangement.spacedBy(6.dp)\n                        ) {\n                            ReaderVisualMode.entries.forEach { mode ->\n                                val label = when (mode) {\n                                    ReaderVisualMode.COMFORT -> \"Confort\"\n                                    ReaderVisualMode.LIGHT -> \"Clair\"\n                                    ReaderVisualMode.DARK -> \"Sombre\"\n                                }\n                                val selected = visualMode == mode\n                                if (selected) {\n                                    SafeguardButton(\n                                        modifier = Modifier.weight(1f),\n                                        onClick = {}\n                                    ) { Text(label) }\n                                } else {\n                                    SafeguardOutlinedButton(\n                                        modifier = Modifier.weight(1f),\n                                        onClick = {\n                                            visualMode = mode\n                                            ReaderComfortPrefs.setVisualMode(\n                                                this@SettingsHubActivity,\n                                                mode\n                                            )\n                                        }\n                                    ) { Text(label) }\n                                }\n                            }\n                        }""",
-    """                        Column(\n                            modifier = Modifier.fillMaxWidth(),\n                            verticalArrangement = Arrangement.spacedBy(6.dp)\n                        ) {\n                            ReaderVisualMode.entries.forEach { mode ->\n                                val label = when (mode) {\n                                    ReaderVisualMode.COMFORT -> \"Confort\"\n                                    ReaderVisualMode.LIGHT -> \"Clair\"\n                                    ReaderVisualMode.DARK -> \"Sombre\"\n                                }\n                                val selected = visualMode == mode\n                                if (selected) {\n                                    SafeguardButton(\n                                        modifier = Modifier.fillMaxWidth(),\n                                        onClick = {}\n                                    ) { Text(label) }\n                                } else {\n                                    SafeguardOutlinedButton(\n                                        modifier = Modifier.fillMaxWidth(),\n                                        onClick = {\n                                            visualMode = mode\n                                            ReaderComfortPrefs.setVisualMode(\n                                                this@SettingsHubActivity,\n                                                mode\n                                            )\n                                        }\n                                    ) { Text(label) }\n                                }\n                            }\n                        }""",
-    "settings visual mode buttons at large font",
-)
-
-replace_once(
-    "app/src/main/java/com/quranunlock/guard/MainActivity.kt",
-    """                        Row(\n                            modifier = Modifier.fillMaxWidth(),\n                            horizontalArrangement = Arrangement.spacedBy(10.dp)\n                        ) {\n                            SafeguardOutlinedButton(\n                                modifier = Modifier.weight(1f),\n                                onClick = {\n                                    startActivity(\n                                        Intent(\n                                            this@MainActivity,\n                                            SpiritualLibraryActivity::class.java\n                                        )\n                                    )\n                                }\n                            ) {\n                                Text(\"Bibliothèque\")\n                            }\n                            SafeguardOutlinedButton(\n                                modifier = Modifier.weight(1f),\n                                onClick = {\n                                    startActivity(\n                                        Intent(\n                                            this@MainActivity,\n                                            AdhkarActivity::class.java\n                                        )\n                                    )\n                                }\n                            ) {\n                                Text(\"Adhkâr\")\n                            }\n                        }""",
-    """                        Column(\n                            modifier = Modifier.fillMaxWidth(),\n                            verticalArrangement = Arrangement.spacedBy(8.dp)\n                        ) {\n                            SafeguardOutlinedButton(\n                                modifier = Modifier.fillMaxWidth(),\n                                onClick = {\n                                    startActivity(\n                                        Intent(\n                                            this@MainActivity,\n                                            SpiritualLibraryActivity::class.java\n                                        )\n                                    )\n                                }\n                            ) {\n                                Text(\"Bibliothèque\")\n                            }\n                            SafeguardOutlinedButton(\n                                modifier = Modifier.fillMaxWidth(),\n                                onClick = {\n                                    startActivity(\n                                        Intent(\n                                            this@MainActivity,\n                                            AdhkarActivity::class.java\n                                        )\n                                    )\n                                }\n                            ) {\n                                Text(\"Adhkâr\")\n                            }\n                        }""",
-    "dashboard library buttons at large font",
-)
 
 build = "app/build.gradle.kts"
-replace_once(
+
+patch(
     build,
-    "compileSdk = 36",
-    "compileSdk = 37",
-    "proven 0.10.8 Android compile SDK",
-)
-replace_once(
-    build,
-    """        val preparedReleaseMetadata =\n            buildFile.contains(\"versionCode = 28\") &&\n                buildFile.contains(\"versionName = \\\"0.10.9\\\"\")\n        check(auditedBaselineMetadata || preparedReleaseMetadata) {\n            \"Expected either the audited 0.10.3 baseline metadata or prepared 0.10.9 release metadata.\"\n        }""",
-    """        val preparedReleaseMetadata =\n            (buildFile.contains(\"versionCode = 28\") &&\n                buildFile.contains(\"versionName = \\\"0.10.9\\\"\")) ||\n            (buildFile.contains(\"versionCode = 29\") &&\n                buildFile.contains(\"versionName = \\\"0.10.10\\\"\"))\n        check(auditedBaselineMetadata || preparedReleaseMetadata) {\n            \"Expected the audited baseline or an explicitly prepared 0.10.9/0.10.10 release metadata set.\"\n        }""",
-    "10.10 migration metadata verifier",
-)
-replace_once(
-    build,
-    """        versionCode = 28\n        versionName = \"0.10.9\"""",
-    """        versionCode = 29\n        versionName = \"0.10.10\""",
-    "0.10.10 version metadata",
+    '''        check(!manifest.contains("android.permission.INTERNET")) {
+            "Quran Safeguard must remain offline."
+        }''',
+    '''        check(manifest.contains("android.permission.INTERNET")) {
+            "Private local Al-Husary downloads require Android's normal INTERNET permission."
+        }
+        val audioController = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioController.kt"
+        ).readText()
+        val audioSource = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioSource.kt"
+        ).readText()
+        check(
+            audioController.contains("QuranAudioSource.url") &&
+                audioController.contains("downloadSurah(") &&
+                audioController.contains("looksLikeMp3") &&
+                audioSource.contains("Husary_Muallim_128kbps")
+        ) {
+            "INTERNET may only support the explicit private local Quran-audio path."
+        }''',
+    "private local audio privacy boundary",
 )
 
-print("0.10.10 runtime hardening is applied")
+patch(
+    build,
+    '''        check(
+            adhkarUi.contains("AdhkarPeriod.MORNING") &&
+                adhkarUi.contains("AdhkarPeriod.EVENING") &&
+                adhkarUi.contains("Text(\\"Matin\\")") &&
+                adhkarUi.contains("Text(\\"Soir\\")")
+        ) {
+            "Morning and evening Adhkar must both be selectable in-app."
+        }
+        check(adhkarUi.contains("Crossfade(")) {
+            "Morning/evening changes require a calm in-app transition."
+        }''',
+    '''        check(
+            adhkarUi.contains("AdhkarPeriod.MORNING") &&
+                adhkarUi.contains("AdhkarPeriod.EVENING") &&
+                adhkarUi.contains("FilterChip(") &&
+                adhkarUi.contains("✓ Matin") &&
+                adhkarUi.contains("✓ Soir")
+        ) {
+            "Morning and evening Adhkar must both be visible and selectable in-app."
+        }''',
+    "large-text Adhkar selector contract",
+)
+
+patch(
+    build,
+    '''        listOf("#171715", "#F7F2E8").forEach { brandColor ->
+            check(launcherIcon.contains(brandColor)) {
+                "Launcher icon lost a required cream/black brand color: " + brandColor
+            }
+        }''',
+    '''        listOf("#1D5B47", "#B48A3C", "#76563C", "#FFF8EA").forEach { brandColor ->
+            check(launcherIcon.contains(brandColor)) {
+                "Launcher icon lost a required green/gold/brown/ivory brand color: " + brandColor
+            }
+        }''',
+    "0.10.10 launcher visual identity",
+)
+
+checks = [
+    ("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt", "Reader109StateSanitizer.migrateOnReaderEntry(this)", "reader migration"),
+    ("app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt", "MushafRuntimeVisibilityPolicy.probeJavascript()", "Challenge visibility gate"),
+    ("app/src/main/assets/reader109/reader.js", "Audio Al-Husary Muʿallim", "audio management UI"),
+    ("app/src/main/assets/reader109/protocol.js", "function disableAudio(s)", "non-blocking audio downgrade"),
+    ("app/src/main/java/com/quranunlock/guard/QuranAudioSource.kt", "Husary_Muallim_128kbps", "Husary Muallim source"),
+    ("app/src/main/AndroidManifest.xml", "android.permission.INTERNET", "audio download permission"),
+    (build, "compileSdk = 37", "proven compile SDK"),
+    (build, "versionCode = 29", "0.10.10 version code"),
+    (build, 'versionName = "0.10.10"', "0.10.10 version name"),
+]
+for file_name, token, marker in checks:
+    require(file_name, token, marker)
+
+print("0.10.10 runtime/audio/UX hardening is applied")
