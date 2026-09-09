@@ -8,17 +8,17 @@ import org.junit.Test
 class ReadingValidationPolicyTest {
     @Test
     fun fiftyNineSecondsCannotValidateEvenAtBottom() {
-        assertFalse(ReadingValidationPolicy.canValidate(59_999L))
+        assertFalse(ReadingValidationPolicy.canValidate(59_999L, bottomReached = true))
     }
 
     @Test
-    fun sixtyActiveSecondsCanValidate() {
-        assertTrue(ReadingValidationPolicy.canValidate(60_000L))
+    fun sixtySecondsWithBottomCanValidate() {
+        assertTrue(ReadingValidationPolicy.canValidate(60_000L, bottomReached = true))
     }
 
     @Test
-    fun missingScrollSignalCannotKeepSixtySecondPageLocked() {
-        assertTrue(ReadingValidationPolicy.canValidate(60_000L))
+    fun sixtySecondsWithoutBottomCannotValidate() {
+        assertFalse(ReadingValidationPolicy.canValidate(60_000L, bottomReached = false))
     }
 
     @Test
