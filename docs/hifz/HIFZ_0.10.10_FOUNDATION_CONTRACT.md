@@ -27,6 +27,7 @@ Ce document fixe les décisions déjà validées pour éviter qu'elles soient pe
 - Aucun déplacement silencieux des bornes.
 - Aucun doublement automatique du quota.
 - Le système peut suggérer le prochain créneau disponible de la même piste, mais le report est explicite.
+- Une suggestion de report ne doit pas empiler automatiquement la séance en retard sur une autre tâche Hifz déjà planifiée ce jour-là.
 
 ## Sabqi
 
@@ -57,6 +58,8 @@ Contrat actuel du socle :
 4. masquage 75 % ;
 5. masquage 100 % ;
 6. test final entièrement masqué.
+
+Chaque palier masqué 25/50/75/100 % exige au moins une réussite non assistée avant de passer au suivant. Une tentative incorrecte ne valide donc jamais un palier masqué. Le test final exige lui aussi une réussite non assistée.
 
 L'audio n'est pas rendu obligatoire par le contrat Itqān actuel.
 
@@ -93,3 +96,7 @@ Sont persistés séparément du lecteur libre :
 - fin du protocole d'entraînement.
 
 Toute corruption du stockage Hifz doit échouer de manière fermée et ne doit pas écraser automatiquement l'état par un état vide.
+
+## Clôture d'une tâche
+
+La fin du protocole d'entraînement et le statut `COMPLETED` de la tâche sont deux états distincts. Une tâche Hifz n'est clôturée qu'au moyen d'une transition explicite après achèvement du protocole. Cette clôture ne modifie ni son identité, ni sa date d'origine, ni son curseur, ni son quota.
