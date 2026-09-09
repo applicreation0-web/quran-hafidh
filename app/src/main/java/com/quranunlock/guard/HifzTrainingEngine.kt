@@ -41,7 +41,8 @@ object HifzTrainingEngine {
         val step = requireCurrent(task, progress, segmentCount)
         val stepProgress = normalizeStepProgress(progress, step)
         return progress.copy(
-            stepProgress = HifzTrainingProgressPolicy.reveal(stepProgress)
+            stepProgress = HifzTrainingProgressPolicy.reveal(stepProgress),
+            totalRevealCount = Math.addExact(progress.totalRevealCount, 1)
         )
     }
 
@@ -54,8 +55,26 @@ object HifzTrainingEngine {
         val step = requireCurrent(task, progress, segmentCount)
         val stepProgress = normalizeStepProgress(progress, step)
         return progress.copy(
-            stepProgress = HifzTrainingProgressPolicy.attempt(stepProgress, correct)
+            stepProgress = HifzTrainingProgressPolicy.attempt(stepProgress, correct),
+            totalIncorrectAttempts = if (correct) {
+                progress.totalIncorrectAttempts
+            } else {
+                Math.addExact(progress.totalIncorrectAttempts, 1)
+            }
         )
+    }
+
+    fun recordActiveSeconds(
+        task: HifzTask,
+        progress: HifzTaskProgress,
+        seconds: Long,
+        segmentCount: Int = 1
+    ): HifzTaskProgress {
+        requireProgressIdentity(task, progress)
+        require(!progress.completed) { "Completed Hifz training cannot accrue active time." }
+        require(seconds >= 0L) { "Active Hifz time cannot be negative." }
+        require(currentStep(task, progress, segmentCount) != null)
+        return progress.copy(activeSeconds = Math.addExact(progress.activeSeconds, seconds))
     }
 
     /**
@@ -122,6 +141,7 @@ object HifzTrainingEngine {
     ): Boolean = runCatching {
         requireProgressIdentity(task, progress)
         require(segmentCount > 0)
+        require(progress.totalRevealCount >= (progress.stepProgress?.revealCount ?: 0))
         val assemblyRequired = requiresAssembly(task.track, segmentCount)
         val lastBaseSegment = segmentCount - 1
 
