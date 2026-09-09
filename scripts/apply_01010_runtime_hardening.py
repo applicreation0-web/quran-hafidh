@@ -67,9 +67,9 @@ replace_once(
 build = "app/build.gradle.kts"
 replace_once(
     build,
-    "compileSdk = 37",
     "compileSdk = 36",
-    "stable Android compile SDK",
+    "compileSdk = 37",
+    "proven 0.10.8 Android compile SDK",
 )
 replace_once(
     build,
