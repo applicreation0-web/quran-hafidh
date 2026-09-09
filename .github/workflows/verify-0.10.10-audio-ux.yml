@@ -1,0 +1,110 @@
+name: Quran Safeguard 0.10.10 audio and UX proof
+
+on:
+  push:
+    branches:
+      - "work/0.10.10-runtime-hifz-final"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: quran-safeguard-01010-audio-ux-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BASELINE_RUN_ID: "34096699893"
+  BASELINE_ARTIFACT: "quran-safeguard-0.10.8-unsigned"
+
+jobs:
+  audio-ux-proof:
+    name: Real local audio + all critical UI surfaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply exact 0.10.10 hardening
+        run: python3 scripts/apply_01010_runtime_hardening.py
+
+      - name: Restore audited immutable Quran/Tafsir corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: baseline-apks
+
+      - name: Extract corpus only and generate reader geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          for apk in Path('baseline-apks').rglob('*.apk'):
+              plus='plus' in apk.name.lower()
+              with zipfile.ZipFile(apk) as z:
+                  for info in z.infolist():
+                      name=info.filename
+                      if info.is_dir():
+                          continue
+                      if not plus and name.startswith('assets/mushaf/'):
+                          dest=Path('app/src/main')/name
+                      elif plus and name.startswith('assets/tafsir/'):
+                          dest=Path('app/src/plus')/name
+                      else:
+                          continue
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      with z.open(info) as src, dest.open('wb') as out:
+                          shutil.copyfileobj(src,out)
+          PY
+          python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/audit_01010_release_contract.py
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install proven build SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Unit proof — both editions including pinned audio source
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+
+      - name: Runtime proof — real Husary download/playback + cross-app UI scale
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            gradle --no-daemon :app:connectedLightDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.QuranAudioRuntimeTest --stacktrace
+            gradle --no-daemon :app:connectedLightDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.SettingsUiScaleRuntimeTest --stacktrace
+            gradle --no-daemon :app:connectedPlusDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.SettingsUiScaleRuntimeTest --stacktrace
+
+      - name: Upload proof reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-ux-proof-${{ github.sha }}
+          path: |
+            app/build/reports/
+            app/build/outputs/androidTest-results/
+          retention-days: 14
+          if-no-files-found: warn
