@@ -16,16 +16,17 @@ enum class HifzTaskStatus {
 }
 
 /**
- * Scheduling state for the structured Hifz journey.
+ * Stable scheduling state for the structured Hifz journey.
  *
- * This state is deliberately independent from the free Memorisation reader sessions.
- * A missed task keeps its original date, cursor and quota until the user explicitly
- * replans or completes it.
+ * This state is deliberately independent from free Memorisation reader sessions.
+ * A missed task keeps its identity, original date, cursor and quota. Replanning may
+ * change only the current scheduled date and status.
  */
 data class HifzTask(
     val id: String,
     val track: HifzTrack,
-    val scheduledDate: LocalDate,
+    val originalScheduledDate: LocalDate,
+    val scheduledDate: LocalDate = originalScheduledDate,
     val cursor: String,
     val quota: Int,
     val status: HifzTaskStatus = HifzTaskStatus.PLANNED
@@ -38,6 +39,8 @@ data class HifzTask(
 }
 
 object HifzSchedulePolicy {
+    private const val MAX_REPLAN_SEARCH_DAYS = 56L
+
     /** Fixed default rhythm approved for 0.10.10. */
     fun defaultTrackFor(day: DayOfWeek): HifzTrack = when (day) {
         DayOfWeek.MONDAY,
@@ -53,7 +56,7 @@ object HifzSchedulePolicy {
 
     /**
      * Missing a planned day is not a failure and never moves the task silently.
-     * Only the status changes; cursor, quota and scheduled date remain untouched.
+     * Only the status changes; cursor, quota and both dates remain untouched.
      */
     fun markOverdue(task: HifzTask, today: LocalDate): HifzTask {
         if (task.status != HifzTaskStatus.PLANNED) return task
@@ -62,7 +65,8 @@ object HifzSchedulePolicy {
     }
 
     /**
-     * Replanning is always explicit. It preserves the exact work cursor and quota.
+     * Replanning is always explicit. It preserves identity, original date, cursor,
+     * quota and track. A completed task cannot be moved back into the queue.
      */
     fun replan(task: HifzTask, newDate: LocalDate): HifzTask {
         require(task.status != HifzTaskStatus.COMPLETED) {
@@ -72,6 +76,25 @@ object HifzSchedulePolicy {
             scheduledDate = newDate,
             status = HifzTaskStatus.PLANNED
         )
+    }
+
+    /**
+     * Suggests the next available day dedicated to the same Hifz track.
+     * This function never mutates or replans the task by itself.
+     */
+    fun suggestReplanDate(
+        task: HifzTask,
+        after: LocalDate,
+        available: (LocalDate) -> Boolean = { true }
+    ): LocalDate? {
+        if (task.status == HifzTaskStatus.COMPLETED) return null
+        for (offset in 1L..MAX_REPLAN_SEARCH_DAYS) {
+            val candidate = after.plusDays(offset)
+            if (defaultTrackFor(candidate.dayOfWeek) == task.track && available(candidate)) {
+                return candidate
+            }
+        }
+        return null
     }
 
     fun complete(task: HifzTask): HifzTask = task.copy(status = HifzTaskStatus.COMPLETED)
