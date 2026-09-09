@@ -97,6 +97,23 @@ object HifzSchedulePolicy {
         return null
     }
 
+    /**
+     * Default backlog-aware suggestion. Any non-completed Hifz task already occupying
+     * a candidate date makes that date unavailable, so a missed task is never stacked
+     * onto another scheduled task as an implicit catch-up burden.
+     */
+    fun suggestReplanDate(
+        task: HifzTask,
+        after: LocalDate,
+        existingTasks: List<HifzTask>
+    ): LocalDate? = suggestReplanDate(task, after) { candidate ->
+        existingTasks.none { existing ->
+            existing.id != task.id &&
+                existing.status != HifzTaskStatus.COMPLETED &&
+                existing.scheduledDate == candidate
+        }
+    }
+
     fun complete(task: HifzTask): HifzTask = task.copy(status = HifzTaskStatus.COMPLETED)
 
     /**
