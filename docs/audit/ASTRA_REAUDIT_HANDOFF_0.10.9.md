@@ -27,6 +27,7 @@ La poursuite contradictoire a ensuite révélé plusieurs faux PASS et écarts d
 11. Safeguard challenge : validation centrale exige maintenant >=60 secondes actives ET `bottomReached`; une page entièrement visible marque automatiquement le bas au chargement, tandis qu’une page scrollable doit réellement atteindre son bas. Le backend `GuardPrefs` applique aussi cette règle fail-closed.
 12. Frontière Tafsir 10.9 : le challenge chronométré ne peut plus ouvrir le Tafsir ; le Tafsir reste réservé à Lecture/Étude Plus. JavaScript du WebView challenge est désactivé.
 13. Cleanup E-Ink du challenge : `refreshController.dispose()` au `onDestroy`.
+14. Gestes lecteur : le swipe horizontal doit aussi respecter le zoom natif réel du WebView ; le correctif one-shot a produit le commit `5ab391884436df5f7e891db45c9f9affefb7ed87`.
 
 ## Exigences de validation finale
 
@@ -57,3 +58,7 @@ La logique E-Ink peut être validée en tests/emulation. L’efficacité physiqu
 ## Publication
 
 Ne signer et ne publier 0.10.9 qu’après un nouveau CI entièrement vert sur le HEAD final, téléchargement/recalcul des SHA-256 des APK Light/Plus issus de CE run et audit de cohérence final. Ne jamais réutiliser les anciens hashes de ce document.
+
+## Relance finale CI
+
+Ce commit documentaire est volontairement utilisé pour déclencher une nouvelle exécution complète du workflow `Quran Safeguard 0.10.9 build and audit` après le correctif de zoom natif. Aucun code applicatif n’est modifié par cette relance.
