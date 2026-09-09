@@ -33,7 +33,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
     private var expanded by mutableStateOf(false)
     private var memoryMode = false
     private var contextual = false
-    private val prefs by lazy { getSharedPreferences("reader109", MODE_PRIVATE) }
+    private val prefs by lazy { getSharedPreferences(QuranPersistenceNamespaces.FREE_READER_MEMORIZATION, MODE_PRIVATE) }
     private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
     private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
     private val audio by lazy { QuranAudioController(this) { event -> runOnUiThread { web?.evaluateJavascript("window.audioEvent && window.audioEvent(${event});", null) } } }
@@ -119,7 +119,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
     inner class ReaderBridge {
         @JavascriptInterface fun initial(): String = JSONObject().apply {
             put("state",prefs.getString("state",null));put("plus",TafsirEdition.isEnabled)
-            put("page",intent.getIntExtra(EXTRA_PAGE,getSharedPreferences("free_quran_reader",MODE_PRIVATE).getInt("last_page",1)).coerceIn(1,604))
+            put("page",intent.getIntExtra(EXTRA_PAGE,getSharedPreferences(QuranPersistenceNamespaces.FREE_READER_LAST_PAGE,MODE_PRIVATE).getInt("last_page",1)).coerceIn(1,604))
             put("legacyBookmarks",org.json.JSONArray(QuranBookmarkStore.load(this@FreeQuranReaderActivity).sorted()))
             put("memory",memoryMode);put("contextual",contextual);put("surah",intent.getIntExtra("surah",0));put("ayah",intent.getIntExtra("ayah",0))
             put("audio",audio.available)

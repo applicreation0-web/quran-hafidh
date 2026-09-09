@@ -1,0 +1,83 @@
+package com.applicreation0.quransafeguard
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import java.time.LocalDate
+
+class HifzResumePolicyTest {
+    @Test
+    fun sameDayRestartIsIdempotent() {
+        val today = LocalDate.of(2026, 9, 9)
+        val state = state(today)
+        val restored = HifzStateCodec.decode(HifzStateCodec.encode(state))
+
+        val resumed = HifzResumePolicy.resume(restored, today)
+
+        assertEquals(restored, resumed.state)
+        assertEquals("sabqi-resume", resumed.nextTask?.id)
+    }
+
+    @Test
+    fun nextDayRestartMarksOverdueWithoutMovingWorkOrProgress() {
+        val plannedDate = LocalDate.of(2026, 9, 9)
+        val state = state(plannedDate)
+        val restored = HifzStateCodec.decode(HifzStateCodec.encode(state))
+        val beforeTask = restored.tasks.single()
+        val beforeProgress = restored.progressByTask.getValue(beforeTask.id)
+
+        val resumed = HifzResumePolicy.resume(restored, LocalDate.of(2026, 9, 10))
+        val afterTask = resumed.state.tasks.single()
+
+        assertEquals(HifzTaskStatus.OVERDUE, afterTask.status)
+        assertEquals(beforeTask.originalScheduledDate, afterTask.originalScheduledDate)
+        assertEquals(beforeTask.scheduledDate, afterTask.scheduledDate)
+        assertEquals(beforeTask.cursor, afterTask.cursor)
+        assertEquals(beforeTask.quota, afterTask.quota)
+        assertEquals(beforeProgress, resumed.state.progressByTask.getValue(afterTask.id))
+        assertEquals(afterTask.id, resumed.nextTask?.id)
+    }
+
+    @Test
+    fun resumeNeverReopensCompletedTask() {
+        val date = LocalDate.of(2026, 9, 8)
+        val done = HifzTask(
+            id = "done",
+            track = HifzTrack.ITQAN,
+            originalScheduledDate = date,
+            cursor = HifzCursor.page(2, 1, 5, 2),
+            quota = 5,
+            status = HifzTaskStatus.COMPLETED
+        )
+        val state = HifzState(tasks = listOf(done))
+
+        val resumed = HifzResumePolicy.resume(state, LocalDate.of(2026, 9, 10))
+
+        assertEquals(done, resumed.state.tasks.single())
+        assertEquals(null, resumed.nextTask)
+    }
+
+    private fun state(date: LocalDate): HifzState {
+        val task = HifzTask(
+            id = "sabqi-resume",
+            track = HifzTrack.SABQI,
+            originalScheduledDate = date,
+            cursor = HifzCursor.page(2, 1, 5, 2),
+            quota = 5
+        )
+        val progress = HifzTaskProgress(
+            taskId = task.id,
+            stepIndex = 2,
+            stepProgress = HifzStepProgress(
+                stepId = "sabqi-visible",
+                repetitions = 6,
+                consecutiveSuccesses = 0,
+                revealCount = 1,
+                assistedSinceLastAttempt = false
+            )
+        )
+        return HifzState(
+            tasks = listOf(task),
+            progressByTask = mapOf(task.id to progress)
+        )
+    }
+}

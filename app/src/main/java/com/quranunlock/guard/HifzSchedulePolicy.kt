@@ -19,21 +19,20 @@ enum class HifzTaskStatus {
  * Stable scheduling state for the structured Hifz journey.
  *
  * This state is deliberately independent from free Memorisation reader sessions.
- * A missed task keeps its identity, original date, cursor and quota. Replanning may
- * change only the current scheduled date and status.
+ * A missed task keeps its identity, original date, typed Quran cursor and quota.
+ * Replanning may change only the current scheduled date and status.
  */
 data class HifzTask(
     val id: String,
     val track: HifzTrack,
     val originalScheduledDate: LocalDate,
     val scheduledDate: LocalDate = originalScheduledDate,
-    val cursor: String,
+    val cursor: HifzCursor,
     val quota: Int,
     val status: HifzTaskStatus = HifzTaskStatus.PLANNED
 ) {
     init {
         require(id.isNotBlank()) { "A Hifz task id is required." }
-        require(cursor.isNotBlank()) { "A Hifz cursor is required." }
         require(quota > 0) { "A Hifz quota must be positive." }
     }
 }

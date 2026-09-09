@@ -8,6 +8,7 @@ Ce document fixe les décisions déjà validées pour éviter qu'elles soient pe
 - `Parcours Hifz` est un orchestrateur distinct avec sa propre persistance.
 - Une session libre de Mémorisation ne modifie jamais le calendrier Hifz.
 - Le moteur de lecture/mémorisation peut servir de surface d'exécution d'une tâche Hifz, mais il n'est jamais la source de vérité du planning Hifz.
+- Les fichiers de préférences sont explicitement distincts : `reader109` / `free_quran_reader` pour le lecteur libre, `hifz_01010` pour le parcours structuré.
 
 ## Rythme hebdomadaire par défaut
 
@@ -27,7 +28,18 @@ Ce document fixe les décisions déjà validées pour éviter qu'elles soient pe
 - Aucun déplacement silencieux des bornes.
 - Aucun doublement automatique du quota.
 - Le système peut suggérer le prochain créneau disponible de la même piste, mais le report est explicite.
-- Une suggestion de report ne doit pas empiler automatiquement la séance en retard sur une autre tâche Hifz déjà planifiée ce jour-là.
+- Après redémarrage ou changement de jour, la normalisation peut uniquement passer une tâche `PLANNED` passée en `OVERDUE` ; elle ne modifie ni date, ni quota, ni progression d'entraînement, ni curseur.
+
+## Curseur coranique Hifz
+
+Le curseur du Parcours Hifz n'est plus une chaîne de texte libre. Il est typé et contient :
+
+- verset de début (`sourate`, `āyah`) ;
+- verset de fin (`sourate`, `āyah`) ;
+- page Muṣḥaf de début ;
+- page Muṣḥaf de fin.
+
+Les références sont validées sur les 114 sourates et les 6236 āyāt canoniques. Les pages sont limitées au Muṣḥaf de Médine fixe de 604 pages. Une référence impossible, une plage inversée ou une page hors 1–604 est rejetée.
 
 ## Sabqi
 
@@ -59,9 +71,7 @@ Contrat actuel du socle :
 5. masquage 100 % ;
 6. test final entièrement masqué.
 
-Chaque palier masqué 25/50/75/100 % exige au moins une réussite non assistée avant de passer au suivant. Une tentative incorrecte ne valide donc jamais un palier masqué. Le test final exige lui aussi une réussite non assistée.
-
-L'audio n'est pas rendu obligatoire par le contrat Itqān actuel.
+L'audio n'est pas rendu obligatoire par le contrat Itqān actuel. Chaque palier masqué exige au moins une réussite non assistée avant le passage au palier suivant ; une tentative incorrecte ne valide jamais le palier.
 
 ## Révélations / aide
 
@@ -77,7 +87,7 @@ Le calendrier réserve samedi et dimanche à Murājaʿah, mais son protocole d'e
 
 ## Persistance
 
-Le Parcours Hifz utilise un stockage séparé (`hifz_01010`) avec schéma versionné.
+Le Parcours Hifz utilise un stockage séparé (`hifz_01010`) avec schéma versionné **2**.
 
 Sont persistés séparément du lecteur libre :
 
@@ -85,7 +95,7 @@ Sont persistés séparément du lecteur libre :
 - piste Sabqi / Itqān / Murājaʿah ;
 - date d'origine ;
 - date planifiée courante ;
-- curseur ;
+- curseur coranique typé (début/fin + pages) ;
 - quota ;
 - statut ;
 - étape d'entraînement courante ;
@@ -95,8 +105,4 @@ Sont persistés séparément du lecteur libre :
 - état assisté ;
 - fin du protocole d'entraînement.
 
-Toute corruption du stockage Hifz doit échouer de manière fermée et ne doit pas écraser automatiquement l'état par un état vide.
-
-## Clôture d'une tâche
-
-La fin du protocole d'entraînement et le statut `COMPLETED` de la tâche sont deux états distincts. Une tâche Hifz n'est clôturée qu'au moyen d'une transition explicite après achèvement du protocole. Cette clôture ne modifie ni son identité, ni sa date d'origine, ni son curseur, ni son quota.
+Toute corruption du stockage Hifz doit échouer de manière fermée et ne doit pas écraser automatiquement l'état par un état vide. Un ancien état de schéma 1 à curseur texte libre n'est pas interprété silencieusement par le schéma 2.

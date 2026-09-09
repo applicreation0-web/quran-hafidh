@@ -22,11 +22,12 @@ class HifzSchedulePolicyTest {
     @Test
     fun missedTaskBecomesOverdueWithoutMovingCursorQuotaOrDates() {
         val originalDate = LocalDate.of(2026, 9, 7)
+        val originalCursor = HifzCursor.page(2, 1, 5, 2)
         val task = task(
             id = "sabqi-1",
             track = HifzTrack.SABQI,
             date = originalDate,
-            cursor = "2:1-2:5",
+            cursor = originalCursor,
             quota = 5
         )
 
@@ -35,7 +36,7 @@ class HifzSchedulePolicyTest {
         assertEquals(HifzTaskStatus.OVERDUE, overdue.status)
         assertEquals(originalDate, overdue.originalScheduledDate)
         assertEquals(originalDate, overdue.scheduledDate)
-        assertEquals("2:1-2:5", overdue.cursor)
+        assertEquals(originalCursor, overdue.cursor)
         assertEquals(5, overdue.quota)
     }
 
@@ -54,7 +55,7 @@ class HifzSchedulePolicyTest {
             id = "itqan-1",
             track = HifzTrack.ITQAN,
             date = original,
-            cursor = "67:1-67:4",
+            cursor = HifzCursor.page(67, 1, 4, 562),
             quota = 4,
             status = HifzTaskStatus.OVERDUE
         )
@@ -122,28 +123,29 @@ class HifzSchedulePolicyTest {
     @Test
     fun overdueTaskHasPriorityButDoesNotDoubleTodaysQuota() {
         val today = LocalDate.of(2026, 9, 9)
+        val missedCursor = HifzCursor.page(1, 1, 4, 1)
         val missed = task(
             id = "missed",
             track = HifzTrack.ITQAN,
             date = LocalDate.of(2026, 9, 8),
-            cursor = "1:1-1:4",
+            cursor = missedCursor,
             quota = 4
         )
         val scheduledToday = task(
             id = "today",
             track = HifzTrack.SABQI,
             date = today,
-            cursor = "1:5-1:9",
-            quota = 5
+            cursor = HifzCursor.page(1, 5, 7, 1),
+            quota = 3
         )
 
         val next = HifzSchedulePolicy.nextTask(today, listOf(scheduledToday, missed))
 
         assertEquals("missed", next?.id)
         assertEquals(4, next?.quota)
-        assertEquals("1:1-1:4", next?.cursor)
+        assertEquals(missedCursor, next?.cursor)
         assertEquals(HifzTaskStatus.PLANNED, scheduledToday.status)
-        assertEquals(5, scheduledToday.quota)
+        assertEquals(3, scheduledToday.quota)
     }
 
     @Test
@@ -173,7 +175,7 @@ class HifzSchedulePolicyTest {
         id: String,
         track: HifzTrack,
         date: LocalDate,
-        cursor: String = "1:1-1:5",
+        cursor: HifzCursor = HifzCursor.page(1, 1, 5, 1),
         quota: Int = 5,
         status: HifzTaskStatus = HifzTaskStatus.PLANNED
     ) = HifzTask(

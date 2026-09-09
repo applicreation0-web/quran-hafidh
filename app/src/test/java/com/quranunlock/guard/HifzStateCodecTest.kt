@@ -8,13 +8,13 @@ import java.time.LocalDate
 class HifzStateCodecTest {
 
     @Test
-    fun roundTripPreservesTaskAndTrainingProgress() {
+    fun roundTripPreservesTypedTaskCursorAndTrainingProgress() {
         val task = HifzTask(
             id = "itqan|task-1",
             track = HifzTrack.ITQAN,
             originalScheduledDate = LocalDate.of(2026, 9, 8),
             scheduledDate = LocalDate.of(2026, 9, 15),
-            cursor = "67:1-67:7 | page 560",
+            cursor = HifzCursor.page(67, 1, 7, 562),
             quota = 30,
             status = HifzTaskStatus.OVERDUE
         )
@@ -40,6 +40,13 @@ class HifzStateCodecTest {
     }
 
     @Test
+    fun legacySchemaFailsClosedInsteadOfParsingFreeTextCursor() {
+        assertThrows(IllegalArgumentException::class.java) {
+            HifzStateCodec.decode("1\n")
+        }
+    }
+
+    @Test
     fun unsupportedSchemaFailsClosed() {
         assertThrows(IllegalArgumentException::class.java) {
             HifzStateCodec.decode("999\n")
@@ -49,8 +56,8 @@ class HifzStateCodecTest {
     @Test
     fun duplicateTaskIdsAreRejected() {
         val date = LocalDate.of(2026, 9, 9)
-        val a = HifzTask("same", HifzTrack.SABQI, date, cursor = "1:1", quota = 1)
-        val b = HifzTask("same", HifzTrack.ITQAN, date, cursor = "1:2", quota = 1)
+        val a = HifzTask("same", HifzTrack.SABQI, date, cursor = HifzCursor.page(1, 1, 3, 1), quota = 1)
+        val b = HifzTask("same", HifzTrack.ITQAN, date, cursor = HifzCursor.page(1, 4, 7, 1), quota = 1)
 
         assertThrows(IllegalArgumentException::class.java) {
             HifzState(tasks = listOf(a, b))

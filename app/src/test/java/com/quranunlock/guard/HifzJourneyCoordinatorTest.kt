@@ -72,7 +72,7 @@ class HifzJourneyCoordinatorTest {
         id = id,
         track = HifzTrack.SABQI,
         originalScheduledDate = LocalDate.of(2026, 9, 9),
-        cursor = "2:1-2:5",
+        cursor = HifzCursor.page(2, 1, 5, 2),
         quota = 5
     )
 }

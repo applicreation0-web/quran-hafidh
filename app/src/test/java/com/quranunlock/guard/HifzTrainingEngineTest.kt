@@ -90,7 +90,7 @@ class HifzTrainingEngineTest {
         assertNull(HifzTrainingEngine.currentStep(task, progress))
         assertEquals(LocalDate.of(2026, 9, 8), task.originalScheduledDate)
         assertEquals(LocalDate.of(2026, 9, 8), task.scheduledDate)
-        assertEquals("2:1-2:5", task.cursor)
+        assertEquals(HifzCursor.page(2, 1, 5, 2), task.cursor)
         assertEquals(5, task.quota)
         assertFalse(task.status == HifzTaskStatus.COMPLETED)
     }
@@ -99,7 +99,7 @@ class HifzTrainingEngineTest {
         id = "task-${track.name.lowercase()}",
         track = track,
         originalScheduledDate = LocalDate.of(2026, 9, 8),
-        cursor = "2:1-2:5",
+        cursor = HifzCursor.page(2, 1, 5, 2),
         quota = 5
     )
 }

@@ -43,11 +43,11 @@ data class HifzLoadResult(
 )
 
 /**
- * Small deterministic codec kept independent from reader109 and GuardPrefs.
- * T records are schedule tasks. P records are training progress for those tasks.
+ * Deterministic, versioned codec kept independent from reader109 and GuardPrefs.
+ * T records contain a typed Quran cursor; P records contain training progress.
  */
 object HifzStateCodec {
-    const val SCHEMA = 1
+    const val SCHEMA = 2
     private const val SEP = "|"
     private const val TASK = "T"
     private const val PROGRESS = "P"
@@ -56,12 +56,18 @@ object HifzStateCodec {
     fun encode(state: HifzState): String = buildString {
         append(SCHEMA).append('\n')
         state.tasks.sortedBy { it.id }.forEach { task ->
+            val cursor = task.cursor
             append(TASK).append(SEP)
             append(encodeText(task.id)).append(SEP)
             append(task.track.name).append(SEP)
             append(task.originalScheduledDate.toEpochDay()).append(SEP)
             append(task.scheduledDate.toEpochDay()).append(SEP)
-            append(encodeText(task.cursor)).append(SEP)
+            append(cursor.start.surah).append(SEP)
+            append(cursor.start.ayah).append(SEP)
+            append(cursor.end.surah).append(SEP)
+            append(cursor.end.ayah).append(SEP)
+            append(cursor.startPage).append(SEP)
+            append(cursor.endPage).append(SEP)
             append(task.quota).append(SEP)
             append(task.status.name).append('\n')
         }
@@ -91,15 +97,20 @@ object HifzStateCodec {
             val fields = line.split(SEP)
             when (fields.firstOrNull()) {
                 TASK -> {
-                    require(fields.size == 8) { "Malformed Hifz task." }
+                    require(fields.size == 13) { "Malformed Hifz task." }
                     tasks += HifzTask(
                         id = decodeText(fields[1]),
                         track = HifzTrack.valueOf(fields[2]),
                         originalScheduledDate = LocalDate.ofEpochDay(fields[3].toLong()),
                         scheduledDate = LocalDate.ofEpochDay(fields[4].toLong()),
-                        cursor = decodeText(fields[5]),
-                        quota = fields[6].toInt(),
-                        status = HifzTaskStatus.valueOf(fields[7])
+                        cursor = HifzCursor(
+                            start = QuranVerseRef(fields[5].toInt(), fields[6].toInt()),
+                            end = QuranVerseRef(fields[7].toInt(), fields[8].toInt()),
+                            startPage = fields[9].toInt(),
+                            endPage = fields[10].toInt()
+                        ),
+                        quota = fields[11].toInt(),
+                        status = HifzTaskStatus.valueOf(fields[12])
                     )
                 }
 
@@ -141,13 +152,21 @@ object HifzStateCodec {
  * or written here, which prevents either feature from silently changing the other.
  */
 object HifzStateStore {
-    internal const val FILE = "hifz_01010"
-    private const val KEY_STATE = "state_v1"
+    internal const val FILE = QuranPersistenceNamespaces.HIFZ
+    private const val KEY_STATE = "state_v2"
+    private const val LEGACY_KEY_STATE = "state_v1"
 
     fun load(context: Context): HifzLoadResult {
-        val raw = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-            .getString(KEY_STATE, null)
-            ?: return HifzLoadResult(HifzState(), corrupted = false)
+        val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        val raw = prefs.getString(KEY_STATE, null)
+        if (raw == null) {
+            // An unreleased schema-1 state is ambiguous because its cursor was free text.
+            // Never silently replace it with an empty schema-2 state.
+            if (prefs.contains(LEGACY_KEY_STATE)) {
+                return HifzLoadResult(HifzState(), corrupted = true)
+            }
+            return HifzLoadResult(HifzState(), corrupted = false)
+        }
 
         return runCatching { HifzStateCodec.decode(raw) }
             .fold(
@@ -156,7 +175,7 @@ object HifzStateStore {
             )
     }
 
-    fun save(context: Context, state: HifzState): Boolean =
+    private fun save(context: Context, state: HifzState): Boolean =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_STATE, HifzStateCodec.encode(state))
