@@ -34,6 +34,9 @@ data class HifzTask(
     init {
         require(id.isNotBlank()) { "A Hifz task id is required." }
         require(quota > 0) { "A Hifz quota must be positive." }
+        require(!scheduledDate.isBefore(originalScheduledDate)) {
+            "A Hifz task cannot be silently moved before its original date."
+        }
     }
 }
 
@@ -65,11 +68,17 @@ object HifzSchedulePolicy {
 
     /**
      * Replanning is always explicit. It preserves identity, original date, cursor,
-     * quota and track. A completed task cannot be moved back into the queue.
+     * quota and track. It can only target a later day dedicated to the same track.
      */
     fun replan(task: HifzTask, newDate: LocalDate): HifzTask {
         require(task.status != HifzTaskStatus.COMPLETED) {
             "A completed Hifz task cannot be replanned."
+        }
+        require(!newDate.isBefore(task.originalScheduledDate)) {
+            "A Hifz task cannot be replanned before its original date."
+        }
+        require(defaultTrackFor(newDate.dayOfWeek) == task.track) {
+            "A Hifz task must be replanned onto a day dedicated to the same track."
         }
         return task.copy(
             scheduledDate = newDate,
