@@ -70,6 +70,8 @@ data class HifzPedagogicalSegment(
 }
 
 object HifzGeometryPolicy {
+    const val DEFAULT_MAX_LINES_PER_SEGMENT = 5
+
     fun targetLines(index: HifzGeometryIndex, target: HifzVerseRange): List<HifzTargetLine> =
         index.linesByPage.toSortedMap().values
             .flatten()
@@ -86,7 +88,7 @@ object HifzGeometryPolicy {
     fun segment(
         index: HifzGeometryIndex,
         target: HifzVerseRange,
-        maxLinesPerSegment: Int
+        maxLinesPerSegment: Int = DEFAULT_MAX_LINES_PER_SEGMENT
     ): List<HifzPedagogicalSegment> {
         require(maxLinesPerSegment > 0)
         return targetLines(index, target)
