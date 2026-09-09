@@ -25,19 +25,43 @@ import androidx.compose.ui.unit.dp
 
 private val baseTypography = Typography()
 
-/** Core 0.10.7 visual tokens. Keep the interface warm, calm and readable. */
-internal val SafeguardAppBackground = Color(0xFFF7F2E8)
-internal val SafeguardSurface = Color(0xFFF7F2E8)
+/**
+ * Quran Safeguard visual system.
+ * Warm ivory + deep green are the base; restrained gold/brown accents give the
+ * controls an oriental/sub-Saharan character without reducing readability.
+ */
+internal val SafeguardAppBackground = Color(0xFFF8F3E8)
+internal val SafeguardSurface = Color(0xFFFFFCF6)
 internal val SafeguardReadingSurface = Color(0xFFF7F2E8)
-internal val SafeguardDeepGreen = Color(0xFF171715)
-internal val SafeguardTextGreen = Color(0xFF171715)
-internal val SafeguardSecondaryText = Color(0xFF555550)
-internal val SafeguardGold = Color(0xFF171715)
+internal val SafeguardDeepGreen = Color(0xFF1D5B47)
+internal val SafeguardTextGreen = Color(0xFF21382F)
+internal val SafeguardSecondaryText = Color(0xFF62665F)
+internal val SafeguardGold = Color(0xFFB48A3C)
+internal val SafeguardBrown = Color(0xFF76563C)
+internal val SafeguardSoftGreen = Color(0xFFE7F0EA)
+internal val SafeguardSoftGold = Color(0xFFF3E8CE)
 
+// Slightly asymmetric corners echo carved/architectural contours while
+// remaining sober and predictable for touch targets.
 internal val SafeguardShapes = Shapes(
-    small = RoundedCornerShape(99.dp),
-    medium = RoundedCornerShape(99.dp),
-    large = RoundedCornerShape(28.dp)
+    small = RoundedCornerShape(
+        topStart = 14.dp,
+        topEnd = 8.dp,
+        bottomEnd = 14.dp,
+        bottomStart = 8.dp
+    ),
+    medium = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 10.dp,
+        bottomEnd = 20.dp,
+        bottomStart = 10.dp
+    ),
+    large = RoundedCornerShape(
+        topStart = 28.dp,
+        topEnd = 14.dp,
+        bottomEnd = 28.dp,
+        bottomStart = 14.dp
+    )
 )
 
 internal val SafeguardTypography = Typography(
@@ -59,12 +83,13 @@ internal fun SafeguardButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
+        modifier = modifier.heightIn(min = 52.dp),
         enabled = enabled,
         shape = shape,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.50f else 0.24f)
+            if (enabled) SafeguardGold.copy(alpha = 0.92f)
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
         ),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -86,12 +111,13 @@ internal fun SafeguardOutlinedButton(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
+        modifier = modifier.heightIn(min = 52.dp),
         enabled = enabled,
         shape = shape,
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outline.copy(alpha = if (enabled) 0.48f else 0.22f)
+            if (enabled) SafeguardBrown.copy(alpha = 0.68f)
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
         ),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.primary,
@@ -111,7 +137,7 @@ internal fun SafeguardProgressBar(
             .fillMaxWidth()
             .height(7.dp)
             .clip(RoundedCornerShape(99.dp))
-            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.16f))
+            .background(SafeguardSoftGold)
     ) {
         Box(
             modifier = Modifier
@@ -121,4 +147,3 @@ internal fun SafeguardProgressBar(
         )
     }
 }
-
