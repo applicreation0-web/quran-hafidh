@@ -58,10 +58,10 @@ jobs:
       - name: Extract candidate APK evidence
         run: |
           mkdir -p candidate-evidence
-          aapt dump xmltree app/build/outputs/apk/light/release/app-light-release-unsigned.apk AndroidManifest.xml > candidate-evidence/light-manifest.txt
-          aapt dump xmltree app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk AndroidManifest.xml > candidate-evidence/plus-manifest.txt
-          aapt dump permissions app/build/outputs/apk/light/release/app-light-release-unsigned.apk > candidate-evidence/light-permissions.txt
-          aapt dump permissions app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/plus-permissions.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree app/build/outputs/apk/light/release/app-light-release-unsigned.apk AndroidManifest.xml > candidate-evidence/light-manifest.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk AndroidManifest.xml > candidate-evidence/plus-manifest.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions app/build/outputs/apk/light/release/app-light-release-unsigned.apk > candidate-evidence/light-permissions.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/plus-permissions.txt
           python3 scripts/verify_candidate_apks.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/candidate-apks.json
           sha256sum app/build/outputs/apk/light/release/app-light-release-unsigned.apk app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk > candidate-evidence/SHA256SUMS
       - name: Upload build and reports
@@ -116,6 +116,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
+      - name: Free space for Android userdata image
+        run: |
+          if [ -d /usr/share/dotnet ]; then
+            sudo mv /usr/share/dotnet /mnt/qsg-unused-dotnet
+          fi
       - name: Runtime reader, persistence, migration and Safeguard boundaries
         uses: reactivecircus/android-emulator-runner@v2
         with:

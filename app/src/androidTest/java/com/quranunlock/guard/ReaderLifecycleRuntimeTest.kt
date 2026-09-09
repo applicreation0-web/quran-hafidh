@@ -149,5 +149,5 @@ class ReaderLifecycleRuntimeTest {
     }
 
     private fun decode(value: String): String =
-        if (value.startsWith(""")) JSONObject("{\"v\":$value}").getString("v") else value
+        if (value.startsWith("\"")) JSONObject("{\"v\":$value}").getString("v") else value
 }

@@ -2,6 +2,7 @@ package com.applicreation0.quransafeguard
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.ParcelFileDescriptor
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -61,6 +62,8 @@ class SafeguardRuntimeBoundaryTest {
     }
 
     private fun shell(command: String) {
-        automation.executeShellCommand(command).use { it.readBytes() }
+        ParcelFileDescriptor.AutoCloseInputStream(
+            automation.executeShellCommand(command)
+        ).use { it.readBytes() }
     }
 }

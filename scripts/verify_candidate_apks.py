@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Behavior-independent evidence extracted from the actual candidate APK bytes."""
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -25,12 +27,16 @@ forbidden_permissions = {
     "android.permission.READ_PHONE_STATE",
 }
 report = {}
+aapt = shutil.which("aapt")
+if not aapt:
+    aapt = str(Path(os.environ["ANDROID_HOME"]) / "build-tools/36.0.0/aapt")
+assert Path(aapt).is_file(), aapt
 
 for edition, apk in apks.items():
     assert apk.is_file() and apk.stat().st_size > 0, apk
-    badging = subprocess.check_output(["aapt", "dump", "badging", str(apk)], text=True)
+    badging = subprocess.check_output([aapt, "dump", "badging", str(apk)], text=True)
     permissions_dump = subprocess.check_output(
-        ["aapt", "dump", "permissions", str(apk)], text=True
+        [aapt, "dump", "permissions", str(apk)], text=True
     )
     match = re.search(
         r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'",
