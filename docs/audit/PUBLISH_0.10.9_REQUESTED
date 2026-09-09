@@ -1,0 +1,9 @@
+Quran Safeguard 0.10.9 publication trigger
+
+audited_app_sha=d493fedfa36951a73cf0ac6142a77180a84abf0e
+audited_ci_run=34384468151
+audited_artifact_id=10117551649
+light_unsigned_sha256=b36eac03f24c514a5ccfe4a17fab39063aa8fb901c87eb26b89a6d76c538aed6
+plus_unsigned_sha256=4ea1220828515f79e73a81c9899db6476c8b7d5d60858210d58a55ef3aadf8d3
+
+This file is a publication trigger only. It does not modify the audited application candidate. The publish workflow must download and sign the exact audited APK artifact above and must refuse any hash mismatch.
