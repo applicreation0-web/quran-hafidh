@@ -1,0 +1,358 @@
+name: Quran Safeguard 0.10.10 dual contradictory audits
+
+on:
+  push:
+    branches:
+      - "work/0.10.10-runtime-hifz-final"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: quran-safeguard-01010-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BASELINE_RUN_ID: "34096699893"
+  BASELINE_ARTIFACT: "quran-safeguard-0.10.8-unsigned"
+
+jobs:
+  prepare-and-static:
+    name: Prepare exact 10.10 source + static/unit gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact candidate source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply idempotent 10.10 hardening
+        run: python3 scripts/apply_01010_runtime_hardening.py
+
+      - name: Commit generated hardening source before corpus restoration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Hardening already committed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/build.gradle.kts \
+            app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt \
+            app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt \
+            app/src/main/assets/reader109/reader.js
+          git commit -m "Apply Quran Safeguard 0.10.10 runtime hardening [generated]"
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Restore exact audited 0.10.8 Mushaf and Plus Tafsir corpus only
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: baseline-apks
+
+      - name: Extract immutable corpus bytes without overwriting 10.10 reader code
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          apks=list(Path('baseline-apks').rglob('*.apk'))
+          if len(apks)<2: raise SystemExit(f'Expected Light and Plus APKs, got {apks}')
+          for apk in apks:
+              is_plus='plus' in apk.name.lower()
+              with zipfile.ZipFile(apk) as z:
+                  for info in z.infolist():
+                      name=info.filename
+                      if name.endswith('/'):
+                          continue
+                      if not is_plus and name.startswith('assets/mushaf/'):
+                          dest=Path('app/src/main')/name
+                      elif is_plus and name.startswith('assets/tafsir/'):
+                          dest=Path('app/src/plus')/name
+                      else:
+                          continue
+                      dest.parent.mkdir(parents=True, exist_ok=True)
+                      with z.open(info) as src, dest.open('wb') as out:
+                          shutil.copyfileobj(src,out)
+          PY
+
+      - name: Generate Hifz geometry from the exact restored Mushaf
+        run: |
+          python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+
+      - name: Run 10.10 release contract audit
+        run: python3 scripts/audit_01010_release_contract.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Full release structural audit
+        run: gradle --no-daemon :app:verifyReleaseAudit --stacktrace
+
+      - name: All Light and Plus unit tests
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+
+      - name: Compile both editions before runtime audits
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+
+      - name: Prove compiled edition boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/debug/app-light-debug.apk
+          python3 scripts/verify_plus_apk_multitafsir_0106.py app/build/outputs/apk/plus/debug/app-plus-debug.apk
+          python3 scripts/verify_0105_runtime_clean.py \
+            --apk app/build/outputs/apk/light/debug/app-light-debug.apk \
+            --apk app/build/outputs/apk/plus/debug/app-plus-debug.apk
+
+  audit-a-boundary:
+    name: Audit A — hostile state / boundaries / recovery
+    needs: prepare-and-static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Apply hardening idempotently for this independent checkout
+        run: python3 scripts/apply_01010_runtime_hardening.py
+      - name: Restore exact Mushaf and Plus corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: baseline-apks
+      - name: Extract only required corpus and build geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          for apk in Path('baseline-apks').rglob('*.apk'):
+              plus='plus' in apk.name.lower()
+              with zipfile.ZipFile(apk) as z:
+                  for i in z.infolist():
+                      n=i.filename
+                      if i.is_dir(): continue
+                      if (not plus) and n.startswith('assets/mushaf/'):
+                          d=Path('app/src/main')/n
+                      elif plus and n.startswith('assets/tafsir/'):
+                          d=Path('app/src/plus')/n
+                      else: continue
+                      d.parent.mkdir(parents=True,exist_ok=True)
+                      with z.open(i) as s,d.open('wb') as o: shutil.copyfileobj(s,o)
+          PY
+          python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/audit_01010_release_contract.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install build SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+      - name: Audit A unit-level boundary oracle
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+      - name: Audit A runtime — Light and Plus hostile-state recovery
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            gradle --no-daemon :app:connectedLightDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.AuditABoundaryRecoveryRuntimeTest --stacktrace
+            gradle --no-daemon :app:connectedPlusDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.AuditABoundaryRecoveryRuntimeTest --stacktrace
+
+  audit-b-activity:
+    name: Audit B — normal activity / lifecycle / stress
+    needs: prepare-and-static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Apply hardening idempotently for this independent checkout
+        run: python3 scripts/apply_01010_runtime_hardening.py
+      - name: Restore exact Mushaf and Plus corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: baseline-apks
+      - name: Extract only required corpus and build geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          for apk in Path('baseline-apks').rglob('*.apk'):
+              plus='plus' in apk.name.lower()
+              with zipfile.ZipFile(apk) as z:
+                  for i in z.infolist():
+                      n=i.filename
+                      if i.is_dir(): continue
+                      if (not plus) and n.startswith('assets/mushaf/'):
+                          d=Path('app/src/main')/n
+                      elif plus and n.startswith('assets/tafsir/'):
+                          d=Path('app/src/plus')/n
+                      else: continue
+                      d.parent.mkdir(parents=True,exist_ok=True)
+                      with z.open(i) as s,d.open('wb') as o: shutil.copyfileobj(s,o)
+          PY
+          python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/audit_01010_release_contract.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install build SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+      - name: Audit B activity-level regression oracle
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+      - name: Audit B runtime — Light and Plus normal journeys and stress
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            gradle --no-daemon :app:connectedLightDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.AuditBActivityStressRuntimeTest --stacktrace
+            gradle --no-daemon :app:connectedPlusDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.AuditBActivityStressRuntimeTest --stacktrace
+
+  candidate-build:
+    name: Build unsigned Light + Plus candidate only after both audits
+    needs:
+      - audit-a-boundary
+      - audit-b-activity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - run: python3 scripts/apply_01010_runtime_hardening.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: baseline-apks
+      - name: Restore required corpus and generate geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          for apk in Path('baseline-apks').rglob('*.apk'):
+              plus='plus' in apk.name.lower()
+              with zipfile.ZipFile(apk) as z:
+                  for i in z.infolist():
+                      n=i.filename
+                      if i.is_dir(): continue
+                      if (not plus) and n.startswith('assets/mushaf/'):
+                          d=Path('app/src/main')/n
+                      elif plus and n.startswith('assets/tafsir/'):
+                          d=Path('app/src/plus')/n
+                      else: continue
+                      d.parent.mkdir(parents=True,exist_ok=True)
+                      with z.open(i) as s,d.open('wb') as o: shutil.copyfileobj(s,o)
+          PY
+          python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/audit_01010_release_contract.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+      - name: Re-run release gate before candidate build
+        run: gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+      - name: Build unsigned 0.10.10 Light and Plus
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease --stacktrace
+      - name: Verify unsigned candidate boundaries and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          light=app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+          plus=app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+          python3 scripts/verify_light_apk_no_tafsir.py "$light"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "$plus"
+          python3 scripts/verify_0105_runtime_clean.py --apk "$light" --apk "$plus"
+          sha256sum "$light" "$plus" | tee candidate-sha256.txt
+          git rev-parse HEAD | tee candidate-source-sha.txt
+      - name: Upload unsigned audited candidate only — never publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.10-dual-audit-unsigned
+          path: |
+            app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+            app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+            candidate-sha256.txt
+            candidate-source-sha.txt
+          if-no-files-found: error
+          retention-days: 14
