@@ -26,13 +26,13 @@ import androidx.compose.ui.unit.dp
 private val baseTypography = Typography()
 
 /** Core 0.10.7 visual tokens. Keep the interface warm, calm and readable. */
-internal val SafeguardAppBackground = Color(0xFFF7F2E8)
-internal val SafeguardSurface = Color(0xFFF7F2E8)
+internal val SafeguardAppBackground = Color(0xFFFBF7EF)
+internal val SafeguardSurface = Color(0xFFFFFDF8)
 internal val SafeguardReadingSurface = Color(0xFFF7F2E8)
-internal val SafeguardDeepGreen = Color(0xFF171715)
-internal val SafeguardTextGreen = Color(0xFF171715)
-internal val SafeguardSecondaryText = Color(0xFF555550)
-internal val SafeguardGold = Color(0xFF171715)
+internal val SafeguardDeepGreen = Color(0xFF214B3B)
+internal val SafeguardTextGreen = Color(0xFF18392E)
+internal val SafeguardSecondaryText = Color(0xFF514A43)
+internal val SafeguardGold = Color(0xFFB0823F)
 
 internal val SafeguardShapes = Shapes(
     small = RoundedCornerShape(99.dp),
