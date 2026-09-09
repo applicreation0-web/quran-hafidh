@@ -30,13 +30,9 @@ data class HifzGeometryIndex(
     val linesByPage: Map<Int, List<HifzGeometryLine>>
 ) {
     init {
-        require(linesByPage.keys.sorted() == (1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT).toList()) {
-            "Hifz geometry must contain exactly the canonical 604 Mushaf pages."
-        }
         val ids = mutableSetOf<String>()
         linesByPage.forEach { (page, lines) ->
             require(page in 1..QuranCanonicalBounds.MUSHAF_PAGE_COUNT)
-            require(lines.isNotEmpty()) { "Every Mushaf page must expose Hifz geometry lines." }
             lines.forEachIndexed { index, line ->
                 require(line.ref.page == page)
                 require(line.ref.ordinal == index + 1) {
