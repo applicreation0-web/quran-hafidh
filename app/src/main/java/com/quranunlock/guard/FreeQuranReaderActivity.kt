@@ -33,10 +33,24 @@ class FreeQuranReaderActivity : ComponentActivity() {
     private var expanded by mutableStateOf(false)
     private var memoryMode = false
     private var contextual = false
+    private var nativeZoomBaseline = 0f
+    private var nativeZoomed = false
     private val prefs by lazy { getSharedPreferences(QuranPersistenceNamespaces.FREE_READER_MEMORIZATION, MODE_PRIVATE) }
     private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
     private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
     private val audio by lazy { QuranAudioController(this) { event -> runOnUiThread { web?.evaluateJavascript("window.audioEvent && window.audioEvent(${event});", null) } } }
+
+    private fun publishNativeZoomState(view: WebView, currentScale: Float) {
+        if (currentScale <= 0f) return
+        if (nativeZoomBaseline <= 0f) nativeZoomBaseline = currentScale
+        val zoomed = kotlin.math.abs(currentScale / nativeZoomBaseline - 1f) > 0.03f
+        if (zoomed == nativeZoomed) return
+        nativeZoomed = zoomed
+        view.evaluateJavascript(
+            "window.nativeZoomChanged && window.nativeZoomChanged($zoomed);",
+            null
+        )
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,6 +84,25 @@ class FreeQuranReaderActivity : ComponentActivity() {
                             addJavascriptInterface(ReaderBridge(), "QsgNative")
                             webViewClient = object : WebViewClient() {
                                 override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?) = true
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    view?.post {
+                                        nativeZoomBaseline = view.scale.takeIf { it > 0f } ?: 1f
+                                        nativeZoomed = false
+                                        view.evaluateJavascript(
+                                            "window.nativeZoomChanged && window.nativeZoomChanged(false);",
+                                            null
+                                        )
+                                    }
+                                }
+                                override fun onScaleChanged(view: WebView?, oldScale: Float, newScale: Float) {
+                                    super.onScaleChanged(view, oldScale, newScale)
+                                    view ?: return
+                                    if (nativeZoomBaseline <= 0f) {
+                                        nativeZoomBaseline = oldScale.takeIf { it > 0f } ?: newScale
+                                    }
+                                    publishNativeZoomState(view, newScale)
+                                }
                                 override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse {
                                     val uri = request?.url
                                     if(uri?.scheme != "https" || uri.host != "quran-safeguard.local") return denied()
@@ -108,7 +141,9 @@ class FreeQuranReaderActivity : ComponentActivity() {
                         }
                     }
                     BackHandler {
-                        if(verse != null) closeTafsir() else web?.evaluateJavascript("window.handleBack();", null)
+                        if(verse != null) {
+                            if(contextual) finish() else closeTafsir()
+                        } else web?.evaluateJavascript("window.handleBack();", null)
                     }
                 }
             }
@@ -152,8 +187,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if(displayProfile == DisplayProfile.EINK && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             val delta = when(event.keyCode) {
-                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_VOLUME_UP -> -1
-                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN -> 1
+                KeyEvent.KEYCODE_PAGE_UP -> -1
+                KeyEvent.KEYCODE_PAGE_DOWN -> 1
                 else -> 0
             }
             if(delta != 0) {
@@ -164,5 +199,5 @@ class FreeQuranReaderActivity : ComponentActivity() {
         return super.dispatchKeyEvent(event)
     }
     override fun onPause(){audio.pause();super.onPause()}
-    override fun onDestroy(){web?.removeJavascriptInterface("QsgNative");web?.destroy();web=null;audio.release();super.onDestroy()}
+    override fun onDestroy(){refreshController.dispose();web?.removeJavascriptInterface("QsgNative");web?.destroy();web=null;audio.release();super.onDestroy()}
 }
