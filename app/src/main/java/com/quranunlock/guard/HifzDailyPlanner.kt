@@ -182,7 +182,8 @@ object HifzDailyPlanner {
     fun planDate(
         state: HifzState,
         today: LocalDate,
-        geometry: HifzGeometryIndex
+        geometry: HifzGeometryIndex,
+        audioAvailableFor: (HifzCursor) -> Boolean = { true }
     ): HifzState {
         if (today in state.planningDates) return state
 
@@ -221,7 +222,9 @@ object HifzDailyPlanner {
             scheduledDate = today,
             cursor = passage.cursor,
             quota = availableMinutes,
-            status = HifzTaskStatus.PLANNED
+            status = HifzTaskStatus.PLANNED,
+            audioPhasesIncluded =
+                track != HifzTrack.SABQI || audioAvailableFor(passage.cursor)
         )
         return markConsidered(
             resumed.copy(tasks = (resumed.tasks + task).sortedBy { it.id }),

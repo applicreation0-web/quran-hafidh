@@ -116,11 +116,25 @@ class GateActivity : ComponentActivity() {
             }
         )
 
-        val page = GuardPrefs.challengePage(this, challengeKey)
+        val challenge = try {
+            val page = GuardPrefs.challengePage(this, challengeKey)
+            GuardPrefs.ensureReadingSession(this, challengeKey, page)
+            Triple(
+                page,
+                GuardPrefs.challengeLevel(this),
+                GuardPrefs.challengePagePosition(this)
+            )
+        } catch (_: NoPendingChallengeException) {
+            // A stale gate must close rather than manufacture a fifteen-minute interval.
+            GuardRuntime.interception.reset()
+            finishAndRemoveTask()
+            return
+        }
+
+        val page = challenge.first
         displayedPage = page
-        GuardPrefs.ensureReadingSession(this, challengeKey, page)
-        val level = GuardPrefs.challengeLevel(this)
-        val (pagePosition, totalPages) = GuardPrefs.challengePagePosition(this)
+        val level = challenge.second
+        val (pagePosition, totalPages) = challenge.third
 
         val mode = GuardPrefs.selectionMode(this)
         val sectionLabel = when (mode) {

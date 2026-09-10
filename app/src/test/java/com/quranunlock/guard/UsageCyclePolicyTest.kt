@@ -13,6 +13,42 @@ class UsageCyclePolicyTest {
         assertEquals(ChallengeLevel.MORNING, UsageCyclePolicy.requiredLevel(state))
     }
 
+
+    @Test
+    fun recoveryNeverPromotesTheStoredPendingLevel() {
+        val state = UsageCycleState(
+            morningCompleted = true,
+            completedIntervals = UsageCyclePolicy.INTERVALS_PER_NINETY_MINUTE_CYCLE,
+            pendingLevel = ChallengeLevel.MICRO
+        )
+
+        assertEquals(ChallengeLevel.MICRO, UsageCyclePolicy.pendingLevelForRecovery(state))
+        assertEquals(
+            UsageCyclePolicy.requiredLevel(state),
+            UsageCyclePolicy.pendingLevelForRecovery(state)
+        )
+    }
+
+    @Test
+    fun recoveryAlwaysAgreesWithTheStoredRequiredLevel() {
+        val levels = listOf(null, ChallengeLevel.MORNING, ChallengeLevel.MICRO, ChallengeLevel.HIZB)
+        for (morning in listOf(false, true)) {
+            for (intervals in 0..UsageCyclePolicy.INTERVALS_PER_NINETY_MINUTE_CYCLE) {
+                for (pending in levels) {
+                    val state = UsageCycleState(
+                        morningCompleted = morning,
+                        completedIntervals = intervals,
+                        pendingLevel = pending
+                    )
+                    assertEquals(
+                        UsageCyclePolicy.requiredLevel(state),
+                        UsageCyclePolicy.pendingLevelForRecovery(state)
+                    )
+                }
+            }
+        }
+    }
+
     @Test
     fun firstFiveIntervalsRequireOnePageAndSixthRequiresHizb() {
         var state = UsageCyclePolicy.completeChallenge(
@@ -204,4 +240,26 @@ class UsageCyclePolicyTest {
             )
         )
     }
+    @Test
+    fun recoveringALostPlanNeverCreditsAnUnlivedInterval() {
+        val settled = UsageCycleState(
+            morningCompleted = true,
+            completedIntervals = 3,
+            pendingLevel = null
+        )
+        assertNull(UsageCyclePolicy.pendingLevelForRecovery(settled))
+        assertEquals(3, settled.completedIntervals)
+    }
+
+    @Test
+    fun recoveringAPendingChallengeLeavesTheIntervalCountUntouched() {
+        val pending = UsageCycleState(
+            morningCompleted = true,
+            completedIntervals = 2,
+            pendingLevel = ChallengeLevel.MICRO
+        )
+        assertEquals(ChallengeLevel.MICRO, UsageCyclePolicy.pendingLevelForRecovery(pending))
+        assertEquals(2, pending.completedIntervals)
+    }
+
 }

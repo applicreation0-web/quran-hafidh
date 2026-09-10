@@ -106,4 +106,30 @@ class ProtectedSelectionPolicyTest {
         assertEquals(setOf("social.a"), result.pendingRemoval)
         assertEquals(today + 1L, result.removalEffectiveEpochDay)
     }
+    @Test
+    fun anEmptyInventoryNeverErasesTheProtectedSelection() {
+        val state = ProtectedSelectionPolicy.reconcile(
+            active = setOf("com.whatsapp", "com.android.chrome"),
+            pendingRemoval = emptySet(),
+            removalEffectiveEpochDay = null,
+            installedTargets = emptySet(),
+            todayEpochDay = 20_000L,
+            inventoryTrustworthy = false
+        )
+        assertEquals(setOf("com.whatsapp", "com.android.chrome"), state.active)
+    }
+
+    @Test
+    fun aTrustworthyInventoryStillPrunesAGenuinelyUninstalledTarget() {
+        val state = ProtectedSelectionPolicy.reconcile(
+            active = setOf("com.whatsapp", "com.android.chrome"),
+            pendingRemoval = emptySet(),
+            removalEffectiveEpochDay = null,
+            installedTargets = setOf("com.whatsapp"),
+            todayEpochDay = 20_000L,
+            inventoryTrustworthy = true
+        )
+        assertEquals(setOf("com.whatsapp"), state.active)
+    }
+
 }

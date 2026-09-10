@@ -40,6 +40,13 @@ object UsageCyclePolicy {
             else -> null
         }
 
+    /**
+     * Reconstruct the level of an already-owed challenge. Never credits presence:
+     * only real foreground time, measured by the service, may do that.
+     */
+    fun pendingLevelForRecovery(state: UsageCycleState): ChallengeLevel? =
+        requiredLevel(state)
+
     fun onIntervalExpired(state: UsageCycleState): UsageCycleState {
         if (!state.morningCompleted) {
             return state.copy(pendingLevel = ChallengeLevel.MORNING)

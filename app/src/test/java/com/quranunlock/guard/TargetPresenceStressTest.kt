@@ -116,7 +116,7 @@ class TargetPresenceStressTest {
     }
 
     @Test
-    fun oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility() {
+    fun oneHundredThousandScopeDecisionsArmSentinelOnlyForRunningSelectedTarget() {
         val selected = setOf(
             "com.android.chrome",
             "com.google.android.youtube",
@@ -125,7 +125,7 @@ class TargetPresenceStressTest {
 
         repeat(100_000) { index ->
             val target = selected.elementAt(index % selected.size)
-            assertFalse(
+            assertTrue(
                 TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                     broadRequested = true,
                     foregroundPackage = target,
@@ -151,7 +151,7 @@ class TargetPresenceStressTest {
      */
     @Test
     fun oneHundredThousandScopeDecisionsNeverGiveOutsideAppsBudgetOwnership() {
-        oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility()
+        oneHundredThousandScopeDecisionsArmSentinelOnlyForRunningSelectedTarget()
     }
 
     @Test

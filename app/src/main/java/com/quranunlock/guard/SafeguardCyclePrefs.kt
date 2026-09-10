@@ -12,6 +12,10 @@ data class UsageProgress(
     val totalPages: Int
 )
 
+/** Thrown when a caller asks for a challenge plan while none is owed. */
+class NoPendingChallengeException :
+    IllegalStateException("No Safeguard challenge is currently owed.")
+
 object SafeguardCyclePrefs {
     private const val USAGE_DAY = "usage_cycle_epoch_day"
     private const val MORNING_COMPLETED = "usage_morning_completed"
@@ -186,15 +190,9 @@ object SafeguardCyclePrefs {
             return
         }
 
-        var state = readState(prefs)
-        var level = UsageCyclePolicy.requiredLevel(state)
-        if (level == null) {
-            // Recover an interrupted expiration without weakening the sixth
-            // interval: the policy reconstructs MICRO versus HIZB from state.
-            state = UsageCyclePolicy.onIntervalExpired(state)
-            level = UsageCyclePolicy.requiredLevel(state)
-                ?: error("Unable to reconstruct the pending Safeguard level.")
-        }
+        val state = readState(prefs)
+        val level = UsageCyclePolicy.pendingLevelForRecovery(state)
+            ?: throw NoPendingChallengeException()
 
         val plan = when (level) {
             ChallengeLevel.MORNING -> QuranPageSelector.sequentialCanonicalQuotaPages(

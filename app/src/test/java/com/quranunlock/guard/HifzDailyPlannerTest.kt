@@ -53,7 +53,7 @@ class HifzDailyPlannerTest {
     }
 
     @Test
-    fun itqanPlansOnePhysicalPageAndProtocolRequiresThirtyVisibleRepetitions() {
+    fun itqanPlansOnePhysicalPageAndProtocolRequiresThirtyTotalRepetitions() {
         val tuesday = LocalDate.of(2026, 9, 8)
         val planned = HifzDailyPlanner.planDate(configuredState(), tuesday, basicGeometry())
         val task = planned.tasks.single()
@@ -61,8 +61,11 @@ class HifzDailyPlannerTest {
         assertEquals(HifzTrack.ITQAN, task.track)
         assertEquals(task.cursor.startPage, task.cursor.endPage)
         assertEquals(2, task.cursor.startPage)
-        assertEquals(30, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).first().repetitions)
-        assertEquals(0, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).first().maskPercent)
+        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN)
+        assertEquals(20, steps.first().repetitions)
+        assertEquals(0, steps.first().maskPercent)
+        assertEquals(30, steps.sumOf { it.repetitions })
+        assertEquals(10, steps.filter { it.maskPercent > 0 }.sumOf { it.repetitions })
     }
 
     @Test
@@ -199,6 +202,27 @@ class HifzDailyPlannerTest {
         requireNotNull(review)
         assertEquals(2, review.cursor.start.surah)
         assertEquals(45, review.quota)
+    }
+
+    @Test
+    fun sabqiWithoutLocalAudioStartsDirectlyWithTheVisualProtocol() {
+        val today = LocalDate.of(2026, 9, 9) // Wednesday = Sabqi
+        val planned = HifzDailyPlanner.planDate(
+            configuredState(),
+            today,
+            basicGeometry(),
+            audioAvailableFor = { false }
+        )
+        val task = planned.tasks.single()
+
+        assertEquals(HifzTrack.SABQI, task.track)
+        assertFalse(task.audioPhasesIncluded)
+        val progress = HifzTrainingEngine.initial(task, segmentCount = 1)
+        val first = HifzTrainingEngine.currentStep(task, progress, segmentCount = 1)
+        requireNotNull(first)
+        assertEquals("sabqi-visible", first.id)
+        assertEquals(HifzTrainingKind.VISIBLE, first.kind)
+        assertEquals(10, first.repetitions)
     }
 
     @Test

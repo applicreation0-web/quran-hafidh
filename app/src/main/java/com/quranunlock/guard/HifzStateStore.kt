@@ -91,7 +91,8 @@ object HifzStateCodec {
             append(cursor.startPage).append(SEP)
             append(cursor.endPage).append(SEP)
             append(task.quota).append(SEP)
-            append(task.status.name).append('\n')
+            append(task.status.name).append(SEP)
+            append(task.audioPhasesIncluded).append('\n')
         }
         state.progressByTask.toSortedMap().forEach { (_, progress) ->
             val step = progress.stepProgress
@@ -231,7 +232,9 @@ object HifzStateCodec {
                 }
 
                 TASK -> {
-                    require(fields.size == 13) { "Malformed Hifz task." }
+                    require(fields.size == 13 || fields.size == 14) {
+                        "Malformed Hifz task."
+                    }
                     tasks += HifzTask(
                         id = decodeText(fields[1]),
                         track = HifzTrack.valueOf(fields[2]),
@@ -244,7 +247,9 @@ object HifzStateCodec {
                             endPage = fields[10].toInt()
                         ),
                         quota = fields[11].toInt(),
-                        status = HifzTaskStatus.valueOf(fields[12])
+                        status = HifzTaskStatus.valueOf(fields[12]),
+                        audioPhasesIncluded =
+                            fields.getOrNull(13)?.toBooleanStrictOrNull() ?: true
                     )
                 }
 
@@ -464,7 +469,7 @@ object HifzStateStore {
         val geometry = HifzGeometryAssetLoader.load(context)
         HifzGeometryPolicy.segment(
             geometry,
-            HifzVerseRange(task.cursor.start, task.cursor.end)
+            task.cursor
         ).size.also { require(it > 0) }
     }.getOrNull()
 
@@ -485,8 +490,7 @@ object HifzStateStore {
                 "Hifz task lies outside configured journey bounds."
             }
 
-            val target = HifzVerseRange(task.cursor.start, task.cursor.end)
-            val segmentCount = HifzGeometryPolicy.segment(geometry, target).size
+            val segmentCount = HifzGeometryPolicy.segment(geometry, task.cursor).size
             require(segmentCount > 0) { "Hifz task has no real Mushaf geometry segment." }
 
             val progress = state.progressByTask[task.id]

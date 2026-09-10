@@ -3,6 +3,7 @@ package com.applicreation0.quransafeguard
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.webkit.WebResourceRequest
@@ -12,6 +13,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -39,6 +43,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +68,11 @@ class MushafReaderActivity : ComponentActivity() {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
     private var selectedTafsirVerse by mutableStateOf<VerseRef?>(null)
     private var tafsirLoadState by mutableStateOf<TafsirLoadState>(TafsirLoadState.Closed)
+    private val displayProfile by lazy { DisplayProfileManager.resolve(this) }
+    private val refreshController by lazy { EInkRefreshController(this, displayProfile) }
+    private var pageWebView: WebView? = null
+    private var hardwarePreviousAction: (() -> Unit)? = null
+    private var hardwareNextAction: (() -> Unit)? = null
 
     private fun openTafsir(verse: VerseRef) {
         if (!TafsirEdition.isEnabled) return
@@ -101,6 +111,14 @@ class MushafReaderActivity : ComponentActivity() {
             return
         }
 
+        val initialLevel = runCatching {
+            GuardPrefs.challengeLevel(this)
+        }.getOrNull()
+        if (initialLevel == null) {
+            finish()
+            return
+        }
+
         val initialPages = initialPlan.first
         val initialActiveIndex = initialPlan.second
         activeReadingPage = initialPages[initialActiveIndex]
@@ -111,7 +129,7 @@ class MushafReaderActivity : ComponentActivity() {
             this,
             "READER_VISIBLE",
             challengeKey,
-            "level=${GuardPrefs.challengeLevel(this).name} " +
+            "level=${initialLevel.name} " +
                 "page=$activeReadingPage " +
                 "progress=${initialActiveIndex + 1}/${initialPages.size}"
         )
@@ -161,9 +179,7 @@ class MushafReaderActivity : ComponentActivity() {
                     mutableFloatStateOf(ReaderComfortPrefs.brightness(this@MushafReaderActivity))
                 }
                 val quotaPageCount = remember { initialPages.size }
-                val level = remember {
-                    GuardPrefs.challengeLevel(this@MushafReaderActivity)
-                }
+                val level = remember { initialLevel }
                 val sectionMode = remember(level) {
                     if (level == ChallengeLevel.MICRO) {
                         GuardPrefs.selectionMode(this@MushafReaderActivity)
@@ -246,9 +262,14 @@ class MushafReaderActivity : ComponentActivity() {
                 }
 
                 fun refreshPlanAfterValidation() {
-                    val fresh = SafeguardCyclePrefs.currentPlan(
-                        this@MushafReaderActivity
-                    )
+                    val fresh = runCatching {
+                        SafeguardCyclePrefs.currentPlan(this@MushafReaderActivity)
+                    }.getOrNull()
+                    if (fresh == null || fresh.first.isEmpty()) {
+                        pauseActiveReading()
+                        finish()
+                        return
+                    }
                     planPages = fresh.first
                     activeIndex = fresh.second
                     activeReadingPage = planPages[activeIndex]
@@ -324,6 +345,7 @@ class MushafReaderActivity : ComponentActivity() {
                         challengeKey,
                         currentPage
                     )
+                    refreshController.onVisualChange(pageWebView, VisualChange.MILESTONE)
 
                     if (GuardPrefs.isUnlocked(
                             this@MushafReaderActivity,
@@ -360,6 +382,19 @@ class MushafReaderActivity : ComponentActivity() {
                             "page=$currentPage"
                         )
                         refreshPlanAfterValidation()
+                    }
+                }
+
+                SideEffect {
+                    hardwarePreviousAction = {
+                        if (selectedTafsirVerse == null && displayedIndex > 0) {
+                            showPage(displayedIndex - 1)
+                        }
+                    }
+                    hardwareNextAction = {
+                        if (selectedTafsirVerse == null) {
+                            validateAndAdvance()
+                        }
                     }
                 }
 
@@ -564,12 +599,30 @@ class MushafReaderActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .weight(1f),
                             transitionSpec = {
-                                if (targetState > initialState) {
-                                    slideInHorizontally { width -> -width } togetherWith
-                                        slideOutHorizontally { width -> width }
+                                if (displayProfile == DisplayProfile.EINK) {
+                                    EnterTransition.None togetherWith ExitTransition.None
+                                } else if (targetState > initialState) {
+                                    slideInHorizontally(
+                                        animationSpec = tween(
+                                            DisplayProfileManager.motionDurationMillis(displayProfile)
+                                        )
+                                    ) { width -> -width } togetherWith
+                                        slideOutHorizontally(
+                                            animationSpec = tween(
+                                                DisplayProfileManager.motionDurationMillis(displayProfile)
+                                            )
+                                        ) { width -> width }
                                 } else {
-                                    slideInHorizontally { width -> width } togetherWith
-                                        slideOutHorizontally { width -> -width }
+                                    slideInHorizontally(
+                                        animationSpec = tween(
+                                            DisplayProfileManager.motionDurationMillis(displayProfile)
+                                        )
+                                    ) { width -> width } togetherWith
+                                        slideOutHorizontally(
+                                            animationSpec = tween(
+                                                DisplayProfileManager.motionDurationMillis(displayProfile)
+                                            )
+                                        ) { width -> -width }
                                 }
                             },
                             label = "mushaf-page-swipe"
@@ -588,7 +641,12 @@ class MushafReaderActivity : ComponentActivity() {
                                     pageNumber = pageNumber,
                                     tafsirOpen = selectedTafsirVerse != null,
                                     modifier = Modifier.fillMaxSize(),
+                                    onWebViewCreated = { pageWebView = it },
                                     onReady = {
+                                        refreshController.onVisualChange(
+                                            pageWebView,
+                                            VisualChange.PAGE
+                                        )
                                         if (!quotaReached &&
                                             pageNumber == activeReadingPage &&
                                             displayedPage == activeReadingPage
@@ -768,6 +826,33 @@ class MushafReaderActivity : ComponentActivity() {
         }.getOrNull()
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (displayProfile == DisplayProfile.EINK &&
+            event.action == KeyEvent.ACTION_DOWN &&
+            event.repeatCount == 0
+        ) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_PAGE_UP -> {
+                    hardwarePreviousAction?.invoke()
+                    return true
+                }
+                KeyEvent.KEYCODE_PAGE_DOWN -> {
+                    hardwareNextAction?.invoke()
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onDestroy() {
+        refreshController.dispose()
+        hardwarePreviousAction = null
+        hardwareNextAction = null
+        pageWebView = null
+        super.onDestroy()
+    }
+
     override fun onStart() {
         super.onStart()
         if (challengeKey.isNotBlank()) {
@@ -893,6 +978,7 @@ private fun MushafPageWebView(
     pageNumber: Int,
     tafsirOpen: Boolean,
     modifier: Modifier = Modifier,
+    onWebViewCreated: (WebView) -> Unit,
     onReady: () -> Unit,
     onBottomReached: () -> Unit,
     onSwipePrevious: () -> Unit,
@@ -914,6 +1000,7 @@ private fun MushafPageWebView(
         modifier = modifier,
         factory = { context ->
             WebView(context).apply {
+                onWebViewCreated(this)
                 setBackgroundColor(
                     android.graphics.Color.parseColor(ReaderComfortPrefs.pageBackground())
                 )

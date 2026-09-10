@@ -543,6 +543,7 @@ object GuardPrefs {
             .map(InstalledApp::packageName)
             .filter(ProtectedApps::isSelectableTarget)
             .toSet()
+        val inventoryTrustworthy = installedTargets.isNotEmpty()
         val storedActive = prefs.getStringSet(
             PROTECTED_PACKAGES,
             null
@@ -564,14 +565,15 @@ object GuardPrefs {
             pendingRemoval = storedPending,
             removalEffectiveEpochDay = storedEffectiveDay,
             installedTargets = installedTargets,
-            todayEpochDay = LocalDate.now().toEpochDay()
+            todayEpochDay = LocalDate.now().toEpochDay(),
+            inventoryTrustworthy = inventoryTrustworthy
         )
 
-        if (state.active != storedActive ||
+        val changed = state.active != storedActive ||
             state.pendingRemoval != storedPending ||
             state.removalEffectiveEpochDay != storedEffectiveDay ||
             !prefs.contains(PROTECTED_PACKAGES)
-        ) {
+        if (changed && inventoryTrustworthy) {
             persistProtectedSelection(prefs, state)
         }
 
@@ -598,6 +600,7 @@ object GuardPrefs {
             .map(InstalledApp::packageName)
             .filter(ProtectedApps::isSelectableTarget)
             .toSet()
+        val inventoryTrustworthy = installedTargets.isNotEmpty()
         val active = protectedPackages(context)
         val pending = prefs.getStringSet(
             PENDING_PROTECTED_REMOVALS,
@@ -620,9 +623,12 @@ object GuardPrefs {
             ),
             requested = packages,
             installedTargets = installedTargets,
-            todayEpochDay = today
+            todayEpochDay = today,
+            inventoryTrustworthy = inventoryTrustworthy
         )
-        persistProtectedSelection(prefs, state)
+        if (inventoryTrustworthy) {
+            persistProtectedSelection(prefs, state)
+        }
     }
 
     private fun persistProtectedSelection(

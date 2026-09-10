@@ -114,7 +114,12 @@ class HifzJourneyActivity : ComponentActivity() {
                             load.state,
                             today,
                             HifzGeometryAssetLoader.load(this@HifzJourneyActivity)
-                        )
+                        ) { cursor ->
+                            QuranAudioController.hasLocalAudioFor(
+                                this@HifzJourneyActivity,
+                                cursor
+                            )
+                        }
                     }.getOrNull()
                 }
                 if (plannedState != null && plannedState != load.state) {
@@ -341,37 +346,11 @@ class HifzJourneyActivity : ComponentActivity() {
                 }) { Text("Ouvrir le Muṣḥaf de séance") }
 
                 if (!progress.completed) {
-                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
-                        val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
-                            HifzTrainingEngine.attempt(task, it, false, segmentCount)
-                        }
-                        onMessage(if (ok) "À refaire enregistré." else "Progression refusée.")
-                        if (ok) onRefresh()
-                    }) { Text("À refaire") }
-
-                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
-                        val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
-                            HifzTrainingEngine.attempt(task, it, true, segmentCount)
-                        }
-                        onMessage(if (ok) "Répétition correcte enregistrée." else "Progression refusée.")
-                        if (ok) onRefresh()
-                    }) { Text("Correct") }
-
-                    SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
-                        val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
-                            HifzTrainingEngine.reveal(task, it, segmentCount)
-                        }
-                        onMessage(if (ok) "Aide comptabilisée." else "Aide non enregistrée.")
-                        if (ok) onRefresh()
-                    }) { Text("J’ai utilisé une aide") }
-
-                    SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
-                        val ok = HifzStateStore.updateProgress(this@HifzJourneyActivity, task.id) {
-                            HifzTrainingEngine.advanceIfValid(task, it, segmentCount)
-                        }
-                        onMessage(if (ok) "Étape évaluée." else "Étape non validable actuellement.")
-                        if (ok) onRefresh()
-                    }) { Text("Valider l’étape") }
+                    Text(
+                        "Les répétitions, aides et validations se font uniquement dans le Muṣḥaf de séance.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 } else {
                     SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         val ok = HifzStateStore.completeTask(this@HifzJourneyActivity, task.id)

@@ -44,6 +44,53 @@ class HifzTrainingEngineTest {
     }
 
     @Test
+    fun correctFinalRepetitionAdvancesWithoutSeparateValidationGesture() {
+        val task = task(HifzTrack.ITQAN)
+        var progress = HifzTrainingEngine.initial(task)
+
+        repeat(19) {
+            progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+            assertEquals("itqan-visible-20", HifzTrainingEngine.currentStep(task, progress)?.id)
+        }
+
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+
+        assertEquals("itqan-mask-25", HifzTrainingEngine.currentStep(task, progress)?.id)
+        assertEquals(0, progress.stepProgress?.repetitions)
+    }
+
+    @Test
+    fun audioPassAtQuotaAlsoAdvancesWithoutSeparateValidationGesture() {
+        val task = task(HifzTrack.SABQI)
+        var progress = HifzTrainingEngine.initial(task)
+
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        assertEquals("sabqi-audio-passive", HifzTrainingEngine.currentStep(task, progress)?.id)
+
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        assertEquals("sabqi-audio-active", HifzTrainingEngine.currentStep(task, progress)?.id)
+        assertEquals(0, progress.stepProgress?.repetitions)
+    }
+
+    @Test
+    fun incorrectFinalRepetitionNeverAutoAdvances() {
+        val task = task(HifzTrack.ITQAN)
+        var progress = HifzTrainingEngine.initial(task)
+
+        repeat(19) {
+            progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        }
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = false)
+
+        assertEquals("itqan-visible-20", HifzTrainingEngine.currentStep(task, progress)?.id)
+        assertEquals(20, progress.stepProgress?.repetitions)
+        assertEquals(0, progress.stepProgress?.consecutiveSuccesses)
+
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        assertEquals("itqan-mask-25", HifzTrainingEngine.currentStep(task, progress)?.id)
+    }
+
+    @Test
     fun revealCannotAdvanceCurrentStep() {
         val task = task(HifzTrack.ITQAN)
         var progress = HifzTrainingEngine.initial(task)
@@ -54,6 +101,28 @@ class HifzTrainingEngineTest {
         assertEquals(0, afterAdvance.stepIndex)
         assertEquals("itqan-visible-20", afterAdvance.stepProgress?.stepId)
         assertEquals(1, afterAdvance.stepProgress?.revealCount)
+    }
+
+
+    @Test
+    fun assistedIntermediateRepetitionCannotAutoAdvance() {
+        val task = task(HifzTrack.ITQAN)
+        var progress = HifzTrainingEngine.initial(task)
+
+        repeat(20) {
+            progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        }
+        assertEquals("itqan-mask-25", HifzTrainingEngine.currentStep(task, progress)?.id)
+
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        progress = HifzTrainingEngine.reveal(task, progress)
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+
+        assertEquals("itqan-mask-25", HifzTrainingEngine.currentStep(task, progress)?.id)
+        assertEquals(2, progress.stepProgress?.repetitions)
+
+        progress = HifzTrainingEngine.attemptAndAdvanceIfValid(task, progress, correct = true)
+        assertEquals("itqan-mask-50", HifzTrainingEngine.currentStep(task, progress)?.id)
     }
 
     @Test

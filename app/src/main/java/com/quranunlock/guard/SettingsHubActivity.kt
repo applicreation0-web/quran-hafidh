@@ -43,6 +43,9 @@ class SettingsHubActivity : ComponentActivity() {
                 var brightness by remember {
                     mutableFloatStateOf(ReaderComfortPrefs.brightness(this@SettingsHubActivity))
                 }
+                var displayPreference by remember {
+                    mutableStateOf(DisplayProfileManager.preference(this@SettingsHubActivity))
+                }
 
                 Column(
                     modifier = Modifier
@@ -121,6 +124,46 @@ class SettingsHubActivity : ComponentActivity() {
                         title = "Apparence & confort",
                         subtitle = "Le Muṣḥaf n’est jamais inversé ni recoloré artificiellement"
                     ) {
+                        Text(
+                            "Profil d’écran",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            DisplayProfilePreference.entries.forEach { preference ->
+                                val label = when (preference) {
+                                    DisplayProfilePreference.AUTOMATIC -> "Auto"
+                                    DisplayProfilePreference.STANDARD -> "Standard"
+                                    DisplayProfilePreference.EINK -> "E-Ink"
+                                }
+                                if (displayPreference == preference) {
+                                    SafeguardButton(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {}
+                                    ) { Text(label) }
+                                } else {
+                                    SafeguardOutlinedButton(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            displayPreference = preference
+                                            DisplayProfileManager.setPreference(
+                                                this@SettingsHubActivity,
+                                                preference
+                                            )
+                                        }
+                                    ) { Text(label) }
+                                }
+                            }
+                        }
+                        Text(
+                            "Auto détecte les liseuses connues. Le choix manuel reste prioritaire.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
                         Text(
                             "Ambiance de lecture",
                             style = MaterialTheme.typography.bodyMedium,

@@ -79,6 +79,31 @@ class HifzStateCodecTest {
     }
 
     @Test
+    fun taskAudioProtocolChoicePersistsAndLegacyTaskDefaultsToAudio() {
+        val date = LocalDate.of(2026, 9, 9)
+        val task = HifzTask(
+            id = "sabqi-no-audio",
+            track = HifzTrack.SABQI,
+            originalScheduledDate = date,
+            cursor = HifzCursor.page(1, 1, 5, 1),
+            quota = 30,
+            audioPhasesIncluded = false
+        )
+        val state = HifzState(tasks = listOf(task))
+
+        val encoded = HifzStateCodec.encode(state)
+        val decoded = HifzStateCodec.decode(encoded)
+        assertEquals(false, decoded.tasks.single().audioPhasesIncluded)
+
+        // Simulate the pre-0.10.11 13-field task record by removing the new final field.
+        val legacy = encoded.lineSequence().joinToString("\n") { line ->
+            if (line.startsWith("T|")) line.substringBeforeLast('|') else line
+        } + "\n"
+        val legacyDecoded = HifzStateCodec.decode(legacy)
+        assertEquals(true, legacyDecoded.tasks.single().audioPhasesIncluded)
+    }
+
+    @Test
     fun emptyPreSetupConfigAlsoRoundTrips() {
         val state = HifzState()
         assertEquals(state, HifzStateCodec.decode(HifzStateCodec.encode(state)))

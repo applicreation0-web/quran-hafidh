@@ -39,6 +39,7 @@ class QuranAccessibilityService : AccessibilityService() {
     private var whatsappCallUiActive = false
     private var lastCheckpointElapsedMs = 0L
     private var pendingOrphanRecovery: OrphanedUnlockRecovery? = null
+    private var anonymousExitSentinelActive = false
 
     private val scopePreferenceListener =
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -324,6 +325,8 @@ class QuranAccessibilityService : AccessibilityService() {
             ?.takeIf(String::isNotBlank)
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (consumeAnonymousOutsideExit(event)) return
+
         if (AccessibilityStatus.isOtherEditionEnabled(this)) {
             pauseForegroundBudget(clearForeground = true)
             applyEventPackageScope(broad = false)
@@ -334,6 +337,42 @@ class QuranAccessibilityService : AccessibilityService() {
         } catch (error: Exception) {
             reportNonFatal("ACCESSIBILITY_EVENT_FAILED", error)
         }
+    }
+
+    /**
+     * Fast path used only while the temporary anonymous exit sentinel is armed.
+     * It performs no label/category lookup and never logs or persists the outside
+     * package. Its sole purpose is to stop target-only accounting on direct exits.
+     */
+    private fun consumeAnonymousOutsideExit(event: AccessibilityEvent?): Boolean {
+        if (!anonymousExitSentinelActive) return false
+
+        val eventPackage = event?.packageName?.toString() ?: return false
+        val runningPackage = foregroundUnlockedPackage
+        val selectedTargets = GuardPrefs.protectedPackages(this)
+
+        if (!TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
+                broadRequested = true,
+                foregroundPackage = foregroundPackage,
+                runningBudgetPackage = runningPackage,
+                selectedTargets = selectedTargets
+            )
+        ) {
+            applyEventPackageScope(broad = false)
+            return false
+        }
+
+        val shouldStop = TargetPresenceScopePolicy.shouldStopForAnonymousOutsideEvent(
+            sentinelArmed = true,
+            eventPackage = eventPackage,
+            activeImePackage = activeInputMethodPackage(),
+            admittedPackages = ProtectedApps.eventScopePackages(this)
+        )
+        if (!shouldStop) return false
+
+        handleOutsideScopeForeground()
+        GuardDiagnostics.log(this, "ANONYMOUS_TARGET_EXIT")
+        return true
     }
 
     private fun processAccessibilityEvent(event: AccessibilityEvent?) {
@@ -513,18 +552,23 @@ class QuranAccessibilityService : AccessibilityService() {
                     selectedTargets = GuardPrefs.protectedPackages(this)
                 )
 
-            // Android does not emit an "application left" callback for a package-
-            // filtered AccessibilityService. While a selected target is actively
-            // consuming the shared budget, accept exactly the first outside event
-            // as an anonymous exit signal. handleOutsideScopeForeground() pauses
-            // the budget and restores the narrow list immediately. Window content
-            // retrieval remains disabled and the outside package is never logged.
+            // Android has no reliable package-filtered "target left foreground"
+            // callback. During active target-only accounting, temporarily accept
+            // window-transition events from any package as a one-event anonymous
+            // exit sentinel. Click/scroll events remain disabled in this broad mode.
+            // The first outside event pauses the budget and restores narrow scope.
             info.packageNames = if (anonymousExitSentinel) {
                 null
             } else {
                 ProtectedApps.eventScopePackages(this).toTypedArray()
             }
+            info.eventTypes = if (anonymousExitSentinel) {
+                EXIT_SENTINEL_EVENT_TYPES
+            } else {
+                NARROW_EVENT_TYPES
+            }
             setServiceInfo(info)
+            anonymousExitSentinelActive = anonymousExitSentinel
         } catch (error: Exception) {
             reportNonFatal("EVENT_SCOPE_UPDATE_FAILED", error)
         }
@@ -758,6 +802,7 @@ class QuranAccessibilityService : AccessibilityService() {
         audioManager = null
         pendingOrphanRecovery = null
         whatsappCallUiActive = false
+        anonymousExitSentinelActive = false
 
         cancelPendingLaunches()
         GuardRuntime.interception.reset()
@@ -779,5 +824,13 @@ class QuranAccessibilityService : AccessibilityService() {
 
     private companion object {
         const val TAG = "QuranSafeguardService"
+        const val NARROW_EVENT_TYPES =
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                AccessibilityEvent.TYPE_WINDOWS_CHANGED or
+                AccessibilityEvent.TYPE_VIEW_CLICKED or
+                AccessibilityEvent.TYPE_VIEW_SCROLLED
+        const val EXIT_SENTINEL_EVENT_TYPES =
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                AccessibilityEvent.TYPE_WINDOWS_CHANGED
     }
 }

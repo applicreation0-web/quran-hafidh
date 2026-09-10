@@ -12,7 +12,7 @@ object HifzTrainingEngine {
 
     fun initial(task: HifzTask, segmentCount: Int = 1): HifzTaskProgress {
         val effectiveSegments = effectiveSegmentCount(task, segmentCount)
-        val steps = HifzTrainingPolicy.stepsFor(task.track)
+        val steps = baseSteps(task)
         require(steps.isNotEmpty()) { "No structured training protocol is defined for ${task.track}." }
         return HifzTaskProgress(
             taskId = task.id,
@@ -68,6 +68,26 @@ object HifzTrainingEngine {
         )
     }
 
+    /**
+     * One user/audio repetition is one confirmation. A correct repetition that makes the
+     * current step valid advances atomically; an incorrect repetition is recorded but
+     * never advances by itself. This removes the redundant second "Validate" gesture.
+     */
+    fun attemptAndAdvanceIfValid(
+        task: HifzTask,
+        progress: HifzTaskProgress,
+        correct: Boolean,
+        segmentCount: Int = 1
+    ): HifzTaskProgress {
+        val wasAssisted = progress.stepProgress?.assistedSinceLastAttempt == true
+        val attempted = attempt(task, progress, correct, segmentCount)
+        return if (correct && !wasAssisted) {
+            advanceIfValid(task, attempted, segmentCount)
+        } else {
+            attempted
+        }
+    }
+
     fun recordActiveSeconds(
         task: HifzTask,
         progress: HifzTaskProgress,
@@ -105,7 +125,7 @@ object HifzTrainingEngine {
         val assemblyRequired = requiresAssembly(task.track, effectiveSegments)
         return when {
             progress.segmentIndex < effectiveSegments - 1 -> {
-                val baseSteps = HifzTrainingPolicy.stepsFor(task.track)
+                val baseSteps = baseSteps(task)
                 progress.copy(
                     segmentIndex = progress.segmentIndex + 1,
                     stepIndex = 0,
@@ -149,7 +169,7 @@ object HifzTrainingEngine {
                 require(progress.segmentIndex == effectiveSegments)
                 require(progress.stepIndex == assembly.size)
             } else {
-                val base = HifzTrainingPolicy.stepsFor(task.track)
+                val base = baseSteps(task)
                 require(progress.segmentIndex == lastBaseSegment)
                 require(progress.stepIndex == base.size)
             }
@@ -166,7 +186,7 @@ object HifzTrainingEngine {
         }
 
         require(progress.segmentIndex in 0 until effectiveSegments)
-        val base = HifzTrainingPolicy.stepsFor(task.track)
+        val base = baseSteps(task)
         require(progress.stepIndex in base.indices)
         val stepProgress = requireNotNull(progress.stepProgress)
         require(stepProgress.stepId == base[progress.stepIndex].id)
@@ -197,8 +217,14 @@ object HifzTrainingEngine {
         HifzTrainingPolicy.assemblyStepsFor(task.track)
     } else {
         require(segmentIndex in 0 until segmentCount) { "Invalid Hifz segment index." }
-        HifzTrainingPolicy.stepsFor(task.track)
+        baseSteps(task)
     }
+
+    private fun baseSteps(task: HifzTask): List<HifzTrainingStep> =
+        HifzTrainingPolicy.stepsFor(
+            task.track,
+            audioAvailable = task.audioPhasesIncluded
+        )
 
     private fun effectiveSegmentCount(task: HifzTask, requested: Int): Int {
         require(requested > 0) { "A Hifz task must expose at least one pedagogical segment." }

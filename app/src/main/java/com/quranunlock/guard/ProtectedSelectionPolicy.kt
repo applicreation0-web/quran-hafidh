@@ -12,10 +12,15 @@ object ProtectedSelectionPolicy {
         pendingRemoval: Set<String>,
         removalEffectiveEpochDay: Long?,
         installedTargets: Set<String>,
-        todayEpochDay: Long
+        todayEpochDay: Long,
+        inventoryTrustworthy: Boolean = true
     ): ProtectedSelectionState {
         val installed = installedTargets.toSet()
-        val cleanActive = active.intersect(installed)
+        val cleanActive = if (inventoryTrustworthy) {
+            active.intersect(installed)
+        } else {
+            active
+        }
         val cleanPending = pendingRemoval.intersect(cleanActive)
 
         if (cleanPending.isNotEmpty() &&
@@ -46,16 +51,22 @@ object ProtectedSelectionPolicy {
         state: ProtectedSelectionState,
         requested: Set<String>,
         installedTargets: Set<String>,
-        todayEpochDay: Long
+        todayEpochDay: Long,
+        inventoryTrustworthy: Boolean = true
     ): ProtectedSelectionState {
         val current = reconcile(
             active = state.active,
             pendingRemoval = state.pendingRemoval,
             removalEffectiveEpochDay = state.removalEffectiveEpochDay,
             installedTargets = installedTargets,
-            todayEpochDay = todayEpochDay
+            todayEpochDay = todayEpochDay,
+            inventoryTrustworthy = inventoryTrustworthy
         )
-        val desired = requested.intersect(installedTargets)
+        val desired = if (inventoryTrustworthy) {
+            requested.intersect(installedTargets)
+        } else {
+            requested.intersect(current.active + installedTargets)
+        }
         val updatedActive = current.active + desired
         val updatedPending = current.pendingRemoval.toMutableSet().apply {
             removeAll(desired)

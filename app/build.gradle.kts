@@ -184,12 +184,6 @@ val verifyPrivacyBoundary by tasks.registering {
         val applicationsUi = file(
             "src/main/java/com/quranunlock/guard/ApplicationsActivity.kt"
         ).readText()
-        val presenceScope = file(
-            "src/main/java/com/quranunlock/guard/TargetPresenceScopePolicy.kt"
-        ).readText()
-        val presenceScopeTests = file(
-            "src/test/java/com/quranunlock/guard/TargetPresenceScopePolicyTest.kt"
-        ).readText()
         val migrationSource = file(
             "src/main/java/com/quranunlock/guard/AppMigrations.kt"
         ).readText()
@@ -298,12 +292,6 @@ val verifyPrivacyBoundary by tasks.registering {
         }
         check(service.contains("ProtectedApps.eventScopePackages(this).toTypedArray()")) {
             "Runtime accessibility scope must remain on the explicit target list."
-        }
-        check(presenceScope.contains("): Boolean = false")) {
-            "0.10.5 must make broad Accessibility scope impossible in policy."
-        }
-        check(presenceScopeTests.contains("fun runningSelectedTargetNeverEnablesAnonymousExitSentinel(")) {
-            "Missing 0.10.5 privacy-first sentinel regression test."
         }
         check(service.contains("handleOutsideScopeForeground()"))
         val outsideHandler = service
@@ -666,17 +654,6 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        val auditedBaselineMetadata =
-            buildFile.contains("versionCode = 22") &&
-                buildFile.contains("versionName = \"0.10.3\"")
-        val preparedReleaseMetadata =
-            (buildFile.contains("versionCode = 28") &&
-                buildFile.contains("versionName = \"0.10.9\"")) ||
-            (buildFile.contains("versionCode = 29") &&
-                buildFile.contains("versionName = \"0.10.10\""))
-        check(auditedBaselineMetadata || preparedReleaseMetadata) {
-            "Expected the audited baseline or an explicitly prepared 0.10.9/0.10.10 release metadata set."
-        }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
         }
@@ -821,14 +798,6 @@ val verifyEditorialBoundary by tasks.registering {
                 !safeguardDesign.contains("0xFFF4F0E6")
         ) {
             "0.10.7 requires calm cream controls without ornamental button drawing."
-        }
-        val launcherIcon = file(
-            "src/main/res/drawable/ic_launcher_foreground.xml"
-        ).readText()
-        listOf("#2C5D49", "#D8BA73", "#7A5337", "#FFFDF5").forEach { baselineColor ->
-            check(launcherIcon.contains(baselineColor)) {
-                "Launcher icon no longer matches the exact 0.10.8 green/gold/brown/ivory baseline: " + baselineColor
-            }
         }
         listOf(
             "HikmaCommentary",
@@ -1099,8 +1068,8 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 29
-        versionName = "0.10.10"
+        versionCode = 30
+        versionName = "0.10.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

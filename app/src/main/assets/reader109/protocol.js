@@ -18,13 +18,13 @@ function plan(lines,audio){
   b.forEach((line,li)=>{
    const lid=prefix+'L'+li, label='L'+(offset+li+1);
    if(audio){add(lid+'passive',label+' · Écoute passive',[line],2,0,'passive');add(lid+'active',label+' · Écoute active',[line],3,0,'active');}
-   [0,25,50,75,100].forEach((mask,mi)=>add(lid+'M'+mask,'Valider — '+(mask?mask+' %':'Visible')+' · '+label,[line],[10,5,5,5,7][mi],mask,'personal',mask===100));
-   add(lid+'confirm','Valider '+label,[line],0,100,'confirm');
-   if(li>0)add(prefix+'chain'+li,li===b.length-1?'Valider le bloc de '+b.length+' lignes':'Valider '+('L'+(offset+1))+'–'+label,b.slice(0,li+1),li===b.length-1?7:5,100,'personal',false);
+   [0,25,50,75,100].forEach((mask,mi)=>add(lid+'M'+mask,(mask?'Masquage '+mask+' %':'Texte visible')+' · '+label,[line],[10,5,5,5,7][mi],mask,'personal',mask===100));
+   add(lid+'confirm','Ligne '+label+' acquise',[line],0,100,'confirm');
+   if(li>0)add(prefix+'chain'+li,li===b.length-1?'Bloc de '+b.length+' lignes':'Enchaînement '+('L'+(offset+1))+'–'+label,b.slice(0,li+1),li===b.length-1?7:5,100,'personal',false);
   });
   if(bi>0)add('blocks'+bi,'Enchaîner les blocs',blocks.slice(0,bi+1).flat(),bi===blocks.length-1?7:5,100);
  });
- add('final','Valider le bloc mémorisé',lines,3,100,'personal',true);
+ add('final','Bloc mémorisé',lines,3,100,'personal',true);
  return steps;
 }
 function create(lines,audio=false){return {schema:1,lines,withAudio:audio,step:0,counts:{},wins:{},readCounts:{visible:0,masked:0},milestones:[],status:'À apprendre',due:Date.now(),seed:Math.floor(Math.random()*2147483647),complete:false};}
@@ -49,6 +49,21 @@ function record(s,correct=true,source='personal'){
  return true;
 }
 function recordMaskedReading(s){const counts=readingCounts(s);s.readCounts={visible:counts.visible,masked:counts.masked+1};return s.readCounts;}
+function recordReinforcementAttempt(r,correct,requiredWins=3){
+ if(!r||!Number.isInteger(requiredWins)||requiredWins<1)return {recorded:false,completed:false};
+ r.count=Math.max(0,Number(r.count)||0)+1;r.wins=correct?(Math.max(0,Number(r.wins)||0)+1):0;
+ return {recorded:true,completed:!!correct&&r.wins>=requiredWins,count:r.count,wins:r.wins};
+}
+/* One completed repetition is the only confirmation needed. A correct repetition that
+ * satisfies the current quota advances immediately; an incorrect repetition never does. */
+function recordAndAutoAdvance(s,correct=true,source='personal'){
+ const before=current(s);if(!before)return {recorded:false,advanced:false,beforeId:null,afterId:null,beforeMask:0,afterMask:0,completed:!!s?.complete};
+ if(!record(s,correct,source))return {recorded:false,advanced:false,beforeId:before.id,afterId:before.id,beforeMask:before.mask||0,afterMask:before.mask||0,completed:!!s.complete};
+ let advanced=!!correct&&validate(s);
+ while(advanced&&current(s)?.min===0&&canValidate(s))validate(s);
+ const after=current(s);
+ return {recorded:true,advanced,beforeId:before.id,afterId:after?.id||null,beforeMask:before.mask||0,afterMask:after?.mask||0,completed:!!s.complete};
+}
 function aid(s,kind='help',hintWords=0){const p=current(s);if(!p)return false;s.wins[p.id]=0;s.assistance={stepId:p.id,kind,hintWords};return true;}
 function clearAid(s){delete s.assistance;}
 function validate(s){if(!canValidate(s))return false;const p=current(s);if(!s.milestones.includes(p.id))s.milestones.push(p.id);clearAid(s);s.step++;if(!current(s)){s.complete=true;s.status='Acquis';s.due=Date.now()+86400000;}return true;}
@@ -68,5 +83,5 @@ function disableAudio(s){
  return true;
 }
 function rank(seed,id){let h=(seed|0)^2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967296;}
-const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,readingCounts,record,recordMaskedReading,aid,clearAid,validate,redo,disableAudio,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
+const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,readingCounts,record,recordAndAutoAdvance,recordMaskedReading,recordReinforcementAttempt,aid,clearAid,validate,redo,disableAudio,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

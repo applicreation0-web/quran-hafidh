@@ -4,8 +4,8 @@ for(const n of [1,2,3,4,5,6,7,8,10,11,12,15,16,31]){
  const sizes=P.balancedBlocks(lines).map(b=>b.length);assert.deepEqual(P.balancedBlocks(lines).flat(),lines);if(n<=7)assert.deepEqual(sizes,[n]);else{assert(sizes.every(size=>size<=6&&size>=3));assert(Math.max(...sizes)-Math.min(...sizes)<=1)}
  const expected={4:[4],5:[5],6:[6],7:[7],8:[4,4],10:[5,5],11:[6,5],15:[5,5,5]};if(expected[n])assert.deepEqual(sizes,expected[n]);
  assert.equal(steps[0].label,'Préparation · Lecture attentive');assert.equal(steps[0].min,2);assert.equal(steps[0].kind,'read');
- for(const label of ['Valider — Visible','Valider — 25 %','Valider — 50 %','Valider — 75 %','Valider — 100 %'])assert(steps.some(p=>p.label.startsWith(label)));
- assert.equal(steps.at(-1).label,'Valider le bloc mémorisé');
+ for(const label of ['Texte visible','Masquage 25 %','Masquage 50 %','Masquage 75 %','Masquage 100 %'])assert(steps.some(p=>p.label.startsWith(label)));
+ assert.equal(steps.at(-1).label,'Bloc mémorisé');
  while(P.current(s)){const p=P.current(s);assert(!P.validate(s)||p.min===0);if(p.kind==='confirm')continue;for(let i=0;i<Math.max(p.min,3);i++)P.record(s,true);assert(P.canValidate(s));const before=[...s.milestones];P.aid(s,'first-word',1);assert(!P.record(s,true));assert(!P.canValidate(s));assert.deepEqual(s.milestones,before);P.clearAid(s);if(p.success)for(let i=0;i<3;i++)P.record(s,true);assert(P.validate(s));Object.assign(s,JSON.parse(JSON.stringify(s)));checks++;}assert(s.complete);assert.equal(s.status,'Acquis');assert.equal(s.milestones.length,steps.length);
 }
 const s=P.create(['1:0'],true);assert.equal(P.current(s).kind,'read');P.record(s);assert(!P.canValidate(s));P.record(s);assert(P.canValidate(s));P.validate(s);assert.equal(P.current(s).kind,'passive');assert(!P.record(s));assert(P.record(s,true,'audio'));assert(!P.canValidate(s));P.record(s,true,'audio');assert(P.canValidate(s));P.validate(s);assert.equal(P.current(s).kind,'passive');
@@ -21,4 +21,21 @@ const counted=P.create(['1:0'],true);assert.deepEqual(P.readingCounts(counted),{
 const legacy=P.create(['1:0'],false);delete legacy.readCounts;legacy.counts[P.current(legacy).id]=4;assert.deepEqual(P.readingCounts(legacy),{visible:4,masked:0});P.record(legacy,true);assert.deepEqual(P.readingCounts(legacy),{visible:5,masked:0});
 const masked=P.create(['1:0'],false);while(P.current(masked).mask===0){const p=P.current(masked);for(let i=0;i<p.min;i++)P.record(masked,true);P.validate(masked)}P.record(masked,true);assert(P.readingCounts(masked).masked>0);const beforeReinforcement=P.readingCounts(masked).masked;P.recordMaskedReading(masked);assert.equal(P.readingCounts(masked).masked,beforeReinforcement+1);
 for(let i=0;i<100;i++){const rank=P.rank(42,'line:'+i);assert.equal(rank,P.rank(42,'line:'+i));assert(rank>=0&&rank<1)}
+
+// 0.10.11 repetition UX: one completed repetition is the only confirmation.
+const auto=P.create(['2:1'],false);
+let autoResult=P.recordAndAutoAdvance(auto,true);
+assert.equal(autoResult.recorded,true);assert.equal(autoResult.advanced,false);assert.equal(P.current(auto).id,'B0prepRead');
+autoResult=P.recordAndAutoAdvance(auto,true);
+assert.equal(autoResult.advanced,true);assert.equal(P.current(auto).id,'B0L0M0');
+while(P.current(auto)&&P.current(auto).mask!==100){const step=P.current(auto);for(let i=0;i<step.min;i++){const r=P.recordAndAutoAdvance(auto,true);if(i<step.min-1)assert.equal(r.advanced,false)} }
+const autoMasked=P.current(auto);assert.equal(autoMasked.mask,100);
+for(let i=0;i<6;i++)assert.equal(P.recordAndAutoAdvance(auto,true).advanced,false);
+const failedFinal=P.recordAndAutoAdvance(auto,false);assert.equal(failedFinal.advanced,false);assert.equal(P.current(auto).id,autoMasked.id);
+assert.equal(P.recordAndAutoAdvance(auto,true).advanced,false);
+assert.equal(P.recordAndAutoAdvance(auto,true).advanced,false);
+const recovered=P.recordAndAutoAdvance(auto,true);assert.equal(recovered.advanced,true);assert.notEqual(P.current(auto)?.id,autoMasked.id);assert.notEqual(P.current(auto)?.kind,'confirm');
+const reinforce={count:0,wins:0};assert.deepEqual(P.recordReinforcementAttempt(reinforce,true,3),{recorded:true,completed:false,count:1,wins:1});assert.equal(P.recordReinforcementAttempt(reinforce,false,3).completed,false);assert.equal(reinforce.wins,0);assert.equal(P.recordReinforcementAttempt(reinforce,true,3).completed,false);assert.equal(P.recordReinforcementAttempt(reinforce,true,3).completed,false);assert.equal(P.recordReinforcementAttempt(reinforce,true,3).completed,true);
+const autoAudio=P.create(['3:1'],true);assert.equal(P.recordAndAutoAdvance(autoAudio,true).advanced,false);assert.equal(P.recordAndAutoAdvance(autoAudio,true).advanced,true);assert.equal(P.current(autoAudio).kind,'passive');assert.equal(P.recordAndAutoAdvance(autoAudio,true,'audio').advanced,false);const audioAdvance=P.recordAndAutoAdvance(autoAudio,true,'audio');assert.equal(audioAdvance.advanced,true);assert.equal(P.current(autoAudio).kind,'passive');
+
 console.log('PASS',checks,'milestone transitions; short, normal, long, preparation, restart, aid, audio isolation, local-audio downgrade and split reading counters');

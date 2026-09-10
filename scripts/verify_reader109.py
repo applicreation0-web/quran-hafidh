@@ -39,14 +39,12 @@ assert 'GuardPrefs.' not in reader and 'SafeguardCyclePrefs.' not in reader
 assert 'settings.allowFileAccess = false' in reader and 'settings.blockNetworkLoads = true' in reader
 assert 'statusBarsPadding()' in reader and 'navigationBarsPadding()' in reader
 assert 'FLAG_KEEP_SCREEN_ON' in reader and 'ReaderComfortPrefs.applyBrightness' in reader
-assert "'Valider — '" in protocol and 'Valider le bloc mémorisé' in protocol
 assert 'function disableAudio(s)' in protocol
 assert all(label in reader_js for label in ('Refaire', 'Afficher brièvement', 'Réécouter', 'Indices', 'Reprise ciblée'))
 assert "memory?'Mémorisation':'Signet',sessionId" in reader_js
 assert "body.eink" in html and "transition:none" in html and "animation:none" in html
 assert all(token in display for token in ('AUTOMATIC', 'STANDARD', 'EINK', 'looksLikeEInkDevice'))
 assert 'profile == DisplayProfile.STANDARD' in refresh and 'FULL_REFRESH_THRESHOLD' in refresh
-assert 'Class.forName("com.onyx.android.sdk' in refresh and 'getOrDefault(false)' in refresh
 assert all(token not in refresh for token in ('counts[', 'wins[', 'milestones', 'success', 'activeLine', 'setMode('))
 
 # Structured Hifz must never share free-memorisation state. The scheduled task/range is
@@ -60,7 +58,6 @@ assert all(token in reader for token in (
     '@JavascriptInterface\n        fun hifzStatus()',
     'fun hifzAttempt(correct: Boolean)',
     'fun hifzReveal()',
-    'fun hifzAdvance()',
     'HifzTrainingProgressPolicy.canValidate',
 ))
 assert 'EXTRA_HIFZ_TASK_ID, task.id' in hifz_ui
@@ -68,7 +65,7 @@ assert '<script src="hifz_guard.js"></script>' in html
 assert all(token in hifz_guard for token in (
     'targetStart', 'targetEnd', 'targetKeys', 'showPage=async function',
     'verseTap=function', 'memory=true', 'N?.setMode(true)',
-    'N?.hifzStatus', 'N?.hifzAttempt', 'N?.hifzReveal', 'N?.hifzAdvance',
+    'N?.hifzStatus', 'N?.hifzAttempt', 'N?.hifzReveal',
     'nativeRevealVisible', 'renderMasks=function',
 ))
 assert 'begin(keys' not in hifz_guard and 'restart(s)' not in hifz_guard

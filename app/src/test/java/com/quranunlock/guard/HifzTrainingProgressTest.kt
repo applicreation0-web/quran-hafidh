@@ -41,11 +41,18 @@ class HifzTrainingProgressTest {
     }
 
     @Test
-    fun finalSabqiValidationRequiresThreeUnassistedConsecutiveSuccesses() {
+    fun finalSabqiValidationRequiresFullQuotaAndThreeUnassistedConsecutiveSuccesses() {
         val step = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI).last()
         var progress = HifzStepProgress(stepId = step.id)
         repeat(3) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
+        progress = HifzTrainingProgressPolicy.reveal(progress)
+        repeat(3) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
 
+        assertFalse(HifzTrainingProgressPolicy.canValidate(step, progress))
+
+        progress = HifzTrainingProgressPolicy.attempt(progress, correct = true)
+        assertEquals(7, progress.repetitions)
+        assertEquals(3, progress.consecutiveSuccesses)
         assertTrue(HifzTrainingProgressPolicy.canValidate(step, progress))
     }
 

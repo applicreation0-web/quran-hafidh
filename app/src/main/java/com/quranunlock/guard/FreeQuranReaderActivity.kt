@@ -37,8 +37,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
     private data class HifzRuntime(
         val task: HifzTask,
         val progress: HifzTaskProgress,
-        val segmentCount: Int
-    )
+        val segments: List<HifzPedagogicalSegment>
+    ) {
+        val segmentCount: Int get() = segments.size
+    }
 
     private var web: WebView? = null
     private var verse by mutableStateOf<VerseRef?>(null)
@@ -88,11 +90,38 @@ class FreeQuranReaderActivity : ComponentActivity() {
         val task = loaded.state.tasks.firstOrNull {
             it.id == id && it.status != HifzTaskStatus.COMPLETED
         } ?: return null
-        val segmentCount = HifzStateStore.segmentCount(this, task) ?: return null
+        val segments = runCatching {
+            HifzGeometryPolicy.segment(
+                HifzGeometryAssetLoader.load(this),
+                task.cursor
+            )
+        }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
         val progress = loaded.state.progressByTask[id]
-            ?: HifzTrainingEngine.initial(task, segmentCount)
-        if (!HifzTrainingEngine.isSemanticallyCoherent(task, progress, segmentCount)) return null
-        return HifzRuntime(task, progress, segmentCount)
+            ?: HifzTrainingEngine.initial(task, segments.size)
+        if (!HifzTrainingEngine.isSemanticallyCoherent(task, progress, segments.size)) return null
+        return HifzRuntime(task, progress, segments)
+    }
+
+    private fun recordHifzAttempt(
+        runtime: HifzRuntime,
+        step: HifzTrainingStep,
+        correct: Boolean
+    ): Boolean {
+        val saved = HifzStateStore.updateProgress(
+            this,
+            runtime.task.id
+        ) { progress ->
+            HifzTrainingEngine.attemptAndAdvanceIfValid(
+                runtime.task,
+                progress,
+                correct,
+                runtime.segmentCount
+            )
+        }
+        if (saved && HifzReadingCountPolicy.isReading(step)) {
+            HifzReadingStatsStore.record(this, runtime.task.id, step)
+        }
+        return saved
     }
 
     private fun publishNativeZoomState(view: WebView, currentScale: Float) {
@@ -315,7 +344,11 @@ class FreeQuranReaderActivity : ComponentActivity() {
         @JavascriptInterface
         fun setMode(memory: Boolean) {
             runOnUiThread {
-                memoryMode = if (hifzMode) true else memory
+                memoryMode = when {
+                    hifzMode -> true
+                    contextual -> false
+                    else -> memory
+                }
                 if (memoryMode) {
                     closeTafsir()
                 } else {
@@ -348,6 +381,13 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 put("endPage", runtime.task.cursor.endPage)
                 put("segmentIndex", runtime.progress.segmentIndex)
                 put("segmentCount", runtime.segmentCount)
+                val segmentLines = if (runtime.progress.segmentIndex in runtime.segments.indices) {
+                    runtime.segments[runtime.progress.segmentIndex].lines
+                } else {
+                    runtime.segments.flatMap { it.lines }
+                }
+                put("segmentLineIds", org.json.JSONArray(segmentLines.map { it.ref.geometryId }))
+                put("segmentPage", segmentLines.firstOrNull()?.ref?.page ?: runtime.task.cursor.startPage)
                 put("completed", runtime.progress.completed)
                 put("activeSeconds", runtime.progress.activeSeconds)
                 put("totalRevealCount", runtime.progress.totalRevealCount)
@@ -368,6 +408,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
             }.toString()
         }
 
+        /** Manual visual-reading attempt. Audio phases are refused here. */
         @JavascriptInterface
         fun hifzAttempt(correct: Boolean): Boolean {
             val runtime = currentHifzRuntime() ?: return false
@@ -376,21 +417,46 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 runtime.progress,
                 runtime.segmentCount
             ) ?: return false
-            val saved = HifzStateStore.updateProgress(
-                this@FreeQuranReaderActivity,
-                runtime.task.id
-            ) { progress ->
-                HifzTrainingEngine.attempt(
-                    runtime.task,
-                    progress,
-                    correct,
-                    runtime.segmentCount
-                )
-            }
-            if (saved && HifzReadingCountPolicy.isReading(step)) {
-                HifzReadingStatsStore.record(this@FreeQuranReaderActivity, runtime.task.id, step)
-            }
-            return saved
+            if (!HifzReadingCountPolicy.isReading(step)) return false
+            return recordHifzAttempt(runtime, step, correct)
+        }
+
+        /**
+         * Arms native verification of one complete pass over the exact task range.
+         * The JavaScript cannot choose another range.
+         */
+        @JavascriptInterface
+        fun hifzPrepareAudioPass(): Boolean {
+            val runtime = currentHifzRuntime() ?: return false
+            val step = HifzTrainingEngine.currentStep(
+                runtime.task,
+                runtime.progress,
+                runtime.segmentCount
+            ) ?: return false
+            if (HifzReadingCountPolicy.isReading(step) || !audioAllowed()) return false
+            val keys = QuranAudioController.verseKeys(runtime.task.cursor)
+            if (keys.isEmpty()) return false
+            return audio.prepareTrackedHifzPass(keys)
+        }
+
+        /**
+         * Advances an audio phase only after MediaPlayer completed every verse of
+         * the exact native task range in order. The completion proof is one-shot.
+         */
+        @JavascriptInterface
+        fun hifzAudioPassCompleted(): Boolean {
+            val runtime = currentHifzRuntime() ?: return false
+            val step = HifzTrainingEngine.currentStep(
+                runtime.task,
+                runtime.progress,
+                runtime.segmentCount
+            ) ?: return false
+            if (HifzReadingCountPolicy.isReading(step) || !audioAllowed()) return false
+            val keys = QuranAudioController.verseKeys(runtime.task.cursor)
+            val first = keys.firstOrNull() ?: return false
+            val last = keys.lastOrNull() ?: return false
+            if (!audio.consumeCompletedPass(first, last)) return false
+            return recordHifzAttempt(runtime, step, correct = true)
         }
 
         @JavascriptInterface
@@ -401,21 +467,6 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 runtime.task.id
             ) { progress ->
                 HifzTrainingEngine.reveal(
-                    runtime.task,
-                    progress,
-                    runtime.segmentCount
-                )
-            }
-        }
-
-        @JavascriptInterface
-        fun hifzAdvance(): Boolean {
-            val runtime = currentHifzRuntime() ?: return false
-            return HifzStateStore.updateProgress(
-                this@FreeQuranReaderActivity,
-                runtime.task.id
-            ) { progress ->
-                HifzTrainingEngine.advanceIfValid(
                     runtime.task,
                     progress,
                     runtime.segmentCount

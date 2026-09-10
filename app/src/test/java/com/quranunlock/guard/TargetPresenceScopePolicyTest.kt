@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TargetPresenceScopePolicyTest {
@@ -9,12 +10,15 @@ class TargetPresenceScopePolicyTest {
         "com.google.android.youtube",
         "com.instagram.android"
     )
+    private val admitted = targets + setOf(
+        "com.applicreation0.quransafeguard",
+        "com.android.systemui",
+        "com.android.launcher3"
+    )
 
     @Test
-    fun runningSelectedTargetRequiresOneAnonymousExitSignal() {
-        // Historical test name retained for the 0.10.4 source gate. In 0.10.5
-        // the correct privacy-first expectation is the opposite: no broad signal.
-        assertFalse(
+    fun runningSelectedTargetArmsAnonymousExitSentinel() {
+        assertTrue(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = true,
                 foregroundPackage = "com.android.chrome",
@@ -25,7 +29,7 @@ class TargetPresenceScopePolicyTest {
     }
 
     @Test
-    fun noSentinelExistsWithoutAnActivelyRunningTargetBudget() {
+    fun sentinelCannotArmWithoutMatchingRunningSelectedTarget() {
         assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = true,
@@ -34,10 +38,6 @@ class TargetPresenceScopePolicyTest {
                 selectedTargets = targets
             )
         )
-    }
-
-    @Test
-    fun outsideApplicationCanNeverOwnTheSharedBudgetScope() {
         assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = true,
@@ -46,29 +46,57 @@ class TargetPresenceScopePolicyTest {
                 selectedTargets = targets
             )
         )
-    }
-
-    @Test
-    fun narrowScopeIsRestoredAfterTheExitSignal() {
-        // There is no exit sentinel anymore; the scope is narrow continuously.
         assertFalse(
             TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                 broadRequested = false,
-                foregroundPackage = null,
-                runningBudgetPackage = null,
+                foregroundPackage = "com.android.chrome",
+                runningBudgetPackage = "com.android.chrome",
                 selectedTargets = targets
             )
         )
     }
 
     @Test
-    fun runningSelectedTargetNeverEnablesAnonymousExitSentinel() {
+    fun outsideWindowEventStopsButTargetSystemAndImeEventsDoNot() {
+        val ime = "com.google.android.inputmethod.latin"
+        assertTrue(
+            TargetPresenceScopePolicy.shouldStopForAnonymousOutsideEvent(
+                sentinelArmed = true,
+                eventPackage = "com.example.bank",
+                activeImePackage = ime,
+                admittedPackages = admitted
+            )
+        )
         assertFalse(
-            TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
-                broadRequested = true,
-                foregroundPackage = "com.android.chrome",
-                runningBudgetPackage = "com.android.chrome",
-                selectedTargets = targets
+            TargetPresenceScopePolicy.shouldStopForAnonymousOutsideEvent(
+                sentinelArmed = true,
+                eventPackage = "com.android.chrome",
+                activeImePackage = ime,
+                admittedPackages = admitted
+            )
+        )
+        assertFalse(
+            TargetPresenceScopePolicy.shouldStopForAnonymousOutsideEvent(
+                sentinelArmed = true,
+                eventPackage = "com.android.systemui",
+                activeImePackage = ime,
+                admittedPackages = admitted
+            )
+        )
+        assertFalse(
+            TargetPresenceScopePolicy.shouldStopForAnonymousOutsideEvent(
+                sentinelArmed = true,
+                eventPackage = ime,
+                activeImePackage = ime,
+                admittedPackages = admitted
+            )
+        )
+        assertFalse(
+            TargetPresenceScopePolicy.shouldStopForAnonymousOutsideEvent(
+                sentinelArmed = false,
+                eventPackage = "com.example.bank",
+                activeImePackage = ime,
+                admittedPackages = admitted
             )
         )
     }

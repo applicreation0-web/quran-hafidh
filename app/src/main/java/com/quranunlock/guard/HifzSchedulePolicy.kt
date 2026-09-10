@@ -29,7 +29,12 @@ data class HifzTask(
     val scheduledDate: LocalDate = originalScheduledDate,
     val cursor: HifzCursor,
     val quota: Int,
-    val status: HifzTaskStatus = HifzTaskStatus.PLANNED
+    val status: HifzTaskStatus = HifzTaskStatus.PLANNED,
+    /**
+     * Fixed when the task is created. Existing persisted tasks default to true
+     * so their step ids remain compatible with the pre-fix protocol.
+     */
+    val audioPhasesIncluded: Boolean = true
 ) {
     init {
         require(id.isNotBlank()) { "A Hifz task id is required." }

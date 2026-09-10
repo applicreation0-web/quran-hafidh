@@ -19,9 +19,10 @@ data class SafeguardTarget(
  *
  * Only explicitly selected social apps and browsers can be protected or persisted.
  * No banking, health, transport, identity or work application is classified,
- * selectable, logged or persisted. Accessibility is also kept permanently inside
- * that product boundary plus Quran Safeguard, System UI and the current launcher;
- * excluded applications are never admitted as anonymous exit sentinels.
+ * selectable, logged or persisted. Accessibility normally stays inside that product
+ * boundary plus Quran Safeguard, System UI and the current launcher. During active
+ * target-only accounting, one anonymous outside window-transition signal may be used
+ * only to stop the timer; the outside package is never classified, logged or persisted.
  */
 object ProtectedApps {
     const val SYSTEM_UI_PACKAGE = "com.android.systemui"

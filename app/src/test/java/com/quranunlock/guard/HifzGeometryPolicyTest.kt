@@ -47,6 +47,30 @@ class HifzGeometryPolicyTest {
         assertTrue(segments.flatMap { it.lines }.all { it.targetVerses == setOf(verse) })
     }
 
+
+    @Test
+    fun taskAwareSegmentationNeverLeaksIntoNeighbouringCursorPage() {
+        val verse = QuranVerseRef(2, 282)
+        val index = HifzGeometryIndex(
+            mapOf(
+                48 to (1..5).map { ordinal -> line("48:${ordinal - 1}", 48, ordinal, verse) },
+                49 to (1..5).map { ordinal -> line("49:${ordinal - 1}", 49, ordinal, verse) }
+            )
+        )
+        val cursor = HifzCursor(
+            start = verse,
+            end = verse,
+            startPage = 48,
+            endPage = 48
+        )
+
+        val segments = HifzGeometryPolicy.segment(index, cursor, maxLinesPerSegment = 5)
+
+        assertEquals(1, segments.size)
+        assertTrue(segments.single().lines.all { it.ref.page == 48 })
+        assertEquals((1..5).toList(), segments.single().lines.map { it.ref.ordinal })
+    }
+
     @Test
     fun itqanTraversalJumpsDirectlyAcrossUnselectedGap() {
         val intervals = listOf(

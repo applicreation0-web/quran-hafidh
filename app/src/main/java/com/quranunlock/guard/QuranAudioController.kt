@@ -8,6 +8,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
@@ -33,6 +34,22 @@ class QuranAudioController(
     private var remainingRepeats = 1
     private var currentSurah = 0
     private var currentAyah = 0
+
+    private data class TrackedAudioPass(
+        val verseKeys: List<String>,
+        var nextIndex: Int = 0
+    )
+
+    data class CompletedAudioPass(
+        val firstVerseKey: String,
+        val lastVerseKey: String,
+        val completedAtElapsedMs: Long
+    )
+
+    private var trackedHifzPass: TrackedAudioPass? = null
+
+    @Volatile
+    private var completedPass: CompletedAudioPass? = null
 
     private val attrs = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -92,6 +109,67 @@ class QuranAudioController(
         return file.isFile && file.length() > MIN_AUDIO_BYTES && looksLikeMp3(file)
     }
 
+    @Synchronized
+    fun prepareTrackedHifzPass(verseKeys: List<String>): Boolean {
+        if (verseKeys.isEmpty()) return false
+        val canonical = verseKeys.all { key ->
+            val parts = key.split(':')
+            if (parts.size != 2) return@all false
+            val surah = parts[0].toIntOrNull() ?: return@all false
+            val ayah = parts[1].toIntOrNull() ?: return@all false
+            QuranAudioSource.isValidReference(surah, ayah)
+        }
+        if (!canonical) return false
+        trackedHifzPass = TrackedAudioPass(verseKeys.toList())
+        completedPass = null
+        return true
+    }
+
+    @Synchronized
+    fun cancelTrackedHifzPass() {
+        trackedHifzPass = null
+        completedPass = null
+    }
+
+    @Synchronized
+    fun consumeCompletedPass(
+        expectedFirstVerseKey: String,
+        expectedLastVerseKey: String,
+        maxAgeMs: Long = 5_000L
+    ): Boolean {
+        val pass = completedPass ?: return false
+        val age = SystemClock.elapsedRealtime() - pass.completedAtElapsedMs
+        val fresh = age in 0..maxAgeMs.coerceAtLeast(0L)
+        val matches = pass.firstVerseKey == expectedFirstVerseKey &&
+            pass.lastVerseKey == expectedLastVerseKey
+        if (!fresh || !matches) return false
+        completedPass = null
+        return true
+    }
+
+    @Synchronized
+    private fun recordCompletedVerse(surah: Int, ayah: Int) {
+        val tracker = trackedHifzPass ?: return
+        val key = "$surah:$ayah"
+        val expected = tracker.verseKeys
+        val expectedKey = expected.getOrNull(tracker.nextIndex)
+
+        tracker.nextIndex = when {
+            key == expectedKey -> tracker.nextIndex + 1
+            key == expected.first() -> 1
+            else -> 0
+        }
+
+        if (tracker.nextIndex >= expected.size) {
+            completedPass = CompletedAudioPass(
+                firstVerseKey = expected.first(),
+                lastVerseKey = expected.last(),
+                completedAtElapsedMs = SystemClock.elapsedRealtime()
+            )
+            tracker.nextIndex = 0
+        }
+    }
+
     fun playVerse(surah: Int, ayah: Int, repeats: Int) {
         if (!QuranAudioSource.isValidReference(surah, ayah)) {
             emit("error", surah, ayah, message = "Référence audio invalide")
@@ -122,6 +200,7 @@ class QuranAudioController(
                 resume()
             }
             setOnCompletionListener { completed ->
+                recordCompletedVerse(currentSurah, currentAyah)
                 emit("cycle_complete")
                 remainingRepeats -= 1
                 if (remainingRepeats > 0) {
@@ -327,6 +406,7 @@ class QuranAudioController(
 
     fun release() {
         pause()
+        cancelTrackedHifzPass()
         releasePlayer()
         executor.shutdownNow()
         runCatching { context.unregisterReceiver(noisy) }
@@ -334,6 +414,53 @@ class QuranAudioController(
 
     companion object {
         private const val MIN_AUDIO_BYTES = 1_024L
-        private val CONTENT_RANGE = Regex("bytes\\s+(\\d+)-(\\d+)/(\\d+)", RegexOption.IGNORE_CASE)
+        private val CONTENT_RANGE =
+            Regex("bytes\\s+(\\d+)-(\\d+)/(\\d+)", RegexOption.IGNORE_CASE)
+
+        internal fun verseKeys(cursor: HifzCursor): List<String> {
+            val result = mutableListOf<String>()
+            var current = cursor.start
+            while (true) {
+                result += current.label
+                if (current == cursor.end) break
+                val next = HifzItqanTraversalPolicy.nextCanonicalVerse(current)
+                    ?: return emptyList()
+                if (compareQuranVerseRefs(next, cursor.end) > 0) return emptyList()
+                current = next
+            }
+            return result
+        }
+
+        fun hasLocalAudioFor(context: Context, cursor: HifzCursor): Boolean {
+            val keys = verseKeys(cursor)
+            if (keys.isEmpty()) return false
+            val dir = File(
+                context.filesDir,
+                "quran-audio/${QuranAudioSource.STORAGE_VERSION}"
+            )
+            return keys.all { key ->
+                val parts = key.split(':')
+                val surah = parts[0].toInt()
+                val ayah = parts[1].toInt()
+                val file = File(dir, QuranAudioSource.fileName(surah, ayah))
+                file.isFile &&
+                    file.length() > MIN_AUDIO_BYTES &&
+                    looksLikeMp3File(file)
+            }
+        }
+
+        private fun looksLikeMp3File(file: File): Boolean = runCatching {
+            file.inputStream().use { input ->
+                val header = ByteArray(3)
+                if (input.read(header) < 2) return@use false
+                val id3 = header.size >= 3 &&
+                    header[0] == 'I'.code.toByte() &&
+                    header[1] == 'D'.code.toByte() &&
+                    header[2] == '3'.code.toByte()
+                val frame = (header[0].toInt() and 0xFF) == 0xFF &&
+                    (header[1].toInt() and 0xE0) == 0xE0
+                id3 || frame
+            }
+        }.getOrDefault(false)
     }
 }
