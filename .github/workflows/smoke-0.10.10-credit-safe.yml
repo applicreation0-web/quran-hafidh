@@ -25,12 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ env.APP_SOURCE_SHA }}
           fetch-depth: 1
 
       - name: Prove runtime candidate provenance
         run: |
           set -euo pipefail
-          test "$(git rev-parse $APP_SOURCE_SHA^{commit})" = "$APP_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$APP_SOURCE_SHA"
           echo "APP_SOURCE_SHA=$APP_SOURCE_SHA"
 
       - name: Reuse already-green Light and Plus APKs
@@ -66,7 +67,7 @@ jobs:
             adb install -r "$apk"
             adb shell am force-stop "$pkg" || true
             adb logcat -c || true
-            adb shell am start -W -n "$pkg/.DashboardActivity" | tee "start-${pkg}.txt"
+            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 | tee "start-${pkg}.txt"
             sleep 5
             adb shell pidof "$pkg" | tee "pid-${pkg}.txt"
             adb shell dumpsys activity activities > "activities-${pkg}.txt"
