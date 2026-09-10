@@ -1,0 +1,211 @@
+name: Quran Safeguard 0.10.11 final build
+
+on:
+  push:
+    branches: ["fix/0.10.10-claude-corrections"]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  final:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE_SHA: 43d8b4aa5a409782d16a065755913558b9e47758
+      TREE_PRECLAUDE: 6b4aa0c7b1cdc7fa430fe16e5120ea6ecae42ac4
+      TREE_POSTCLAUDE: 04d44464e8b91c6565ffc4dccc78e24d31d956f7
+      TREE_FINAL: cdac98e84651929d5b1a8a28da616aef90b3896b
+      LIGHT_CERT_SHA256: 6c706f4ea44ef667d0b9698c07a39e929b1e286d2397665504411dedb37457ac
+      PLUS_CERT_SHA256: 1843d245832549afc6333ab77a587649a14fedb1f4acc9c08f367c3f0301d989
+      LIGHT_KEYSTORE_B64: ${{ secrets.LIGHT_KEYSTORE_B64 }}
+      LIGHT_KEYSTORE_PASSWORD: ${{ secrets.LIGHT_KEYSTORE_PASSWORD }}
+      PLUS_KEYSTORE_B64: ${{ secrets.PLUS_KEYSTORE_B64 }}
+      PLUS_KEYSTORE_PASSWORD: ${{ secrets.PLUS_KEYSTORE_PASSWORD }}
+    steps:
+      - name: Checkout one-shot helper
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct and freeze exact audited source
+        shell: bash
+        run: |
+          set -euo pipefail
+          helper="${RUNNER_TEMP}/qs011"
+          mkdir -p "$helper"
+          cat .github/qs011/patchbundle.part* | base64 --decode > "$helper/patches.tar.xz"
+          tar -xJf "$helper/patches.tar.xz" -C "$helper"
+          printf '%s  %s\n' b28c3bac4d5edac8f7a1dd734b32cb965ebc8bb9d5701c230ae4b050a5d7eb59 "$helper/01-preclaude.patch" | sha256sum -c -
+          printf '%s  %s\n' d3d245dfa8ead6bc420cb6db92eb7db7a9bdc797f99db18f9e2053a363b1dc26 "$helper/02-postclaude.patch" | sha256sum -c -
+          printf '%s  %s\n' 8c585a050f8fd94a33eddecc7dac8f43191035e2659dff14130ba0084276a127 "$helper/03-final-fix.patch" | sha256sum -c -
+          git reset --hard "$BASE_SHA"
+          git clean -fdx
+          test "$(git rev-parse HEAD^{tree})" = "ef96a4b9bba11316a9c9300a6d42dec3980821c3"
+          git apply "$helper/01-preclaude.patch"
+          git add -A
+          test "$(git write-tree)" = "$TREE_PRECLAUDE"
+          git apply "$helper/02-postclaude.patch"
+          git add -A
+          test "$(git write-tree)" = "$TREE_POSTCLAUDE"
+          git apply "$helper/03-final-fix.patch"
+          git add -A
+          test "$(git write-tree)" = "$TREE_FINAL"
+          git diff --cached --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Freeze Quran Safeguard 0.10.11 final candidate [skip ci]"
+          test "$(git rev-parse HEAD^{tree})" = "$TREE_FINAL"
+          candidate_sha="$(git rev-parse HEAD)"
+          git push --force origin HEAD:refs/heads/release/0.10.11-final
+          remote_sha="$(git ls-remote origin refs/heads/release/0.10.11-final | cut -f1)"
+          test "$remote_sha" = "$candidate_sha"
+          echo "CANDIDATE_SHA=$candidate_sha" >> "$GITHUB_ENV"
+          echo "$candidate_sha" > "${RUNNER_TEMP}/candidate_code_sha.txt"
+          echo "$TREE_FINAL" > "${RUNNER_TEMP}/candidate_tree_sha.txt"
+          git archive --format=zip -o "${RUNNER_TEMP}/Quran-Safeguard-0.10.11-source.zip" HEAD
+          sha256sum "${RUNNER_TEMP}/Quran-Safeguard-0.10.11-source.zip" > "${RUNNER_TEMP}/source-SHA256.txt"
+
+      - name: Restore validated Mushaf and multi-tafsir corpus from 0.10.9 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject immutable build-time corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          reuse="${RUNNER_TEMP}/reuse109"
+          mkdir -p "$reuse"
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/qurtubi_en.sqlite.gz.b64.part*' 'assets/tafsir/qushayri_en.sqlite.gz.b64.part*' -d "$reuse"
+          mushaf_src="$reuse/assets/mushaf/hafs/kfqc/svg-br"
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp "$mushaf_src"/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          { for i in $(seq 1 604); do cat "$mushaf_dst/$(printf '%03d' "$i").svg.br"; done; } | sha256sum | grep -F '30b7435f86693f0c311c666ffa996b667be37f23a7cdfce519275f9b85a9e406'
+          test "$(git hash-object "$mushaf_dst/001.svg.br")" = f9967e81a5ef1557c5d1616e68535c11823f1454
+          test "$(git hash-object "$mushaf_dst/302.svg.br")" = 092516fd77cffd486246d0f43c7570af5be2a089
+          test "$(git hash-object "$mushaf_dst/604.svg.br")" = 42ff64d8cc6842f76c3a62a398e478b668573ff6
+          tafsir_src="$reuse/assets/tafsir"
+          tafsir_dst="app/src/plus/assets/tafsir"
+          cp "$tafsir_src"/qurtubi_en.sqlite.gz.b64.part* "$tafsir_dst/"
+          cp "$tafsir_src"/qushayri_en.sqlite.gz.b64.part* "$tafsir_dst/"
+          cat > "${RUNNER_TEMP}/tafsir-parts.sha256" <<'EOF'
+          dd14cc7857df94ed039dc000caee89edf99127292f4a9a7e2c103913ac5f2fce  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part00
+          ddd18340f31fd3f331d20aa8450c4db5e88c369f45e375ed48403096e1e6b749  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part01
+          f89cf3667fcaf28145b54cec14405a3763a9a5667cad37f3c6720d4f4b51e52a  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part02
+          ad472c2330ddb5072f74858a8b6401ef0508c00a153ec00ad7ccbd706b5d9c17  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part03
+          0d8f4f6a2975c6e1c6cdf2811cba54a0731d6d5f7d7d2cf68adc0ccad94946b4  app/src/plus/assets/tafsir/qushayri_en.sqlite.gz.b64.part00
+          ee3e789360653101c4db0d7d2c223198fa37403051c0cad1f64b300cd9a9144f  app/src/plus/assets/tafsir/qushayri_en.sqlite.gz.b64.part01
+          EOF
+          sha256sum -c "${RUNNER_TEMP}/tafsir-parts.sha256"
+          { for f in qurtubi_en.sqlite.gz.b64.part00 qurtubi_en.sqlite.gz.b64.part01 qurtubi_en.sqlite.gz.b64.part02 qurtubi_en.sqlite.gz.b64.part03 qushayri_en.sqlite.gz.b64.part00 qushayri_en.sqlite.gz.b64.part01; do cat "$tafsir_dst/$f"; done; } | sha256sum | grep -F 'aef2eb1af69a90a186e74c0411c6c37a951770a928c8c3b5e20dba6ce70dd020'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Reader geometry and deterministic repetition tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          node scripts/test_reader109_protocol.js
+          python3 scripts/verify_reader109.py
+          sha256sum app/src/main/assets/reader109/geometry.json geometry-report.json > "${RUNNER_TEMP}/geometry-SHA256.txt"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install exact Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Final release gates unit tests and Light Plus compilation
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:verifyReleaseAudit :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+          gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease --stacktrace
+
+      - name: Audit compiled edition boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          light_unsigned="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus_unsigned="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          test -s "$light_unsigned" && test -s "$plus_unsigned"
+          python3 scripts/verify_light_apk_no_tafsir.py "$light_unsigned"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "$plus_unsigned"
+
+      - name: Sign with historical Light and Plus certificates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$LIGHT_KEYSTORE_B64" && test -n "$LIGHT_KEYSTORE_PASSWORD"
+          test -n "$PLUS_KEYSTORE_B64" && test -n "$PLUS_KEYSTORE_PASSWORD"
+          out="${RUNNER_TEMP}/quran-safeguard-0.10.11-final"
+          mkdir -p "$out"
+          printf '%s' "$LIGHT_KEYSTORE_B64" | base64 --decode > "${RUNNER_TEMP}/light.p12"
+          printf '%s' "$PLUS_KEYSTORE_B64" | base64 --decode > "${RUNNER_TEMP}/plus.p12"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          light_u="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus_u="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          "$tools/zipalign" -p -f 4 "$light_u" "${RUNNER_TEMP}/light-aligned.apk"
+          "$tools/zipalign" -p -f 4 "$plus_u" "${RUNNER_TEMP}/plus-aligned.apk"
+          light="$out/Quran-Safeguard-0.10.11-Light-release.apk"
+          plus="$out/Quran-Safeguard-Plus-0.10.11-release.apk"
+          "$tools/apksigner" sign --ks "${RUNNER_TEMP}/light.p12" --ks-type PKCS12 --ks-key-alias quran-safeguard --ks-pass env:LIGHT_KEYSTORE_PASSWORD --key-pass env:LIGHT_KEYSTORE_PASSWORD --out "$light" "${RUNNER_TEMP}/light-aligned.apk"
+          "$tools/apksigner" sign --ks "${RUNNER_TEMP}/plus.p12" --ks-type PKCS12 --ks-key-alias quran-safeguard-plus --ks-pass env:PLUS_KEYSTORE_PASSWORD --key-pass env:PLUS_KEYSTORE_PASSWORD --out "$plus" "${RUNNER_TEMP}/plus-aligned.apk"
+          "$tools/zipalign" -c -p 4 "$light"
+          "$tools/zipalign" -c -p 4 "$plus"
+          "$tools/apksigner" verify --verbose --print-certs "$light" | tee "$out/light-signature.txt"
+          "$tools/apksigner" verify --verbose --print-certs "$plus" | tee "$out/plus-signature.txt"
+          grep -Fq "Signer #1 certificate SHA-256 digest: $LIGHT_CERT_SHA256" "$out/light-signature.txt"
+          grep -Fq "Signer #1 certificate SHA-256 digest: $PLUS_CERT_SHA256" "$out/plus-signature.txt"
+          test "$(apkanalyzer manifest application-id "$light")" = "com.applicreation0.quransafeguard"
+          test "$(apkanalyzer manifest application-id "$plus")" = "com.applicreation0.quransafeguard.plus"
+          test "$(apkanalyzer manifest version-code "$light")" = "30"
+          test "$(apkanalyzer manifest version-code "$plus")" = "30"
+          test "$(apkanalyzer manifest version-name "$light")" = "0.10.11"
+          test "$(apkanalyzer manifest version-name "$plus")" = "0.10.11-plus.1"
+          python3 scripts/verify_light_apk_no_tafsir.py "$light"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "$plus"
+          sha256sum "$light" "$plus" > "$out/Quran-Safeguard-0.10.11-SHA256.txt"
+          cp "${RUNNER_TEMP}/candidate_code_sha.txt" "${RUNNER_TEMP}/candidate_tree_sha.txt" "${RUNNER_TEMP}/source-SHA256.txt" "${RUNNER_TEMP}/geometry-SHA256.txt" "$out/"
+          cp "${RUNNER_TEMP}/Quran-Safeguard-0.10.11-source.zip" "$out/"
+          printf 'candidate_code_sha=%s\ncandidate_tree_sha=%s\nbase_sha=%s\nsource_tree_verified_before build-time corpus injection=true\n' "$CANDIDATE_SHA" "$TREE_FINAL" "$BASE_SHA" > "$out/PROVENANCE.txt"
+          cat > "$out/PHYSICAL_ACCEPTANCE_REQUIRED.txt" <<'EOF'
+          Release is not physically accepted yet. Mandatory checks remain:
+          1. WhatsApp ~30s -> bank ~60s -> WhatsApp: about 14:30 remains, not 13:30.
+          2. No visible bank lag/interference while Safeguard service is enabled.
+          3. Real 15-minute/90-minute counter accuracy and smooth return after unlock.
+          4. Install over existing version with historical signing lineage.
+          5. E-Ink ghosting, flash behavior, and physical Page Up/Page Down.
+          EOF
+          (cd "$out" && zip -9 Quran-Safeguard-0.10.11-Light-backup.zip Quran-Safeguard-0.10.11-Light-release.apk Quran-Safeguard-0.10.11-SHA256.txt light-signature.txt PROVENANCE.txt PHYSICAL_ACCEPTANCE_REQUIRED.txt)
+          (cd "$out" && zip -9 Quran-Safeguard-Plus-0.10.11-backup.zip Quran-Safeguard-Plus-0.10.11-release.apk Quran-Safeguard-0.10.11-SHA256.txt plus-signature.txt PROVENANCE.txt PHYSICAL_ACCEPTANCE_REQUIRED.txt)
+
+      - name: Upload single final evidence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.11-final
+          path: |
+            ${{ runner.temp }}/quran-safeguard-0.10.11-final/
+            app/build/test-results/
+            geometry-report.json
+          if-no-files-found: error
+          retention-days: 30
