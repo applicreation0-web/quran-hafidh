@@ -75,10 +75,21 @@ object HifzGeometryPolicy {
     fun targetLines(index: HifzGeometryIndex, target: HifzVerseRange): List<HifzTargetLine> =
         index.linesByPage.toSortedMap().values
             .flatten()
-            .mapNotNull { line ->
-                val active = line.verses.filter(target::contains).toSet()
-                active.takeIf { it.isNotEmpty() }?.let { HifzTargetLine(line.ref, it) }
-            }
+            .mapNotNull { line -> targetLine(line, target) }
+
+    /**
+     * Task-aware form. It is essential for page-based Itqan: a verse may touch two
+     * physical Mushaf pages, but a one-page task must never silently mask or credit the
+     * neighbouring page. The cursor page bounds therefore constrain the rendered lines.
+     */
+    fun targetLines(index: HifzGeometryIndex, cursor: HifzCursor): List<HifzTargetLine> {
+        val target = HifzVerseRange(cursor.start, cursor.end)
+        return index.linesByPage.toSortedMap()
+            .filterKeys { it in cursor.startPage..cursor.endPage }
+            .values
+            .flatten()
+            .mapNotNull { line -> targetLine(line, target) }
+    }
 
     /**
      * Uses only real geometry lines. Segments never cross a Mushaf page boundary and all
@@ -89,9 +100,35 @@ object HifzGeometryPolicy {
         index: HifzGeometryIndex,
         target: HifzVerseRange,
         maxLinesPerSegment: Int = DEFAULT_MAX_LINES_PER_SEGMENT
+    ): List<HifzPedagogicalSegment> = segmentLines(
+        target,
+        targetLines(index, target),
+        maxLinesPerSegment
+    )
+
+    /** Task-aware segmentation constrained to the exact physical pages in the cursor. */
+    fun segment(
+        index: HifzGeometryIndex,
+        cursor: HifzCursor,
+        maxLinesPerSegment: Int = DEFAULT_MAX_LINES_PER_SEGMENT
+    ): List<HifzPedagogicalSegment> = segmentLines(
+        HifzVerseRange(cursor.start, cursor.end),
+        targetLines(index, cursor),
+        maxLinesPerSegment
+    )
+
+    private fun targetLine(line: HifzGeometryLine, target: HifzVerseRange): HifzTargetLine? {
+        val active = line.verses.filter(target::contains).toSet()
+        return active.takeIf { it.isNotEmpty() }?.let { HifzTargetLine(line.ref, it) }
+    }
+
+    private fun segmentLines(
+        target: HifzVerseRange,
+        lines: List<HifzTargetLine>,
+        maxLinesPerSegment: Int
     ): List<HifzPedagogicalSegment> {
         require(maxLinesPerSegment > 0)
-        return targetLines(index, target)
+        return lines
             .groupBy { it.ref.page }
             .toSortedMap()
             .values
