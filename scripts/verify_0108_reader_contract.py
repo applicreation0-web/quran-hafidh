@@ -22,8 +22,8 @@ honorific = text("app/src/plus/java/com/quranunlock/guard/JalalaynHonorificPrese
 require('READER_CREAM_HEX = "#F7F2E8"' in comfort, "cream constant missing")
 require("ReaderVisualMode.entries.forEach" not in free, "theme choices remain in free reader UI")
 require('"Clair"' not in free and '"Sombre"' not in free, "light/dark reader choices remain")
-require('#F7F2E8' in free and '--cream:#F7F2E8' in free_html,
-        "free Kotlin/HTML reader is not pinned to cream")
+require("ReaderComfortPrefs.pageBackground()" in free and '--cream:#F7F2E8' in free_html,
+        "free Kotlin/HTML reader is not pinned to shared cream contract")
 require("ReaderComfortPrefs.pageBackground()" in challenge, "challenge reader is not pinned to cream")
 require("android.graphics.Color.WHITE" not in challenge, "challenge WebView still forces white")
 require("background: #ffffff" not in challenge, "challenge HTML still forces white")
