@@ -34,6 +34,12 @@ class FreeQuranReaderActivity : ComponentActivity() {
         const val EXTRA_HIFZ_TASK_ID = "hifz_task_id"
     }
 
+    private data class HifzRuntime(
+        val task: HifzTask,
+        val progress: HifzTaskProgress,
+        val segmentCount: Int
+    )
+
     private var web: WebView? = null
     private var verse by mutableStateOf<VerseRef?>(null)
     private var expanded by mutableStateOf(false)
@@ -69,7 +75,23 @@ class FreeQuranReaderActivity : ComponentActivity() {
         val id = hifzTaskId ?: return null
         val loaded = HifzStateStore.load(this)
         if (loaded.corrupted) return null
-        return loaded.state.tasks.firstOrNull { it.id == id && it.status != HifzTaskStatus.COMPLETED }
+        return loaded.state.tasks.firstOrNull {
+            it.id == id && it.status != HifzTaskStatus.COMPLETED
+        }
+    }
+
+    private fun currentHifzRuntime(): HifzRuntime? {
+        val id = hifzTaskId ?: return null
+        val loaded = HifzStateStore.load(this)
+        if (loaded.corrupted) return null
+        val task = loaded.state.tasks.firstOrNull {
+            it.id == id && it.status != HifzTaskStatus.COMPLETED
+        } ?: return null
+        val segmentCount = HifzStateStore.segmentCount(this, task) ?: return null
+        val progress = loaded.state.progressByTask[id]
+            ?: HifzTrainingEngine.initial(task, segmentCount)
+        if (!HifzTrainingEngine.isSemanticallyCoherent(task, progress, segmentCount)) return null
+        return HifzRuntime(task, progress, segmentCount)
     }
 
     private fun publishNativeZoomState(view: WebView, currentScale: Float) {
@@ -294,6 +316,93 @@ class FreeQuranReaderActivity : ComponentActivity() {
             runOnUiThread {
                 memoryMode = if (hifzMode) true else memory
                 if (memoryMode) closeTafsir()
+            }
+        }
+
+        @JavascriptInterface
+        fun hifzStatus(): String {
+            val runtime = currentHifzRuntime()
+                ?: return JSONObject().put("valid", false).toString()
+            val step = HifzTrainingEngine.currentStep(
+                runtime.task,
+                runtime.progress,
+                runtime.segmentCount
+            )
+            val stepProgress = runtime.progress.stepProgress
+            val canAdvance = step != null && stepProgress != null &&
+                runCatching { HifzTrainingProgressPolicy.canValidate(step, stepProgress) }
+                    .getOrDefault(false)
+            return JSONObject().apply {
+                put("valid", true)
+                put("taskId", runtime.task.id)
+                put("track", runtime.task.track.name)
+                put("start", runtime.task.cursor.start.label)
+                put("end", runtime.task.cursor.end.label)
+                put("startPage", runtime.task.cursor.startPage)
+                put("endPage", runtime.task.cursor.endPage)
+                put("segmentIndex", runtime.progress.segmentIndex)
+                put("segmentCount", runtime.segmentCount)
+                put("completed", runtime.progress.completed)
+                put("activeSeconds", runtime.progress.activeSeconds)
+                put("totalRevealCount", runtime.progress.totalRevealCount)
+                put("totalIncorrectAttempts", runtime.progress.totalIncorrectAttempts)
+                put("stepId", step?.id)
+                put("stepLabel", step?.label)
+                put("kind", step?.kind?.name)
+                put("maskPercent", step?.maskPercent ?: 0)
+                put("requiredRepetitions", step?.repetitions ?: 0)
+                put("requiredConsecutiveSuccesses", step?.requiresConsecutiveSuccesses ?: 0)
+                put("repetitions", stepProgress?.repetitions ?: 0)
+                put("consecutiveSuccesses", stepProgress?.consecutiveSuccesses ?: 0)
+                put("revealCount", stepProgress?.revealCount ?: 0)
+                put("assisted", stepProgress?.assistedSinceLastAttempt ?: false)
+                put("canAdvance", canAdvance)
+            }.toString()
+        }
+
+        @JavascriptInterface
+        fun hifzAttempt(correct: Boolean): Boolean {
+            val runtime = currentHifzRuntime() ?: return false
+            return HifzStateStore.updateProgress(
+                this@FreeQuranReaderActivity,
+                runtime.task.id
+            ) { progress ->
+                HifzTrainingEngine.attempt(
+                    runtime.task,
+                    progress,
+                    correct,
+                    runtime.segmentCount
+                )
+            }
+        }
+
+        @JavascriptInterface
+        fun hifzReveal(): Boolean {
+            val runtime = currentHifzRuntime() ?: return false
+            return HifzStateStore.updateProgress(
+                this@FreeQuranReaderActivity,
+                runtime.task.id
+            ) { progress ->
+                HifzTrainingEngine.reveal(
+                    runtime.task,
+                    progress,
+                    runtime.segmentCount
+                )
+            }
+        }
+
+        @JavascriptInterface
+        fun hifzAdvance(): Boolean {
+            val runtime = currentHifzRuntime() ?: return false
+            return HifzStateStore.updateProgress(
+                this@FreeQuranReaderActivity,
+                runtime.task.id
+            ) { progress ->
+                HifzTrainingEngine.advanceIfValid(
+                    runtime.task,
+                    progress,
+                    runtime.segmentCount
+                )
             }
         }
 
