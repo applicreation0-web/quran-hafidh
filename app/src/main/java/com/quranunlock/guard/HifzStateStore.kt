@@ -55,14 +55,16 @@ data class HifzLoadResult(
 /**
  * Deterministic, versioned codec kept independent from reader109 and GuardPrefs.
  * C stores Sabqi bounds, measured paces and available time. I records ordered Itqan
- * intervals. D records dates already considered by the daily planner. T records schedule
- * tasks and P records segment-aware training progress plus local training metrics.
+ * intervals. W records the configurable seven-day Hifz rhythm. D records dates already
+ * considered by the daily planner. T records schedule tasks and P records segment-aware
+ * training progress plus local training metrics.
  */
 object HifzStateCodec {
     const val SCHEMA = 6
     private const val SEP = "|"
     private const val CONFIG = "C"
     private const val ITQAN_INTERVAL = "I"
+    private const val WEEKLY_SCHEDULE = "W"
     private const val PLANNING_DATE = "D"
     private const val TASK = "T"
     private const val PROGRESS = "P"
@@ -71,6 +73,7 @@ object HifzStateCodec {
     fun encode(state: HifzState): String = buildString {
         append(SCHEMA).append('\n')
         appendConfig(state.journeyConfig)
+        appendWeeklySchedule(state.journeyConfig.schedule)
         state.planningDates.sorted().forEach { date ->
             append(PLANNING_DATE).append(SEP).append(date.toEpochDay()).append('\n')
         }
@@ -136,16 +139,26 @@ object HifzStateCodec {
         }
     }
 
+    private fun StringBuilder.appendWeeklySchedule(schedule: HifzWeeklySchedule) {
+        append(WEEKLY_SCHEDULE)
+        java.time.DayOfWeek.values().forEach { day ->
+            append(SEP).append(schedule.trackFor(day).name)
+        }
+        append('\n')
+    }
+
     fun decode(raw: String): HifzState {
         val lines = raw.lineSequence().filter { it.isNotBlank() }.toList()
         require(lines.isNotEmpty()) { "Missing Hifz state." }
         require(lines.first().toIntOrNull() == SCHEMA) { "Unsupported Hifz state schema." }
 
         var configSeen = false
+        var scheduleSeen = false
         var declaredSabqi: HifzVerseRange? = null
         var boundsDeclared: Boolean? = null
         var pace: HifzPaceProfile? = null
         var availableMinutes: HifzAvailableMinutes? = null
+        var schedule = HifzWeeklySchedule.DEFAULT
         val itqanIntervals = sortedMapOf<Int, HifzVerseRange>()
         val planningDates = linkedSetOf<LocalDate>()
         val tasks = mutableListOf<HifzTask>()
@@ -191,6 +204,24 @@ object HifzStateCodec {
                         QuranVerseRef(fields[2].toInt(), fields[3].toInt()),
                         QuranVerseRef(fields[4].toInt(), fields[5].toInt())
                     )
+                }
+
+                WEEKLY_SCHEDULE -> {
+                    require(!scheduleSeen) { "Duplicate Hifz weekly schedule." }
+                    require(fields.size == 8) { "Malformed Hifz weekly schedule." }
+                    scheduleSeen = true
+                    schedule = HifzWeeklySchedule(
+                        monday = HifzTrack.valueOf(fields[1]),
+                        tuesday = HifzTrack.valueOf(fields[2]),
+                        wednesday = HifzTrack.valueOf(fields[3]),
+                        thursday = HifzTrack.valueOf(fields[4]),
+                        friday = HifzTrack.valueOf(fields[5]),
+                        saturday = HifzTrack.valueOf(fields[6]),
+                        sunday = HifzTrack.valueOf(fields[7])
+                    )
+                    require(schedule.containsAllTracks()) {
+                        "A Hifz weekly schedule must keep Sabqi, Itqan and Murajaah active."
+                    }
                 }
 
                 PLANNING_DATE -> {
@@ -266,7 +297,8 @@ object HifzStateCodec {
             journeyConfig = HifzJourneyConfig(
                 bounds = bounds,
                 pace = requireNotNull(pace),
-                availableMinutes = requireNotNull(availableMinutes)
+                availableMinutes = requireNotNull(availableMinutes),
+                schedule = schedule
             ),
             planningDates = planningDates,
             tasks = tasks,
@@ -438,18 +470,17 @@ object HifzStateStore {
 
     private fun isSemanticallyCoherent(context: Context, state: HifzState): Boolean = runCatching {
         val bounds = state.journeyConfig.bounds
+        require(state.journeyConfig.schedule.containsAllTracks()) {
+            "Hifz schedule must retain Sabqi, Itqan and Murajaah."
+        }
         require(state.tasks.isEmpty() || bounds != null) {
             "Hifz tasks cannot exist before journey bounds are configured."
         }
         val geometry = HifzGeometryAssetLoader.load(context)
 
         state.tasks.forEach { task ->
-            require(HifzSchedulePolicy.defaultTrackFor(task.originalScheduledDate.dayOfWeek) == task.track) {
-                "Hifz task original date does not match its track."
-            }
-            require(HifzSchedulePolicy.defaultTrackFor(task.scheduledDate.dayOfWeek) == task.track) {
-                "Hifz task scheduled date does not match its track."
-            }
+            // Historical task dates remain valid even if the user later changes weekdays.
+            // HifzTask itself enforces monotonic replanning; new plans use the active schedule.
             require(taskRangeIsInsideConfiguredCorpus(task, requireNotNull(bounds))) {
                 "Hifz task lies outside configured journey bounds."
             }
