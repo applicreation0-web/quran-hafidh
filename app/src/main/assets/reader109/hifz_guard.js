@@ -15,12 +15,14 @@
  memory=true;
  N?.setMode(true);
  let nativeRevealGeneration=0,nativeRevealTimer=null,nativeRevealVisible=false;
+ let hifzAudioStepKey=null;
 
  const targetKeys=()=>geo?rangeKeys(targetStart,targetEnd):[];
  const status=()=>{
   try{return JSON.parse(N?.hifzStatus?.()||'{"valid":false}')}catch(_){return {valid:false}}
  };
  const trackLabel=t=>t==='SABQI'?'Sabqi':t==='ITQAN'?'Itqān':t==='MURAJAAH'?'Murājaʿah':'Hifz';
+ const readingCountLabel=st=>'sans masque '+Number(st.visibleReadings||0)+' · avec masque '+Number(st.maskedReadings||0);
  const targetPages=()=>{
   if(!geo)return [];
   const keys=targetKeys();
@@ -76,7 +78,7 @@
  function nativeAdvance(){
   const before=status();if(!before.valid||!before.canAdvance)return;
   if(N?.hifzAdvance?.()!==true){notice('Étape Hifz non validée');return}
-  nativeRevealVisible=false;refreshNative();visual('MILESTONE');
+  hifzAudioStepKey=null;nativeRevealVisible=false;refreshNative();visual('MILESTONE');
  }
  function briefNativeReveal(){
   const st=status();if(!st.valid||st.completed||Number(st.maskPercent||0)<=0)return;
@@ -92,16 +94,33 @@
  function playTarget(count=1){
   const keys=targetKeys();
   if(!localAudioReady(keys)){notice('Téléchargez d’abord l’audio Al-Husary du passage');audioOptions();return}
+  const st=status();
+  hifzAudioStepKey=(st.kind==='AUDIO_PASSIVE'||st.kind==='AUDIO_ACTIVE')?st.stepId:null;
   audioQueue=[];audioCountsProgress=false;
   for(let i=0;i<count;i++)audioQueue.push(...keys);
   nextAudio();
  }
 
+ // A complete pass over the target is one Hifz audio repetition. Verse playback itself
+ // remains verse-synchronised; it never creates word-level progression.
+ const baseAudioEvent=window.audioEvent;
+ window.audioEvent=function(e){
+  if(typeof baseAudioEvent==='function')baseAudioEvent(e);
+  if(e?.state!=='cycle_complete'||!hifzAudioStepKey)return;
+  const keys=targetKeys();if(!keys.length)return;
+  const completedKey=Number(e.surah)+':'+Number(e.ayah);
+  if(completedKey!==keys.at(-1))return;
+  const st=status();
+  if(!st.valid||st.stepId!==hifzAudioStepKey||(st.kind!=='AUDIO_PASSIVE'&&st.kind!=='AUDIO_ACTIVE')){hifzAudioStepKey=null;return}
+  if(N?.hifzAttempt?.(true)!==true){hifzAudioStepKey=null;notice('Progression audio Hifz non enregistrée');return}
+  refreshNative();
+ };
+
  renderMemory=function(){
   memory=true;
   const mem=$('mem');mem.hidden=false;
   const body=$('memcontrols');body.replaceChildren();
-  const st=status(),keys=targetKeys(),ls=geo?selectedLines(keys):[];
+  const st=status(),keys=targetKeys();
   if(!st.valid){
    $('stepLabel').textContent='Séance Hifz indisponible';
    $('memCount').textContent='Aucune progression n’est enregistrée.';
@@ -111,10 +130,10 @@
   const phase=st.segmentIndex>=st.segmentCount?'Assemblage':('Segment '+(Number(st.segmentIndex)+1)+' / '+st.segmentCount);
   $('stepLabel').textContent=trackLabel(st.track)+' · '+(st.completed?'Terminé':(st.stepLabel||'Étape'));
   $('memCount').textContent=st.completed
-   ? targetStart+' → '+targetEnd+' · progression prête à clôturer'
+   ? targetStart+' → '+targetEnd+' · '+readingCountLabel(st)+' · progression prête à clôturer'
    : phase+' · '+st.repetitions+' / '+st.requiredRepetitions+' répétition(s)'+
      (st.requiredConsecutiveSuccesses?(' · '+st.consecutiveSuccesses+' / '+st.requiredConsecutiveSuccesses+' correctes consécutives'):'')+
-     ' · aides '+st.totalRevealCount+' · erreurs '+st.totalIncorrectAttempts;
+     ' · '+readingCountLabel(st)+' · aides '+st.totalRevealCount+' · erreurs '+st.totalIncorrectAttempts;
 
   if(st.completed){
    body.append(button('Retour au parcours',()=>N?.exit(),'capsule'));
@@ -141,6 +160,7 @@
   const b=sheet('Séance Hifz'),st=status();
   addText(b,trackLabel(st.track)+' · '+targetStart+' → '+targetEnd);
   if(st.valid){
+   addText(b,'Lectures : '+readingCountLabel(st),'small');
    addText(b,'Temps actif enregistré : '+Math.floor(Number(st.activeSeconds||0)/60)+' min '+(Number(st.activeSeconds||0)%60)+' s','small');
    addText(b,'Aides : '+Number(st.totalRevealCount||0)+' · erreurs : '+Number(st.totalIncorrectAttempts||0),'small muted');
   }
@@ -150,6 +170,8 @@
 
  exitMemory=function(){
   nativeRevealGeneration++;
+  hifzAudioStepKey=null;
+  audioQueue=[];N?.pause();
   if(nativeRevealTimer!==null){clearTimeout(nativeRevealTimer);nativeRevealTimer=null}
   nativeRevealVisible=false;save();N?.exit();
  };
@@ -157,6 +179,7 @@
  options=function(){
   const b=sheet('Séance Hifz'),st=status();
   addText(b,trackLabel(st.track)+' · '+targetStart+' → '+targetEnd,'small');
+  if(st.valid)addText(b,'Lectures : '+readingCountLabel(st),'small muted');
   if(initial.audio)b.append(button('Audio Al-Husary Muʿallim',audioOptions));
   b.append(button('Retour au parcours',()=>N?.exit(),'text'));
  };
