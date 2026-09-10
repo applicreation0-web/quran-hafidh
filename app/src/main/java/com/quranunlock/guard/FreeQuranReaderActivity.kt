@@ -53,6 +53,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
         intent.getStringExtra(EXTRA_HIFZ_TASK_ID)?.trim()?.takeIf { it.isNotEmpty() }
     }
     private val hifzMode: Boolean get() = hifzTaskId != null
+    private fun audioAllowed(): Boolean = memoryMode || hifzMode
     private val readerStateKey: String by lazy { hifzTaskId?.let { "task:$it" } ?: "state" }
     private val prefs by lazy {
         getSharedPreferences(
@@ -315,7 +316,11 @@ class FreeQuranReaderActivity : ComponentActivity() {
         fun setMode(memory: Boolean) {
             runOnUiThread {
                 memoryMode = if (hifzMode) true else memory
-                if (memoryMode) closeTafsir()
+                if (memoryMode) {
+                    closeTafsir()
+                } else {
+                    audio.pause()
+                }
             }
         }
 
@@ -329,6 +334,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 runtime.segmentCount
             )
             val stepProgress = runtime.progress.stepProgress
+            val counts = HifzReadingStatsStore.load(this@FreeQuranReaderActivity, runtime.task.id)
             val canAdvance = step != null && stepProgress != null &&
                 runCatching { HifzTrainingProgressPolicy.canValidate(step, stepProgress) }
                     .getOrDefault(false)
@@ -346,6 +352,8 @@ class FreeQuranReaderActivity : ComponentActivity() {
                 put("activeSeconds", runtime.progress.activeSeconds)
                 put("totalRevealCount", runtime.progress.totalRevealCount)
                 put("totalIncorrectAttempts", runtime.progress.totalIncorrectAttempts)
+                put("visibleReadings", counts.visible)
+                put("maskedReadings", counts.masked)
                 put("stepId", step?.id)
                 put("stepLabel", step?.label)
                 put("kind", step?.kind?.name)
@@ -363,7 +371,12 @@ class FreeQuranReaderActivity : ComponentActivity() {
         @JavascriptInterface
         fun hifzAttempt(correct: Boolean): Boolean {
             val runtime = currentHifzRuntime() ?: return false
-            return HifzStateStore.updateProgress(
+            val step = HifzTrainingEngine.currentStep(
+                runtime.task,
+                runtime.progress,
+                runtime.segmentCount
+            ) ?: return false
+            val saved = HifzStateStore.updateProgress(
                 this@FreeQuranReaderActivity,
                 runtime.task.id
             ) { progress ->
@@ -374,6 +387,10 @@ class FreeQuranReaderActivity : ComponentActivity() {
                     runtime.segmentCount
                 )
             }
+            if (saved && HifzReadingCountPolicy.isReading(step)) {
+                HifzReadingStatsStore.record(this@FreeQuranReaderActivity, runtime.task.id, step)
+            }
+            return saved
         }
 
         @JavascriptInterface
@@ -445,15 +462,24 @@ class FreeQuranReaderActivity : ComponentActivity() {
 
         @JavascriptInterface
         fun play(surah: Int, ayah: Int, repeats: Int) {
-            runOnUiThread { audio.playVerse(surah, ayah, repeats.coerceIn(1, 100)) }
+            runOnUiThread {
+                if (audioAllowed()) audio.playVerse(surah, ayah, repeats.coerceIn(1, 100))
+            }
         }
 
         @JavascriptInterface fun pause() { runOnUiThread { audio.pause() } }
-        @JavascriptInterface fun resume() { runOnUiThread { audio.resume() } }
-        @JavascriptInterface fun isDownloaded(surah: Int, ayah: Int): Boolean = audio.isDownloaded(surah, ayah)
-        @JavascriptInterface fun downloadVerse(surah: Int, ayah: Int) { audio.downloadVerse(surah, ayah) }
-        @JavascriptInterface fun downloadSurah(surah: Int, ayahCount: Int) { audio.downloadSurah(surah, ayahCount) }
-        @JavascriptInterface fun deleteSurah(surah: Int, ayahCount: Int) { audio.deleteSurah(surah, ayahCount) }
+        @JavascriptInterface fun resume() { runOnUiThread { if (audioAllowed()) audio.resume() } }
+        @JavascriptInterface fun isDownloaded(surah: Int, ayah: Int): Boolean =
+            audioAllowed() && audio.isDownloaded(surah, ayah)
+        @JavascriptInterface fun downloadVerse(surah: Int, ayah: Int) {
+            if (audioAllowed()) audio.downloadVerse(surah, ayah)
+        }
+        @JavascriptInterface fun downloadSurah(surah: Int, ayahCount: Int) {
+            if (audioAllowed()) audio.downloadSurah(surah, ayahCount)
+        }
+        @JavascriptInterface fun deleteSurah(surah: Int, ayahCount: Int) {
+            if (audioAllowed()) audio.deleteSurah(surah, ayahCount)
+        }
 
         @JavascriptInterface
         fun announce(surah: Int, ayah: Int) {
