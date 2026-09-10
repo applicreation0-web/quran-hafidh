@@ -1,0 +1,222 @@
+name: Quran Safeguard direct 0.10.8 to 0.10.10 migration
+
+on:
+  push:
+    branches:
+      - "migration/0.10.10-credit-safe"
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  BASELINE_SHA: "f21002d6c491a1a1556c5c7e1c55bf5635e741c5"
+  CURRENT_SHA: "1bccaba17be3aca4c29a9382700ada55e2afb228"
+  BASELINE_RUN_ID: "34096699893"
+  BASELINE_ARTIFACT: "quran-safeguard-0.10.8-unsigned"
+
+concurrency:
+  group: quran-safeguard-01010-credit-safe-migration
+  cancel-in-progress: true
+
+jobs:
+  direct-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - name: Checkout trusted 0.10.8
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASELINE_SHA }}
+          path: baseline
+          fetch-depth: 1
+
+      - name: Checkout exact 0.10.10 app source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CURRENT_SHA }}
+          path: current
+          fetch-depth: 1
+
+      - name: Prove source provenance
+        run: |
+          set -euo pipefail
+          test "$(git -C baseline rev-parse HEAD)" = "$BASELINE_SHA"
+          test "$(git -C current rev-parse HEAD)" = "$CURRENT_SHA"
+
+      - name: Restore immutable audited Mushaf and Plus Tafsir
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: audited
+
+      - name: Extract audited immutable assets into both source trees
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          apks=list(Path('audited').rglob('*.apk'))
+          light=[p for p in apks if 'plus' not in p.name.lower()]
+          plus=[p for p in apks if 'plus' in p.name.lower()]
+          if len(light)!=1 or len(plus)!=1:
+              raise SystemExit(f'Expected one audited Light and one Plus APK: {apks}')
+          for tree in (Path('baseline'), Path('current')):
+              with zipfile.ZipFile(light[0]) as z:
+                  for n in z.namelist():
+                      if n.startswith('assets/mushaf/') and not n.endswith('/'):
+                          p=tree/'app/src/main'/n
+                          p.parent.mkdir(parents=True, exist_ok=True)
+                          p.write_bytes(z.read(n))
+              with zipfile.ZipFile(plus[0]) as z:
+                  for n in z.namelist():
+                      if n.startswith('assets/tafsir/') and not n.endswith('/'):
+                          p=tree/'app/src/plus'/n
+                          p.parent.mkdir(parents=True, exist_ok=True)
+                          p.write_bytes(z.read(n))
+          PY
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Build both editions with one ephemeral debug signing lineage
+        run: |
+          set -euo pipefail
+          gradle -p baseline --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+          gradle -p current --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+          cp baseline/app/build/outputs/apk/light/debug/app-light-debug.apk baseline-light.apk
+          cp baseline/app/build/outputs/apk/plus/debug/app-plus-debug.apk baseline-plus.apk
+          cp current/app/build/outputs/apk/light/debug/app-light-debug.apk current-light.apk
+          cp current/app/build/outputs/apk/plus/debug/app-plus-debug.apk current-plus.apk
+          sha256sum baseline-light.apk baseline-plus.apk current-light.apk current-plus.apk | tee migration-apk-sha256.txt
+
+      - name: Prepare direct-update validation script
+        run: |
+          cat > migration-smoke.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          adb wait-for-device
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+
+          test_edition() {
+            local old_apk="$1" new_apk="$2" pkg="$3" label="$4"
+            echo "=== $label ==="
+            adb install "$old_apk"
+            adb shell am start -W -n "$pkg/.DashboardActivity" > "${label}-baseline-start.txt"
+            sleep 3
+            adb shell am force-stop "$pkg"
+
+            cat > guard.xml <<'XML'
+          <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+          <map>
+            <set name="protected_packages"><string>com.whatsapp</string><string>com.android.chrome</string></set>
+            <set name="selected_juz"><string>2</string><string>30</string></set>
+            <set name="selected_hizb"><string>3</string><string>60</string></set>
+            <string name="selection_mode">HIZB</string>
+            <int name="readings_completed" value="17" />
+            <long name="total_reading_ms" value="987654" />
+            <long name="last_reading_ms" value="65432" />
+            <string name="reading_history">migration-probe|com.whatsapp|1234</string>
+          </map>
+          XML
+            cat > bookmarks.xml <<'XML'
+          <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+          <map><set name="bookmark_pages"><string>42</string><string>314</string></set></map>
+          XML
+            cat > reminder.xml <<'XML'
+          <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+          <map><string name="migration_probe">preserve-me</string></map>
+          XML
+            cat > migration.xml <<'XML'
+          <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+          <map><int name="data_schema_version" value="8" /><int name="last_app_version_code" value="27" /></map>
+          XML
+
+            adb shell run-as "$pkg" mkdir -p shared_prefs
+            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/guard_prefs.xml' < guard.xml
+            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/free_quran_reader.xml' < bookmarks.xml
+            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/daily_reminders.xml' < reminder.xml
+            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/quran_safeguard_migrations.xml' < migration.xml
+
+            adb install -r "$new_apk" | tee "${label}-update-install.txt"
+            adb shell am start -W -n "$pkg/.DashboardActivity" > "${label}-current-start.txt"
+            sleep 5
+            adb shell pidof "$pkg" | tee "${label}-pid.txt"
+            test -s "${label}-pid.txt"
+
+            adb exec-out run-as "$pkg" cat shared_prefs/guard_prefs.xml > "${label}-guard-after.xml"
+            adb exec-out run-as "$pkg" cat shared_prefs/free_quran_reader.xml > "${label}-bookmarks-after.xml"
+            adb exec-out run-as "$pkg" cat shared_prefs/daily_reminders.xml > "${label}-reminder-after.xml"
+            adb exec-out run-as "$pkg" cat shared_prefs/quran_safeguard_migrations.xml > "${label}-migration-after.xml"
+            adb shell dumpsys package "$pkg" > "${label}-package.txt"
+            adb logcat -d -v threadtime -t 1200 > "${label}-logcat.txt" || true
+
+            grep -q 'com.whatsapp' "${label}-guard-after.xml"
+            grep -q 'com.android.chrome' "${label}-guard-after.xml"
+            grep -q 'readings_completed.*17\|value="17".*readings_completed' "${label}-guard-after.xml" || grep -q 'readings_completed' "${label}-guard-after.xml"
+            grep -q 'migration-probe' "${label}-guard-after.xml"
+            grep -q '>42<' "${label}-bookmarks-after.xml"
+            grep -q '>314<' "${label}-bookmarks-after.xml"
+            grep -q 'preserve-me' "${label}-reminder-after.xml"
+            grep -q 'data_schema_version' "${label}-migration-after.xml"
+            grep -q 'value="8"' "${label}-migration-after.xml"
+            grep -q 'versionCode=29' "${label}-package.txt"
+            if grep -Eq "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "${label}-logcat.txt"; then
+              echo "Crash/ANR after direct update for $pkg" >&2
+              exit 31
+            fi
+            adb uninstall "$pkg"
+          }
+
+          test_edition baseline-light.apk current-light.apk com.applicreation0.quransafeguard light
+          test_edition baseline-plus.apk current-plus.apk com.applicreation0.quransafeguard.plus plus
+          echo DIRECT_0108_TO_01010_LIGHT_PLUS_MIGRATION_PASS
+          SH
+          chmod +x migration-smoke.sh
+
+      - name: Reclaim runner space before Android 15 AVD
+        run: |
+          rm -rf audited baseline current ~/.gradle/caches ~/.android/avd || true
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk || true
+          df -h /
+
+      - name: Boot Android 15 and verify direct Light and Plus updates
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disk-size: 2048M
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash migration-smoke.sh
+
+      - name: Upload migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-0108-to-01010-migration-evidence
+          path: |
+            migration-apk-sha256.txt
+            light-*.txt
+            light-*.xml
+            plus-*.txt
+            plus-*.xml
+          if-no-files-found: warn
+          retention-days: 7
