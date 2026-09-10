@@ -25,11 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
-
-      - name: Apply exact 0.10.10 hardening
-        run: python3 scripts/apply_01010_runtime_hardening.py
-
+      - name: Assert exact 0.10.10 hardening is already committed
+        run: |
+          python3 scripts/apply_01010_runtime_hardening.py
+          git diff --exit-code
       - name: Restore audited immutable Quran/Tafsir corpus
         uses: actions/download-artifact@v4
         with:
@@ -38,11 +39,8 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ env.BASELINE_RUN_ID }}
           path: baseline-apks
-
       - name: Extract corpus only and generate reader geometry
-        shell: bash
         run: |
-          set -euo pipefail
           python3 - <<'PY'
           import shutil, zipfile
           from pathlib import Path
@@ -51,23 +49,19 @@ jobs:
               with zipfile.ZipFile(apk) as z:
                   for info in z.infolist():
                       name=info.filename
-                      if info.is_dir():
-                          continue
+                      if info.is_dir(): continue
                       if not plus and name.startswith('assets/mushaf/'):
                           dest=Path('app/src/main')/name
                       elif plus and name.startswith('assets/tafsir/'):
                           dest=Path('app/src/plus')/name
-                      else:
-                          continue
+                      else: continue
                       dest.parent.mkdir(parents=True, exist_ok=True)
-                      with z.open(info) as src, dest.open('wb') as out:
-                          shutil.copyfileobj(src,out)
+                      with z.open(info) as src, dest.open('wb') as out: shutil.copyfileobj(src,out)
           PY
           python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
           python3 scripts/build_reader109_geometry.py
           python3 scripts/verify_hifz_geometry_edges.py
           python3 scripts/audit_01010_release_contract.py
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -80,10 +74,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
-
       - name: Unit proof — both editions including pinned audio source
         run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
-
+      - name: Reclaim runner space before audio/UX emulator
+        run: |
+          rm -rf baseline-apks ~/.android/avd
+          df -h /
       - name: Runtime proof — real Husary download/playback + cross-app UI scale
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -91,6 +87,7 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
+          disk-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
@@ -98,7 +95,6 @@ jobs:
             gradle --no-daemon :app:connectedPlusDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.QuranAudioRuntimeTest --stacktrace
             gradle --no-daemon :app:connectedLightDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.SettingsUiScaleRuntimeTest --stacktrace
             gradle --no-daemon :app:connectedPlusDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.applicreation0.quransafeguard.SettingsUiScaleRuntimeTest --stacktrace
-
       - name: Upload proof reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -9,14 +9,22 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: quran-safeguard-01010-audit-b-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   boundary-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Apply 0.10.10 hardening idempotently
-        run: python3 scripts/apply_01010_runtime_hardening.py
+        run: |
+          python3 scripts/apply_01010_runtime_hardening.py
+          git diff --exit-code
       - name: Restore audited Mushaf and Plus corpus
         uses: actions/download-artifact@v4
         with:
@@ -59,10 +67,10 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
-      - name: Install proven build SDK and emulator image
+      - name: Install proven build SDK
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-35" "system-images;android-35;google_apis;x86_64" "emulator"
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-35"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
@@ -76,12 +84,18 @@ jobs:
         run: |
           python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
           python3 scripts/verify_plus_apk_tafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+      - name: Reclaim runner space before emulator
+        run: |
+          rm -rf baseline108 ~/.android/avd
+          df -h /
       - name: Adversarial runtime boundary audit - Light
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           arch: x86_64
+          target: google_apis
           profile: pixel_2
+          disk-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: gradle --no-daemon :app:connectedLightDebugAndroidTest --stacktrace
@@ -90,7 +104,9 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
+          target: google_apis
           profile: pixel_2
+          disk-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: gradle --no-daemon :app:connectedPlusDebugAndroidTest --stacktrace
@@ -98,7 +114,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: audit-b-boundary-evidence
+          name: audit-b-boundary-evidence-${{ github.sha }}
           path: |
             app/build/reports/
             app/build/outputs/androidTest-results/
