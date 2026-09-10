@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 /** Structured Hifz surface, independent from free Memorisation. */
@@ -41,6 +44,8 @@ class HifzJourneyActivity : ComponentActivity() {
         val load = remember(refresh) { HifzStateStore.load(this@HifzJourneyActivity) }
         val today = LocalDate.now()
         var message by remember { mutableStateOf<String?>(null) }
+        var editingConfig by remember { mutableStateOf(false) }
+        val config = load.state.journeyConfig
 
         Column(
             modifier = Modifier
@@ -56,7 +61,7 @@ class HifzJourneyActivity : ComponentActivity() {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                "Sabqi lundi/mercredi/vendredi • Itqān mardi/jeudi • Murājaʿah samedi/dimanche",
+                scheduleSummary(config.schedule),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
@@ -74,21 +79,29 @@ class HifzJourneyActivity : ComponentActivity() {
                 }
             }
 
-            val config = load.state.journeyConfig
-            if (config.bounds == null || config.pace.sabqiMinutesPerPage == null ||
-                config.pace.itqanMinutesPerPage == null || config.pace.murajaahMinutesPerPage == null ||
+            val needsSetup = config.bounds == null || config.pace.sabqiMinutesPerPage == null ||
+                config.pace.itqanMinutesPerPage == null ||
                 config.availableMinutes.sabqi == null || config.availableMinutes.itqan == null ||
-                config.availableMinutes.murajaah == null
-            ) {
+                config.availableMinutes.murajaah == null || !config.schedule.containsAllTracks()
+
+            if (needsSetup || editingConfig) {
                 SetupCard(
                     existing = config,
                     onSaved = { newConfig ->
                         val ok = if (load.corrupted) false else HifzStateStore.updateJourneyConfig(this@HifzJourneyActivity) { newConfig }
                         message = if (ok) "Configuration Hifz enregistrée." else "Configuration refusée : état ou bornes invalides."
-                        if (ok) refresh++
+                        if (ok) {
+                            editingConfig = false
+                            refresh++
+                        }
                     }
                 )
             } else {
+                SafeguardOutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { editingConfig = true }
+                ) { Text("Modifier le parcours") }
+
                 val plannedState = remember(refresh, today) {
                     runCatching {
                         val geometry = HifzGeometryAssetLoader.load(this@HifzJourneyActivity)
@@ -148,31 +161,56 @@ class HifzJourneyActivity : ComponentActivity() {
         var itqanEndA by remember { mutableStateOf(bounds?.itqan?.firstOrNull()?.end?.ayah?.toString() ?: "") }
         var sabqiPace by remember { mutableStateOf(existing.pace.sabqiMinutesPerPage?.toString() ?: "") }
         var itqanPace by remember { mutableStateOf(existing.pace.itqanMinutesPerPage?.toString() ?: "") }
-        var murajaahPace by remember { mutableStateOf(existing.pace.murajaahMinutesPerPage?.toString() ?: "") }
+        var murajaahPace by remember {
+            mutableStateOf(
+                existing.pace.murajaahMinutesPerPage?.toString()
+                    ?: MurajaahPolicy.INITIAL_MINUTES_PER_PAGE_REFERENCE.toString()
+            )
+        }
         var sabqiMinutes by remember { mutableStateOf(existing.availableMinutes.sabqi?.toString() ?: "") }
         var itqanMinutes by remember { mutableStateOf(existing.availableMinutes.itqan?.toString() ?: "") }
         var murajaahMinutes by remember { mutableStateOf(existing.availableMinutes.murajaah?.toString() ?: "") }
+        var weeklySchedule by remember { mutableStateOf(existing.schedule) }
         var localError by remember { mutableStateOf<String?>(null) }
 
         Card(modifier = Modifier.fillMaxWidth(), shape = SafeguardShapes.large) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Configuration requise", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Configuration du parcours", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Text(
-                    "Aucune vitesse ni durée n’est inventée. Indiquez vos bornes, votre rythme observé et votre temps disponible.",
+                    "Indiquez vos bornes, votre rythme et votre temps disponible. Murājaʿah part de 1 juz ≈ 45 min et reste ajustable.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 VersePair("Début Sabqi", sabqiStartS, sabqiStartA, { sabqiStartS = it }, { sabqiStartA = it })
                 VersePair("Fin Sabqi", sabqiEndS, sabqiEndA, { sabqiEndS = it }, { sabqiEndA = it })
                 VersePair("Début Itqān", itqanStartS, itqanStartA, { itqanStartS = it }, { itqanStartA = it })
                 VersePair("Fin Itqān", itqanEndS, itqanEndA, { itqanEndS = it }, { itqanEndA = it })
+
+                Text("Jours du parcours", fontWeight = FontWeight.SemiBold)
+                Text(
+                    "S = Sabqi • I = Itqān • M = Murājaʿah",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                DayOfWeek.values().forEach { day ->
+                    HifzDaySelector(
+                        day = day,
+                        selected = weeklySchedule.trackFor(day),
+                        onSelected = { track -> weeklySchedule = weeklySchedule.withTrack(day, track) }
+                    )
+                }
+
                 NumberField("Sabqi min/page observées", sabqiPace) { sabqiPace = it }
                 NumberField("Itqān min/page observées", itqanPace) { itqanPace = it }
-                NumberField("Murājaʿah min/page observées", murajaahPace) { murajaahPace = it }
+                NumberField("Murājaʿah min/page (2,25 = 45 min/juz)", murajaahPace) { murajaahPace = it }
                 NumberField("Minutes disponibles Sabqi", sabqiMinutes) { sabqiMinutes = it }
                 NumberField("Minutes disponibles Itqān", itqanMinutes) { itqanMinutes = it }
                 NumberField("Minutes disponibles Murājaʿah", murajaahMinutes) { murajaahMinutes = it }
                 localError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 SafeguardButton(modifier = Modifier.fillMaxWidth(), onClick = {
+                    if (!weeklySchedule.containsAllTracks()) {
+                        localError = "Conservez au moins un jour Sabqi, un jour Itqān et un jour Murājaʿah."
+                        return@SafeguardButton
+                    }
                     val candidate = runCatching {
                         HifzJourneyConfig(
                             bounds = HifzJourneyBounds(
@@ -196,7 +234,8 @@ class HifzJourneyActivity : ComponentActivity() {
                                 sabqi = sabqiMinutes.toInt(),
                                 itqan = itqanMinutes.toInt(),
                                 murajaah = murajaahMinutes.toInt()
-                            )
+                            ),
+                            schedule = weeklySchedule
                         )
                     }.getOrElse {
                         localError = "Valeurs invalides. Vérifiez les sourates, versets, durées et l’ordre des bornes."
@@ -205,6 +244,31 @@ class HifzJourneyActivity : ComponentActivity() {
                     localError = null
                     onSaved(candidate)
                 }) { Text("Enregistrer le parcours") }
+            }
+        }
+    }
+
+    @Composable
+    private fun HifzDaySelector(
+        day: DayOfWeek,
+        selected: HifzTrack,
+        onSelected: (HifzTrack) -> Unit
+    ) {
+        Text(dayLabel(day), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                HifzTrack.SABQI to "S",
+                HifzTrack.ITQAN to "I",
+                HifzTrack.MURAJAAH to "M"
+            ).forEach { (track, label) ->
+                FilterChip(
+                    selected = selected == track,
+                    onClick = { onSelected(track) },
+                    label = { Text(label) }
+                )
             }
         }
     }
@@ -220,7 +284,12 @@ class HifzJourneyActivity : ComponentActivity() {
         val progress = state.progressByTask[task.id] ?: HifzTrainingEngine.initial(task, segmentCount)
         val step = HifzTrainingEngine.currentStep(task, progress, segmentCount)
         val suggested = if (task.status == HifzTaskStatus.OVERDUE) {
-            HifzSchedulePolicy.suggestReplanDate(task, LocalDate.now(), state.tasks)
+            HifzSchedulePolicy.suggestReplanDate(
+                task,
+                LocalDate.now(),
+                state.tasks,
+                state.journeyConfig.schedule
+            )
         } else null
 
         Card(modifier = Modifier.fillMaxWidth(), shape = SafeguardShapes.large) {
@@ -283,7 +352,7 @@ class HifzJourneyActivity : ComponentActivity() {
                 if (suggested != null) {
                     SafeguardOutlinedButton(modifier = Modifier.fillMaxWidth(), onClick = {
                         val ok = HifzStateStore.updateTask(this@HifzJourneyActivity, task.id) {
-                            HifzSchedulePolicy.replan(it, suggested)
+                            HifzSchedulePolicy.replan(it, suggested, state.journeyConfig.schedule)
                         }
                         onMessage(if (ok) "Séance reportée explicitement au $suggested, quota inchangé." else "Report refusé.")
                         if (ok) onRefresh()
@@ -335,6 +404,27 @@ class HifzJourneyActivity : ComponentActivity() {
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
         )
+    }
+
+    private fun scheduleSummary(schedule: HifzWeeklySchedule): String =
+        DayOfWeek.values().joinToString(" • ") { day ->
+            "${dayLabel(day)} ${trackShortLabel(schedule.trackFor(day))}"
+        }
+
+    private fun dayLabel(day: DayOfWeek): String = when (day) {
+        DayOfWeek.MONDAY -> "Lun"
+        DayOfWeek.TUESDAY -> "Mar"
+        DayOfWeek.WEDNESDAY -> "Mer"
+        DayOfWeek.THURSDAY -> "Jeu"
+        DayOfWeek.FRIDAY -> "Ven"
+        DayOfWeek.SATURDAY -> "Sam"
+        DayOfWeek.SUNDAY -> "Dim"
+    }
+
+    private fun trackShortLabel(track: HifzTrack): String = when (track) {
+        HifzTrack.SABQI -> "S"
+        HifzTrack.ITQAN -> "I"
+        HifzTrack.MURAJAAH -> "M"
     }
 
     private fun trackLabel(track: HifzTrack): String = when (track) {
