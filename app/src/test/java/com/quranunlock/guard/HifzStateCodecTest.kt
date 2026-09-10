@@ -33,6 +33,15 @@ class HifzStateCodecTest {
             totalIncorrectAttempts = 3,
             activeSeconds = 901
         )
+        val customSchedule = HifzWeeklySchedule(
+            monday = HifzTrack.SABQI,
+            tuesday = HifzTrack.ITQAN,
+            wednesday = HifzTrack.ITQAN,
+            thursday = HifzTrack.MURAJAAH,
+            friday = HifzTrack.SABQI,
+            saturday = HifzTrack.MURAJAAH,
+            sunday = HifzTrack.SABQI
+        )
         val config = HifzJourneyConfig(
             bounds = HifzJourneyBounds(
                 sabqi = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30)),
@@ -50,7 +59,8 @@ class HifzStateCodecTest {
                 sabqi = 30,
                 itqan = 25,
                 murajaah = 45
-            )
+            ),
+            schedule = customSchedule
         )
         val state = HifzState(
             journeyConfig = config,
@@ -62,6 +72,7 @@ class HifzStateCodecTest {
         val decoded = HifzStateCodec.decode(HifzStateCodec.encode(state))
 
         assertEquals(state, decoded)
+        assertEquals(customSchedule, decoded.journeyConfig.schedule)
         assertEquals(2, decoded.journeyConfig.bounds?.itqan?.size)
         assertEquals(2, decoded.progressByTask[task.id]?.segmentIndex)
         assertEquals(901L, decoded.progressByTask[task.id]?.activeSeconds)
@@ -71,6 +82,21 @@ class HifzStateCodecTest {
     fun emptyPreSetupConfigAlsoRoundTrips() {
         val state = HifzState()
         assertEquals(state, HifzStateCodec.decode(HifzStateCodec.encode(state)))
+    }
+
+    @Test
+    fun schemaSixStateWithoutWeeklyRecordUsesApprovedDefaultForCompatibility() {
+        val raw = "6\nC|-|-|-|-|-|-|-|-|-|-\n"
+        val decoded = HifzStateCodec.decode(raw)
+        assertEquals(HifzWeeklySchedule.DEFAULT, decoded.journeyConfig.schedule)
+    }
+
+    @Test
+    fun weeklyRecordMustKeepAllThreeTracks() {
+        val raw = "6\nC|-|-|-|-|-|-|-|-|-|-\nW|SABQI|SABQI|SABQI|SABQI|SABQI|SABQI|SABQI\n"
+        assertThrows(IllegalArgumentException::class.java) {
+            HifzStateCodec.decode(raw)
+        }
     }
 
     @Test
