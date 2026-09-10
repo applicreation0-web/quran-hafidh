@@ -3,87 +3,90 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+
 def read(rel):
     return (ROOT / rel).read_text(encoding="utf-8")
 
+
 def require(ok, message):
     if not ok:
-        raise SystemExit("0.10.7 VISUAL CONTRACT FAILURE: " + message)
+        raise SystemExit("0.10.10 PRODUCT CONTRACT FAILURE: " + message)
 
-reader = read("app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt")
+
 design = read("app/src/main/java/com/quranunlock/guard/SafeguardDesign.kt")
 theme = read("app/src/main/java/com/quranunlock/guard/MainActivity.kt")
-hub = read("app/src/main/java/com/quranunlock/guard/QuranHubActivity.kt")
-panel = read("app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt")
-repo = read("app/src/plus/java/com/quranunlock/guard/MultiTafsirRepository.kt")
-edition = read("app/src/plus/java/com/quranunlock/guard/TafsirEdition.kt")
-contract = read("docs/VISUAL_CONTRACT_0.10.7.md")
+reader = read("app/src/main/assets/reader109/reader.js")
+hifz_guard = read("app/src/main/assets/reader109/hifz_guard.js")
+hifz_policy = read("app/src/main/java/com/quranunlock/guard/HifzTrainingPolicy.kt")
+eink = read("app/src/main/java/com/quranunlock/guard/EInkRefreshController.kt")
+icon_light = read("app/src/main/res/drawable/ic_launcher_foreground.xml")
+icon_plus = read("app/src/plus/res/drawable/ic_launcher_foreground.xml")
+geometry_test = read("app/src/test/java/com/quranunlock/guard/HifzGeometryPolicyTest.kt")
 
-require("statusBarsPadding()" in reader and "navigationBarsPadding()" in reader,
-        "reader must respect Android system bars")
-require("Navigation • page $quickNavPage / $LAST_PAGE" in reader,
-        "persistent free-reading page slider label missing")
-require(reader.count("valueRange = FIRST_PAGE.toFloat()..LAST_PAGE.toFloat()") >= 2,
-        "both quick and persistent page navigation must cover 1..604")
-require("onValueChangeFinished" in reader,
-        "page navigation must commit on drag finish")
-require("steps = LAST_PAGE - FIRST_PAGE - 1" not in reader,
-        "hundreds of slider tick marks must not clutter the reader")
-require(".height(28.dp)" in reader,
-        "persistent page slider must stay visually compact")
-require("chromeHidden" in reader and "pureReading" in reader,
-        "clean reading mode must remain available")
-require("0.84f" in reader and "0.42f" in reader,
-        "Tafsir compact/expanded reading states missing")
-
+# Final visual identity. Historical green/gold/brown values are explicitly obsolete.
 for marker in (
     "SafeguardAppBackground = Color(0xFFFBF7EF)",
-    "SafeguardSurface = Color(0xFFFFFDF8)",
     "SafeguardReadingSurface = Color(0xFFF7F2E8)",
-    "SafeguardDeepGreen = Color(0xFF214B3B)",
-    "SafeguardTextGreen = Color(0xFF18392E)",
-    "SafeguardSecondaryText = Color(0xFF514A43)",
-    "SafeguardGold = Color(0xFFB0823F)",
+    "SafeguardInk = Color(0xFF171715)",
 ):
-    require(marker in design, "0.10.7 palette token missing: " + marker)
+    require(marker in design, "final cream/black design token missing: " + marker)
 
-for old in ("sahelianButtonOrnament", "drawDiamond"):
-    require(old not in design, "ornamental button drawing returned: " + old)
+for banned in ("#2C5D49", "#214B3B", "#18392E", "#B0823F", "#D8BA73", "#7A5337", "#1D5B47"):
+    require(banned not in theme + reader + eink + icon_light + icon_plus,
+            "obsolete coloured visual token remains active: " + banned)
 
-for color in (
-    "primary = SafeguardDeepGreen",
-    "background = SafeguardAppBackground",
-    "surface = SafeguardSurface",
-    "onBackground = SafeguardTextGreen",
-    "onSurfaceVariant = SafeguardSecondaryText",
-    "tertiary = SafeguardGold",
-):
-    require(color in theme, "premium palette marker missing: " + color)
+require("primary = SafeguardInk" in theme and "tertiary = SafeguardInk" in theme,
+        "Compose theme must be monochrome")
+require("ElevatedCard" not in theme,
+        "dashboard must not return to elevated-card-heavy presentation")
+require(icon_light.count("#171715") >= 3 and icon_plus.count("#171715") >= 3,
+        "adaptive launcher icons must use the black-ink contract")
 
-require("ElevatedCard" not in hub and "QuranHubRow" in hub,
-        "Qur'an hub must remain a light list rather than elevated-card grid")
-require("if (isPoetry) TextAlign.Start else TextAlign.Justify" in panel,
-        "Tafsir prose must be justified while poetry stays start-aligned")
-require("run.text.replace(Regex(\"\\\\n{2,}\"), \"\\n\")" in panel,
-        "non-poetry double blank lines must stay collapsed")
-require("stroke: none !important" in edition and "#C8CEC8" in edition,
-        "neutral no-outline verse selection changed")
+# Audio is visible and callable only in memorization/Hifz, never normal reading.
+require("const audioModeAllowed=()=>memory||!!initial.hifz" in reader,
+        "reader audio scope gate missing")
+require("$('audio').hidden=!allowAudio" in reader and "$('repeat').hidden=!allowAudio" in reader,
+        "normal reader can still expose audio controls")
+require("if(!audioModeAllowed())return" in reader,
+        "audio actions must fail closed outside memorization/Hifz")
+require("Audio Al-Husary Muʿallim" in hifz_guard,
+        "structured Hifz audio control missing")
+require("st.kind==='AUDIO_PASSIVE'||st.kind==='AUDIO_ACTIVE'" in hifz_guard,
+        "structured Hifz audio repetitions are not connected to native progress")
 
-for marker in ('JALALAYN("jalalayn", "Jalalayn")',
-               'QURTUBI("qurtubi", "Qurtubi")',
-               'QUSHAYRI("qushayri", "Qushayri")'):
-    require(marker in repo, "author label changed: " + marker)
-
+# Hifz repetition/masking product rules.
+require('HifzTrainingStep("sabqi-visible", "Texte visible", HifzTrainingKind.VISIBLE, 10, 0)' in hifz_policy,
+        "Sabqi must start its reading protocol with 10 visible readings")
 for marker in (
-    "curseur horizontal permanent",
-    "niveaux de gris",
-    "Tafsîr reste en anglais",
-    "#214B3B",
-    "#B0823F",
-    "Aucun mode noir",
-    "prose du commentaire est justifiée",
-    "réellement orphelins",
+    'HifzTrainingStep("sabqi-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 5, 25)',
+    'HifzTrainingStep("sabqi-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 5, 50)',
+    'HifzTrainingStep("sabqi-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 5, 75)',
+    'HifzTrainingStep("sabqi-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 7, 100)',
 ):
-    require(marker in contract, "visual contract marker missing: " + marker)
+    require(marker in hifz_policy, "Sabqi progressive masking rule missing")
+require('id = "itqan-visible-20"' in hifz_policy and "repetitions = 20" in hifz_policy,
+        "Itqan must contain 20 visible repetitions")
+require('HifzTrainingStep("itqan-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 2, 25' in hifz_policy,
+        "Itqan 10-masked protocol missing")
+require('id = "murajaah-recall"' in hifz_policy and "maskPercent = 0" in hifz_policy,
+        "Murajaah must not impose masking")
+require("visibleReadings" in hifz_guard and "maskedReadings" in hifz_guard,
+        "structured Hifz must expose separate visible/masked counters")
+require("readingCounts" in reader and "avec masque" in reader and "sans masque" in reader,
+        "free memorization must expose separate visible/masked counters")
 
-print("0.10.7 visual publication contract: PASS")
+# E-Ink: portable, deterministic and monochrome. Physical-device proof is separate.
+require("com.onyx" not in eink and "EpdController" not in eink,
+        "manufacturer-specific E-Ink API dependency remains")
+require("profile == DisplayProfile.STANDARD" in eink,
+        "Standard display profile must remain a strict no-op")
+require("einkFullRefreshFallback" in reader and "#171715" in reader and "#F7F2E8" in reader,
+        "portable monochrome E-Ink cleanup missing")
+
+# Edge cases are product tests, not decorative tests.
+require("midPageTargetKeepsOnlyTargetVersesActive" in geometry_test,
+        "Itqan mid-page start regression test missing")
+require("fifteenRealLinesSplitFiveByFiveButKeepOneCanonicalVerse" in geometry_test,
+        "long Sabqi verse regression test missing")
+
+print("Quran Safeguard 0.10.10 requirement-driven product contract: PASS")
