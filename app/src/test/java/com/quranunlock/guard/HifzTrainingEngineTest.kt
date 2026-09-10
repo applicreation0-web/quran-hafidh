@@ -10,30 +10,32 @@ import java.time.LocalDate
 class HifzTrainingEngineTest {
 
     @Test
-    fun sabqiEngineStartsWithoutAudioDependency() {
+    fun sabqiEngineStartsWithAlHusaryListeningPhaseByDefault() {
         val task = task(HifzTrack.SABQI)
         val progress = HifzTrainingEngine.initial(task)
 
-        assertEquals("sabqi-visible", progress.stepProgress?.stepId)
-        assertEquals(HifzTrainingKind.VISIBLE, HifzTrainingEngine.currentStep(task, progress)?.kind)
+        assertEquals("sabqi-audio-passive", progress.stepProgress?.stepId)
+        assertEquals(HifzTrainingKind.AUDIO_PASSIVE, HifzTrainingEngine.currentStep(task, progress)?.kind)
     }
 
     @Test
-    fun itqanStartsAtThirtyVisibleRepetitions() {
+    fun itqanStartsAtTwentyVisibleRepetitions() {
         val task = task(HifzTrack.ITQAN)
         val progress = HifzTrainingEngine.initial(task)
 
         val step = HifzTrainingEngine.currentStep(task, progress)
-        assertEquals("itqan-visible-30", step?.id)
-        assertEquals(30, step?.repetitions)
+        assertEquals("itqan-visible-20", step?.id)
+        assertEquals(20, step?.repetitions)
     }
 
     @Test
-    fun murajaahStartsAndCompletesOneCleanRecall() {
+    fun murajaahStartsVisibleAndCompletesOneCleanRecall() {
         val task = task(HifzTrack.MURAJAAH)
         var progress = HifzTrainingEngine.initial(task)
 
-        assertEquals("murajaah-recall", HifzTrainingEngine.currentStep(task, progress)?.id)
+        val step = HifzTrainingEngine.currentStep(task, progress)
+        assertEquals("murajaah-recall", step?.id)
+        assertEquals(0, step?.maskPercent)
         progress = HifzTrainingEngine.attempt(task, progress, correct = true)
         progress = HifzTrainingEngine.advanceIfValid(task, progress)
 
@@ -50,7 +52,7 @@ class HifzTrainingEngineTest {
         val afterAdvance = HifzTrainingEngine.advanceIfValid(task, progress)
 
         assertEquals(0, afterAdvance.stepIndex)
-        assertEquals("itqan-visible-30", afterAdvance.stepProgress?.stepId)
+        assertEquals("itqan-visible-20", afterAdvance.stepProgress?.stepId)
         assertEquals(1, afterAdvance.stepProgress?.revealCount)
     }
 
@@ -59,7 +61,7 @@ class HifzTrainingEngineTest {
         val task = task(HifzTrack.ITQAN)
         var progress = HifzTrainingEngine.initial(task)
 
-        repeat(30) {
+        repeat(20) {
             progress = HifzTrainingEngine.attempt(task, progress, correct = true)
         }
         progress = HifzTrainingEngine.advanceIfValid(task, progress)
@@ -84,7 +86,7 @@ class HifzTrainingEngineTest {
             if (expectedSegment < segmentCount - 1) {
                 assertFalse(progress.completed)
                 assertEquals(expectedSegment + 1, progress.segmentIndex)
-                assertEquals("sabqi-visible", progress.stepProgress?.stepId)
+                assertEquals("sabqi-audio-passive", progress.stepProgress?.stepId)
             }
         }
 
