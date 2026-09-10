@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "QuranSafeguard"
 include(":app")
+include(":migration-fixture")
