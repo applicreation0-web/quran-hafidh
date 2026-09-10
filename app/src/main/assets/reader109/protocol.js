@@ -27,25 +27,35 @@ function plan(lines,audio){
  add('final','Valider le bloc mémorisé',lines,3,100,'personal',true);
  return steps;
 }
-function create(lines,audio=false){return {schema:1,lines,withAudio:audio,step:0,counts:{},wins:{},milestones:[],status:'À apprendre',due:Date.now(),seed:Math.floor(Math.random()*2147483647),complete:false};}
+function create(lines,audio=false){return {schema:1,lines,withAudio:audio,step:0,counts:{},wins:{},readCounts:{visible:0,masked:0},milestones:[],status:'À apprendre',due:Date.now(),seed:Math.floor(Math.random()*2147483647),complete:false};}
 function current(s){return plan(s.lines,s.withAudio)[s.step]||null;}
 function assistanceActive(s){const p=current(s);return !!p&&s.assistance?.stepId===p.id;}
 function canValidate(s){const p=current(s);return !!p&&!assistanceActive(s)&&(s.counts[p.id]||0)>=p.min&&(!p.success||(s.wins[p.id]||0)>=3);}
+function readingCounts(s){
+ if(!s)return {visible:0,masked:0};
+ if(s.readCounts&&Number.isFinite(s.readCounts.visible)&&Number.isFinite(s.readCounts.masked))return {visible:Math.max(0,s.readCounts.visible|0),masked:Math.max(0,s.readCounts.masked|0)};
+ let visible=0,masked=0;
+ plan(s.lines,s.withAudio).forEach(p=>{if(p.kind==='passive'||p.kind==='active'||p.kind==='confirm')return;const n=Math.max(0,Number(s.counts?.[p.id]||0));if(p.mask>0)masked+=n;else visible+=n});
+ s.readCounts={visible,masked};return {visible,masked};
+}
 function record(s,correct=true,source='personal'){
  const p=current(s);if(!p||p.kind==='confirm')return false;
  if(assistanceActive(s))return false;
  if((p.kind==='passive'||p.kind==='active')&&source!=='audio')return false;
  if(p.kind!=='passive'&&p.kind!=='active'&&source==='audio')return false;
- s.counts[p.id]=(s.counts[p.id]||0)+1;s.wins[p.id]=correct?(s.wins[p.id]||0)+1:0;return true;
+ s.counts[p.id]=(s.counts[p.id]||0)+1;s.wins[p.id]=correct?(s.wins[p.id]||0)+1:0;
+ if(source!=='audio'){const counts=readingCounts(s);s.readCounts=p.mask>0?{visible:counts.visible,masked:counts.masked+1}:{visible:counts.visible+1,masked:counts.masked};}
+ return true;
 }
+function recordMaskedReading(s){const counts=readingCounts(s);s.readCounts={visible:counts.visible,masked:counts.masked+1};return s.readCounts;}
 function aid(s,kind='help',hintWords=0){const p=current(s);if(!p)return false;s.wins[p.id]=0;s.assistance={stepId:p.id,kind,hintWords};return true;}
 function clearAid(s){delete s.assistance;}
 function validate(s){if(!canValidate(s))return false;const p=current(s);if(!s.milestones.includes(p.id))s.milestones.push(p.id);clearAid(s);s.step++;if(!current(s)){s.complete=true;s.status='Acquis';s.due=Date.now()+86400000;}return true;}
 function redo(s){const p=current(s);if(p){s.counts[p.id]=0;s.wins[p.id]=0;}clearAid(s);}
 /*
- * Audio is an enhancement, never a blocker. If local files disappear or the
- * phone is offline, rebase the session onto the non-audio plan while keeping
- * already validated non-audio milestones and counters.
+ * Audio is an enhancement, never a blocker in free memorization. If local files
+ * disappear or the phone is offline, rebase the session onto the non-audio plan while
+ * keeping already validated non-audio milestones, counters and reading statistics.
  */
 function disableAudio(s){
  if(!s||!s.withAudio)return false;
@@ -57,5 +67,5 @@ function disableAudio(s){
  return true;
 }
 function rank(seed,id){let h=(seed|0)^2166136261;for(let i=0;i<id.length;i++){h^=id.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967296;}
-const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,record,aid,clearAid,validate,redo,disableAudio,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
+const api={balancedBlocks,plan,create,current,assistanceActive,canValidate,readingCounts,record,recordMaskedReading,aid,clearAid,validate,redo,disableAudio,rank};if(typeof module!=='undefined')module.exports=api;root.QsgProtocol=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
