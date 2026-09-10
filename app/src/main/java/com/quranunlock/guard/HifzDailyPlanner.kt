@@ -123,7 +123,7 @@ object HifzDailyPlanner {
             return markConsidered(resumed, today)
         }
 
-        val track = HifzSchedulePolicy.defaultTrackFor(today.dayOfWeek)
+        val track = resumed.journeyConfig.schedule.trackFor(today.dayOfWeek)
         if (resumed.tasks.any { it.track == track && it.status != HifzTaskStatus.COMPLETED }) {
             return markConsidered(resumed, today)
         }
