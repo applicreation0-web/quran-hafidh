@@ -74,7 +74,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
                     AndroidView(modifier = Modifier.fillMaxSize(), factory = { context ->
                         WebView(context).apply {
                             web = this
-                            setBackgroundColor(android.graphics.Color.parseColor("#F7F2E8"))
+                            setBackgroundColor(android.graphics.Color.parseColor(ReaderComfortPrefs.pageBackground()))
                             settings.javaScriptEnabled = true
                             settings.allowFileAccess = false
                             settings.allowContentAccess = false
