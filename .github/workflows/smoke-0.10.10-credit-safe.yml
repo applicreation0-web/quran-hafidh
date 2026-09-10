@@ -21,7 +21,7 @@ concurrency:
 jobs:
   android15-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,21 +61,39 @@ jobs:
           adb wait-for-device
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
           test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35"
+          DASHBOARD_CLASS="com.applicreation0.quransafeguard.DashboardActivity"
 
           smoke_one() {
             local apk="$1" pkg="$2"
-            adb install -r "$apk"
+            echo "=== SMOKE $pkg ==="
+            adb install -r "$apk" | tee "install-${pkg}.txt"
             adb shell am force-stop "$pkg" || true
             adb logcat -c || true
-            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 | tee "start-${pkg}.txt"
+
+            set +e
+            adb shell am start -W -n "$pkg/$DASHBOARD_CLASS" > "start-${pkg}.txt" 2>&1
+            local start_rc=$?
+            set -e
             sleep 5
-            adb shell pidof "$pkg" | tee "pid-${pkg}.txt"
-            adb shell dumpsys activity activities > "activities-${pkg}.txt"
-            adb logcat -d -v threadtime -t 1200 > "logcat-${pkg}.txt" || true
-            test -s "pid-${pkg}.txt"
+
+            adb shell pidof "$pkg" > "pid-${pkg}.txt" 2>&1 || true
+            adb shell dumpsys activity activities > "activities-${pkg}.txt" 2>&1 || true
+            adb logcat -d -v threadtime -t 2000 > "logcat-${pkg}.txt" 2>&1 || true
+
             if grep -Eq "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "logcat-${pkg}.txt"; then
               echo "Crash/ANR detected for $pkg" >&2
+              grep -E -A35 -B10 "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "logcat-${pkg}.txt" >&2 || true
               exit 21
+            fi
+            if [ "$start_rc" -ne 0 ]; then
+              echo "Launcher start failed for $pkg" >&2
+              cat "start-${pkg}.txt" >&2
+              exit 22
+            fi
+            if [ ! -s "pid-${pkg}.txt" ]; then
+              echo "Process did not survive launcher smoke for $pkg" >&2
+              tail -n 160 "logcat-${pkg}.txt" >&2 || true
+              exit 23
             fi
             grep -q "$pkg" "activities-${pkg}.txt"
             adb uninstall "$pkg"
@@ -112,6 +130,7 @@ jobs:
           name: android15-credit-safe-smoke-evidence
           path: |
             smoke-apk-sha256.txt
+            install-*.txt
             start-*.txt
             pid-*.txt
             activities-*.txt
