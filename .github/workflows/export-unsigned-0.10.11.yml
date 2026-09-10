@@ -1,0 +1,168 @@
+name: Export audited Quran Safeguard 0.10.11 unsigned APKs
+
+on:
+  push:
+    branches:
+      - "build/0.10.11-unsigned-export"
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  CANDIDATE_SHA: c6e600f2ae1332cefca160e54b99beaa2b7b4927
+  CANDIDATE_TREE: 449ce5e218131b64f1075fda39d84739d1ea88eb
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout export helper
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove application source is unchanged from audited candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse "${CANDIDATE_SHA}^{tree}")" = "${CANDIDATE_TREE}"
+          test -z "$(git diff --name-only "${CANDIDATE_SHA}"..HEAD -- app)"
+          printf 'candidate_code_sha=%s\n' "${CANDIDATE_SHA}" > "${RUNNER_TEMP}/BUILD-PROVENANCE.txt"
+          printf 'candidate_tree_sha=%s\n' "${CANDIDATE_TREE}" >> "${RUNNER_TEMP}/BUILD-PROVENANCE.txt"
+          printf 'export_helper_sha=%s\n' "$(git rev-parse HEAD)" >> "${RUNNER_TEMP}/BUILD-PROVENANCE.txt"
+          printf 'app_source_diff_vs_candidate=none\n' >> "${RUNNER_TEMP}/BUILD-PROVENANCE.txt"
+          printf 'prior_full_release_run=34523384690\n' >> "${RUNNER_TEMP}/BUILD-PROVENANCE.txt"
+          printf 'prior_release_gates_tests_compile=PASS\n' >> "${RUNNER_TEMP}/BUILD-PROVENANCE.txt"
+
+      - name: Restore validated 0.10.9 immutable Mushaf and Tafsir corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          repository: applicreation0-web/quran-unlock-android
+          path: baseline109
+
+      - name: Verify and inject immutable build-time corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+
+          reuse="${RUNNER_TEMP}/reuse109"
+          mkdir -p "$reuse"
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/qurtubi_en.sqlite.gz.b64.part*' 'assets/tafsir/qushayri_en.sqlite.gz.b64.part*' -d "$reuse"
+
+          mushaf_src="$reuse/assets/mushaf/hafs/kfqc/svg-br"
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp "$mushaf_src"/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          { for i in $(seq 1 604); do cat "$mushaf_dst/$(printf '%03d' "$i").svg.br"; done; } | sha256sum | grep -F '30b7435f86693f0c311c666ffa996b667be37f23a7cdfce519275f9b85a9e406'
+          test "$(git hash-object "$mushaf_dst/001.svg.br")" = f9967e81a5ef1557c5d1616e68535c11823f1454
+          test "$(git hash-object "$mushaf_dst/302.svg.br")" = 092516fd77cffd486246d0f43c7570af5be2a089
+          test "$(git hash-object "$mushaf_dst/604.svg.br")" = 42ff64d8cc6842f76c3a62a398e478b668573ff6
+
+          tafsir_src="$reuse/assets/tafsir"
+          tafsir_dst="app/src/plus/assets/tafsir"
+          cp "$tafsir_src"/qurtubi_en.sqlite.gz.b64.part* "$tafsir_dst/"
+          cp "$tafsir_src"/qushayri_en.sqlite.gz.b64.part* "$tafsir_dst/"
+          cat > "${RUNNER_TEMP}/tafsir-parts.sha256" <<'EOF'
+          dd14cc7857df94ed039dc000caee89edf99127292f4a9a7e2c103913ac5f2fce  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part00
+          ddd18340f31fd3f331d20aa8450c4db5e88c369f45e375ed48403096e1e6b749  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part01
+          f89cf3667fcaf28145b54cec14405a3763a9a5667cad37f3c6720d4f4b51e52a  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part02
+          ad472c2330ddb5072f74858a8b6401ef0508c00a153ec00ad7ccbd706b5d9c17  app/src/plus/assets/tafsir/qurtubi_en.sqlite.gz.b64.part03
+          0d8f4f6a2975c6e1c6cdf2811cba54a0731d6d5f7d7d2cf68adc0ccad94946b4  app/src/plus/assets/tafsir/qushayri_en.sqlite.gz.b64.part00
+          ee3e789360653101c4db0d7d2c223198fa37403051c0cad1f64b300cd9a9144f  app/src/plus/assets/tafsir/qushayri_en.sqlite.gz.b64.part01
+          EOF
+          sed -i 's/^          //' "${RUNNER_TEMP}/tafsir-parts.sha256"
+          sha256sum -c "${RUNNER_TEMP}/tafsir-parts.sha256"
+          { for f in qurtubi_en.sqlite.gz.b64.part00 qurtubi_en.sqlite.gz.b64.part01 qurtubi_en.sqlite.gz.b64.part02 qurtubi_en.sqlite.gz.b64.part03 qushayri_en.sqlite.gz.b64.part00 qushayri_en.sqlite.gz.b64.part01; do cat "$tafsir_dst/$f"; done; } | sha256sum | grep -F 'aef2eb1af69a90a186e74c0411c6c37a951770a928c8c3b5e20dba6ce70dd020'
+
+      - name: Generate exact reader geometry
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify reader geometry and deterministic protocol
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          node scripts/test_reader109_protocol.js
+          python3 scripts/verify_reader109.py
+          sha256sum app/src/main/assets/reader109/geometry.json geometry-report.json > "${RUNNER_TEMP}/geometry-SHA256.txt"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install exact Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+          cache-read-only: true
+
+      - name: Build Light and Plus unsigned release APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease --stacktrace
+
+      - name: Inspect and stage audited unsigned APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          test -s "$light" && test -s "$plus"
+          python3 scripts/verify_light_apk_no_tafsir.py "$light"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "$plus"
+
+          out="${RUNNER_TEMP}/quran-safeguard-0.10.11-unsigned"
+          mkdir -p "$out"
+          cp "$light" "$out/Quran-Safeguard-0.10.11-Light-unsigned.apk"
+          cp "$plus" "$out/Quran-Safeguard-Plus-0.10.11-unsigned.apk"
+          sha256sum "$out"/*.apk > "$out/UNSIGNED-SHA256.txt"
+          cp "${RUNNER_TEMP}/BUILD-PROVENANCE.txt" "${RUNNER_TEMP}/geometry-SHA256.txt" "$out/"
+          printf 'build_time_corpus_source_run=34336797351\n' >> "$out/BUILD-PROVENANCE.txt"
+          printf 'build_time_corpus_source_artifact=10098471284\n' >> "$out/BUILD-PROVENANCE.txt"
+          printf 'mushaf_pages=604\n' >> "$out/BUILD-PROVENANCE.txt"
+          printf 'unsigned_apk_boundary_audit=PASS\n' >> "$out/BUILD-PROVENANCE.txt"
+
+          tools_tar="${RUNNER_TEMP}/android-build-tools-36.0.0-official.tar.gz"
+          tar -C "$ANDROID_HOME/build-tools" -czf "$tools_tar" 36.0.0
+          sha256sum "$tools_tar" > "${RUNNER_TEMP}/BUILD-TOOLS-SHA256.txt"
+
+      - name: Upload audited unsigned APKs for offline signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.11-unsigned-for-offline-signing
+          path: ${{ runner.temp }}/quran-safeguard-0.10.11-unsigned/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload official Android Build Tools 36 for offline signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36.0.0-for-offline-signing
+          path: |
+            ${{ runner.temp }}/android-build-tools-36.0.0-official.tar.gz
+            ${{ runner.temp }}/BUILD-TOOLS-SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
