@@ -17,14 +17,14 @@ import java.util.concurrent.Executors
 import org.json.JSONObject
 
 /**
- * Al-Husary Muʿallim playback backed only by files downloaded by this app.
- * Nothing is bundled in the APK and playback never streams directly.
+ * Future Al-Husary Muʿallim playback infrastructure.
+ * Audio is intentionally disabled for the 0.10.10 release scope.
  */
 class QuranAudioController(
     private val context: Context,
     private val event: (String) -> Unit
 ) {
-    val available: Boolean = true
+    val available: Boolean = false
 
     private val manager = context.getSystemService(AudioManager::class.java)
     private val executor = Executors.newSingleThreadExecutor()
@@ -268,7 +268,6 @@ class QuranAudioController(
             }
 
             if (expectedCompleteLength != null && part.length() != expectedCompleteLength) {
-                // Keep the .part file so a later explicit retry can resume safely.
                 return false
             }
             if (part.length() <= MIN_AUDIO_BYTES || !looksLikeMp3(part)) {
@@ -288,11 +287,6 @@ class QuranAudioController(
         }
     }
 
-    /**
-     * Validates a resume response such as "bytes 124000-248999/249000" and
-     * returns the authoritative complete object size. A server that resumes at
-     * another offset is rejected rather than corrupting the local MP3.
-     */
     private fun parseContentRange(value: String, expectedStart: Long): Long {
         val match = CONTENT_RANGE.matchEntire(value.trim())
             ?: error("Content-Range invalide")
