@@ -1,0 +1,16 @@
+diff --git a/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt b/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt
+index 9fcfcd5..7f32c5d 100644
+--- a/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt
++++ b/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt
+@@ -44,9 +44,9 @@ class HifzTrainingProgressTest {
+     fun finalSabqiValidationRequiresFullQuotaAndThreeUnassistedConsecutiveSuccesses() {
+         val step = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI).last()
+         var progress = HifzStepProgress(stepId = step.id)
+-        repeat(4) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
++        repeat(3) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
+         progress = HifzTrainingProgressPolicy.reveal(progress)
+-        repeat(2) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
++        repeat(3) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
+ 
+         assertFalse(HifzTrainingProgressPolicy.canValidate(step, progress))
+ 
