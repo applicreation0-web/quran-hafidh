@@ -1,0 +1,119 @@
+name: Quran Safeguard 0.10.10 credit-safe Android 15 smoke
+
+on:
+  push:
+    branches:
+      - "runtime/0.10.10-credit-safe"
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FOUNDATION_RUN_ID: "34456833388"
+  FOUNDATION_ARTIFACT: "quran-safeguard-0.10.10-rebuild-foundation"
+  APP_SOURCE_SHA: "1bccaba17be3aca4c29a9382700ada55e2afb228"
+
+concurrency:
+  group: quran-safeguard-01010-credit-safe-smoke
+  cancel-in-progress: true
+
+jobs:
+  android15-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Prove runtime candidate provenance
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse $APP_SOURCE_SHA^{commit})" = "$APP_SOURCE_SHA"
+          echo "APP_SOURCE_SHA=$APP_SOURCE_SHA"
+
+      - name: Reuse already-green Light and Plus APKs
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.FOUNDATION_ARTIFACT }}
+          run-id: ${{ env.FOUNDATION_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: foundation
+
+      - name: Locate exact APKs
+        run: |
+          set -euo pipefail
+          LIGHT=$(find foundation -type f -name '*light*debug*.apk' | head -n1)
+          PLUS=$(find foundation -type f -name '*plus*debug*.apk' | head -n1)
+          test -s "$LIGHT"
+          test -s "$PLUS"
+          cp "$LIGHT" light.apk
+          cp "$PLUS" plus.apk
+          sha256sum light.apk plus.apk | tee smoke-apk-sha256.txt
+
+      - name: Prepare Android 15 runtime smoke
+        run: |
+          cat > android15-smoke.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          adb wait-for-device
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+          test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35"
+
+          smoke_one() {
+            local apk="$1" pkg="$2"
+            adb install -r "$apk"
+            adb shell am force-stop "$pkg" || true
+            adb logcat -c || true
+            adb shell am start -W -n "$pkg/.DashboardActivity" | tee "start-${pkg}.txt"
+            sleep 5
+            adb shell pidof "$pkg" | tee "pid-${pkg}.txt"
+            adb shell dumpsys activity activities > "activities-${pkg}.txt"
+            adb logcat -d -v threadtime -t 1200 > "logcat-${pkg}.txt" || true
+            test -s "pid-${pkg}.txt"
+            if grep -Eq "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "logcat-${pkg}.txt"; then
+              echo "Crash/ANR detected for $pkg" >&2
+              exit 21
+            fi
+            grep -q "$pkg" "activities-${pkg}.txt"
+            adb uninstall "$pkg"
+          }
+
+          smoke_one light.apk com.applicreation0.quransafeguard
+          smoke_one plus.apk com.applicreation0.quransafeguard.plus
+          echo ANDROID15_LIGHT_PLUS_SMOKE_PASS
+          SH
+          chmod +x android15-smoke.sh
+
+      - name: Reclaim runner space before AVD
+        run: |
+          rm -rf foundation ~/.gradle/caches ~/.android/avd || true
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk || true
+          df -h /
+
+      - name: Boot Android 15 and smoke Light plus Plus
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disk-size: 2048M
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash android15-smoke.sh
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android15-credit-safe-smoke-evidence
+          path: |
+            smoke-apk-sha256.txt
+            start-*.txt
+            pid-*.txt
+            activities-*.txt
+            logcat-*.txt
+          if-no-files-found: warn
+          retention-days: 7
