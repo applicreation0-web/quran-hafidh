@@ -13,22 +13,33 @@ data class HifzPlannedPassage(
 }
 
 object HifzPassagePlanningPolicy {
-    /**
-     * A physical line touched by the target counts as a full line of work. This is
-     * deliberately conservative when an off-target verse shares that line.
-     */
+    const val SABQI_REAL_LINE_TARGET = 5
+
+    /** A physical line touched by the target counts as a full line of work. */
     fun pageEquivalent(index: HifzGeometryIndex, target: HifzVerseRange): Double {
         val lines = HifzGeometryPolicy.targetLines(index, target)
         require(lines.isNotEmpty()) { "Target has no Mushaf geometry lines." }
-        return lines
-            .groupBy { it.ref.page }
-            .entries
-            .sumOf { (page, targetLines) ->
-                val pageLineCount = requireNotNull(index.linesByPage[page]).size
-                require(pageLineCount > 0)
-                targetLines.map { it.ref.geometryId }.distinct().size.toDouble() / pageLineCount
-            }
+        return pageEquivalentFromLines(index, lines)
     }
+
+    /** Task-page-aware volume, used by exact physical-page Itqan and pace tracking. */
+    fun pageEquivalent(index: HifzGeometryIndex, cursor: HifzCursor): Double {
+        val lines = HifzGeometryPolicy.targetLines(index, cursor)
+        require(lines.isNotEmpty()) { "Task has no Mushaf geometry lines." }
+        return pageEquivalentFromLines(index, lines)
+    }
+
+    private fun pageEquivalentFromLines(
+        index: HifzGeometryIndex,
+        lines: List<HifzTargetLine>
+    ): Double = lines
+        .groupBy { it.ref.page }
+        .entries
+        .sumOf { (page, targetLines) ->
+            val pageLineCount = requireNotNull(index.linesByPage[page]).size
+            require(pageLineCount > 0)
+            targetLines.map { it.ref.geometryId }.distinct().size.toDouble() / pageLineCount
+        }
 
     fun cursor(index: HifzGeometryIndex, target: HifzVerseRange): HifzCursor {
         val startPage = pagesForVerse(index, target.start).minOrNull()
@@ -39,9 +50,77 @@ object HifzPassagePlanningPolicy {
     }
 
     /**
-     * Selects whole verses only. If even the first verse exceeds the estimated capacity,
-     * that single verse is still the task: its internal line segments may span sessions,
-     * but no fraction is ever credited as an acquired Quran verse.
+     * Sabqi is an exact real-Mushaf-line method, not a time-derived quantity. Whole
+     * verses remain the canonical persistence unit. We stop before the first verse that
+     * would make the passage exceed five real lines; if the first verse itself occupies
+     * more than five lines, that indivisible verse is the only allowed oversize case.
+     */
+    fun takeSabqiFiveLines(
+        index: HifzGeometryIndex,
+        allowed: HifzVerseRange,
+        start: QuranVerseRef
+    ): HifzPlannedPassage? {
+        if (!allowed.contains(start)) return null
+        var current = start
+        var bestEnd: QuranVerseRef? = null
+        var bestLineCount = 0
+        while (allowed.contains(current)) {
+            val candidate = HifzVerseRange(start, current)
+            val lineCount = HifzGeometryPolicy.targetLines(index, candidate)
+                .map { it.ref.geometryId }
+                .distinct()
+                .size
+            require(lineCount > 0) { "Sabqi candidate has no Mushaf line geometry." }
+            if (bestEnd == null || lineCount <= SABQI_REAL_LINE_TARGET) {
+                bestEnd = current
+                bestLineCount = lineCount
+            } else {
+                break
+            }
+            if (bestLineCount >= SABQI_REAL_LINE_TARGET) break
+            current = HifzItqanTraversalPolicy.nextCanonicalVerse(current) ?: break
+        }
+        val end = bestEnd ?: return null
+        val range = HifzVerseRange(start, end)
+        return HifzPlannedPassage(cursor(index, range), pageEquivalent(index, range))
+    }
+
+    /**
+     * Itqan is exactly one physical Madinah-Mushaf page x30. At a configured corpus
+     * boundary the first/last task may be a partial page; it never borrows verses beyond
+     * the declared interval. Verse references remain canonical while rendering is clamped
+     * to this page by the task-aware geometry policy.
+     */
+    fun takeItqanPage(
+        index: HifzGeometryIndex,
+        allowed: HifzVerseRange,
+        start: QuranVerseRef,
+        afterPage: Int? = null
+    ): HifzPlannedPassage? {
+        if (!allowed.contains(start)) return null
+        val pages = pagesForVerse(index, start).sorted()
+        val page = pages.firstOrNull { afterPage == null || it > afterPage }
+            ?: pages.firstOrNull()
+            ?: return null
+        val pageLines = index.linesByPage[page].orEmpty()
+        val pageVerses = pageLines
+            .flatMap { it.verses }
+            .filter { allowed.contains(it) && compareQuranVerseRefs(start, it) <= 0 }
+            .distinct()
+            .sortedWith(Comparator(::compareQuranVerseRefs))
+        if (pageVerses.isEmpty()) return null
+        val cursor = HifzCursor(
+            start = start,
+            end = pageVerses.last(),
+            startPage = page,
+            endPage = page
+        )
+        return HifzPlannedPassage(cursor, pageEquivalent(index, cursor))
+    }
+
+    /**
+     * Selects whole verses only for adaptive time-based work (Murajaah support). If even
+     * the first verse exceeds capacity, that indivisible verse remains the task.
      */
     fun takeContiguousWithinCapacity(
         index: HifzGeometryIndex,
@@ -72,28 +151,22 @@ object HifzPassagePlanningPolicy {
         return HifzPlannedPassage(cursor(index, range), bestVolume)
     }
 
-    /** One page/partial-page revision portion, preserving mid-page Quran boundaries. */
+    /** One page/partial-page revision portion, preserving source task page boundaries. */
     fun murajaahPortions(
         index: HifzGeometryIndex,
         source: HifzCursor
-    ): List<HifzPlannedPassage> {
-        val sourceRange = HifzVerseRange(source.start, source.end)
-        return HifzGeometryPolicy.targetLines(index, sourceRange)
-            .groupBy { it.ref.page }
-            .toSortedMap()
-            .map { (page, lines) ->
-                val verses = lines.flatMap { it.targetVerses }.distinct()
-                    .sortedWith(Comparator(::compareQuranVerseRefs))
-                require(verses.isNotEmpty())
-                val range = HifzVerseRange(verses.first(), verses.last())
-                HifzPlannedPassage(
-                    cursor = HifzCursor(range.start, range.end, page, page),
-                    pageEquivalent = pageEquivalent(index, range)
-                )
-            }
-    }
+    ): List<HifzPlannedPassage> = HifzGeometryPolicy.targetLines(index, source)
+        .groupBy { it.ref.page }
+        .toSortedMap()
+        .map { (page, lines) ->
+            val verses = lines.flatMap { it.targetVerses }.distinct()
+                .sortedWith(Comparator(::compareQuranVerseRefs))
+            require(verses.isNotEmpty())
+            val cursor = HifzCursor(verses.first(), verses.last(), page, page)
+            HifzPlannedPassage(cursor = cursor, pageEquivalent = pageEquivalent(index, cursor))
+        }
 
-    private fun pagesForVerse(index: HifzGeometryIndex, verse: QuranVerseRef): Set<Int> =
+    internal fun pagesForVerse(index: HifzGeometryIndex, verse: QuranVerseRef): Set<Int> =
         index.linesByPage.entries
             .asSequence()
             .filter { (_, lines) -> lines.any { verse in it.verses } }
@@ -102,9 +175,8 @@ object HifzPassagePlanningPolicy {
 }
 
 /**
- * Idempotent daily planner. A date is recorded only when a daily load was actually
- * created/consumed (including an existing backlog). Missing setup or missing measured
- * pace remains retryable later the same day after the user completes configuration.
+ * Idempotent daily planner. Sabqi quantity is five real Mushaf lines; Itqan quantity is
+ * one physical page; only Murajaah converts available time through the adjustable pace.
  */
 object HifzDailyPlanner {
     fun planDate(
@@ -117,8 +189,6 @@ object HifzDailyPlanner {
         val resumed = HifzResumePolicy.resume(state, today).state
         val bounds = resumed.journeyConfig.bounds ?: return resumed
 
-        // Existing backlog/today work consumes today's automatic slot. Never create a
-        // second quota later the same day after that work is completed.
         if (HifzSchedulePolicy.nextTask(today, resumed.tasks) != null) {
             return markConsidered(resumed, today)
         }
@@ -129,17 +199,19 @@ object HifzDailyPlanner {
         }
         val availableMinutes = resumed.journeyConfig.availableMinutes.forTrack(track)
             ?: return resumed
-        val capacity = HifzTimeQuotaPolicy.pageEquivalentCapacity(
-            track,
-            availableMinutes.toDouble(),
-            resumed.journeyConfig.pace
-        ) ?: return resumed
-        if (capacity <= 0.0) return resumed
 
         val passage = when (track) {
-            HifzTrack.SABQI -> planSabqi(resumed, bounds, geometry, capacity)
-            HifzTrack.ITQAN -> planItqan(resumed, bounds, geometry, capacity)
-            HifzTrack.MURAJAAH -> planMurajaah(resumed, geometry, capacity)
+            HifzTrack.SABQI -> planSabqi(resumed, bounds, geometry)
+            HifzTrack.ITQAN -> planItqan(resumed, bounds, geometry)
+            HifzTrack.MURAJAAH -> {
+                val capacity = HifzTimeQuotaPolicy.pageEquivalentCapacity(
+                    track,
+                    availableMinutes.toDouble(),
+                    resumed.journeyConfig.pace
+                ) ?: return resumed
+                if (capacity <= 0.0) return resumed
+                planMurajaah(resumed, geometry, capacity)
+            }
         } ?: return markConsidered(resumed, today)
 
         val task = HifzTask(
@@ -160,44 +232,32 @@ object HifzDailyPlanner {
     private fun planSabqi(
         state: HifzState,
         bounds: HifzJourneyBounds,
-        geometry: HifzGeometryIndex,
-        capacity: Double
+        geometry: HifzGeometryIndex
     ): HifzPlannedPassage? {
         val last = state.tasks.filter { it.track == HifzTrack.SABQI }
-            .maxWithOrNull(
-                compareBy<HifzTask> { it.cursor.end.surah }
-                    .thenBy { it.cursor.end.ayah }
-            )
-        val start = if (last == null) {
-            bounds.sabqi.start
-        } else {
-            HifzItqanTraversalPolicy.nextCanonicalVerse(last.cursor.end) ?: return null
-        }
+            .maxWithOrNull(compareBy<HifzTask> { it.cursor.end.surah }.thenBy { it.cursor.end.ayah })
+        val start = if (last == null) bounds.sabqi.start
+        else HifzItqanTraversalPolicy.nextCanonicalVerse(last.cursor.end) ?: return null
         if (!bounds.sabqi.contains(start)) return null
-        return HifzPassagePlanningPolicy.takeContiguousWithinCapacity(
-            geometry, bounds.sabqi, start, capacity
-        )
+        return HifzPassagePlanningPolicy.takeSabqiFiveLines(geometry, bounds.sabqi, start)
     }
 
     private fun planItqan(
         state: HifzState,
         bounds: HifzJourneyBounds,
-        geometry: HifzGeometryIndex,
-        capacity: Double
+        geometry: HifzGeometryIndex
     ): HifzPlannedPassage? {
         val last = state.tasks.filter { it.track == HifzTrack.ITQAN }
-            .maxWithOrNull(
-                compareBy<HifzTask> { it.cursor.end.surah }
-                    .thenBy { it.cursor.end.ayah }
-            )
-        val start = if (last == null) {
-            bounds.itqan.first().start
-        } else {
-            HifzItqanTraversalPolicy.nextAfter(bounds.itqan, last.cursor.end) ?: return null
-        }
+            .maxWithOrNull(compareBy<HifzTask> { it.cursor.end.surah }.thenBy { it.cursor.end.ayah })
+        val start = if (last == null) bounds.itqan.first().start
+        else HifzItqanTraversalPolicy.nextAfter(bounds.itqan, last.cursor.end) ?: return null
         val interval = bounds.itqan.firstOrNull { it.contains(start) } ?: return null
-        return HifzPassagePlanningPolicy.takeContiguousWithinCapacity(
-            geometry, interval, start, capacity
+        val sameIntervalAsLast = last != null && interval.contains(last.cursor.end)
+        return HifzPassagePlanningPolicy.takeItqanPage(
+            geometry,
+            interval,
+            start,
+            afterPage = last?.cursor?.endPage?.takeIf { sameIntervalAsLast }
         )
     }
 
@@ -240,8 +300,6 @@ object HifzDailyPlanner {
             }
         }
 
-        // No arbitrary weighted score and no fixed Sabqi/Itqan ratio: explicit lexicographic
-        // priorities use observed fragility, then least-recent review and source age.
         val ranked = candidates.sortedWith(
             compareByDescending<Ranked> { it.errors }
                 .thenByDescending { it.reveals }
@@ -249,8 +307,7 @@ object HifzDailyPlanner {
                 .thenBy { it.sourceDate }
                 .thenBy { it.stable }
         )
-        return ranked.firstOrNull { it.passage.pageEquivalent <= capacity + 1e-9 }
-            ?.passage
+        return ranked.firstOrNull { it.passage.pageEquivalent <= capacity + 1e-9 }?.passage
             ?: ranked.firstOrNull()?.passage
     }
 
@@ -262,5 +319,6 @@ object HifzDailyPlanner {
             append(track.name.lowercase()).append('-').append(date)
             append('-').append(cursor.start.surah).append('_').append(cursor.start.ayah)
             append('-').append(cursor.end.surah).append('_').append(cursor.end.ayah)
+            append('-').append(cursor.startPage).append('_').append(cursor.endPage)
         }
 }
