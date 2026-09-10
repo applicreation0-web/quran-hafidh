@@ -43,18 +43,8 @@ data class HifzTask(
 object HifzSchedulePolicy {
     private const val MAX_REPLAN_SEARCH_DAYS = 56L
 
-    /** Fixed default rhythm approved for 0.10.10. */
-    fun defaultTrackFor(day: DayOfWeek): HifzTrack = when (day) {
-        DayOfWeek.MONDAY,
-        DayOfWeek.WEDNESDAY,
-        DayOfWeek.FRIDAY -> HifzTrack.SABQI
-
-        DayOfWeek.TUESDAY,
-        DayOfWeek.THURSDAY -> HifzTrack.ITQAN
-
-        DayOfWeek.SATURDAY,
-        DayOfWeek.SUNDAY -> HifzTrack.MURAJAAH
-    }
+    /** Approved rhythm used for a new 0.10.10 setup and legacy state without overrides. */
+    fun defaultTrackFor(day: DayOfWeek): HifzTrack = HifzWeeklySchedule.DEFAULT.trackFor(day)
 
     /**
      * Missing a planned day is not a failure and never moves the task silently.
@@ -68,17 +58,22 @@ object HifzSchedulePolicy {
 
     /**
      * Replanning is always explicit. It preserves identity, original date, cursor,
-     * quota and track. It can only target a later day dedicated to the same track.
+     * quota and track. It can only target a later day assigned to the same track by
+     * the user's current weekly schedule.
      */
-    fun replan(task: HifzTask, newDate: LocalDate): HifzTask {
+    fun replan(
+        task: HifzTask,
+        newDate: LocalDate,
+        schedule: HifzWeeklySchedule = HifzWeeklySchedule.DEFAULT
+    ): HifzTask {
         require(task.status != HifzTaskStatus.COMPLETED) {
             "A completed Hifz task cannot be replanned."
         }
         require(!newDate.isBefore(task.originalScheduledDate)) {
             "A Hifz task cannot be replanned before its original date."
         }
-        require(defaultTrackFor(newDate.dayOfWeek) == task.track) {
-            "A Hifz task must be replanned onto a day dedicated to the same track."
+        require(schedule.trackFor(newDate.dayOfWeek) == task.track) {
+            "A Hifz task must be replanned onto a configured day for the same track."
         }
         return task.copy(
             scheduledDate = newDate,
@@ -87,18 +82,19 @@ object HifzSchedulePolicy {
     }
 
     /**
-     * Suggests the next available day dedicated to the same Hifz track.
+     * Suggests the next available day assigned to the same Hifz track.
      * This function never mutates or replans the task by itself.
      */
     fun suggestReplanDate(
         task: HifzTask,
         after: LocalDate,
+        schedule: HifzWeeklySchedule = HifzWeeklySchedule.DEFAULT,
         available: (LocalDate) -> Boolean = { true }
     ): LocalDate? {
         if (task.status == HifzTaskStatus.COMPLETED) return null
         for (offset in 1L..MAX_REPLAN_SEARCH_DAYS) {
             val candidate = after.plusDays(offset)
-            if (defaultTrackFor(candidate.dayOfWeek) == task.track && available(candidate)) {
+            if (schedule.trackFor(candidate.dayOfWeek) == task.track && available(candidate)) {
                 return candidate
             }
         }
@@ -113,8 +109,9 @@ object HifzSchedulePolicy {
     fun suggestReplanDate(
         task: HifzTask,
         after: LocalDate,
-        existingTasks: List<HifzTask>
-    ): LocalDate? = suggestReplanDate(task, after) { candidate ->
+        existingTasks: List<HifzTask>,
+        schedule: HifzWeeklySchedule = HifzWeeklySchedule.DEFAULT
+    ): LocalDate? = suggestReplanDate(task, after, schedule) { candidate ->
         existingTasks.none { existing ->
             existing.id != task.id &&
                 existing.status != HifzTaskStatus.COMPLETED &&
