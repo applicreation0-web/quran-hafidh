@@ -1,0 +1,32 @@
+name: Export Quran Safeguard 0.10.10 source snapshot
+
+on:
+  push:
+    branches:
+      - "export/0.10.10-source-20260910"
+
+permissions:
+  contents: read
+
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact pinned source
+        uses: actions/checkout@v4
+        with:
+          ref: 24640a22a828409bb98fcab76dc49eadf967339b
+          fetch-depth: 0
+      - name: Create exact source ZIP
+        run: |
+          git archive --format=zip --prefix=quran-unlock-android-0.10.10-source/ -o Quran-Safeguard-0.10.10-source-24640a22.zip 24640a22a828409bb98fcab76dc49eadf967339b
+          sha256sum Quran-Safeguard-0.10.10-source-24640a22.zip > SHA256SUMS-source.txt
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.10-source-24640a22
+          path: |
+            Quran-Safeguard-0.10.10-source-24640a22.zip
+            SHA256SUMS-source.txt
+          if-no-files-found: error
+          retention-days: 14
