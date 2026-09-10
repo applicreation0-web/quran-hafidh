@@ -3,7 +3,7 @@ name: Quran Safeguard 0.10.10 audio and UX proof
 on:
   push:
     branches:
-      - "work/0.10.10-runtime-hifz-final"
+      - "audit/0.10.10-runtime-harness-fix"
   workflow_dispatch:
 
 permissions:
@@ -17,16 +17,24 @@ concurrency:
 env:
   BASELINE_RUN_ID: "34096699893"
   BASELINE_ARTIFACT: "quran-safeguard-0.10.8-unsigned"
+  APP_SOURCE_SHA: "24640a22a828409bb98fcab76dc49eadf967339b"
 
 jobs:
   audio-ux-proof:
     name: Real local audio + all critical UI surfaces
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact application candidate
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.APP_SOURCE_SHA }}
           fetch-depth: 0
+      - name: Record application provenance
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APP_SOURCE_SHA"
+          git show -s --format='%H %s' HEAD
       - name: Assert exact 0.10.10 hardening is already committed
         run: |
           python3 scripts/apply_01010_runtime_hardening.py
@@ -78,7 +86,9 @@ jobs:
         run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
       - name: Reclaim runner space before audio/UX emulator
         run: |
-          rm -rf baseline-apks ~/.android/avd
+          set -euo pipefail
+          rm -rf baseline-apks ~/.gradle/caches ~/.android/avd
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk || true
           df -h /
       - name: Runtime proof — real Husary download/playback + cross-app UI scale
         uses: reactivecircus/android-emulator-runner@v2
@@ -87,7 +97,8 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_2
-          disk-size: 4096M
+          disk-size: 2048M
+          ram-size: 2048M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
@@ -99,7 +110,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: audio-ux-proof-${{ github.sha }}
+          name: audio-ux-proof-${{ env.APP_SOURCE_SHA }}
           path: |
             app/build/reports/
             app/build/outputs/androidTest-results/
