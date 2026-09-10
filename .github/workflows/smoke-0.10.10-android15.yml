@@ -96,6 +96,54 @@ jobs:
           gradle --no-daemon :app:assembleLightDebug --stacktrace
           test -s app/build/outputs/apk/light/debug/app-light-debug.apk
 
+      - name: Prepare Android 15 diagnostic script
+        run: |
+          cat > android15-smoke-runtime.sh <<'SH'
+          #!/usr/bin/env bash
+          set -u
+          PACKAGE=com.applicreation0.quransafeguard
+          COMPONENT=com.applicreation0.quransafeguard/.DashboardActivity
+          adb wait-for-device
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" || exit 10
+          test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35" || exit 11
+          adb install -r app/build/outputs/apk/light/debug/app-light-debug.apk || exit 12
+          adb shell pm path "$PACKAGE" | tee android15-smoke-package.txt
+          adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$PACKAGE" | tee android15-smoke-resolve.txt || true
+          adb shell am force-stop "$PACKAGE" || true
+          adb logcat -c || true
+          set +e
+          adb shell am start -W -n "$COMPONENT" > android15-smoke-start.txt 2>&1
+          START_RC=$?
+          set -e
+          cat android15-smoke-start.txt
+          sleep 8
+          adb shell pidof "$PACKAGE" > android15-smoke-pid.txt 2>&1 || true
+          adb shell dumpsys activity activities > android15-smoke-activity.txt 2>&1 || true
+          adb shell dumpsys package "$PACKAGE" > android15-smoke-dumpsys-package.txt 2>&1 || true
+          adb logcat -d -v threadtime -t 1500 > android15-smoke-logcat.txt 2>&1 || true
+          echo "PID=$(cat android15-smoke-pid.txt 2>/dev/null || true)"
+          grep -E 'mResumedActivity|topResumedActivity|com\.applicreation0\.quransafeguard' android15-smoke-activity.txt | tail -n 40 || true
+          grep -E 'FATAL EXCEPTION|Process: com\.applicreation0\.quransafeguard|ANR in com\.applicreation0\.quransafeguard|AndroidRuntime|ActivityTaskManager' android15-smoke-logcat.txt | tail -n 120 || true
+          if [ "$START_RC" -ne 0 ]; then
+            echo "Android 15 explicit launcher start failed rc=$START_RC" >&2
+            exit 20
+          fi
+          if grep -Eq 'FATAL EXCEPTION|ANR in com\.applicreation0\.quransafeguard' android15-smoke-logcat.txt; then
+            echo 'Android 15 app crash/ANR evidence detected' >&2
+            exit 21
+          fi
+          if [ ! -s android15-smoke-pid.txt ]; then
+            echo 'Android 15 app process is not alive after successful explicit launch' >&2
+            exit 22
+          fi
+          if ! grep -Eq 'com\.applicreation0\.quransafeguard/.DashboardActivity|com\.applicreation0\.quransafeguard/com\.applicreation0\.quransafeguard\.DashboardActivity' android15-smoke-activity.txt; then
+            echo 'DashboardActivity not present in activity state after launch' >&2
+            exit 23
+          fi
+          echo 'ANDROID15_SMOKE_PASS'
+          SH
+          chmod +x android15-smoke-runtime.sh
+
       - name: Reclaim runner space before Android 15 AVD
         run: |
           set -euo pipefail
@@ -113,48 +161,7 @@ jobs:
           ram-size: 2048M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -u
-            PACKAGE=com.applicreation0.quransafeguard
-            COMPONENT=com.applicreation0.quransafeguard/.DashboardActivity
-            adb wait-for-device
-            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" || exit 10
-            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35" || exit 11
-            adb install -r app/build/outputs/apk/light/debug/app-light-debug.apk || exit 12
-            adb shell pm path "$PACKAGE" | tee android15-smoke-package.txt
-            adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$PACKAGE" | tee android15-smoke-resolve.txt || true
-            adb shell am force-stop "$PACKAGE" || true
-            adb logcat -c || true
-            set +e
-            adb shell am start -W -n "$COMPONENT" > android15-smoke-start.txt 2>&1
-            START_RC=$?
-            set -e
-            cat android15-smoke-start.txt
-            sleep 8
-            adb shell pidof "$PACKAGE" > android15-smoke-pid.txt 2>&1 || true
-            adb shell dumpsys activity activities > android15-smoke-activity.txt 2>&1 || true
-            adb shell dumpsys package "$PACKAGE" > android15-smoke-dumpsys-package.txt 2>&1 || true
-            adb logcat -d -v threadtime -t 1500 > android15-smoke-logcat.txt 2>&1 || true
-            echo "PID=$(cat android15-smoke-pid.txt 2>/dev/null || true)"
-            grep -E 'mResumedActivity|topResumedActivity|com\.applicreation0\.quransafeguard' android15-smoke-activity.txt | tail -n 40 || true
-            grep -E 'FATAL EXCEPTION|Process: com\.applicreation0\.quransafeguard|ANR in com\.applicreation0\.quransafeguard|AndroidRuntime|ActivityTaskManager' android15-smoke-logcat.txt | tail -n 120 || true
-            if [ "$START_RC" -ne 0 ]; then
-              echo "Android 15 explicit launcher start failed rc=$START_RC" >&2
-              exit 20
-            fi
-            if grep -Eq 'FATAL EXCEPTION|ANR in com\.applicreation0\.quransafeguard' android15-smoke-logcat.txt; then
-              echo 'Android 15 app crash/ANR evidence detected' >&2
-              exit 21
-            fi
-            if [ ! -s android15-smoke-pid.txt ]; then
-              echo 'Android 15 app process is not alive after successful explicit launch' >&2
-              exit 22
-            fi
-            if ! grep -Eq 'com\.applicreation0\.quransafeguard/.DashboardActivity|com\.applicreation0\.quransafeguard/com\.applicreation0\.quransafeguard\.DashboardActivity' android15-smoke-activity.txt; then
-              echo 'DashboardActivity not present in activity state after launch' >&2
-              exit 23
-            fi
-            echo 'ANDROID15_SMOKE_PASS'
+          script: bash android15-smoke-runtime.sh
 
       - name: Upload Android 15 launch diagnostics
         if: always()
