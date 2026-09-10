@@ -825,9 +825,9 @@ val verifyEditorialBoundary by tasks.registering {
         val launcherIcon = file(
             "src/main/res/drawable/ic_launcher_foreground.xml"
         ).readText()
-        listOf("#1D5B47", "#B48A3C", "#76563C", "#FFF8EA").forEach { brandColor ->
-            check(launcherIcon.contains(brandColor)) {
-                "Launcher icon lost a required green/gold/brown/ivory brand color: " + brandColor
+        listOf("#2C5D49", "#D8BA73", "#7A5337", "#FFFDF5").forEach { baselineColor ->
+            check(launcherIcon.contains(baselineColor)) {
+                "Launcher icon no longer matches the exact 0.10.8 green/gold/brown/ivory baseline: " + baselineColor
             }
         }
         listOf(
