@@ -1,0 +1,124 @@
+name: Quran Safeguard 0.10.10 minimal Android 15 smoke
+
+on:
+  push:
+    branches:
+      - "smoke/0.10.10-android15"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: quran-safeguard-01010-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BASELINE_RUN_ID: "34096699893"
+  BASELINE_ARTIFACT: "quran-safeguard-0.10.8-unsigned"
+
+jobs:
+  android15-smoke:
+    name: Boot Android 15 + install and launch Light
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Restore only Light Mushaf bytes required by preBuild
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: baseline-apks
+
+      - name: Extract only canonical Mushaf assets
+        run: |
+          python3 - <<'PY'
+          import shutil, zipfile
+          from pathlib import Path
+          apks = [p for p in Path('baseline-apks').rglob('*.apk') if 'plus' not in p.name.lower()]
+          if not apks:
+              raise SystemExit('Light baseline APK not found')
+          with zipfile.ZipFile(apks[0]) as z:
+              copied = 0
+              for info in z.infolist():
+                  if info.is_dir() or not info.filename.startswith('assets/mushaf/'):
+                      continue
+                  dest = Path('app/src/main') / info.filename
+                  dest.parent.mkdir(parents=True, exist_ok=True)
+                  with z.open(info) as src, dest.open('wb') as out:
+                      shutil.copyfileobj(src, out)
+                  copied += 1
+          print(f'Copied Mushaf files: {copied}')
+          if copied < 604:
+              raise SystemExit('Canonical Mushaf extraction incomplete')
+          PY
+          rm -rf baseline-apks
+          df -h /
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install only build SDK needed by the app
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Build Light debug only
+        run: gradle --no-daemon :app:assembleLightDebug --stacktrace
+
+      - name: Free runner space before AVD
+        run: |
+          rm -rf ~/.gradle/caches/transforms-* ~/.android/avd /tmp/* || true
+          df -h /
+
+      - name: Android 15 boot + install + launch smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disk-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb wait-for-device
+            booted=""
+            for i in $(seq 1 90); do
+              booted=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+              [ "$booted" = "1" ] && break
+              sleep 2
+            done
+            test "$booted" = "1"
+            adb devices
+            APK=$(find app/build/outputs/apk/light/debug -name '*.apk' | head -n 1)
+            test -n "$APK"
+            adb install -r "$APK"
+            adb shell am force-stop com.applicreation0.quransafeguard
+            adb shell am start -W -n com.applicreation0.quransafeguard/.MainActivity
+            sleep 3
+            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | grep 'com.applicreation0.quransafeguard'
+            adb shell pidof com.applicreation0.quransafeguard
+
+      - name: Record smoke provenance
+        if: always()
+        run: |
+          echo "candidate_base=24640a22a828409bb98fcab76dc49eadf967339b"
+          echo "smoke_sha=${GITHUB_SHA}"
+          git diff -- app || true
