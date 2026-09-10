@@ -117,7 +117,7 @@ jobs:
             local old_apk="$1" new_apk="$2" pkg="$3" label="$4"
             echo "=== $label ==="
             adb install "$old_apk"
-            adb shell am start -W -n "$pkg/.DashboardActivity" > "${label}-baseline-start.txt"
+            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 > "${label}-baseline-start.txt"
             sleep 3
             adb shell am force-stop "$pkg"
 
@@ -147,14 +147,19 @@ jobs:
           <map><int name="data_schema_version" value="8" /><int name="last_app_version_code" value="27" /></map>
           XML
 
+            adb push guard.xml /data/local/tmp/guard.xml >/dev/null
+            adb push bookmarks.xml /data/local/tmp/bookmarks.xml >/dev/null
+            adb push reminder.xml /data/local/tmp/reminder.xml >/dev/null
+            adb push migration.xml /data/local/tmp/migration.xml >/dev/null
             adb shell run-as "$pkg" mkdir -p shared_prefs
-            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/guard_prefs.xml' < guard.xml
-            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/free_quran_reader.xml' < bookmarks.xml
-            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/daily_reminders.xml' < reminder.xml
-            adb shell run-as "$pkg" sh -c 'cat > shared_prefs/quran_safeguard_migrations.xml' < migration.xml
+            adb shell run-as "$pkg" cp /data/local/tmp/guard.xml shared_prefs/guard_prefs.xml
+            adb shell run-as "$pkg" cp /data/local/tmp/bookmarks.xml shared_prefs/free_quran_reader.xml
+            adb shell run-as "$pkg" cp /data/local/tmp/reminder.xml shared_prefs/daily_reminders.xml
+            adb shell run-as "$pkg" cp /data/local/tmp/migration.xml shared_prefs/quran_safeguard_migrations.xml
 
             adb install -r "$new_apk" | tee "${label}-update-install.txt"
-            adb shell am start -W -n "$pkg/.DashboardActivity" > "${label}-current-start.txt"
+            adb logcat -c || true
+            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 > "${label}-current-start.txt"
             sleep 5
             adb shell pidof "$pkg" | tee "${label}-pid.txt"
             test -s "${label}-pid.txt"
@@ -168,7 +173,8 @@ jobs:
 
             grep -q 'com.whatsapp' "${label}-guard-after.xml"
             grep -q 'com.android.chrome' "${label}-guard-after.xml"
-            grep -q 'readings_completed.*17\|value="17".*readings_completed' "${label}-guard-after.xml" || grep -q 'readings_completed' "${label}-guard-after.xml"
+            grep -q 'readings_completed' "${label}-guard-after.xml"
+            grep -q 'value="17"' "${label}-guard-after.xml"
             grep -q 'migration-probe' "${label}-guard-after.xml"
             grep -q '>42<' "${label}-bookmarks-after.xml"
             grep -q '>314<' "${label}-bookmarks-after.xml"
