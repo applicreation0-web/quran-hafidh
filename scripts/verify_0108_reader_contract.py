@@ -43,13 +43,17 @@ require('id="sun"' in free_html and "setBrightness" in free and "setBrightness" 
 require("ReaderComfortPrefs.applyBrightness" in free,
         "free reader does not apply the persisted brightness")
 
-runtime_sources = "\n".join(
-    path.read_text(encoding="utf-8")
-    for path in (ROOT / "app/src").rglob("*")
-    if path.is_file() and path.suffix in {".kt", ".java", ".html", ".js", ".xml"}
+obsolete_cream_offenders = []
+for path in (ROOT / "app/src").rglob("*"):
+    if not path.is_file() or path.suffix not in {".kt", ".java", ".html", ".js", ".xml"}:
+        continue
+    source = path.read_text(encoding="utf-8")
+    if "#F4F0E6" in source or "0xFFF4F0E6" in source:
+        obsolete_cream_offenders.append(str(path.relative_to(ROOT)))
+require(
+    not obsolete_cream_offenders,
+    "obsolete cream remains in: " + ", ".join(obsolete_cream_offenders)
 )
-require("#F4F0E6" not in runtime_sources and "0xFFF4F0E6" not in runtime_sources,
-        "obsolete cream remains in runtime sources")
 
 require("Poésie · lignes conservées selon l’édition source" not in panel,
         "application-authored poetry explanation still rendered")
@@ -75,4 +79,3 @@ print("- calm immersion + tap reveal; keep-screen-on")
 print("- Tafsir editorial poetry label removed")
 print("- Jalalayn remains English; honorific shorthand normalized at display time")
 print("- 60-second/foreground/unlock structural safeguards retained")
-
