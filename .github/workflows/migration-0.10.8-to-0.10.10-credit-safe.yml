@@ -85,10 +85,15 @@ jobs:
 
       - uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK
+      - name: Install Android SDK and Android 15 image
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-37.0" \
+            "build-tools;36.0.0" \
+            "emulator" \
+            "system-images;android-35;default;x86_64"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -234,17 +239,56 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk || true
           df -h /
 
-      - name: Boot Android 15 and verify direct Light and Plus updates
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          profile: pixel_2
-          disk-size: 2048M
-          ram-size: 2048M
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash migration-smoke.sh
+      - name: Boot Android 15 manually and verify direct Light and Plus updates
+        run: |
+          set -euo pipefail
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd --force \
+            --name migration35 \
+            --package 'system-images;android-35;default;x86_64' \
+            --device pixel_2
+          printf 'hw.cpu.ncore=2\nhw.ramSize=2048M\ndisk.dataPartition.size=2048M\n' >> "$ANDROID_AVD_HOME/migration35.avd/config.ini"
+
+          adb start-server
+          nohup emulator \
+            -avd migration35 \
+            -port 5554 \
+            -no-window \
+            -gpu swiftshader_indirect \
+            -noaudio \
+            -no-boot-anim \
+            -camera-back none \
+            -accel off \
+            -no-snapshot \
+            -no-metrics \
+            > emulator-migration.log 2>&1 &
+          echo $! > emulator.pid
+
+          booted=0
+          for i in $(seq 1 180); do
+            state="$(adb -s emulator-5554 get-state 2>/dev/null || true)"
+            completed="$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+            if [ "$state" = "device" ] && [ "$completed" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 3
+          done
+          if [ "$booted" -ne 1 ]; then
+            echo 'Android 15 emulator did not reach boot_completed=1' >&2
+            tail -n 200 emulator-migration.log >&2 || true
+            exit 40
+          fi
+
+          export ANDROID_SERIAL=emulator-5554
+          bash migration-smoke.sh
+
+      - name: Stop Android emulator
+        if: always()
+        run: |
+          adb -s emulator-5554 emu kill || true
+          if [ -f emulator.pid ]; then kill "$(cat emulator.pid)" || true; fi
 
       - name: Upload migration evidence
         if: always()
@@ -253,6 +297,7 @@ jobs:
           name: direct-0108-to-01010-migration-evidence
           path: |
             migration-apk-sha256.txt
+            emulator-migration.log
             light-*.txt
             light-*.xml
             plus-*.txt
