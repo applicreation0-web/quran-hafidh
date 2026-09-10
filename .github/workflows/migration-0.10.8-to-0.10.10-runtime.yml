@@ -71,9 +71,8 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import zipfile
-          root=Path.home() / 'work'
-          baseline=Path(__import__('os').environ['RUNNER_TEMP'])/'baseline-apks'
+          import zipfile, os
+          baseline=Path(os.environ['RUNNER_TEMP'])/'baseline-apks'
           apks=list(baseline.rglob('*.apk'))
           light=[p for p in apks if 'light' in p.name.lower()]
           plus=[p for p in apks if 'plus' in p.name.lower()]
@@ -85,7 +84,7 @@ jobs:
                       p=Path('app/src/main')/n
                       p.parent.mkdir(parents=True,exist_ok=True)
                       p.write_bytes(z.read(n))
-          with zipfile.ZipFile(plus[0]) as z:
+          with zipfile.ZipFile(plus) as z:
               for n in z.namelist():
                   if n.startswith('assets/tafsir/') and not n.endswith('/'):
                       p=Path('app/src/plus')/n
@@ -133,7 +132,7 @@ jobs:
                       p=Path('app/src/main')/n
                       p.parent.mkdir(parents=True,exist_ok=True)
                       p.write_bytes(z.read(n))
-          with zipfile.ZipFile(plus[0]) as z:
+          with zipfile.ZipFile(plus) as z:
               for n in z.namelist():
                   if n.startswith('assets/tafsir/') and not n.endswith('/'):
                       p=Path('app/src/plus')/n
@@ -196,6 +195,74 @@ jobs:
           </map>
           XML
 
+      - name: Prepare single-process migration runtime script
+        run: |
+          cat > migration-runtime.sh <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+          test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35"
+          for EDITION in light plus; do
+            if [ "$EDITION" = light ]; then
+              PKG=com.applicreation0.quransafeguard
+            else
+              PKG=com.applicreation0.quransafeguard.plus
+            fi
+            OLD="$RUNNER_TEMP/0108-$EDITION-debug.apk"
+            NEW="$RUNNER_TEMP/01010-$EDITION-debug.apk"
+            echo "=== $EDITION: install 0.10.8 ==="
+            adb install -r "$OLD"
+            adb logcat -c || true
+            adb shell am start -W -n "$PKG/.DashboardActivity" | tee "migration-$EDITION-0108-start.txt"
+            sleep 2
+            adb shell am force-stop "$PKG"
+            adb shell run-as "$PKG" mkdir -p shared_prefs
+            adb shell "run-as $PKG sh -c 'cat > shared_prefs/guard_prefs.xml'" < "$RUNNER_TEMP/guard_prefs_seed.xml"
+            adb shell run-as "$PKG" chmod 600 shared_prefs/guard_prefs.xml
+            adb shell run-as "$PKG" cat shared_prefs/guard_prefs.xml > "migration-$EDITION-before.xml"
+            adb shell run-as "$PKG" cat shared_prefs/quran_safeguard_migrations.xml > "migration-$EDITION-schema-before.xml" || true
+
+            echo "=== $EDITION: adb install -r 0.10.10 over 0.10.8 ==="
+            adb install -r "$NEW"
+            adb shell dumpsys package "$PKG" | grep -m1 'versionCode=29'
+            adb logcat -c || true
+            set +e
+            adb shell am start -W -n "$PKG/.DashboardActivity" > "migration-$EDITION-start.txt" 2>&1
+            START_RC=$?
+            set -e
+            cat "migration-$EDITION-start.txt"
+            sleep 5
+            adb shell pidof "$PKG" > "migration-$EDITION-pid.txt" 2>&1 || true
+            adb shell run-as "$PKG" cat shared_prefs/guard_prefs.xml > "migration-$EDITION-after.xml" || true
+            adb shell run-as "$PKG" cat shared_prefs/quran_safeguard_migrations.xml > "migration-$EDITION-schema-after.xml" || true
+            adb logcat -d -v threadtime -t 1500 > "migration-$EDITION-logcat.txt" 2>&1 || true
+
+            test "$START_RC" -eq 0
+            test -s "migration-$EDITION-pid.txt"
+            grep -q 'com.whatsapp' "migration-$EDITION-after.xml"
+            grep -q 'com.android.chrome' "migration-$EDITION-after.xml"
+            grep -q 'name="selected_juz"' "migration-$EDITION-after.xml"
+            grep -q '>1<' "migration-$EDITION-after.xml"
+            grep -q '>30<' "migration-$EDITION-after.xml"
+            grep -q 'name="selected_hizb"' "migration-$EDITION-after.xml"
+            grep -q '>60<' "migration-$EDITION-after.xml"
+            grep -q '<string name="selection_mode">HIZB</string>' "migration-$EDITION-after.xml"
+            grep -q '<boolean name="accessibility_consent" value="true"' "migration-$EDITION-after.xml"
+            grep -q '<int name="readings_completed" value="7"' "migration-$EDITION-after.xml"
+            grep -q '<long name="total_reading_ms" value="420000"' "migration-$EDITION-after.xml"
+            grep -q '<long name="last_reading_ms" value="65000"' "migration-$EDITION-after.xml"
+            grep -q '1690000000000|com.whatsapp|42|65000|MUSHAF' "migration-$EDITION-after.xml"
+            grep -q '<int name="data_schema_version" value="8"' "migration-$EDITION-schema-after.xml"
+            if grep -Eq 'FATAL EXCEPTION|ANR in (com\.applicreation0\.quransafeguard|com\.applicreation0\.quransafeguard\.plus)' "migration-$EDITION-logcat.txt"; then
+              echo "Crash/ANR during $EDITION upgrade" >&2
+              exit 31
+            fi
+            adb uninstall "$PKG"
+          done
+          echo 'REAL_0108_TO_01010_MIGRATION_PASS'
+          SH
+          chmod +x migration-runtime.sh
+
       - name: Reclaim runner space before Android 15 migration device
         run: |
           set -euo pipefail
@@ -213,63 +280,7 @@ jobs:
           ram-size: 2048M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -eu
-            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
-            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35"
-            adb push "$RUNNER_TEMP/guard_prefs_seed.xml" /data/local/tmp/guard_prefs_seed.xml
-            for EDITION in light plus; do
-              if [ "$EDITION" = light ]; then
-                PKG=com.applicreation0.quransafeguard
-              else
-                PKG=com.applicreation0.quransafeguard.plus
-              fi
-              OLD="$RUNNER_TEMP/0108-$EDITION-debug.apk"
-              NEW="$RUNNER_TEMP/01010-$EDITION-debug.apk"
-              echo "=== $EDITION: install 0.10.8 ==="
-              adb install -r "$OLD"
-              adb logcat -c
-              adb shell am start -W -n "$PKG/.DashboardActivity"
-              sleep 2
-              adb shell am force-stop "$PKG"
-              adb shell run-as "$PKG" mkdir -p shared_prefs
-              adb shell run-as "$PKG" cp /data/local/tmp/guard_prefs_seed.xml shared_prefs/guard_prefs.xml
-              adb shell run-as "$PKG" chmod 600 shared_prefs/guard_prefs.xml
-              adb shell run-as "$PKG" cat shared_prefs/guard_prefs.xml > "migration-$EDITION-before.xml"
-              adb shell run-as "$PKG" cat shared_prefs/quran_safeguard_migrations.xml > "migration-$EDITION-schema-before.xml"
-
-              echo "=== $EDITION: adb install -r 0.10.10 over 0.10.8 ==="
-              adb install -r "$NEW"
-              adb shell dumpsys package "$PKG" | grep -m1 'versionCode=29'
-              adb logcat -c
-              adb shell am start -W -n "$PKG/.DashboardActivity" | tee "migration-$EDITION-start.txt"
-              sleep 5
-              adb shell pidof "$PKG" > "migration-$EDITION-pid.txt"
-              adb shell run-as "$PKG" cat shared_prefs/guard_prefs.xml > "migration-$EDITION-after.xml"
-              adb shell run-as "$PKG" cat shared_prefs/quran_safeguard_migrations.xml > "migration-$EDITION-schema-after.xml"
-              adb logcat -d -v threadtime -t 1000 > "migration-$EDITION-logcat.txt" || true
-
-              grep -q 'com.whatsapp' "migration-$EDITION-after.xml"
-              grep -q 'com.android.chrome' "migration-$EDITION-after.xml"
-              grep -q 'name="selected_juz"' "migration-$EDITION-after.xml"
-              grep -q '>1<' "migration-$EDITION-after.xml"
-              grep -q '>30<' "migration-$EDITION-after.xml"
-              grep -q 'name="selected_hizb"' "migration-$EDITION-after.xml"
-              grep -q '>60<' "migration-$EDITION-after.xml"
-              grep -q '<string name="selection_mode">HIZB</string>' "migration-$EDITION-after.xml"
-              grep -q '<boolean name="accessibility_consent" value="true"' "migration-$EDITION-after.xml"
-              grep -q '<int name="readings_completed" value="7"' "migration-$EDITION-after.xml"
-              grep -q '<long name="total_reading_ms" value="420000"' "migration-$EDITION-after.xml"
-              grep -q '<long name="last_reading_ms" value="65000"' "migration-$EDITION-after.xml"
-              grep -q '1690000000000|com.whatsapp|42|65000|MUSHAF' "migration-$EDITION-after.xml"
-              grep -q '<int name="data_schema_version" value="8"' "migration-$EDITION-schema-after.xml"
-              if grep -Eq 'FATAL EXCEPTION|ANR in (com\.applicreation0\.quransafeguard|com\.applicreation0\.quransafeguard\.plus)' "migration-$EDITION-logcat.txt"; then
-                echo "Crash/ANR during $EDITION upgrade" >&2
-                exit 31
-              fi
-              adb uninstall "$PKG"
-            done
-            echo 'REAL_0108_TO_01010_MIGRATION_PASS'
+          script: bash migration-runtime.sh
 
       - name: Upload migration evidence
         if: always()
