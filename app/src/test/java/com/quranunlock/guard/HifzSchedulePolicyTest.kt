@@ -20,6 +20,41 @@ class HifzSchedulePolicyTest {
     }
 
     @Test
+    fun customWeekControlsReplanWithoutChangingTaskIdentityOrQuota() {
+        val schedule = HifzWeeklySchedule(
+            monday = HifzTrack.SABQI,
+            tuesday = HifzTrack.ITQAN,
+            wednesday = HifzTrack.ITQAN,
+            thursday = HifzTrack.MURAJAAH,
+            friday = HifzTrack.SABQI,
+            saturday = HifzTrack.MURAJAAH,
+            sunday = HifzTrack.SABQI
+        )
+        val original = LocalDate.of(2026, 9, 8)
+        val task = task(
+            id = "custom-itqan",
+            track = HifzTrack.ITQAN,
+            date = original,
+            quota = 27,
+            status = HifzTaskStatus.OVERDUE
+        )
+
+        val suggested = HifzSchedulePolicy.suggestReplanDate(
+            task = task,
+            after = original,
+            schedule = schedule
+        )
+        assertEquals(LocalDate.of(2026, 9, 9), suggested)
+
+        val replanned = HifzSchedulePolicy.replan(task, requireNotNull(suggested), schedule)
+        assertEquals(task.id, replanned.id)
+        assertEquals(27, replanned.quota)
+        assertEquals(task.cursor, replanned.cursor)
+        assertEquals(original, replanned.originalScheduledDate)
+        assertEquals(LocalDate.of(2026, 9, 9), replanned.scheduledDate)
+    }
+
+    @Test
     fun missedTaskBecomesOverdueWithoutMovingCursorQuotaOrDates() {
         val originalDate = LocalDate.of(2026, 9, 7)
         val originalCursor = HifzCursor.page(2, 1, 5, 2)
