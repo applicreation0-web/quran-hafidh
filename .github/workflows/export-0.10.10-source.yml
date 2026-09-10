@@ -15,18 +15,21 @@ jobs:
       - name: Checkout exact pinned source
         uses: actions/checkout@v4
         with:
-          ref: 24640a22a828409bb98fcab76dc49eadf967339b
+          ref: 43d8b4aa5a409782d16a065755913558b9e47758
           fetch-depth: 0
+      - name: Record candidate SHA
+        run: echo "43d8b4aa5a409782d16a065755913558b9e47758" > candidate-sha.txt
       - name: Create exact source ZIP
         run: |
-          git archive --format=zip --prefix=quran-unlock-android-0.10.10-source/ -o Quran-Safeguard-0.10.10-source-24640a22.zip 24640a22a828409bb98fcab76dc49eadf967339b
-          sha256sum Quran-Safeguard-0.10.10-source-24640a22.zip > SHA256SUMS-source.txt
+          git archive --format=zip --prefix=quran-unlock-android-0.10.10-source/ -o Quran-Safeguard-0.10.10-source-43d8b4aa.zip 43d8b4aa5a409782d16a065755913558b9e47758
+          sha256sum Quran-Safeguard-0.10.10-source-43d8b4aa.zip > SHA256SUMS-source.txt
       - name: Upload source snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: quran-safeguard-0.10.10-source-24640a22
+          name: quran-safeguard-0.10.10-source-43d8b4aa
           path: |
-            Quran-Safeguard-0.10.10-source-24640a22.zip
+            Quran-Safeguard-0.10.10-source-43d8b4aa.zip
             SHA256SUMS-source.txt
+            candidate-sha.txt
           if-no-files-found: error
           retention-days: 14
