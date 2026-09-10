@@ -2,12 +2,15 @@ name: 0.10.10 Audit A - Operational contradictory
 
 on:
   push:
-    branches: ["work/0.10.10-runtime-hifz-final"]
+    branches: ["audit/0.10.10-runtime-harness-fix"]
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
+
+env:
+  APP_SOURCE_SHA: "24640a22a828409bb98fcab76dc49eadf967339b"
 
 concurrency:
   group: quran-safeguard-01010-audit-a-${{ github.ref }}
@@ -18,9 +21,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact application candidate
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.APP_SOURCE_SHA }}
+      - name: Record application provenance
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APP_SOURCE_SHA"
+          git show -s --format='%H %s' HEAD
       - name: Apply 0.10.10 hardening idempotently
         run: |
           python3 scripts/apply_01010_runtime_hardening.py
@@ -86,7 +95,9 @@ jobs:
           python3 scripts/verify_plus_apk_tafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
       - name: Reclaim runner space before emulator
         run: |
+          set -euo pipefail
           rm -rf baseline108 ~/.android/avd
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk || true
           df -h /
       - name: Runtime zone-of-activity audit - Light
         uses: reactivecircus/android-emulator-runner@v2
@@ -95,9 +106,16 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_4
-          disk-size: 4096M
+          disk-size: 2048M
+          ram-size: 2048M
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: gradle --no-daemon :app:connectedLightDebugAndroidTest --stacktrace
+      - name: Reset AVD before Plus runtime audit
+        if: success()
+        run: |
+          rm -rf ~/.android/avd
+          df -h /
       - name: Runtime zone-of-activity audit - Plus
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -105,14 +123,16 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_4
-          disk-size: 4096M
+          disk-size: 2048M
+          ram-size: 2048M
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: gradle --no-daemon :app:connectedPlusDebugAndroidTest --stacktrace
       - name: Upload independent operational evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: audit-a-operational-evidence-${{ github.sha }}
+          name: audit-a-operational-evidence-${{ env.APP_SOURCE_SHA }}
           path: |
             app/build/reports/
             app/build/outputs/androidTest-results/
