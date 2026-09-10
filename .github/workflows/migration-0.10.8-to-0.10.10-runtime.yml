@@ -1,0 +1,283 @@
+name: 0.10.8 to 0.10.10 real upgrade gate
+
+on:
+  push:
+    branches:
+      - "migration/0.10.8-to-0.10.10-runtime"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  BASE_SOURCE_SHA: "f21002d6c491a1a1556c5c7e1c55bf5635e741c5"
+  APP_SOURCE_SHA: "24640a22a828409bb98fcab76dc49eadf967339b"
+  BASELINE_RUN_ID: "34096699893"
+  BASELINE_ARTIFACT: "quran-safeguard-0.10.8-unsigned"
+
+concurrency:
+  group: quran-safeguard-0108-to-01010-migration
+  cancel-in-progress: true
+
+jobs:
+  real-upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Download audited 0.10.8 corpus source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.BASELINE_ARTIFACT }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.BASELINE_RUN_ID }}
+          path: ${{ runner.temp }}/baseline-apks
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "platforms;android-35"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Checkout exact 0.10.8 source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_SOURCE_SHA }}
+          fetch-depth: 1
+
+      - name: Prove 0.10.8 source provenance
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$BASE_SOURCE_SHA"
+          git show -s --format='%H %s' HEAD
+
+      - name: Restore 0.10.8 Mushaf and Plus corpus
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          root=Path.home() / 'work'
+          baseline=Path(__import__('os').environ['RUNNER_TEMP'])/'baseline-apks'
+          apks=list(baseline.rglob('*.apk'))
+          light=[p for p in apks if 'light' in p.name.lower()]
+          plus=[p for p in apks if 'plus' in p.name.lower()]
+          if len(light) != 1 or len(plus) != 1:
+              raise SystemExit(f'Expected one Light and one Plus 0.10.8 APK, got {apks}')
+          with zipfile.ZipFile(light[0]) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/mushaf/') and not n.endswith('/'):
+                      p=Path('app/src/main')/n
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      p.write_bytes(z.read(n))
+          with zipfile.ZipFile(plus[0]) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/tafsir/') and not n.endswith('/'):
+                      p=Path('app/src/plus')/n
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      p.write_bytes(z.read(n))
+          PY
+
+      - name: Build signed-debug 0.10.8 Light and Plus
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+          cp app/build/outputs/apk/light/debug/app-light-debug.apk "$RUNNER_TEMP/0108-light-debug.apk"
+          cp app/build/outputs/apk/plus/debug/app-plus-debug.apk "$RUNNER_TEMP/0108-plus-debug.apk"
+          test -s "$RUNNER_TEMP/0108-light-debug.apk"
+          test -s "$RUNNER_TEMP/0108-plus-debug.apk"
+
+      - name: Checkout exact 0.10.10 application candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.APP_SOURCE_SHA }}
+          fetch-depth: 1
+          clean: true
+
+      - name: Prove 0.10.10 source provenance
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APP_SOURCE_SHA"
+          git show -s --format='%H %s' HEAD
+
+      - name: Restore audited immutable corpus into 0.10.10 source
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, zipfile
+          baseline=Path(os.environ['RUNNER_TEMP'])/'baseline-apks'
+          apks=list(baseline.rglob('*.apk'))
+          light=[p for p in apks if 'light' in p.name.lower()]
+          plus=[p for p in apks if 'plus' in p.name.lower()]
+          if len(light) != 1 or len(plus) != 1:
+              raise SystemExit(f'Expected one Light and one Plus 0.10.8 APK, got {apks}')
+          with zipfile.ZipFile(light[0]) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/mushaf/') and not n.endswith('/'):
+                      p=Path('app/src/main')/n
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      p.write_bytes(z.read(n))
+          with zipfile.ZipFile(plus[0]) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/tafsir/') and not n.endswith('/'):
+                      p=Path('app/src/plus')/n
+                      p.parent.mkdir(parents=True,exist_ok=True)
+                      p.write_bytes(z.read(n))
+          PY
+
+      - name: Build signed-debug 0.10.10 Light and Plus
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+          cp app/build/outputs/apk/light/debug/app-light-debug.apk "$RUNNER_TEMP/01010-light-debug.apk"
+          cp app/build/outputs/apk/plus/debug/app-plus-debug.apk "$RUNNER_TEMP/01010-plus-debug.apk"
+          test -s "$RUNNER_TEMP/01010-light-debug.apk"
+          test -s "$RUNNER_TEMP/01010-plus-debug.apk"
+
+      - name: Prove update package IDs, versions and signing compatibility
+        run: |
+          set -euo pipefail
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          for apk in "$RUNNER_TEMP/0108-light-debug.apk" "$RUNNER_TEMP/0108-plus-debug.apk" "$RUNNER_TEMP/01010-light-debug.apk" "$RUNNER_TEMP/01010-plus-debug.apk"; do
+            "$AAPT" dump badging "$apk" | head -n 2
+            "$APKSIGNER" verify --print-certs "$apk" | grep 'Signer #1 certificate SHA-256 digest'
+          done
+          L08=$($APKSIGNER verify --print-certs "$RUNNER_TEMP/0108-light-debug.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {print $2}')
+          L10=$($APKSIGNER verify --print-certs "$RUNNER_TEMP/01010-light-debug.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {print $2}')
+          P08=$($APKSIGNER verify --print-certs "$RUNNER_TEMP/0108-plus-debug.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {print $2}')
+          P10=$($APKSIGNER verify --print-certs "$RUNNER_TEMP/01010-plus-debug.apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {print $2}')
+          test -n "$L08" && test "$L08" = "$L10"
+          test -n "$P08" && test "$P08" = "$P10"
+          "$AAPT" dump badging "$RUNNER_TEMP/0108-light-debug.apk" | grep -q "package: name='com.applicreation0.quransafeguard' versionCode='27'"
+          "$AAPT" dump badging "$RUNNER_TEMP/01010-light-debug.apk" | grep -q "package: name='com.applicreation0.quransafeguard' versionCode='29'"
+          "$AAPT" dump badging "$RUNNER_TEMP/0108-plus-debug.apk" | grep -q "package: name='com.applicreation0.quransafeguard.plus' versionCode='27'"
+          "$AAPT" dump badging "$RUNNER_TEMP/01010-plus-debug.apk" | grep -q "package: name='com.applicreation0.quransafeguard.plus' versionCode='29'"
+
+      - name: Prepare representative 0.10.8 persisted state
+        run: |
+          cat > "$RUNNER_TEMP/guard_prefs_seed.xml" <<'XML'
+          <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+          <map>
+              <set name="protected_packages">
+                  <string>com.whatsapp</string>
+                  <string>com.android.chrome</string>
+              </set>
+              <set name="selected_juz">
+                  <string>1</string>
+                  <string>30</string>
+              </set>
+              <set name="selected_hizb">
+                  <string>1</string>
+                  <string>60</string>
+              </set>
+              <string name="selection_mode">HIZB</string>
+              <boolean name="accessibility_consent" value="true" />
+              <int name="readings_completed" value="7" />
+              <long name="total_reading_ms" value="420000" />
+              <long name="last_reading_ms" value="65000" />
+              <string name="reading_history">1690000000000|com.whatsapp|42|65000|MUSHAF</string>
+          </map>
+          XML
+
+      - name: Reclaim runner space before Android 15 migration device
+        run: |
+          set -euo pipefail
+          rm -rf "$RUNNER_TEMP/baseline-apks" ~/.gradle/caches ~/.android/avd
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk || true
+          df -h /
+
+      - name: Real Android 15 upgrade 0.10.8 to 0.10.10 - Light and Plus
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disk-size: 2048M
+          ram-size: 2048M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -eu
+            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+            test "$(adb shell getprop ro.build.version.sdk | tr -d '\r')" = "35"
+            adb push "$RUNNER_TEMP/guard_prefs_seed.xml" /data/local/tmp/guard_prefs_seed.xml
+            for EDITION in light plus; do
+              if [ "$EDITION" = light ]; then
+                PKG=com.applicreation0.quransafeguard
+              else
+                PKG=com.applicreation0.quransafeguard.plus
+              fi
+              OLD="$RUNNER_TEMP/0108-$EDITION-debug.apk"
+              NEW="$RUNNER_TEMP/01010-$EDITION-debug.apk"
+              echo "=== $EDITION: install 0.10.8 ==="
+              adb install -r "$OLD"
+              adb logcat -c
+              adb shell am start -W -n "$PKG/.DashboardActivity"
+              sleep 2
+              adb shell am force-stop "$PKG"
+              adb shell run-as "$PKG" mkdir -p shared_prefs
+              adb shell run-as "$PKG" cp /data/local/tmp/guard_prefs_seed.xml shared_prefs/guard_prefs.xml
+              adb shell run-as "$PKG" chmod 600 shared_prefs/guard_prefs.xml
+              adb shell run-as "$PKG" cat shared_prefs/guard_prefs.xml > "migration-$EDITION-before.xml"
+              adb shell run-as "$PKG" cat shared_prefs/quran_safeguard_migrations.xml > "migration-$EDITION-schema-before.xml"
+
+              echo "=== $EDITION: adb install -r 0.10.10 over 0.10.8 ==="
+              adb install -r "$NEW"
+              adb shell dumpsys package "$PKG" | grep -m1 'versionCode=29'
+              adb logcat -c
+              adb shell am start -W -n "$PKG/.DashboardActivity" | tee "migration-$EDITION-start.txt"
+              sleep 5
+              adb shell pidof "$PKG" > "migration-$EDITION-pid.txt"
+              adb shell run-as "$PKG" cat shared_prefs/guard_prefs.xml > "migration-$EDITION-after.xml"
+              adb shell run-as "$PKG" cat shared_prefs/quran_safeguard_migrations.xml > "migration-$EDITION-schema-after.xml"
+              adb logcat -d -v threadtime -t 1000 > "migration-$EDITION-logcat.txt" || true
+
+              grep -q 'com.whatsapp' "migration-$EDITION-after.xml"
+              grep -q 'com.android.chrome' "migration-$EDITION-after.xml"
+              grep -q 'name="selected_juz"' "migration-$EDITION-after.xml"
+              grep -q '>1<' "migration-$EDITION-after.xml"
+              grep -q '>30<' "migration-$EDITION-after.xml"
+              grep -q 'name="selected_hizb"' "migration-$EDITION-after.xml"
+              grep -q '>60<' "migration-$EDITION-after.xml"
+              grep -q '<string name="selection_mode">HIZB</string>' "migration-$EDITION-after.xml"
+              grep -q '<boolean name="accessibility_consent" value="true"' "migration-$EDITION-after.xml"
+              grep -q '<int name="readings_completed" value="7"' "migration-$EDITION-after.xml"
+              grep -q '<long name="total_reading_ms" value="420000"' "migration-$EDITION-after.xml"
+              grep -q '<long name="last_reading_ms" value="65000"' "migration-$EDITION-after.xml"
+              grep -q '1690000000000|com.whatsapp|42|65000|MUSHAF' "migration-$EDITION-after.xml"
+              grep -q '<int name="data_schema_version" value="8"' "migration-$EDITION-schema-after.xml"
+              if grep -Eq 'FATAL EXCEPTION|ANR in (com\.applicreation0\.quransafeguard|com\.applicreation0\.quransafeguard\.plus)' "migration-$EDITION-logcat.txt"; then
+                echo "Crash/ANR during $EDITION upgrade" >&2
+                exit 31
+              fi
+              adb uninstall "$PKG"
+            done
+            echo 'REAL_0108_TO_01010_MIGRATION_PASS'
+
+      - name: Upload migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-0108-to-01010-evidence-${{ env.APP_SOURCE_SHA }}
+          path: |
+            migration-*.xml
+            migration-*.txt
+          if-no-files-found: warn
+          retention-days: 14
