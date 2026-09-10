@@ -26,14 +26,20 @@ data class HifzTrainingStep(
 }
 
 /**
- * Stable structured-Hifz protocol. The persisted journey must remain usable without
- * network or downloaded audio, so the default excludes optional audio phases. A caller
- * that has positively established usable local audio may request the richer Sabqi
- * sequence explicitly with audioAvailable=true.
+ * Product Hifz protocol for 0.10.10.
+ *
+ * Sabqi: 10 visible readings then 5x25%, 5x50%, 5x75%, 7x100%.
+ * Itqan: exactly 30 page repetitions = 20 visible + 10 masked.
+ * Murajaah: no masking is imposed.
+ *
+ * Al-Husary is part of the structured-Hifz experience. Sabqi keeps its explicit
+ * listening phases when audio is available (the normal/default path); callers may
+ * explicitly request audioAvailable=false only for fail-safe recovery. Itqan and
+ * Murajaah expose the player independently from their repetition protocol.
  */
 object HifzTrainingPolicy {
 
-    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = false): List<HifzTrainingStep> =
+    fun stepsFor(track: HifzTrack, audioAvailable: Boolean = true): List<HifzTrainingStep> =
         rawStepsFor(track).filter { !it.requiresAudio || audioAvailable }
 
     private fun rawStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
@@ -42,6 +48,10 @@ object HifzTrainingPolicy {
         HifzTrack.MURAJAAH -> murajaahSteps()
     }
 
+    /**
+     * A long Sabqi verse may be split into real-Mushaf-line segments. Segment completion
+     * never credits a fraction of the verse: the whole passage must still be assembled.
+     */
     fun assemblyStepsFor(track: HifzTrack): List<HifzTrainingStep> = when (track) {
         HifzTrack.SABQI -> listOf(
             HifzTrainingStep(
@@ -78,46 +88,30 @@ object HifzTrainingPolicy {
         HifzTrainingStep("sabqi-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 5, 25),
         HifzTrainingStep("sabqi-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 5, 50),
         HifzTrainingStep("sabqi-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 5, 75),
-        HifzTrainingStep("sabqi-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 7, 100),
-        HifzTrainingStep(
-            id = "sabqi-final",
-            label = "Test final du segment entièrement masqué",
-            kind = HifzTrainingKind.FINAL_TEST,
-            repetitions = 3,
-            maskPercent = 100,
-            requiresConsecutiveSuccesses = 3
-        )
+        HifzTrainingStep("sabqi-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 7, 100)
     )
 
     private fun itqanSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
-            id = "itqan-visible-30",
+            id = "itqan-visible-20",
             label = "Consolidation texte visible",
             kind = HifzTrainingKind.VISIBLE,
-            repetitions = 30,
+            repetitions = 20,
             maskPercent = 0
         ),
-        HifzTrainingStep("itqan-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 1, 25, requiresConsecutiveSuccesses = 1),
-        HifzTrainingStep("itqan-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 1, 50, requiresConsecutiveSuccesses = 1),
-        HifzTrainingStep("itqan-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 1, 75, requiresConsecutiveSuccesses = 1),
-        HifzTrainingStep("itqan-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 1, 100, requiresConsecutiveSuccesses = 1),
-        HifzTrainingStep(
-            id = "itqan-final",
-            label = "Test final entièrement masqué",
-            kind = HifzTrainingKind.FINAL_TEST,
-            repetitions = 1,
-            maskPercent = 100,
-            requiresConsecutiveSuccesses = 1
-        )
+        HifzTrainingStep("itqan-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 2, 25, requiresConsecutiveSuccesses = 1),
+        HifzTrainingStep("itqan-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 2, 50, requiresConsecutiveSuccesses = 1),
+        HifzTrainingStep("itqan-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 2, 75, requiresConsecutiveSuccesses = 1),
+        HifzTrainingStep("itqan-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 4, 100, requiresConsecutiveSuccesses = 1)
     )
 
     private fun murajaahSteps(): List<HifzTrainingStep> = listOf(
         HifzTrainingStep(
             id = "murajaah-recall",
             label = "Récitation de révision",
-            kind = HifzTrainingKind.FINAL_TEST,
+            kind = HifzTrainingKind.VISIBLE,
             repetitions = MurajaahPolicy.RECITATIONS_PER_PORTION,
-            maskPercent = 100,
+            maskPercent = 0,
             requiresConsecutiveSuccesses = 1
         )
     )
