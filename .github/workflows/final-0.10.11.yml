@@ -17,7 +17,8 @@ jobs:
       TREE_PRECLAUDE: 6b4aa0c7b1cdc7fa430fe16e5120ea6ecae42ac4
       TREE_POSTCLAUDE: 04d44464e8b91c6565ffc4dccc78e24d31d956f7
       TREE_PRIOR_FINAL: cdac98e84651929d5b1a8a28da616aef90b3896b
-      TREE_FINAL: 5b2ef0acc47fc35e8ce0b1a6e99def10f63bde28
+      TREE_SECOND_FINAL: 5b2ef0acc47fc35e8ce0b1a6e99def10f63bde28
+      TREE_FINAL: 449ce5e218131b64f1075fda39d84739d1ea88eb
       LIGHT_CERT_SHA256: 6c706f4ea44ef667d0b9698c07a39e929b1e286d2397665504411dedb37457ac
       PLUS_CERT_SHA256: 1843d245832549afc6333ab77a587649a14fedb1f4acc9c08f367c3f0301d989
       LIGHT_KEYSTORE_B64: ${{ secrets.LIGHT_KEYSTORE_B64 }}
@@ -39,10 +40,12 @@ jobs:
           cat .github/qs011/patchbundle.part* | base64 --decode > "$helper/patches.tar.xz"
           tar -xJf "$helper/patches.tar.xz" -C "$helper"
           cp .github/qs011/04-second-final-fix.patch "$helper/04-second-final-fix.patch"
+          cp .github/qs011/05-third-final-test-fix.patch "$helper/05-third-final-test-fix.patch"
           printf '%s  %s\n' b28c3bac4d5edac8f7a1dd734b32cb965ebc8bb9d5701c230ae4b050a5d7eb59 "$helper/01-preclaude.patch" | sha256sum -c -
           printf '%s  %s\n' d3d245dfa8ead6bc420cb6db92eb7db7a9bdc797f99db18f9e2053a363b1dc26 "$helper/02-postclaude.patch" | sha256sum -c -
           printf '%s  %s\n' 8c585a050f8fd94a33eddecc7dac8f43191035e2659dff14130ba0084276a127 "$helper/03-final-fix.patch" | sha256sum -c -
           printf '%s  %s\n' 18b7ed5008442f4b2dd6f894d043eea7eab1cf8d3059e911223f339382adb109 "$helper/04-second-final-fix.patch" | sha256sum -c -
+          printf '%s  %s\n' b82c6e8d08f05f5a664f0d51c36b2da17579184e92f34e4302c1450d621ba56e "$helper/05-third-final-test-fix.patch" | sha256sum -c -
 
           git reset --hard "$BASE_SHA"
           git clean -fdx
@@ -62,12 +65,16 @@ jobs:
 
           git apply "$helper/04-second-final-fix.patch"
           git add -A
+          test "$(git write-tree)" = "$TREE_SECOND_FINAL"
+
+          git apply "$helper/05-third-final-test-fix.patch"
+          git add -A
           test "$(git write-tree)" = "$TREE_FINAL"
           git diff --cached --check
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Freeze Quran Safeguard 0.10.11 final candidate 2 [skip ci]"
+          git commit -m "Freeze Quran Safeguard 0.10.11 final candidate 3 [skip ci]"
           test "$(git rev-parse HEAD^{tree})" = "$TREE_FINAL"
           candidate_sha="$(git rev-parse HEAD)"
           git push --force origin HEAD:refs/heads/release/0.10.11-final
