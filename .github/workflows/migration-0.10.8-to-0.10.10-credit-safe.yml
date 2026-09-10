@@ -22,7 +22,7 @@ concurrency:
 jobs:
   direct-update:
     runs-on: ubuntu-latest
-    timeout-minutes: 28
+    timeout-minutes: 35
     steps:
       - name: Checkout trusted 0.10.8
         uses: actions/checkout@v4
@@ -112,13 +112,28 @@ jobs:
           set -euo pipefail
           adb wait-for-device
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+          DASHBOARD_CLASS="com.applicreation0.quransafeguard.DashboardActivity"
 
           test_edition() {
             local old_apk="$1" new_apk="$2" pkg="$3" label="$4"
             echo "=== $label ==="
-            adb install "$old_apk"
-            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 > "${label}-baseline-start.txt"
+            adb install "$old_apk" | tee "${label}-baseline-install.txt"
+            adb logcat -c || true
+            set +e
+            adb shell am start -W -n "$pkg/$DASHBOARD_CLASS" > "${label}-baseline-start.txt" 2>&1
+            local baseline_start_rc=$?
+            set -e
             sleep 3
+            adb logcat -d -v threadtime -t 1200 > "${label}-baseline-logcat.txt" 2>&1 || true
+            if [ "$baseline_start_rc" -ne 0 ]; then
+              cat "${label}-baseline-start.txt" >&2
+              exit 27
+            fi
+            if grep -Eq "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "${label}-baseline-logcat.txt"; then
+              echo "Baseline crash/ANR for $pkg" >&2
+              grep -E -A35 -B10 "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "${label}-baseline-logcat.txt" >&2 || true
+              exit 28
+            fi
             adb shell am force-stop "$pkg"
 
             cat > guard.xml <<'XML'
@@ -159,17 +174,36 @@ jobs:
 
             adb install -r "$new_apk" | tee "${label}-update-install.txt"
             adb logcat -c || true
-            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1 > "${label}-current-start.txt"
+            set +e
+            adb shell am start -W -n "$pkg/$DASHBOARD_CLASS" > "${label}-current-start.txt" 2>&1
+            local current_start_rc=$?
+            set -e
             sleep 5
-            adb shell pidof "$pkg" | tee "${label}-pid.txt"
-            test -s "${label}-pid.txt"
+
+            adb shell pidof "$pkg" > "${label}-pid.txt" 2>&1 || true
+            adb shell dumpsys activity activities > "${label}-activities.txt" 2>&1 || true
+            adb logcat -d -v threadtime -t 2000 > "${label}-logcat.txt" 2>&1 || true
+
+            if grep -Eq "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "${label}-logcat.txt"; then
+              echo "Crash/ANR after direct update for $pkg" >&2
+              grep -E -A35 -B10 "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "${label}-logcat.txt" >&2 || true
+              exit 31
+            fi
+            if [ "$current_start_rc" -ne 0 ]; then
+              cat "${label}-current-start.txt" >&2
+              exit 32
+            fi
+            if [ ! -s "${label}-pid.txt" ]; then
+              echo "Updated process did not survive for $pkg" >&2
+              tail -n 160 "${label}-logcat.txt" >&2 || true
+              exit 33
+            fi
 
             adb exec-out run-as "$pkg" cat shared_prefs/guard_prefs.xml > "${label}-guard-after.xml"
             adb exec-out run-as "$pkg" cat shared_prefs/free_quran_reader.xml > "${label}-bookmarks-after.xml"
             adb exec-out run-as "$pkg" cat shared_prefs/daily_reminders.xml > "${label}-reminder-after.xml"
             adb exec-out run-as "$pkg" cat shared_prefs/quran_safeguard_migrations.xml > "${label}-migration-after.xml"
             adb shell dumpsys package "$pkg" > "${label}-package.txt"
-            adb logcat -d -v threadtime -t 1200 > "${label}-logcat.txt" || true
 
             grep -q 'com.whatsapp' "${label}-guard-after.xml"
             grep -q 'com.android.chrome' "${label}-guard-after.xml"
@@ -181,11 +215,10 @@ jobs:
             grep -q 'preserve-me' "${label}-reminder-after.xml"
             grep -q 'data_schema_version' "${label}-migration-after.xml"
             grep -q 'value="8"' "${label}-migration-after.xml"
+            grep -q 'last_app_version_code' "${label}-migration-after.xml"
+            grep -q 'value="29"' "${label}-migration-after.xml"
             grep -q 'versionCode=29' "${label}-package.txt"
-            if grep -Eq "FATAL EXCEPTION|ANR in ${pkg//./\\.}" "${label}-logcat.txt"; then
-              echo "Crash/ANR after direct update for $pkg" >&2
-              exit 31
-            fi
+            grep -q "$pkg" "${label}-activities.txt"
             adb uninstall "$pkg"
           }
 
