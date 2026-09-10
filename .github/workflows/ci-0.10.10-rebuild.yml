@@ -3,7 +3,7 @@ name: Quran Safeguard 0.10.10 clean rebuild
 on:
   push:
     branches:
-      - "rebuild/0.10.10-hifz-on-0.10.8"
+      - "work/0.10.10-credit-safe"
   workflow_dispatch:
 
 permissions:
