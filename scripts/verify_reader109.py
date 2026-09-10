@@ -21,6 +21,7 @@ assert audio_meta['baseUrl'] == 'https://everyayah.com/data/Husary_Muallim_128kb
 
 reader = (src / 'main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt').read_text()
 reader_js = (a / 'reader.js').read_text()
+hifz_guard = (a / 'hifz_guard.js').read_text()
 protocol = (a / 'protocol.js').read_text()
 html = (a / 'index.html').read_text()
 display = (src / 'main/java/com/quranunlock/guard/DisplayProfile.kt').read_text()
@@ -29,6 +30,9 @@ audio = (src / 'main/java/com/quranunlock/guard/QuranAudioController.kt').read_t
 audio_source = (src / 'main/java/com/quranunlock/guard/QuranAudioSource.kt').read_text()
 selection = (src / 'main/java/com/quranunlock/guard/ReadingSelectionActivity.kt').read_text()
 hub = (src / 'main/java/com/quranunlock/guard/QuranHubActivity.kt').read_text()
+hifz_ui = (src / 'main/java/com/quranunlock/guard/HifzJourneyActivity.kt').read_text()
+hifz_time = (src / 'main/java/com/quranunlock/guard/HifzActiveTimeRecorder.kt').read_text()
+namespaces = (src / 'main/java/com/quranunlock/guard/QuranPersistenceNamespaces.kt').read_text()
 
 assert '!memoryMode&&TafsirEdition.isEnabled' in reader.replace(' ', '')
 assert 'GuardPrefs.' not in reader and 'SafeguardCyclePrefs.' not in reader
@@ -45,6 +49,21 @@ assert 'profile == DisplayProfile.STANDARD' in refresh and 'FULL_REFRESH_THRESHO
 assert 'Class.forName("com.onyx.android.sdk' in refresh and 'getOrDefault(false)' in refresh
 assert all(token not in refresh for token in ('counts[', 'wins[', 'milestones', 'success', 'activeLine', 'setMode('))
 
+# Structured Hifz must never share free-memorisation state. Its reader is bound to the
+# scheduled task/range, never exposes Tafsir, and only foreground elapsed time is charged.
+assert 'HIFZ_READER' in namespaces and 'FREE_READER_MEMORIZATION' in namespaces
+assert 'EXTRA_HIFZ_TASK_ID' in reader and 'QuranPersistenceNamespaces.HIFZ_READER' in reader
+assert 'hifzActiveStartedAtMs' in reader and 'SystemClock.elapsedRealtime()' in reader
+assert 'HifzActiveTimeRecorder.record' in reader and 'override fun onPause()' in reader
+assert 'EXTRA_HIFZ_TASK_ID, task.id' in hifz_ui
+assert '<script src="hifz_guard.js"></script>' in html
+assert all(token in hifz_guard for token in (
+    'targetStart', 'targetEnd', 'targetKeys', 'activeSessionIsTarget',
+    'showPage=async function', 'verseTap=function', 'memory=true', 'N?.setMode(true)'
+))
+assert "N?.exit()" in hifz_guard
+assert 'HifzTrainingEngine.recordActiveSeconds' in hifz_time
+
 # Local-only Al-Husary Muallim contract. Reader WebView itself remains network-blocked;
 # only the native audio controller can fetch pinned HTTPS ayah files after user action.
 assert 'val available: Boolean = true' in audio
@@ -56,10 +75,11 @@ assert "classList.toggle('audio',playing&&p.dataset.verse===e.surah+':'+e.ayah)"
 assert 'localAudioReady' in reader_js and 'P.disableAudio(s)' in reader_js
 assert 'audioCountsProgress' in reader_js
 assert 'visual(' not in reader_js[reader_js.index('window.audioEvent='):reader_js.index('window.setOcclusion=')]
+assert 'Audio Al-Husary Muʿallim' in hifz_guard
 
 assert not any('eink' in part.lower() for path in src.rglob('*') if path.is_dir() for part in path.parts[-1:])
 assert 'if (TafsirEdition.isEnabled)' in selection and 'if (TafsirEdition.isEnabled)' in hub
 assert 'Tafsîr al-Jalalayn' not in selection
 
 subprocess.run(['node', str(r / 'scripts/test_reader109_protocol.js')], check=True)
-print('PASS 604 pages, 6236 verses, memory protocol, STANDARD/EINK, Tafsir isolation, no microphone, private local Al-Husary audio')
+print('PASS 604 pages, 6236 verses, isolated free/Hifz reader state, STANDARD/EINK, Tafsir isolation, no microphone, private local Al-Husary audio')
