@@ -9,7 +9,6 @@ import android.os.SystemClock
 import android.view.View
 import android.webkit.WebView
 import java.lang.ref.WeakReference
-import java.lang.reflect.Modifier
 
 enum class VisualChange(val ghostingWeight: Int) {
     PAGE(8), MASK_LEVEL(3), REVEAL(4), REVEAL_RETURN(6),
@@ -52,7 +51,10 @@ internal class EInkRefreshPolicy(
     }
 }
 
-/** STANDARD is a strict no-op; EINK only performs visual refreshes. */
+/**
+ * STANDARD is a strict no-op. EINK uses only portable Android/WebView invalidation and
+ * monochrome cleanup; no BOOX/Onyx or other manufacturer SDK/API is called.
+ */
 class EInkRefreshController(
     @Suppress("UNUSED_PARAMETER") activity: Activity,
     private val profile: DisplayProfile,
@@ -96,7 +98,7 @@ class EInkRefreshController(
             RefreshAction.PARTIAL -> view.postInvalidateOnAnimation()
             RefreshAction.FULL_NOW -> {
                 cancelDeferred()
-                requestFullRefresh(view)
+                requestPortableFullRefresh(view)
             }
             RefreshAction.FULL_LATER -> schedule(view, decision.dueAtMs)
         }
@@ -123,8 +125,8 @@ class EInkRefreshController(
         scheduledDueAt = Long.MIN_VALUE
     }
 
-    private fun requestFullRefresh(view: View) {
-        if (disposed || tryVendorFullRefresh(view)) return
+    private fun requestPortableFullRefresh(view: View) {
+        if (disposed) return
         if (view is WebView) {
             view.postOnAnimation {
                 if (disposed) return@postOnAnimation
@@ -163,7 +165,7 @@ class EInkRefreshController(
 
     private fun nativeOverlay(view: View) {
         if (disposed) return
-        val black = ColorDrawable(Color.BLACK).apply { setBounds(0, 0, view.width, view.height) }
+        val black = ColorDrawable(Color.rgb(23, 23, 21)).apply { setBounds(0, 0, view.width, view.height) }
         val cream = ColorDrawable(Color.rgb(247, 242, 232)).apply { setBounds(0, 0, view.width, view.height) }
         addOverlay(view, black)
         postTracked(55L) {
@@ -172,19 +174,4 @@ class EInkRefreshController(
             postTracked(55L) { removeOverlay(view, cream) }
         }
     }
-
-    private fun tryVendorFullRefresh(view: View): Boolean = runCatching {
-        val controller = Class.forName("com.onyx.android.sdk.api.device.epd.EpdController")
-        val modeClass = Class.forName("com.onyx.android.sdk.api.device.epd.UpdateMode")
-        val gc = modeClass.enumConstants?.firstOrNull {
-            it.toString().equals("GC", true) || it.toString().contains("FULL", true)
-        } ?: return false
-        val method = controller.methods.firstOrNull { candidate ->
-            Modifier.isStatic(candidate.modifiers) && candidate.parameterTypes.size == 2 &&
-                View::class.java.isAssignableFrom(candidate.parameterTypes[0]) &&
-                candidate.parameterTypes[1].isAssignableFrom(modeClass)
-        } ?: return false
-        method.invoke(null, view, gc)
-        true
-    }.getOrDefault(false)
 }
