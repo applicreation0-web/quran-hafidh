@@ -49,18 +49,30 @@ assert 'profile == DisplayProfile.STANDARD' in refresh and 'FULL_REFRESH_THRESHO
 assert 'Class.forName("com.onyx.android.sdk' in refresh and 'getOrDefault(false)' in refresh
 assert all(token not in refresh for token in ('counts[', 'wins[', 'milestones', 'success', 'activeLine', 'setMode('))
 
-# Structured Hifz must never share free-memorisation state. Its reader is bound to the
-# scheduled task/range, never exposes Tafsir, and only foreground elapsed time is charged.
+# Structured Hifz must never share free-memorisation state. The scheduled task/range is
+# authoritative, Tafsir is unreachable, native Hifz progress owns attempts/reveals, and
+# only foreground elapsed time is charged.
 assert 'HIFZ_READER' in namespaces and 'FREE_READER_MEMORIZATION' in namespaces
 assert 'EXTRA_HIFZ_TASK_ID' in reader and 'QuranPersistenceNamespaces.HIFZ_READER' in reader
 assert 'hifzActiveStartedAtMs' in reader and 'SystemClock.elapsedRealtime()' in reader
 assert 'HifzActiveTimeRecorder.record' in reader and 'override fun onPause()' in reader
+assert all(token in reader for token in (
+    '@JavascriptInterface\n        fun hifzStatus()',
+    'fun hifzAttempt(correct: Boolean)',
+    'fun hifzReveal()',
+    'fun hifzAdvance()',
+    'HifzTrainingProgressPolicy.canValidate',
+))
 assert 'EXTRA_HIFZ_TASK_ID, task.id' in hifz_ui
 assert '<script src="hifz_guard.js"></script>' in html
 assert all(token in hifz_guard for token in (
-    'targetStart', 'targetEnd', 'targetKeys', 'activeSessionIsTarget',
-    'showPage=async function', 'verseTap=function', 'memory=true', 'N?.setMode(true)'
+    'targetStart', 'targetEnd', 'targetKeys', 'showPage=async function',
+    'verseTap=function', 'memory=true', 'N?.setMode(true)',
+    'N?.hifzStatus', 'N?.hifzAttempt', 'N?.hifzReveal', 'N?.hifzAdvance',
+    'nativeRevealVisible', 'renderMasks=function',
 ))
+assert 'begin(keys' not in hifz_guard and 'restart(s)' not in hifz_guard
+assert "state.sessions=[]" in hifz_guard and "state.active=null" in hifz_guard
 assert "N?.exit()" in hifz_guard
 assert 'HifzTrainingEngine.recordActiveSeconds' in hifz_time
 
@@ -75,11 +87,13 @@ assert "classList.toggle('audio',playing&&p.dataset.verse===e.surah+':'+e.ayah)"
 assert 'localAudioReady' in reader_js and 'P.disableAudio(s)' in reader_js
 assert 'audioCountsProgress' in reader_js
 assert 'visual(' not in reader_js[reader_js.index('window.audioEvent='):reader_js.index('window.setOcclusion=')]
-assert 'Audio Al-Husary Muʿallim' in hifz_guard
+assert 'Audio Al-Husary Muʿallim' in hifz_guard and 'playTarget' in hifz_guard
 
 assert not any('eink' in part.lower() for path in src.rglob('*') if path.is_dir() for part in path.parts[-1:])
 assert 'if (TafsirEdition.isEnabled)' in selection and 'if (TafsirEdition.isEnabled)' in hub
 assert 'Tafsîr al-Jalalayn' not in selection
 
+subprocess.run(['node', '--check', str(a / 'reader.js')], check=True)
+subprocess.run(['node', '--check', str(a / 'hifz_guard.js')], check=True)
 subprocess.run(['node', str(r / 'scripts/test_reader109_protocol.js')], check=True)
-print('PASS 604 pages, 6236 verses, isolated free/Hifz reader state, STANDARD/EINK, Tafsir isolation, no microphone, private local Al-Husary audio')
+print('PASS 604 pages, 6236 verses, authoritative isolated Hifz reader state, STANDARD/EINK, Tafsir isolation, no microphone, private local Al-Husary audio')
