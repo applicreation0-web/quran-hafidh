@@ -243,6 +243,7 @@ jobs:
         run: |
           set -euo pipefail
           export ANDROID_AVD_HOME="$HOME/.android/avd"
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
           mkdir -p "$ANDROID_AVD_HOME"
           echo no | avdmanager create avd --force \
             --name migration35 \
@@ -251,7 +252,7 @@ jobs:
           printf 'hw.cpu.ncore=2\nhw.ramSize=2048M\ndisk.dataPartition.size=2048M\n' >> "$ANDROID_AVD_HOME/migration35.avd/config.ini"
 
           adb start-server
-          nohup emulator \
+          nohup "$ANDROID_HOME/emulator/emulator" \
             -avd migration35 \
             -port 5554 \
             -no-window \
