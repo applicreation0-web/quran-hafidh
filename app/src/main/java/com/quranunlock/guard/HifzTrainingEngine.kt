@@ -5,11 +5,13 @@ package com.applicreation0.quransafeguard
  *
  * The scheduler owns when/what must be studied. This engine owns only progress inside
  * that task. It never changes dates, cursor or quota and never reads reader109 state.
+ * Sabqi may use five-line pedagogical segments for an indivisible long verse; Itqan and
+ * Murajaah are task-wide protocols and therefore always have one training phase.
  */
 object HifzTrainingEngine {
 
     fun initial(task: HifzTask, segmentCount: Int = 1): HifzTaskProgress {
-        require(segmentCount > 0) { "A Hifz task must expose at least one pedagogical segment." }
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
         val steps = HifzTrainingPolicy.stepsFor(task.track)
         require(steps.isNotEmpty()) { "No structured training protocol is defined for ${task.track}." }
         return HifzTaskProgress(
@@ -18,7 +20,7 @@ object HifzTrainingEngine {
             stepIndex = 0,
             stepProgress = HifzStepProgress(stepId = steps.first().id),
             completed = false
-        )
+        ).also { require(effectiveSegments > 0) }
     }
 
     fun currentStep(
@@ -27,9 +29,9 @@ object HifzTrainingEngine {
         segmentCount: Int = 1
     ): HifzTrainingStep? {
         requireProgressIdentity(task, progress)
-        require(segmentCount > 0)
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
         if (progress.completed) return null
-        val steps = stepsForPhase(task, progress.segmentIndex, segmentCount)
+        val steps = stepsForPhase(task, progress.segmentIndex, effectiveSegments)
         return steps.getOrNull(progress.stepIndex)
     }
 
@@ -38,7 +40,8 @@ object HifzTrainingEngine {
         progress: HifzTaskProgress,
         segmentCount: Int = 1
     ): HifzTaskProgress {
-        val step = requireCurrent(task, progress, segmentCount)
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
+        val step = requireCurrent(task, progress, effectiveSegments)
         val stepProgress = normalizeStepProgress(progress, step)
         return progress.copy(
             stepProgress = HifzTrainingProgressPolicy.reveal(stepProgress),
@@ -52,7 +55,8 @@ object HifzTrainingEngine {
         correct: Boolean,
         segmentCount: Int = 1
     ): HifzTaskProgress {
-        val step = requireCurrent(task, progress, segmentCount)
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
+        val step = requireCurrent(task, progress, effectiveSegments)
         val stepProgress = normalizeStepProgress(progress, step)
         return progress.copy(
             stepProgress = HifzTrainingProgressPolicy.attempt(stepProgress, correct),
@@ -71,27 +75,24 @@ object HifzTrainingEngine {
         segmentCount: Int = 1
     ): HifzTaskProgress {
         requireProgressIdentity(task, progress)
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
         require(!progress.completed) { "Completed Hifz training cannot accrue active time." }
         require(seconds >= 0L) { "Active Hifz time cannot be negative." }
-        require(currentStep(task, progress, segmentCount) != null)
+        require(currentStep(task, progress, effectiveSegments) != null)
         return progress.copy(activeSeconds = Math.addExact(progress.activeSeconds, seconds))
     }
 
-    /**
-     * Advances only when the current step contract is satisfied. For multi-segment Sabqi,
-     * finishing a segment advances only the pedagogical segment. After the last segment a
-     * dedicated whole-passage assembly test is required; only that test may set completed.
-     */
     fun advanceIfValid(
         task: HifzTask,
         progress: HifzTaskProgress,
         segmentCount: Int = 1
     ): HifzTaskProgress {
-        val step = requireCurrent(task, progress, segmentCount)
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
+        val step = requireCurrent(task, progress, effectiveSegments)
         val stepProgress = normalizeStepProgress(progress, step)
         if (!HifzTrainingProgressPolicy.canValidate(step, stepProgress)) return progress
 
-        val phaseSteps = stepsForPhase(task, progress.segmentIndex, segmentCount)
+        val phaseSteps = stepsForPhase(task, progress.segmentIndex, effectiveSegments)
         val nextIndex = progress.stepIndex + 1
         if (nextIndex < phaseSteps.size) {
             return progress.copy(
@@ -101,9 +102,9 @@ object HifzTrainingEngine {
             )
         }
 
-        val assemblyRequired = requiresAssembly(task.track, segmentCount)
+        val assemblyRequired = requiresAssembly(task.track, effectiveSegments)
         return when {
-            progress.segmentIndex < segmentCount - 1 -> {
+            progress.segmentIndex < effectiveSegments - 1 -> {
                 val baseSteps = HifzTrainingPolicy.stepsFor(task.track)
                 progress.copy(
                     segmentIndex = progress.segmentIndex + 1,
@@ -112,11 +113,11 @@ object HifzTrainingEngine {
                     completed = false
                 )
             }
-            assemblyRequired && progress.segmentIndex == segmentCount - 1 -> {
+            assemblyRequired && progress.segmentIndex == effectiveSegments - 1 -> {
                 val assembly = HifzTrainingPolicy.assemblyStepsFor(task.track)
                 require(assembly.isNotEmpty())
                 progress.copy(
-                    segmentIndex = segmentCount,
+                    segmentIndex = effectiveSegments,
                     stepIndex = 0,
                     stepProgress = HifzStepProgress(stepId = assembly.first().id),
                     completed = false
@@ -130,26 +131,22 @@ object HifzTrainingEngine {
         }
     }
 
-    /**
-     * Validates persisted progress against the protocol rather than trusting a serialized
-     * completed flag or arbitrary step id. This is used by HifzStateStore to fail closed.
-     */
     fun isSemanticallyCoherent(
         task: HifzTask,
         progress: HifzTaskProgress,
         segmentCount: Int = 1
     ): Boolean = runCatching {
         requireProgressIdentity(task, progress)
-        require(segmentCount > 0)
+        val effectiveSegments = effectiveSegmentCount(task, segmentCount)
         require(progress.totalRevealCount >= (progress.stepProgress?.revealCount ?: 0))
-        val assemblyRequired = requiresAssembly(task.track, segmentCount)
-        val lastBaseSegment = segmentCount - 1
+        val assemblyRequired = requiresAssembly(task.track, effectiveSegments)
+        val lastBaseSegment = effectiveSegments - 1
 
         if (progress.completed) {
             require(progress.stepProgress == null)
             if (assemblyRequired) {
                 val assembly = HifzTrainingPolicy.assemblyStepsFor(task.track)
-                require(progress.segmentIndex == segmentCount)
+                require(progress.segmentIndex == effectiveSegments)
                 require(progress.stepIndex == assembly.size)
             } else {
                 val base = HifzTrainingPolicy.stepsFor(task.track)
@@ -159,7 +156,7 @@ object HifzTrainingEngine {
             return@runCatching true
         }
 
-        if (assemblyRequired && progress.segmentIndex == segmentCount) {
+        if (assemblyRequired && progress.segmentIndex == effectiveSegments) {
             val assembly = HifzTrainingPolicy.assemblyStepsFor(task.track)
             require(progress.stepIndex in assembly.indices)
             val stepProgress = requireNotNull(progress.stepProgress)
@@ -168,7 +165,7 @@ object HifzTrainingEngine {
             return@runCatching true
         }
 
-        require(progress.segmentIndex in 0 until segmentCount)
+        require(progress.segmentIndex in 0 until effectiveSegments)
         val base = HifzTrainingPolicy.stepsFor(task.track)
         require(progress.stepIndex in base.indices)
         val stepProgress = requireNotNull(progress.stepProgress)
@@ -189,25 +186,23 @@ object HifzTrainingEngine {
         step: HifzTrainingStep
     ): HifzStepProgress {
         val existing = progress.stepProgress
-        return if (existing?.stepId == step.id) {
-            existing
-        } else {
-            HifzStepProgress(stepId = step.id)
-        }
+        return if (existing?.stepId == step.id) existing else HifzStepProgress(stepId = step.id)
     }
 
     private fun stepsForPhase(
         task: HifzTask,
         segmentIndex: Int,
         segmentCount: Int
-    ): List<HifzTrainingStep> {
-        require(segmentCount > 0)
-        return if (requiresAssembly(task.track, segmentCount) && segmentIndex == segmentCount) {
-            HifzTrainingPolicy.assemblyStepsFor(task.track)
-        } else {
-            require(segmentIndex in 0 until segmentCount) { "Invalid Hifz segment index." }
-            HifzTrainingPolicy.stepsFor(task.track)
-        }
+    ): List<HifzTrainingStep> = if (requiresAssembly(task.track, segmentCount) && segmentIndex == segmentCount) {
+        HifzTrainingPolicy.assemblyStepsFor(task.track)
+    } else {
+        require(segmentIndex in 0 until segmentCount) { "Invalid Hifz segment index." }
+        HifzTrainingPolicy.stepsFor(task.track)
+    }
+
+    private fun effectiveSegmentCount(task: HifzTask, requested: Int): Int {
+        require(requested > 0) { "A Hifz task must expose at least one pedagogical segment." }
+        return if (task.track == HifzTrack.SABQI) requested else 1
     }
 
     private fun requiresAssembly(track: HifzTrack, segmentCount: Int): Boolean =
