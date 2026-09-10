@@ -32,6 +32,7 @@ internal fun MultiTafsirPanel(
     onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val contextual = (context as? android.app.Activity)?.intent?.getBooleanExtra("contextual", false) == true
     val prefs = remember {
         context.getSharedPreferences(
             MULTI_TAFSIR_PREFS,
@@ -40,7 +41,7 @@ internal fun MultiTafsirPanel(
     }
     var selectedEdition by remember {
         mutableStateOf(
-            PrivateTafsirEdition.fromStorage(
+            if (contextual) PrivateTafsirEdition.JALALAYN else PrivateTafsirEdition.fromStorage(
                 prefs.getString(
                     MULTI_EDITION_KEY,
                     PrivateTafsirEdition.JALALAYN.storageValue
@@ -57,7 +58,7 @@ internal fun MultiTafsirPanel(
         val loaded = MultiTafsirRepository.loadAvailable(context, verse)
         val resolved = loaded.resolveEdition(selectedEdition)
         if (resolved != null && resolved != selectedEdition) {
-            prefs.edit()
+            if (!contextual) prefs.edit()
                 .putString(MULTI_EDITION_KEY, resolved.storageValue)
                 .apply()
             selectedEdition = resolved
@@ -68,7 +69,7 @@ internal fun MultiTafsirPanel(
     fun choose(edition: PrivateTafsirEdition) {
         val available = availability ?: return
         if (edition !in available.editions || edition == selectedEdition) return
-        prefs.edit()
+        if (!contextual) prefs.edit()
             .putString(MULTI_EDITION_KEY, edition.storageValue)
             .apply()
         selectedEdition = edition
@@ -96,3 +97,4 @@ internal fun MultiTafsirPanel(
         onPanelTopInWindow = onPanelTopInWindow
     )
 }
+

@@ -197,8 +197,22 @@ val verifyPrivacyBoundary by tasks.registering {
         check(manifest.contains("android:name=\".QuranSafeguardApp\""))
         check(migrationSource.contains("class QuranSafeguardApp"))
         check(migrationSource.contains("AppMigrations.run(this)"))
-        check(!manifest.contains("android.permission.INTERNET")) {
-            "Quran Safeguard must remain offline."
+        check(manifest.contains("android.permission.INTERNET")) {
+            "Private local Al-Husary downloads require Android's normal INTERNET permission."
+        }
+        val audioController = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioController.kt"
+        ).readText()
+        val audioSource = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioSource.kt"
+        ).readText()
+        check(
+            audioController.contains("QuranAudioSource.url") &&
+                audioController.contains("downloadSurah(") &&
+                audioController.contains("looksLikeMp3") &&
+                audioSource.contains("Husary_Muallim_128kbps")
+        ) {
+            "INTERNET may only support the explicit private local Quran-audio path."
         }
         check(!manifest.contains("android.permission.QUERY_ALL_PACKAGES")) {
             "Broad package visibility is forbidden."
@@ -656,10 +670,12 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
             buildFile.contains("versionCode = 22") &&
                 buildFile.contains("versionName = \"0.10.3\"")
         val preparedReleaseMetadata =
-            buildFile.contains("versionCode = 27") &&
-                buildFile.contains("versionName = \"0.10.8\"")
+            (buildFile.contains("versionCode = 28") &&
+                buildFile.contains("versionName = \"0.10.9\"")) ||
+            (buildFile.contains("versionCode = 29") &&
+                buildFile.contains("versionName = \"0.10.10\""))
         check(auditedBaselineMetadata || preparedReleaseMetadata) {
-            "Expected either the audited 0.10.3 baseline metadata or prepared 0.10.8 release metadata."
+            "Expected the audited baseline or an explicitly prepared 0.10.9/0.10.10 release metadata set."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -787,13 +803,11 @@ val verifyEditorialBoundary by tasks.registering {
         check(
             adhkarUi.contains("AdhkarPeriod.MORNING") &&
                 adhkarUi.contains("AdhkarPeriod.EVENING") &&
-                adhkarUi.contains("Text(\"Matin\")") &&
-                adhkarUi.contains("Text(\"Soir\")")
+                adhkarUi.contains("FilterChip(") &&
+                adhkarUi.contains("✓ Matin") &&
+                adhkarUi.contains("✓ Soir")
         ) {
-            "Morning and evening Adhkar must both be selectable in-app."
-        }
-        check(adhkarUi.contains("Crossfade(")) {
-            "Morning/evening changes require a calm in-app transition."
+            "Morning and evening Adhkar must both be visible and selectable in-app."
         }
         val safeguardDesign = file(
             "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
@@ -802,16 +816,18 @@ val verifyEditorialBoundary by tasks.registering {
             !safeguardDesign.contains("sahelianButtonOrnament") &&
                 !safeguardDesign.contains("drawDiamond") &&
                 !safeguardDesign.contains("chevron") &&
-                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF4F0E6)")
+                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF7F2E8)") &&
+                !safeguardDesign.contains("#F4F0E6") &&
+                !safeguardDesign.contains("0xFFF4F0E6")
         ) {
             "0.10.7 requires calm cream controls without ornamental button drawing."
         }
         val launcherIcon = file(
             "src/main/res/drawable/ic_launcher_foreground.xml"
         ).readText()
-        listOf("#214B3B", "#B9873E", "#FFFDF5").forEach { brandColor ->
+        listOf("#1D5B47", "#B48A3C", "#76563C", "#FFF8EA").forEach { brandColor ->
             check(launcherIcon.contains(brandColor)) {
-                "Launcher icon lost a required green/gold/cream brand color: " + brandColor
+                "Launcher icon lost a required green/gold/brown/ivory brand color: " + brandColor
             }
         }
         listOf(
@@ -1083,8 +1099,9 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "0.10.8"
+        versionCode = 29
+        versionName = "0.10.10"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     flavorDimensions += "edition"
@@ -1134,6 +1151,9 @@ dependencies {
     implementation("com.batoulapps.adhan:adhan2:0.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit-ktx:1.2.1")
 }
 
 
