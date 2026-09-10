@@ -15,5 +15,10 @@ const assisted=P.create(['1:0'],false);while(P.current(assisted).mask!==100){con
 // If local audio disappears after a session has started, the pedagogical path
 // must continue on the non-audio plan without inventing audio completions.
 const downgrade=P.create(['1:0','1:1'],true);for(let i=0;i<2;i++)P.record(downgrade,true);assert(P.canValidate(downgrade));assert(P.validate(downgrade));assert.equal(P.current(downgrade).kind,'passive');const savedMilestones=[...downgrade.milestones];assert(P.disableAudio(downgrade));assert.equal(downgrade.withAudio,false);assert.deepEqual(downgrade.milestones,savedMilestones);assert.notEqual(P.current(downgrade)?.kind,'passive');assert.equal(P.disableAudio(downgrade),false);
+// Product metric: actual readings stay split into visible versus masked; audio never
+// increments either counter and old sessions without readCounts are derived exactly once.
+const counted=P.create(['1:0'],true);assert.deepEqual(P.readingCounts(counted),{visible:0,masked:0});P.record(counted,true);assert.deepEqual(P.readingCounts(counted),{visible:1,masked:0});P.record(counted,true);P.validate(counted);assert(P.record(counted,true,'audio'));assert.deepEqual(P.readingCounts(counted),{visible:2,masked:0});
+const legacy=P.create(['1:0'],false);delete legacy.readCounts;legacy.counts[P.current(legacy).id]=4;assert.deepEqual(P.readingCounts(legacy),{visible:4,masked:0});P.record(legacy,true);assert.deepEqual(P.readingCounts(legacy),{visible:5,masked:0});
+const masked=P.create(['1:0'],false);while(P.current(masked).mask===0){const p=P.current(masked);for(let i=0;i<p.min;i++)P.record(masked,true);P.validate(masked)}P.record(masked,true);assert(P.readingCounts(masked).masked>0);const beforeReinforcement=P.readingCounts(masked).masked;P.recordMaskedReading(masked);assert.equal(P.readingCounts(masked).masked,beforeReinforcement+1);
 for(let i=0;i<100;i++){const rank=P.rank(42,'line:'+i);assert.equal(rank,P.rank(42,'line:'+i));assert(rank>=0&&rank<1)}
-console.log('PASS',checks,'milestone transitions; short, normal, long, preparation, restart, aid, audio isolation and local-audio downgrade');
+console.log('PASS',checks,'milestone transitions; short, normal, long, preparation, restart, aid, audio isolation, local-audio downgrade and split reading counters');
