@@ -140,13 +140,21 @@ object HifzGeometryPolicy {
     }
 }
 
-/** Loads the exact geometry generated from the shipped 604-page Mushaf corpus. */
+/** Loads and validates the immutable 604-page geometry once per app process. */
 object HifzGeometryAssetLoader {
+    @Volatile
+    private var cached: HifzGeometryIndex? = null
+
     fun load(context: Context): HifzGeometryIndex {
-        val raw = context.assets.open("reader109/geometry.json")
-            .bufferedReader(Charsets.UTF_8)
-            .use { it.readText() }
-        return decode(raw)
+        cached?.let { return it }
+        return synchronized(this) {
+            cached ?: run {
+                val raw = context.applicationContext.assets.open("reader109/geometry.json")
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                decode(raw).also { cached = it }
+            }
+        }
     }
 
     internal fun decode(raw: String): HifzGeometryIndex {
