@@ -43,8 +43,9 @@ function record(s,correct=true,source='personal'){
  if(assistanceActive(s))return false;
  if((p.kind==='passive'||p.kind==='active')&&source!=='audio')return false;
  if(p.kind!=='passive'&&p.kind!=='active'&&source==='audio')return false;
+ const before=source!=='audio'?readingCounts(s):null;
  s.counts[p.id]=(s.counts[p.id]||0)+1;s.wins[p.id]=correct?(s.wins[p.id]||0)+1:0;
- if(source!=='audio'){const counts=readingCounts(s);s.readCounts=p.mask>0?{visible:counts.visible,masked:counts.masked+1}:{visible:counts.visible+1,masked:counts.masked};}
+ if(before){s.readCounts=p.mask>0?{visible:before.visible,masked:before.masked+1}:{visible:before.visible+1,masked:before.masked};}
  return true;
 }
 function recordMaskedReading(s){const counts=readingCounts(s);s.readCounts={visible:counts.visible,masked:counts.masked+1};return s.readCounts;}
