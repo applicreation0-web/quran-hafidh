@@ -1,0 +1,119 @@
+-                Manifest.permission.POST_NOTIFICATIONS
+-            ) != PackageManager.PERMISSION_GRANTED
+-        ) {
+-            return
+-        }
++        if (!canPostNotifications(context)) return
+         val manager = context.getSystemService(NotificationManager::class.java) ?: return
+         val pending = PendingIntent.getActivity(
+             context,
+diff --git a/app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt b/app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt
+index 717a1b3976633304f8cdba79a0bde1378f5bbbba..23e5bd28d4aa48b7cf37940c6c847a497e833ee4 100644
+--- a/app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt
++++ b/app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt
+@@ -1,10 +1,13 @@
+ package com.applicreation0.quransafeguard
+ 
+ import android.annotation.SuppressLint
++import android.graphics.Rect
+ import android.os.Build
+ import android.os.Bundle
++import android.os.SystemClock
+ import android.view.KeyEvent
+ import android.view.MotionEvent
++import android.view.View
+ import android.view.WindowManager
+ import android.webkit.WebResourceRequest
+ import android.webkit.WebView
+@@ -53,6 +56,8 @@ import androidx.compose.ui.viewinterop.AndroidView
+ import kotlinx.coroutines.delay
+ import org.brotli.dec.BrotliInputStream
+ 
++private const val UNLOCK_READER_TAFSIR_ENABLED = false
++
+ class MushafReaderActivity : ComponentActivity() {
+     companion object {
+         const val EXTRA_PAGE = "page"
+@@ -75,7 +80,7 @@ class MushafReaderActivity : ComponentActivity() {
+     private var hardwareNextAction: (() -> Unit)? = null
+ 
+     private fun openTafsir(verse: VerseRef) {
+-        if (!TafsirEdition.isEnabled) return
++        if (!UNLOCK_READER_TAFSIR_ENABLED || !TafsirEdition.isEnabled) return
+         selectedTafsirVerse = verse
+         tafsirLoadState = TafsirLoadState.Loading
+         TafsirEdition.selectVerse(verse)
+@@ -461,7 +466,7 @@ class MushafReaderActivity : ComponentActivity() {
+                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
+                             ) {
+                                 Text(
+-                                    "Qur’an & Tafsîr",
++                                    if (UNLOCK_READER_TAFSIR_ENABLED && TafsirEdition.isEnabled) "Qur’an & Tafsîr" else "Qur’an",
+                                     modifier = Modifier.weight(1f),
+                                     style = MaterialTheme.typography.titleMedium,
+                                     color = MaterialTheme.colorScheme.primary,
+@@ -995,6 +1000,13 @@ private fun MushafPageWebView(
+     val currentOnReaderTap = rememberUpdatedState(onReaderTap)
+     val currentOnVerseTapped = rememberUpdatedState(onVerseTapped)
+     val currentOnFailure = rememberUpdatedState(onFailure)
++    val sourceLooksSubstantive = remember(svgContent) {
++        Regex("""<svg\b""", RegexOption.IGNORE_CASE).containsMatchIn(svgContent) &&
++            Regex(
++                """<(path|text|use|polygon|polyline|line|circle|ellipse|rect)\b""",
++                RegexOption.IGNORE_CASE
++            ).containsMatchIn(svgContent)
++    }
+ 
+     AndroidView(
+         modifier = modifier,
+@@ -1004,7 +1016,7 @@ private fun MushafPageWebView(
+                 setBackgroundColor(
+                     android.graphics.Color.parseColor(ReaderComfortPrefs.pageBackground())
+                 )
+-                settings.javaScriptEnabled = TafsirEdition.isEnabled
++                settings.javaScriptEnabled = UNLOCK_READER_TAFSIR_ENABLED && TafsirEdition.isEnabled
+                 settings.domStorageEnabled = false
+                 settings.allowFileAccess = false
+                 settings.allowContentAccess = false
+@@ -1074,30 +1086,89 @@ private fun MushafPageWebView(
+                     }
+                 }
+ 
++                var readyProbeGeneration = 0
++                var readyDelivered = false
++                addOnAttachStateChangeListener(
++                    object : View.OnAttachStateChangeListener {
++                        override fun onViewAttachedToWindow(v: View) = Unit
++
++                        override fun onViewDetachedFromWindow(v: View) {
++                            // A probe belonging to a WebView that left the composition
++                            // must never keep polling or mark a stale page ready later.
++                            readyProbeGeneration += 1
++                            readyDelivered = false
++                        }
++                    }
++                )
++
+                 webViewClient = object : WebViewClient() {
+                     override fun shouldOverrideUrlLoading(
+                         view: WebView?,
+                         request: WebResourceRequest?
+                     ): Boolean = true
+ 
++                    override fun onPageStarted(
++                        view: WebView?,
++                        url: String?,
++                        favicon: android.graphics.Bitmap?
++                    ) {
++                        readyProbeGeneration += 1
++                        readyDelivered = false
++                        super.onPageStarted(view, url, favicon)
++                    }
++
+                     override fun onPageFinished(
+                         view: WebView?,
+                         url: String?
+                     ) {
+-                        currentOnReady.value()
+-                        view?.post {
+-                            val contentHeightPx =
