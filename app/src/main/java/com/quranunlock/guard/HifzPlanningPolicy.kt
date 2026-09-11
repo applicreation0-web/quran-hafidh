@@ -78,9 +78,9 @@ data class HifzPaceProfile(
 }
 
 /**
- * Converts real available time into a page-equivalent capacity without rounding up.
- * The caller may turn a fractional page into an exact verse portion; this policy never
- * silently forces a whole extra page that exceeds the user's available time.
+ * Legacy page-equivalent helper retained only for compatibility with existing Claude
+ * state/statistics. New Hifz planning must not use page-equivalent pace as the primary
+ * business unit when an exact verse/line calculation is available.
  */
 object HifzTimeQuotaPolicy {
     fun pageEquivalentCapacity(
@@ -96,9 +96,14 @@ object HifzTimeQuotaPolicy {
     }
 }
 
-/** Verse-first traversal across a possibly discontinuous Itqan corpus. */
+/** Verse-first endless cyclic traversal across a possibly discontinuous Itqan corpus. */
 object HifzItqanTraversalPolicy {
-    fun nextAfter(intervals: List<HifzVerseRange>, current: QuranVerseRef): QuranVerseRef? {
+    /**
+     * Returns the next eligible verse. When the last eligible interval ends, traversal
+     * wraps to the first interval instead of returning null. Gaps are skipped by jumping
+     * to the next interval's start. This is the frozen endless-Itqan rule.
+     */
+    fun nextAfter(intervals: List<HifzVerseRange>, current: QuranVerseRef): QuranVerseRef {
         require(intervals.isNotEmpty())
         intervals.zipWithNext().forEach { (previous, next) ->
             require(previous.isStrictlyBefore(next))
@@ -109,10 +114,13 @@ object HifzItqanTraversalPolicy {
             val interval = intervals[containingIndex]
             val nextVerse = nextCanonicalVerse(current)
             if (nextVerse != null && interval.contains(nextVerse)) return nextVerse
-            return intervals.getOrNull(containingIndex + 1)?.start
+            return intervals.getOrNull(containingIndex + 1)?.start ?: intervals.first().start
         }
 
+        // A cursor recovered inside a gap resumes at the next eligible interval. If it
+        // lies after the final range, wrap to the first range rather than ending Itqan.
         return intervals.firstOrNull { compareQuranVerseRefs(current, it.start) < 0 }?.start
+            ?: intervals.first().start
     }
 
     internal fun nextCanonicalVerse(ref: QuranVerseRef): QuranVerseRef? {
@@ -158,6 +166,7 @@ object MurajaahPolicy {
     const val INITIAL_REFERENCE_PAGES = 20
     const val INITIAL_REFERENCE_MINUTES = 45
     const val INITIAL_MINUTES_PER_PAGE_REFERENCE = 2.25
+    const val INITIAL_SECONDS_PER_LINE = 9.0
 
     fun takeAdaptiveOrder(
         candidatesInAdaptivePriorityOrder: List<MurajaahCandidate>,
