@@ -173,6 +173,12 @@ public final class MushafView extends WebView {
         });
     }
 
+    /** Keep the selected verse in the unobscured upper part before the bottom Tafsir opens. */
+    public void revealSelectionAboveBottomPanel() {
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.revealSelection(0.46);", null));
+    }
+
     public void localCounterChanged() { eink.local(this); }
     public void cycleCompleted() { eink.cycleCompleted(this, prefs); }
 
