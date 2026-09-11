@@ -28,8 +28,20 @@ def adb(*args, **kwargs): return run("adb", *args, **kwargs)
 
 def dump_ui(name):
     remote=f"/sdcard/{name}.xml"; local=EVIDENCE/f"{name}.xml"
-    adb("shell","uiautomator","dump",remote); adb("pull",remote,str(local))
-    return ET.parse(local).getroot()
+    diagnostics=[]
+    for attempt in range(1,5):
+        local.unlink(missing_ok=True)
+        adb("shell","rm","-f",remote,check=False)
+        output=adb("shell","uiautomator","dump","--compressed",remote,check=False)
+        diagnostics.append(f"attempt={attempt}: {output.strip()}")
+        adb("pull",remote,str(local),check=False)
+        if local.is_file() and local.stat().st_size>32:
+            try:
+                return ET.parse(local).getroot()
+            except ET.ParseError as error:
+                diagnostics.append(f"parse={error}")
+        time.sleep(0.8)
+    raise AssertionError("UI dump unavailable after 4 attempts. " + " | ".join(diagnostics))
 
 
 def all_text(root): return [n.attrib.get("text","") for n in root.iter("node") if n.attrib.get("text","")]
@@ -73,7 +85,7 @@ def require_enabled(root, text, expected):
 
 def reject_webview_error(root):
     joined="\n".join(all_visible_strings(root))
-    forbidden=("Webpage not available","ERR_HTTP_","ERR_FAILED","could not be loaded","Erreur Mushaf")
+    forbidden=("Webpage not available","ERR_HTTP_","ERR_FAILED","could not be loaded","Erreur Mushaf","Mushaf indisponible")
     hits=[v for v in forbidden if v.lower() in joined.lower()]
     if hits: raise AssertionError(f"WebView error content is visible ({hits}). UI strings: {all_visible_strings(root)}")
 
@@ -127,6 +139,7 @@ def main():
     tap_text(home,"Lecture / Étude · Tafsir"); wait_ui(1.0)
     study=dump_ui("study-page1")
     require_text(study,"Lecture / Étude ·",contains=True); require_text(study,"Tafsir"); require_content_desc(study,"Mushaf page 1"); reject_webview_error(study)
+    screenshot("study-page1")
     tap_text(study,"Page ›"); wait_ui(1.0)
     study2=dump_ui("study-page2"); require_content_desc(study2,"Mushaf page 2"); reject_webview_error(study2)
     tap_text(study2,"‹ Page"); wait_ui(1.0)
