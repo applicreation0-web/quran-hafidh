@@ -1,99 +1,54 @@
 package com.quransafeguard.hifz.ui;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.Gravity;
-import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.quransafeguard.hifz.R;
-import com.quransafeguard.hifz.data.MushafRepository;
-import com.quransafeguard.hifz.reader.MushafRenderer;
+import com.quransafeguard.hifz.storage.HifzProgressStore;
+import com.quransafeguard.hifz.storage.HifzScheduleStore;
 
-/** First native local-reader slice: page 1 -> page 2 -> page 1. */
+import java.time.LocalDate;
+
+/** Quran Hifz home. No app-blocking or device-type routing exists in this application. */
 public final class MainActivity extends Activity {
-    private MushafRenderer renderer;
-    private TextView pageLabel;
-    private Button previous;
-    private Button next;
+    private LinearLayout root;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+    }
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(android.graphics.Color.WHITE);
+    @Override protected void onResume() {
+        super.onResume();
+        buildHome();
+    }
 
-        renderer = new MushafRenderer(this);
-        renderer.setId(R.id.mushaf_renderer);
-        root.addView(renderer, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            0,
-            1f
-        ));
+    private void buildHome() {
+        root = Ui.column(this);
+        TextView title = Ui.text(this, "Quran Hifz", 28, true);
+        root.addView(title);
+        root.addView(Ui.text(this, "BOOX · local · Mushaf de Médine", 14, false));
 
-        LinearLayout controls = new LinearLayout(this);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setGravity(Gravity.CENTER);
+        root.addView(Ui.button(this, "Lecture / Étude", v -> startActivity(new Intent(this, StudyReaderActivity.class))));
+        root.addView(Ui.button(this, "Mémorisation libre", v -> startActivity(new Intent(this, FreeMemActivity.class))));
+        root.addView(Ui.button(this, "Parcours Hifz", v -> openHifz()));
 
-        previous = new Button(this);
-        previous.setId(R.id.previous_page);
-        previous.setText("‹");
-        previous.setContentDescription("Page précédente");
-        previous.setOnClickListener(v -> renderer.previousPage());
-
-        pageLabel = new TextView(this);
-        pageLabel.setId(R.id.page_label);
-        pageLabel.setGravity(Gravity.CENTER);
-        pageLabel.setTextSize(18f);
-
-        next = new Button(this);
-        next.setId(R.id.next_page);
-        next.setText("›");
-        next.setContentDescription("Page suivante");
-        next.setOnClickListener(v -> renderer.nextPage());
-
-        int buttonWidth = dp(64);
-        controls.addView(previous, new LinearLayout.LayoutParams(buttonWidth, dp(56)));
-        controls.addView(pageLabel, new LinearLayout.LayoutParams(dp(120), dp(56)));
-        controls.addView(next, new LinearLayout.LayoutParams(buttonWidth, dp(56)));
-        root.addView(controls, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ));
-
-        renderer.setListener(new MushafRenderer.Listener() {
-            @Override public void onPageChanged(int page) {
-                pageLabel.setText("Page " + page + " / 604");
-                previous.setEnabled(page > MushafRepository.FIRST_PAGE && renderer.isPageBundled(page - 1));
-                next.setEnabled(page < MushafRepository.LAST_PAGE && renderer.isPageBundled(page + 1));
+        HifzProgressStore progress = new HifzProgressStore(this);
+        if (progress.isConfigured()) {
+            HifzScheduleStore.Pending pending = new HifzScheduleStore(this).nextPending(LocalDate.now());
+            if (pending != null) {
+                String status = pending.overdue ? "À replanifier" : "Aujourd’hui";
+                root.addView(Ui.text(this, status + " : " + HifzProgramActivity.displayMode(pending.mode) + " · " + pending.scheduledDate, 15, true));
             }
-
-            @Override public void onError(int page, Throwable error) {
-                Toast.makeText(MainActivity.this,
-                    "Page locale indisponible : " + page,
-                    Toast.LENGTH_LONG).show();
-            }
-        });
-
-        previous.setEnabled(false);
-        next.setEnabled(false);
-        pageLabel.setText("Chargement…");
+        } else {
+            root.addView(Ui.text(this, "Parcours Hifz : configuration initiale requise (4 bornes).", 14, false));
+        }
         setContentView(root);
-        renderer.showPage(MushafRepository.FIRST_PAGE);
     }
 
-    @Override
-    protected void onDestroy() {
-        if (renderer != null) renderer.close();
-        super.onDestroy();
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+    private void openHifz() {
+        HifzProgressStore progress = new HifzProgressStore(this);
+        startActivity(new Intent(this, progress.isConfigured() ? HifzProgramActivity.class : HifzSetupActivity.class));
     }
 }
