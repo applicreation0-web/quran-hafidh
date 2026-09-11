@@ -1,0 +1,144 @@
+name: Package Quran test apps delivery
+
+on:
+  push:
+    branches:
+      - delivery/testapps-2026-09-11
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package-delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Hifz source snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: integration/hifz-test-app
+          path: hifz-source
+          fetch-depth: 1
+
+      - name: Checkout Safeguard source snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: integration/safeguard-test-app
+          path: safeguard-source
+          fetch-depth: 1
+
+      - name: Restore validated local Quran assets once
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Download exact Hifz APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-hifz-test-dfa5356f964805ccf1daf4d9c67f550331a5e1b5
+          run-id: 34609445334
+          github-token: ${{ github.token }}
+          path: hifz-apk-artifact
+
+      - name: Download exact Safeguard APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-test-df0610ee8faead6d51fb869f84115eef096043de
+          run-id: 34606144421
+          github-token: ${{ github.token }}
+          path: safeguard-apk-artifact
+
+      - name: Build local source snapshots and delivery files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p delivery
+
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+
+          # Hifz build reads these assets from the historical app asset paths.
+          h_mushaf="hifz-source/app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          h_tafsir="hifz-source/app/src/plus/assets/tafsir"
+          rm -rf "$h_mushaf" "$h_tafsir"
+          mkdir -p "$h_mushaf" "$h_tafsir"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$h_mushaf/"
+          cp baseline109/extracted/assets/tafsir/al_jalalayn_en.sqlite.gz.part* "$h_tafsir/"
+
+          # Safeguard has its own isolated source asset paths.
+          s_mushaf="safeguard-source/safeguard-app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          s_tafsir="safeguard-source/safeguard-app/src/plus/assets/tafsir"
+          rm -rf "$s_mushaf" "$s_tafsir"
+          mkdir -p "$s_mushaf" "$s_tafsir"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$s_mushaf/"
+          cp baseline109/extracted/assets/tafsir/al_jalalayn_en.sqlite.gz.part* "$s_tafsir/"
+
+          test "$(find "$h_mushaf" -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          test "$(find "$s_mushaf" -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          cat "$h_tafsir"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
+          cat "$s_tafsir"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
+
+          h_apk="$(find hifz-apk-artifact -type f -name '*.apk' -print -quit)"
+          s_apk="$(find safeguard-apk-artifact -type f -name '*.apk' -print -quit)"
+          test -n "$h_apk" && test -s "$h_apk"
+          test -n "$s_apk" && test -s "$s_apk"
+          cp "$h_apk" delivery/Quran-Hifz-TEST.apk
+          cp "$s_apk" delivery/Quran-Safeguard-TEST.apk
+
+          cp hifz-source/docs/handoff/CLAUDE_QURAN_HIFZ_TEST_SPEC.md delivery/
+          cp safeguard-source/docs/handoff/CLAUDE_QURAN_SAFEGUARD_TEST_SPEC.md delivery/
+
+          # Remove Git metadata and transient outputs only. Keep exact source + local assets.
+          rm -rf hifz-source/.git safeguard-source/.git
+          find hifz-source safeguard-source -type d -name build -prune -exec rm -rf {} + || true
+          (cd hifz-source && zip -qr ../delivery/Quran-Hifz-TEST-source.zip .)
+          (cd safeguard-source && zip -qr ../delivery/Quran-Safeguard-TEST-source.zip .)
+
+          cat > delivery/DELIVERY_STATUS.md <<'EOF'
+          # Quran test apps — delivery status — 2026-09-11
+
+          ## Quran Hifz TEST
+          - Source branch: `integration/hifz-test-app`
+          - Source SHA packaged: `dfa5356f964805ccf1daf4d9c67f550331a5e1b5`
+          - APK build run: `34609445334`
+          - Local assets: 604 Mushaf SVG Brotli pages + local geometry + local Tafsir parts.
+          - Build/oracle/product-boundary/signature/corpus gates: PASS.
+          - Runtime status: consult the same run `34609445334`; delivery is TEST, not release.
+          - Audio Husary is not claimed functional: local pack/redistribution source remains unresolved.
+          - Final French Tafsir is not claimed: current validated test corpus is Al-Jalalayn English.
+
+          ## Quran Safeguard TEST
+          - Source branch: `integration/safeguard-test-app`
+          - APK code SHA: `df0610ee8faead6d51fb869f84115eef096043de`
+          - Packaged source branch adds documentation only after that code.
+          - APK build run: `34606144421`
+          - Independent Safeguard oracle: PASS.
+          - Real Plus unit tests after split: PASS.
+          - APK assembly: PASS.
+          - APK signature: PASS (v2).
+          - Previous workflow conclusion was red because a later manifest-label assertion used a literal-label assumption; do not reinterpret that red as a failed APK build.
+          - Runtime on a real phone is still required, especially target return, 60-second active reading and no interaction/lag on banking/security/identity apps.
+          - Counter policy conflict remains explicit: historical 15/90 global behavior vs intended independent per-app active-time budgets must be resolved before release.
+
+          ## Shared delivery rule
+          These are TEST builds for device testing and Claude handoff, not production releases. Do not infer PASS for anything not explicitly listed above.
+          EOF
+
+          (cd delivery && sha256sum Quran-Hifz-TEST.apk Quran-Safeguard-TEST.apk Quran-Hifz-TEST-source.zip Quran-Safeguard-TEST-source.zip > SHA256SUMS.txt)
+          ls -lh delivery
+
+      - name: Upload complete delivery bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-testapps-delivery-${{ github.sha }}
+          path: delivery/
+          if-no-files-found: error
+          retention-days: 14
