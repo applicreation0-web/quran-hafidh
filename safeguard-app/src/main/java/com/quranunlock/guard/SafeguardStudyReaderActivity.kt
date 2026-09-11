@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,8 +36,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import org.brotli.dec.BrotliInputStream
 
 /**
@@ -121,6 +120,7 @@ class SafeguardStudyReaderActivity : ComponentActivity() {
                     .statusBarsPadding()
                     .navigationBarsPadding()
             ) {
+                val panelMaxHeight = maxHeight * 0.5f
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(
                         modifier = Modifier
@@ -171,7 +171,7 @@ class SafeguardStudyReaderActivity : ComponentActivity() {
                                 verse = verse,
                                 state = TafsirLoadState.Loading,
                                 modifier = Modifier.align(Alignment.BottomCenter),
-                                maxPanelHeight = maxHeight * 0.5f,
+                                maxPanelHeight = panelMaxHeight,
                                 onPanelTopInWindow = { top -> TafsirEdition.revealAbove(top) },
                                 onQuranReferenceSelected = null
                             )
