@@ -111,3 +111,57 @@ jobs:
             geometry-report.json
           if-no-files-found: warn
           retention-days: 14
+
+  runtime-hifz-test:
+    needs: build-hifz-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download exact APK built by this run
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-hifz-test-${{ github.sha }}
+          path: candidate
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install screenshot verifier
+        run: pip install --disable-pip-version-check pillow
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Prepare Android runtime acceleration
+        shell: bash
+        run: |
+          if [ -d /usr/share/dotnet ]; then sudo rm -rf /usr/share/dotnet; fi
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+          df -h /home/runner
+
+      - name: Install launch and inspect Quran Hifz TEST
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disk-size: 2048M
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            apk="$(find candidate -type f -name '*.apk' -print -quit)"
+            test -n "$apk" && test -s "$apk"
+            python3 scripts/runtime_hifz_smoke.py "$apk"
+
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-runtime-${{ github.sha }}
+          path: runtime-evidence/
+          if-no-files-found: warn
+          retention-days: 14
