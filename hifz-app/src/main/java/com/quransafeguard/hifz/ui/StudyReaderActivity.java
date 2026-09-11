@@ -183,6 +183,7 @@ public final class StudyReaderActivity extends android.app.Activity implements R
         dialog.setContentView(shell);
         dialog.setCanceledOnTouchOutside(true);
         dialog.setOnDismissListener(ignored -> {
+            if (surface != null) surface.cleanupGhosting();
             if (!isFinishing() && selected != null) tafsirButton.setVisibility(View.VISIBLE);
         });
         tafsirButton.setVisibility(View.GONE);
@@ -190,6 +191,7 @@ public final class StudyReaderActivity extends android.app.Activity implements R
 
         Window w = dialog.getWindow();
         if (w != null) {
+            w.setWindowAnimations(0);
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             w.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
