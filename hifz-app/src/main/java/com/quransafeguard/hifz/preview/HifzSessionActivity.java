@@ -132,7 +132,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted = true;
             program.setText("Sabqi — séance du jour terminée");
             progress.setText((prefs.lastSabqiLabel().isEmpty() ? "Bloc terminé" : prefs.lastSabqiLabel())
-                + "\nLe bloc est maintenant en Sabqi récent ; aucune promotion Itqān automatique.");
+                + "\nLe bloc reste dans la fenêtre Sabqi récent jusqu’à saturation des 30 min.");
             return;
         }
         int startLimit = geometry.firstLineIndex(prefs.sabqiStart());
@@ -197,6 +197,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 label
             );
             if (!ok) { onError("Impossible d’enregistrer atomiquement la fin du bloc Sabqi."); return; }
+            // New Sabqi first enters recent review. Only capacity pressure caused by the new arrival
+            // may evict the oldest WHOLE verses into Itqan; review quality never promotes by itself.
+            rebalanceRecentWindow();
             closeClockForCompletedSession();
             mushaf.cycleCompleted();
             renderMode();
@@ -208,6 +211,47 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateRevealButton();
         if (currentPage != unitFirstPage) { currentPage = unitFirstPage; showCurrent(); updatePageButtons(); }
         updateSabqiProgress(rep,reveals);
+    }
+
+    /**
+     * Sliding recent-Sabqi window. Capacity is 30 minutes at the measured recent-review speed.
+     * The queue remains chronological because review actions never remove/reorder it. When a new
+     * Sabqi makes the window too large, remove the oldest complete five-line groups up to a safe
+     * verse boundary and promote only verses fully covered by those removed lines.
+     * A few extra recent lines are intentionally allowed when verse integrity requires it.
+     */
+    private void rebalanceRecentWindow() {
+        List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
+        if (recent.isEmpty()) return;
+        int capacity = Math.max(PreviewConfig.SABQI_LINES,
+            (int)Math.floor(PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING * 60.0 / prefs.recentSecondsPerLine()));
+        int total = 0;
+        for (HifzPrefs.RecentSabqi item : recent) total += Math.max(0, item.endLine - item.startLine + 1);
+        if (total <= capacity) return;
+
+        int overflow = total - capacity;
+        int removedLines = 0;
+        int blocksToRemove = 0;
+        int oldestStart = recent.get(0).startLine;
+        int safeEnd = -1;
+        for (HifzPrefs.RecentSabqi item : recent) {
+            removedLines += Math.max(0, item.endLine - item.startLine + 1);
+            blocksToRemove++;
+            GeometryRepository.FiveLineBlock block = geometry.fiveLineBlock(item.startLine);
+            if (removedLines >= overflow && !block.endsInsideVerse) {
+                safeEnd = item.endLine;
+                break;
+            }
+        }
+        if (safeEnd < oldestStart || blocksToRemove <= 0) return; // keep a temporary over-capacity window rather than cut a verse
+
+        ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
+        if (complete.isEmpty()) return;
+        if (!prefs.addPromotedVerses(complete)) {
+            onError("Impossible d’enregistrer la promotion de la fenêtre Sabqi récent.");
+            return;
+        }
+        for (int i = 0; i < blocksToRemove; i++) prefs.removeFirstRecentSabqi();
     }
 
     private void renderItqan() {
@@ -286,42 +330,32 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(recent.isEmpty() || elapsed>=PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60_000L){
             transitionToBlockB(elapsed);return;
         }
-        HifzPrefs.RecentSabqi item=recent.get(0);
+        int reviewIndex=(recentLinesDone/PreviewConfig.SABQI_LINES)%recent.size();
+        HifzPrefs.RecentSabqi item=recent.get(reviewIndex);
         GeometryRepository.FiveLineBlock b=geometry.fiveLineBlock(item.startLine);
         currentPage=geometry.line(item.startLine).page;
         unitFirstPage=currentPage;unitLastPage=geometry.line(item.endLine).page;
         currentSelection=b.verses;currentLineIds=b.lineIds;currentMask=0;
         int capacity=(int)Math.floor(PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60.0/prefs.recentSecondsPerLine());
         program.setText("Murājaʿah · Bloc A · Sabqi récent · 30 min\n"+b.verseLabel());
-        progress.setText("File : "+recent.size()+" bloc(s) · capacité estimée "+capacity+" lignes · déjà revues "+recentLinesDone
-            +"\nValidez uniquement après révision réelle du bloc.");
+        progress.setText("Fenêtre récente : "+recent.size()+" bloc(s) · capacité estimée "+capacity+" lignes · déjà revues "+recentLinesDone
+            +"\nMême sans faute, ce passage reste récent tant que la fenêtre tient dans 30 min.");
         showCurrent();
-        Button stable=Ui.smallButton(this,"Stable sans aide",v->reviewRecent(true));
-        Button retry=Ui.smallButton(this,"À revoir",v->reviewRecent(false));
-        Ui.weight(stable,1);Ui.weight(retry,1);actions.addView(stable);actions.addView(retry);
+        Button reviewed=Ui.smallButton(this,"Revu sans aide",v->reviewRecent(false));
+        Button difficult=Ui.smallButton(this,"À renforcer",v->reviewRecent(true));
+        Ui.weight(reviewed,1);Ui.weight(difficult,1);actions.addView(reviewed);actions.addView(difficult);
     }
 
-    private void reviewRecent(boolean stable) {
+    /** Review quality is a signal only. It never removes/promotes/reorders recent material. */
+    private void reviewRecent(boolean difficult) {
         if (!takeRepLock()) return;
         if (prefs.recentSabqi().isEmpty()) { transitionToBlockB(clock.elapsedMs()); return; }
-        boolean ok=stable?prefs.markFirstRecentStable():prefs.deferFirstRecentSabqi();
-        if(!ok){onError("Impossible d’enregistrer la révision Sabqi récente.");return;}
         recentLinesDone+=PreviewConfig.SABQI_LINES;
-        if(stable) reconcileStablePromotions();
         long elapsed=clock.elapsedMs();
         prefs.setMurajaahRuntime("A",null,recentLinesDone,elapsed,0L);
-        if(prefs.recentSabqi().isEmpty() || elapsed>=PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60_000L) transitionToBlockB(elapsed);
+        // Difficult passages may be signalled in the UI; chronology and promotion remain capacity-driven.
+        if (elapsed>=PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60_000L) transitionToBlockB(elapsed);
         else renderMode();
-    }
-
-    private void reconcileStablePromotions() {
-        ArrayList<VerseRef> complete=new ArrayList<>();
-        for(HifzPrefs.LineInterval interval:prefs.stableRecentLines()){
-            for(VerseRef verse:geometry.versesFullyCoveredByLines(interval.startLine,interval.endLine)){
-                if(!complete.contains(verse)) complete.add(verse);
-            }
-        }
-        if(!prefs.addPromotedVerses(complete)) onError("Impossible d’enregistrer les versets promus vers Itqān.");
     }
 
     private void transitionToBlockB(long elapsed) {
