@@ -11,7 +11,6 @@ public final class PreviewConfig {
     public static final int MURAJAAH_MINUTES_WORKING = 45;
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
-    // Frozen Sabqi repetition contract.
     public static final int SABQI_VISIBLE_REPS = 15;
     public static final int SABQI_25_REPS = 5;
     public static final int SABQI_50_REPS = 5;
@@ -19,7 +18,6 @@ public final class PreviewConfig {
     public static final int SABQI_100_REPS = 7;
     public static final int SABQI_TOTAL_REPS = 37;
 
-    // Working Itqan mask split only. Total x30 is frozen; the split is not.
     public static final int ITQAN_VISIBLE_REPS_WORKING = 10;
     public static final int ITQAN_25_REPS_WORKING = 5;
     public static final int ITQAN_50_REPS_WORKING = 5;
@@ -30,7 +28,8 @@ public final class PreviewConfig {
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
     public static final int MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 15;
     public static final int MURAJAAH_ITQAN_MINUTES_WORKING = 30;
-    public static final int EINK_FULL_CLEAN_PAGE_INTERVAL_WORKING = 8;
+    // Personal BOOX default: a page change gets a full cleanup. Local counters/masks remain local.
+    public static final int EINK_FULL_CLEAN_PAGE_INTERVAL_WORKING = 1;
 
     public static int sabqiMaskForNextRep(int completed) {
         if (completed < 0 || completed >= SABQI_TOTAL_REPS) return 0;
