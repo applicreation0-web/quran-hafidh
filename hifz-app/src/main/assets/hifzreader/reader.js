@@ -1,13 +1,5 @@
 'use strict';
-/*
- * Quran Hifz — lecteur local (sélection, masques, révélation au-dessus du panneau).
- * Corrections 2026-09-11 (audit Claude) :
- *  - plus de tabindex sur les polygones : supprime le cadre orange (anneau de focus WebView) ;
- *  - masque calculé uniquement sur les cellules réellement dans les versets sélectionnés ;
- *  - cellules masquées jointives (plus de lamelles de texte visibles entre les mots) ;
- *  - marqueurs de fin de verset toujours visibles au-dessus du masque ;
- *  - revealSelection() crée la marge de défilement nécessaire, clearReveal() la retire.
- */
+/* Quran Hifz local reader: canonical SVG, deterministic nested masks, no network. */
 const N=window.HifzNative;
 const boot=window.HIFZ_BOOT||{};
 let pageGeo=boot.geometry||null;
@@ -16,6 +8,7 @@ let selected=boot.selection||[];
 let lineIds=boot.lines||[];
 let mask=Number(boot.mask||0);
 let eink=!!boot.eink;
+let audioVerse=null;
 const NS='http://www.w3.org/2000/svg';
 const mushaf=document.getElementById('mushaf');
 
@@ -48,42 +41,55 @@ function insideSelection(polys,x,y){
   return polys.some(p=>{try{return p.isPointInFill(pt)}catch(_e){return false}});
 }
 
-/* Cellules (mots) des lignes ciblées dont le centre est dans un verset sélectionné. */
+/* Cells whose centre belongs to the selected Quran passage. */
 function maskCandidates(lines,polys){
-  const out=[];
+  const byLine=[];
   lines.forEach((line,li)=>{
-    const top=Number(line.top),bottom=Number(line.bottom),cells=line.cells||[];
-    cells.forEach((cell,ci)=>{
+    const top=Number(line.top),bottom=Number(line.bottom),cells=[];
+    (line.cells||[]).forEach((cell,ci)=>{
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      out.push({line:li,index:ci,x0,x1,top,bottom,
-        order:stableHash(String(line.id)+'#'+ci+'#'+cell[0]+'#'+cell[1])});
+      cells.push({line:li,index:ci,x0,x1,top,bottom});
     });
+    cells.sort((a,b)=>a.x0-b.x0);
+    if(cells.length)byLine.push({id:String(line.id),cells});
   });
-  return out;
+  return byLine;
 }
 
-/* Élargit chaque cellule masquée jusqu'au milieu de l'espace avec ses voisines de ligne. */
+/* Expand a hidden cell to the midpoint of its neighbours: no letter slivers between masked words. */
 function widenedRect(cell,lineCells){
-  const i=lineCells.indexOf(cell);
-  const prev=lineCells[i-1],next=lineCells[i+1];
+  const i=lineCells.indexOf(cell),prev=lineCells[i-1],next=lineCells[i+1];
   const left=prev?Math.min(cell.x0,(prev.x1+cell.x0)/2):cell.x0-3;
   const right=next?Math.max(cell.x1,(cell.x1+next.x0)/2):cell.x1+3;
-  return {x:left-0.6,y:cell.top-0.6,width:(right-left)+1.2,height:(cell.bottom-cell.top)+1.2};
+  return {x:left-0.8,y:cell.top-0.8,width:(right-left)+1.6,height:(cell.bottom-cell.top)+1.6};
 }
 
-/* Recopie au-dessus du masque les rosaces de fin de verset situées dans la sélection. */
+/*
+ * One coherent segment per physical line. 25% is contained in 50%, then 75%, then 100%.
+ * A stable per-line direction avoids a distracting identical edge on every line while preserving nesting.
+ */
+function hiddenCellsForLine(line,percent){
+  const cells=line.cells,n=cells.length;
+  if(percent<=0||!n)return [];
+  if(percent>=100)return [...cells];
+  const take=Math.max(1,Math.min(n,Math.ceil(n*percent/100)));
+  const fromRight=(stableHash(line.id)&1)===0;
+  return fromRight?cells.slice(n-take):cells.slice(0,take);
+}
+
+/* Re-copy ayah rosettes above mask so structural markers stay visible. */
 function markerLayer(svg,polys){
   const g=document.createElementNS(NS,'g');
   const markers=svg.querySelectorAll('#ayah_markers > g');
   if(!markers.length)return g;
-  const inv=svg.getScreenCTM()?.inverse();
-  if(!inv)return g;
+  const rootCtm=svg.getScreenCTM();if(!rootCtm)return g;
+  const inv=rootCtm.inverse();
   markers.forEach(m=>{
     const ctm=m.getScreenCTM();if(!ctm)return;
-    const full=inv.multiply(ctm);
-    const b=m.getBBox();
-    const c=new DOMPoint(b.x+b.width/2,b.y+b.height/2).matrixTransform(full);
+    const full=inv.multiply(ctm),b=m.getBBox();
+    const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
+    const c=pt.matrixTransform(full);
     if(!insideSelection(polys,c.x,c.y))return;
     const wrap=document.createElementNS(NS,'g');
     wrap.setAttribute('transform',`matrix(${full.a} ${full.b} ${full.c} ${full.d} ${full.e} ${full.f})`);
@@ -96,13 +102,15 @@ function markerLayer(svg,polys){
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
-  svg.querySelectorAll('.ayahPolygon').forEach(p=>p.classList.toggle('selected',selected.includes(p.dataset.verse)));
+  svg.querySelectorAll('.ayahPolygon').forEach(p=>{
+    p.classList.toggle('selected',selected.includes(p.dataset.verse));
+    p.classList.toggle('audio',audioVerse!==null&&p.dataset.verse===audioVerse);
+  });
   svg.querySelectorAll('.masklayer').forEach(n=>n.remove());
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
   if(!clamped||!pageGeo||!lineIds.length)return;
   const lines=(pageGeo.lines||[]).filter(l=>lineIds.includes(l.id));if(!lines.length)return;
-  const polys=selectedPolygons(svg);
-  const candidates=maskCandidates(lines,polys);if(!candidates.length)return;
+  const polys=selectedPolygons(svg),byLine=maskCandidates(lines,polys);if(!byLine.length)return;
 
   const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
   const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
@@ -112,16 +120,11 @@ function render(){
   const group=document.createElementNS(NS,'g');
   if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
 
-  const ordered=[...candidates].sort((a,b)=>a.order-b.order||a.top-b.top||a.x0-b.x0);
-  const hiddenCount=clamped>=100?ordered.length:Math.max(1,Math.round(ordered.length*clamped/100));
-  const hidden=new Set(ordered.slice(0,hiddenCount));
-  const byLine=new Map();
-  candidates.forEach(c=>{if(!byLine.has(c.line))byLine.set(c.line,[]);byLine.get(c.line).push(c)});
-  byLine.forEach(list=>{
-    list.sort((a,b)=>a.x0-b.x0);
-    list.forEach(cell=>{
+  byLine.forEach(line=>{
+    const hidden=new Set(hiddenCellsForLine(line,clamped));
+    line.cells.forEach(cell=>{
       if(!hidden.has(cell))return;
-      const r=widenedRect(cell,list),el=document.createElementNS(NS,'rect');
+      const r=widenedRect(cell,line.cells),el=document.createElementNS(NS,'rect');
       el.setAttribute('class','maskcell');
       el.setAttribute('x',r.x);el.setAttribute('y',r.y);el.setAttribute('width',r.width);el.setAttribute('height',r.height);
       group.appendChild(el);
@@ -132,7 +135,6 @@ function render(){
   svg.appendChild(layer);
 }
 
-/* Place la sélection au-dessus d'un panneau couvrant (1 - visibleFraction) de la hauteur. */
 function revealSelection(visibleFraction){
   const svg=currentSvg();if(!svg||!selected.length)return;
   const nodes=selectedPolygons(svg);if(!nodes.length)return;
@@ -151,15 +153,13 @@ function revealSelection(visibleFraction){
     if(delta)window.scrollBy(0,delta);
   });
 }
-function clearReveal(){
-  document.documentElement.style.setProperty('--reveal-pad','0px');
-  window.scrollTo(0,0);
-}
+function clearReveal(){document.documentElement.style.setProperty('--reveal-pad','0px');window.scrollTo(0,0)}
 
 window.HifzReader={
   setGeometry(geometry){pageGeo=geometry||null;render()},
   setMask(hidden){mask=Number(hidden||0);render()},
   setSelection(selection,lines){selected=selection||[];lineIds=lines||[];render()},
+  setAudioVerse(value){audioVerse=value||null;render()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},
   page(){return currentPage}
