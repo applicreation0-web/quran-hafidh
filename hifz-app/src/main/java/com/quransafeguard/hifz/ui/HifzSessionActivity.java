@@ -64,6 +64,7 @@ public final class HifzSessionActivity extends android.app.Activity implements R
         super.onCreate(state);
         mode = getIntent().getStringExtra(EXTRA_MODE);
         if (!HifzScheduleStore.SABQI.equals(mode)
+            && !HifzScheduleStore.SABQI_REVIEW.equals(mode)
             && !HifzScheduleStore.ITQAN.equals(mode)
             && !HifzScheduleStore.MURAJAAH.equals(mode)) {
             throw new IllegalArgumentException("Unknown Hifz mode");
@@ -146,6 +147,7 @@ public final class HifzSessionActivity extends android.app.Activity implements R
         loader.execute(() -> {
             try {
                 if (HifzScheduleStore.SABQI.equals(mode)) prepareSabqi();
+                else if (HifzScheduleStore.SABQI_REVIEW.equals(mode)) prepareSabqiReview();
                 else if (HifzScheduleStore.ITQAN.equals(mode)) prepareItqan();
                 else prepareMurajaah();
             } catch (Throwable error) {
@@ -171,7 +173,8 @@ public final class HifzSessionActivity extends android.app.Activity implements R
 
     private void renderSabqi() {
         int rep = progressStore.sabqiRep();
-        program.setText("5 lignes · " + sabqiBlock.startVerse + " → " + sabqiBlock.endVerse + " · 37 répétitions");
+        program.setText("5 lignes · " + sabqiBlock.startVerse + " → " + sabqiBlock.endVerse
+            + " · 37 répétitions · cible 90 min");
         progressText.setText("Répétition suivante : " + Math.min(37, rep + 1)
             + " / 37 · masque " + currentMask + "% · aides "
             + progressStore.sabqiAssisted() + timingSuffix(mode));
@@ -217,6 +220,47 @@ public final class HifzSessionActivity extends android.app.Activity implements R
         renderProgressOnly();
     }
 
+    /** Evening consolidation reads the most recently learned Sabqi block without moving it. */
+    private void prepareSabqiReview() throws Exception {
+        List<HifzProgressStore.RecentSabqi> recent = progressStore.recentSabqi();
+        if (recent.isEmpty()) {
+            activeLines = Collections.emptyList();
+            currentPage = lineGeometry.pageForVerse(progressStore.sabqiCursor());
+            currentMask = 0;
+            runOnUiThread(this::renderEmptySabqiReview);
+            return;
+        }
+        HifzProgressStore.RecentSabqi item = recent.get(recent.size() - 1);
+        List<LineGeometryRepository.PageLine> all = lineGeometry.allLines();
+        int start = Math.max(0, Math.min(item.startGlobalLine, all.size() - 1));
+        int end = Math.max(start, Math.min(item.endGlobalLine, all.size() - 1));
+        activeLines = new ArrayList<>(all.subList(start, end + 1));
+        currentPage = activeLines.get(0).page;
+        currentMask = 0;
+        runOnUiThread(this::renderSabqiReview);
+    }
+
+    private void renderSabqiReview() {
+        program.setText("Révision Sabqi du soir · 15–20 min");
+        progressText.setText("Bloc Sabqi récent · " + activeLines.size()
+            + " lignes · aucune nouvelle acquisition · curseur inchangé");
+        showCurrent();
+        Button done = Ui.smallButton(this, "Révision terminée", v ->
+            completeScheduled("Révision du soir · bloc Sabqi récent"));
+        Ui.weight(done, 1f);
+        actions.addView(done);
+    }
+
+    private void renderEmptySabqiReview() {
+        program.setText("Révision Sabqi du soir · 15–20 min");
+        progressText.setText("Aucun bloc Sabqi récent disponible. Aucun curseur ne sera modifié.");
+        showCurrent();
+        Button done = Ui.smallButton(this, "Terminer", v ->
+            completeScheduled("Révision du soir · aucun bloc récent"));
+        Ui.weight(done, 1f);
+        actions.addView(done);
+    }
+
     private void prepareItqan() throws Exception {
         EligibleCorpus corpus = exactItqanCorpus();
         itqanUnit = lineGeometry.eligiblePageUnit(progressStore.itqanCursor(), corpus);
@@ -228,7 +272,8 @@ public final class HifzSessionActivity extends android.app.Activity implements R
 
     private void renderItqan() {
         int rep = progressStore.itqanRep();
-        program.setText("Page " + itqanUnit.page + " · " + itqanUnit.start + " → " + itqanUnit.end + " · ×30");
+        program.setText("Page " + itqanUnit.page + " · " + itqanUnit.start + " → " + itqanUnit.end
+            + " · ×30 · cible 60 min");
         progressText.setText("Répétition suivante : " + Math.min(30, rep + 1)
             + " / 30 · masque " + currentMask + "% · aides "
             + progressStore.itqanAssisted() + timingSuffix(mode));
