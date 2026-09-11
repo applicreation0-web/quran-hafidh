@@ -10,6 +10,7 @@ plugins {
 val pinnedQuranSvgCommit = "1b427fab77aae1403fe7e1f0b8c794a5384d5605"
 val quranSvgSubmodule = rootProject.file("third_party/quran-svg")
 val canonicalMushafSource = quranSvgSubmodule.resolve("mushafs/hafs/kfqc/svg-br")
+val canonicalGeometrySource = quranSvgSubmodule.resolve("mushafs/hafs/kfqc/json")
 val generatedMushafAssets = layout.buildDirectory.dir("generated/hifzMushafAssets")
 val smokeMushaf = providers.gradleProperty("hifzSmokeMushaf")
     .orNull
@@ -34,12 +35,12 @@ fun checkedGitOutput(vararg args: String): String {
 
 val verifyHifzMushafSource by tasks.registering {
     group = "verification"
-    description = "Verifies the pinned, clean, exact 604-page local KFQC Mushaf source."
+    description = "Verifies the pinned, clean, exact 604-page local KFQC Mushaf and geometry source."
 
     doLast {
-        if (!quranSvgSubmodule.isDirectory || !canonicalMushafSource.isDirectory) {
+        if (!quranSvgSubmodule.isDirectory || !canonicalMushafSource.isDirectory || !canonicalGeometrySource.isDirectory) {
             throw GradleException(
-                "Pinned quran-svg submodule is missing. Run: git submodule update --init --recursive"
+                "Pinned quran-svg submodule is missing or incomplete. Run: git submodule update --init --recursive"
             )
         }
 
@@ -55,17 +56,31 @@ val verifyHifzMushafSource by tasks.registering {
             throw GradleException("Pinned quran-svg source has tracked local modifications; refusing to build")
         }
 
-        val expectedNames = (1..604).map {
+        val expectedSvgNames = (1..604).map {
             String.format(Locale.ROOT, "%03d.svg.br", it)
         }
-        val actualNames = canonicalMushafSource
+        val actualSvgNames = canonicalMushafSource
             .listFiles { file -> file.isFile && file.name.endsWith(".svg.br") }
             ?.map { it.name }
             ?.sorted()
             ?: emptyList()
-        if (actualNames != expectedNames) {
+        if (actualSvgNames != expectedSvgNames) {
             throw GradleException(
-                "Expected canonical KFQC files 001.svg.br..604.svg.br; found ${actualNames.size} pages"
+                "Expected canonical KFQC files 001.svg.br..604.svg.br; found ${actualSvgNames.size} pages"
+            )
+        }
+
+        val expectedGeometryNames = (1..604).map {
+            String.format(Locale.ROOT, "%03d.json", it)
+        }
+        val actualGeometryNames = canonicalGeometrySource
+            .listFiles { file -> file.isFile && Regex("\\d{3}\\.json").matches(file.name) }
+            ?.map { it.name }
+            ?.sorted()
+            ?: emptyList()
+        if (actualGeometryNames != expectedGeometryNames) {
+            throw GradleException(
+                "Expected canonical KFQC geometry 001.json..604.json; found ${actualGeometryNames.size} pages"
             )
         }
     }
@@ -81,6 +96,14 @@ val prepareHifzMushafAssets by tasks.registering(Sync::class) {
             include("*.svg.br")
         }
         into("mushaf/hafs/kfqc/svg-br")
+    }
+    from(canonicalGeometrySource) {
+        if (smokeMushaf) {
+            include("001.json", "002.json")
+        } else {
+            include(Regex("\\d{3}\\.json"))
+        }
+        into("geometry/hafs/kfqc")
     }
     into(generatedMushafAssets)
 }
