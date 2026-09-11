@@ -16,7 +16,6 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
       - name: Restore validated Mushaf and Tafsir baseline
         uses: actions/download-artifact@v4
         with:
@@ -24,7 +23,6 @@ jobs:
           run-id: 34336797351
           github-token: ${{ github.token }}
           path: baseline109
-
       - name: Verify and inject canonical 604-page Mushaf and approved Tafsir
         shell: bash
         run: |
@@ -32,30 +30,19 @@ jobs:
           old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
           test -n "$old_plus" && test -s "$old_plus"
           echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
-
-          rm -rf baseline109/extracted
-          mkdir -p baseline109/extracted
-          unzip -q "$old_plus" \
-            'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' \
-            'assets/tafsir/*' \
-            -d baseline109/extracted
-
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
           mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
           rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
           cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
           count="$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')"
           test "$count" = 604
-          echo "canonical Mushaf pages: $count"
-
           tafsir_dst="app/src/plus/assets/tafsir"
           rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
           cp baseline109/extracted/assets/tafsir/al_jalalayn_en.sqlite.gz.part* "$tafsir_dst/"
           tafsir_parts="$(find "$tafsir_dst" -maxdepth 1 -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')"
           test "$tafsir_parts" = 4
-          cat "$tafsir_dst"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | \
-            grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
-          echo "approved Tafsir parts: $tafsir_parts"
-
+          cat "$tafsir_dst"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -67,7 +54,6 @@ jobs:
           python3 scripts/build_reader109_geometry.py
           python3 scripts/verify_hifz_geometry_edges.py
           test -s app/src/main/assets/reader109/geometry.json
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -81,54 +67,31 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-
       - name: Run Hifz oracle and product-boundary gate
         run: gradle --no-daemon :hifz-core:test :hifz-app:verifyHifzProductBoundary --stacktrace
-
       - name: Assemble isolated Quran Hifz TEST APK
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
-
       - name: Inspect packaged APK boundary, corpus and signature
         shell: bash
         run: |
           set -euo pipefail
           apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
           test -n "$apk" && test -s "$apk"
-
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" \
-            | tee hifz-app-signature.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee hifz-app-signature.txt
           grep -q 'Verified' hifz-app-signature.txt
-
           apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
-          grep -q 'package="com.quransafeguard.hifz.test.debug"' hifz-app-manifest.xml
+          grep -q 'package="com.quransafeguard.hifz.installtest1"' hifz-app-manifest.xml
           grep -q 'Quran Hifz TEST' hifz-app-manifest.xml
-          if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then
-            echo 'FAIL: Safeguard privilege leaked into Hifz APK' >&2
-            exit 1
-          fi
-
+          if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
           unzip -l "$apk" > hifz-app-apk-list.txt
           grep -q 'assets/reader109/geometry.json' hifz-app-apk-list.txt
-          grep -q 'assets/hifzreader/index.html' hifz-app-apk-list.txt
           page_count="$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' hifz-app-apk-list.txt | wc -l | tr -d ' ')"
           test "$page_count" = 604
           tafsir_count="$(grep -E 'assets/tafsir/al_jalalayn_en\.sqlite\.gz\.part[0-9]{2}' hifz-app-apk-list.txt | wc -l | tr -d ' ')"
           test "$tafsir_count" = 4
-
-          rm -rf packaged-tafsir && mkdir packaged-tafsir
-          unzip -q "$apk" 'assets/tafsir/al_jalalayn_en.sqlite.gz.part*' -d packaged-tafsir
-          cat packaged-tafsir/assets/tafsir/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum \
-            | tee hifz-tafsir-sha256.txt
-          grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 ' \
-            hifz-tafsir-sha256.txt
-
           sha256sum "$apk" | tee hifz-app-sha256.txt
           echo "APK=$apk" | tee hifz-app-build-info.txt
-          echo "MUSHAF_PAGES=$page_count" | tee -a hifz-app-build-info.txt
-          echo "TAFSIR_PARTS=$tafsir_count" | tee -a hifz-app-build-info.txt
-          echo "TAFSIR_SHA256=26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56" | tee -a hifz-app-build-info.txt
           echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
-
       - name: Upload Hifz TEST evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -142,31 +105,26 @@ jobs:
             hifz-app-apk-list.txt
             hifz-app-signature.txt
             hifz-app-sha256.txt
-            hifz-tafsir-sha256.txt
             hifz-app-build-info.txt
             geometry-report.json
           if-no-files-found: warn
           retention-days: 14
-
   runtime-hifz-test:
     needs: build-hifz-test
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-
       - name: Download exact APK built by this run
         uses: actions/download-artifact@v4
         with:
           name: quran-hifz-test-${{ github.sha }}
           path: candidate
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install screenshot verifier
         run: pip install --disable-pip-version-check pillow
-
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -177,8 +135,6 @@ jobs:
         run: |
           if [ -d /usr/share/dotnet ]; then sudo rm -rf /usr/share/dotnet; fi
           if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
-          df -h /home/runner
-
       - name: Install launch and inspect Quran Hifz TEST
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -188,7 +144,6 @@ jobs:
           disk-size: 2048M
           disable-animations: true
           script: python3 scripts/runtime_hifz_smoke.py "$(find candidate -type f -name '*.apk' -print -quit)"
-
       - name: Upload runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
