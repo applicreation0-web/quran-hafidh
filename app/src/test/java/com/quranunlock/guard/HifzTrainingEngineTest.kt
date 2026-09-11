@@ -10,22 +10,25 @@ import java.time.LocalDate
 class HifzTrainingEngineTest {
 
     @Test
-    fun sabqiEngineStartsWithAlHusaryListeningPhaseByDefault() {
+    fun sabqiStartsWithFifteenVisibleRepetitionsAndNoAudioProgressStep() {
         val task = task(HifzTrack.SABQI)
         val progress = HifzTrainingEngine.initial(task)
+        val step = HifzTrainingEngine.currentStep(task, progress)
 
-        assertEquals("sabqi-audio-passive", progress.stepProgress?.stepId)
-        assertEquals(HifzTrainingKind.AUDIO_PASSIVE, HifzTrainingEngine.currentStep(task, progress)?.kind)
+        assertEquals("sabqi-visible", progress.stepProgress?.stepId)
+        assertEquals(HifzTrainingKind.VISIBLE, step?.kind)
+        assertEquals(15, step?.repetitions)
+        assertFalse(step?.requiresAudio ?: true)
     }
 
     @Test
-    fun itqanStartsAtTwentyVisibleRepetitions() {
+    fun itqanStartsAtCentralizedPreviewVisibleRepetitions() {
         val task = task(HifzTrack.ITQAN)
         val progress = HifzTrainingEngine.initial(task)
 
         val step = HifzTrainingEngine.currentStep(task, progress)
-        assertEquals("itqan-visible-20", step?.id)
-        assertEquals(20, step?.repetitions)
+        assertEquals("itqan-visible", step?.id)
+        assertEquals(HifzTrainingPolicy.PREVIEW_ITQAN_VISIBLE_REPETITIONS, step?.repetitions)
     }
 
     @Test
@@ -52,7 +55,7 @@ class HifzTrainingEngineTest {
         val afterAdvance = HifzTrainingEngine.advanceIfValid(task, progress)
 
         assertEquals(0, afterAdvance.stepIndex)
-        assertEquals("itqan-visible-20", afterAdvance.stepProgress?.stepId)
+        assertEquals("itqan-visible", afterAdvance.stepProgress?.stepId)
         assertEquals(1, afterAdvance.stepProgress?.revealCount)
     }
 
@@ -60,8 +63,9 @@ class HifzTrainingEngineTest {
     fun incorrectMaskedItqanAttemptCannotAdvance() {
         val task = task(HifzTrack.ITQAN)
         var progress = HifzTrainingEngine.initial(task)
+        val first = HifzTrainingEngine.currentStep(task, progress)!!
 
-        repeat(20) {
+        repeat(first.repetitions) {
             progress = HifzTrainingEngine.attempt(task, progress, correct = true)
         }
         progress = HifzTrainingEngine.advanceIfValid(task, progress)
@@ -75,33 +79,24 @@ class HifzTrainingEngineTest {
     }
 
     @Test
-    fun threeSegmentSabqiCannotCreditAnyFractionAndRequiresWholePassageAssembly() {
+    fun renderingSegmentsNeverMultiplySabqiRepetitionsOrAddAssembly() {
         val task = task(HifzTrack.SABQI)
-        val segmentCount = 3
-        var progress = HifzTrainingEngine.initial(task, segmentCount)
+        val renderingSegments = 3
+        var progress = HifzTrainingEngine.initial(task, renderingSegments)
 
-        repeat(segmentCount) { expectedSegment ->
-            assertEquals(expectedSegment, progress.segmentIndex)
-            progress = finishCurrentBasePhase(task, progress, segmentCount)
-            if (expectedSegment < segmentCount - 1) {
-                assertFalse(progress.completed)
-                assertEquals(expectedSegment + 1, progress.segmentIndex)
-                assertEquals("sabqi-audio-passive", progress.stepProgress?.stepId)
+        HifzTrainingPolicy.stepsFor(HifzTrack.SABQI).forEach { step ->
+            assertEquals(0, progress.segmentIndex)
+            assertEquals(step.id, HifzTrainingEngine.currentStep(task, progress, renderingSegments)?.id)
+            repeat(step.repetitions) {
+                progress = HifzTrainingEngine.attempt(task, progress, correct = true, segmentCount = renderingSegments)
             }
+            progress = HifzTrainingEngine.advanceIfValid(task, progress, renderingSegments)
         }
 
-        assertFalse(progress.completed)
-        assertEquals(segmentCount, progress.segmentIndex)
-        assertEquals("sabqi-assembly-final", HifzTrainingEngine.currentStep(task, progress, segmentCount)?.id)
-
-        repeat(2) {
-            progress = HifzTrainingEngine.attempt(task, progress, correct = true, segmentCount = segmentCount)
-        }
-        assertFalse(HifzTrainingEngine.advanceIfValid(task, progress, segmentCount).completed)
-
-        progress = HifzTrainingEngine.attempt(task, progress, correct = true, segmentCount = segmentCount)
-        progress = HifzTrainingEngine.advanceIfValid(task, progress, segmentCount)
         assertTrue(progress.completed)
+        assertEquals(0, progress.segmentIndex)
+        assertNull(progress.stepProgress)
+        assertTrue(HifzTrainingPolicy.assemblyStepsFor(HifzTrack.SABQI).isEmpty())
     }
 
     @Test
@@ -151,26 +146,6 @@ class HifzTrainingEngineTest {
         assertEquals(HifzCursor.page(2, 1, 5, 2), task.cursor)
         assertEquals(5, task.quota)
         assertFalse(task.status == HifzTaskStatus.COMPLETED)
-    }
-
-    private fun finishCurrentBasePhase(
-        task: HifzTask,
-        initial: HifzTaskProgress,
-        segmentCount: Int
-    ): HifzTaskProgress {
-        var progress = initial
-        val startingSegment = progress.segmentIndex
-        while (!progress.completed && progress.segmentIndex == startingSegment) {
-            val step = HifzTrainingEngine.currentStep(task, progress, segmentCount) ?: break
-            repeat(step.repetitions) {
-                progress = HifzTrainingEngine.attempt(task, progress, correct = true, segmentCount = segmentCount)
-            }
-            while ((progress.stepProgress?.consecutiveSuccesses ?: 0) < step.requiresConsecutiveSuccesses) {
-                progress = HifzTrainingEngine.attempt(task, progress, correct = true, segmentCount = segmentCount)
-            }
-            progress = HifzTrainingEngine.advanceIfValid(task, progress, segmentCount)
-        }
-        return progress
     }
 
     private fun task(track: HifzTrack) = HifzTask(
