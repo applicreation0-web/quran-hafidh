@@ -1,0 +1,113 @@
+name: Quran Hifz isolated test app
+
+on:
+  push:
+    branches:
+      - integration/hifz-test-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-hifz-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject canonical 604-page Mushaf
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$dst" && mkdir -p "$dst"
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' -d baseline109/extracted
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$dst/"
+          count="$(find "$dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')"
+          test "$count" = 604
+          echo "canonical Mushaf pages: $count"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate exact Hifz geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          test -s app/src/main/assets/reader109/geometry.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Hifz oracle and product-boundary gate
+        run: gradle --no-daemon :hifz-core:test :hifz-app:verifyHifzProductBoundary --stacktrace
+
+      - name: Assemble isolated Quran Hifz TEST APK
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+
+      - name: Inspect packaged APK boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
+          grep -q 'package="com.quransafeguard.hifz.test.debug"' hifz-app-manifest.xml
+          grep -q 'Quran Hifz TEST' hifz-app-manifest.xml
+          if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then
+            echo 'FAIL: Safeguard privilege leaked into Hifz APK' >&2
+            exit 1
+          fi
+          unzip -l "$apk" > hifz-app-apk-list.txt
+          grep -q 'assets/reader109/geometry.json' hifz-app-apk-list.txt
+          grep -q 'assets/hifzreader/index.html' hifz-app-apk-list.txt
+          page_count="$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' hifz-app-apk-list.txt | wc -l | tr -d ' ')"
+          test "$page_count" = 604
+          sha256sum "$apk" | tee hifz-app-sha256.txt
+          echo "APK=$apk" | tee hifz-app-build-info.txt
+          echo "MUSHAF_PAGES=$page_count" | tee -a hifz-app-build-info.txt
+          echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
+
+      - name: Upload Hifz TEST evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-test-${{ github.sha }}
+          path: |
+            hifz-app/build/outputs/apk/debug/*.apk
+            hifz-core/build/test-results/
+            hifz-core/build/reports/tests/
+            hifz-app-manifest.xml
+            hifz-app-apk-list.txt
+            hifz-app-sha256.txt
+            hifz-app-build-info.txt
+            geometry-report.json
+          if-no-files-found: warn
+          retention-days: 14
