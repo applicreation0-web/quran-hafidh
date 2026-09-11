@@ -1,0 +1,109 @@
+-                                (view.contentHeight * view.scale).toInt()
+-                            if (contentHeightPx > 0 &&
+-                                view.height > 0 &&
+-                                !ReadingValidationPolicy.requiresScroll(
+-                                    contentHeightPx = contentHeightPx,
+-                                    viewportHeightPx = view.height
+-                                )
+-                            ) {
+-                                currentOnBottomReached.value()
+-                            }
++                        val webView = view ?: return
++                        if (!sourceLooksSubstantive) {
++                            readyProbeGeneration += 1
++                            currentOnFailure.value()
++                            return
+                         }
++
++                        val generation = ++readyProbeGeneration
++                        val deadline = SystemClock.uptimeMillis() + 12_000L
++                        webView.postOnAnimation(object : Runnable {
++                            override fun run() {
++                                if (generation != readyProbeGeneration || readyDelivered) return
++
++                                val visibleRect = Rect()
++                                val contentHeightPx =
++                                    (webView.contentHeight * webView.scale).toInt()
++                                val visiblyRendered =
++                                    webView.isAttachedToWindow &&
++                                        webView.visibility == View.VISIBLE &&
++                                        webView.alpha > 0f &&
++                                        webView.width > 1 &&
++                                        webView.height > 1 &&
++                                        contentHeightPx > 1 &&
++                                        webView.getGlobalVisibleRect(visibleRect) &&
++                                        visibleRect.width() > 1 &&
++                                        visibleRect.height() > 1
++
++                                if (visiblyRendered) {
++                                    readyDelivered = true
++                                    currentOnReady.value()
++                                    if (!ReadingValidationPolicy.requiresScroll(
++                                            contentHeightPx = contentHeightPx,
++                                            viewportHeightPx = webView.height
++                                        )
++                                    ) {
++                                        currentOnBottomReached.value()
++                                    }
++                                    return
++                                }
++
++                                if (SystemClock.uptimeMillis() >= deadline) {
++                                    readyProbeGeneration += 1
++                                    currentOnFailure.value()
++                                } else {
++                                    webView.postOnAnimation(this)
++                                }
++                            }
++                        })
+                     }
+ 
+                     override fun onReceivedError(
+@@ -1106,6 +1177,8 @@ private fun MushafPageWebView(
+                         error: android.webkit.WebResourceError?
+                     ) {
+                         if (request?.isForMainFrame == true) {
++                            readyProbeGeneration += 1
++                            readyDelivered = false
+                             currentOnFailure.value()
+                         }
+                     }
+@@ -1135,19 +1208,25 @@ private fun MushafPageWebView(
+                       </style>
+                     </head>
+                     <body>
+-                      ${TafsirEdition.prepareHtml(svgContent, pageNumber)}
++                      ${if (UNLOCK_READER_TAFSIR_ENABLED) {
++                          TafsirEdition.prepareHtml(svgContent, pageNumber)
++                      } else {
++                          svgContent
++                      }}
+                     </body>
+                     </html>
+                 """.trimIndent()
+ 
+-                TafsirEdition.configureWebView(
+-                    webView = this,
+-                    pageNumber = pageNumber,
+-                    verseIndex = MushafVerseIndex.fromSvg(svgContent),
+-                    onVerseTapped = { verse ->
+-                        currentOnVerseTapped.value(verse)
+-                    }
+-                )
++                if (UNLOCK_READER_TAFSIR_ENABLED) {
++                    TafsirEdition.configureWebView(
++                        webView = this,
++                        pageNumber = pageNumber,
++                        verseIndex = MushafVerseIndex.fromSvg(svgContent),
++                        onVerseTapped = { verse ->
++                            currentOnVerseTapped.value(verse)
++                        }
++                    )
++                }
+ 
+                 loadDataWithBaseURL(
+                     "https://quran-safeguard.local/",
+diff --git a/app/src/plus/java/com/quranunlock/guard/MultiTafsirPanel.kt b/app/src/plus/java/com/quranunlock/guard/MultiTafsirPanel.kt
+index 6befca368d8845ac416aab4b5a66e8eba751f17a..ccb766af71268584a8f4a1246accfe9de5757bd7 100644
+--- a/app/src/plus/java/com/quranunlock/guard/MultiTafsirPanel.kt
++++ b/app/src/plus/java/com/quranunlock/guard/MultiTafsirPanel.kt
