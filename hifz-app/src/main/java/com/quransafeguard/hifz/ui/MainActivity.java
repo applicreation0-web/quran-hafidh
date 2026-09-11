@@ -9,6 +9,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.quransafeguard.hifz.R;
 import com.quransafeguard.hifz.data.MushafRepository;
 import com.quransafeguard.hifz.reader.MushafRenderer;
 
@@ -28,6 +29,7 @@ public final class MainActivity extends Activity {
         root.setBackgroundColor(android.graphics.Color.WHITE);
 
         renderer = new MushafRenderer(this);
+        renderer.setId(R.id.mushaf_renderer);
         root.addView(renderer, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             0,
@@ -39,15 +41,18 @@ public final class MainActivity extends Activity {
         controls.setGravity(Gravity.CENTER);
 
         previous = new Button(this);
+        previous.setId(R.id.previous_page);
         previous.setText("‹");
         previous.setContentDescription("Page précédente");
         previous.setOnClickListener(v -> renderer.previousPage());
 
         pageLabel = new TextView(this);
+        pageLabel.setId(R.id.page_label);
         pageLabel.setGravity(Gravity.CENTER);
         pageLabel.setTextSize(18f);
 
         next = new Button(this);
+        next.setId(R.id.next_page);
         next.setText("›");
         next.setContentDescription("Page suivante");
         next.setOnClickListener(v -> renderer.nextPage());
