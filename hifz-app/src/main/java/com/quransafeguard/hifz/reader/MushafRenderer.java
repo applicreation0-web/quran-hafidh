@@ -24,13 +24,20 @@ public final class MushafRenderer extends View implements AutoCloseable {
         void onError(int page, Throwable error);
     }
 
+    /** User-requested page loads never wait behind speculative prefetch work. */
     private final ExecutorService loader = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "quran-hifz-mushaf-loader");
         t.setDaemon(true);
         return t;
     });
+    private final ExecutorService prefetcher = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "quran-hifz-mushaf-prefetch");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        return t;
+    });
     private final AtomicInteger generation = new AtomicInteger();
-    private final LruCache<Integer, SVG> cache = new LruCache<>(3);
+    private final LruCache<Integer, SVG> cache = new LruCache<>(5);
     private final MushafRepository repository;
     private final RectF renderedContent = new RectF();
     private final RectF documentViewBox = new RectF();
@@ -114,12 +121,7 @@ public final class MushafRenderer extends View implements AutoCloseable {
 
         loader.execute(() -> {
             try {
-                MushafRepository.Page source = repository.load(page);
-                SVG parsed = SVG.getFromInputStream(new ByteArrayInputStream(source.svgUtf8));
-                RectF box = parsed.getDocumentViewBox();
-                if (box == null || box.width() <= 0f || box.height() <= 0f) {
-                    throw new IllegalArgumentException("Mushaf page has no valid viewBox: " + page);
-                }
+                SVG parsed = loadSvg(page);
                 post(() -> {
                     if (closed || ticket != generation.get()) return;
                     cache.put(page, parsed);
@@ -134,6 +136,16 @@ public final class MushafRenderer extends View implements AutoCloseable {
         });
     }
 
+    private SVG loadSvg(int page) throws Exception {
+        MushafRepository.Page source = repository.load(page);
+        SVG parsed = SVG.getFromInputStream(new ByteArrayInputStream(source.svgUtf8));
+        RectF box = parsed.getDocumentViewBox();
+        if (box == null || box.width() <= 0f || box.height() <= 0f) {
+            throw new IllegalArgumentException("Mushaf page has no valid viewBox: " + page);
+        }
+        return parsed;
+    }
+
     private void applyDocument(int page, SVG parsed) {
         document = parsed;
         RectF box = parsed.getDocumentViewBox();
@@ -142,6 +154,30 @@ public final class MushafRenderer extends View implements AutoCloseable {
         updateRenderedContentRect();
         invalidate();
         if (listener != null) listener.onPageChanged(page);
+        prefetchAdjacent(page);
+    }
+
+    /**
+     * Warm the two likely Arabic-book navigation targets without touching the View or triggering
+     * E-Ink refreshes. Cache work runs independently from the user-requested loader.
+     */
+    private void prefetchAdjacent(int page) {
+        prefetchPage(page + 1);
+        prefetchPage(page - 1);
+    }
+
+    private void prefetchPage(int page) {
+        if (closed || page < MushafRepository.FIRST_PAGE || page > MushafRepository.LAST_PAGE) return;
+        if (cache.get(page) != null) return;
+        prefetcher.execute(() -> {
+            if (closed || cache.get(page) != null) return;
+            try {
+                SVG parsed = loadSvg(page);
+                if (!closed && cache.get(page) == null) cache.put(page, parsed);
+            } catch (Throwable ignored) {
+                // Speculative work must never surface an error or affect the requested page.
+            }
+        });
     }
 
     public void nextPage() {
@@ -189,6 +225,7 @@ public final class MushafRenderer extends View implements AutoCloseable {
         closed = true;
         generation.incrementAndGet();
         loader.shutdownNow();
+        prefetcher.shutdownNow();
         cache.evictAll();
         document = null;
         renderedContent.setEmpty();
