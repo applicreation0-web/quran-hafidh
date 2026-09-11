@@ -118,7 +118,16 @@ public final class MushafRenderer extends View implements AutoCloseable {
         canvas.drawColor(Color.WHITE);
         SVG svg = document;
         if (svg == null || getWidth() <= 0 || getHeight() <= 0) return;
-        svg.renderToCanvas(canvas, new RectF(0f, 0f, getWidth(), getHeight()));
+
+        RectF source = svg.getDocumentViewBox();
+        if (source == null || source.width() <= 0f || source.height() <= 0f) return;
+        RectF viewport = PageViewport.fitCenter(
+            source.width(),
+            source.height(),
+            getWidth(),
+            getHeight()
+        );
+        svg.renderToCanvas(canvas, viewport);
     }
 
     @Override
