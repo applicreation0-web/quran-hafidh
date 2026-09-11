@@ -179,6 +179,11 @@ public final class MushafView extends WebView {
             "window.HifzReader&&window.HifzReader.revealSelection(0.46);", null));
     }
 
+    public void clearReveal() {
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.clearReveal&&window.HifzReader.clearReveal();", null));
+    }
+
     public void localCounterChanged() { eink.local(this); }
     public void cycleCompleted() { eink.cycleCompleted(this, prefs); }
 
