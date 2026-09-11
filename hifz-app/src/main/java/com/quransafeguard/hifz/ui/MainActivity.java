@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.quransafeguard.hifz.BuildConfig;
 import com.quransafeguard.hifz.storage.HifzProgressStore;
 import com.quransafeguard.hifz.storage.HifzScheduleStore;
 
@@ -39,7 +40,12 @@ public final class MainActivity extends Activity {
             HifzScheduleStore.Pending pending = new HifzScheduleStore(this).nextPending(LocalDate.now());
             if (pending != null) {
                 String status = pending.overdue ? "À replanifier" : "Aujourd’hui";
-                root.addView(Ui.text(this, status + " : " + HifzProgramActivity.displayMode(pending.mode) + " · " + pending.scheduledDate, 15, true));
+                root.addView(Ui.text(this, status + " : " + HifzProgramActivity.displayMode(pending.mode)
+                    + " · " + pending.scheduledDate, 15, true));
+            }
+            if (BuildConfig.DEBUG) {
+                root.addView(Ui.button(this, "Tests Hifz · sans impact", v ->
+                    startActivity(new Intent(this, HifzDiagnosticsActivity.class))));
             }
         } else {
             root.addView(Ui.text(this, "Parcours Hifz : configuration initiale requise (4 bornes).", 14, false));
