@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /** Exact read-only index derived from the same shipped KFQC SVG corpus as the renderer. */
 public final class GeometryRepository {
@@ -187,6 +186,36 @@ public final class GeometryRepository {
         boolean startPartial = startLineIndex > 0 && lines.get(startLineIndex - 1).verses.contains(first);
         boolean endPartial = endIndex + 1 < lines.size() && lines.get(endIndex + 1).verses.contains(last);
         return new FiveLineBlock(startLineIndex, endIndex, first, last, startPartial, endPartial, ids, verses);
+    }
+
+    /** Verses whose complete physical line span lies inside the supplied stable line interval. */
+    public List<VerseRef> versesFullyCoveredByLines(int startLineIndex, int endLineIndex) {
+        if (startLineIndex < 0 || endLineIndex >= lines.size() || endLineIndex < startLineIndex) {
+            throw new IllegalArgumentException("Invalid stable line interval " + startLineIndex + ".." + endLineIndex);
+        }
+        LinkedHashSet<VerseRef> candidates = new LinkedHashSet<>();
+        for (int i = startLineIndex; i <= endLineIndex; i++) candidates.addAll(lines.get(i).verses);
+        ArrayList<VerseRef> complete = new ArrayList<>();
+        for (VerseRef verse : candidates) {
+            if (firstLineIndex(verse) >= startLineIndex && lastLineIndex(verse) <= endLineIndex) complete.add(verse);
+        }
+        complete.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return complete;
+    }
+
+    /** Count physical Mushaf lines touched by a non-wrapping canonical verse interval. */
+    public int lineCountForVerseRange(VerseRef start, VerseRef end) {
+        if (ordinal(end) < ordinal(start)) throw new IllegalArgumentException("Wrapped range not supported for calibration");
+        int low = ordinal(start), high = ordinal(end), count = 0;
+        for (LineMeta line : lines) {
+            boolean hit = false;
+            for (VerseRef ref : line.verses) {
+                int o = ordinal(ref);
+                if (o >= low && o <= high) { hit = true; break; }
+            }
+            if (hit) count++;
+        }
+        return count;
     }
 
     /** Itqan working unit: the eligible verse segment on the current canonical Mushaf page. */
