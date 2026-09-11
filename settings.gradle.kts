@@ -18,3 +18,4 @@ rootProject.name = "QuranSafeguard"
 include(":app")
 include(":hifz-core")
 include(":safeguard-core")
+include(":hifz-app")
