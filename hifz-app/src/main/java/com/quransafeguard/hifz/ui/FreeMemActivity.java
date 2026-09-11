@@ -86,8 +86,14 @@ public final class FreeMemActivity extends android.app.Activity implements Reade
     private void go(int delta) {
         int next = clampPage(page + delta);
         if (next == page) return;
-        page = next; start = end = null; focus = null; count = 0;
-        save(); surface.clearMemorizationState(); surface.showPage(page); updateSelectionLabel();
+        // Navigation is not a new memorization session: preserve passage, mask and repetition count
+        // so a free passage may span page boundaries. Only the transient focus rectangle is cleared.
+        page = next;
+        focus = null;
+        save();
+        surface.clearMemorizationState();
+        surface.showPage(page);
+        updateSelectionLabel();
     }
 
     @Override public void onPageChanged(int shown) {
