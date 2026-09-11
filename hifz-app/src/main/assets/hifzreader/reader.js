@@ -21,13 +21,15 @@ function prepare(){
    const k=key(p.getAttribute('surah'),p.getAttribute('ayah'));p.dataset.verse=k;
    if(!seen.has(k)){
      seen.add(k);p.setAttribute('role','button');p.setAttribute('tabindex','0');
-     p.onclick=()=>{const [s,a]=parse(k);N?.verseTap(s,a)};
+     p.onclick=e=>{e.stopPropagation();const [s,a]=parse(k);N?.verseTap(s,a)};
      p.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();const [s,a]=parse(k);N?.verseTap(s,a)}};
    }
  });
  render();
  N?.pageShown(currentPage);
 }
+
+mushaf.onclick=()=>N?.surfaceTap();
 
 function render(){
  document.body.classList.toggle('eink',eink);
