@@ -1,17 +1,30 @@
 'use strict';
 const N=window.HifzNative;
-let geo=null,currentPage=1,selected=[],lineIds=[],mask=0,eink=false,loadSeq=0;
+let pageGeo=null,currentPage=1,selected=[],lineIds=[],mask=0,eink=false,loadSeq=0;
 const mushaf=document.getElementById('mushaf');
-fetch('../reader109/geometry.json').then(r=>r.json()).then(g=>{geo=g;N?.ready();}).catch(()=>N?.error('Géométrie Mushaf indisponible'));
+
 function key(s,a){return s+':'+a}
 function parse(k){return k.split(':').map(Number)}
 function currentSvg(){return mushaf.querySelector('svg')}
-async function loadPage(page){
+
+function loadPage(page){
  if(page<1||page>604)return;
  const seq=++loadSeq,current=page;currentPage=page;
- const response=await fetch('../page/'+page);if(!response.ok){N?.error('Page '+page+' indisponible');return}
- const text=await response.text();if(seq!==loadSeq)return;
+ let text='',geometryText='';
+ try{
+   text=N?.pageSvg(page)||'';
+   geometryText=N?.pageGeometry(page)||'';
+ }catch(error){N?.error('Page '+page+' indisponible');return}
+ if(seq!==loadSeq)return;
+ if(!text){N?.error('Page '+page+' indisponible');return}
+ try{
+   pageGeo=geometryText?JSON.parse(geometryText):null;
+ }catch(error){
+   pageGeo=null;N?.error('Géométrie page '+page+' invalide');return;
+ }
+ if(!pageGeo){N?.error('Géométrie page '+page+' indisponible');return}
  const doc=new DOMParser().parseFromString(text,'image/svg+xml');
+ if(doc.querySelector('parsererror')){N?.error('SVG page '+page+' invalide');return}
  const svg=document.importNode(doc.documentElement,true);mushaf.replaceChildren(svg);
  const seen=new Set();
  svg.querySelectorAll('.ayahPolygon').forEach(p=>{
@@ -23,14 +36,14 @@ async function loadPage(page){
  });
  render();N?.pageShown(current);
 }
+
 function render(){
  document.body.classList.toggle('eink',eink);
  const svg=currentSvg();if(!svg)return;
  svg.querySelectorAll('.ayahPolygon').forEach(p=>p.classList.toggle('selected',selected.includes(p.dataset.verse)));
  svg.querySelectorAll('.masklayer').forEach(n=>n.remove());
- if(!mask||!geo||!lineIds.length)return;
- const page=geo.pages[String(currentPage)];if(!page)return;
- const lines=page.lines.filter(l=>lineIds.includes(l.id));if(!lines.length)return;
+ if(!mask||!pageGeo||!lineIds.length)return;
+ const lines=(pageGeo.lines||[]).filter(l=>lineIds.includes(l.id));if(!lines.length)return;
  const NS='http://www.w3.org/2000/svg';
  const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
  const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');clip.id='hifz-selection-clip';
@@ -46,9 +59,12 @@ function render(){
  });
  layer.appendChild(group);svg.appendChild(layer);
 }
+
 window.HifzReader={
  show(page,selection,lines,hidden,einkMode){selected=selection||[];lineIds=lines||[];mask=hidden||0;eink=!!einkMode;if(page!==currentPage||!currentSvg())loadPage(page);else render()},
  setMask(hidden){mask=hidden||0;render()},
  setSelection(selection,lines){selected=selection||[];lineIds=lines||[];render()},
  page(){return currentPage}
 };
+
+N?.ready();
