@@ -1,0 +1,45 @@
+name: Quran Hifz 6h candidate
+
+on:
+  push:
+    branches:
+      - work/quran-hifz-6h-build
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout with pinned Mushaf submodule
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Unit tests
+        run: gradle :hifz-core:test --stacktrace
+
+      - name: Verify canonical 604-page Mushaf and geometry
+        run: gradle :hifz-app:verifyHifzMushafSource --stacktrace
+
+      - name: Compile smoke APK
+        run: gradle :hifz-app:assembleDebug -PhifzSmokeMushaf=true --stacktrace
+
+      - name: Upload smoke APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-smoke-apk
+          path: hifz-app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
