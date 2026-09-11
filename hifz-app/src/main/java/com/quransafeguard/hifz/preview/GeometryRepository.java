@@ -226,7 +226,6 @@ public final class GeometryRepository {
             boolean eligibleLine = false;
             for (VerseRef ref : line.verses) {
                 if (corpus.contains(ref)) {
-                    // On the very first physical line, exclude verses before the exact cursor.
                     if (counted == 0 && ordinal(ref) < ordinal(expectedCursor)) continue;
                     eligibleLine = true;
                     if (traversal.isEmpty() || !traversal.get(traversal.size() - 1).equals(ref)) traversal.add(ref);
@@ -236,9 +235,6 @@ public final class GeometryRepository {
             if (eligibleLine) counted++;
             lineIndex++;
             if (lineIndex >= lines.size()) lineIndex = 0;
-
-            // Skip physical regions containing no eligible corpus. The loop naturally reaches
-            // the next range; no ineligible verse is ever returned as a planned endpoint.
         }
         return new EligibleLinePlan(cursor, last, requestedLines, traversal);
     }
@@ -272,7 +268,10 @@ public final class GeometryRepository {
 
     public static int ordinal(VerseRef ref) { return QuranCanon.INSTANCE.ordinal(ref); }
 
-    public static VerseRef previous(VerseRef ref) { return QuranCanon.INSTANCE.previous(ref); }
+    public static VerseRef previous(VerseRef ref) {
+        int current = ordinal(ref);
+        return current <= 1 ? null : QuranCanon.INSTANCE.fromOrdinal(current - 1);
+    }
 
     private static String readAsset(Context context, String path) throws Exception {
         try (InputStream in = context.getAssets().open(path); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
