@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="false"
         android:label="Quran Hifz"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="false"
+        tools:replace="android:allowBackup,android:label">
         <activity android:name=".ui.HifzSessionActivity" android:exported="false" />
         <activity android:name=".ui.HifzProgramActivity" android:exported="false" />
         <activity android:name=".ui.HifzSetupActivity" android:exported="false" />
