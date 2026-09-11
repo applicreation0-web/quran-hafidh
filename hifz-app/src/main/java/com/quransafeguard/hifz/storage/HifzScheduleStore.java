@@ -22,6 +22,7 @@ public final class HifzScheduleStore {
     public static final String SABQI_REVIEW = "SABQI_REVIEW";
     public static final String ITQAN = "ITQAN";
     public static final String MURAJAAH = "MURAJAAH";
+    private static final String KEY_EVENING_REVIEW_START = "evening_review_start";
 
     public static final class Pending {
         public final LocalDate scheduledDate;
@@ -36,11 +37,22 @@ public final class HifzScheduleStore {
 
     private final SharedPreferences p;
     private final HifzProgressStore progress;
+    private final LocalDate eveningReviewStart;
 
     public HifzScheduleStore(Context context) {
         // Keep the original preference file so adding the evening slot never erases prior history.
         p = context.getApplicationContext().getSharedPreferences("quran_hifz_schedule_v1", Context.MODE_PRIVATE);
         progress = new HifzProgressStore(context);
+        String stored = p.getString(KEY_EVENING_REVIEW_START, null);
+        if (stored == null) {
+            eveningReviewStart = LocalDate.now();
+            p.edit().putString(KEY_EVENING_REVIEW_START, eveningReviewStart.toString()).apply();
+        } else {
+            LocalDate parsed;
+            try { parsed = LocalDate.parse(stored); }
+            catch (RuntimeException invalid) { parsed = LocalDate.now(); }
+            eveningReviewStart = parsed;
+        }
     }
 
     /** Primary learning/revision mode for the day. */
@@ -58,7 +70,7 @@ public final class HifzScheduleStore {
         }
     }
 
-    /** Ordered slots for one day. Morning always precedes the evening consolidation slot. */
+    /** Product policy for a newly scheduled day. */
     public static List<String> slotsFor(LocalDate date) {
         if (SABQI.equals(modeFor(date))) {
             return Arrays.asList(SABQI, SABQI_REVIEW);
@@ -66,12 +78,20 @@ public final class HifzScheduleStore {
         return Collections.singletonList(modeFor(date));
     }
 
+    /** Existing installations do not acquire artificial evening-review debt for past dates. */
+    private List<String> effectiveSlotsFor(LocalDate date) {
+        if (date.isBefore(eveningReviewStart) && SABQI.equals(modeFor(date))) {
+            return Collections.singletonList(SABQI);
+        }
+        return slotsFor(date);
+    }
+
     public boolean isCompleted(LocalDate date, String mode) {
         return p.getBoolean(key(date, mode), false);
     }
 
     public void markCompleted(LocalDate date, String mode) {
-        if (!slotsFor(date).contains(mode)) {
+        if (!effectiveSlotsFor(date).contains(mode)) {
             throw new IllegalArgumentException("Mode does not match scheduled slot");
         }
         p.edit().putBoolean(key(date, mode), true).apply();
@@ -87,7 +107,7 @@ public final class HifzScheduleStore {
         if (start.isAfter(today)) start = today;
         LocalDate cursor = start;
         while (!cursor.isAfter(today)) {
-            for (String mode : slotsFor(cursor)) {
+            for (String mode : effectiveSlotsFor(cursor)) {
                 if (!isCompleted(cursor, mode)) {
                     return new Pending(cursor, mode, cursor.isBefore(today));
                 }
