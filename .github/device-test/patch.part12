@@ -1,0 +1,98 @@
+@@ -17,8 +17,9 @@ private const val MULTI_EDITION_KEY = "selected_edition"
+  * Loading/controller layer for the single TafsirPanel renderer.
+  *
+  * Availability is resolved from real source-backed rows for the tapped verse.
+- * A remembered edition that does not cover the verse is never left selected:
+- * Jalalayn is the first fallback, then the first genuinely available edition.
++ * A remembered edition remains selected even when its verified corpus does not cover
++ * the verse, so the panel can state that the requested commentary is unavailable instead
++ * of silently substituting another author. The user may then choose an available edition.
+  * Primary reader labels stay author-based: Jalalayn, Qurtubi and Qushayri.
+  */
+ @Composable
+@@ -55,15 +56,7 @@ internal fun MultiTafsirPanel(
+ 
+     LaunchedEffect(verse) {
+         availability = null
+-        val loaded = MultiTafsirRepository.loadAvailable(context, verse)
+-        val resolved = loaded.resolveEdition(selectedEdition)
+-        if (resolved != null && resolved != selectedEdition) {
+-            if (!contextual) prefs.edit()
+-                .putString(MULTI_EDITION_KEY, resolved.storageValue)
+-                .apply()
+-            selectedEdition = resolved
+-        }
+-        availability = loaded
++        availability = MultiTafsirRepository.loadAvailable(context, verse)
+     }
+ 
+     fun choose(edition: PrivateTafsirEdition) {
+diff --git a/app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt b/app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt
+index b4a479e44aad43d0dd0f61089fb61a02f0c89b33..f03c648e65793aa810ca19d22a991f03cbb2ce1e 100644
+--- a/app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt
++++ b/app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt
+@@ -111,6 +111,8 @@ internal fun TafsirPanel(
+     var requestedNoteNumber by remember(verse, selectedEdition) { mutableStateOf<Int?>(null) }
+     val scrollState = remember(verse, selectedEdition) { ScrollState(0) }
+     val availableEntry = (state as? TafsirLoadState.Available)?.entry
++    val canChooseEdition = availableEditions.isNotEmpty() &&
++        (availableEditions.size > 1 || selectedEdition !in availableEditions)
+     val noteRequesters = remember(availableEntry?.notes) {
+         availableEntry?.notes
+             ?.associate { it.number to BringIntoViewRequester() }
+@@ -179,11 +181,11 @@ internal fun TafsirPanel(
+                             stateDescription = selectedEdition.displayName
+                             heading()
+                         },
+-                        enabled = availableEditions.size > 1,
++                        enabled = canChooseEdition,
+                         onClick = { menuExpanded = true }
+                     ) {
+                         Text(
+-                            if (availableEditions.size > 1) {
++                            if (canChooseEdition) {
+                                 "${selectedEdition.displayName} ▾ · ${verse.surah}:${verse.ayah}"
+                             } else {
+                                 "${selectedEdition.displayName} · ${verse.surah}:${verse.ayah}"
+@@ -193,7 +195,7 @@ internal fun TafsirPanel(
+                         )
+                     }
+                     DropdownMenu(
+-                        expanded = menuExpanded && availableEditions.size > 1,
++                        expanded = menuExpanded && canChooseEdition,
+                         onDismissRequest = { menuExpanded = false }
+                     ) {
+                         availableEditions.forEach { edition ->
+diff --git a/app/src/test/java/com/quranunlock/guard/HifzTrainingEngineTest.kt b/app/src/test/java/com/quranunlock/guard/HifzTrainingEngineTest.kt
+index c04975c0f952a2df53a84aa7afe779482cbd7e58..1f5e2e74d4647c2d6b97d419c8a3f22fa4ce7f58 100644
+--- a/app/src/test/java/com/quranunlock/guard/HifzTrainingEngineTest.kt
++++ b/app/src/test/java/com/quranunlock/guard/HifzTrainingEngineTest.kt
+@@ -143,6 +143,28 @@ class HifzTrainingEngineTest {
+         assertEquals(0, progress.stepProgress?.consecutiveSuccesses)
+     }
+ 
++    @Test
++    fun itqanRemainsTaskWideWhenGeometryHasSeveralSegments() {
++        val task = task(HifzTrack.ITQAN)
++        val geometrySegmentCount = 4
++        var progress = HifzTrainingEngine.initial(task, geometrySegmentCount)
++        var actions = 0
++
++        while (!progress.completed) {
++            progress = HifzTrainingEngine.attemptAndAdvanceIfValid(
++                task,
++                progress,
++                correct = true,
++                segmentCount = geometrySegmentCount
++            )
++            actions += 1
++            assertTrue(actions <= 30)
++        }
++
++        assertEquals(30, actions)
++        assertEquals(0, progress.segmentIndex)
++    }
++
+     @Test
+     fun threeSegmentSabqiCannotCreditAnyFractionAndRequiresWholePassageAssembly() {
+         val task = task(HifzTrack.SABQI)
