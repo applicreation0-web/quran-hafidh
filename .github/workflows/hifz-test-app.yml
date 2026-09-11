@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - integration/hifz-test-app
+      - integration/hifz-boox-final-convergence
   workflow_dispatch:
 
 permissions:
