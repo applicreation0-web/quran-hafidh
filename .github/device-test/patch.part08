@@ -1,0 +1,103 @@
+-  window.addEventListener('error',e=>{if(document.body.classList.contains('booting'))showFailure('Erreur pendant le rendu du Muṣḥaf.',e.error)});
+-  window.addEventListener('unhandledrejection',e=>{showFailure('Erreur pendant le chargement du Muṣḥaf.',e.reason)});
+   document.addEventListener('DOMContentLoaded',()=>{
+     const retry=document.getElementById('readerRetry');
+-    if(retry)retry.addEventListener('click',()=>location.reload());
++    if(retry)retry.addEventListener('click',()=>{clearLoadCallbacks();loadActive=false;location.reload()});
+     const mushaf=document.getElementById('mushaf');
+     if(mushaf){
+       new MutationObserver(()=>{
+-        mushaf.dataset.runtimeReady='false';
+-        document.body.classList.remove('runtime-ready');
+-        requestAnimationFrame(()=>requestAnimationFrame(verifyRenderedPage));
++        if(!loadActive)return;
++        const generation=loadGeneration;
++        clearFrames();
++        frameOne=requestAnimationFrame(()=>{
++          frameOne=null;
++          if(!isCurrent(generation))return;
++          frameTwo=requestAnimationFrame(()=>{frameTwo=null;verifyRenderedPage(generation)});
++        });
+       }).observe(mushaf,{childList:true});
+     }
+-    setTimeout(()=>{if(document.body.classList.contains('booting'))showFailure('Le lecteur n’a pas terminé son démarrage.')},12000);
+   });
+-  window.QsgRuntimeGuard={sanitizeInitial,sanitizeState,strictPage,verifyRenderedPage,fail:showFailure,get lastFailure(){return lastFailure}};
++  const abandon=()=>{loadGeneration++;loadActive=false;clearLoadCallbacks()};
++  window.addEventListener('pagehide',abandon,{once:true});
++  window.addEventListener('beforeunload',abandon,{once:true});
++
++  window.QsgRuntimeGuard={
++    sanitizeInitial,sanitizeState,strictPage,substantiveSvg,verifyRenderedPage,fail:showFailure,
++    get lastFailure(){return lastFailure},
++    get loading(){return loadActive},
++    get generation(){return loadGeneration},
++    get waitingForLayout(){return !!sizeWatch}
++  };
+ })();
+diff --git a/app/src/main/java/com/quranunlock/guard/EInkRefreshController.kt b/app/src/main/java/com/quranunlock/guard/EInkRefreshController.kt
+index d64792ab649576744ca292c31612c9e53f66e668..23df7d2e503d53d1383efd10f77a885c21d998e8 100644
+--- a/app/src/main/java/com/quranunlock/guard/EInkRefreshController.kt
++++ b/app/src/main/java/com/quranunlock/guard/EInkRefreshController.kt
+@@ -64,6 +64,8 @@ class EInkRefreshController(
+     companion object {
+         internal const val FULL_REFRESH_THRESHOLD = 10
+         internal const val MIN_FULL_REFRESH_INTERVAL_MS = 2_500L
++        internal const val CLEANER_BLACK_MS = 120L
++        internal const val CLEANER_LIGHT_MS = 120L
+     }
+ 
+     private val policy = EInkRefreshPolicy()
+@@ -168,10 +170,10 @@ class EInkRefreshController(
+         val black = ColorDrawable(Color.rgb(23, 23, 21)).apply { setBounds(0, 0, view.width, view.height) }
+         val cream = ColorDrawable(Color.rgb(247, 242, 232)).apply { setBounds(0, 0, view.width, view.height) }
+         addOverlay(view, black)
+-        postTracked(55L) {
++        postTracked(CLEANER_BLACK_MS) {
+             removeOverlay(view, black)
+             addOverlay(view, cream)
+-            postTracked(55L) { removeOverlay(view, cream) }
++            postTracked(CLEANER_LIGHT_MS) { removeOverlay(view, cream) }
+         }
+     }
+ }
+diff --git a/app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt b/app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt
+index a21e5f4be8873f3bf6f7a02c48ab7a134c6ae79b..f84ef3dafe230d1b47d165c78798a84095434bf5 100644
+--- a/app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt
++++ b/app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt
+@@ -39,7 +39,11 @@ class FreeQuranReaderActivity : ComponentActivity() {
+         val progress: HifzTaskProgress,
+         val segments: List<HifzPedagogicalSegment>
+     ) {
+-        val segmentCount: Int get() = segments.size
++        val geometrySegmentCount: Int get() = segments.size
++        // Only Sabqi is pedagogically segmented. Itqan and Murajaah are trained
++        // task-wide even when the geometry spans several physical line groups.
++        val trainingSegmentCount: Int
++            get() = if (task.track == HifzTrack.SABQI) segments.size else 1
+     }
+ 
+     private var web: WebView? = null
+@@ -115,7 +119,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
+                 runtime.task,
+                 progress,
+                 correct,
+-                runtime.segmentCount
++                runtime.trainingSegmentCount
+             )
+         }
+         if (saved && HifzReadingCountPolicy.isReading(step)) {
+@@ -364,7 +368,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
+             val step = HifzTrainingEngine.currentStep(
+                 runtime.task,
+                 runtime.progress,
+-                runtime.segmentCount
++                runtime.trainingSegmentCount
+             )
+             val stepProgress = runtime.progress.stepProgress
+             val counts = HifzReadingStatsStore.load(this@FreeQuranReaderActivity, runtime.task.id)
+@@ -380,11 +384,12 @@ class FreeQuranReaderActivity : ComponentActivity() {
+                 put("startPage", runtime.task.cursor.startPage)
+                 put("endPage", runtime.task.cursor.endPage)
+                 put("segmentIndex", runtime.progress.segmentIndex)
+-                put("segmentCount", runtime.segmentCount)
