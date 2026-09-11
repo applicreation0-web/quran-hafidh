@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -24,6 +25,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     private int mask = 0;
     private TextView title, selection, counter;
     private android.content.SharedPreferences state;
+    private final List<Button> maskButtons = new ArrayList<>();
 
     @Override protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
@@ -35,7 +37,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
-        top.addView(Ui.smallButton(this,"‹",v->finish()));
+        top.addView(Ui.smallButton(this,"‹ Retour",v->finish()));
         title = Ui.text(this,"Mémorisation libre · "+page+" / 604",15,true); Ui.weight(title,1f); title.setGravity(Gravity.CENTER); top.addView(title); root.addView(top);
 
         selection = Ui.text(this,"",14,false); selection.setPadding(Ui.dp(this,12),4,Ui.dp(this,12),4); root.addView(selection);
@@ -49,13 +51,24 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         Ui.weight(minus,1);Ui.weight(plus,1);Ui.weight(reset,1);reps.addView(minus);reps.addView(plus);reps.addView(reset);root.addView(reps);
 
         LinearLayout masks=Ui.row(this);
-        for(int value:new int[]{0,25,50,75,100}){Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();});Ui.weight(b,1);masks.addView(b);}root.addView(masks);
+        for(int value:new int[]{0,25,50,75,100}){
+            Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
+            b.setTag(value);maskButtons.add(b);Ui.weight(b,1);masks.addView(b);
+        }
+        root.addView(masks);
         LinearLayout nav=Ui.row(this);
-        Button prev=Ui.smallButton(this,"‹ Page",v->go(-1));Button audio=Ui.smallButton(this,"Audio",v->Toast.makeText(this,"Al-Husary Muʿallim : corpus local à installer séparément. Aucun compteur Hifz n’est modifié.",Toast.LENGTH_LONG).show());Button next=Ui.smallButton(this,"Page ›",v->go(1));
-        Ui.weight(prev,1);Ui.weight(audio,1);Ui.weight(next,1);nav.addView(prev);nav.addView(audio);nav.addView(next);root.addView(nav);
+        Button prev=Ui.smallButton(this,"‹ Page",v->go(-1));
+        Button next=Ui.smallButton(this,"Page ›",v->go(1));
+        Ui.weight(prev,1);nav.addView(prev);
+        if (new HifzAudioGate(this).available()) {
+            Button audio=Ui.smallButton(this,"Audio",v->Toast.makeText(this,"Audio disponible. Aucun compteur Hifz n’est modifié.",Toast.LENGTH_LONG).show());
+            Ui.weight(audio,1);nav.addView(audio);
+        }
+        Ui.weight(next,1);nav.addView(next);root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
         updateSelectionLabel();
+        updateMaskButtons();
     }
 
     private VerseRef parseOptional(String value){
@@ -69,6 +82,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         save();
         counter.setText("Répétitions manuelles : 0");
         updateSelectionLabel();
+        updateMaskButtons();
         mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
         title.setText("Mémorisation libre · "+page+" / 604");
     }
@@ -88,13 +102,22 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         else selection.setText("Passage libre : "+start+" → "+end+" · masque "+mask+"%\nAucun curseur Sabqi / Itqān / Murājaʿah n’est modifié.");
     }
 
+    private void updateMaskButtons() {
+        boolean hasSelection = start != null && end != null;
+        for (Button button : maskButtons) {
+            int value = (Integer) button.getTag();
+            button.setEnabled(hasSelection);
+            Ui.setChosen(button, hasSelection && value == mask);
+        }
+    }
+
     @Override public void onVerseTap(VerseRef verse){
         if(start==null){start=end=verse;}
         else if(start.equals(end)){if(GeometryRepository.ordinal(verse)<GeometryRepository.ordinal(start)){end=start;start=verse;}else end=verse;}
         else {start=end=verse;count=0;counter.setText("Répétitions manuelles : 0");}
         List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
         mushaf.setSelection(refs,lines);mushaf.setMask(mask);
-        updateSelectionLabel();save();
+        updateSelectionLabel();updateMaskButtons();save();
     }
     @Override public void onReady(){
         if(start!=null&&end!=null){
