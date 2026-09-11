@@ -1,0 +1,85 @@
+ window.audioEvent=function(e){playing=e.state==='playing';$('audio').textContent=playing?'❚❚':'▶';document.querySelectorAll('.ayahPolygon').forEach(p=>p.classList.toggle('audio',playing&&p.dataset.verse===e.surah+':'+e.ayah));if(e.state==='cycle_complete'){const s=currentSession(),step=s&&P.current(s);const refs=step?refsFor(step.lines):[];if(audioCountsProgress&&refs.at(-1)===e.surah+':'+e.ayah){void recordFreeRepetition(s,true,'audio').then(advanced=>{if(!advanced)nextAudio()})}else nextAudio()}if(e.state==='download_required'){audioQueue=[];audioCountsProgress=false;const s=currentSession();if(s&&s.withAudio){P.disableAudio(s);save();renderMemory()}notice('Audio local manquant — la séance continue sans audio.')}if(e.state==='download_start')notice('Téléchargement audio démarré…');if(e.state==='download_progress')notice('Téléchargement audio '+e.done+' / '+e.total);if(e.state==='download_complete')notice('Audio local disponible hors ligne ✓');if(e.state==='delete_complete')notice('Audio local supprimé');if(e.state==='download_error'||e.state==='error')notice(e.message||'Audio indisponible')};
+ window.setOcclusion=function(px){occlusion=px;$('viewport').style.paddingBottom=px+'px';if(px===0)$('viewport').style.paddingBottom='0px'};
+ window.einkCleanerRuns=0;
++const EINK_BLACK_MS=120,EINK_LIGHT_MS=120;let einkFlashTimer=null;
+ window.einkFullRefreshFallback=function(){
+  if(!eink)return false;
+- const cleaner=$('einkCleaner');window.einkCleanerRuns++;cleaner.hidden=false;cleaner.style.background='#171715';
+- requestAnimationFrame(()=>{cleaner.style.background='#F7F2E8';setTimeout(()=>{cleaner.hidden=true},55)});
++ const cleaner=$('einkCleaner');window.einkCleanerRuns++;clearTimeout(einkFlashTimer);cleaner.hidden=false;cleaner.style.background='#171715';
++ /* Deux frames pour que le noir soit réellement peint, puis maintien avant le retour au crème. */
++ requestAnimationFrame(()=>requestAnimationFrame(()=>{einkFlashTimer=setTimeout(()=>{cleaner.style.background='#F7F2E8';einkFlashTimer=setTimeout(()=>{cleaner.hidden=true;einkFlashTimer=null},EINK_LIGHT_MS)},EINK_BLACK_MS)}));
+  return true;
+ };
+ window.handleBack=function(){if(!$('sheet').hidden){closeSheet();return}if(memory){exitMemory();return}N?.exit()};
+diff --git a/app/src/main/assets/reader109/runtime_guard.js b/app/src/main/assets/reader109/runtime_guard.js
+index 4bdb791a8a151a04cd677d58709963a8655afef0..f22d05f83e9d8a7332ebbcf85fe85c26bf78e84d 100644
+--- a/app/src/main/assets/reader109/runtime_guard.js
++++ b/app/src/main/assets/reader109/runtime_guard.js
+@@ -35,10 +35,30 @@
+   }
+ 
+   let pendingPageTimer=null;
++  let sizeWatch=null;
++  let frameOne=null;
++  let frameTwo=null;
++  let loadGeneration=0;
++  let loadActive=false;
+   let lastFailure='';
+-  const clearPending=()=>{if(pendingPageTimer!==null){clearTimeout(pendingPageTimer);pendingPageTimer=null}};
+-  function showFailure(message,error){
+-    clearPending();
++
++  const clearPendingTimer=()=>{
++    if(pendingPageTimer!==null){clearTimeout(pendingPageTimer);pendingPageTimer=null}
++  };
++  const clearFrames=()=>{
++    if(frameOne!==null){cancelAnimationFrame(frameOne);frameOne=null}
++    if(frameTwo!==null){cancelAnimationFrame(frameTwo);frameTwo=null}
++  };
++  const clearSizeWatch=()=>{
++    if(sizeWatch){try{sizeWatch.disconnect()}catch(_){}sizeWatch=null}
++  };
++  const clearLoadCallbacks=()=>{clearPendingTimer();clearFrames();clearSizeWatch()};
++  const isCurrent=generation=>loadActive&&generation===loadGeneration;
++
++  function showFailure(message,error,generation=loadGeneration){
++    if(generation!==loadGeneration)return false;
++    clearLoadCallbacks();
++    loadActive=false;
+     lastFailure=message||'Le Muṣḥaf n’a pas pu être affiché.';
+     console.error(lastFailure,error||'');
+     document.body.classList.remove('booting','hidden','runtime-ready');
+@@ -46,43 +66,96 @@
+     if(text)text.textContent=lastFailure+' La lecture n’est pas validée. Vous pouvez réessayer ou revenir.';
+     if(box)box.hidden=false;
+     const mushaf=document.getElementById('mushaf');
+-    if(mushaf)mushaf.setAttribute('aria-busy','false');
++    if(mushaf){mushaf.setAttribute('aria-busy','false');mushaf.dataset.runtimeReady='false'}
++    return true;
+   }
++
+   function beginPageLoad(){
+-    clearPending();
++    const generation=++loadGeneration;
++    clearLoadCallbacks();
++    loadActive=true;
++    lastFailure='';
+     document.body.classList.remove('runtime-ready');
+     document.body.classList.add('booting');
+     const box=document.getElementById('readerError');if(box)box.hidden=true;
+-    const mushaf=document.getElementById('mushaf');if(mushaf)mushaf.setAttribute('aria-busy','true');
+-    pendingPageTimer=setTimeout(()=>showFailure('Le chargement de la page du Muṣḥaf a expiré.'),12000);
++    const mushaf=document.getElementById('mushaf');
++    if(mushaf){mushaf.setAttribute('aria-busy','true');mushaf.dataset.runtimeReady='false'}
++    pendingPageTimer=setTimeout(()=>{
++      if(isCurrent(generation))showFailure('Le chargement de la page du Muṣḥaf a expiré.',null,generation)
++    },12000);
++    return generation;
++  }
++
++  function svgViewBoxIsSubstantive(svg){
++    const raw=(svg.getAttribute('viewBox')||'').trim().split(/[\s,]+/).map(Number);
++    if(raw.length===4&&raw.every(Number.isFinite)&&raw[2]>1&&raw[3]>1)return true;
++    const width=parseFloat(svg.getAttribute('width')||'0');
++    const height=parseFloat(svg.getAttribute('height')||'0');
