@@ -20,7 +20,7 @@ import java.util.List;
  * Progressive masking is deterministic and therefore stable on E-Ink.
  */
 public final class MemorizationOverlayView extends View {
-    private final Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint maskPaint = new Paint();
     private final Paint focusPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private MushafRenderer renderer;
     private List<LineGeometryRepository.PageLine> selectedLines = Collections.emptyList();
@@ -33,6 +33,9 @@ public final class MemorizationOverlayView extends View {
         super(context, attrs);
         setWillNotDraw(false);
         setBackgroundColor(Color.TRANSPARENT);
+        // Hard black/white edges are intentional: grey antialiased fringes ghost on E-Ink.
+        maskPaint.setAntiAlias(false);
+        maskPaint.setDither(false);
         maskPaint.setStyle(Paint.Style.FILL);
         maskPaint.setColor(Color.WHITE);
         focusPaint.setStyle(Paint.Style.STROKE);
@@ -72,10 +75,15 @@ public final class MemorizationOverlayView extends View {
             for (LineGeometryRepository.PageLine line : selectedLines) {
                 if (line.page != r.getCurrentPage()) continue;
                 RectF rect = r.mapDocumentToView(line.documentBounds);
-                if (rect == null) continue;
+                if (rect == null || rect.width() <= 0f || rect.height() <= 0f) continue;
+
                 // Arabic is RTL: progressive masking starts at the visual right edge.
-                float left = rect.right - rect.width() * fraction;
-                canvas.drawRect(left, rect.top, rect.right, rect.bottom, maskPaint);
+                // Snap mask boundaries to physical pixels so 25/50/75% cannot leave grey seams.
+                float left = (float) Math.floor(rect.right - rect.width() * fraction);
+                float top = (float) Math.floor(rect.top);
+                float right = (float) Math.ceil(rect.right);
+                float bottom = (float) Math.ceil(rect.bottom);
+                canvas.drawRect(left, top, right, bottom, maskPaint);
             }
         }
 
