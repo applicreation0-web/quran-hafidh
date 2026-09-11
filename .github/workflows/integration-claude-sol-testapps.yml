@@ -8,17 +8,21 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  hifz-core:
+  domain-oracles:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Hifz core tests
-        run: ./gradlew :hifz-core:test --stacktrace
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Run independent Hifz and Safeguard domain tests
+        run: gradle --no-daemon :hifz-core:test :safeguard-core:test --stacktrace
