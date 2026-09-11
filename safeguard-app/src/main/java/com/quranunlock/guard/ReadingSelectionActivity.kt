@@ -110,7 +110,14 @@ class ReadingSelectionActivity : ComponentActivity() {
                         )
                         SafeguardButton(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = { startActivity(Intent(this@ReadingSelectionActivity, FreeQuranReaderActivity::class.java)) }
+                            onClick = {
+                                startActivity(
+                                    Intent(
+                                        this@ReadingSelectionActivity,
+                                        SafeguardStudyReaderActivity::class.java
+                                    )
+                                )
+                            }
                         ) { Text(if (TafsirEdition.isEnabled) "Lecture / Étude" else "Lecture") }
                     }
                 }
