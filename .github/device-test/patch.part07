@@ -1,0 +1,111 @@
++    return Number.isFinite(width)&&Number.isFinite(height)&&width>1&&height>1;
+   }
++
+   function substantiveSvg(svg){
+     if(!(svg instanceof SVGElement)||svg.localName.toLowerCase()!=='svg')return false;
+     if(svg.querySelector('parsererror'))return false;
+-    const nodes=svg.querySelectorAll('path,text,use,polygon,polyline,line,circle,ellipse,rect');
+-    if(nodes.length<8)return false;
+-    const r=svg.getBoundingClientRect();
+-    if(!(r.width>1&&r.height>1))return false;
+-    let box=null;try{box=svg.getBBox()}catch(_){}
+-    if(box&&!(box.width>1&&box.height>1))return false;
+-    return true;
++    const graphics=svg.querySelectorAll('path,text,use,polygon,polyline,line,circle,ellipse,rect');
++    if(graphics.length===0)return false;
++    if(!svgViewBoxIsSubstantive(svg))return false;
++    return [...graphics].some(node=>{
++      if(node.localName==='text')return !!node.textContent?.trim();
++      if(node.localName==='use')return !!(node.getAttribute('href')||node.getAttribute('xlink:href'));
++      if(node.localName==='path')return !!node.getAttribute('d')?.trim();
++      return true;
++    });
++  }
++
++  function waitForLayout(mushaf,generation){
++    if(!isCurrent(generation))return false;
++    clearSizeWatch();
++    const verify=()=>{if(isCurrent(generation))verifyRenderedPage(generation)};
++    if(typeof ResizeObserver==='function'){
++      sizeWatch=new ResizeObserver(()=>{
++        if(!isCurrent(generation))return;
++        const svg=mushaf.querySelector('svg'),r=svg?.getBoundingClientRect();
++        if(r&&r.width>1&&r.height>1){clearSizeWatch();verify()}
++      });
++      sizeWatch.observe(mushaf);
++      const svg=mushaf.querySelector('svg');if(svg)sizeWatch.observe(svg);
++    }else{
++      frameOne=requestAnimationFrame(()=>{frameOne=null;verify()});
++    }
++    return false;
+   }
+-  function verifyRenderedPage(){
++
++  function verifyRenderedPage(generation=loadGeneration){
++    if(!isCurrent(generation))return false;
+     const mushaf=document.getElementById('mushaf'),svg=mushaf?.querySelector('svg');
+     if(!substantiveSvg(svg)){
+-      showFailure('La page du Muṣḥaf est vide ou invalide.');return false;
++      showFailure('La page du Muṣḥaf est vide ou invalide.',null,generation);return false;
+     }
++    const r0=svg.getBoundingClientRect();
++    if(!(r0.width>1&&r0.height>1))return waitForLayout(mushaf,generation);
++
++    clearSizeWatch();
++    clearFrames();
+     document.body.classList.add('runtime-ready');
+     document.body.classList.remove('booting');
+-    requestAnimationFrame(()=>{
+-      const r=svg.getBoundingClientRect(),style=getComputedStyle(svg),host=getComputedStyle(mushaf);
+-      const visible=r.width>1&&r.height>1&&style.display!=='none'&&style.visibility!=='hidden'&&style.opacity!=='0'&&host.display!=='none'&&host.visibility!=='hidden';
+-      if(!visible){showFailure('La page du Muṣḥaf est chargée mais n’est pas visible.');return}
+-      clearPending();
+-      lastFailure='';
+-      mushaf.setAttribute('aria-busy','false');
+-      mushaf.dataset.runtimeReady='true';
+-      const box=document.getElementById('readerError');if(box)box.hidden=true;
++    frameOne=requestAnimationFrame(()=>{
++      frameOne=null;
++      if(!isCurrent(generation))return;
++      frameTwo=requestAnimationFrame(()=>{
++        frameTwo=null;
++        if(!isCurrent(generation))return;
++        if(mushaf.querySelector('svg')!==svg){verifyRenderedPage(generation);return}
++        const r=svg.getBoundingClientRect(),style=getComputedStyle(svg),host=getComputedStyle(mushaf);
++        const visible=r.width>1&&r.height>1&&style.display!=='none'&&style.visibility!=='hidden'&&style.opacity!=='0'&&host.display!=='none'&&host.visibility!=='hidden';
++        if(!visible){showFailure('La page du Muṣḥaf est chargée mais n’est pas visible.',null,generation);return}
++        clearLoadCallbacks();
++        loadActive=false;
++        lastFailure='';
++        mushaf.setAttribute('aria-busy','false');
++        mushaf.dataset.runtimeReady='true';
++        const box=document.getElementById('readerError');if(box)box.hidden=true;
++      });
+     });
+     return true;
+   }
+@@ -91,28 +164,50 @@
+   window.fetch=async function(input,init){
+     const url=String(typeof input==='string'?input:input?.url||'');
+     const pageRequest=/(^|\/)page\/\d{1,3}(?:$|[?#])/.test(url)||url.includes('../page/');
+-    if(pageRequest)beginPageLoad();
++    const generation=pageRequest?beginPageLoad():null;
+     try{
+       const response=await originalFetch(input,init);
+-      if(pageRequest&&!response.ok)showFailure('La page du Muṣḥaf est indisponible.');
++      if(pageRequest&&!response.ok&&generation!==null)showFailure('La page du Muṣḥaf est indisponible.',null,generation);
+       return response;
+-    }catch(e){if(pageRequest)showFailure('Impossible de charger la page du Muṣḥaf.',e);throw e}
++    }catch(e){
++      if(pageRequest&&generation!==null)showFailure('Impossible de charger la page du Muṣḥaf.',e,generation);
++      throw e;
++    }
++  };
++
++  const unrelatedRuntimeError=(label,error)=>{
++    console.error(label,error||'');
++    if(!loadActive&&typeof window.notice==='function')window.notice('Action impossible');
+   };
++  window.addEventListener('error',e=>unrelatedRuntimeError('QSG erreur JavaScript',e.error||e.message));
++  window.addEventListener('unhandledrejection',e=>unrelatedRuntimeError('QSG promesse rejetée',e.reason));
+ 
