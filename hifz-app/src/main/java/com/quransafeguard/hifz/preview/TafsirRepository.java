@@ -52,14 +52,31 @@ public final class TafsirRepository {
 
     public static final class Entry {
         public final String editionName;
-        public final String sourceTitle;
+        public final String work;
+        public final String author;
+        public final String translator;
+        public final String language;
         public final List<Run> commentaryRuns;
         public final List<Note> notes;
-        Entry(List<Run> commentaryRuns, List<Note> notes) {
-            this.editionName = EDITION_NAME;
-            this.sourceTitle = SOURCE_TITLE;
+
+        Entry(String editionName, String work, String author, String translator, String language,
+              List<Run> commentaryRuns, List<Note> notes) {
+            this.editionName = editionName;
+            this.work = work;
+            this.author = author;
+            this.translator = translator;
+            this.language = language;
             this.commentaryRuns = Collections.unmodifiableList(commentaryRuns);
             this.notes = Collections.unmodifiableList(notes);
+        }
+
+        public String metadataLine() {
+            ArrayList<String> values = new ArrayList<>();
+            if (work != null && !work.trim().isEmpty()) values.add(work.trim());
+            if (author != null && !author.trim().isEmpty()) values.add(author.trim());
+            if (translator != null && !translator.trim().isEmpty()) values.add("tr. " + translator.trim());
+            if (language != null && !language.trim().isEmpty()) values.add(language.trim());
+            return android.text.TextUtils.join(" · ", values);
         }
     }
 
@@ -93,7 +110,7 @@ public final class TafsirRepository {
                     notes.add(new Note(c.getInt(0), runs));
                 }
             }
-            return new Entry(commentary, notes);
+            return new Entry(EDITION_NAME, SOURCE_TITLE, "", "", "English", commentary, notes);
         } finally {
             db.close();
         }
@@ -189,7 +206,7 @@ public final class TafsirRepository {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (InputStream in = new java.io.FileInputStream(file)) {
             byte[] buffer = new byte[64 * 1024]; int n;
-            while ((n = in.read(buffer)) >= 0) digest.update(buffer, 0, n);
+            while ((n = input.read(buffer)) >= 0) digest.update(buffer, 0, n);
         }
         StringBuilder out = new StringBuilder();
         for (byte b : digest.digest()) out.append(String.format(java.util.Locale.ROOT,"%02x", b & 0xff));
