@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.RenderProcessGoneDetail;
@@ -30,6 +31,8 @@ public final class MushafView extends WebView {
         void onError(String message);
         void onPageShown(int page);
         default void onSurfaceTap() {}
+        /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
+        default void onPageSwipe(int delta) {}
     }
 
     private static final String INLINE_NONCE = "hifz-local";
@@ -50,6 +53,7 @@ public final class MushafView extends WebView {
     private List<VerseRef> lastSelection;
     private List<String> lastLineIds;
     private int lastMask;
+    private float touchDownX, touchDownY;
 
     private final Runnable watchdog = new Runnable() {
         @Override public void run() {
@@ -95,6 +99,22 @@ public final class MushafView extends WebView {
             listenerNotified = true;
             post(value::onReady);
         }
+    }
+
+    @Override public boolean onTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            touchDownX = event.getX();
+            touchDownY = event.getY();
+        } else if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+            float dx = event.getX() - touchDownX;
+            float dy = event.getY() - touchDownY;
+            float threshold = 60f * getResources().getDisplayMetrics().density;
+            if (Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy) * 1.35f) {
+                if (listener != null) listener.onPageSwipe(dx > 0 ? 1 : -1);
+                return true;
+            }
+        }
+        return super.onTouchEvent(event);
     }
 
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
@@ -171,6 +191,14 @@ public final class MushafView extends WebView {
             script.append("window.HifzReader.setSelection(").append(verses).append(',').append(lines).append("));");
             evaluateJavascript(script.toString(), null);
         });
+    }
+
+    /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */
+    public void setAudioVerse(VerseRef verse) {
+        String value = verse == null ? "null" : JSONObject.quote(verse.toString());
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setAudioVerse(" + value + ");", null));
+        eink.local(this);
     }
 
     /** Keep the selected verse in the unobscured upper part before the bottom Tafsir opens. */
