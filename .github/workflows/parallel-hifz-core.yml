@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: parallel-products-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   core-tests-and-hifz-harness:
     runs-on: ubuntu-latest
@@ -34,6 +38,14 @@ jobs:
           sha256sum hifz-app/build/outputs/apk/debug/hifz-app-debug.apk hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk > hifz-app/build/evidence/SHA256SUMS
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions hifz-app/build/outputs/apk/debug/hifz-app-debug.apk > hifz-app/build/evidence/debug-permissions.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree hifz-app/build/outputs/apk/debug/hifz-app-debug.apk AndroidManifest.xml > hifz-app/build/evidence/debug-manifest.txt
+          if grep -qi "accessibility" hifz-app/build/evidence/debug-manifest.txt; then
+            echo "Hifz harness must not declare Accessibility components" >&2
+            exit 1
+          fi
+          if grep -q "QUERY_ALL_PACKAGES" hifz-app/build/evidence/debug-permissions.txt; then
+            echo "Hifz harness must not request broad package visibility" >&2
+            exit 1
+          fi
           cat hifz-app/build/evidence/SHA256SUMS
       - name: Upload core test evidence
         if: always()
