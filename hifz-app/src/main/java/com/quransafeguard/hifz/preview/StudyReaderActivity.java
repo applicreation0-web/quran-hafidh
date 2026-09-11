@@ -198,35 +198,40 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             try{
                 Map<MultiTafsirRepository.Edition,TafsirRepository.Entry> available=new MultiTafsirRepository(this).loadAvailable(verse);
                 runOnUiThread(()->{
-                    textColumn.removeAllViews();editionRow.removeAllViews();
+                    textColumn.removeAllViews();editionRow.removeAllViews();editionRow.setVisibility(View.VISIBLE);
+                    MultiTafsirRepository.Edition resolved=currentEdition[0];
+                    if(!available.isEmpty()&&!available.containsKey(resolved))resolved=available.containsKey(MultiTafsirRepository.Edition.JALALAYN)?MultiTafsirRepository.Edition.JALALAYN:available.keySet().iterator().next();
+                    currentEdition[0]=resolved;
+
+                    for(MultiTafsirRepository.Edition edition:MultiTafsirRepository.Edition.values()){
+                        final boolean covered=available.containsKey(edition);
+                        Button editionButton=Ui.smallButton(this,covered?edition.displayName:edition.displayName+" · hors couverture",v->{
+                            if(!available.containsKey(edition))return;
+                            ViewGroup row=(ViewGroup)v.getParent();for(int i=0;i<row.getChildCount();i++){View child=row.getChildAt(i);if(child instanceof Button)Ui.setChosen((Button)child,child==v);}
+                            currentEdition[0]=edition;readingPrefs.edit().putString(TAFSIR_EDITION_KEY,edition.storageValue).apply();
+                            TafsirRepository.Entry entry=available.get(edition);loaded[0]=entry;applyTafsirIdentity(title,source,verse,entry,available);renderTafsir(textColumn,entry,fontSize[0]);
+                        });
+                        editionButton.setEnabled(covered);Ui.setChosen(editionButton,covered&&edition==currentEdition[0]);Ui.weight(editionButton,1);editionRow.addView(editionButton);
+                    }
+
                     if(available.isEmpty()){
-                        source.setText("Aucune édition disponible pour ce verset.");
+                        source.setText("Aucune édition locale ne couvre ce verset.");
                         textColumn.addView(tafsirText("Aucun commentaire vérifié n’est disponible pour ce verset.",fontSize[0],false));return;
                     }
-                    MultiTafsirRepository.Edition resolved=currentEdition[0];
-                    if(!available.containsKey(resolved))resolved=available.containsKey(MultiTafsirRepository.Edition.JALALAYN)?MultiTafsirRepository.Edition.JALALAYN:available.keySet().iterator().next();
-                    currentEdition[0]=resolved;
-                    if(available.size()>1){
-                        editionRow.setVisibility(View.VISIBLE);
-                        for(MultiTafsirRepository.Edition edition:available.keySet()){
-                            Button editionButton=Ui.smallButton(this,edition.displayName,v->{
-                                ViewGroup row=(ViewGroup)v.getParent();for(int i=0;i<row.getChildCount();i++){View child=row.getChildAt(i);if(child instanceof Button)Ui.setChosen((Button)child,child==v);}
-                                currentEdition[0]=edition;readingPrefs.edit().putString(TAFSIR_EDITION_KEY,edition.storageValue).apply();
-                                TafsirRepository.Entry entry=available.get(edition);loaded[0]=entry;applyTafsirIdentity(title,source,verse,entry);renderTafsir(textColumn,entry,fontSize[0]);
-                            });
-                            Ui.setChosen(editionButton,edition==currentEdition[0]);Ui.weight(editionButton,1);editionRow.addView(editionButton);
-                        }
-                    }else editionRow.setVisibility(View.GONE);
                     TafsirRepository.Entry entry=available.get(currentEdition[0]);loaded[0]=entry;readingPrefs.edit().putString(TAFSIR_EDITION_KEY,currentEdition[0].storageValue).apply();
-                    applyTafsirIdentity(title,source,verse,entry);renderTafsir(textColumn,entry,fontSize[0]);
+                    applyTafsirIdentity(title,source,verse,entry,available);renderTafsir(textColumn,entry,fontSize[0]);
                 });
             }catch(Throwable error){runOnUiThread(()->{source.setText("Tafsir local");textColumn.removeAllViews();textColumn.addView(tafsirText("Tafsir indisponible : "+safeMessage(error),fontSize[0],false));});}
         });
         return shell;
     }
 
-    private void applyTafsirIdentity(TextView title,TextView source,VerseRef verse,TafsirRepository.Entry entry){
-        title.setText(entry.editionName+" · "+verse.getSurah()+":"+verse.getAyah());String metadata=entry.metadataLine();source.setText(metadata.isEmpty()?entry.editionName:metadata);
+    private void applyTafsirIdentity(TextView title,TextView source,VerseRef verse,TafsirRepository.Entry entry,Map<MultiTafsirRepository.Edition,TafsirRepository.Entry> available){
+        title.setText(entry.editionName+" · "+verse.getSurah()+":"+verse.getAyah());
+        String metadata=entry.metadataLine();String base=metadata.isEmpty()?entry.editionName:metadata;
+        ArrayList<String> missing=new ArrayList<>();
+        for(MultiTafsirRepository.Edition edition:MultiTafsirRepository.Edition.values())if(!available.containsKey(edition))missing.add(edition.displayName);
+        source.setText(missing.isEmpty()?base:base+"\nHors couverture locale pour ce verset : "+android.text.TextUtils.join(", ",missing));
     }
     private static String safeMessage(Throwable error){String message=error.getMessage();return message==null||message.trim().isEmpty()?error.getClass().getSimpleName():message;}
 
