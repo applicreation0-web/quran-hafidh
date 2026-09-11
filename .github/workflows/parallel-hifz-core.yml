@@ -1,4 +1,4 @@
-name: Parallel Product Cores
+name: Quran Hifz Full Scope Preview
 
 on:
   push:
@@ -13,58 +13,105 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core-tests-and-hifz-harness:
+  full-preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch exact pinned 604-page KFQC Mushaf
+        run: bash scripts/fetch_mushaf_pages.sh
+      - name: Generate geometry from the exact shipped Mushaf
+        run: |
+          pip install pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          test -s app/src/main/assets/reader109/geometry.json
+          cat geometry-report.json
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
-      - name: Install Android SDK used by the harness
+      - name: Install Android SDK
         run: sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
+
       - name: Run independent Hifz and Safeguard core tests
         run: gradle --no-daemon :hifz-core:test :safeguard-core:test --stacktrace
-      - name: Build Hifz test APKs
-        run: gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleRelease --stacktrace
-      - name: Record APK evidence
+
+      - name: Compile full-scope Quran Hifz preview
+        run: gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleRelease :hifz-app:assembleDebugAndroidTest --stacktrace
+
+      - name: Sign preview release with explicit disposable TEST key
+        run: |
+          keytool -genkeypair -v \
+            -keystore /tmp/quran-hifz-preview-test.keystore \
+            -storepass previewpass -keypass previewpass -alias preview \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Quran Hifz Preview TEST,O=Local Test,C=GB"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
+            --ks /tmp/quran-hifz-preview-test.keystore \
+            --ks-pass pass:previewpass --key-pass pass:previewpass \
+            --ks-key-alias preview \
+            --out hifz-app/build/outputs/apk/release/Quran-Hifz-FULL-SCOPE-PREVIEW-TEST.apk \
+            hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs \
+            hifz-app/build/outputs/apk/release/Quran-Hifz-FULL-SCOPE-PREVIEW-TEST.apk \
+            > hifz-app/build/apksigner-verify.txt
+          cat hifz-app/build/apksigner-verify.txt
+
+      - name: Audit compiled product boundary and evidence
         run: |
           mkdir -p hifz-app/build/evidence
-          sha256sum hifz-app/build/outputs/apk/debug/hifz-app-debug.apk hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk > hifz-app/build/evidence/SHA256SUMS
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions hifz-app/build/outputs/apk/debug/hifz-app-debug.apk > hifz-app/build/evidence/debug-permissions.txt
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree hifz-app/build/outputs/apk/debug/hifz-app-debug.apk AndroidManifest.xml > hifz-app/build/evidence/debug-manifest.txt
-          if grep -qi "accessibility" hifz-app/build/evidence/debug-manifest.txt; then
-            echo "Hifz harness must not declare Accessibility components" >&2
-            exit 1
-          fi
-          if grep -q "QUERY_ALL_PACKAGES" hifz-app/build/evidence/debug-permissions.txt; then
-            echo "Hifz harness must not request broad package visibility" >&2
-            exit 1
-          fi
+          APK=hifz-app/build/outputs/apk/release/Quran-Hifz-FULL-SCOPE-PREVIEW-TEST.apk
+          sha256sum "$APK" > hifz-app/build/evidence/SHA256SUMS
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" > hifz-app/build/evidence/permissions.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree "$APK" AndroidManifest.xml > hifz-app/build/evidence/manifest.txt
+          cp geometry-report.json hifz-app/build/evidence/
+          cp hifz-app/build/apksigner-verify.txt hifz-app/build/evidence/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -name '*.svg.br' | wc -l)" = "604"
+          if grep -qi "AccessibilityService\|BIND_ACCESSIBILITY_SERVICE" hifz-app/build/evidence/manifest.txt; then echo "Hifz must not contain Safeguard Accessibility" >&2; exit 1; fi
+          if grep -q "QUERY_ALL_PACKAGES" hifz-app/build/evidence/permissions.txt; then echo "Broad package visibility forbidden" >&2; exit 1; fi
+          if grep -q "android.permission.INTERNET" hifz-app/build/evidence/permissions.txt; then echo "Preview must remain offline until audio hosting is approved" >&2; exit 1; fi
+          grep -q "com.quransafeguard.hifz.preview" hifz-app/build/evidence/manifest.txt
           cat hifz-app/build/evidence/SHA256SUMS
-      - name: Upload core test evidence
+
+      - name: Android runtime, geometry, Tafsir and real install smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disk-size: 3072M
+          disable-animations: true
+          script: |
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace
+            adb uninstall com.quransafeguard.hifz.preview || true
+            adb install hifz-app/build/outputs/apk/release/Quran-Hifz-FULL-SCOPE-PREVIEW-TEST.apk
+            adb shell am start -W -n com.quransafeguard.hifz.preview/.MainActivity | tee hifz-app/build/evidence/launch.txt
+            grep -q "Status: ok" hifz-app/build/evidence/launch.txt
+            adb shell uiautomator dump /sdcard/hifz-window.xml
+            adb pull /sdcard/hifz-window.xml hifz-app/build/evidence/hifz-window.xml
+            grep -q "Quran Hifz" hifz-app/build/evidence/hifz-window.xml
+
+      - name: Upload preview APK and all proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: parallel-product-core-test-evidence
+          name: quran-hifz-full-scope-preview
           path: |
+            hifz-app/build/outputs/apk/release/Quran-Hifz-FULL-SCOPE-PREVIEW-TEST.apk
+            hifz-app/build/evidence/
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
             hifz-core/build/test-results/
             hifz-core/build/reports/tests/
             safeguard-core/build/test-results/
             safeguard-core/build/reports/tests/
-          retention-days: 7
-      - name: Upload Hifz harness APKs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quran-hifz-parallel-test-apks
-          path: |
-            hifz-app/build/outputs/apk/debug/hifz-app-debug.apk
-            hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk
-            hifz-app/build/evidence/
           retention-days: 7
