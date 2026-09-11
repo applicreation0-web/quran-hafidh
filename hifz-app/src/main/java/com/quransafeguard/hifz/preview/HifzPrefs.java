@@ -113,14 +113,11 @@ public final class HifzPrefs {
     public void setSabqiLineCursor(int value) { p.edit().putInt("sabqiLineCursor", value).apply(); }
     public int sabqiRep() { return p.getInt("sabqiRep", 0); }
     public int sabqiAssisted() { return p.getInt("sabqiAssisted", 0); }
-    public void setSabqiProgress(int rep, int assisted) {
-        p.edit().putInt("sabqiRep", rep).putInt("sabqiAssisted", assisted).apply();
+    public boolean setSabqiProgress(int rep, int assisted) {
+        return p.edit().putInt("sabqiRep", rep).putInt("sabqiAssisted", assisted).commit();
     }
 
-    /**
-     * Atomic Sabqi completion: recent queue, promotion, next cursor, reset counters/timer and
-     * day gate are committed together. A failed commit leaves the old SharedPreferences file.
-     */
+    /** Atomic Sabqi completion: queue, promotion, cursor, reset, timer and day gate together. */
     public boolean completeSabqiBlock(int startLine, int endLine, VerseRef promotion,
                                       int nextLineCursor, String date, String label) {
         List<RecentSabqi> queue = recentSabqi();
@@ -146,13 +143,13 @@ public final class HifzPrefs {
     public VerseRef itqanUnitStart() { return optionalRef("itqanUnitStart"); }
     public VerseRef itqanUnitEnd() { return optionalRef("itqanUnitEnd"); }
 
-    public void setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
-        p.edit()
+    public boolean setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
+        return p.edit()
             .putInt("itqanRep", rep)
             .putInt("itqanAssisted", assisted)
             .putString("itqanUnitStart", unitStart == null ? "" : unitStart.toString())
             .putString("itqanUnitEnd", unitEnd == null ? "" : unitEnd.toString())
-            .apply();
+            .commit();
     }
 
     public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
