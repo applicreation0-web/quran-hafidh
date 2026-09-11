@@ -41,6 +41,7 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
     private float downX, downY;
     private long downTime;
     private boolean closed;
+    private boolean composingPageChange;
 
     public ReaderSurface(Context context) { this(context, null); }
     public ReaderSurface(Context context, AttributeSet attrs) {
@@ -56,10 +57,15 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
 
         renderer.setListener(new MushafRenderer.Listener() {
             @Override public void onPageChanged(int page) {
-                overlay.invalidate();
-                eink.pageChanged(renderer);
-                loadPageRegions(page);
-                if (listener != null) listener.onPageChanged(page);
+                // Let the owner update the mask/focus synchronously, then refresh the composite once.
+                composingPageChange = true;
+                try {
+                    loadPageRegions(page);
+                    if (listener != null) listener.onPageChanged(page);
+                    eink.pageChanged(ReaderSurface.this);
+                } finally {
+                    composingPageChange = false;
+                }
             }
             @Override public void onError(int page, Throwable error) {
                 if (listener != null) listener.onError(error);
@@ -82,18 +88,18 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
                                      int maskPercent) {
         overlay.setSelection(lines, focus);
         overlay.setMaskPercent(maskPercent);
-        eink.localChanged(overlay);
+        if (!composingPageChange) eink.localChanged(overlay);
     }
 
     public void clearMemorizationState() {
         overlay.setSelection(Collections.emptyList(), null);
         overlay.setMaskPercent(0);
-        eink.localChanged(overlay);
+        if (!composingPageChange) eink.localChanged(overlay);
     }
 
     public void revealTemporarily(boolean reveal) {
         overlay.setRevealAll(reveal);
-        eink.localChanged(overlay);
+        if (!composingPageChange) eink.localChanged(overlay);
     }
 
     /** Full E-Ink cleanup after a temporary window/overlay such as the floating Tafsir closes. */
