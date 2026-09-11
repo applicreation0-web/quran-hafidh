@@ -67,7 +67,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         topControls = Ui.row(this);
         topControls.setBackgroundColor(Ui.PAPER);
         topControls.setPadding(Ui.dp(this, 8), Ui.dp(this, 4), Ui.dp(this, 8), Ui.dp(this, 4));
-        Button back = Ui.smallButton(this, "‹", v -> finish());
+        Button back = Ui.smallButton(this, "‹ Retour", v -> finish());
         pageLabel = Ui.text(this, "Lecture / Étude · " + page + " / 604", 15, true);
         Ui.weight(pageLabel, 1f); pageLabel.setGravity(Gravity.CENTER);
         topControls.addView(back); topControls.addView(pageLabel);
@@ -115,7 +115,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
-        page = next; selected = null; tafsirButton.setEnabled(false);
+        page = next; selected = null; tafsirButton.setEnabled(false); tafsirButton.setText("Tafsir");
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         pageLabel.setText("Lecture / Étude · " + page + " / 604");
         pageSeek.setProgress(page - 1);
@@ -128,6 +128,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onVerseTap(VerseRef verse) {
         selected = verse;
         tafsirButton.setEnabled(true);
+        tafsirButton.setText("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
         showControls();
     }
@@ -154,6 +155,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void scheduleAutoHide() {
         if (mushaf == null) return;
         mushaf.removeCallbacks(autoHide);
+        if (selected != null) return;
         mushaf.postDelayed(autoHide, 3200L);
     }
 
@@ -207,7 +209,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         shell.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         dialog.setContentView(shell); dialog.setCanceledOnTouchOutside(true);
-        dialog.setOnDismissListener(d -> hideControls());
+        dialog.setOnDismissListener(closed -> {
+            mushaf.clearReveal();
+            showControls();
+        });
         dialog.show();
         Window w = dialog.getWindow();
         if (w != null) {
@@ -241,6 +246,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                         editionRow.setVisibility(View.VISIBLE);
                         for (MultiTafsirRepository.Edition edition : available.keySet()) {
                             Button editionButton = Ui.smallButton(this, edition.displayName, v -> {
+                                android.view.ViewGroup row = (android.view.ViewGroup) v.getParent();
+                                for (int i = 0; i < row.getChildCount(); i++) {
+                                    android.view.View child = row.getChildAt(i);
+                                    if (child instanceof Button) Ui.setChosen((Button) child, child == v);
+                                }
                                 currentEdition[0] = edition;
                                 readingPrefs.edit().putString(TAFSIR_EDITION_KEY, edition.storageValue).apply();
                                 TafsirRepository.Entry entry = available.get(edition);
@@ -248,6 +258,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                                 applyTafsirIdentity(title, source, verse, entry);
                                 renderTafsir(textColumn, entry, fontSize[0]);
                             });
+                            Ui.setChosen(editionButton, edition == currentEdition[0]);
                             Ui.weight(editionButton,1f);
                             editionRow.addView(editionButton);
                         }
@@ -339,12 +350,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             }
         }
         TextView view = tafsirText(text, fontSp, false);
-        view.setLineSpacing(0f, poetry ? 1.55f : (note ? 1.45f : 1.50f));
+        view.setLineSpacing(0f, poetry ? 1.35f : (note ? 1.30f : 1.25f));
         if (poetry) {
             view.setGravity(Gravity.START);
             view.setPadding(Ui.dp(this,12),0,Ui.dp(this,4),Ui.dp(this,4));
-        } else if (Build.VERSION.SDK_INT >= 26) {
-            view.setJustificationMode(Layout.JUSTIFICATION_MODE_INTER_WORD);
         }
         target.addView(view);
     }
