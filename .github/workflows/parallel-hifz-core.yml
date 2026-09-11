@@ -9,20 +9,32 @@ permissions:
   contents: read
 
 jobs:
-  core-tests:
+  core-tests-and-hifz-harness:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK used by the harness
+        run: sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.5.0"
       - name: Run independent Hifz and Safeguard core tests
         run: gradle --no-daemon :hifz-core:test :safeguard-core:test --stacktrace
+      - name: Build Hifz test APKs
+        run: gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleRelease --stacktrace
+      - name: Record APK evidence
+        run: |
+          mkdir -p hifz-app/build/evidence
+          sha256sum hifz-app/build/outputs/apk/debug/hifz-app-debug.apk hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk > hifz-app/build/evidence/SHA256SUMS
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions hifz-app/build/outputs/apk/debug/hifz-app-debug.apk > hifz-app/build/evidence/debug-permissions.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump xmltree hifz-app/build/outputs/apk/debug/hifz-app-debug.apk AndroidManifest.xml > hifz-app/build/evidence/debug-manifest.txt
+          cat hifz-app/build/evidence/SHA256SUMS
       - name: Upload core test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -33,4 +45,14 @@ jobs:
             hifz-core/build/reports/tests/
             safeguard-core/build/test-results/
             safeguard-core/build/reports/tests/
+          retention-days: 7
+      - name: Upload Hifz harness APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-parallel-test-apks
+          path: |
+            hifz-app/build/outputs/apk/debug/hifz-app-debug.apk
+            hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk
+            hifz-app/build/evidence/
           retention-days: 7
