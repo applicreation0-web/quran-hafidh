@@ -1,0 +1,28 @@
+- $('title').textContent=(memory?'Mémorisation':'Sourate '+[...once][0]?.split(':')[0])+' · '+p+' / 604';$('progress').value=p;$('pageCount').textContent=p+' / 604';$('prev').disabled=p===1;$('next').disabled=p===604;
++ $('title').textContent=(memory?'Mémorisation':'Sourate '+(focus||[...once][0])?.split(':')[0])+' · '+p+' / 604';$('progress').value=p;$('pageCount').textContent=p+' / 604';$('prev').disabled=p===1;$('next').disabled=p===604;
+  renderMarks();renderMemory();save();if(focus)focusVerse(focus);requestAnimationFrame(()=>{document.body.classList.remove('booting');requestAnimationFrame(()=>visual('PAGE'))})
+ }
+ function applyZoom(){document.documentElement.style.setProperty('--zoom',state.zoom||1);$('pagebox').style.justifyContent=state.zoom>1?'flex-start':'center'}
+ function selectionKeys(){if(!memory)return selected?[selected]:[];const s=currentSession();if(s&&!selectStart)return s.verses;return selectStart?rangeKeys(selectStart,selectEnd||selectStart):[]}
+-function renderMarks(){document.querySelectorAll('.ayahPolygon').forEach(p=>p.classList.toggle('selected',selectionKeys().includes(p.dataset.verse)));$('bookmark').classList.toggle('active',state.marks.some(m=>m.page===page&&(!selected||m.verse===selected)));$('tafsir').hidden=!initial.plus||memory;$('tafsir').disabled=!selected;const allowAudio=audioModeAllowed()&&!!initial.audio;$('audio').hidden=!allowAudio;$('repeat').hidden=!allowAudio;renderMasks()}
++function renderMarks(){document.querySelectorAll('.ayahPolygon').forEach(p=>p.classList.toggle('selected',selectionKeys().includes(p.dataset.verse)));$('bookmark').classList.toggle('active',state.marks.some(m=>m.page===page&&(selected?m.verse===selected:!m.verse)));$('tafsir').hidden=!initial.plus||memory;$('tafsir').disabled=!selected;const allowAudio=audioModeAllowed()&&!!initial.audio;$('audio').hidden=!allowAudio;$('repeat').hidden=!allowAudio;renderMasks()}
+ function verseTap(k){chrome();if(memory){N?.setMode(true);if(currentSession()&&!selectStart){focusVerse(k);return}if(!selectStart||selectEnd){selectStart=k;selectEnd=null}else selectEnd=k;focusVerse(k);renderMemory();save()}else focusVerse(k)}
+ function currentLines(){const s=currentSession();if(!s||!memory)return [];return (s.reinforcement?[s.reinforcement.line]:(P.current(s)?.lines||s.lines)).map(lineById)}
+ function renderMasks(){const svg=$('mushaf').querySelector('svg');if(!svg)return;svg.querySelectorAll('.masklayer').forEach(x=>x.remove());const s=currentSession();if(!memory||!s||selectStart)return;const step=P.current(s),mask=reviewMask??(step?.mask||0);if(!mask)return;const NS='http://www.w3.org/2000/svg',group=document.createElementNS(NS,'g');group.classList.add('masklayer');const defs=document.createElementNS(NS,'defs');group.append(defs);
+@@ -48,7 +61,7 @@ async function recordFreeRepetition(s,correct=true,source='personal'){
+  const result=P.recordAndAutoAdvance(s,correct,source);if(!result.recorded)return false;save();
+  if(!result.advanced){renderMemory();return false}
+  invalidateBriefReveal();audioQueue=[];audioCountsProgress=false;await jumpToStep();renderMemory();renderMasks();
+- visual(result.beforeMask!==result.afterMask?'MASK_LEVEL':'MILESTONE');return true
++ visual(result.afterMask>result.beforeMask?'REVEAL_RETURN':result.beforeMask!==result.afterMask?'MASK_LEVEL':'MILESTONE');return true
+ }
+ async function recordReinforcement(s,r,correct){
+  const result=P.recordReinforcementAttempt(r,correct,3);if(!result.recorded)return false;P.recordMaskedReading(s);save();
+@@ -69,16 +82,17 @@ function renderMemory(){const mem=$('mem');mem.hidden=!memory;if(!memory)return;
+ function briefReveal(s){const generation=++revealGeneration;if(revealTimer!==null)clearTimeout(revealTimer);P.aid(s,'brief',0);reviewMask=0;renderMasks();save();requestAnimationFrame(()=>{if(generation===revealGeneration)visual('REVEAL')});revealTimer=setTimeout(()=>{if(generation!==revealGeneration||currentSession()!==s||!memory)return;revealTimer=null;reviewMask=null;renderMasks();save();renderMemory();requestAnimationFrame(()=>{if(generation===revealGeneration)visual('REVEAL_RETURN')})},eink?900:1500)}
+ function selectedLines(keys){return Object.values(geo.pages).flatMap(p=>p.lines).filter(l=>l.verses.some(v=>keys.includes(v))).map(l=>l.id)}
+ async function begin(keys,lines){invalidateBriefReveal();const s=P.create(lines,localAudioReady(keys));s.id=Date.now().toString(36);s.verses=keys;state.sessions.push(s);state.active=s.id;selectStart=selectEnd=null;save();await jumpToStep();renderMemory();renderMasks()}
+-async function jumpToStep(){const line=currentLines()[0];if(!line)return;if(page!==line.page)await showPage(line.page);renderMasks();chrome()}
+-function exitMemory(){invalidateBriefReveal();audioQueue=[];N?.pause();memory=false;selectStart=selectEnd=null;N?.setMode(false);save();renderMemory();renderMarks();chrome()}
+-async function restart(s){invalidateBriefReveal();const fresh=P.create(s.lines,localAudioReady(s.verses));fresh.id=Date.now().toString(36);fresh.verses=s.verses;state.sessions.push(fresh);state.active=fresh.id;save();await jumpToStep();renderMemory();renderMasks()}
++async function jumpToStep(){const line=currentLines()[0];if(!line)return;const moved=page!==line.page;if(moved)await showPage(line.page);renderMasks();chrome();revealLine(line,!moved)}
