@@ -52,6 +52,7 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
         addView(renderer, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         addView(overlay, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
         eink.attachReader(renderer);
+        eink.attachOverlay(overlay);
 
         renderer.setListener(new MushafRenderer.Listener() {
             @Override public void onPageChanged(int page) {
@@ -132,8 +133,8 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
             float density = getResources().getDisplayMetrics().density;
             float swipeThreshold = 64f * density;
             if (Math.abs(dx) >= swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.25f && elapsed < 900L) {
-                // RTL Mushaf: swipe left advances, swipe right goes back.
-                if (listener != null) listener.onPageSwipe(dx < 0f ? +1 : -1);
+                // Arabic-book convention: a rightward swipe advances to the next Mushaf page.
+                if (listener != null) listener.onPageSwipe(dx > 0f ? +1 : -1);
                 return true;
             }
             float tapSlop = 18f * density;
