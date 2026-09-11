@@ -77,8 +77,6 @@ function maskCandidates(svg,lines){
      });
    });
  });
- // If browser geometry cannot expose polygon boxes, retain the historical fallback
- // but still use deterministic nested thresholds below.
  if(!all.length && lines.length){
    lines.forEach((line,lineIndex)=>{
      (line.cells||[]).forEach((cell,cellIndex)=>{
@@ -94,6 +92,31 @@ function maskCandidates(svg,lines){
  }
  all.sort((a,b)=>a.order-b.order || a.y-b.y || a.x-b.x);
  return all;
+}
+
+function revealSelection(visibleFraction){
+ const svg=currentSvg();
+ if(!svg||!selected.length)return;
+ const nodes=[...svg.querySelectorAll('.ayahPolygon')].filter(p=>selected.includes(p.dataset.verse));
+ if(!nodes.length)return;
+ let top=Infinity,bottom=-Infinity;
+ nodes.forEach(p=>{
+   const r=p.getBoundingClientRect();
+   if(r.height<=0||r.width<=0)return;
+   top=Math.min(top,r.top);bottom=Math.max(bottom,r.bottom);
+ });
+ if(!Number.isFinite(top)||!Number.isFinite(bottom))return;
+ const viewport=Math.max(1,window.innerHeight||document.documentElement.clientHeight||1);
+ const fraction=Math.max(.30,Math.min(.70,Number(visibleFraction)||.46));
+ const limit=viewport*fraction;
+ const safeTop=viewport*.07;
+ const height=Math.max(1,bottom-top);
+ if(bottom>limit){
+   const wantedTop=Math.max(safeTop,limit-height-12);
+   window.scrollBy(0,top-wantedTop);
+ } else if(top<safeTop){
+   window.scrollBy(0,top-safeTop);
+ }
 }
 
 function render(){
@@ -127,6 +150,7 @@ window.HifzReader={
  setGeometry(geometry){pageGeo=geometry||null;render()},
  setMask(hidden){mask=Number(hidden||0);render()},
  setSelection(selection,lines){selected=selection||[];lineIds=lines||[];render()},
+ revealSelection(visibleFraction){revealSelection(visibleFraction)},
  page(){return currentPage}
 };
 
