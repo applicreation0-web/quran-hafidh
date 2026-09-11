@@ -141,8 +141,7 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
             float density = getResources().getDisplayMetrics().density;
             float swipeThreshold = 64f * density;
             if (Math.abs(dx) >= swipeThreshold && Math.abs(dx) > Math.abs(dy) * 1.25f && elapsed < 900L) {
-                // Arabic-book convention: a rightward swipe advances to the next Mushaf page.
-                if (listener != null) listener.onPageSwipe(dx > 0f ? +1 : -1);
+                if (listener != null) listener.onPageSwipe(PageTurnPolicy.deltaForHorizontalSwipe(dx));
                 return true;
             }
             float tapSlop = 18f * density;
