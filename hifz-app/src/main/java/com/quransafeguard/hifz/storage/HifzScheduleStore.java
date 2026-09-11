@@ -38,7 +38,8 @@ public final class HifzScheduleStore {
     private final HifzProgressStore progress;
 
     public HifzScheduleStore(Context context) {
-        p = context.getApplicationContext().getSharedPreferences("quran_hifz_schedule_v2", Context.MODE_PRIVATE);
+        // Keep the original preference file so adding the evening slot never erases prior history.
+        p = context.getApplicationContext().getSharedPreferences("quran_hifz_schedule_v1", Context.MODE_PRIVATE);
         progress = new HifzProgressStore(context);
     }
 
