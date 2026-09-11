@@ -25,6 +25,19 @@ public final class BooxEinkController {
         }
     }
 
+    /**
+     * Fast local update mode for masks/focus and other transient reader overlays.
+     * Keeping the overlay in GU avoids a costly full reader refresh for every memorization step.
+     */
+    public void attachOverlay(View overlay) {
+        if (overlay == null) return;
+        try {
+            EpdController.setViewDefaultUpdateMode(overlay, UpdateMode.GU);
+        } catch (RuntimeException ignored) {
+            // Non-Onyx runtime.
+        }
+    }
+
     /** Called after a new Mushaf page has actually reached the renderer. */
     public void pageChanged(View reader) {
         if (reader == null) return;
@@ -50,14 +63,22 @@ public final class BooxEinkController {
         }
     }
 
-    /** Partial refresh constrained to a changed mask/focus rectangle. */
+    /**
+     * Partial refresh constrained to a changed mask/focus rectangle.
+     * The overlay is attached to GU mode, therefore a normal dirty-rect invalidation remains a
+     * local fast refresh on BOOX while still working on ordinary Android devices.
+     */
     public void localChanged(View view, Rect dirty) {
         if (view == null) return;
         if (dirty == null || dirty.isEmpty()) {
             localChanged(view);
             return;
         }
-        view.invalidate(dirty);
+        try {
+            view.invalidate(dirty);
+        } catch (RuntimeException ignored) {
+            view.invalidate();
+        }
     }
 
     /** Explicit ghosting cleanup. Kept rare because GC is visibly slower on E-Ink. */
