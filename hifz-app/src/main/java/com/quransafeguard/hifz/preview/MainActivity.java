@@ -115,21 +115,17 @@ public final class MainActivity extends android.app.Activity {
     private String personalDayPlan(DayOfWeek day) {
         switch (day) {
             case MONDAY:
-                return "Matin · Sabqi Al-Baqarah · 5 lignes · 90 min\nSoir · Révision Sabqi · 15–20 min";
-            case TUESDAY:
-                return "Itqān Hujurāt → An-Nās · 1 page ×30";
             case WEDNESDAY:
-                return "Matin · Sabqi Al-Baqarah · 5 lignes · 90 min\nSoir · Révision Sabqi cumulative · 15–20 min";
-            case THURSDAY:
-                return "Itqān Hujurāt → An-Nās · page suivante ×30";
             case FRIDAY:
-                return "Matin · Sabqi Al-Baqarah · 5 lignes · 90 min\nSoir · Bilan Sabqi · 15–20 min";
+                return "Sabqi · 5 lignes · 37 répétitions · repère 90 min";
+            case TUESDAY:
+            case THURSDAY:
+                return "Itqān · unité suivante ×30 · repère 60 min";
             case SATURDAY:
-                return "Matin · Murājaʿah Hujurāt → An-Nās · 60 min\nSoir · Murājaʿah Al-Baqarah · 60 min";
             case SUNDAY:
-                return "Matin · suite Murājaʿah Hujurāt → An-Nās · 60 min\nSoir · suite Murājaʿah Al-Baqarah · 60 min";
+                return "Murājaʿah · Sabqi récent 15 min + cycle Itqān 30 min";
             default:
-                throw new IllegalStateException("Unsupported day: "+day);
+                throw new IllegalArgumentException("Unsupported day: " + day);
         }
     }
 
