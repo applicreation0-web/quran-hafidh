@@ -1,29 +1,41 @@
 # Quran Hifz — lecteur Mushaf local natif
 
-## Flux
+## Flux runtime
 
 `NNN.svg.br` est lu exclusivement depuis les assets de Quran Hifz. `MushafRepository` valide la plage 1..604, décompresse Brotli en mémoire avec une limite de taille, puis `MushafSvgValidator` refuse les constructions SVG actives ou externes. `MushafRenderer` parse ensuite le SVG avec AndroidSVG et dessine directement sur un `Canvas` Android.
 
 Il n'y a ni WebView, ni JavaScript, ni faux domaine local, ni interception d'URL, ni fallback réseau.
 
-## Source canonique
+## Source canonique figée
 
 - Hafs 'an 'Asim / KFQC.
 - Source amont : `quranpedia/quran-svg`.
+- Sous-module Git local : `third_party/quran-svg`.
 - Commit figé : `1b427fab77aae1403fe7e1f0b8c794a5384d5605`.
-- Arbre `svg-br` figé : `fe267b844a17750e57fbe2dd5e9c8ca81d59c8f9`.
+- Corpus attendu : exactement `001.svg.br` à `604.svg.br`.
 
-Le script `scripts/vendor_hifz_mushaf.py` est volontairement un outil de préparation locale. L'application installée ne télécharge rien.
+Le sous-module sert uniquement de source de build locale et reproductible. L'application installée ne télécharge rien. Gradle copie les pages nécessaires vers des assets générés avant `merge*Assets`.
 
-## Test local par étapes
+## Premier gate local : 001 → 002 → 001
 
-1. `python3 scripts/vendor_hifz_mushaf.py --smoke`
-2. construire/installler `:hifz-app` localement ;
-3. vérifier page 1 ;
-4. page suivante vers 2 ;
-5. page précédente vers 1 ;
-6. exécuter le test instrumenté `LocalMushafAssetInstrumentedTest` ;
-7. seulement ensuite vendoriser les 604 pages avec `python3 scripts/vendor_hifz_mushaf.py` ;
-8. exécuter `python3 scripts/verify_hifz_mushaf_assets.py` avant de brancher géométrie/Hifz/BOOX.
+1. `git submodule update --init --recursive`
+2. `./gradlew :hifz-app:assembleDebug -PhifzSmokeMushaf=true`
+3. installer l'APK localement sur l'appareil de test ;
+4. vérifier l'affichage natif de la page 1 ;
+5. naviguer vers la page 2 ;
+6. revenir à la page 1 ;
+7. exécuter `LocalMushafAssetInstrumentedTest` ;
+8. répéter rapidement 1 → 2 → 1 pour vérifier qu'un ancien chargement asynchrone ne reprend jamais la main.
+
+En mode smoke, seules 001 et 002 sont empaquetées dans l'APK de test, même si le sous-module local contient les 604 pages.
+
+## Après validation du gate
+
+- build normal sans `-PhifzSmokeMushaf=true` : empaquetage des 604 pages locales ;
+- contrôle de navigation multi-pages et mémoire ;
+- seulement ensuite branchement de la géométrie ;
+- ensuite seulement interactions Hifz et optimisation BOOX/E-Ink.
+
+`scripts/vendor_hifz_mushaf.py` reste disponible pour produire une copie vendored des assets à partir du même sous-module piné. Il n'effectue aucun téléchargement.
 
 Aucun GitHub Actions n'est requis pour cette boucle de débogage.

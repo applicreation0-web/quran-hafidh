@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Vendor the pinned 604-page KFQC Hafs SVG-Brotli corpus into Quran Hifz.
+"""Vendor the pinned local KFQC Hafs SVG-Brotli corpus into Quran Hifz.
 
-This is a developer/local setup tool, never an app runtime dependency and never a
-GitHub Actions debugging step.
+The source is the pinned git submodule under third_party/quran-svg. This script
+never downloads Quran data and is intended for local developer/release prep only.
 """
 
 from __future__ import annotations
@@ -12,31 +12,32 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
-import urllib.request
 
 PINNED_COMMIT = "1b427fab77aae1403fe7e1f0b8c794a5384d5605"
-SVG_BR_TREE = "fe267b844a17750e57fbe2dd5e9c8ca81d59c8f9"
-REPO = "quranpedia/quran-svg"
+SOURCE_REPOSITORY = "quranpedia/quran-svg"
+SUBMODULE = Path("third_party/quran-svg")
+SOURCE = SUBMODULE / "mushafs/hafs/kfqc/svg-br"
 DEST = Path("hifz-app/src/main/assets/mushaf/hafs/kfqc/svg-br")
 MANIFEST = DEST.parent / "manifest.json"
 
 
-def github_blob_sha(data: bytes) -> str:
+def git(*args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(SUBMODULE), *args],
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def git_blob_sha(data: bytes) -> str:
     header = f"blob {len(data)}\0".encode("ascii")
     return hashlib.sha1(header + data).hexdigest()
-
-
-def get_json(url: str) -> object:
-    req = urllib.request.Request(url, headers={"User-Agent": "Quran-Hifz-local-vendor"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        return json.load(response)
-
-
-def get_bytes(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "Quran-Hifz-local-vendor"})
-    with urllib.request.urlopen(req, timeout=60) as response:
-        return response.read()
 
 
 def atomic_write(path: Path, data: bytes) -> None:
@@ -53,46 +54,62 @@ def atomic_write(path: Path, data: bytes) -> None:
             os.unlink(tmp)
 
 
+def verify_source() -> list[str]:
+    if not SOURCE.is_dir():
+        raise SystemExit(
+            "Pinned quran-svg submodule is missing. Run: git submodule update --init --recursive"
+        )
+
+    head = git("rev-parse", "HEAD")
+    if head != PINNED_COMMIT:
+        raise SystemExit(f"Unexpected quran-svg commit: {head} != {PINNED_COMMIT}")
+
+    dirty = git("status", "--porcelain", "--untracked-files=no")
+    if dirty:
+        raise SystemExit("quran-svg submodule has tracked local modifications; refusing to vendor")
+
+    expected = [f"{page:03d}.svg.br" for page in range(1, 605)]
+    actual = sorted(path.name for path in SOURCE.glob("*.svg.br"))
+    if actual != expected:
+        raise SystemExit(f"Expected the canonical 604-page set, found {len(actual)} pages")
+    return expected
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke", action="store_true", help="vendor only pages 001 and 002")
     args = parser.parse_args()
 
-    tree_url = f"https://api.github.com/repos/{REPO}/git/trees/{SVG_BR_TREE}"
-    tree = get_json(tree_url)
-    entries = {item["path"]: item for item in tree["tree"] if item.get("type") == "blob"}
-    expected_names = [f"{page:03d}.svg.br" for page in range(1, 605)]
-    if sorted(entries) != expected_names:
-        raise SystemExit("Pinned source tree is not exactly the canonical 604-page set")
+    expected = verify_source()
+    wanted = expected[:2] if args.smoke else expected
 
-    wanted = expected_names[:2] if args.smoke else expected_names
+    DEST.mkdir(parents=True, exist_ok=True)
+    wanted_set = set(wanted)
+    for existing in DEST.glob("*.svg.br"):
+        if existing.name not in wanted_set:
+            existing.unlink()
+
     manifest = {
-        "source_repository": REPO,
+        "source_repository": SOURCE_REPOSITORY,
         "pinned_commit": PINNED_COMMIT,
-        "svg_br_tree": SVG_BR_TREE,
-        "page_count": 604,
+        "canonical_page_count": 604,
+        "vendored_page_count": len(wanted),
+        "mode": "smoke" if args.smoke else "full",
         "files": {},
     }
 
     for name in wanted:
-        expected_sha = entries[name]["sha"]
-        raw_url = (
-            f"https://raw.githubusercontent.com/{REPO}/{PINNED_COMMIT}/"
-            f"mushafs/hafs/kfqc/svg-br/{name}"
-        )
-        data = get_bytes(raw_url)
-        actual_sha = github_blob_sha(data)
-        if actual_sha != expected_sha:
-            raise SystemExit(f"Integrity mismatch for {name}: {actual_sha} != {expected_sha}")
+        data = (SOURCE / name).read_bytes()
         atomic_write(DEST / name, data)
-        manifest["files"][name] = {"git_blob_sha1": actual_sha, "bytes": len(data)}
-        print(f"OK {name} {len(data)} bytes {actual_sha}")
+        manifest["files"][name] = {
+            "git_blob_sha1": git_blob_sha(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "bytes": len(data),
+        }
+        print(f"OK {name} {len(data)} bytes")
 
     atomic_write(MANIFEST, (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8"))
-    if args.smoke:
-        print("Smoke corpus ready: 001.svg.br and 002.svg.br")
-    else:
-        print("Canonical local Mushaf ready: 604/604 pages")
+    print(f"Vendored {len(wanted)}/604 canonical pages from pinned local source")
 
 
 if __name__ == "__main__":
