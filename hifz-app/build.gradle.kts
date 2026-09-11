@@ -15,31 +15,13 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
 val verifyHifzProductBoundary by tasks.registering {
     doLast {
         val manifest = file("src/main/AndroidManifest.xml").readText()
-        check(!manifest.contains("AccessibilityService", ignoreCase = true)) {
-            "Quran Hifz must not package an Accessibility service."
-        }
-        check(!manifest.contains("<queries>")) {
-            "Quran Hifz must not query or enumerate external applications."
-        }
-        check(!manifest.contains("QUERY_ALL_PACKAGES")) {
-            "Quran Hifz must never request broad package visibility."
-        }
-        check(!manifest.contains("BIND_ACCESSIBILITY_SERVICE")) {
-            "Quran Hifz must never request Safeguard blocking privileges."
-        }
-        val sourceText = fileTree("src/main") {
-            include("**/*.java", "**/*.kt", "**/*.xml")
-        }.files.joinToString("\n") { it.readText() }
-        listOf(
-            "QuranAccessibilityService",
-            "ProtectedApps",
-            "GuardPrefs.protectedPackages",
-            "UsageCyclePolicy",
-            "UnlockBudgetIntegrity"
-        ).forEach { forbidden ->
-            check(!sourceText.contains(forbidden)) {
-                "Safeguard-only symbol leaked into Quran Hifz: $forbidden"
-            }
+        check(!manifest.contains("AccessibilityService", ignoreCase = true)) { "Quran Hifz must not package an Accessibility service." }
+        check(!manifest.contains("<queries>")) { "Quran Hifz must not query or enumerate external applications." }
+        check(!manifest.contains("QUERY_ALL_PACKAGES")) { "Quran Hifz must never request broad package visibility." }
+        check(!manifest.contains("BIND_ACCESSIBILITY_SERVICE")) { "Quran Hifz must never request Safeguard blocking privileges." }
+        val sourceText = fileTree("src/main") { include("**/*.java", "**/*.kt", "**/*.xml") }.files.joinToString("\n") { it.readText() }
+        listOf("QuranAccessibilityService","ProtectedApps","GuardPrefs.protectedPackages","UsageCyclePolicy","UnlockBudgetIntegrity").forEach { forbidden ->
+            check(!sourceText.contains(forbidden)) { "Safeguard-only symbol leaked into Quran Hifz: $forbidden" }
         }
     }
 }
@@ -49,13 +31,13 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        // Test package deliberately differs from the future final product id
-        // com.quransafeguard.hifz so it can be installed and removed independently.
-        applicationId = "com.quransafeguard.hifz.test"
+        // Fresh install-only test package. This intentionally avoids every previous
+        // experimental Hifz package/signature on the user's phone.
+        applicationId = "com.quransafeguard.hifz.installtest1"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3-convergence-test"
+        versionCode = 4
+        versionName = "0.4-installable-test"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -63,7 +45,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            applicationIdSuffix = ".debug"
+            // No applicationIdSuffix: exact fresh package above is used for the APK.
         }
         getByName("release") {
             isMinifyEnabled = false
