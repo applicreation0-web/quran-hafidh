@@ -76,8 +76,9 @@ jobs:
           set -euo pipefail
           apk="$(find safeguard-app/build/outputs/apk/plus/debug -type f -name '*.apk' -print -quit)"
           test -n "$apk" && test -s "$apk"
+          # apksigner returns non-zero when verification fails; use that contract rather
+          # than grepping human-readable output whose wording changes by build-tools version.
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee safeguard-app-signature.txt
-          grep -q 'Verified' safeguard-app-signature.txt
           apkanalyzer manifest print "$apk" > safeguard-app-manifest.xml
           grep -q 'package="com.quransafeguard.safeguard.test"' safeguard-app-manifest.xml
           grep -q 'Quran Safeguard TEST' safeguard-app-manifest.xml
