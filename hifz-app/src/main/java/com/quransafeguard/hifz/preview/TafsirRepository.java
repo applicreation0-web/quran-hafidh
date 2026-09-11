@@ -19,16 +19,48 @@ import java.util.Collections;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
-/** Read-only Tafsir al-Jalalayn corpus bundled from the previously audited project asset. */
+/** Read-only, source-backed Tafsir al-Jalalayn corpus from the audited project asset. */
 public final class TafsirRepository {
+    public static final String EDITION_NAME = "Jalalayn";
+    public static final String SOURCE_TITLE = "Tafsir al-Jalalayn (English translation)";
     private static final String DB_NAME = "al_jalalayn_en.sqlite";
     private static final String EXPECTED_SHA256 = "26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56";
     private static final int EXPECTED_VERSES = 6236;
 
+    public enum RunStyle {
+        REGULAR,
+        ITALIC,
+        BOLD,
+        BOLD_ITALIC,
+        TECHNICAL_TERM,
+        TRANSLITERATION,
+        POETRY,
+        NOTE_REF
+    }
+
+    public static final class Run {
+        public final RunStyle style;
+        public final String text;
+        Run(RunStyle style, String text) { this.style = style; this.text = text; }
+    }
+
+    public static final class Note {
+        public final int number;
+        public final List<Run> runs;
+        Note(int number, List<Run> runs) { this.number = number; this.runs = Collections.unmodifiableList(runs); }
+    }
+
     public static final class Entry {
-        public final String commentary;
-        public final List<String> notes;
-        Entry(String commentary, List<String> notes) { this.commentary = commentary; this.notes = notes; }
+        public final String editionName;
+        public final String sourceTitle;
+        public final List<Run> commentaryRuns;
+        public final List<Note> notes;
+        Entry(List<Run> commentaryRuns, List<Note> notes) {
+            this.editionName = EDITION_NAME;
+            this.sourceTitle = SOURCE_TITLE;
+            this.commentaryRuns = Collections.unmodifiableList(commentaryRuns);
+            this.notes = Collections.unmodifiableList(notes);
+        }
     }
 
     private final Context app;
@@ -50,11 +82,16 @@ public final class TafsirRepository {
                 if (c.moveToFirst()) body = c.getString(0);
             }
             if (body == null) return null;
-            String commentary = flattenRuns(body);
-            ArrayList<String> notes = new ArrayList<>();
+            List<Run> commentary = parseRuns(body);
+            if (commentary.isEmpty()) return null;
+            ArrayList<Note> notes = new ArrayList<>();
             try (Cursor c = db.rawQuery("SELECT label,body_json FROM verse_note WHERE surah=? AND ayah=? ORDER BY ordinal",
                 new String[]{Integer.toString(verse.getSurah()), Integer.toString(verse.getAyah())})) {
-                while (c.moveToNext()) notes.add(c.getString(0) + ". " + flattenRuns(c.getString(1)));
+                while (c.moveToNext()) {
+                    List<Run> runs = parseRuns(c.getString(1));
+                    if (runs.isEmpty()) throw new IllegalStateException("Empty Tafsir note " + c.getInt(0));
+                    notes.add(new Note(c.getInt(0), runs));
+                }
             }
             return new Entry(commentary, notes);
         } finally {
@@ -110,15 +147,42 @@ public final class TafsirRepository {
         }
     }
 
-    private String flattenRuns(String json) throws Exception {
+    private List<Run> parseRuns(String json) throws Exception {
         JSONArray array = new JSONArray(json);
-        StringBuilder out = new StringBuilder();
+        ArrayList<Run> out = new ArrayList<>();
         for (int i = 0; i < array.length(); i++) {
             JSONObject run = array.getJSONObject(i);
-            String text = run.optString("text", "");
-            if (!text.isEmpty()) out.append(text);
+            RunStyle style = parseStyle(run.optString("style", ""));
+            if (style == null) throw new IllegalStateException("Unknown Tafsir run style");
+            String text = normalizeJalalaynHonorifics(run.optString("text", ""));
+            if (!text.isEmpty()) out.add(new Run(style, text));
         }
-        return out.toString().trim();
+        return out;
+    }
+
+    private RunStyle parseStyle(String value) {
+        switch (value) {
+            case "regular": return RunStyle.REGULAR;
+            case "italic": return RunStyle.ITALIC;
+            case "bold": return RunStyle.BOLD;
+            case "bold_italic": return RunStyle.BOLD_ITALIC;
+            case "technical_term": return RunStyle.TECHNICAL_TERM;
+            case "transliteration": return RunStyle.TRANSLITERATION;
+            case "poetry": return RunStyle.POETRY;
+            case "note_ref": return RunStyle.NOTE_REF;
+            default: return null;
+        }
+    }
+
+    /**
+     * Exact display-only substitutions approved in the historical 0.10.6 Jalalayn
+     * presentation. Never infer an honorific from a person's name.
+     */
+    private String normalizeJalalaynHonorifics(String source) {
+        return source
+            .replace("(ṣʿa)", "ﷺ")
+            .replace("(ṣ)", "ﷺ")
+            .replace("(ʿa)", "عليه السلام");
     }
 
     private String sha256(File file) throws Exception {
