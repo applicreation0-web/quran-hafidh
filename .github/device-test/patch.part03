@@ -1,0 +1,34 @@
++function sessionPassageKey(s){const verses=Array.isArray(s?.verses)&&s.verses.length?s.verses.join('|'):'';const lines=Array.isArray(s?.lines)&&s.lines.length?s.lines.join('|'):'';return verses?('v:'+verses):(lines?('l:'+lines):null)}
++function mergeSessionStats(into,from){
++ // Historical duplicates may contain useful lifetime reading totals, but their
++ // protocol counters/wins/milestones describe a different run. Never merge
++ // those into the session we keep: doing so could silently auto-advance it.
++ const ir=into.readCounts||{},fr=from?.readCounts||{};
++ into.readCounts={visible:Math.max(0,Number(ir.visible)||0,Number(fr.visible)||0),masked:Math.max(0,Number(ir.masked)||0,Number(fr.masked)||0)};
++ into.reviews=Math.max(0,Number(into.reviews)||0,Number(from?.reviews)||0);
++ into.extraActive=Math.max(0,Number(into.extraActive)||0,Number(from?.extraActive)||0);
++ return into
++}
++function dedupeSessions(list,activeId){const chosen=new Map(),order=[];for(const s of Array.isArray(list)?list:[]){const key=sessionPassageKey(s);if(!key){order.push({key:null,s});continue}const prior=chosen.get(key);if(!prior){chosen.set(key,s);order.push({key});continue}const priorActive=prior.id===activeId,currentActive=s.id===activeId;if(currentActive&&!priorActive){mergeSessionStats(s,prior);chosen.set(key,s)}else if(!priorActive&&!currentActive){mergeSessionStats(s,prior);chosen.set(key,s)}else{mergeSessionStats(prior,s)}}return order.map(x=>x.key?chosen.get(x.key):x.s).filter((s,i,a)=>a.indexOf(s)===i)}
++state.sessions=dedupeSessions(state.sessions,state.active);
+ state.ui=state.ui||{mode:'READING',selectStart:null,selectEnd:null};
+ const eink=initial.displayProfile==='EINK';document.body.classList.toggle('eink',eink);
+ let page=initial.contextual?1:state.page,selected=null,memory=!!initial.memory||(!initial.contextual&&state.ui.mode==='MEMORIZATION'),selectStart=state.ui.selectStart||null,selectEnd=state.ui.selectEnd||null,geo,loadId=0,timer,noticeTimer,occlusion=0,playing=false,repeats=1,reviewMask=null,audioCountsProgress=false,revealGeneration=0,revealTimer=null;
+@@ -20,22 +33,22 @@ function notice(t){$('notice').textContent=t;$('notice').hidden=false;clearTimeo
+ function chrome(){document.body.classList.remove('hidden');clearTimeout(timer);timer=setTimeout(()=>{if($('sheet').hidden&&!document.activeElement?.matches('button:focus-visible,input,select'))document.body.classList.add('hidden')},2500)}
+ function button(text,fn,cls='capsule',disabled=false){const b=document.createElement('button');b.className=cls;b.textContent=text;b.disabled=disabled;b.onclick=()=>{fn();chrome()};return b}
+ function sheet(title){$('sheetTitle').textContent=title;$('sheetBody').replaceChildren();$('sheet').hidden=false;$('shade').hidden=false;chrome();$('close').focus();return $('sheetBody')}
+-function closeSheet(){$('sheet').hidden=true;$('shade').hidden=true;chrome()}
++function closeSheet(){const wasOpen=!$('sheet').hidden;$('sheet').hidden=true;$('shade').hidden=true;chrome();if(wasOpen)requestAnimationFrame(()=>visual('LINE'))}
+ $('close').onclick=closeSheet;$('shade').onclick=closeSheet;
+ function addText(parent,text,cls=''){const e=document.createElement('p');e.className=cls;e.textContent=text;parent.append(e);return e}
+ function refsFor(lines){return [...new Set(lines.flatMap(id=>lineById(id).verses))].filter(k=>{const s=currentSession();return !s||s.verses.includes(k)}).sort((a,b)=>keynum(a)-keynum(b))}
+ function lineById(id){const pg=id.split(':')[0];return geo.pages[pg].lines.find(l=>l.id===id)}
+-function focusVerse(k){selected=k;renderMarks();const [s,a]=k.split(':').map(Number);N?.announce(s,a)}
+-function invalidateBriefReveal(){revealGeneration++;if(revealTimer!==null){clearTimeout(revealTimer);revealTimer=null}reviewMask=null}
+-async function showPage(p,focus=null){if(p<1||p>604)return;invalidateBriefReveal();const id=++loadId;page=p;selected=focus;const response=await fetch('../page/'+p);if(!response.ok){notice('Page indisponible');return}const text=await response.text();if(id!==loadId)return;
++function focusVerse(k){selected=k;renderMarks();visual('HIGHLIGHT');const [s,a]=k.split(':').map(Number);N?.announce(s,a)}
++function invalidateBriefReveal(signal=true){revealGeneration++;if(revealTimer!==null){clearTimeout(revealTimer);revealTimer=null;if(signal)requestAnimationFrame(()=>visual('REVEAL_RETURN'))}reviewMask=null}
++async function showPage(p,focus=null){if(p<1||p>604)return;invalidateBriefReveal(false);const id=++loadId;page=p;selected=focus;const response=await fetch('../page/'+p);if(!response.ok){notice('Page indisponible');return}const text=await response.text();if(id!==loadId)return;
+  const doc=new DOMParser().parseFromString(text,'image/svg+xml');const svg=document.importNode(doc.documentElement,true);$('mushaf').replaceChildren(svg);$('viewport').scrollTop=0;applyZoom();
+  const once=new Set();svg.querySelectorAll('.ayahPolygon').forEach(path=>{const k=path.getAttribute('surah')+':'+path.getAttribute('ayah');path.dataset.verse=k;if(!once.has(k)){once.add(k);path.setAttribute('role','button');path.setAttribute('tabindex','0');path.setAttribute('aria-label','Sourate '+k.split(':')[0]+', verset '+k.split(':')[1]);path.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();verseTap(k)}})}else path.setAttribute('aria-hidden','true')});
