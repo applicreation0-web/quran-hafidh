@@ -9,12 +9,10 @@ import java.time.LocalDate
 class HifzDailyPlannerTest {
 
     @Test
-    fun sabqiPlansFiveRealMushafLinesWithoutRequiringMeasuredPace() {
-        val today = LocalDate.of(2026, 9, 9) // Wednesday = Sabqi
+    fun sabqiPlansExactlyFiveRealMushafLinesWithoutMeasuredPace() {
+        val today = LocalDate.of(2026, 9, 9)
         val state = configuredState().copy(
-            journeyConfig = configuredState().journeyConfig.copy(
-                pace = HifzPaceProfile()
-            )
+            journeyConfig = configuredState().journeyConfig.copy(pace = HifzPaceProfile())
         )
 
         val planned = HifzDailyPlanner.planDate(state, today, basicGeometry())
@@ -23,20 +21,19 @@ class HifzDailyPlannerTest {
         assertEquals(HifzTrack.SABQI, task.track)
         assertEquals(QuranVerseRef(1, 1), task.cursor.start)
         assertEquals(QuranVerseRef(1, 5), task.cursor.end)
-        assertEquals(5, HifzGeometryPolicy.targetLines(
-            basicGeometry(), HifzVerseRange(task.cursor.start, task.cursor.end)
-        ).size)
+        assertEquals("1:1", task.cursor.startLineId)
+        assertEquals("1:5", task.cursor.endLineId)
+        assertFalse(task.cursor.endVersePartial)
+        assertEquals(5, HifzGeometryPolicy.targetLines(basicGeometry(), task.cursor).size)
         assertEquals(30, task.quota)
         assertTrue(today in planned.planningDates)
     }
 
     @Test
-    fun sabqiNeverExceedsFiveLinesExceptForOneIndivisibleLongVerse() {
+    fun longVerseIsCutAtFiveRealLinesAndResumesSameVerseOnNextLine() {
         val longVerse = QuranVerseRef(2, 282)
         val geometry = HifzGeometryIndex(
-            mapOf(48 to (1..15).map { ordinal ->
-                line("48:$ordinal", 48, ordinal, longVerse)
-            })
+            mapOf(48 to (1..15).map { ordinal -> line("48:$ordinal", 48, ordinal, longVerse) })
         )
         val planned = HifzPassagePlanningPolicy.takeSabqiFiveLines(
             geometry,
@@ -47,13 +44,15 @@ class HifzDailyPlannerTest {
         requireNotNull(planned)
         assertEquals(longVerse, planned.cursor.start)
         assertEquals(longVerse, planned.cursor.end)
-        assertEquals(15, HifzGeometryPolicy.targetLines(
-            geometry, HifzVerseRange(longVerse, longVerse)
-        ).size)
+        assertEquals("48:1", planned.cursor.startLineId)
+        assertEquals("48:5", planned.cursor.endLineId)
+        assertTrue(planned.cursor.endVersePartial)
+        assertEquals(5, HifzGeometryPolicy.targetLines(geometry, planned.cursor).size)
+        assertEquals(longVerse to "48:6", HifzPassagePlanningPolicy.nextSabqiStart(geometry, planned.cursor))
     }
 
     @Test
-    fun itqanPlansOnePhysicalPageAndProtocolRequiresThirtyVisibleRepetitions() {
+    fun itqanPreviewTaskStillTotalsThirtyRepetitions() {
         val tuesday = LocalDate.of(2026, 9, 8)
         val planned = HifzDailyPlanner.planDate(configuredState(), tuesday, basicGeometry())
         val task = planned.tasks.single()
@@ -61,8 +60,8 @@ class HifzDailyPlannerTest {
         assertEquals(HifzTrack.ITQAN, task.track)
         assertEquals(task.cursor.startPage, task.cursor.endPage)
         assertEquals(2, task.cursor.startPage)
-        assertEquals(30, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).first().repetitions)
-        assertEquals(0, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).first().maskPercent)
+        assertEquals(30, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).sumOf { it.repetitions })
+        assertTrue(HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).any { it.maskPercent > 0 })
     }
 
     @Test
@@ -91,7 +90,7 @@ class HifzDailyPlannerTest {
     }
 
     @Test
-    fun itqanNeverCrossesUnselectedGapAndNextTaskStartsAtNextInterval() {
+    fun itqanStartsAtUpperTailThenWrapsToLowerEligibleInterval() {
         val tuesday = LocalDate.of(2026, 9, 8)
         val thursday = LocalDate.of(2026, 9, 10)
         val bounds = HifzJourneyBounds(
@@ -106,17 +105,16 @@ class HifzDailyPlannerTest {
 
         val first = HifzDailyPlanner.planDate(HifzState(journeyConfig = config), tuesday, geometry)
         val firstTask = first.tasks.single()
-        assertEquals(QuranVerseRef(2, 1), firstTask.cursor.start)
-        assertEquals(QuranVerseRef(2, 2), firstTask.cursor.end)
-        assertEquals(2, firstTask.cursor.startPage)
-        assertEquals(2, firstTask.cursor.endPage)
+        assertEquals(QuranVerseRef(49, 1), firstTask.cursor.start)
+        assertEquals(QuranVerseRef(49, 2), firstTask.cursor.end)
+        assertEquals(515, firstTask.cursor.startPage)
 
         val afterFirst = first.copy(tasks = listOf(firstTask.copy(status = HifzTaskStatus.COMPLETED)))
         val second = HifzDailyPlanner.planDate(afterFirst, thursday, geometry)
         val secondTask = second.tasks.first { it.originalScheduledDate == thursday }
-        assertEquals(QuranVerseRef(49, 1), secondTask.cursor.start)
-        assertEquals(QuranVerseRef(49, 2), secondTask.cursor.end)
-        assertEquals(515, secondTask.cursor.startPage)
+        assertEquals(QuranVerseRef(2, 1), secondTask.cursor.start)
+        assertEquals(QuranVerseRef(2, 2), secondTask.cursor.end)
+        assertEquals(2, secondTask.cursor.startPage)
         assertFalse(secondTask.cursor.start.surah in 3..48)
     }
 
@@ -132,9 +130,7 @@ class HifzDailyPlannerTest {
             )
         )
         val target = HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(49, 2))
-        val planned = HifzPassagePlanningPolicy.takeItqanPage(
-            index, target, QuranVerseRef(49, 1)
-        )
+        val planned = HifzPassagePlanningPolicy.takeItqanPage(index, target, QuranVerseRef(49, 1))
 
         requireNotNull(planned)
         assertEquals(515, planned.cursor.startPage)
@@ -145,7 +141,7 @@ class HifzDailyPlannerTest {
     }
 
     @Test
-    fun murajaahUsesFragilityEvidenceWithoutFixedSabqiItqanRatio() {
+    fun murajaahExistingClaudePlannerStillDoesNotMutateSourceTask() {
         val saturday = LocalDate.of(2026, 9, 12)
         val sabqi = HifzTask(
             id = "sabqi-source", track = HifzTrack.SABQI,
@@ -161,14 +157,8 @@ class HifzDailyPlannerTest {
         )
         val geometry = HifzGeometryIndex(
             mapOf(
-                2 to listOf(
-                    line("2:1", 2, 1, QuranVerseRef(2, 1)),
-                    line("2:2", 2, 2, QuranVerseRef(2, 2))
-                ),
-                562 to listOf(
-                    line("562:1", 562, 1, QuranVerseRef(67, 1)),
-                    line("562:2", 562, 2, QuranVerseRef(67, 2))
-                )
+                2 to listOf(line("2:1", 2, 1, QuranVerseRef(2, 1)), line("2:2", 2, 2, QuranVerseRef(2, 2))),
+                562 to listOf(line("562:1", 562, 1, QuranVerseRef(67, 1)), line("562:2", 562, 2, QuranVerseRef(67, 2)))
             )
         )
         val state = HifzState(
@@ -182,8 +172,7 @@ class HifzDailyPlannerTest {
             tasks = listOf(sabqi, itqan),
             progressByTask = mapOf(
                 sabqi.id to HifzTaskProgress(
-                    taskId = sabqi.id, totalIncorrectAttempts = 0,
-                    totalRevealCount = 0, completed = true,
+                    taskId = sabqi.id, completed = true,
                     stepIndex = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI).size
                 ),
                 itqan.id to HifzTaskProgress(
@@ -199,6 +188,7 @@ class HifzDailyPlannerTest {
         requireNotNull(review)
         assertEquals(2, review.cursor.start.surah)
         assertEquals(45, review.quota)
+        assertEquals(itqan.cursor, state.tasks.first { it.id == "itqan-source" }.cursor)
     }
 
     @Test
@@ -223,22 +213,14 @@ class HifzDailyPlannerTest {
 
     private fun basicGeometry() = HifzGeometryIndex(
         mapOf(
-            1 to (1..7).map { ordinal ->
-                line("1:$ordinal", 1, ordinal, QuranVerseRef(1, ordinal))
-            },
-            2 to listOf(
-                line("2:1", 2, 1, QuranVerseRef(2, 1)),
-                line("2:2", 2, 2, QuranVerseRef(2, 2))
-            )
+            1 to (1..7).map { ordinal -> line("1:$ordinal", 1, ordinal, QuranVerseRef(1, ordinal)) },
+            2 to listOf(line("2:1", 2, 1, QuranVerseRef(2, 1)), line("2:2", 2, 2, QuranVerseRef(2, 2)))
         )
     )
 
     private fun gapGeometry() = HifzGeometryIndex(
         mapOf(
-            2 to listOf(
-                line("2:1", 2, 1, QuranVerseRef(2, 1)),
-                line("2:2", 2, 2, QuranVerseRef(2, 2))
-            ),
+            2 to listOf(line("2:1", 2, 1, QuranVerseRef(2, 1)), line("2:2", 2, 2, QuranVerseRef(2, 2))),
             515 to listOf(
                 line("515:1", 515, 1, QuranVerseRef(48, 29)),
                 line("515:2", 515, 2, QuranVerseRef(48, 29), QuranVerseRef(49, 1)),
