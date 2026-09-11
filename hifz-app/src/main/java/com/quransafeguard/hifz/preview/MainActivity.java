@@ -7,12 +7,13 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.quransafeguard.hifz.core.HifzSchedule;
-import com.quransafeguard.hifz.core.SessionKind;
+import com.quransafeguard.hifz.core.ScheduledSession;
+import com.quransafeguard.hifz.core.SessionType;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
 
-/** Quran Hifz full-scope preview home. No Safeguard/blocking API is linked here. */
+/** Quran Hifz test home. No Safeguard/blocking API is linked here. */
 public final class MainActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private GeometryRepository geometry;
@@ -27,8 +28,8 @@ public final class MainActivity extends android.app.Activity {
         root.setPadding(Ui.dp(this,20),Ui.dp(this,20),Ui.dp(this,20),Ui.dp(this,24));
         scroll.addView(root);
 
-        root.addView(Ui.text(this,"Quran Hifz",28,true));
-        TextView subtitle=Ui.text(this,"Preview fonctionnelle · BOOX / E‑Ink · aucun blocage d’applications",14,false);
+        root.addView(Ui.text(this,"Quran Hifz TEST",28,true));
+        TextView subtitle=Ui.text(this,"BOOX / E‑Ink · aucun blocage d’applications",14,false);
         subtitle.setPadding(0,Ui.dp(this,4),0,Ui.dp(this,16));root.addView(subtitle);
 
         today=Ui.text(this,"",18,true);today.setPadding(0,0,0,Ui.dp(this,16));root.addView(today);refreshToday();
@@ -40,7 +41,7 @@ public final class MainActivity extends android.app.Activity {
         root.addView(Ui.button(this,"Murājaʿah · révision en blocs de versets",v->openSession(HifzSessionActivity.MURAJAAH)));
         root.addView(Ui.button(this,"État / paramètres de test",v->startActivity(new Intent(this,SettingsActivity.class))));
 
-        TextView limits=Ui.text(this,"Audio Hifz : logique isolée prévue, mais récitation Al‑Husary non embarquée dans cette preview tant que l’hébergement/redistribution n’est pas validé.\n\nDurées 90/60/45 min et split de masque Itqān 10/5/5/5/5 : paramètres de travail, pas décisions irréversibles.",13,false);
+        TextView limits=Ui.text(this,"Audio Hifz : logique isolée, sans incrément des répétitions ni déplacement des curseurs. La récitation Al‑Husary n’est pas embarquée tant que sa redistribution n’est pas validée.\n\nDurées 90/60/45 min et split de masque Itqān 10/5/5/5/5 : paramètres de travail, pas décisions irréversibles.",13,false);
         limits.setPadding(0,Ui.dp(this,18),0,0);root.addView(limits);
         setContentView(scroll);
     }
@@ -50,14 +51,16 @@ public final class MainActivity extends android.app.Activity {
     private void openSession(String mode){startActivity(new Intent(this,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode));}
 
     private void refreshToday(){
-        LocalDate date=LocalDate.now();SessionKind kind=HifzSchedule.INSTANCE.scheduledKind(date,prefs.programStartDate());
-        if(kind==null){today.setText("Aujourd’hui · parcours non démarré");return;}
+        LocalDate date=LocalDate.now();
+        ScheduledSession scheduled=HifzSchedule.INSTANCE.scheduled(date,prefs.programStartDate(),date);
+        if(scheduled==null){today.setText("Aujourd’hui · parcours non démarré");return;}
+        SessionType kind=scheduled.getType();
         String line;
         switch(kind){
             case SABQI:{int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=geometry.firstLineIndex(new VerseRef(2,75));GeometryRepository.FiveLineBlock b=geometry.fiveLineBlock(cursor);line="Aujourd’hui — Sabqi\nSourate "+b.startVerse.getSurah()+" · "+b.verseLabel()+"\n5 lignes · 37 répétitions";break;}
             case ITQAN:{GeometryRepository.VerseUnit u=geometry.eligiblePageUnit(prefs.itqanCursor(),prefs.corpus());line="Aujourd’hui — Itqān\nSourate "+u.start.getSurah()+" · "+u.start+" → "+u.end+"\n×30 · corpus cyclique";break;}
             case MURAJAAH:{int planned=(int)Math.floor(PreviewConfig.MURAJAAH_ITQAN_MINUTES_WORKING*60.0/prefs.murajaahSecondsPerLine());GeometryRepository.EligibleLinePlan p=geometry.planEligibleLines(prefs.murajaahCursor(),Math.max(1,planned),prefs.corpus());line="Aujourd’hui — Murājaʿah\nBloc A : Sabqi récent ("+prefs.recentSabqi().size()+" en attente)\nBloc B : "+p.start+" → "+p.actualPlannedEnd+" (prévision)";break;}
-            default: line="Aujourd’hui — Mémorisation libre";
+            default: throw new IllegalStateException("Unsupported Hifz session type: "+kind);
         }
         today.setText(line);
     }
