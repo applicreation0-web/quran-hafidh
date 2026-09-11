@@ -1,6 +1,7 @@
 import org.gradle.api.GradleException
 import org.gradle.api.tasks.Sync
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 
 plugins {
     id("com.android.application")
@@ -54,7 +55,9 @@ val verifyHifzMushafSource by tasks.registering {
             throw GradleException("Pinned quran-svg source has tracked local modifications; refusing to build")
         }
 
-        val expectedNames = (1..604).map { "%03d.svg.br".format(it) }
+        val expectedNames = (1..604).map {
+            String.format(Locale.ROOT, "%03d.svg.br", it)
+        }
         val actualNames = canonicalMushafSource
             .listFiles { file -> file.isFile && file.name.endsWith(".svg.br") }
             ?.map { it.name }

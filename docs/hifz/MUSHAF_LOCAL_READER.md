@@ -16,23 +16,33 @@ Il n'y a ni WebView, ni JavaScript, ni faux domaine local, ni interception d'URL
 
 Chaque build Hifz exécute `verifyHifzMushafSource` avant la copie des assets. Le build échoue si le sous-module est absent, pointe sur un autre commit, contient des modifications suivies ou ne présente pas exactement les 604 pages KFQC attendues. Le sous-module sert uniquement de source de build locale et reproductible ; l'application installée ne télécharge rien.
 
+## Outils de build locaux
+
+Le dépôt ne contient pas encore de Gradle Wrapper binaire. Pour éviter un faux `./gradlew`, le gate local exige explicitement :
+
+- JDK 17 ;
+- Gradle 9.5.0 ;
+- Android SDK avec API 37 et Build Tools compatibles.
+
+AGP 9.3.0 utilise Gradle 9.5.0 comme version minimale/par défaut et JDK 17. Tant que le wrapper complet et vérifié n'est pas ajouté au dépôt, les commandes ci-dessous utilisent donc `gradle`.
+
 ## Premier gate local : 001 → 002 → 001
 
 1. `git submodule update --init --recursive`
-2. `./gradlew :hifz-app:verifyHifzMushafSource`
-3. `./gradlew :hifz-app:assembleDebug -PhifzSmokeMushaf=true`
+2. `gradle :hifz-app:verifyHifzMushafSource`
+3. `gradle :hifz-app:assembleDebug -PhifzSmokeMushaf=true`
 4. installer l'APK localement sur l'appareil de test ;
 5. vérifier l'affichage natif de la page 1 ;
 6. naviguer vers la page 2 ;
 7. revenir à la page 1 ;
-8. lancer les tests instrumentés avec le même mode smoke ;
+8. `gradle :hifz-app:connectedDebugAndroidTest -PhifzSmokeMushaf=true`
 9. répéter rapidement 1 → 2 → 1 pour vérifier qu'un ancien chargement asynchrone ne reprend jamais la main.
 
 En mode smoke, seules 001 et 002 sont empaquetées dans l'APK de test, même si le sous-module local contient les 604 pages.
 
 ## Critères GO du gate
 
-Le gate 001 → 002 → 001 est GO uniquement si : page 1 rendue sans WebView, page 2 rendue, retour page 1 correct, aucune page distante sollicitée, aucune reprise d'un chargement périmé, aucun crash/ANR et `LocalMushafAssetInstrumentedTest` + `MainActivityMushafNavigationInstrumentedTest` réussissent sur l'environnement Android local.
+Le gate 001 → 002 → 001 est GO uniquement si : page 1 rendue sans WebView, page 2 rendue, retour page 1 correct, aucune page distante sollicitée, aucune reprise d'un chargement périmé, aucun crash/ANR et `LocalMushafAssetInstrumentedTest` + `MainActivityMushafNavigationInstrumentedTest` + `HifzStateStoreInstrumentedTest` réussissent sur l'environnement Android local.
 
 ## Après validation du gate
 
