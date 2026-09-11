@@ -17,6 +17,9 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Audit Mushaf, geometry and Tafsir with Python
+        run: python3 scripts/audit_quran_hifz_inputs.py
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
