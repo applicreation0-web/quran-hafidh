@@ -2,11 +2,11 @@ package com.quransafeguard.hifz.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.os.Bundle;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.quransafeguard.hifz.BuildConfig;
 import com.quransafeguard.hifz.storage.HifzProgressStore;
 import com.quransafeguard.hifz.storage.HifzScheduleStore;
 
@@ -43,7 +43,7 @@ public final class MainActivity extends Activity {
                 root.addView(Ui.text(this, status + " : " + HifzProgramActivity.displayMode(pending.mode)
                     + " · " + pending.scheduledDate, 15, true));
             }
-            if (BuildConfig.DEBUG) {
+            if (isDebuggable()) {
                 root.addView(Ui.button(this, "Tests Hifz · sans impact", v ->
                     startActivity(new Intent(this, HifzDiagnosticsActivity.class))));
             }
@@ -51,6 +51,10 @@ public final class MainActivity extends Activity {
             root.addView(Ui.text(this, "Parcours Hifz : configuration initiale requise (4 bornes).", 14, false));
         }
         setContentView(root);
+    }
+
+    private boolean isDebuggable() {
+        return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
 
     private void openHifz() {
