@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -45,6 +46,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean repActionLocked;
     private boolean hasShown;
     private boolean sessionCompleted;
+    private int unitFirstPage = 1;
+    private int unitLastPage = 1;
+    private boolean revealedThisRep;
+    private Button revealButton;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -67,7 +72,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void buildUi() {
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
-        top.addView(Ui.smallButton(this,"‹",v->finish()));
+        top.addView(Ui.smallButton(this,"‹ Retour",v->finish()));
         heading = Ui.text(this, displayModeName(), 18, true); Ui.weight(heading,1f); heading.setGravity(Gravity.CENTER); top.addView(heading); root.addView(top);
         program = Ui.text(this,"Chargement du programme…",15,true); program.setPadding(Ui.dp(this,12),4,Ui.dp(this,12),2); root.addView(program);
         timerText = Ui.text(this,"",13,false); timerText.setPadding(Ui.dp(this,12),2,Ui.dp(this,12),2); root.addView(timerText);
@@ -75,20 +80,36 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         mushaf = new MushafView(this); mushaf.setListener(this); root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
         actions = Ui.row(this); actions.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4)); root.addView(actions);
         LinearLayout nav=Ui.row(this);nav.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,8));
-        prevPage=Ui.smallButton(this,"‹ Page",v->goPage(-1));Button audio=Ui.smallButton(this,"Audio",v->audioGate());nextPage=Ui.smallButton(this,"Page ›",v->goPage(1));
-        Ui.weight(prevPage,1);Ui.weight(audio,1);Ui.weight(nextPage,1);nav.addView(prevPage);nav.addView(audio);nav.addView(nextPage);root.addView(nav);
+        prevPage=Ui.smallButton(this,"‹ Page",v->goPage(-1));
+        nextPage=Ui.smallButton(this,"Page ›",v->goPage(1));
+        Ui.weight(prevPage,1);nav.addView(prevPage);
+        if (new HifzAudioGate(this).available()) {
+            Button audio = Ui.smallButton(this,"Audio",v->audioGate());
+            Ui.weight(audio,1);nav.addView(audio);
+        }
+        Ui.weight(nextPage,1);nav.addView(nextPage);root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
 
     private void renderMode() {
         actions.removeAllViews();
-        boolean pageNavigationAllowed = MURAJAAH.equals(mode);
-        prevPage.setEnabled(pageNavigationAllowed);
-        nextPage.setEnabled(pageNavigationAllowed);
-        if (SABQI.equals(mode)) renderSabqi();
-        else if (ITQAN.equals(mode)) renderItqan();
-        else renderMurajaah();
+        revealButton = null;
+        unitFirstPage = 1;
+        unitLastPage = 1;
+        try {
+            if (SABQI.equals(mode)) renderSabqi();
+            else if (ITQAN.equals(mode)) renderItqan();
+            else renderMurajaah();
+        } catch (RuntimeException error) {
+            sessionCompleted = true;
+            clock.pause();
+            String detail = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
+            program.setText(displayModeName() + " — état illisible");
+            progress.setText("Détail : " + detail
+                + "\nAucune donnée n’a été modifiée. Si le problème persiste : Paramètres › Réinitialiser l’état de test.");
+        }
+        updatePageButtons();
     }
 
     private void renderSabqi() {
@@ -103,13 +124,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (cursor < 0) { cursor = geometry.firstLineIndex(new VerseRef(2,75)); prefs.setSabqiLineCursor(cursor); }
         sabqiBlock = geometry.fiveLineBlock(cursor);
         currentPage = geometry.line(sabqiBlock.startLineIndex).page;
+        unitFirstPage = currentPage;
+        unitLastPage = geometry.line(sabqiBlock.endLineIndex).page;
         currentSelection = sabqiBlock.verses; currentLineIds = sabqiBlock.lineIds;
         int rep = prefs.sabqiRep(); currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
-        program.setText("Sabqi — Sourate " + sabqiBlock.startVerse.getSurah() + " · " + sabqiBlock.verseLabel() + "\n5 lignes réelles · 37 répétitions");
+        program.setText("Sabqi — Sourate " + sabqiBlock.startVerse.getSurah() + " · " + sabqiBlock.verseLabel()
+            + "\n5 lignes réelles · 37 répétitions" + (unitLastPage > unitFirstPage ? " · pages " + unitFirstPage + "–" + unitLastPage : ""));
         updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
         Button done=Ui.smallButton(this,"Répétition faite",v->completeSabqiRep(false));Button assisted=Ui.smallButton(this,"Faite avec aide",v->completeSabqiRep(true));
         Ui.weight(done,1);Ui.weight(assisted,1);actions.addView(done);actions.addView(assisted);
+        revealButton = createRevealButton();
+        Ui.weight(revealButton, 1f);
+        actions.addView(revealButton);
+        updateRevealButton();
     }
 
     private void updateSabqiProgress(int rep, int aids) {
@@ -126,6 +154,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void completeSabqiRep(boolean assisted) {
         if (!takeRepLock()) return;
+        assisted = assisted || consumeReveal();
         int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
         int oldMask=currentMask;
         rep++; int aids=prefs.sabqiAssisted()+(assisted?1:0);
@@ -149,6 +178,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(!prefs.setSabqiProgress(rep,aids)){onError("Impossible d’enregistrer la répétition Sabqi.");return;}
         currentMask=PreviewConfig.sabqiMaskForNextRep(rep);
         if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        updateRevealButton();
+        if (currentPage != unitFirstPage) {
+            currentPage = unitFirstPage;
+            showCurrent();
+            updatePageButtons();
+        }
         updateSabqiProgress(rep,aids);
     }
 
@@ -166,18 +201,26 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef savedEnd=prefs.itqanUnitEnd();
         if(rep>0 && savedStart!=null && savedEnd!=null){
             currentPage=geometry.pageForVerse(savedStart);
+            unitFirstPage = currentPage;
+            unitLastPage = currentPage;
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
             List<String> lineIds=geometry.lineIdsForVerseRange(savedStart,savedEnd);
             itqanUnit=new GeometryRepository.VerseUnit(currentPage,savedStart,savedEnd,verses,lineIds);
         } else {
             itqanUnit=geometry.eligiblePageUnit(prefs.itqanCursor(),corpus);
             currentPage=itqanUnit.page;
+            unitFirstPage = currentPage;
+            unitLastPage = currentPage;
         }
         currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
         currentMask=PreviewConfig.itqanMaskForNextRep(rep);
         program.setText("Itqān — Sourate "+itqanUnit.start.getSurah()+" · "+itqanUnit.start+" → "+itqanUnit.end+"\n×30 · masquage obligatoire · corpus cyclique");
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         Button done=Ui.smallButton(this,"Répétition faite",v->completeItqanRep(false));Button assisted=Ui.smallButton(this,"Faite avec aide",v->completeItqanRep(true));Ui.weight(done,1);Ui.weight(assisted,1);actions.addView(done);actions.addView(assisted);
+        revealButton = createRevealButton();
+        Ui.weight(revealButton, 1f);
+        actions.addView(revealButton);
+        updateRevealButton();
     }
 
     private void updateItqanProgress(int rep,int aids){
@@ -187,6 +230,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void completeItqanRep(boolean assisted){
         if (!takeRepLock()) return;
+        assisted = assisted || consumeReveal();
         int rep=prefs.itqanRep();if(rep>=30)return;
         int oldMask=currentMask;rep++;int aids=prefs.itqanAssisted()+(assisted?1:0);
         if(rep>=30){
@@ -198,7 +242,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             mushaf.cycleCompleted();renderMode();return;
         }
         if(!prefs.setItqanProgress(rep,aids,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition Itqān.");return;}
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep);if(currentMask!=oldMask)mushaf.setMask(currentMask);updateItqanProgress(rep,aids);
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep);if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        updateRevealButton();
+        if (currentPage != unitFirstPage) {
+            currentPage = unitFirstPage;
+            showCurrent();
+            updatePageButtons();
+        }
+        updateItqanProgress(rep,aids);
     }
 
     private void renderMurajaah(){
@@ -246,10 +297,60 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
     }
     private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask);}
-    private void goPage(int d){
-        if(SABQI.equals(mode)||ITQAN.equals(mode)) return;
-        currentPage=Math.max(1,Math.min(604,currentPage+d));showCurrent();
+
+    private void goPage(int delta) {
+        int target = Math.max(1, Math.min(604, currentPage + delta));
+        if (SABQI.equals(mode) || ITQAN.equals(mode)) {
+            target = Math.max(unitFirstPage, Math.min(unitLastPage, target));
+        }
+        if (target == currentPage) return;
+        currentPage = target;
+        showCurrent();
+        updatePageButtons();
     }
+
+    private void updatePageButtons() {
+        boolean free = MURAJAAH.equals(mode);
+        boolean multiPage = unitLastPage > unitFirstPage;
+        int visibility = (free || multiPage) ? View.VISIBLE : View.GONE;
+        prevPage.setVisibility(visibility);
+        nextPage.setVisibility(visibility);
+        prevPage.setEnabled(free ? currentPage > 1 : currentPage > unitFirstPage);
+        nextPage.setEnabled(free ? currentPage < 604 : currentPage < unitLastPage);
+    }
+
+    private Button createRevealButton() {
+        Button button = Ui.smallButton(this, "Révéler", null);
+        button.setOnTouchListener((view, event) -> {
+            int action = event.getActionMasked();
+            if (action == android.view.MotionEvent.ACTION_DOWN) {
+                if (currentMask <= 0) return false;
+                revealedThisRep = true;
+                view.setPressed(true);
+                mushaf.setMask(0);
+                return true;
+            }
+            if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) {
+                view.setPressed(false);
+                mushaf.setMask(currentMask);
+                if (action == android.view.MotionEvent.ACTION_UP) view.performClick();
+                return true;
+            }
+            return false;
+        });
+        return button;
+    }
+
+    private boolean consumeReveal() {
+        boolean revealed = revealedThisRep;
+        revealedThisRep = false;
+        return revealed;
+    }
+
+    private void updateRevealButton() {
+        if (revealButton != null) revealButton.setEnabled(currentMask > 0);
+    }
+
     private void audioGate(){HifzAudioGate gate=new HifzAudioGate(this);Toast.makeText(this,gate.status()+". Aucun compteur ni curseur n’est modifié.",Toast.LENGTH_LONG).show();}
     private void closeClockForCompletedSession(){
         sessionCompleted = true;
@@ -262,7 +363,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private String displayModeName(){return SABQI.equals(mode)?"Sabqi":ITQAN.equals(mode)?"Itqān":"Murājaʿah";}
     @Override public void onReady(){if(!hasShown)showCurrent();}
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
-    @Override public void onPageShown(int page){currentPage=page;}
+    @Override public void onPageShown(int page){currentPage=page;updatePageButtons();}
     @Override protected void onResume(){super.onResume();if(!sessionCompleted)clock.resume();}
     @Override protected void onPause(){if(sessionCompleted){clock.pause();prefs.setElapsedFor(mode,0L);}else prefs.setElapsedFor(mode,clock.pause());super.onPause();}
     @Override protected void onDestroy(){if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
