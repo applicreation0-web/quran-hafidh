@@ -1,0 +1,108 @@
+-                val segmentLines = if (runtime.progress.segmentIndex in runtime.segments.indices) {
+-                    runtime.segments[runtime.progress.segmentIndex].lines
+-                } else {
+-                    runtime.segments.flatMap { it.lines }
++                put("segmentCount", runtime.trainingSegmentCount)
++                val segmentLines = when {
++                    runtime.task.track != HifzTrack.SABQI -> runtime.segments.flatMap { it.lines }
++                    runtime.progress.segmentIndex in runtime.segments.indices ->
++                        runtime.segments[runtime.progress.segmentIndex].lines
++                    else -> runtime.segments.flatMap { it.lines }
+                 }
+                 put("segmentLineIds", org.json.JSONArray(segmentLines.map { it.ref.geometryId }))
+                 put("segmentPage", segmentLines.firstOrNull()?.ref?.page ?: runtime.task.cursor.startPage)
+@@ -415,7 +420,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
+             val step = HifzTrainingEngine.currentStep(
+                 runtime.task,
+                 runtime.progress,
+-                runtime.segmentCount
++                runtime.trainingSegmentCount
+             ) ?: return false
+             if (!HifzReadingCountPolicy.isReading(step)) return false
+             return recordHifzAttempt(runtime, step, correct)
+@@ -431,7 +436,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
+             val step = HifzTrainingEngine.currentStep(
+                 runtime.task,
+                 runtime.progress,
+-                runtime.segmentCount
++                runtime.trainingSegmentCount
+             ) ?: return false
+             if (HifzReadingCountPolicy.isReading(step) || !audioAllowed()) return false
+             val keys = QuranAudioController.verseKeys(runtime.task.cursor)
+@@ -449,7 +454,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
+             val step = HifzTrainingEngine.currentStep(
+                 runtime.task,
+                 runtime.progress,
+-                runtime.segmentCount
++                runtime.trainingSegmentCount
+             ) ?: return false
+             if (HifzReadingCountPolicy.isReading(step) || !audioAllowed()) return false
+             val keys = QuranAudioController.verseKeys(runtime.task.cursor)
+@@ -469,7 +474,7 @@ class FreeQuranReaderActivity : ComponentActivity() {
+                 HifzTrainingEngine.reveal(
+                     runtime.task,
+                     progress,
+-                    runtime.segmentCount
++                    runtime.trainingSegmentCount
+                 )
+             }
+         }
+diff --git a/app/src/main/java/com/quranunlock/guard/GateActivity.kt b/app/src/main/java/com/quranunlock/guard/GateActivity.kt
+index fe58db791698a5a0baf254e1fa5ddc88fcd992f2..f77fe6036f75ce0387a1d28f13e6ab86fd51ae42 100644
+--- a/app/src/main/java/com/quranunlock/guard/GateActivity.kt
++++ b/app/src/main/java/com/quranunlock/guard/GateActivity.kt
+@@ -105,13 +105,17 @@ class GateActivity : ComponentActivity() {
+                         "GATE_BACK_TO_HOME",
+                         challengeKey
+                     )
++                    // Explicit cancellation must win over any delayed gate retry
++                    // already queued by AccessibilityService. Returning Home is a user
++                    // choice, not a new protection event.
++                    GuardRuntime.interception.reset()
+                     startActivity(
+                         Intent(Intent.ACTION_MAIN).apply {
+                             addCategory(Intent.CATEGORY_HOME)
+                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                         }
+                     )
+-                    finish()
++                    finishAndRemoveTask()
+                 }
+             }
+         )
+diff --git a/app/src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt b/app/src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt
+index d22906817ca19ccb8a199e757e22de5e66254d05..01330c6b863e92c4e0d43bac7d517bd6636d0fb7 100644
+--- a/app/src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt
++++ b/app/src/main/java/com/quranunlock/guard/MindfulReminderScheduler.kt
+@@ -248,6 +248,10 @@ object ReminderNotifications {
+ 
+     fun showDaily(context: Context) {
+         ensureChannel(context)
++        // Do not consume the once-per-day marker when Android is currently
++        // refusing notifications. Otherwise granting permission later could leave
++        // today's reminder falsely recorded as delivered.
++        if (!canPostNotifications(context)) return
+         if (!ReminderPrefs.markThoughtNotificationIfNeeded(context)) return
+ 
+         val thought = DailyReminderManager.today(context)
+@@ -283,6 +287,13 @@ object ReminderNotifications {
+         )
+     }
+ 
++    private fun canPostNotifications(context: Context): Boolean =
++        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
++            ContextCompat.checkSelfPermission(
++                context,
++                Manifest.permission.POST_NOTIFICATIONS
++            ) == PackageManager.PERMISSION_GRANTED
++
+     private fun show(
+         context: Context,
+         id: Int,
+@@ -290,14 +301,7 @@ object ReminderNotifications {
+         text: String,
+         contentIntent: Intent
+     ) {
+-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+-            ContextCompat.checkSelfPermission(
+-                context,
