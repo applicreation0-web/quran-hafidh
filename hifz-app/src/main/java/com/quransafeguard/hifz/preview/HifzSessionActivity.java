@@ -16,7 +16,7 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
-/** Structured Sabqi / Itqan / Murajaah preview using the independent domain engine. */
+/** Structured Sabqi / Itqan / Murajaah session using the independent domain engine. */
 public final class HifzSessionActivity extends android.app.Activity implements MushafView.Listener {
     public static final String EXTRA_MODE = "mode";
     public static final String SABQI = "SABQI";
@@ -53,7 +53,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         prefs = new HifzPrefs(this);
         geometry = GeometryRepository.get(this);
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
-            if (timerText != null) timerText.setText("Temps actif : " + SessionClock.format(elapsed) + " · cible " + targetMinutes() + " min (paramètre de travail)");
+            if (timerText != null) timerText.setText("Temps actif : " + SessionClock.format(elapsed) + " · repère " + targetMinutes() + " min");
             long bucket = elapsed / 5_000L;
             if (bucket != lastCheckpointBucket) {
                 lastCheckpointBucket = bucket;
@@ -78,6 +78,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         prevPage=Ui.smallButton(this,"‹ Page",v->goPage(-1));Button audio=Ui.smallButton(this,"Audio",v->audioGate());nextPage=Ui.smallButton(this,"Page ›",v->goPage(1));
         Ui.weight(prevPage,1);Ui.weight(audio,1);Ui.weight(nextPage,1);nav.addView(prevPage);nav.addView(audio);nav.addView(nextPage);root.addView(nav);
         setContentView(root);
+        Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
 
     private void renderMode() {
@@ -180,7 +181,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateItqanProgress(int rep,int aids){
-        progress.setText("Répétition suivante : "+Math.min(rep+1,30)+" / 30 · masque "+currentMask+"% (split de masque = paramètre de travail) · aides "+aids);
+        progress.setText("Répétition suivante : "+Math.min(rep+1,30)+" / 30 · masque "+currentMask+"% · aides "+aids);
         eink.local(progress);
     }
 
@@ -211,7 +212,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         List<HifzPrefs.RecentSabqi> recent=prefs.recentSabqi();
         if(!murajaahBlockB&&!recent.isEmpty()){
             HifzPrefs.RecentSabqi item=recent.get(0);GeometryRepository.FiveLineBlock b=geometry.fiveLineBlock(item.startLine);currentPage=geometry.line(item.startLine).page;currentSelection=b.verses;currentLineIds=b.lineIds;currentMask=0;
-            program.setText("Murājaʿah — Bloc A · Sabqi récent\nSourate "+b.startVerse.getSurah()+" · "+b.verseLabel()+"\n15 min réservées (paramètre de travail)");progress.setText("File de Sabqi récent : "+recent.size()+" bloc(s). Aucune répétition imposée.");showCurrent();
+            program.setText("Murājaʿah — Bloc A · Sabqi récent\nSourate "+b.startVerse.getSurah()+" · "+b.verseLabel()+"\n15 min réservées");progress.setText("File de Sabqi récent : "+recent.size()+" bloc(s). Aucune répétition imposée.");showCurrent();
             Button reviewed=Ui.smallButton(this,"Bloc revu",v->{prefs.removeFirstRecentSabqi();renderMode();});Button skip=Ui.smallButton(this,"Passer au Bloc B",v->{murajaahBlockB=true;renderMode();});Ui.weight(reviewed,1);Ui.weight(skip,1);actions.addView(reviewed);actions.addView(skip);return;
         }
         murajaahBlockB=true;int seconds=PreviewConfig.MURAJAAH_ITQAN_MINUTES_WORKING*60;int lines=(int)Math.floor(seconds/prefs.murajaahSecondsPerLine());lines=Math.max(1,lines);
