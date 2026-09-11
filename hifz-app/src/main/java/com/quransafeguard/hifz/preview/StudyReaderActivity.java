@@ -18,10 +18,9 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Lecture/Etude. This is the only preview screen that exposes Tafsir. */
+/** Lecture/Etude. This is the only Hifz screen that exposes Tafsir. */
 public final class StudyReaderActivity extends android.app.Activity implements MushafView.Listener {
     private MushafView mushaf;
-    private GeometryRepository geometry;
     private int page = 1;
     private VerseRef selected;
     private TextView pageLabel;
@@ -30,7 +29,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        geometry = GeometryRepository.get(this);
         page = getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
 
         LinearLayout root = Ui.column(this);
@@ -68,8 +66,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     @Override public void onVerseTap(VerseRef verse) {
-        selected = verse; tafsirButton.setEnabled(true);
-        mushaf.setSelection(Collections.singletonList(verse), geometry.lineIdsForVerseRange(verse, verse));
+        selected = verse;
+        tafsirButton.setEnabled(true);
+        // Verse polygons are already embedded in the local SVG. Study mode needs no
+        // full-Mushaf geometry parse merely to highlight the tapped verse.
+        mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
     }
 
     private void openTafsir() {
