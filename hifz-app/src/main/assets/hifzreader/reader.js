@@ -122,6 +122,7 @@ function render(){
 }
 
 window.HifzReader={
+ setGeometry(geometry){pageGeo=geometry||null;render()},
  setMask(hidden){mask=Number(hidden||0);render()},
  setSelection(selection,lines){selected=selection||[];lineIds=lines||[];render()},
  page(){return currentPage}
