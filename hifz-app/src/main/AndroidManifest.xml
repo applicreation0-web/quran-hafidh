@@ -2,9 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="false"
-        android:label="Quran Hifz Test"
+        android:label="Quran Hifz Preview"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="false">
+        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".HifzSessionActivity" android:exported="false" />
+        <activity android:name=".FreeMemActivity" android:exported="false" />
+        <activity android:name=".StudyReaderActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
