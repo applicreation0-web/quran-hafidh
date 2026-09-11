@@ -9,15 +9,15 @@ import java.time.LocalDate
 class HifzPlanningPolicyTest {
     @Test
     fun itqanSupportsSeveralIndependentOrderedIntervals() {
-        val baqarah = HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 286))
+        val baqarah = HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 74))
         val hujuratToNas = HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
         val bounds = HifzJourneyBounds(
-            sabqi = HifzVerseRange(QuranVerseRef(67, 1), QuranVerseRef(67, 30)),
+            sabqi = HifzVerseRange(QuranVerseRef(2, 75), QuranVerseRef(48, 29)),
             itqan = listOf(baqarah, hujuratToNas)
         )
 
         assertEquals(listOf(baqarah, hujuratToNas), bounds.itqan)
-        assertEquals(QuranVerseRef(2, 286), bounds.itqan[0].end)
+        assertEquals(QuranVerseRef(2, 74), bounds.itqan[0].end)
         assertEquals(QuranVerseRef(49, 1), bounds.itqan[1].start)
     }
 
@@ -35,6 +35,28 @@ class HifzPlanningPolicyTest {
     }
 
     @Test
+    fun itqanSkipsGapAndWrapsAfterNasInsteadOfStopping() {
+        val intervals = listOf(
+            HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 74)),
+            HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
+        )
+
+        assertEquals(QuranVerseRef(49, 1), HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(2, 74)))
+        assertEquals(QuranVerseRef(2, 1), HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(114, 6)))
+        assertEquals(QuranVerseRef(49, 1), HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(3, 1)))
+    }
+
+    @Test
+    fun growingFirstItqanRangeDoesNotChangeTraversalOrder() {
+        val intervals = listOf(
+            HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 95)),
+            HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
+        )
+        assertEquals(QuranVerseRef(49, 1), HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(2, 95)))
+        assertEquals(QuranVerseRef(52, 11), HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(52, 10)))
+    }
+
+    @Test
     fun reversedSetupBoundsAreRejected() {
         assertThrows(IllegalArgumentException::class.java) {
             HifzVerseRange(QuranVerseRef(67, 10), QuranVerseRef(67, 1))
@@ -42,7 +64,7 @@ class HifzPlanningPolicyTest {
     }
 
     @Test
-    fun quotaUsesSeparateMeasuredPacesAndRealAvailableTime() {
+    fun legacyQuotaHelperUsesSeparateMeasuredPacesAndRealAvailableTime() {
         val pace = HifzPaceProfile(
             sabqiMinutesPerPage = 15.0,
             itqanMinutesPerPage = 5.0,
@@ -64,15 +86,16 @@ class HifzPlanningPolicyTest {
     }
 
     @Test
-    fun murajaahUsesAcceptedOneRecitationAndLocalCorrectionReference() {
+    fun murajaahKeepsAcceptedOneRecitationAndNineSecondLineReference() {
         assertEquals(1, MurajaahPolicy.RECITATIONS_PER_PORTION)
         assertEquals(true, MurajaahPolicy.LOCAL_CORRECTION_ONLY)
         assertEquals(20, MurajaahPolicy.INITIAL_REFERENCE_PAGES)
         assertEquals(45, MurajaahPolicy.INITIAL_REFERENCE_MINUTES)
+        assertEquals(9.0, MurajaahPolicy.INITIAL_SECONDS_PER_LINE, 0.0001)
     }
 
     @Test
-    fun murajaahDoesNotInjectAnyFixedSabqiItqanRatio() {
+    fun legacyAdaptiveOrderDoesNotInjectAnyFixedSabqiItqanRatio() {
         val sabqiA = candidate("sabqi-a", MurajaahOrigin.RECENT_SABQI)
         val sabqiB = candidate("sabqi-b", MurajaahOrigin.RECENT_SABQI)
         val sabqiC = candidate("sabqi-c", MurajaahOrigin.RECENT_SABQI)
