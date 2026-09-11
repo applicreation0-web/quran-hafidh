@@ -1,0 +1,91 @@
+diff --git a/app/src/main/assets/reader109/hifz_guard.js b/app/src/main/assets/reader109/hifz_guard.js
+index d24f7c2b05c90fd65333596c4b087d107f262e29..5aba68a30054992bbc9aa151e25925b779035170 100644
+--- a/app/src/main/assets/reader109/hifz_guard.js
++++ b/app/src/main/assets/reader109/hifz_guard.js
+@@ -15,7 +15,7 @@
+  memory=true;
+  N?.setMode(true);
+  let nativeRevealGeneration=0,nativeRevealTimer=null,nativeRevealVisible=false;
+- let hifzAudioStepKey=null;
++ let hifzAudioStepKey=null,hifzViewportKey=null;
+ 
+  const targetKeys=()=>geo?rangeKeys(targetStart,targetEnd):[];
+  const status=()=>{
+@@ -23,6 +23,19 @@
+  };
+  const trackLabel=t=>t==='SABQI'?'Sabqi':t==='ITQAN'?'Itqān':t==='MURAJAAH'?'Murājaʿah':'Hifz';
+  const readingCountLabel=st=>'sans masque '+Number(st.visibleReadings||0)+' · avec masque '+Number(st.maskedReadings||0);
++ function syncHifzOcclusion(st,allowScroll=true){
++  requestAnimationFrame(()=>{
++   if(!memory||!st?.valid)return;
++   const box=$('pagebox'),bottom=$('bottom');if(!box||!bottom)return;
++   const oldPad=parseFloat(box.style.paddingBottom)||0,pad=Math.max(oldPad,bottom.offsetHeight);
++   let changed=false;if(pad>oldPad){box.style.paddingBottom=pad+'px';changed=true}
++   if(st.track==='SABQI'&&allowScroll&&Number(st.segmentIndex)<Number(st.segmentCount)){
++    const ids=Array.isArray(st.segmentLineIds)?st.segmentLineIds:[],id=ids.at(-1),key=Number(st.segmentIndex)+':'+String(st.segmentPage||'')+':'+ids.join(',');
++    if(id&&key!==hifzViewportKey){hifzViewportKey=key;const line=lineById(id);if(line){revealLine(line,true);return}}
++   }
++   if(changed)requestAnimationFrame(()=>visual('PAGE'));
++  })
++ }
+  const targetPages=()=>{
+   if(!geo)return [];
+   const keys=targetKeys();
+@@ -80,8 +93,8 @@
+    const nextPage=Number(after.segmentPage||0);
+    if(nextPage>0&&page!==nextPage)await showPage(nextPage);
+   }
+-  renderMemory();save();
+-  if(Number(before.maskPercent||0)!==Number(after.maskPercent||0)){renderMarks();visual('MASK_LEVEL')}
++  renderMemory();save();syncHifzOcclusion(after,segmentChanged);
++  if(Number(before.maskPercent||0)!==Number(after.maskPercent||0)){renderMarks();visual(Number(after.maskPercent||0)>Number(before.maskPercent||0)?'REVEAL_RETURN':'MASK_LEVEL')}
+   return true;
+  }
+  function nativeAttempt(correct){
+@@ -155,7 +168,7 @@
+ 
+   if(st.kind==='AUDIO_PASSIVE'||st.kind==='AUDIO_ACTIVE'){
+    if(localAudioReady(keys)){
+-    body.append(button('▶ Al-Husary',()=>playTarget(Math.max(1,Number(st.requiredRepetitions)||1)),'capsule'));
++    body.append(button('▶ Al-Husary',()=>playTarget(Math.max(1,(Number(st.requiredRepetitions)||1)-Number(st.repetitions||0))),'capsule'));
+    }else{
+     body.append(button('Télécharger l’audio',audioOptions,'capsule'));
+     body.append(button('Retour au parcours',()=>N?.exit(),'text'));
+@@ -176,6 +189,7 @@
+   if(initial.audio&&!audioStep){
+    body.append(button(localAudioReady(keys)?'▶ Audio':'Audio',()=>localAudioReady(keys)?playTarget(repeats):audioOptions(),'text'));
+   }
++  syncHifzOcclusion(st,false);
+  };
+ 
+  memoryDetails=function(){
+@@ -192,10 +206,12 @@
+ 
+  exitMemory=function(){
+   nativeRevealGeneration++;
+-  hifzAudioStepKey=null;
++  hifzAudioStepKey=null;hifzViewportKey=null;
+   audioQueue=[];N?.pause();
+   if(nativeRevealTimer!==null){clearTimeout(nativeRevealTimer);nativeRevealTimer=null}
+-  nativeRevealVisible=false;save();N?.exit();
++  nativeRevealVisible=false;
++  if($('pagebox').style.paddingBottom){$('pagebox').style.paddingBottom='';requestAnimationFrame(()=>visual('PAGE'))}
++  save();N?.exit();
+  };
+ 
+  options=function(){
+@@ -210,7 +226,7 @@
+   if(!geo){setTimeout(constrainUi,40);return;}
+   const pages=targetPages();
+   if(pages.length){$('progress').min=String(pages[0]);$('progress').max=String(pages.at(-1))}
+-  renderMarks();renderMemory();
++  renderMarks();renderMemory();syncHifzOcclusion(status(),true);
+  };
+  constrainUi();
+ })();
+diff --git a/app/src/main/assets/reader109/index.html b/app/src/main/assets/reader109/index.html
+index dae9ebc0f730df9942478af79394e030832a259d..7b319ecc43fb10872bd04c1d40745ae6b3ee1066 100644
+--- a/app/src/main/assets/reader109/index.html
++++ b/app/src/main/assets/reader109/index.html
+@@ -1,5 +1,5 @@
+ <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=4"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'"><title>Quran Safeguard</title><style>
