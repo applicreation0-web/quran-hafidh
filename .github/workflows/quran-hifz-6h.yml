@@ -6,6 +6,10 @@ on:
       - work/quran-hifz-6h-build
   workflow_dispatch:
 
+concurrency:
+  group: quran-hifz-6h-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
