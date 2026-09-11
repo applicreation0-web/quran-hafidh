@@ -33,15 +33,18 @@ object QuranCanonicalBounds {
 }
 
 /**
- * Typed, immutable Hifz position. Verse bounds are canonical and the page bounds refer
- * to the fixed 604-page Medina Mushaf used by Safeguard. No free-form cursor text is
- * accepted in the structured Hifz state.
+ * Typed, immutable Hifz position. Verse identity remains the primary user-facing unit.
+ * Optional real-line ids preserve an exact five-line Sabqi boundary when the block ends
+ * inside a verse. Legacy cursors remain valid with null line ids.
  */
 data class HifzCursor(
     val start: QuranVerseRef,
     val end: QuranVerseRef = start,
     val startPage: Int,
-    val endPage: Int = startPage
+    val endPage: Int = startPage,
+    val startLineId: String? = null,
+    val endLineId: String? = null,
+    val endVersePartial: Boolean = false
 ) {
     init {
         QuranCanonicalBounds.requireValid(start)
@@ -54,13 +57,23 @@ data class HifzCursor(
             "Invalid Hifz end page: $endPage"
         }
         require(startPage <= endPage) { "Hifz end page cannot precede its start page." }
+        require((startLineId == null) == (endLineId == null)) {
+            "Exact Hifz line bounds must provide both start and end line ids."
+        }
+        startLineId?.let { require(it.isNotBlank()) }
+        endLineId?.let { require(it.isNotBlank()) }
+        require(!endVersePartial || endLineId != null) {
+            "A partial verse boundary requires an exact end line id."
+        }
     }
+
+    val hasExactLineBounds: Boolean get() = startLineId != null && endLineId != null
 
     val label: String
         get() {
             val verses = if (start == end) start.label else "${start.label}–${end.label}"
-            val pages = if (startPage == endPage) "page $startPage" else "pages $startPage–$endPage"
-            return "$verses • $pages"
+            val partial = if (endVersePartial) " (partiel)" else ""
+            return "$verses$partial"
         }
 
     companion object {
