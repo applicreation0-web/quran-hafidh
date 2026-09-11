@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.ui;
 
 import android.app.Dialog;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -29,6 +30,7 @@ import com.quransafeguard.hifz.storage.ReaderStateStore;
 import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Lecture / Etude optimized for BOOX.
@@ -52,6 +54,7 @@ public final class StudyReaderActivity extends android.app.Activity implements R
         t.setDaemon(true);
         return t;
     });
+    private final AtomicInteger tafsirGeneration = new AtomicInteger();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -147,13 +150,15 @@ public final class StudyReaderActivity extends android.app.Activity implements R
         if (region == null) return;
         final VerseRef verse = new VerseRef(region.surah, region.ayah);
         final Dialog dialog = new Dialog(this);
+        final int dialogTicket = tafsirGeneration.incrementAndGet();
 
         LinearLayout shell = Ui.column(this);
         shell.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 12));
         shell.setBackground(floatingPanelBackground(1));
 
         LinearLayout header = Ui.row(this);
-        TextView title = Ui.text(this, "Jalalayn · " + region.surah + ":" + region.ayah, 17, true);
+        TextView title = Ui.text(this,
+            "Tafsir · sourate " + region.surah + " · verset " + region.ayah, 17, true);
         Ui.weight(title, 1f);
         header.addView(title);
 
@@ -168,6 +173,19 @@ public final class StudyReaderActivity extends android.app.Activity implements R
         header.addView(close);
         shell.addView(header);
 
+        LinearLayout editions = Ui.row(this);
+        editions.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 5));
+        Button jalalayn = Ui.smallButton(this, "Jalalayn", null);
+        Button qurtubi = Ui.smallButton(this, "Qurtubi", null);
+        Button qushayri = Ui.smallButton(this, "Qushayri", null);
+        Ui.weight(jalalayn, 1f);
+        Ui.weight(qurtubi, 1f);
+        Ui.weight(qushayri, 1f);
+        editions.addView(jalalayn);
+        editions.addView(qurtubi);
+        editions.addView(qushayri);
+        shell.addView(editions);
+
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.addView(body, new ScrollView.LayoutParams(
@@ -180,9 +198,25 @@ public final class StudyReaderActivity extends android.app.Activity implements R
             1f
         ));
 
+        final TafsirRepository.Edition[] current = { stateStore.tafsirEdition() };
+        final Runnable refreshSelection = () -> {
+            styleEditionButton(jalalayn, current[0] == TafsirRepository.Edition.JALALAYN);
+            styleEditionButton(qurtubi, current[0] == TafsirRepository.Edition.QURTUBI);
+            styleEditionButton(qushayri, current[0] == TafsirRepository.Edition.QUSHAYRI);
+        };
+
+        jalalayn.setOnClickListener(v -> selectEdition(
+            TafsirRepository.Edition.JALALAYN, current, refreshSelection, verse, body, dialogTicket));
+        qurtubi.setOnClickListener(v -> selectEdition(
+            TafsirRepository.Edition.QURTUBI, current, refreshSelection, verse, body, dialogTicket));
+        qushayri.setOnClickListener(v -> selectEdition(
+            TafsirRepository.Edition.QUSHAYRI, current, refreshSelection, verse, body, dialogTicket));
+        refreshSelection.run();
+
         dialog.setContentView(shell);
         dialog.setCanceledOnTouchOutside(true);
         dialog.setOnDismissListener(ignored -> {
+            tafsirGeneration.incrementAndGet();
             if (surface != null) surface.cleanupGhosting();
             if (!isFinishing() && selected != null) tafsirButton.setVisibility(View.VISIBLE);
         });
@@ -195,29 +229,63 @@ public final class StudyReaderActivity extends android.app.Activity implements R
             w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             w.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-            int width = Math.round(getResources().getDisplayMetrics().widthPixels * 0.92f);
-            int height = Math.round(getResources().getDisplayMetrics().heightPixels * 0.46f);
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int screenHeight = getResources().getDisplayMetrics().heightPixels;
+            int width = Math.min(Math.round(screenWidth * 0.92f), Ui.dp(this, 760));
+            int height = Math.min(Math.round(screenHeight * 0.48f), Ui.dp(this, 620));
             w.setLayout(width, height);
             WindowManager.LayoutParams attrs = w.getAttributes();
             attrs.y = Ui.dp(this, 18);
             w.setAttributes(attrs);
         }
 
+        loadEdition(verse, current[0], body, dialogTicket);
+    }
+
+    private void selectEdition(TafsirRepository.Edition edition,
+                               TafsirRepository.Edition[] current,
+                               Runnable refreshSelection,
+                               VerseRef verse,
+                               TextView body,
+                               int dialogTicket) {
+        if (current[0] == edition) return;
+        current[0] = edition;
+        stateStore.saveTafsirEdition(edition);
+        refreshSelection.run();
+        loadEdition(verse, edition, body, dialogTicket);
+    }
+
+    private void styleEditionButton(Button button, boolean selected) {
+        button.setTypeface(Typeface.DEFAULT, selected ? Typeface.BOLD : Typeface.NORMAL);
+        button.setTextSize(selected ? 15f : 14f);
+    }
+
+    private void loadEdition(VerseRef verse,
+                             TafsirRepository.Edition edition,
+                             TextView body,
+                             int dialogTicket) {
+        final int requestTicket = tafsirGeneration.incrementAndGet();
+        body.setText("Chargement · " + edition.displayName + "…");
         io.execute(() -> {
+            final String text;
             try {
-                TafsirRepository.Entry entry = new TafsirRepository(this).load(verse);
-                final String text;
+                TafsirRepository.Entry entry = new TafsirRepository(this).load(verse, edition);
                 if (entry == null) {
-                    text = "Aucun commentaire disponible pour ce verset.";
+                    text = "Aucun commentaire " + edition.displayName + " disponible pour ce verset.";
                 } else {
                     StringBuilder b = new StringBuilder(entry.commentary);
                     for (String note : entry.notes) b.append("\n\n").append(note);
                     text = b.toString();
                 }
-                runOnUiThread(() -> body.setText(text));
             } catch (Throwable error) {
-                runOnUiThread(() -> body.setText("Tafsir indisponible."));
+                String message = error.getMessage();
+                text = edition.displayName + " indisponible"
+                    + (message == null || message.isEmpty() ? "." : " : " + message);
             }
+            runOnUiThread(() -> {
+                if (isFinishing() || dialogTicket > requestTicket || requestTicket != tafsirGeneration.get()) return;
+                body.setText(text);
+            });
         });
     }
 
@@ -241,6 +309,7 @@ public final class StudyReaderActivity extends android.app.Activity implements R
     }
 
     @Override protected void onDestroy() {
+        tafsirGeneration.incrementAndGet();
         ui.removeCallbacksAndMessages(null);
         io.shutdownNow();
         if (surface != null) surface.close();
