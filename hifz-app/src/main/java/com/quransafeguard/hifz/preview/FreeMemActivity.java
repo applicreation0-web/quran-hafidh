@@ -56,15 +56,17 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
             b.setTag(value);maskButtons.add(b);Ui.weight(b,1);masks.addView(b);
         }
         root.addView(masks);
+
+        // Arabic-book direction: next page (+1) on the left, previous (-1) on the right.
         LinearLayout nav=Ui.row(this);
-        Button prev=Ui.smallButton(this,"‹ Page",v->go(-1));
-        Button next=Ui.smallButton(this,"Page ›",v->go(1));
-        Ui.weight(prev,1);nav.addView(prev);
+        Button next=Ui.smallButton(this,"Page suivante ›",v->go(1));
+        Button prev=Ui.smallButton(this,"‹ Page précédente",v->go(-1));
+        Ui.weight(next,1);nav.addView(next);
         if (new HifzAudioGate(this).available()) {
-            Button audio=Ui.smallButton(this,"Audio",v->Toast.makeText(this,"Audio disponible. Aucun compteur Hifz n’est modifié.",Toast.LENGTH_LONG).show());
+            Button audio=Ui.smallButton(this,"Audio",v->openAudio());
             Ui.weight(audio,1);nav.addView(audio);
         }
-        Ui.weight(next,1);nav.addView(next);root.addView(nav);
+        Ui.weight(prev,1);nav.addView(prev);root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
         updateSelectionLabel();
@@ -81,20 +83,19 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         start=end=null; count=0; mask=0;
         save();
         counter.setText("Répétitions manuelles : 0");
-        updateSelectionLabel();
-        updateMaskButtons();
+        updateSelectionLabel();updateMaskButtons();
         mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
         title.setText("Mémorisation libre · "+page+" / 604");
     }
 
+    private void openAudio(){
+        List<VerseRef> refs=(start!=null&&end!=null)?geometry.versesForRange(start,end):Collections.emptyList();
+        new HifzAudioDialog(this,mushaf,refs).show();
+    }
+
     private void save(){
-        state.edit()
-            .putInt("page",page)
-            .putInt("count",count)
-            .putInt("mask",mask)
-            .putString("start",start==null?"":start.toString())
-            .putString("end",end==null?"":end.toString())
-            .apply();
+        state.edit().putInt("page",page).putInt("count",count).putInt("mask",mask)
+            .putString("start",start==null?"":start.toString()).putString("end",end==null?"":end.toString()).apply();
     }
 
     private void updateSelectionLabel(){
@@ -106,8 +107,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         boolean hasSelection = start != null && end != null;
         for (Button button : maskButtons) {
             int value = (Integer) button.getTag();
-            button.setEnabled(hasSelection);
-            Ui.setChosen(button, hasSelection && value == mask);
+            button.setEnabled(hasSelection);Ui.setChosen(button, hasSelection && value == mask);
         }
     }
 
@@ -116,13 +116,12 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         else if(start.equals(end)){if(GeometryRepository.ordinal(verse)<GeometryRepository.ordinal(start)){end=start;start=verse;}else end=verse;}
         else {start=end=verse;count=0;counter.setText("Répétitions manuelles : 0");}
         List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
-        mushaf.setSelection(refs,lines);mushaf.setMask(mask);
-        updateSelectionLabel();updateMaskButtons();save();
+        mushaf.setSelection(refs,lines);mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();save();
     }
+    @Override public void onPageSwipe(int delta){go(delta);}
     @Override public void onReady(){
         if(start!=null&&end!=null){
-            List<VerseRef> refs=geometry.versesForRange(start,end);
-            List<String> lines=geometry.lineIdsForVerseRange(start,end);
+            List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
             mushaf.show(page,refs,lines,mask);
         } else mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
     }
