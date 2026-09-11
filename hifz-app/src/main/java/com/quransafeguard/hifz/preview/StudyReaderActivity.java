@@ -159,6 +159,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         final VerseRef verse = selected;
         if (verse == null) return;
         hideControls();
+        mushaf.revealSelectionAboveBottomPanel();
         final Dialog dialog = new Dialog(this);
         LinearLayout shell = Ui.column(this);
         shell.setPadding(Ui.dp(this,16),Ui.dp(this,8),Ui.dp(this,16),Ui.dp(this,10));
