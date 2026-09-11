@@ -2,6 +2,7 @@ package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HifzCursorTest {
@@ -15,13 +16,29 @@ class HifzCursorTest {
     }
 
     @Test
-    fun typedCursorAcceptsCanonicalVerseAndPageBounds() {
+    fun typedCursorKeepsVerseFirstLabelAndCanonicalPageInternally() {
         val cursor = HifzCursor.page(67, 1, 7, 562)
 
         assertEquals(QuranVerseRef(67, 1), cursor.start)
         assertEquals(QuranVerseRef(67, 7), cursor.end)
         assertEquals(562, cursor.startPage)
-        assertEquals("67:1–67:7 • page 562", cursor.label)
+        assertEquals("67:1–67:7", cursor.label)
+    }
+
+    @Test
+    fun exactLineCursorCanExposePartialVerseWithoutInventingAnotherVerse() {
+        val cursor = HifzCursor(
+            start = QuranVerseRef(2, 80),
+            end = QuranVerseRef(2, 82),
+            startPage = 12,
+            endPage = 12,
+            startLineId = "12:6",
+            endLineId = "12:10",
+            endVersePartial = true
+        )
+
+        assertTrue(cursor.hasExactLineBounds)
+        assertEquals("2:80–2:82 (partiel)", cursor.label)
     }
 
     @Test
