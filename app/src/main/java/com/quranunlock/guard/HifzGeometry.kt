@@ -52,9 +52,7 @@ data class HifzTargetLine(
     val ref: HifzLineRef,
     val targetVerses: Set<QuranVerseRef>
 ) {
-    init {
-        require(targetVerses.isNotEmpty())
-    }
+    init { require(targetVerses.isNotEmpty()) }
 }
 
 data class HifzPedagogicalSegment(
@@ -63,50 +61,59 @@ data class HifzPedagogicalSegment(
 ) {
     init {
         require(lines.isNotEmpty())
-        lines.forEach { line ->
-            require(line.targetVerses.all(canonicalTarget::contains))
-        }
+        lines.forEach { line -> require(line.targetVerses.all(canonicalTarget::contains)) }
     }
 }
 
 object HifzGeometryPolicy {
     const val DEFAULT_MAX_LINES_PER_SEGMENT = 5
 
+    fun orderedLines(index: HifzGeometryIndex): List<HifzGeometryLine> =
+        index.linesByPage.toSortedMap().values.flatten()
+
+    fun lineById(index: HifzGeometryIndex, id: String): HifzGeometryLine? =
+        orderedLines(index).firstOrNull { it.ref.geometryId == id }
+
+    fun nextLine(index: HifzGeometryIndex, id: String): HifzGeometryLine? {
+        val lines = orderedLines(index)
+        val position = lines.indexOfFirst { it.ref.geometryId == id }
+        if (position < 0 || position + 1 >= lines.size) return null
+        return lines[position + 1]
+    }
+
     fun targetLines(index: HifzGeometryIndex, target: HifzVerseRange): List<HifzTargetLine> =
-        index.linesByPage.toSortedMap().values
-            .flatten()
-            .mapNotNull { line -> targetLine(line, target) }
+        orderedLines(index).mapNotNull { line -> targetLine(line, target) }
 
     /**
-     * Task-aware form. It is essential for page-based Itqan: a verse may touch two
-     * physical Mushaf pages, but a one-page task must never silently mask or credit the
-     * neighbouring page. The cursor page bounds therefore constrain the rendered lines.
+     * Exact task-aware form. New Sabqi cursors carry start/end real-line ids so a block
+     * ending inside a verse resumes at the following physical line instead of rounding
+     * to the next verse. Legacy cursors fall back to page bounds.
      */
     fun targetLines(index: HifzGeometryIndex, cursor: HifzCursor): List<HifzTargetLine> {
         val target = HifzVerseRange(cursor.start, cursor.end)
-        return index.linesByPage.toSortedMap()
-            .filterKeys { it in cursor.startPage..cursor.endPage }
-            .values
-            .flatten()
-            .mapNotNull { line -> targetLine(line, target) }
+        val sourceLines = if (cursor.hasExactLineBounds) {
+            val all = orderedLines(index)
+            val startIndex = all.indexOfFirst { it.ref.geometryId == cursor.startLineId }
+            val endIndex = all.indexOfFirst { it.ref.geometryId == cursor.endLineId }
+            require(startIndex >= 0 && endIndex >= startIndex) { "Unknown or reversed Hifz line bounds." }
+            all.subList(startIndex, endIndex + 1)
+        } else {
+            index.linesByPage.toSortedMap()
+                .filterKeys { it in cursor.startPage..cursor.endPage }
+                .values
+                .flatten()
+        }
+        return sourceLines.mapNotNull { line -> targetLine(line, target) }
     }
 
-    /**
-     * Uses only real geometry lines. Segments never cross a Mushaf page boundary and all
-     * retain the exact same canonical verse target. Completing a segment cannot advance
-     * the canonical cursor.
-     */
+    /** Rendering segmentation only; training repetitions remain task-wide. */
     fun segment(
         index: HifzGeometryIndex,
         target: HifzVerseRange,
         maxLinesPerSegment: Int = DEFAULT_MAX_LINES_PER_SEGMENT
-    ): List<HifzPedagogicalSegment> = segmentLines(
-        target,
-        targetLines(index, target),
-        maxLinesPerSegment
-    )
+    ): List<HifzPedagogicalSegment> = segmentLines(target, targetLines(index, target), maxLinesPerSegment)
 
-    /** Task-aware segmentation constrained to the exact physical pages in the cursor. */
+    /** Task-aware rendering segmentation constrained to the exact cursor line bounds. */
     fun segment(
         index: HifzGeometryIndex,
         cursor: HifzCursor,
@@ -142,16 +149,14 @@ object HifzGeometryPolicy {
 
 /** Loads and validates the immutable 604-page geometry once per app process. */
 object HifzGeometryAssetLoader {
-    @Volatile
-    private var cached: HifzGeometryIndex? = null
+    @Volatile private var cached: HifzGeometryIndex? = null
 
     fun load(context: Context): HifzGeometryIndex {
         cached?.let { return it }
         return synchronized(this) {
             cached ?: run {
                 val raw = context.applicationContext.assets.open("reader109/geometry.json")
-                    .bufferedReader(Charsets.UTF_8)
-                    .use { it.readText() }
+                    .bufferedReader(Charsets.UTF_8).use { it.readText() }
                 decode(raw).also { cached = it }
             }
         }
