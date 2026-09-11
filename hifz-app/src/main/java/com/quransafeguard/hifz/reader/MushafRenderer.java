@@ -30,8 +30,8 @@ public final class MushafRenderer extends View implements AutoCloseable {
     });
     private final AtomicInteger generation = new AtomicInteger();
     private final LruCache<Integer, SVG> cache = new LruCache<>(3);
+    private final MushafRepository repository;
 
-    private MushafRepository repository;
     private Listener listener;
     private SVG document;
     private int currentPage = MushafRepository.FIRST_PAGE;
@@ -55,12 +55,19 @@ public final class MushafRenderer extends View implements AutoCloseable {
         return currentPage;
     }
 
+    public boolean isPageBundled(int page) {
+        if (page < MushafRepository.FIRST_PAGE || page > MushafRepository.LAST_PAGE) return false;
+        return repository.isBundled(page);
+    }
+
     public void showPage(int page) {
         if (closed) throw new IllegalStateException("MushafRenderer is closed");
         if (page < MushafRepository.FIRST_PAGE || page > MushafRepository.LAST_PAGE) {
             throw new IllegalArgumentException("Mushaf page must be 1..604");
         }
 
+        // Every navigation invalidates any older in-flight load, even when this page is cached.
+        final int ticket = generation.incrementAndGet();
         SVG cached = cache.get(page);
         if (cached != null) {
             document = cached;
@@ -70,7 +77,6 @@ public final class MushafRenderer extends View implements AutoCloseable {
             return;
         }
 
-        final int ticket = generation.incrementAndGet();
         loader.execute(() -> {
             try {
                 MushafRepository.Page source = repository.load(page);
@@ -97,11 +103,13 @@ public final class MushafRenderer extends View implements AutoCloseable {
     }
 
     public void nextPage() {
-        if (currentPage < MushafRepository.LAST_PAGE) showPage(currentPage + 1);
+        int next = currentPage + 1;
+        if (next <= MushafRepository.LAST_PAGE && isPageBundled(next)) showPage(next);
     }
 
     public void previousPage() {
-        if (currentPage > MushafRepository.FIRST_PAGE) showPage(currentPage - 1);
+        int previous = currentPage - 1;
+        if (previous >= MushafRepository.FIRST_PAGE && isPageBundled(previous)) showPage(previous);
     }
 
     @Override

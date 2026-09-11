@@ -64,8 +64,8 @@ public final class MainActivity extends Activity {
         renderer.setListener(new MushafRenderer.Listener() {
             @Override public void onPageChanged(int page) {
                 pageLabel.setText("Page " + page + " / 604");
-                previous.setEnabled(page > MushafRepository.FIRST_PAGE);
-                next.setEnabled(page < MushafRepository.LAST_PAGE);
+                previous.setEnabled(page > MushafRepository.FIRST_PAGE && renderer.isPageBundled(page - 1));
+                next.setEnabled(page < MushafRepository.LAST_PAGE && renderer.isPageBundled(page + 1));
             }
 
             @Override public void onError(int page, Throwable error) {
@@ -75,6 +75,9 @@ public final class MainActivity extends Activity {
             }
         });
 
+        previous.setEnabled(false);
+        next.setEnabled(false);
+        pageLabel.setText("Chargement…");
         setContentView(root);
         renderer.showPage(MushafRepository.FIRST_PAGE);
     }
