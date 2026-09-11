@@ -98,10 +98,11 @@ public final class GeometryRepository {
 
     private static volatile GeometryRepository INSTANCE;
     private final List<LineMeta> lines;
+    private final JSONObject pages;
 
     private GeometryRepository(Context context) throws Exception {
         JSONObject root = new JSONObject(readAsset(context, "reader109/geometry.json"));
-        JSONObject pages = root.getJSONObject("pages");
+        pages = root.getJSONObject("pages");
         ArrayList<LineMeta> result = new ArrayList<>();
         int index = 0;
         for (int page = 1; page <= 604; page++) {
@@ -142,6 +143,14 @@ public final class GeometryRepository {
 
     public int lineCount() { return lines.size(); }
     public LineMeta line(int index) { return lines.get(index); }
+
+    /** Exact per-page geometry already parsed by the singleton; avoids a second full JSON parse in the renderer. */
+    public String pageGeometryJson(int page) {
+        if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
+        JSONObject pageObject = pages.optJSONObject(Integer.toString(page));
+        if (pageObject == null) throw new IllegalStateException("geometry missing for page " + page);
+        return pageObject.toString();
+    }
 
     public int firstLineIndex(VerseRef verse) {
         for (LineMeta line : lines) if (line.verses.contains(verse)) return line.globalIndex;
