@@ -12,7 +12,7 @@ val quranSvgSubmodule = rootProject.file("third_party/quran-svg")
 val canonicalMushafSource = quranSvgSubmodule.resolve("mushafs/hafs/kfqc/svg-br")
 val canonicalGeometrySource = quranSvgSubmodule.resolve("mushafs/hafs/kfqc/json")
 val auditedTafsirSource = rootProject.file("app/src/plus/assets/tafsir")
-val generatedHifzAssets = layout.buildDirectory.dir("generated/hifzAssets")
+val generatedHifzAssets = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val smokeMushaf = providers.gradleProperty("hifzSmokeMushaf")
     .orNull
     ?.toBooleanStrictOrNull()
