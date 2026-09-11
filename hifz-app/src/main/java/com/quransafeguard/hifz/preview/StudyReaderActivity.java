@@ -12,8 +12,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
-
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.util.Collections;
@@ -30,7 +28,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private Button tafsirButton;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
-    @Override protected void onCreate(@Nullable Bundle state) {
+    @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         geometry = GeometryRepository.get(this);
         page = getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
