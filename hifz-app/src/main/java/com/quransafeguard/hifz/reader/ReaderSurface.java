@@ -57,6 +57,8 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
 
         renderer.setListener(new MushafRenderer.Listener() {
             @Override public void onPageChanged(int page) {
+                // Never allow a tap on the new page to resolve against the previous page geometry.
+                currentRegions = Collections.emptyList();
                 // Let the owner update the mask/focus synchronously, then refresh the composite once.
                 composingPageChange = true;
                 try {
