@@ -206,7 +206,7 @@ public final class TafsirRepository {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (InputStream in = new java.io.FileInputStream(file)) {
             byte[] buffer = new byte[64 * 1024]; int n;
-            while ((n = input.read(buffer)) >= 0) digest.update(buffer, 0, n);
+            while ((n = in.read(buffer)) >= 0) digest.update(buffer, 0, n);
         }
         StringBuilder out = new StringBuilder();
         for (byte b : digest.digest()) out.append(String.format(java.util.Locale.ROOT,"%02x", b & 0xff));
