@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.ui;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -11,8 +12,11 @@ import android.widget.TextView;
 
 final class Ui {
     private Ui() { }
-    static final int INK = Color.rgb(18, 18, 17);
-    static final int PAPER = Color.WHITE;
+
+    // Reuse the established 0.10.x visual contract: warm cream + near-black only.
+    static final int INK = Color.rgb(23, 23, 21);      // #171715
+    static final int PAPER = Color.rgb(247, 242, 232); // #F7F2E8
+    static final int SECONDARY = Color.rgb(85, 85, 80);
 
     static int dp(Context c, int value) { return Math.round(value * c.getResources().getDisplayMetrics().density); }
 
@@ -34,7 +38,10 @@ final class Ui {
         b.setTextColor(INK);
         b.setOnClickListener(listener);
         b.setStateListAnimator(null);
-        b.setMinHeight(dp(c, 52));
+        b.setElevation(0f);
+        b.setMinHeight(dp(c, 50));
+        b.setPadding(dp(c, 16), dp(c, 8), dp(c, 16), dp(c, 8));
+        b.setBackground(buttonBackground(c, 18));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         p.setMargins(0, dp(c, 5), 0, dp(c, 5));
@@ -50,16 +57,28 @@ final class Ui {
         b.setTextColor(INK);
         b.setOnClickListener(listener);
         b.setStateListAnimator(null);
+        b.setElevation(0f);
         b.setMinWidth(dp(c, 48));
         b.setMinHeight(dp(c, 44));
+        b.setPadding(dp(c, 9), dp(c, 5), dp(c, 9), dp(c, 5));
+        b.setBackground(buttonBackground(c, 14));
         return b;
+    }
+
+    private static GradientDrawable buttonBackground(Context c, int radiusDp) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(PAPER);
+        d.setStroke(Math.max(1, dp(c, 1)), SECONDARY);
+        d.setCornerRadius(dp(c, radiusDp));
+        return d;
     }
 
     static LinearLayout column(Context c) {
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(PAPER);
-        root.setPadding(dp(c, 12), dp(c, 10), dp(c, 12), dp(c, 10));
+        int horizontal = c.getResources().getConfiguration().smallestScreenWidthDp >= 600 ? 22 : 12;
+        root.setPadding(dp(c, horizontal), dp(c, 10), dp(c, horizontal), dp(c, 10));
         return root;
     }
 
