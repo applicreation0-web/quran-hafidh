@@ -12,7 +12,7 @@ import android.widget.TextView;
 final class Ui {
     private Ui() {}
     static final int INK = Color.rgb(18, 18, 17);
-    static final int PAPER = Color.WHITE;
+    static final int PAPER = Color.rgb(250, 248, 240);
 
     static int dp(Context c, int value) { return Math.round(value * c.getResources().getDisplayMetrics().density); }
 
