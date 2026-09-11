@@ -66,11 +66,16 @@ public final class TafsirRepository {
         File dir = new File(app.getNoBackupFilesDir(), "tafsir");
         if (!dir.exists() && !dir.mkdirs()) throw new IllegalStateException("Cannot create Tafsir directory");
         File dest = new File(dir, DB_NAME);
-        if (dest.isFile() && EXPECTED_SHA256.equals(sha256(dest))) return dest;
+        File verified = new File(dir, DB_NAME + ".verified");
+        if (dest.isFile() && verified.isFile() && verificationMarker(dest).equals(readSmallText(verified))) return dest;
+        if (dest.isFile() && EXPECTED_SHA256.equals(sha256(dest))) {
+            writeSmallText(verified, verificationMarker(dest));
+            return dest;
+        }
         File tmp = new File(dir, DB_NAME + ".tmp");
         List<InputStream> streams = new ArrayList<>();
         try {
-            for (int i = 0; i < 4; i++) streams.add(app.getAssets().open(String.format("tafsir/al_jalalayn_en.sqlite.gz.part%02d", i)));
+            for (int i = 0; i < 4; i++) streams.add(app.getAssets().open(String.format(java.util.Locale.ROOT,"tafsir/al_jalalayn_en.sqlite.gz.part%02d", i)));
             try (GZIPInputStream in = new GZIPInputStream(new SequenceInputStream(Collections.enumeration(streams)));
                  FileOutputStream out = new FileOutputStream(tmp)) {
                 byte[] buffer = new byte[64 * 1024]; int n;
@@ -80,10 +85,28 @@ public final class TafsirRepository {
             if (!EXPECTED_SHA256.equals(sha256(tmp))) throw new IllegalStateException("Tafsir checksum mismatch");
             if (dest.exists() && !dest.delete()) throw new IllegalStateException("Cannot replace Tafsir database");
             if (!tmp.renameTo(dest)) throw new IllegalStateException("Cannot install Tafsir database");
+            writeSmallText(verified, verificationMarker(dest));
             return dest;
         } finally {
             for (InputStream stream : streams) try { stream.close(); } catch (Exception ignored) {}
             if (tmp.exists() && !dest.exists()) tmp.delete();
+        }
+    }
+
+    private String verificationMarker(File file) { return EXPECTED_SHA256 + ":" + file.length(); }
+
+    private String readSmallText(File file) {
+        try (InputStream in = new java.io.FileInputStream(file)) {
+            byte[] bytes = new byte[(int) Math.min(512L, file.length())];
+            int n = in.read(bytes);
+            return n <= 0 ? "" : new String(bytes, 0, n, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception ignored) { return ""; }
+    }
+
+    private void writeSmallText(File file, String value) throws Exception {
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            out.write(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            out.getFD().sync();
         }
     }
 
@@ -105,7 +128,7 @@ public final class TafsirRepository {
             while ((n = in.read(buffer)) >= 0) digest.update(buffer, 0, n);
         }
         StringBuilder out = new StringBuilder();
-        for (byte b : digest.digest()) out.append(String.format("%02x", b & 0xff));
+        for (byte b : digest.digest()) out.append(String.format(java.util.Locale.ROOT,"%02x", b & 0xff));
         return out.toString();
     }
 }
