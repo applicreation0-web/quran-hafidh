@@ -48,7 +48,7 @@ class HifzGeometryPolicyTest {
     }
 
     @Test
-    fun itqanTraversalJumpsDirectlyAcrossUnselectedGap() {
+    fun itqanTraversalSkipsGapAndWrapsAfterAnNas() {
         val intervals = listOf(
             HifzVerseRange(QuranVerseRef(2, 1), QuranVerseRef(2, 286)),
             HifzVerseRange(QuranVerseRef(49, 1), QuranVerseRef(114, 6))
@@ -62,7 +62,10 @@ class HifzGeometryPolicyTest {
             QuranVerseRef(49, 2),
             HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(49, 1))
         )
-        assertEquals(null, HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(114, 6)))
+        assertEquals(
+            QuranVerseRef(2, 1),
+            HifzItqanTraversalPolicy.nextAfter(intervals, QuranVerseRef(114, 6))
+        )
     }
 
     private fun line(
