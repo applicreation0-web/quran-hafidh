@@ -18,7 +18,6 @@ import com.quransafeguard.hifz.data.LineGeometryRepository;
 import com.quransafeguard.hifz.reader.ReaderSurface;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /** Free, punctual memorization. It never reads or changes structured Hifz cursors. */
@@ -43,41 +42,75 @@ public final class FreeMemActivity extends android.app.Activity implements Reade
         start = parseNullable(prefs.getString("start", null));
         end = parseNullable(prefs.getString("end", null));
 
-        LinearLayout root = Ui.column(this); root.setPadding(0, 0, 0, 0);
-        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,8), Ui.dp(this,4), Ui.dp(this,8), Ui.dp(this,4));
-        top.addView(Ui.smallButton(this, "‹", v -> finish()));
-        title = Ui.text(this, "Mémorisation libre", 15, true); title.setGravity(Gravity.CENTER); Ui.weight(title,1f); top.addView(title); root.addView(top);
+        LinearLayout root = Ui.column(this);
+        root.setPadding(0, 0, 0, 0);
+
+        title = Ui.text(this, "Mémorisation libre", 15, true);
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(Ui.dp(this, 8), Ui.dp(this, 3), Ui.dp(this, 8), Ui.dp(this, 3));
+        root.addView(title);
 
         selection = Ui.text(this, "Touchez un verset pour choisir le passage.", 14, false);
-        selection.setPadding(Ui.dp(this,12), 2, Ui.dp(this,12), 2); root.addView(selection);
+        selection.setPadding(Ui.dp(this, 12), 1, Ui.dp(this, 12), 1);
+        root.addView(selection);
 
-        surface = new ReaderSurface(this); surface.setListener(this);
+        surface = new ReaderSurface(this);
+        surface.setListener(this);
         root.addView(surface, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        counter = Ui.text(this, "Répétitions : " + count, 15, true); counter.setGravity(Gravity.CENTER); root.addView(counter);
+        counter = Ui.text(this, "Répétitions : " + count, 15, true);
+        counter.setGravity(Gravity.CENTER);
+        root.addView(counter);
+
         LinearLayout reps = Ui.row(this);
-        Button minus = Ui.smallButton(this, "−1", v -> { if (count > 0) count--; save(); refreshCounter(); });
-        Button plus = Ui.smallButton(this, "+1", v -> { count++; save(); refreshCounter(); });
-        Button reset = Ui.smallButton(this, "Remise à 0", v -> { count = 0; save(); refreshCounter(); });
-        Ui.weight(minus,1); Ui.weight(plus,1); Ui.weight(reset,1); reps.addView(minus); reps.addView(plus); reps.addView(reset); root.addView(reps);
+        Button minus = Ui.smallButton(this, "−1", v -> {
+            if (count > 0) count--;
+            save();
+            refreshCounter();
+        });
+        Button plus = Ui.smallButton(this, "+1", v -> {
+            count++;
+            save();
+            refreshCounter();
+        });
+        Button reset = Ui.smallButton(this, "Remise à 0", v -> {
+            count = 0;
+            save();
+            refreshCounter();
+        });
+        Ui.weight(minus, 1);
+        Ui.weight(plus, 1);
+        Ui.weight(reset, 1);
+        reps.addView(minus);
+        reps.addView(plus);
+        reps.addView(reset);
+        root.addView(reps);
 
         LinearLayout masks = Ui.row(this);
-        for (int value : new int[]{0,25,50,75,100}) {
-            Button b = Ui.smallButton(this, value + "%", v -> { mask = value; save(); refreshSelection(); });
-            Ui.weight(b,1); masks.addView(b);
+        for (int value : new int[]{0, 25, 50, 75, 100}) {
+            Button b = Ui.smallButton(this, value + "%", v -> {
+                mask = value;
+                save();
+                refreshSelection();
+            });
+            Ui.weight(b, 1);
+            masks.addView(b);
         }
-        root.addView(masks);
 
-        LinearLayout nav = Ui.row(this);
-        Button previous = Ui.smallButton(this, "‹ Page", v -> go(-1));
-        Button reveal = Ui.smallButton(this, "Afficher brièvement", null);
+        // BOOX navigation is swipe/system-key based. Keep only the memorization-specific reveal
+        // action here; previous/next and an in-app back button would duplicate device controls.
+        Button reveal = Ui.smallButton(this, "Afficher", null);
         reveal.setOnTouchListener((v, event) -> {
             if (event.getActionMasked() == MotionEvent.ACTION_DOWN) surface.revealTemporarily(true);
-            if (event.getActionMasked() == MotionEvent.ACTION_UP || event.getActionMasked() == MotionEvent.ACTION_CANCEL) surface.revealTemporarily(false);
+            if (event.getActionMasked() == MotionEvent.ACTION_UP
+                || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                surface.revealTemporarily(false);
+            }
             return true;
         });
-        Button next = Ui.smallButton(this, "Page ›", v -> go(+1));
-        Ui.weight(previous,1); Ui.weight(reveal,1); Ui.weight(next,1); nav.addView(previous); nav.addView(reveal); nav.addView(next); root.addView(nav);
+        Ui.weight(reveal, 1);
+        masks.addView(reveal);
+        root.addView(masks);
 
         setContentView(root);
         surface.showPage(page);
@@ -97,7 +130,9 @@ public final class FreeMemActivity extends android.app.Activity implements Reade
     }
 
     @Override public void onPageChanged(int shown) {
-        page = shown; save(); title.setText("Mémorisation libre · " + shown + " / 604");
+        page = shown;
+        save();
+        title.setText("Mémorisation libre · " + shown + " / 604");
         refreshSelection();
     }
 
@@ -107,16 +142,28 @@ public final class FreeMemActivity extends android.app.Activity implements Reade
         if (start == null) {
             start = end = verse;
         } else if (start.equals(end)) {
-            if (ordinal(verse) < ordinal(start)) { end = start; start = verse; } else end = verse;
+            if (ordinal(verse) < ordinal(start)) {
+                end = start;
+                start = verse;
+            } else {
+                end = verse;
+            }
         } else {
-            start = end = verse; count = 0; refreshCounter();
+            start = end = verse;
+            count = 0;
+            refreshCounter();
         }
-        save(); refreshSelection();
+        save();
+        refreshSelection();
     }
 
     private void refreshSelection() {
         if (surface == null) return;
-        if (start == null || end == null) { surface.clearMemorizationState(); updateSelectionLabel(); return; }
+        if (start == null || end == null) {
+            surface.clearMemorizationState();
+            updateSelectionLabel();
+            return;
+        }
         try {
             int low = Math.min(ordinal(start), ordinal(end));
             int high = Math.max(ordinal(start), ordinal(end));
@@ -124,7 +171,10 @@ public final class FreeMemActivity extends android.app.Activity implements Reade
             for (LineGeometryRepository.PageLine line : lines.linesForPage(page)) {
                 for (VerseRef verse : line.verses) {
                     int o = ordinal(verse);
-                    if (o >= low && o <= high) { selected.add(line); break; }
+                    if (o >= low && o <= high) {
+                        selected.add(line);
+                        break;
+                    }
                 }
             }
             surface.setMemorizationState(selected, focus, mask);
@@ -135,38 +185,72 @@ public final class FreeMemActivity extends android.app.Activity implements Reade
     }
 
     private void updateSelectionLabel() {
-        if (start == null || end == null) selection.setText("Touchez un verset pour choisir le passage.");
-        else selection.setText("Passage : " + start + " → " + end + " · masque " + mask + "%");
+        if (start == null || end == null) {
+            selection.setText("Touchez un verset pour choisir le passage.");
+        } else {
+            selection.setText("Passage : " + start + " → " + end + " · masque " + mask + "%");
+        }
     }
 
-    private void refreshCounter() { counter.setText("Répétitions : " + count); }
+    private void refreshCounter() {
+        counter.setText("Répétitions : " + count);
+    }
 
     private void save() {
-        prefs.edit().putInt("page", page).putInt("count", count).putInt("mask", mask)
+        prefs.edit()
+            .putInt("page", page)
+            .putInt("count", count)
+            .putInt("mask", mask)
             .putString("start", start == null ? null : start.toString())
-            .putString("end", end == null ? null : end.toString()).apply();
+            .putString("end", end == null ? null : end.toString())
+            .apply();
     }
 
-    @Override public void onPageSwipe(int delta) { go(delta); }
-    @Override public void onError(Throwable error) { Toast.makeText(this, "Mémorisation : " + error.getMessage(), Toast.LENGTH_LONG).show(); }
+    @Override public void onPageSwipe(int delta) {
+        go(delta);
+    }
+
+    @Override public void onError(Throwable error) {
+        Toast.makeText(this, "Mémorisation : " + error.getMessage(), Toast.LENGTH_LONG).show();
+    }
 
     @Override public boolean onKeyDown(int code, KeyEvent event) {
-        if (code == KeyEvent.KEYCODE_PAGE_UP) { go(-1); return true; }
-        if (code == KeyEvent.KEYCODE_PAGE_DOWN) { go(+1); return true; }
+        if (code == KeyEvent.KEYCODE_PAGE_UP) {
+            go(-1);
+            return true;
+        }
+        if (code == KeyEvent.KEYCODE_PAGE_DOWN) {
+            go(+1);
+            return true;
+        }
         return super.onKeyDown(code, event);
     }
 
-    @Override protected void onDestroy() { if (surface != null) surface.close(); super.onDestroy(); }
+    @Override protected void onDestroy() {
+        if (surface != null) surface.close();
+        super.onDestroy();
+    }
 
-    private static int ordinal(VerseRef ref) { return QuranCanon.INSTANCE.ordinal(ref); }
-    private static int clampPage(int value) { return Math.max(1, Math.min(604, value)); }
-    private static int clampMask(int value) { return Math.max(0, Math.min(100, value)); }
+    private static int ordinal(VerseRef ref) {
+        return QuranCanon.INSTANCE.ordinal(ref);
+    }
+
+    private static int clampPage(int value) {
+        return Math.max(1, Math.min(604, value));
+    }
+
+    private static int clampMask(int value) {
+        return Math.max(0, Math.min(100, value));
+    }
+
     private static VerseRef parseNullable(String value) {
         if (value == null || value.isEmpty()) return null;
         try {
             String[] parts = value.split(":", -1);
             if (parts.length != 2) return null;
             return new VerseRef(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
-        } catch (RuntimeException invalid) { return null; }
+        } catch (RuntimeException invalid) {
+            return null;
+        }
     }
 }
