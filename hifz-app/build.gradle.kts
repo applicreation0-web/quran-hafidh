@@ -13,6 +13,8 @@ val canonicalMushafSource = quranSvgSubmodule.resolve("mushafs/hafs/kfqc/svg-br"
 val canonicalGeometrySource = quranSvgSubmodule.resolve("mushafs/hafs/kfqc/json")
 val auditedTafsirSource = rootProject.file("app/src/plus/assets/tafsir")
 val generatedHifzAssets = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
+val canonicalPageNames = (1..604).map { String.format(Locale.ROOT, "%03d.svg.br", it) }
+val canonicalGeometryNames = (1..604).map { String.format(Locale.ROOT, "%03d.json", it) }
 val smokeMushaf = providers.gradleProperty("hifzSmokeMushaf")
     .orNull
     ?.toBooleanStrictOrNull()
@@ -44,15 +46,20 @@ val verifyHifzMushafSource by tasks.registering {
         if (checkedGitOutput("status", "--porcelain", "--untracked-files=no").isNotEmpty()) {
             throw GradleException("Pinned quran-svg source has tracked local modifications; refusing to build")
         }
-        val expectedSvg = (1..604).map { String.format(Locale.ROOT, "%03d.svg.br", it) }
-        val actualSvg = canonicalMushafSource.listFiles { f -> f.isFile && f.name.endsWith(".svg.br") }
-            ?.map { it.name }?.sorted() ?: emptyList()
-        if (actualSvg != expectedSvg) throw GradleException("Expected 001.svg.br..604.svg.br; found ${actualSvg.size} pages")
 
-        val expectedGeometry = (1..604).map { String.format(Locale.ROOT, "%03d.json", it) }
-        val actualGeometry = canonicalGeometrySource.listFiles { f -> f.isFile && Regex("\\d{3}\\.json").matches(f.name) }
+        val actualSvg = canonicalMushafSource
+            .listFiles { f -> f.isFile && Regex("\\d{3}\\.svg\\.br").matches(f.name) }
             ?.map { it.name }?.sorted() ?: emptyList()
-        if (actualGeometry != expectedGeometry) throw GradleException("Expected geometry 001.json..604.json; found ${actualGeometry.size} pages")
+        if (actualSvg != canonicalPageNames) {
+            throw GradleException("Expected exact canonical 001.svg.br..604.svg.br; found ${actualSvg.size} numbered pages")
+        }
+
+        val actualGeometry = canonicalGeometrySource
+            .listFiles { f -> f.isFile && Regex("\\d{3}\\.json").matches(f.name) }
+            ?.map { it.name }?.sorted() ?: emptyList()
+        if (actualGeometry != canonicalGeometryNames) {
+            throw GradleException("Expected exact geometry 001.json..604.json; found ${actualGeometry.size} numbered pages")
+        }
 
         val tafsirParts = (0..3).map { auditedTafsirSource.resolve(String.format(Locale.ROOT, "al_jalalayn_en.sqlite.gz.part%02d", it)) }
         if (tafsirParts.any { !it.isFile }) throw GradleException("Audited Tafsir asset set is incomplete")
@@ -62,11 +69,19 @@ val verifyHifzMushafSource by tasks.registering {
 val prepareHifzAssets by tasks.registering(Sync::class) {
     dependsOn(verifyHifzMushafSource)
     from(canonicalMushafSource) {
-        if (smokeMushaf) include("001.svg.br", "002.svg.br") else include("*.svg.br")
+        if (smokeMushaf) {
+            include("001.svg.br", "002.svg.br")
+        } else {
+            include(*canonicalPageNames.toTypedArray())
+        }
         into("mushaf/hafs/kfqc/svg-br")
     }
     from(canonicalGeometrySource) {
-        if (smokeMushaf) include("001.json", "002.json") else include("*.json")
+        if (smokeMushaf) {
+            include("001.json", "002.json")
+        } else {
+            include(*canonicalGeometryNames.toTypedArray())
+        }
         into("geometry/hafs/kfqc")
     }
     from(auditedTafsirSource) {
