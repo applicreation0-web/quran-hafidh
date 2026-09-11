@@ -31,13 +31,11 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        // Fresh install-only test package. This intentionally avoids every previous
-        // experimental Hifz package/signature on the user's phone.
         applicationId = "com.quransafeguard.hifz.installtest1"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4-installable-test"
+        versionCode = 5
+        versionName = "0.5-tablet-tafsir-test"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -45,7 +43,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            // No applicationIdSuffix: exact fresh package above is used for the APK.
+            // Exact personal test package; no suffix so the candidate can replace the prior test when signatures match.
         }
         getByName("release") {
             isMinifyEnabled = false
