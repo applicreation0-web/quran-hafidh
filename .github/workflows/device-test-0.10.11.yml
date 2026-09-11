@@ -1,8 +1,8 @@
-name: Quran Safeguard 0.10.11 private device test
+name: Quran Safeguard 0.10.11 private device test r2
 
 on:
   push:
-    branches: ["test/0.10.11-device"]
+    branches: ["fix/0.10.11-device-feedback1"]
 
 permissions:
   contents: read
@@ -29,10 +29,24 @@ jobs:
           node --check app/src/main/assets/reader109/reader.js
           node --check app/src/main/assets/reader109/runtime_guard.js
           node --check app/src/main/assets/reader109/hifz_guard.js
-          printf 'carrier_commit=%s\ncarrier_tree=%s\npatch_sha256=%s\n' \
+          printf 'carrier_commit=%s\ncarrier_tree=%s\nbase_patch_sha256=%s\n' \
             "$(git rev-parse HEAD)" "$(git rev-parse HEAD^{tree})" \
             'f3dc097d4595da13dc022dafb1fdebd4e453ecd51e4b54f7bfbbbb639dcc67d3' \
             > "${RUNNER_TEMP}/DEVICE-TEST-PROVENANCE.txt"
+
+      - name: Apply first physical-device feedback corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apply_device_feedback1.py
+          node --check app/src/main/assets/reader109/reader.js
+          node --check app/src/main/assets/reader109/runtime_guard.js
+          node --check app/src/main/assets/reader109/hifz_guard.js
+          sha256sum scripts/apply_device_feedback1.py >> "${RUNNER_TEMP}/DEVICE-TEST-PROVENANCE.txt"
+          grep -F 'FREE_READER_READING' app/src/main/java/com/quranunlock/guard/QuranPersistenceNamespaces.kt
+          grep -F 'GATE_TAFSIR_ENABLED = true' app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt
+          ! grep -F 'Sabqi min/page observées' app/src/main/java/com/quranunlock/guard/HifzJourneyActivity.kt
+          ! grep -F 'Itqān min/page observées' app/src/main/java/com/quranunlock/guard/HifzJourneyActivity.kt
 
       - name: Restore validated 0.10.9 build-time corpus
         uses: actions/download-artifact@v4
@@ -75,6 +89,7 @@ jobs:
           python3 scripts/build_reader109_geometry.py
           node scripts/test_reader109_protocol.js
           python3 scripts/verify_reader109.py
+          python3 scripts/verify_0108_reader_contract.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -108,11 +123,11 @@ jobs:
           test -s "$light_u" && test -s "$plus_u"
           python3 scripts/verify_light_apk_no_tafsir.py "$light_u"
           python3 scripts/verify_plus_apk_multitafsir_0106.py "$plus_u"
-          out="${RUNNER_TEMP}/quran-safeguard-0.10.11-device-test"
+          out="${RUNNER_TEMP}/quran-safeguard-0.10.11-device-test-r2"
           mkdir -p "$out/tools36/lib" "$out/tools36/lib64"
           tools="$ANDROID_HOME/build-tools/36.0.0"
-          light="$out/Quran-Safeguard-0.10.11-TEST-Light-aligned-unsigned.apk"
-          plus="$out/Quran-Safeguard-Plus-0.10.11-TEST-aligned-unsigned.apk"
+          light="$out/Quran-Safeguard-0.10.11-TEST-R2-Light-aligned-unsigned.apk"
+          plus="$out/Quran-Safeguard-Plus-0.10.11-TEST-R2-aligned-unsigned.apk"
           "$tools/zipalign" -p -f 4 "$light_u" "$light"
           "$tools/zipalign" -p -f 4 "$plus_u" "$plus"
           "$tools/zipalign" -c -p 4 "$light"
@@ -125,12 +140,12 @@ jobs:
           chmod +x "$out/tools36/apksigner" "$out/tools36/zipalign" "$out/tools36/aapt2"
           sha256sum "$light" "$plus" > "$out/UNSIGNED-SHA256.txt"
           cp "${RUNNER_TEMP}/DEVICE-TEST-PROVENANCE.txt" "$out/"
-          printf 'PRIVATE DEVICE TEST ONLY — NOT A RELEASE\nDo not publish these unsigned APKs. Sign only with the historical local keys.\n' > "$out/TEST-ONLY.txt"
+          printf 'PRIVATE DEVICE TEST R2 ONLY — NOT A RELEASE\nContains first physical-device feedback corrections.\n' > "$out/TEST-ONLY.txt"
 
-      - name: Upload private device-test bundle
+      - name: Upload private device-test r2 bundle
         uses: actions/upload-artifact@v4
         with:
-          name: quran-safeguard-0.10.11-device-test
-          path: ${{ runner.temp }}/quran-safeguard-0.10.11-device-test/
+          name: quran-safeguard-0.10.11-device-test-r2
+          path: ${{ runner.temp }}/quran-safeguard-0.10.11-device-test-r2/
           if-no-files-found: error
           retention-days: 1
