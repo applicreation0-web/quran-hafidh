@@ -15,6 +15,10 @@ val auditedTafsirSource = rootProject.file("app/src/plus/assets/tafsir")
 val generatedHifzAssets = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val canonicalPageNames = (1..604).map { String.format(Locale.ROOT, "%03d.svg.br", it) }
 val canonicalGeometryNames = (1..604).map { String.format(Locale.ROOT, "%03d.json", it) }
+val jalalaynTafsirNames = (0..3).map { String.format(Locale.ROOT, "al_jalalayn_en.sqlite.gz.part%02d", it) }
+val qurtubiTafsirNames = (0..3).map { String.format(Locale.ROOT, "qurtubi_en.sqlite.gz.b64.part%02d", it) }
+val qushayriTafsirNames = (0..1).map { String.format(Locale.ROOT, "qushayri_en.sqlite.gz.b64.part%02d", it) }
+val auditedTafsirNames = jalalaynTafsirNames + qurtubiTafsirNames + qushayriTafsirNames
 val smokeMushaf = providers.gradleProperty("hifzSmokeMushaf")
     .orNull
     ?.toBooleanStrictOrNull()
@@ -34,7 +38,7 @@ fun checkedGitOutput(vararg args: String): String {
 
 val verifyHifzMushafSource by tasks.registering {
     group = "verification"
-    description = "Verifies the pinned exact 604-page KFQC Mushaf, geometry and audited Tafsir inputs."
+    description = "Verifies the pinned exact 604-page KFQC Mushaf, geometry and audited three-Tafsir inputs."
     doLast {
         if (!quranSvgSubmodule.isDirectory || !canonicalMushafSource.isDirectory || !canonicalGeometrySource.isDirectory) {
             throw GradleException("Pinned quran-svg submodule is missing or incomplete. Run: git submodule update --init --recursive")
@@ -61,8 +65,10 @@ val verifyHifzMushafSource by tasks.registering {
             throw GradleException("Expected exact geometry 001.json..604.json; found ${actualGeometry.size} numbered pages")
         }
 
-        val tafsirParts = (0..3).map { auditedTafsirSource.resolve(String.format(Locale.ROOT, "al_jalalayn_en.sqlite.gz.part%02d", it)) }
-        if (tafsirParts.any { !it.isFile }) throw GradleException("Audited Tafsir asset set is incomplete")
+        val missingTafsir = auditedTafsirNames.filterNot { auditedTafsirSource.resolve(it).isFile }
+        if (missingTafsir.isNotEmpty()) {
+            throw GradleException("Audited three-Tafsir asset set is incomplete: ${missingTafsir.joinToString()}")
+        }
     }
 }
 
@@ -85,7 +91,7 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
         into("geometry/hafs/kfqc")
     }
     from(auditedTafsirSource) {
-        include("al_jalalayn_en.sqlite.gz.part00", "al_jalalayn_en.sqlite.gz.part01", "al_jalalayn_en.sqlite.gz.part02", "al_jalalayn_en.sqlite.gz.part03")
+        include(*auditedTafsirNames.toTypedArray())
         into("tafsir")
     }
     into(generatedHifzAssets)
