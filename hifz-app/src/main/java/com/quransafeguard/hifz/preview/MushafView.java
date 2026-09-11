@@ -41,7 +41,6 @@ public final class MushafView extends WebView {
     private boolean listenerNotified;
     private boolean ready;
     private Runnable pending;
-    private JSONObject geometryPages;
     private final HifzPrefs prefs;
     private final EinkController eink = new EinkController();
 
@@ -116,7 +115,7 @@ public final class MushafView extends WebView {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
             String svg = readPageSvg(page);
-            String geometry = readPageGeometry(page);
+            String geometry = lineIds.isEmpty() ? null : GeometryRepository.get(getContext()).pageGeometryJson(page);
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             JSONArray verses = new JSONArray();
             for (VerseRef ref : selection) verses.put(ref.toString());
@@ -128,7 +127,7 @@ public final class MushafView extends WebView {
                 .put("lines", lines)
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
                 .put("eink", eink.isEink(prefs))
-                .put("geometry", new JSONObject(geometry));
+                .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
             html = html
@@ -157,8 +156,21 @@ public final class MushafView extends WebView {
         for (VerseRef ref : selection) verses.put(ref.toString());
         JSONArray lines = new JSONArray();
         for (String id : lineIds) lines.put(id);
-        runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setSelection(" + verses + "," + lines + ");", null));
+        final String geometry;
+        try {
+            geometry = lineIds.isEmpty() ? null : GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
+        } catch (Throwable error) {
+            report("Géométrie de sélection indisponible : " + safeMessage(error));
+            return;
+        }
+        runWhenReady(() -> {
+            StringBuilder script = new StringBuilder("window.HifzReader&&(");
+            if (geometry != null) {
+                script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
+            }
+            script.append("window.HifzReader.setSelection(").append(verses).append(',').append(lines).append("));");
+            evaluateJavascript(script.toString(), null);
+        });
     }
 
     public void localCounterChanged() { eink.local(this); }
@@ -188,16 +200,6 @@ public final class MushafView extends WebView {
             if (!svg.contains("<svg") || !svg.contains("</svg>")) throw new IllegalStateException("invalid SVG payload");
             return svg;
         }
-    }
-
-    private synchronized String readPageGeometry(int page) throws Exception {
-        if (geometryPages == null) {
-            JSONObject root = new JSONObject(readAssetText("reader109/geometry.json"));
-            geometryPages = root.getJSONObject("pages");
-        }
-        JSONObject pageObject = geometryPages.optJSONObject(String.valueOf(page));
-        if (pageObject == null) throw new IllegalStateException("geometry missing for page " + page);
-        return pageObject.toString();
     }
 
     private static String readUtf8(InputStream input) throws Exception {
