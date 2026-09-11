@@ -25,9 +25,9 @@ jobs:
           mkdir -p third_party/quran-svg
           git -C third_party/quran-svg init
           git -C third_party/quran-svg remote add origin https://github.com/quranpedia/quran-svg.git
-          git -C third_party/quran-svg config core.sparseCheckout true
-          printf 'mushafs/hafs/kfqc/svg-br/\nmushafs/hafs/kfqc/json/\n' > third_party/quran-svg/.git/info/sparse-checkout
-          git -C third_party/quran-svg fetch --depth=1 origin 1b427fab77aae1403fe7e1f0b8c794a5384d5605
+          git -C third_party/quran-svg sparse-checkout init --cone
+          git -C third_party/quran-svg sparse-checkout set mushafs/hafs/kfqc/svg-br mushafs/hafs/kfqc/json
+          git -C third_party/quran-svg fetch --depth=1 --filter=blob:none origin 1b427fab77aae1403fe7e1f0b8c794a5384d5605
           git -C third_party/quran-svg checkout --detach FETCH_HEAD
           test "$(git -C third_party/quran-svg rev-parse HEAD)" = "1b427fab77aae1403fe7e1f0b8c794a5384d5605"
 
