@@ -22,6 +22,7 @@ android {
         targetSdk = 36
         versionCode = 2
         versionName = "0.2-full-scope-preview"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssets)
@@ -38,4 +39,7 @@ tasks.named("preBuild").configure { dependsOn(prepareHifzAssets) }
 dependencies {
     implementation(project(":hifz-core"))
     implementation("org.brotli:dec:0.1.2")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("junit:junit:4.13.2")
 }
