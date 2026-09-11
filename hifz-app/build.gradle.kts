@@ -2,10 +2,10 @@ plugins {
     id("com.android.application")
 }
 
-val generatedHifzAssets = layout.buildDirectory.dir("generated/hifzAssets")
+val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    into(generatedHifzAssets)
+    into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/audio.json")) { into("reader109") }
@@ -26,7 +26,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    sourceSets.getByName("main").assets.srcDir(generatedHifzAssets)
+    // AGP 9 rejects Provider<Directory> through the legacy SourceSet API.
+    // Resolve the build directory eagerly here; preBuild carries the task dependency explicitly.
+    sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
 
     buildTypes {
         getByName("release") {
