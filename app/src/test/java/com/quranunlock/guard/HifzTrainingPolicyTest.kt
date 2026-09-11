@@ -8,42 +8,38 @@ import org.junit.Test
 class HifzTrainingPolicyTest {
 
     @Test
-    fun sabqiDefaultsToAudioThenTenVisibleAndTwentyTwoMaskedReadings() {
+    fun sabqiIsExactlyThirtySevenRecitationsAndAudioIsNotAProgressStep() {
         val steps = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI)
 
-        assertEquals(HifzTrainingKind.AUDIO_PASSIVE, steps[0].kind)
-        assertEquals(HifzTrainingKind.AUDIO_ACTIVE, steps[1].kind)
-        assertTrue(steps.take(2).all { it.requiresAudio })
-
-        val readings = steps.filter { it.kind != HifzTrainingKind.AUDIO_PASSIVE && it.kind != HifzTrainingKind.AUDIO_ACTIVE }
-        assertEquals(10, readings.filter { it.maskPercent == 0 }.sumOf { it.repetitions })
-        assertEquals(22, readings.filter { it.maskPercent > 0 }.sumOf { it.repetitions })
-        assertEquals(listOf(25, 50, 75, 100), readings.filter { it.maskPercent > 0 }.map { it.maskPercent })
-        assertEquals(listOf(5, 5, 5, 7), readings.filter { it.maskPercent > 0 }.map { it.repetitions })
-    }
-
-    @Test
-    fun sabqiCanFailSafeWithoutAudioWithoutChangingReadingProtocol() {
-        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI, audioAvailable = false)
-
         assertFalse(steps.any { it.requiresAudio })
-        assertEquals("sabqi-visible", steps.first().id)
-        assertEquals(10, steps.filter { it.maskPercent == 0 }.sumOf { it.repetitions })
+        assertFalse(steps.any { it.kind == HifzTrainingKind.AUDIO_PASSIVE || it.kind == HifzTrainingKind.AUDIO_ACTIVE })
+        assertEquals(15, steps.filter { it.maskPercent == 0 }.sumOf { it.repetitions })
         assertEquals(22, steps.filter { it.maskPercent > 0 }.sumOf { it.repetitions })
+        assertEquals(37, steps.sumOf { it.repetitions })
+        assertEquals(listOf(25, 50, 75, 100), steps.filter { it.maskPercent > 0 }.map { it.maskPercent })
+        assertEquals(listOf(5, 5, 5, 7), steps.filter { it.maskPercent > 0 }.map { it.repetitions })
+        assertTrue(HifzTrainingPolicy.assemblyStepsFor(HifzTrack.SABQI).isEmpty())
     }
 
     @Test
-    fun itqanIsExactlyTwentyVisiblePlusTenMaskedRepetitions() {
+    fun audioAvailabilityNeverChangesSabqiRepetitionProtocol() {
+        val withAudio = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI, audioAvailable = true)
+        val withoutAudio = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI, audioAvailable = false)
+        assertEquals(withAudio, withoutAudio)
+        assertEquals(37, withoutAudio.sumOf { it.repetitions })
+    }
+
+    @Test
+    fun itqanPreviewDistributionRemainsExactlyThirtyWithMandatoryMasking() {
         val steps = HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN)
         val visible = steps.filter { it.maskPercent == 0 }
         val masked = steps.filter { it.maskPercent > 0 }
 
-        assertEquals(20, visible.sumOf { it.repetitions })
-        assertEquals(10, masked.sumOf { it.repetitions })
+        assertEquals(HifzTrainingPolicy.PREVIEW_ITQAN_VISIBLE_REPETITIONS, visible.sumOf { it.repetitions })
+        assertEquals(20, masked.sumOf { it.repetitions })
         assertEquals(30, steps.sumOf { it.repetitions })
         assertEquals(listOf(25, 50, 75, 100), masked.map { it.maskPercent })
-        assertEquals(listOf(2, 2, 2, 4), masked.map { it.repetitions })
-        assertTrue(masked.all { it.requiresConsecutiveSuccesses == 1 })
+        assertEquals(listOf(5, 5, 5, 5), masked.map { it.repetitions })
         assertFalse(steps.any { it.requiresAudio })
     }
 
