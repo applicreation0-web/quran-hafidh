@@ -19,10 +19,33 @@ val verifyHifzProductBoundary by tasks.registering {
         check(!manifest.contains("<queries>")) { "Quran Hifz must not query or enumerate external applications." }
         check(!manifest.contains("QUERY_ALL_PACKAGES")) { "Quran Hifz must never request broad package visibility." }
         check(!manifest.contains("BIND_ACCESSIBILITY_SERVICE")) { "Quran Hifz must never request Safeguard blocking privileges." }
+        check(!manifest.contains("android.permission.INTERNET")) { "Quran Hifz must remain offline-first and must not request INTERNET." }
         val sourceText = fileTree("src/main") { include("**/*.java", "**/*.kt", "**/*.xml") }.files.joinToString("\n") { it.readText() }
         listOf("QuranAccessibilityService","ProtectedApps","GuardPrefs.protectedPackages","UsageCyclePolicy","UnlockBudgetIntegrity").forEach { forbidden ->
             check(!sourceText.contains(forbidden)) { "Safeguard-only symbol leaked into Quran Hifz: $forbidden" }
         }
+    }
+}
+
+val verifyHifzConvergenceRules by tasks.registering {
+    doLast {
+        val config = file("src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java").readText()
+        val session = file("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java").readText()
+        val settings = file("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java").readText()
+        val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
+        val reader = file("src/main/assets/hifzreader/reader.js").readText()
+        val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
+        check(config.contains("MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 30"))
+        check(config.contains("MURAJAAH_ITQAN_MINUTES_WORKING = 30"))
+        check(config.contains("MURAJAAH_MINUTES_WORKING = 60"))
+        check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
+        check(session.contains("Stable sans aide") && session.contains("À revoir"))
+        check(session.contains("révélations") && session.contains("Révéler"))
+        check(settings.contains("+ Ajouter une plage Itqān") && settings.contains("Début rotation Itqān"))
+        check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges") && prefs.contains("stableRecentLines"))
+        check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
+        check(reader.contains("hiddenCellsForLine") && reader.contains("setAudioVerse"))
+        check(reader.contains("clearReveal") && reader.contains("revealSelection"))
     }
 }
 
@@ -34,8 +57,8 @@ android {
         applicationId = "com.quransafeguard.hifz.installtest1"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.5-tablet-tafsir-test"
+        versionCode = 6
+        versionName = "0.6-boox-convergence-test"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -43,7 +66,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            // Exact personal test package; no suffix so the candidate can replace the prior test when signatures match.
+            // Exact personal test package; no suffix so this signed test candidate updates the prior test package.
         }
         getByName("release") {
             isMinifyEnabled = false
@@ -54,6 +77,7 @@ android {
 tasks.named("preBuild").configure {
     dependsOn(prepareHifzAssets)
     dependsOn(verifyHifzProductBoundary)
+    dependsOn(verifyHifzConvergenceRules)
 }
 
 dependencies {
