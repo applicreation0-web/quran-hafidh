@@ -4,7 +4,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.KeyEvent;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -15,7 +14,6 @@ import com.quransafeguard.hifz.core.EligibleCorpus;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,6 +31,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private TextView heading, program, progress, timerText;
     private LinearLayout actions;
     private SessionClock clock;
+    private final EinkController eink = new EinkController();
+    private long lastCheckpointBucket = -1L;
     private int currentPage = 1;
     private List<VerseRef> currentSelection = Collections.emptyList();
     private List<String> currentLineIds = Collections.emptyList();
@@ -53,6 +53,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         gates = getSharedPreferences("hifz_preview_session_gates", MODE_PRIVATE);
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
             if (timerText != null) timerText.setText("Temps actif : " + SessionClock.format(elapsed) + " · cible " + targetMinutes() + " min (paramètre de travail)");
+            long bucket = elapsed / 5_000L;
+            if (bucket != lastCheckpointBucket) {
+                lastCheckpointBucket = bucket;
+                prefs.setElapsedFor(mode, elapsed);
+            }
         });
         buildUi();
         renderMode();
@@ -95,15 +100,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentSelection = sabqiBlock.verses; currentLineIds = sabqiBlock.lineIds;
         int rep = prefs.sabqiRep(); currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
         program.setText("Sabqi — Sourate " + sabqiBlock.startVerse.getSurah() + " · " + sabqiBlock.verseLabel() + "\n5 lignes réelles · 37 répétitions");
-        progress.setText("Répétition suivante : " + Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + " / 37 · masque " + currentMask + "% · aides " + prefs.sabqiAssisted());
+        updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
         Button done=Ui.smallButton(this,"Répétition faite",v->completeSabqiRep(false));Button assisted=Ui.smallButton(this,"Faite avec aide",v->completeSabqiRep(true));
         Ui.weight(done,1);Ui.weight(assisted,1);actions.addView(done);actions.addView(assisted);
     }
 
+    private void updateSabqiProgress(int rep, int aids) {
+        progress.setText("Répétition suivante : " + Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + " / 37 · masque " + currentMask + "% · aides " + aids);
+        eink.local(progress);
+    }
+
     private void completeSabqiRep(boolean assisted) {
         int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
-        rep++; int aids=prefs.sabqiAssisted()+(assisted?1:0); prefs.setSabqiProgress(rep,aids); mushaf.localCounterChanged();
+        int oldMask=currentMask;
+        rep++; int aids=prefs.sabqiAssisted()+(assisted?1:0); prefs.setSabqiProgress(rep,aids);
         if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
             prefs.addRecentSabqi(sabqiBlock.startLineIndex,sabqiBlock.endLineIndex);
             VerseRef promotion=sabqiBlock.endsInsideVerse?GeometryRepository.previous(sabqiBlock.endVerse):sabqiBlock.endVerse;
@@ -112,8 +123,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             String label=sabqiBlock.verseLabel();gates.edit().putString("lastSabqiDate",LocalDate.now().toString()).putString("lastSabqiLabel",label).apply();
             mushaf.cycleCompleted();renderMode();return;
         }
-        currentMask=PreviewConfig.sabqiMaskForNextRep(rep);mushaf.setMask(currentMask);
-        progress.setText("Répétition suivante : "+(rep+1)+" / 37 · masque "+currentMask+"% · aides "+aids);
+        currentMask=PreviewConfig.sabqiMaskForNextRep(rep);
+        if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        updateSabqiProgress(rep,aids);
     }
 
     private void renderItqan() {
@@ -123,14 +135,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         itqanUnit=geometry.eligiblePageUnit(prefs.itqanCursor(),corpus);currentPage=itqanUnit.page;currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
         int rep=prefs.itqanRep();currentMask=PreviewConfig.itqanMaskForNextRep(rep);
         program.setText("Itqān — Sourate "+itqanUnit.start.getSurah()+" · "+itqanUnit.start+" → "+itqanUnit.end+"\n×30 · masquage obligatoire · corpus cyclique");
-        progress.setText("Répétition suivante : "+Math.min(rep+1,30)+" / 30 · masque "+currentMask+"% (split de masque = paramètre de travail) · aides "+prefs.itqanAssisted());showCurrent();
+        updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         Button done=Ui.smallButton(this,"Répétition faite",v->completeItqanRep(false));Button assisted=Ui.smallButton(this,"Faite avec aide",v->completeItqanRep(true));Ui.weight(done,1);Ui.weight(assisted,1);actions.addView(done);actions.addView(assisted);
     }
 
+    private void updateItqanProgress(int rep,int aids){
+        progress.setText("Répétition suivante : "+Math.min(rep+1,30)+" / 30 · masque "+currentMask+"% (split de masque = paramètre de travail) · aides "+aids);
+        eink.local(progress);
+    }
+
     private void completeItqanRep(boolean assisted){
-        int rep=prefs.itqanRep();if(rep>=30)return;rep++;int aids=prefs.itqanAssisted()+(assisted?1:0);prefs.setItqanProgress(rep,aids,itqanUnit.end);mushaf.localCounterChanged();
+        int rep=prefs.itqanRep();if(rep>=30)return;int oldMask=currentMask;rep++;int aids=prefs.itqanAssisted()+(assisted?1:0);prefs.setItqanProgress(rep,aids,itqanUnit.end);
         if(rep>=30){VerseRef next=prefs.corpus().next(itqanUnit.end);prefs.setItqanCursor(next);prefs.setItqanProgress(0,0,null);String label=itqanUnit.start+" → "+itqanUnit.end;gates.edit().putString("lastItqanDate",LocalDate.now().toString()).putString("lastItqanLabel",label+" · ×30").apply();mushaf.cycleCompleted();renderMode();return;}
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep);mushaf.setMask(currentMask);progress.setText("Répétition suivante : "+(rep+1)+" / 30 · masque "+currentMask+"% · aides "+aids);
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep);if(currentMask!=oldMask)mushaf.setMask(currentMask);updateItqanProgress(rep,aids);
     }
 
     private void renderMurajaah(){
@@ -149,10 +166,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void finishMurajaah(){if(murajaahActualEnd==null){Toast.makeText(this,"Touchez d’abord le dernier verset réellement révisé.",Toast.LENGTH_LONG).show();return;}VerseRef next=prefs.corpus().next(murajaahActualEnd);VerseRef itqanBefore=prefs.itqanCursor();prefs.setMurajaahCursor(next);String label="Réel : "+murajaahPlan.start+" → "+murajaahActualEnd+" · prochain curseur "+next;gates.edit().putString("lastMurajaahDate",LocalDate.now().toString()).putString("lastMurajaahLabel",label).apply();if(!prefs.itqanCursor().equals(itqanBefore))throw new IllegalStateException("Murajaah modified Itqan cursor");renderMode();}
 
-    @Override public void onVerseTap(VerseRef verse){if(MURAJAAH.equals(mode)&&murajaahBlockB&&murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse)){murajaahActualEnd=verse;progress.setText("Fin réelle sélectionnée : "+verse+"\nCette borne, et non la prévision, deviendra le nouveau curseur Murājaʿah.");mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));}}
+    @Override public void onVerseTap(VerseRef verse){if(MURAJAAH.equals(mode)&&murajaahBlockB&&murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse)){murajaahActualEnd=verse;progress.setText("Fin réelle sélectionnée : "+verse+"\nCette borne, et non la prévision, deviendra le nouveau curseur Murājaʿah.");eink.local(progress);mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));}}
     private void showCurrent(){mushaf.show(currentPage,currentSelection,currentLineIds,currentMask);}
     private void goPage(int d){currentPage=Math.max(1,Math.min(604,currentPage+d));showCurrent();}
-    private void audioGate(){Toast.makeText(this,"Audio Hifz : commandes et isolation des curseurs prévues. Le corpus Al-Husary n’est pas activé dans cette preview tant que l’hébergement/redistribution n’est pas validé. Aucun compteur n’est modifié.",Toast.LENGTH_LONG).show();}
+    private void audioGate(){HifzAudioGate gate=new HifzAudioGate(this);Toast.makeText(this,gate.status()+". Aucun compteur ni curseur n’est modifié.",Toast.LENGTH_LONG).show();}
     private int targetMinutes(){return SABQI.equals(mode)?PreviewConfig.SABQI_MINUTES_WORKING:ITQAN.equals(mode)?PreviewConfig.ITQAN_MINUTES_WORKING:PreviewConfig.MURAJAAH_MINUTES_WORKING;}
     private String displayModeName(){return SABQI.equals(mode)?"Sabqi":ITQAN.equals(mode)?"Itqān":"Murājaʿah";}
     @Override public void onReady(){showCurrent();}
