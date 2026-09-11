@@ -20,7 +20,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
-/** Offline canonical Mushaf WebView. Network and file access are disabled. */
+/** Offline canonical Mushaf WebView. Network and file access are disabled by product boundary. */
 public final class MushafView extends WebView {
     public interface Listener {
         void onVerseTap(VerseRef verse);
@@ -45,7 +45,12 @@ public final class MushafView extends WebView {
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
         s.setDomStorageEnabled(false);
-        s.setBlockNetworkLoads(true);
+        // The reader uses an HTTPS-shaped, fully intercepted pseudo-origin. Blocking
+        // network loads here prevents WebView from reaching shouldInterceptRequest()
+        // on some Android/WebView versions and leaves the reader completely white.
+        // Hifz intentionally has no INTERNET permission, CSP is self-only, and every
+        // non quran-hifz.local request below is denied, so this does not enable network IO.
+        s.setBlockNetworkLoads(false);
         s.setBuiltInZoomControls(true);
         s.setDisplayZoomControls(false);
         addJavascriptInterface(new Bridge(), "HifzNative");
@@ -74,7 +79,13 @@ public final class MushafView extends WebView {
         loadUrl("https://quran-hifz.local/hifzreader/index.html");
     }
 
-    public void setListener(Listener value) { listener = value; }
+    public void setListener(Listener value) {
+        listener = value;
+        // loadUrl() starts in the constructor. If the local reader becomes ready
+        // before the Activity installs its listener, replay readiness so page 1
+        // cannot remain an empty but otherwise valid WebView.
+        if (ready && value != null) post(value::onReady);
+    }
 
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
         JSONArray verses = new JSONArray();
