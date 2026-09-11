@@ -1,0 +1,110 @@
+name: Quran Safeguard isolated test app
+
+on:
+  push:
+    branches:
+      - integration/safeguard-test-app
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-safeguard-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Inject exact 604-page Mushaf and approved Tafsir
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+
+          mushaf_dst="safeguard-app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+
+          tafsir_dst="safeguard-app/src/plus/assets/tafsir"
+          rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
+          cp baseline109/extracted/assets/tafsir/al_jalalayn_en.sqlite.gz.part* "$tafsir_dst/"
+          test "$(find "$tafsir_dst" -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')" = 4
+          cat "$tafsir_dst"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | \
+            grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run independent Safeguard oracle
+        run: gradle --no-daemon :safeguard-core:test --stacktrace
+
+      - name: Run real Plus unit tests after product split
+        run: gradle --no-daemon :safeguard-app:testPlusDebugUnitTest --stacktrace
+
+      - name: Assemble isolated Quran Safeguard TEST APK
+        run: gradle --no-daemon :safeguard-app:assemblePlusDebug --stacktrace
+
+      - name: Inspect product boundary and signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find safeguard-app/build/outputs/apk/plus/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee safeguard-app-signature.txt
+          grep -q 'Verified' safeguard-app-signature.txt
+          apkanalyzer manifest print "$apk" > safeguard-app-manifest.xml
+          grep -q 'package="com.quransafeguard.safeguard.test"' safeguard-app-manifest.xml
+          grep -q 'Quran Safeguard TEST' safeguard-app-manifest.xml
+          grep -q 'BIND_ACCESSIBILITY_SERVICE' safeguard-app-manifest.xml
+          if grep -Eqi 'HifzJourneyActivity|HifzSetupActivity|FreeQuranReaderActivity|QUERY_ALL_PACKAGES' safeguard-app-manifest.xml; then
+            echo 'FAIL: Hifz or broad package visibility leaked into Safeguard TEST' >&2
+            exit 1
+          fi
+          unzip -l "$apk" > safeguard-app-apk-list.txt
+          page_count="$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' safeguard-app-apk-list.txt | wc -l | tr -d ' ')"
+          test "$page_count" = 604
+          sha256sum "$apk" | tee safeguard-app-sha256.txt
+          printf 'HEAD=%s\nAPK=%s\nMUSHAF_PAGES=%s\n' "$GITHUB_SHA" "$apk" "$page_count" | tee safeguard-app-build-info.txt
+
+      - name: Upload Safeguard TEST evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-test-${{ github.sha }}
+          path: |
+            safeguard-app/build/outputs/apk/plus/debug/*.apk
+            safeguard-app/build/test-results/
+            safeguard-app/build/reports/tests/
+            safeguard-app-manifest.xml
+            safeguard-app-signature.txt
+            safeguard-app-apk-list.txt
+            safeguard-app-sha256.txt
+            safeguard-app-build-info.txt
+          if-no-files-found: warn
+          retention-days: 14
