@@ -22,29 +22,14 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/**
- * Simple offline Mushaf renderer.
- *
- * Every page is already packaged in the APK as %03d.svg.br. Android decompresses the requested
- * page locally, injects that exact SVG into an in-memory HTML document, and the local reader
- * script only handles verse taps / selection / masks. No runtime download, no INTERNET permission.
- *
- * Corrections 2026-09-11 (audit Claude) :
- *  1. The template slot is an explicit HTML comment (<!--MUSHAF_SVG-->). The previous marker
- *     "<div id=\"mushaf\"></div>" did not exist in index.html, so show() always failed.
- *  2. loadDataWithBaseURL() instead of loadData(): loadData() builds a data: URL where '#'
- *     starts a fragment and '%xx' is decoded, which truncated the page at the first CSS colour.
- *  3. "ready" now means "the JavaScript of the CURRENT page is loaded". It is reset on every
- *     show(), so setMask()/setSelection() are queued instead of being silently lost.
- *  4. Watchdog: if the page does not report pageShown in time, retry once, then report a visible
- *     error. A WebView renderer crash no longer kills the app: the Activity is recreated.
- */
+/** Offline Mushaf renderer using the exact packaged KFQC SVG page. */
 public final class MushafView extends WebView {
     public interface Listener {
         void onVerseTap(VerseRef verse);
         void onReady();
         void onError(String message);
         void onPageShown(int page);
+        default void onSurfaceTap() {}
     }
 
     private static final String INLINE_NONCE = "hifz-local";
@@ -54,8 +39,8 @@ public final class MushafView extends WebView {
 
     private Listener listener;
     private boolean listenerNotified;
-    private boolean ready;          // JavaScript of the current page is loaded
-    private Runnable pending;       // latest mask/selection request made while loading
+    private boolean ready;
+    private Runnable pending;
     private JSONObject geometryPages;
     private final HifzPrefs prefs;
     private final EinkController eink = new EinkController();
@@ -94,25 +79,17 @@ public final class MushafView extends WebView {
         s.setDisplayZoomControls(false);
         addJavascriptInterface(new Bridge(), "HifzNative");
         setWebViewClient(new WebViewClient() {
-            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return true;
-            }
-
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) { return true; }
             @Override public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                // Returning true keeps the app process alive. This WebView instance is now unusable:
-                // recreate the screen (page/progress are persisted by the Activities).
                 removeCallbacks(watchdog);
                 report("Moteur d’affichage redémarré.");
                 Context c = getContext();
-                if (c instanceof Activity && !((Activity) c).isFinishing()) {
-                    post(((Activity) c)::recreate);
-                }
+                if (c instanceof Activity && !((Activity) c).isFinishing()) post(((Activity) c)::recreate);
                 return true;
             }
         });
     }
 
-    /** Notifies onReady() once: the view is attached and show() may be called. */
     public void setListener(Listener value) {
         listener = value;
         if (value != null && !listenerNotified) {
@@ -131,7 +108,7 @@ public final class MushafView extends WebView {
         requestedPage = page;
         pageShown = false;
         ready = false;
-        pending = null; // superseded by the boot values of this page
+        pending = null;
         lastSelection = selection;
         lastLineIds = lineIds;
         lastMask = maskPercent;
@@ -140,9 +117,7 @@ public final class MushafView extends WebView {
             String javascript = readAssetText("hifzreader/reader.js");
             String svg = readPageSvg(page);
             String geometry = readPageGeometry(page);
-            if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) {
-                throw new IllegalStateException("reader template incomplete");
-            }
+            if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             JSONArray verses = new JSONArray();
             for (VerseRef ref : selection) verses.put(ref.toString());
             JSONArray lines = new JSONArray();
@@ -156,13 +131,11 @@ public final class MushafView extends WebView {
                 .put("geometry", new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
-            // String.replace(CharSequence, CharSequence) is literal (no regex, no '$' groups).
             html = html
                 .replace("script-src 'self';", "script-src 'nonce-" + INLINE_NONCE + "';")
                 .replace("connect-src 'self'", "connect-src 'none'")
                 .replace(SCRIPT_TAG, inline)
                 .replace(SVG_SLOT, svg);
-            // No URL parsing of the content: '#', '%' and non-ASCII characters are safe here.
             loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             postDelayed(watchdog, PAGE_TIMEOUT_MS);
         } catch (Throwable error) {
@@ -173,9 +146,7 @@ public final class MushafView extends WebView {
     public void setMask(int maskPercent) {
         lastMask = maskPercent;
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");",
-            null
-        ));
+            "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");", null));
         eink.mask(this);
     }
 
@@ -187,9 +158,7 @@ public final class MushafView extends WebView {
         JSONArray lines = new JSONArray();
         for (String id : lineIds) lines.put(id);
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setSelection(" + verses + "," + lines + ");",
-            null
-        ));
+            "window.HifzReader&&window.HifzReader.setSelection(" + verses + "," + lines + ");", null));
     }
 
     public void localCounterChanged() { eink.local(this); }
@@ -205,25 +174,18 @@ public final class MushafView extends WebView {
         destroy();
     }
 
-    private void runWhenReady(Runnable action) {
-        if (ready) action.run(); else pending = action;
-    }
+    private void runWhenReady(Runnable action) { if (ready) action.run(); else pending = action; }
 
     private String readAssetText(String path) throws Exception {
-        try (InputStream input = getContext().getAssets().open(path)) {
-            return readUtf8(input);
-        }
+        try (InputStream input = getContext().getAssets().open(path)) { return readUtf8(input); }
     }
 
     private String readPageSvg(int page) throws Exception {
         if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
         String path = String.format(java.util.Locale.ROOT, "mushaf/hafs/kfqc/svg-br/%03d.svg.br", page);
-        try (InputStream raw = getContext().getAssets().open(path);
-             BrotliInputStream input = new BrotliInputStream(raw)) {
+        try (InputStream raw = getContext().getAssets().open(path); BrotliInputStream input = new BrotliInputStream(raw)) {
             String svg = readUtf8(input);
-            if (!svg.contains("<svg") || !svg.contains("</svg>")) {
-                throw new IllegalStateException("invalid SVG payload");
-            }
+            if (!svg.contains("<svg") || !svg.contains("</svg>")) throw new IllegalStateException("invalid SVG payload");
             return svg;
         }
     }
@@ -251,9 +213,7 @@ public final class MushafView extends WebView {
         return message == null || message.trim().isEmpty() ? error.getClass().getSimpleName() : message;
     }
 
-    private void report(String message) {
-        post(() -> { if (listener != null) listener.onError(message); });
-    }
+    private void report(String message) { post(() -> { if (listener != null) listener.onError(message); }); }
 
     private final class Bridge {
         @JavascriptInterface public void ready() {
@@ -266,19 +226,16 @@ public final class MushafView extends WebView {
         @JavascriptInterface public void verseTap(int surah, int ayah) {
             post(() -> {
                 if (listener == null) return;
-                try {
-                    listener.onVerseTap(new VerseRef(surah, ayah));
-                } catch (IllegalArgumentException invalidVerse) {
-                    report("Verset invalide ignoré : " + surah + ":" + ayah);
-                }
+                try { listener.onVerseTap(new VerseRef(surah, ayah)); }
+                catch (IllegalArgumentException invalidVerse) { report("Verset invalide ignoré : " + surah + ":" + ayah); }
             });
         }
 
+        @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }
         @JavascriptInterface public void error(String message) { report(message); }
-
         @JavascriptInterface public void pageShown(int page) {
             post(() -> {
-                if (page != requestedPage) return; // stale callback from a previous load
+                if (page != requestedPage) return;
                 pageShown = true;
                 removeCallbacks(watchdog);
                 setContentDescription("Mushaf page " + page);
