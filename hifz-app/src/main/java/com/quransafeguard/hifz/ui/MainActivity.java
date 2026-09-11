@@ -12,10 +12,12 @@ import android.widget.Toast;
 import com.quransafeguard.hifz.R;
 import com.quransafeguard.hifz.data.MushafRepository;
 import com.quransafeguard.hifz.reader.MushafRenderer;
+import com.quransafeguard.hifz.storage.ReaderStateStore;
 
-/** First native local-reader slice: page 1 -> page 2 -> page 1. */
+/** Native local Mushaf reader shell. Reader position is independent from Hifz progress. */
 public final class MainActivity extends Activity {
     private MushafRenderer renderer;
+    private ReaderStateStore readerStateStore;
     private TextView pageLabel;
     private Button previous;
     private Button next;
@@ -23,6 +25,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        readerStateStore = new ReaderStateStore(this);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -68,6 +71,7 @@ public final class MainActivity extends Activity {
 
         renderer.setListener(new MushafRenderer.Listener() {
             @Override public void onPageChanged(int page) {
+                readerStateStore.savePage(page);
                 pageLabel.setText("Page " + page + " / 604");
                 previous.setEnabled(page > MushafRepository.FIRST_PAGE && renderer.isPageBundled(page - 1));
                 next.setEnabled(page < MushafRepository.LAST_PAGE && renderer.isPageBundled(page + 1));
@@ -84,7 +88,11 @@ public final class MainActivity extends Activity {
         next.setEnabled(false);
         pageLabel.setText("Chargement…");
         setContentView(root);
-        renderer.showPage(MushafRepository.FIRST_PAGE);
+        int startPage = readerStateStore.loadPage();
+        if (!renderer.isPageBundled(startPage)) {
+            startPage = MushafRepository.FIRST_PAGE;
+        }
+        renderer.showPage(startPage);
     }
 
     @Override
