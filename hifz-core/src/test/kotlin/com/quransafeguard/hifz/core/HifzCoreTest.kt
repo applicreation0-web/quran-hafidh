@@ -104,6 +104,10 @@ class HifzCoreTest {
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(6).dayOfWeek))
     }
 
+    @Test fun murajaahDefaultDurationMatchesThirtyPlusThirty() {
+        assertEquals(60, SessionDurations().murajaahMinutes)
+    }
+
     @Test fun thirtyMinutesAtNineSecondsPerLinePlans200Lines() {
         assertEquals(200, MurajaahPlanner.plannedLines(1800, 9.0))
     }
