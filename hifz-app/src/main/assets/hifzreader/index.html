@@ -5,7 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=4,user-scalable=yes">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
 <style>
-html,body{margin:0;width:100%;height:100%;background:#fff;color:#000;overflow:auto}*{box-sizing:border-box}#box{min-height:100%;display:flex;align-items:center;justify-content:center}#mushaf{width:min(100vw,calc(100vh * 345 / 550));flex:none}#mushaf>svg{display:block;width:100%;height:auto}.ayahPolygon{pointer-events:all;cursor:pointer;fill:#777!important;fill-opacity:0;stroke:none!important}.ayahPolygon.selected{fill:#777!important;fill-opacity:.10;stroke:none!important}.masklayer{pointer-events:none}.eink *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+:root{--paper:#faf8f2;--sheet:#fffdf8;--sel:#000;--sel-op:.07;--mask:#e8e4da;--reveal-pad:0px}
+html{-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;background:var(--paper);color:#000;-webkit-user-select:none;user-select:none}
+*{box-sizing:border-box}
+#box{min-height:100vh;display:flex;align-items:center;justify-content:center;padding-bottom:var(--reveal-pad)}
+#mushaf{width:min(100vw,calc(100vh * 345 / 550));flex:none;background:var(--sheet)}
+#mushaf>svg{display:block;width:100%;height:auto}
+.ayahPolygon{pointer-events:all;cursor:pointer;fill:var(--sel)!important;fill-opacity:0;stroke:none!important;outline:none}
+.ayahPolygon:focus,.ayahPolygon:focus-visible{outline:none}
+.ayahPolygon.selected{fill-opacity:var(--sel-op)}
+.masklayer{pointer-events:none}
+.maskcell{fill:var(--mask)}
+body.eink{--paper:#fff;--sheet:#fff;--sel-op:.12;--mask:#cfcfcf}
+.eink *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 </style>
 </head>
 <body><div id="box"><div id="mushaf" aria-label="Mushaf de Médine"><!--MUSHAF_SVG--></div></div><script src="reader.js"></script></body>
