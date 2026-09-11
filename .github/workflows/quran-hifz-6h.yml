@@ -13,7 +13,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - name: Checkout application
         uses: actions/checkout@v4
@@ -58,9 +58,21 @@ jobs:
       - name: Compile smoke APK
         run: gradle :hifz-app:assembleDebug -PhifzSmokeMushaf=true --stacktrace
 
-      - name: Upload smoke APK
+      - name: Compile full 604-page candidate APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf hifz-app/build/generated/hifzAssets hifz-app/build/outputs/apk/debug
+          gradle :hifz-app:prepareHifzAssets --rerun-tasks --stacktrace
+          gradle :hifz-app:assembleDebug --stacktrace
+          cp hifz-app/build/outputs/apk/debug/hifz-app-debug.apk Quran-Hifz-0.10.10-candidate.apk
+          sha256sum Quran-Hifz-0.10.10-candidate.apk | tee Quran-Hifz-0.10.10-candidate.sha256
+
+      - name: Upload full candidate APK
         uses: actions/upload-artifact@v4
         with:
-          name: quran-hifz-smoke-apk
-          path: hifz-app/build/outputs/apk/debug/*.apk
+          name: quran-hifz-0.10.10-candidate
+          path: |
+            Quran-Hifz-0.10.10-candidate.apk
+            Quran-Hifz-0.10.10-candidate.sha256
           if-no-files-found: error
