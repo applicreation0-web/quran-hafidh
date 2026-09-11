@@ -7,7 +7,8 @@ val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").g
 val prepareHifzAssets by tasks.registering(Sync::class) {
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
-    from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
+    from(rootProject.file("app/src/main/assets/reader109/hifz-index.json")) { into("reader109") }
+    from(rootProject.file("app/src/main/assets/reader109/hifz-pages")) { into("reader109/hifz-pages") }
     from(rootProject.file("app/src/main/assets/reader109/audio.json")) { into("reader109") }
     from(rootProject.file("app/src/plus/assets/tafsir")) { into("tafsir") }
 }
