@@ -4,9 +4,9 @@ package com.applicreation0.quransafeguard
  * Coordinates the boundary between training progress and the Hifz schedule.
  *
  * Training completion and schedule completion are intentionally two distinct states.
- * The task is marked COMPLETED only through this explicit transition after the training
- * protocol has finished. This prevents a reader callback or counter from silently moving
- * the Hifz cursor/calendar.
+ * A task becomes COMPLETED only through this explicit transition. A completed Sabqi task
+ * may atomically grow the eligible Itqan corpus, but existing Itqan/Murajaah task history
+ * and cursors are never rewritten or teleported.
  */
 object HifzJourneyCoordinator {
 
@@ -32,7 +32,8 @@ object HifzJourneyCoordinator {
     }
 
     /**
-     * Returns a complete replacement state. Persistence can commit this state atomically.
+     * Returns one complete replacement state so persistence can commit task completion
+     * and eligible-corpus promotion together.
      */
     fun completeTask(
         state: HifzState,
@@ -47,6 +48,15 @@ object HifzJourneyCoordinator {
         val completedTask = completeTask(task, progress, segmentCount)
         val tasks = state.tasks.toMutableList()
         tasks[taskIndex] = completedTask
-        return state.copy(tasks = tasks)
+
+        val config = if (task.track == HifzTrack.SABQI) {
+            val bounds = state.journeyConfig.bounds
+            if (bounds == null) state.journeyConfig
+            else state.journeyConfig.copy(
+                bounds = HifzPromotionPolicy.promoteCompletedSabqi(bounds, task.cursor)
+            )
+        } else state.journeyConfig
+
+        return state.copy(tasks = tasks, journeyConfig = config)
     }
 }
