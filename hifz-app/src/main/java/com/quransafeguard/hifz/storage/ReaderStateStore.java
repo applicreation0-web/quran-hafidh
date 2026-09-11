@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.quransafeguard.hifz.data.MushafRepository;
+import com.quransafeguard.hifz.data.TafsirRepository;
 
 /** Reader-only persistence. It deliberately does not contain Sabqi/Itqan/Murajaah policy. */
 public final class ReaderStateStore {
@@ -12,6 +13,7 @@ public final class ReaderStateStore {
     private static final String KEY_SCHEMA = "schema";
     private static final String KEY_LAST_PAGE = "last_page";
     private static final String KEY_TAFSIR_TEXT_SP = "tafsir_text_sp";
+    private static final String KEY_TAFSIR_EDITION = "tafsir_edition";
 
     private final SharedPreferences prefs;
 
@@ -43,6 +45,15 @@ public final class ReaderStateStore {
     public void saveTafsirTextSp(float sp) {
         float clamped = Math.max(14f, Math.min(30f, sp));
         prefs.edit().putFloat(KEY_TAFSIR_TEXT_SP, clamped).apply();
+    }
+
+    public TafsirRepository.Edition tafsirEdition() {
+        return TafsirRepository.Edition.fromStorage(prefs.getString(KEY_TAFSIR_EDITION, null));
+    }
+
+    public void saveTafsirEdition(TafsirRepository.Edition edition) {
+        TafsirRepository.Edition safe = edition == null ? TafsirRepository.Edition.JALALAYN : edition;
+        prefs.edit().putString(KEY_TAFSIR_EDITION, safe.storageValue).apply();
     }
 
     public void clear() {
