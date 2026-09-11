@@ -101,7 +101,7 @@ val prepareHifzMushafAssets by tasks.registering(Sync::class) {
         if (smokeMushaf) {
             include("001.json", "002.json")
         } else {
-            include(Regex("\\d{3}\\.json"))
+            include("*.json")
         }
         into("geometry/hafs/kfqc")
     }
@@ -140,6 +140,7 @@ dependencies {
     implementation(project(":hifz-core"))
     implementation("org.brotli:dec:0.1.2")
     implementation("com.caverock:androidsvg-aar:1.4")
+    implementation("com.onyx.android.sdk:onyxsdk-device:1.3.5")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
