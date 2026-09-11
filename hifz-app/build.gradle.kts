@@ -8,6 +8,7 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
     into(generatedHifzAssets)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
+    from(rootProject.file("app/src/main/assets/reader109/audio.json")) { into("reader109") }
     from(rootProject.file("app/src/plus/assets/tafsir")) { into("tafsir") }
     from("src/main/assets/hifzreader") { into("hifzreader") }
 }
