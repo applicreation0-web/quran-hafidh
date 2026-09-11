@@ -4,11 +4,11 @@ package com.quransafeguard.hifz.preview;
 public final class PreviewConfig {
     private PreviewConfig() {}
 
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
     public static final int SABQI_LINES = 5; // frozen
     public static final int SABQI_MINUTES_WORKING = 90;
     public static final int ITQAN_MINUTES_WORKING = 60;
-    public static final int MURAJAAH_MINUTES_WORKING = 45;
+    public static final int MURAJAAH_MINUTES_WORKING = 60;
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
     public static final int SABQI_VISIBLE_REPS = 15;
@@ -26,8 +26,12 @@ public final class PreviewConfig {
     public static final int ITQAN_TOTAL_REPS = 30;
 
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
-    public static final int MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 15;
+    public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
+    public static final int MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 30;
     public static final int MURAJAAH_ITQAN_MINUTES_WORKING = 30;
+    public static final int SPEED_MIN_LINES = 20;
+    public static final int SPEED_MIN_SECONDS = 300;
+    public static final double SPEED_MAX_CHANGE_RATIO = 0.10;
     // Personal BOOX default: a page change gets a full cleanup. Local counters/masks remain local.
     public static final int EINK_FULL_CLEAN_PAGE_INTERVAL_WORKING = 1;
 
