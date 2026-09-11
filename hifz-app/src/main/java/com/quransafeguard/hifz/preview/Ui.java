@@ -60,9 +60,10 @@ final class Ui {
     }
 
     /**
-     * Keep all app chrome inside Android system bars. Quran Hifz never hides or draws
-     * controls below the status/navigation bars. Insets are additive to the caller's
-     * base padding so the same rule works on phones, tablets and BOOX.
+     * Android 14 and lower already keep a normal non-edge-to-edge Activity inside
+     * system bars. Android 15+ enforces edge-to-edge for this targetSdk, so only
+     * those devices need manual system-bar insets. This avoids double-padding older
+     * phones/BOOX devices while protecting controls on API 35+.
      */
     static void respectSystemBars(Activity activity, View root, int left, int top, int right, int bottom) {
         Window window = activity.getWindow();
@@ -71,24 +72,19 @@ final class Ui {
         int flags = window.getDecorView().getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
         if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         window.getDecorView().setSystemUiVisibility(flags);
+
+        if (Build.VERSION.SDK_INT < 35) {
+            root.setPadding(left, top, right, bottom);
+            return;
+        }
         root.setOnApplyWindowInsetsListener((view, insets) -> {
-            int insetLeft;
-            int insetTop;
-            int insetRight;
-            int insetBottom;
-            if (Build.VERSION.SDK_INT >= 30) {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-                insetLeft = bars.left;
-                insetTop = bars.top;
-                insetRight = bars.right;
-                insetBottom = bars.bottom;
-            } else {
-                insetLeft = insets.getSystemWindowInsetLeft();
-                insetTop = insets.getSystemWindowInsetTop();
-                insetRight = insets.getSystemWindowInsetRight();
-                insetBottom = insets.getSystemWindowInsetBottom();
-            }
-            view.setPadding(left + insetLeft, top + insetTop, right + insetRight, bottom + insetBottom);
+            android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+            view.setPadding(
+                left + bars.left,
+                top + bars.top,
+                right + bars.right,
+                bottom + bars.bottom
+            );
             return insets;
         });
         root.requestApplyInsets();
