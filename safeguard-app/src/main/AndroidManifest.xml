@@ -11,6 +11,7 @@
         android:name="android.permission.CALL_PHONE"
         tools:node="remove" />
 
+    <!-- Positive package visibility only: 6 social apps + 8 browsers. -->
     <queries>
         <package android:name="com.whatsapp" />
         <package android:name="com.twitter.android" />
@@ -56,13 +57,7 @@
             android:screenOrientation="portrait" />
 
         <activity
-            android:name=".HifzJourneyActivity"
-            android:excludeFromRecents="false"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".FreeQuranReaderActivity"
+            android:name=".SafeguardStudyReaderActivity"
             android:excludeFromRecents="false"
             android:exported="false"
             android:screenOrientation="portrait" />
