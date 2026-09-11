@@ -18,7 +18,7 @@ public final class SettingsActivity extends android.app.Activity {
         scroll.addView(root);
 
         LinearLayout top = Ui.row(this);
-        top.addView(Ui.smallButton(this,"‹",v->finish()));
+        top.addView(Ui.smallButton(this,"‹ Retour",v->finish()));
         TextView title=Ui.text(this,"Paramètres",22,true);Ui.weight(title,1);top.addView(title);root.addView(top);
 
         Switch eink = new Switch(this);
