@@ -30,6 +30,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -40,6 +41,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private static final float TAFSIR_DEFAULT_SP = 18f;
     private static final String TAFSIR_PREFS = "hifz_tafsir_reading";
     private static final String TAFSIR_FONT_KEY = "commentary_font_size_sp";
+    private static final String TAFSIR_EDITION_KEY = "edition";
 
     private MushafView mushaf;
     private int page = 1;
@@ -160,20 +162,28 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (verse == null) return;
         hideControls();
         mushaf.revealSelectionAboveBottomPanel();
+
         final Dialog dialog = new Dialog(this);
         LinearLayout shell = Ui.column(this);
         shell.setPadding(Ui.dp(this,16),Ui.dp(this,8),Ui.dp(this,16),Ui.dp(this,10));
 
-        TextView title = Ui.text(this, TafsirRepository.EDITION_NAME + " · " + verse.getSurah() + ":" + verse.getAyah(), 17, true);
+        TextView title = Ui.text(this, "Tafsir · " + verse.getSurah() + ":" + verse.getAyah(), 17, true);
         shell.addView(title);
-        TextView source = Ui.text(this, TafsirRepository.SOURCE_TITLE, 12, false);
+        TextView source = Ui.text(this, "Chargement des éditions vérifiées…", 12, false);
         source.setTextColor(Ui.MUTED);
         source.setPadding(0,0,0,Ui.dp(this,4));
         shell.addView(source);
 
+        LinearLayout editionRow = Ui.row(this);
+        editionRow.setVisibility(View.GONE);
+        shell.addView(editionRow);
+
         SharedPreferences readingPrefs = getSharedPreferences(TAFSIR_PREFS, MODE_PRIVATE);
         final float[] fontSize = {Math.max(TAFSIR_MIN_SP, Math.min(TAFSIR_MAX_SP, readingPrefs.getFloat(TAFSIR_FONT_KEY, TAFSIR_DEFAULT_SP)))};
         final TafsirRepository.Entry[] loaded = {null};
+        final MultiTafsirRepository.Edition[] currentEdition = {
+            MultiTafsirRepository.Edition.fromStorage(readingPrefs.getString(TAFSIR_EDITION_KEY, "jalalayn"))
+        };
         final LinearLayout textColumn = Ui.column(this);
         textColumn.setPadding(0,0,0,0);
 
@@ -192,8 +202,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         controls.addView(minus); controls.addView(plus); controls.addView(close); shell.addView(controls);
 
         ScrollView scroll = new ScrollView(this);
-        TextView loading = tafsirText("Chargement…", fontSize[0], false);
-        textColumn.addView(loading);
+        textColumn.addView(tafsirText("Chargement…", fontSize[0], false));
         scroll.addView(textColumn);
         shell.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
@@ -207,28 +216,69 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             View content = findViewById(android.R.id.content);
             int availableHeight = content == null ? getResources().getDisplayMetrics().heightPixels : content.getHeight();
-            int panelWidth = overlayWidth(760);
-            w.setLayout(panelWidth, Math.max(Ui.dp(this,220), Math.round(availableHeight * .50f)));
+            w.setLayout(overlayWidth(760), Math.max(Ui.dp(this,220), Math.round(availableHeight * .50f)));
         }
+
         io.execute(() -> {
             try {
-                TafsirRepository.Entry entry = new TafsirRepository(this).load(verse);
+                Map<MultiTafsirRepository.Edition, TafsirRepository.Entry> available =
+                    new MultiTafsirRepository(this).loadAvailable(verse);
                 runOnUiThread(() -> {
                     textColumn.removeAllViews();
-                    if (entry == null) {
+                    editionRow.removeAllViews();
+                    if (available.isEmpty()) {
+                        source.setText("Aucune édition disponible pour ce verset.");
                         textColumn.addView(tafsirText("Aucun commentaire vérifié n’est disponible pour ce verset.", fontSize[0], false));
-                    } else {
-                        loaded[0] = entry;
-                        renderTafsir(textColumn, entry, fontSize[0]);
+                        return;
                     }
+                    MultiTafsirRepository.Edition resolved = currentEdition[0];
+                    if (!available.containsKey(resolved)) {
+                        if (available.containsKey(MultiTafsirRepository.Edition.JALALAYN)) resolved = MultiTafsirRepository.Edition.JALALAYN;
+                        else resolved = available.keySet().iterator().next();
+                    }
+                    currentEdition[0] = resolved;
+                    if (available.size() > 1) {
+                        editionRow.setVisibility(View.VISIBLE);
+                        for (MultiTafsirRepository.Edition edition : available.keySet()) {
+                            Button editionButton = Ui.smallButton(this, edition.displayName, v -> {
+                                currentEdition[0] = edition;
+                                readingPrefs.edit().putString(TAFSIR_EDITION_KEY, edition.storageValue).apply();
+                                TafsirRepository.Entry entry = available.get(edition);
+                                loaded[0] = entry;
+                                applyTafsirIdentity(title, source, verse, entry);
+                                renderTafsir(textColumn, entry, fontSize[0]);
+                            });
+                            Ui.weight(editionButton,1f);
+                            editionRow.addView(editionButton);
+                        }
+                    } else {
+                        editionRow.setVisibility(View.GONE);
+                    }
+                    TafsirRepository.Entry entry = available.get(currentEdition[0]);
+                    loaded[0] = entry;
+                    readingPrefs.edit().putString(TAFSIR_EDITION_KEY, currentEdition[0].storageValue).apply();
+                    applyTafsirIdentity(title, source, verse, entry);
+                    renderTafsir(textColumn, entry, fontSize[0]);
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
+                    source.setText("Tafsir local");
                     textColumn.removeAllViews();
-                    textColumn.addView(tafsirText("Tafsir indisponible : " + error.getMessage(), fontSize[0], false));
+                    textColumn.addView(tafsirText("Tafsir indisponible : " + safeMessage(error), fontSize[0], false));
                 });
             }
         });
+    }
+
+    private void applyTafsirIdentity(TextView title, TextView source, VerseRef verse, TafsirRepository.Entry entry) {
+        title.setText(entry.editionName + " · " + verse.getSurah() + ":" + verse.getAyah());
+        String metadata = entry.metadataLine();
+        source.setText(metadata.isEmpty() ? entry.editionName : metadata);
+    }
+
+    private static String safeMessage(Throwable error) {
+        String message = error.getMessage();
+        return message == null || message.trim().isEmpty() ? error.getClass().getSimpleName() : message;
     }
 
     private void renderTafsir(LinearLayout target, TafsirRepository.Entry entry, float fontSp) {
