@@ -19,10 +19,12 @@ function prepare(){
  const seen=new Set();
  svg.querySelectorAll('.ayahPolygon').forEach(p=>{
    const k=key(p.getAttribute('surah'),p.getAttribute('ayah'));p.dataset.verse=k;
+   p.onclick=e=>{e.stopPropagation();const [s,a]=parse(k);N?.verseTap(s,a)};
    if(!seen.has(k)){
      seen.add(k);p.setAttribute('role','button');p.setAttribute('tabindex','0');
-     p.onclick=e=>{e.stopPropagation();const [s,a]=parse(k);N?.verseTap(s,a)};
      p.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();const [s,a]=parse(k);N?.verseTap(s,a)}};
+   }else{
+     p.setAttribute('aria-hidden','true');
    }
  });
  render();
@@ -104,7 +106,7 @@ function render(){
  const NS='http://www.w3.org/2000/svg';
  const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
  const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');clip.id='hifz-selection-clip';
- svg.querySelectorAll('.ayahPolygon').forEach(p=>{if(selected.includes(p.dataset.verse)){const q=p.cloneNode();q.removeAttribute('class');q.removeAttribute('tabindex');q.removeAttribute('role');q.setAttribute('fill-opacity','1');clip.appendChild(q)}});
+ svg.querySelectorAll('.ayahPolygon').forEach(p=>{if(selected.includes(p.dataset.verse)){const q=p.cloneNode();q.removeAttribute('class');q.removeAttribute('tabindex');q.removeAttribute('role');q.removeAttribute('aria-hidden');q.setAttribute('fill-opacity','1');clip.appendChild(q)}});
  defs.appendChild(clip);layer.appendChild(defs);
  const group=document.createElementNS(NS,'g');group.setAttribute('clip-path','url(#hifz-selection-clip)');
  const candidates=maskCandidates(svg,lines);
