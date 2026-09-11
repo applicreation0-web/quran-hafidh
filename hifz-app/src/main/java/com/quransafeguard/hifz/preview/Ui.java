@@ -2,91 +2,160 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
-import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+/**
+ * Petits constructeurs d'interface partagés.
+ *
+ * Reconstruit depuis l'APK 0.5-tablet-tafsir-test (commit ce7b1b67) — mêmes signatures publiques.
+ * Corrections 2026-09-11 (audit Claude) :
+ *  - boutons plats cernés d'encre, sans ombre ni gris Material : lisibles sur téléphone et sur e-ink ;
+ *  - état appuyé en négatif (encre/papier), état désactivé clairement estompé ;
+ *  - état « choisi » (setChosen) pour les sélecteurs : masque 0–100 %, édition de Tafsir ;
+ *  - petits espacements entre boutons d'une même rangée (les bords ne se touchent plus).
+ */
 final class Ui {
-    private Ui() {}
     static final int INK = Color.rgb(18, 18, 17);
     static final int PAPER = Color.rgb(250, 248, 240);
     static final int MUTED = Color.rgb(82, 79, 73);
+    static final int LINE = Color.rgb(196, 191, 180);
 
-    static int dp(Context c, int value) { return Math.round(value * c.getResources().getDisplayMetrics().density); }
+    private Ui() {}
 
-    static TextView text(Context c, String value, float sp, boolean bold) {
-        TextView v = new TextView(c);
-        v.setText(value); v.setTextSize(sp); v.setTextColor(INK);
-        v.setLineSpacing(0f, 1.15f);
-        if (bold) v.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        return v;
+    static Button button(Context context, String label, View.OnClickListener listener) {
+        Button button = styled(new Button(context), context, 15f);
+        button.setText(label);
+        button.setOnClickListener(listener);
+        button.setMinHeight(dp(context, 48));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, dp(context, 4), 0, dp(context, 4));
+        button.setLayoutParams(params);
+        return button;
     }
 
-    static Button button(Context c, String label, View.OnClickListener listener) {
-        Button b = new Button(c);
-        b.setText(label); b.setAllCaps(false); b.setTextSize(15f); b.setTextColor(INK);
-        b.setOnClickListener(listener);
-        b.setMinHeight(dp(c, 48));
-        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        p.setMargins(0, dp(c, 4), 0, dp(c, 4)); b.setLayoutParams(p);
-        return b;
+    static Button smallButton(Context context, String label, View.OnClickListener listener) {
+        Button button = styled(new Button(context), context, 14f);
+        button.setText(label);
+        button.setOnClickListener(listener);
+        button.setMinWidth(dp(context, 48));
+        button.setMinHeight(dp(context, 44));
+        return button;
     }
 
-    static Button smallButton(Context c, String label, View.OnClickListener listener) {
-        Button b = new Button(c); b.setText(label); b.setAllCaps(false); b.setTextSize(14f); b.setTextColor(INK); b.setOnClickListener(listener);
-        b.setMinWidth(dp(c, 48)); b.setMinHeight(dp(c, 44));
-        return b;
+    /** Sélecteur visuel : le bouton choisi est affiché en négatif. */
+    static void setChosen(Button button, boolean chosen) {
+        button.setSelected(chosen);
     }
 
-    static LinearLayout column(Context c) {
-        LinearLayout root = new LinearLayout(c); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(PAPER);
-        root.setPadding(dp(c, 16), dp(c, 16), dp(c, 16), dp(c, 16));
-        return root;
+    static LinearLayout column(Context context) {
+        LinearLayout column = new LinearLayout(context);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setBackgroundColor(PAPER);
+        int pad = dp(context, 16);
+        column.setPadding(pad, pad, pad, pad);
+        return column;
     }
 
-    static LinearLayout row(Context c) {
-        LinearLayout row = new LinearLayout(c); row.setOrientation(LinearLayout.HORIZONTAL); row.setGravity(Gravity.CENTER_VERTICAL); return row;
+    static LinearLayout row(Context context) {
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        return row;
+    }
+
+    static TextView text(Context context, String value, float sizeSp, boolean bold) {
+        TextView view = new TextView(context);
+        view.setText(value);
+        view.setTextSize(sizeSp);
+        view.setTextColor(INK);
+        view.setLineSpacing(0f, 1.15f);
+        if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        return view;
     }
 
     static void weight(View view, float weight) {
-        view.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, weight));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, weight);
+        if (view instanceof Button) {
+            int gap = dp(view.getContext(), 3);
+            params.setMargins(gap, gap, gap, gap);
+        }
+        view.setLayoutParams(params);
     }
 
-    /**
-     * Android 14 and lower already keep a normal non-edge-to-edge Activity inside
-     * system bars. Android 15+ enforces edge-to-edge for this targetSdk, so only
-     * those devices need manual system-bar insets. This avoids double-padding older
-     * phones/BOOX devices while protecting controls on API 35+.
-     */
+    static int dp(Context context, int value) {
+        return Math.round(value * context.getResources().getDisplayMetrics().density);
+    }
+
     static void respectSystemBars(Activity activity, View root, int left, int top, int right, int bottom) {
         Window window = activity.getWindow();
         window.setStatusBarColor(PAPER);
         window.setNavigationBarColor(PAPER);
-        int flags = window.getDecorView().getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        window.getDecorView().setBackgroundColor(PAPER);
+        int flags = window.getDecorView().getSystemUiVisibility()
+            | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         window.getDecorView().setSystemUiVisibility(flags);
-
         if (Build.VERSION.SDK_INT < 35) {
             root.setPadding(left, top, right, bottom);
             return;
         }
         root.setOnApplyWindowInsetsListener((view, insets) -> {
-            android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-            view.setPadding(
-                left + bars.left,
-                top + bars.top,
-                right + bars.right,
-                bottom + bars.bottom
-            );
+            Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+            view.setPadding(bars.left + left, bars.top + top, bars.right + right, bars.bottom + bottom);
             return insets;
         });
         root.requestApplyInsets();
+    }
+
+    private static Button styled(Button button, Context context, float sizeSp) {
+        button.setAllCaps(false);
+        button.setTextSize(sizeSp);
+        button.setStateListAnimator(null); // pas d'ombre : rendu net sur e-ink
+        button.setElevation(0f);
+        int radius = dp(context, 8);
+        int stroke = Math.max(1, dp(context, 1));
+
+        StateListDrawable background = new StateListDrawable();
+        background.addState(new int[] {-android.R.attr.state_enabled}, shape(PAPER, LINE, radius, stroke));
+        background.addState(new int[] {android.R.attr.state_pressed}, shape(INK, INK, radius, stroke));
+        background.addState(new int[] {android.R.attr.state_selected}, shape(INK, INK, radius, stroke));
+        background.addState(new int[] {}, shape(PAPER, INK, radius, stroke));
+        button.setBackground(background);
+
+        button.setTextColor(new ColorStateList(
+            new int[][] {
+                {-android.R.attr.state_enabled},
+                {android.R.attr.state_pressed},
+                {android.R.attr.state_selected},
+                {}
+            },
+            new int[] {LINE, PAPER, PAPER, INK}
+        ));
+        int h = dp(context, 10);
+        button.setPadding(h, 0, h, 0);
+        return button;
+    }
+
+    private static GradientDrawable shape(int fill, int strokeColor, int radius, int strokeWidth) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(fill);
+        shape.setCornerRadius(radius);
+        shape.setStroke(strokeWidth, strokeColor);
+        return shape;
     }
 }
