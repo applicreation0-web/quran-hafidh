@@ -95,6 +95,11 @@ public final class ReaderSurface extends FrameLayout implements AutoCloseable {
         eink.localChanged(overlay);
     }
 
+    /** Full E-Ink cleanup after a temporary window/overlay such as the floating Tafsir closes. */
+    public void cleanupGhosting() {
+        if (!closed) eink.fullClean(this);
+    }
+
     public int getMaskPercent() { return overlay.getMaskPercent(); }
 
     private void loadPageRegions(int page) {
