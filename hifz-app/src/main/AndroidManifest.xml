@@ -6,9 +6,12 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
-        <activity
-            android:name=".ui.MainActivity"
-            android:exported="true">
+        <activity android:name=".ui.HifzSessionActivity" android:exported="false" />
+        <activity android:name=".ui.HifzProgramActivity" android:exported="false" />
+        <activity android:name=".ui.HifzSetupActivity" android:exported="false" />
+        <activity android:name=".ui.FreeMemActivity" android:exported="false" />
+        <activity android:name=".ui.StudyReaderActivity" android:exported="false" />
+        <activity android:name=".ui.MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
