@@ -1,40 +1,32 @@
 'use strict';
 const N=window.HifzNative;
-let pageGeo=null,currentPage=1,selected=[],lineIds=[],mask=0,eink=false,loadSeq=0;
+const boot=window.HIFZ_BOOT||{};
+let pageGeo=boot.geometry||null;
+let currentPage=Number(boot.page||1);
+let selected=boot.selection||[];
+let lineIds=boot.lines||[];
+let mask=Number(boot.mask||0);
+let eink=!!boot.eink;
 const mushaf=document.getElementById('mushaf');
 
 function key(s,a){return s+':'+a}
 function parse(k){return k.split(':').map(Number)}
 function currentSvg(){return mushaf.querySelector('svg')}
 
-function loadPage(page){
- if(page<1||page>604)return;
- const seq=++loadSeq,current=page;currentPage=page;
- let text='',geometryText='';
- try{
-   text=N?.pageSvg(page)||'';
-   geometryText=N?.pageGeometry(page)||'';
- }catch(error){N?.error('Page '+page+' indisponible');return}
- if(seq!==loadSeq)return;
- if(!text){N?.error('Page '+page+' indisponible');return}
- try{
-   pageGeo=geometryText?JSON.parse(geometryText):null;
- }catch(error){
-   pageGeo=null;N?.error('Géométrie page '+page+' invalide');return;
- }
- if(!pageGeo){N?.error('Géométrie page '+page+' indisponible');return}
- const doc=new DOMParser().parseFromString(text,'image/svg+xml');
- if(doc.querySelector('parsererror')){N?.error('SVG page '+page+' invalide');return}
- const svg=document.importNode(doc.documentElement,true);mushaf.replaceChildren(svg);
+function prepare(){
+ const svg=currentSvg();
+ if(!svg){N?.error('SVG Mushaf absent');return}
  const seen=new Set();
  svg.querySelectorAll('.ayahPolygon').forEach(p=>{
    const k=key(p.getAttribute('surah'),p.getAttribute('ayah'));p.dataset.verse=k;
-   if(!seen.has(k)){seen.add(k);p.setAttribute('role','button');p.setAttribute('tabindex','0');
+   if(!seen.has(k)){
+     seen.add(k);p.setAttribute('role','button');p.setAttribute('tabindex','0');
      p.onclick=()=>{const [s,a]=parse(k);N?.verseTap(s,a)};
      p.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();const [s,a]=parse(k);N?.verseTap(s,a)}};
    }
  });
- render();N?.pageShown(current);
+ render();
+ N?.pageShown(currentPage);
 }
 
 function render(){
@@ -61,10 +53,10 @@ function render(){
 }
 
 window.HifzReader={
- show(page,selection,lines,hidden,einkMode){selected=selection||[];lineIds=lines||[];mask=hidden||0;eink=!!einkMode;if(page!==currentPage||!currentSvg())loadPage(page);else render()},
- setMask(hidden){mask=hidden||0;render()},
+ setMask(hidden){mask=Number(hidden||0);render()},
  setSelection(selection,lines){selected=selection||[];lineIds=lines||[];render()},
  page(){return currentPage}
 };
 
 N?.ready();
+prepare();
