@@ -14,15 +14,30 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
- * Physical line index derived only from canonical per-ayah polygons.
- * The Quran SVG itself is never rewritten or reflowed.
+ * Physical Quran-line index derived only from the canonical KFQC ayah polygons.
+ *
+ * The KFQC ayah geometry is verse-oriented: a long ayah polygon may span several printed
+ * lines. Therefore one polygon center cannot be treated as one Mushaf line. Standard Madinah
+ * pages use a stable 15-row vertical grid; this class reconstructs that grid from the actual
+ * polygon edges on each page and then maps ayahs to the physical rows they overlap.
+ *
+ * No Tarteel/layout database is bundled or required at runtime. The source of truth shipped by
+ * Quran Hifz remains the pinned quran-svg KFQC geometry. The derived grid has been independently
+ * cross-checked against a mature QPC-v4 layout during development.
  */
 public final class LineGeometryRepository {
-    private static final float NATURAL_CLUSTER_CENTER_PX = 9.5f;
     private static volatile LineGeometryRepository INSTANCE;
+
+    /** Median KFQC row boundaries, derived from the pinned 604-page geometry itself. */
+    private static final float[] STANDARD_BOUNDARY_TEMPLATE = new float[]{
+        0.00f, 41.25f, 77.00f, 113.25f, 148.75f, 184.50f, 220.25f, 256.50f,
+        292.25f, 327.75f, 363.75f, 399.25f, 435.25f, 470.75f, 507.00f, 547.44f
+    };
+    private static final float BOUNDARY_MATCH_TOLERANCE = 12f;
+    private static final float MIN_VERTICAL_OVERLAP = 1.5f;
+    private static final float OVERLAP_FRACTION = 0.35f;
 
     public static LineGeometryRepository get(Context context) {
         LineGeometryRepository local = INSTANCE;
@@ -39,6 +54,7 @@ public final class LineGeometryRepository {
 
     public static final class PageLine {
         public final int page;
+        /** Physical row number on the printed page. Decorative rows are simply absent. */
         public final int number;
         public final RectF documentBounds;
         public final List<VerseRef> verses;
@@ -107,31 +123,6 @@ public final class LineGeometryRepository {
         }
     }
 
-    private static final class Candidate {
-        final RectF bounds;
-        final VerseRef verse;
-        Candidate(RectF bounds, VerseRef verse) { this.bounds = bounds; this.verse = verse; }
-        float centerY() { return bounds.centerY(); }
-    }
-
-    private static final class Cluster {
-        final RectF bounds;
-        final LinkedHashSet<VerseRef> verses = new LinkedHashSet<>();
-        int count = 0;
-        float centerSum = 0f;
-        Cluster(Candidate c) {
-            bounds = new RectF(c.bounds);
-            add(c);
-        }
-        void add(Candidate c) {
-            if (count > 0) bounds.union(c.bounds);
-            verses.add(c.verse);
-            centerSum += c.centerY();
-            count++;
-        }
-        float centerY() { return centerSum / Math.max(1, count); }
-    }
-
     private final GeometryRepository ayahGeometry;
     private final SparseArray<List<PageLine>> pageCache = new SparseArray<>();
     private volatile List<PageLine> allLines;
@@ -145,74 +136,164 @@ public final class LineGeometryRepository {
         if (cached != null) return cached;
 
         List<GeometryRepository.AyahRegion> regions = ayahGeometry.loadPage(page);
-        ArrayList<Candidate> candidates = new ArrayList<>();
-        for (GeometryRepository.AyahRegion region : regions) {
-            VerseRef verse = new VerseRef(region.surah, region.ayah);
-            for (GeometryRepository.Polygon polygon : region.getPolygons()) {
-                RectF b = polygon.getBounds();
-                if (b.width() > 0.5f && b.height() > 0.5f) candidates.add(new Candidate(b, verse));
-            }
+        final List<PageLine> built;
+        if (page == 1) {
+            // Opening spread: one surah-name row, then seven Quran text rows.
+            built = buildOpeningRows(page, regions, 7, 2);
+        } else if (page == 2) {
+            // Opening spread: surah-name + basmallah, then six Quran text rows.
+            built = buildOpeningRows(page, regions, 6, 3);
+        } else {
+            built = buildRowsFromEdges(page, regions, deriveStandardBoundaries(regions), 1);
         }
-        if (candidates.isEmpty()) throw new IOException("No Quran line candidates on page " + page);
-        candidates.sort(Comparator.comparingDouble(Candidate::centerY));
 
-        ArrayList<Cluster> natural = new ArrayList<>();
-        for (Candidate c : candidates) {
-            Cluster best = null;
-            float bestDistance = Float.MAX_VALUE;
-            for (Cluster cluster : natural) {
-                float distance = Math.abs(cluster.centerY() - c.centerY());
-                float overlap = Math.min(cluster.bounds.bottom, c.bounds.bottom) - Math.max(cluster.bounds.top, c.bounds.top);
-                float minHeight = Math.min(cluster.bounds.height(), c.bounds.height());
-                boolean verticallySame = overlap > Math.max(1f, minHeight * 0.30f) || distance <= NATURAL_CLUSTER_CENTER_PX;
-                if (verticallySame && distance < bestDistance) { best = cluster; bestDistance = distance; }
-            }
-            if (best == null) natural.add(new Cluster(c)); else best.add(c);
-        }
-        natural.sort(Comparator.comparingDouble(Cluster::centerY));
-
-        // Standard Madinah pages after the opening spread contain 15 Quran text lines.
-        // If decorative geometry caused over/under clustering, deterministically re-bin candidates
-        // onto 15 vertical centers. Pages 1-2 keep their natural opening-spread line count.
-        List<Cluster> finalClusters = natural;
-        if (page > 2 && natural.size() != 15) finalClusters = forceFifteen(candidates);
-
-        ArrayList<PageLine> lines = new ArrayList<>(finalClusters.size());
-        int number = 1;
-        for (Cluster cluster : finalClusters) {
-            ArrayList<VerseRef> verses = new ArrayList<>(cluster.verses);
-            verses.sort(Comparator.comparingInt(LineGeometryRepository::ordinal));
-            if (!verses.isEmpty()) lines.add(new PageLine(page, number++, cluster.bounds, verses));
-        }
-        if (page > 2 && lines.size() != 15) {
-            throw new IOException("Expected 15 Quran lines on page " + page + "; derived " + lines.size());
-        }
-        List<PageLine> immutable = Collections.unmodifiableList(lines);
+        if (built.isEmpty()) throw new IOException("No Quran text lines derived on page " + page);
+        List<PageLine> immutable = Collections.unmodifiableList(built);
         pageCache.put(page, immutable);
         return immutable;
     }
 
-    private static List<Cluster> forceFifteen(List<Candidate> candidates) {
-        float minCenter = Float.POSITIVE_INFINITY;
-        float maxCenter = Float.NEGATIVE_INFINITY;
-        for (Candidate c : candidates) {
-            minCenter = Math.min(minCenter, c.centerY());
-            maxCenter = Math.max(maxCenter, c.centerY());
+    private static List<PageLine> buildOpeningRows(int page,
+                                                    List<GeometryRepository.AyahRegion> regions,
+                                                    int rowCount,
+                                                    int physicalStartRow) throws IOException {
+        float minMarker = Float.POSITIVE_INFINITY;
+        float maxMarker = Float.NEGATIVE_INFINITY;
+        for (GeometryRepository.AyahRegion region : regions) {
+            if (region.markerY == null || !Float.isFinite(region.markerY)) continue;
+            minMarker = Math.min(minMarker, region.markerY);
+            maxMarker = Math.max(maxMarker, region.markerY);
         }
-        float step = (maxCenter - minCenter) / 14f;
-        if (!(step > 0f)) throw new IllegalStateException("Cannot derive 15 Mushaf lines");
-        ArrayList<Cluster> bins = new ArrayList<>(Collections.nCopies(15, null));
-        for (Candidate c : candidates) {
-            int index = Math.round((c.centerY() - minCenter) / step);
-            index = Math.max(0, Math.min(14, index));
-            Cluster cluster = bins.get(index);
-            if (cluster == null) bins.set(index, new Cluster(c)); else cluster.add(c);
+        if (!Float.isFinite(minMarker) || !Float.isFinite(maxMarker) || maxMarker <= minMarker || rowCount < 2) {
+            throw new IOException("Cannot derive opening-spread line grid on page " + page);
         }
-        // Empty bin can occur only with malformed source spacing; merge/recover from nearest candidate.
-        ArrayList<Cluster> out = new ArrayList<>();
-        for (Cluster cluster : bins) if (cluster != null) out.add(cluster);
-        out.sort(Comparator.comparingDouble(Cluster::centerY));
+
+        float step = (maxMarker - minMarker) / (rowCount - 1f);
+        float[] centers = new float[rowCount];
+        for (int i = 0; i < rowCount; i++) centers[i] = minMarker + step * i;
+        float[] edges = new float[rowCount + 1];
+        edges[0] = centers[0] - step * 0.5f;
+        for (int i = 1; i < rowCount; i++) edges[i] = (centers[i - 1] + centers[i]) * 0.5f;
+        edges[rowCount] = centers[rowCount - 1] + step * 0.5f;
+        return buildRowsFromEdges(page, regions, edges, physicalStartRow);
+    }
+
+    private static float[] deriveStandardBoundaries(List<GeometryRepository.AyahRegion> regions) throws IOException {
+        ArrayList<Float> polygonEdges = new ArrayList<>();
+        for (GeometryRepository.AyahRegion region : regions) {
+            for (GeometryRepository.Polygon polygon : region.getPolygons()) {
+                RectF bounds = polygon.getBounds();
+                if (bounds.height() <= 0f) continue;
+                polygonEdges.add(bounds.top);
+                polygonEdges.add(bounds.bottom);
+            }
+        }
+        if (polygonEdges.isEmpty()) throw new IOException("No polygon edges for KFQC line grid");
+
+        final int n = STANDARD_BOUNDARY_TEMPLATE.length;
+        Float[] observed = new Float[n];
+        for (int i = 0; i < n; i++) {
+            ArrayList<Float> near = new ArrayList<>();
+            float target = STANDARD_BOUNDARY_TEMPLATE[i];
+            for (Float y : polygonEdges) {
+                if (Math.abs(y - target) <= BOUNDARY_MATCH_TOLERANCE) near.add(y);
+            }
+            if (!near.isEmpty()) observed[i] = median(near);
+        }
+
+        // The standard KFQC viewBox is 550 high. Keep the outer frame deterministic even when
+        // no ayah polygon happens to touch the first/last boundary on a particular page.
+        if (observed[0] == null) observed[0] = 0f;
+        if (observed[n - 1] == null) observed[n - 1] = 550f;
+
+        float[] offsets = new float[n];
+        boolean[] known = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            if (observed[i] != null) {
+                offsets[i] = observed[i] - STANDARD_BOUNDARY_TEMPLATE[i];
+                known[i] = true;
+            }
+        }
+
+        float[] out = new float[n];
+        for (int i = 0; i < n; i++) {
+            float offset;
+            if (known[i]) {
+                offset = offsets[i];
+            } else {
+                int lo = i - 1;
+                while (lo >= 0 && !known[lo]) lo--;
+                int hi = i + 1;
+                while (hi < n && !known[hi]) hi++;
+                if (lo < 0 || hi >= n) throw new IOException("Cannot interpolate KFQC row boundary " + i);
+                float t = (i - lo) / (float) (hi - lo);
+                offset = offsets[lo] * (1f - t) + offsets[hi] * t;
+            }
+            out[i] = STANDARD_BOUNDARY_TEMPLATE[i] + offset;
+        }
+
+        for (int i = 1; i < n; i++) {
+            if (!(out[i] > out[i - 1])) out[i] = out[i - 1] + 1f;
+        }
         return out;
+    }
+
+    private static float median(List<Float> values) {
+        ArrayList<Float> sorted = new ArrayList<>(values);
+        Collections.sort(sorted);
+        int n = sorted.size();
+        if ((n & 1) == 1) return sorted.get(n / 2);
+        return (sorted.get(n / 2 - 1) + sorted.get(n / 2)) * 0.5f;
+    }
+
+    private static List<PageLine> buildRowsFromEdges(int page,
+                                                      List<GeometryRepository.AyahRegion> regions,
+                                                      float[] edges,
+                                                      int physicalStartRow) throws IOException {
+        ArrayList<PageLine> lines = new ArrayList<>();
+        for (int row = 0; row + 1 < edges.length; row++) {
+            float top = edges[row];
+            float bottom = edges[row + 1];
+            if (!(bottom > top)) throw new IOException("Invalid KFQC row band on page " + page);
+            float lineHeight = bottom - top;
+            float left = Float.POSITIVE_INFINITY;
+            float right = Float.NEGATIVE_INFINITY;
+            LinkedHashSet<VerseRef> verseSet = new LinkedHashSet<>();
+
+            for (GeometryRepository.AyahRegion region : regions) {
+                boolean overlapsLine = false;
+                float regionLeft = Float.POSITIVE_INFINITY;
+                float regionRight = Float.NEGATIVE_INFINITY;
+                for (GeometryRepository.Polygon polygon : region.getPolygons()) {
+                    RectF b = polygon.getBounds();
+                    float overlap = Math.min(bottom, b.bottom) - Math.max(top, b.top);
+                    float threshold = Math.max(MIN_VERTICAL_OVERLAP,
+                        Math.min(lineHeight, b.height()) * OVERLAP_FRACTION);
+                    if (overlap >= threshold) {
+                        overlapsLine = true;
+                        regionLeft = Math.min(regionLeft, b.left);
+                        regionRight = Math.max(regionRight, b.right);
+                    }
+                }
+                if (overlapsLine) {
+                    verseSet.add(new VerseRef(region.surah, region.ayah));
+                    left = Math.min(left, regionLeft);
+                    right = Math.max(right, regionRight);
+                }
+            }
+
+            // Surah-name/basmallah/decorative rows have no ayah polygons. They are not counted as
+            // Quran memorization lines, but physical row numbers are preserved for exact masking.
+            if (verseSet.isEmpty()) continue;
+            if (!Float.isFinite(left) || !Float.isFinite(right) || !(right > left)) {
+                throw new IOException("Invalid Quran row horizontal extent on page " + page);
+            }
+            ArrayList<VerseRef> verses = new ArrayList<>(verseSet);
+            verses.sort(Comparator.comparingInt(LineGeometryRepository::ordinal));
+            lines.add(new PageLine(page, physicalStartRow + row,
+                new RectF(left, top, right, bottom), verses));
+        }
+        return lines;
     }
 
     public List<PageLine> allLines() throws IOException {
