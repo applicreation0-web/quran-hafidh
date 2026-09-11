@@ -250,7 +250,7 @@ object HifzSchedule {
 data class SessionDurations(
     val sabqiMinutes: Int = 90,
     val itqanMinutes: Int = 60,
-    val murajaahMinutes: Int = 45,
+    val murajaahMinutes: Int = 60,
     val freeMemMinutes: Int = 45
 ) {
     init { require(listOf(sabqiMinutes, itqanMinutes, murajaahMinutes, freeMemMinutes).all { it > 0 }) }
