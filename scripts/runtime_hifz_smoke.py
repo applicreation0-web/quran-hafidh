@@ -44,11 +44,48 @@ def all_text(root):
     return [node.attrib.get("text", "") for node in root.iter("node") if node.attrib.get("text", "")]
 
 
+def all_visible_strings(root):
+    values = []
+    for node in root.iter("node"):
+        for attr in ("text", "content-desc"):
+            value = node.attrib.get(attr, "")
+            if value:
+                values.append(value)
+    return values
+
+
 def require_text(root, expected, *, contains=False):
     texts = all_text(root)
     ok = any((expected in text) if contains else (text == expected) for text in texts)
     if not ok:
         raise AssertionError(f"Missing UI text {expected!r}. Visible texts: {texts}")
+
+
+def require_content_desc(root, expected):
+    descriptions = [
+        node.attrib.get("content-desc", "")
+        for node in root.iter("node")
+        if node.attrib.get("content-desc", "")
+    ]
+    if expected not in descriptions:
+        raise AssertionError(
+            f"Missing semantic Mushaf marker {expected!r}. Content descriptions: {descriptions}"
+        )
+
+
+def reject_webview_error(root):
+    visible = all_visible_strings(root)
+    joined = "\n".join(visible)
+    forbidden = (
+        "Webpage not available",
+        "ERR_HTTP_",
+        "ERR_FAILED",
+        "could not be loaded",
+        "Erreur de chargement du Mushaf",
+    )
+    hits = [value for value in forbidden if value.lower() in joined.lower()]
+    if hits:
+        raise AssertionError(f"WebView error content is visible ({hits}). UI strings: {visible}")
 
 
 def parse_bounds(value):
@@ -139,6 +176,10 @@ def main():
     require_text(study, "Tafsir")
     require_text(study, "‹ Page")
     require_text(study, "Page ›")
+    reject_webview_error(study)
+    # This marker is set by MushafView.Bridge.pageShown(), which is called only after
+    # reader.js has parsed and injected the canonical SVG for page 1.
+    require_content_desc(study, "Mushaf page 1")
     screenshot("study")
     adb("shell", "input", "keyevent", "KEYCODE_BACK")
     wait_ui(1)
@@ -150,6 +191,7 @@ def main():
     require_text(sabqi, "Sabqi")
     require_text(sabqi, "5 lignes réelles · 37 répétitions", contains=True)
     require_text(sabqi, "Répétition faite")
+    reject_webview_error(sabqi)
     screenshot("sabqi")
     assert_foreground()
 
@@ -169,6 +211,8 @@ def main():
     print("- adb install succeeded")
     print("- launcher activity opened")
     print("- home, Lecture/Étude and Sabqi UI text verified")
+    print("- canonical Mushaf page 1 render proved by native bridge semantic marker")
+    print("- WebView error pages explicitly rejected")
     print("- home, Lecture/Étude and Sabqi screenshots are non-blank")
     print("- no app crash/ANR signature found")
 

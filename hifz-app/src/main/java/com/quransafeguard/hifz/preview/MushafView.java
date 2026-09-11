@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -15,11 +14,9 @@ import org.brotli.dec.BrotliInputStream;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -67,13 +64,9 @@ public final class MushafView extends WebView {
         addJavascriptInterface(new Bridge(), "HifzNative");
         setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                // The reader itself is injected in-memory. Reject every user/script navigation;
+                // there are no legitimate navigations in Quran Hifz.
                 return true;
-            }
-
-            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                // There are no legitimate subresource requests. Everything required by the
-                // reader is already in memory or returned by HifzNative.
-                return denied();
             }
         });
 
@@ -190,17 +183,6 @@ public final class MushafView extends WebView {
         return message == null || message.trim().isEmpty() ? error.getClass().getSimpleName() : message;
     }
 
-    private WebResourceResponse denied() {
-        return new WebResourceResponse(
-            "text/plain",
-            "UTF-8",
-            403,
-            "Blocked",
-            Collections.emptyMap(),
-            new ByteArrayInputStream(new byte[0])
-        );
-    }
-
     private void reportBridgeError(String prefix, Throwable error) {
         String message = prefix + ": " + safeMessage(error);
         post(() -> { if (listener != null) listener.onError(message); });
@@ -243,6 +225,10 @@ public final class MushafView extends WebView {
 
         @JavascriptInterface public void pageShown(int page) {
             post(() -> {
+                // Runtime tests use this semantic marker. It is emitted only after reader.js
+                // has parsed and injected the canonical SVG, so a WebView error page cannot
+                // masquerade as a successful Mushaf render.
+                setContentDescription("Mushaf page " + page);
                 eink.page(MushafView.this, prefs);
                 if (listener != null) listener.onPageShown(page);
             });
