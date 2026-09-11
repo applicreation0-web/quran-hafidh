@@ -33,6 +33,7 @@ final class Ui {
         b.setTextSize(16f);
         b.setTextColor(INK);
         b.setOnClickListener(listener);
+        b.setStateListAnimator(null);
         b.setMinHeight(dp(c, 52));
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -48,6 +49,7 @@ final class Ui {
         b.setTextSize(14f);
         b.setTextColor(INK);
         b.setOnClickListener(listener);
+        b.setStateListAnimator(null);
         b.setMinWidth(dp(c, 48));
         b.setMinHeight(dp(c, 44));
         return b;
