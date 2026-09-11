@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-/** One clear home for Qur'an reading features; no challenge state is mutated here. */
+/** Quran Safeguard hub: Study/Tafsir only. Structured or free Hifz does not exist here. */
 class QuranHubActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,61 +38,45 @@ class QuranHubActivity : ComponentActivity() {
                     Text(
                         "Qur’an",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        if (TafsirEdition.isEnabled) "Lecture, Tafsîr, mémorisation et Hifz." else "Lecture, mémorisation et Hifz.",
+                        "Lecture / Étude et Tafsir.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(top = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
+                    HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
 
                     QuranHubRow(
-                        title = if (TafsirEdition.isEnabled) "Lecture libre & Tafsîr" else "Lecture du Qur’an",
-                        subtitle = "Muṣḥaf de Médine • signets • navigation",
-                        onClick = {
-                            startActivity(Intent(this@QuranHubActivity, FreeQuranReaderActivity::class.java))
-                        }
-                    )
-                    QuranHubRow(
-                        title = "Mémorisation",
-                        subtitle = "Mode libre et ponctuel • sourate, page ou passage",
+                        title = "Lecture / Étude",
+                        subtitle = "Muṣḥaf de Médine • Tafsir • navigation",
                         onClick = {
                             startActivity(
-                                Intent(this@QuranHubActivity, FreeQuranReaderActivity::class.java)
-                                    .putExtra(FreeQuranReaderActivity.EXTRA_MEMORIZATION, true)
+                                Intent(this@QuranHubActivity, SafeguardStudyReaderActivity::class.java)
                             )
                         }
                     )
                     QuranHubRow(
-                        title = "Parcours Hifz",
-                        subtitle = "Sabqi • Itqān • Murājaʿah • suivi structuré indépendant",
-                        onClick = {
-                            startActivity(Intent(this@QuranHubActivity, HifzJourneyActivity::class.java))
-                        }
-                    )
-                    QuranHubRow(
                         title = "Parcours Juz / Hizb",
-                        subtitle = "Choisir le parcours quotidien Safeguard",
+                        subtitle = "Choisir les sections utilisées par la lecture Safeguard",
                         onClick = {
-                            startActivity(Intent(this@QuranHubActivity, ReadingSelectionActivity::class.java))
+                            startActivity(
+                                Intent(this@QuranHubActivity, ReadingSelectionActivity::class.java)
+                            )
                         }
                     )
                     QuranHubRow(
                         title = "Historique de lecture",
                         subtitle = "Pages, temps de lecture et progression locale",
                         onClick = {
-                            startActivity(Intent(this@QuranHubActivity, ReadingHistoryActivity::class.java))
+                            startActivity(
+                                Intent(this@QuranHubActivity, ReadingHistoryActivity::class.java)
+                            )
                         }
                     )
 
                     Text(
-                        "Lecture libre, Mémorisation, Parcours Hifz et Challenge gardent des états séparés : aucune lecture libre ne crédite un déblocage ni ne déplace le planning Hifz.",
+                        "Le lecteur volontaire ne crédite aucun déblocage. Le déblocage utilise son propre lecteur de challenge.",
                         modifier = Modifier.padding(top = 8.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -104,11 +88,7 @@ class QuranHubActivity : ComponentActivity() {
 }
 
 @Composable
-private fun QuranHubRow(
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
+private fun QuranHubRow(title: String, subtitle: String, onClick: () -> Unit) {
     Column {
         Row(
             modifier = Modifier
@@ -118,28 +98,16 @@ private fun QuranHubRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
-                )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                "›",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text("›", style = MaterialTheme.typography.titleLarge)
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider()
     }
 }
