@@ -4,6 +4,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 
+import java.util.Locale;
+
 /** Monotonic active-session clock. Caller resumes/pauses with Activity lifecycle. */
 final class SessionClock {
     interface Listener { void onTick(long elapsedMs); }
@@ -42,6 +44,12 @@ final class SessionClock {
         return accumulatedMs;
     }
 
+    void reset() {
+        accumulatedMs = 0L;
+        if (startedAt >= 0L) startedAt = SystemClock.elapsedRealtime();
+        listener.onTick(0L);
+    }
+
     long elapsedMs() {
         return accumulatedMs + (startedAt >= 0L ? Math.max(0L, SystemClock.elapsedRealtime() - startedAt) : 0L);
     }
@@ -53,6 +61,6 @@ final class SessionClock {
         long h = seconds / 3600L;
         long m = (seconds % 3600L) / 60L;
         long s = seconds % 60L;
-        return h > 0 ? String.format("%d:%02d:%02d", h, m, s) : String.format("%02d:%02d", m, s);
+        return h > 0 ? String.format(Locale.ROOT, "%d:%02d:%02d", h, m, s) : String.format(Locale.ROOT, "%02d:%02d", m, s);
     }
 }
