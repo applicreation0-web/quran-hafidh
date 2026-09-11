@@ -9,6 +9,7 @@ import android.os.SystemClock
 import android.view.View
 import android.webkit.WebView
 import java.lang.ref.WeakReference
+import java.lang.reflect.Method
 
 enum class VisualChange(val ghostingWeight: Int) {
     PAGE(8), MASK_LEVEL(3), REVEAL(4), REVEAL_RETURN(6),
@@ -39,8 +40,7 @@ internal class EInkRefreshPolicy(
 
     private fun decide(nowMs: Long): RefreshDecision {
         val due = if (lastFullAt == Long.MIN_VALUE) nowMs else lastFullAt + minimumIntervalMs
-        return if (nowMs >= due) fullNow(nowMs)
-        else RefreshDecision(RefreshAction.FULL_LATER, due)
+        return if (nowMs >= due) fullNow(nowMs) else RefreshDecision(RefreshAction.FULL_LATER, due)
     }
 
     private fun fullNow(nowMs: Long): RefreshDecision {
@@ -52,8 +52,14 @@ internal class EInkRefreshPolicy(
 }
 
 /**
- * STANDARD is a strict no-op. EINK uses only portable Android/WebView invalidation and
- * monochrome cleanup; no BOOX/Onyx or other manufacturer SDK/API is called.
+ * Rendering-only E-Ink controller. Product functionality is never selected here.
+ *
+ * On BOOX, the official Onyx EpdController path is preferred reflectively:
+ * - REGAL (or GU on older SDKs) for text/partial changes;
+ * - GC for cleanup/full refresh.
+ * Reflection keeps the ordinary Android build independent from an Onyx SDK artifact.
+ * If the device does not expose a compatible API, a portable WebView/View fallback is
+ * used. STANDARD remains a strict no-op beyond Android's own normal rendering.
  */
 class EInkRefreshController(
     @Suppress("UNUSED_PARAMETER") activity: Activity,
@@ -95,10 +101,10 @@ class EInkRefreshController(
         if (disposed) return
         when (decision.action) {
             RefreshAction.NONE -> Unit
-            RefreshAction.PARTIAL -> view.postInvalidateOnAnimation()
+            RefreshAction.PARTIAL -> requestPartialRefresh(view)
             RefreshAction.FULL_NOW -> {
                 cancelDeferred()
-                requestPortableFullRefresh(view)
+                requestFullRefresh(view)
             }
             RefreshAction.FULL_LATER -> schedule(view, decision.dueAtMs)
         }
@@ -125,13 +131,69 @@ class EInkRefreshController(
         scheduledDueAt = Long.MIN_VALUE
     }
 
+    private fun requestPartialRefresh(view: View) {
+        if (tryOnyxRefresh(view, full = false)) return
+        view.postInvalidateOnAnimation()
+    }
+
+    private fun requestFullRefresh(view: View) {
+        if (tryOnyxRefresh(view, full = true)) return
+        requestPortableFullRefresh(view)
+    }
+
+    /**
+     * Supports modern and legacy BOOX package layouts without a compile-time dependency.
+     * The reflective path fails closed to the portable renderer on any mismatch.
+     */
+    private fun tryOnyxRefresh(view: View, full: Boolean): Boolean = runCatching {
+        val controller = runCatching {
+            Class.forName("com.onyx.android.sdk.api.device.epd.EpdController")
+        }.getOrElse {
+            Class.forName("com.onyx.android.sdk.device.EpdController")
+        }
+
+        val modeClass = controller.declaredClasses.firstOrNull { it.simpleName == "UpdateMode" }
+            ?: runCatching {
+                Class.forName("com.onyx.android.sdk.api.device.epd.UpdateMode")
+            }.getOrElse {
+                Class.forName("com.onyx.android.sdk.device.EpdController\$UpdateMode")
+            }
+
+        val desiredNames = if (full) listOf("GC") else listOf("REGAL", "GU", "GU_FAST")
+        val mode = requireNotNull(modeClass.enumConstants?.firstOrNull { constant ->
+            desiredNames.any { it == (constant as Enum<*>).name }
+        }) { "No compatible Onyx update mode." }
+
+        if (!full) {
+            findStaticMethod(controller, "setViewDefaultUpdateMode", View::class.java, modeClass)
+                ?.invoke(null, view, mode)
+            // Requesting the normal invalidation after the default mode is set lets the
+            // platform coalesce local dirty regions rather than forcing a whole-screen GC.
+            view.invalidate()
+            true
+        } else {
+            val invalidate = findStaticMethod(controller, "invalidate", View::class.java, modeClass)
+                ?: findStaticMethod(controller, "postInvalidate", View::class.java, modeClass)
+                ?: error("No compatible Onyx GC invalidate method.")
+            invalidate.invoke(null, view, mode)
+            true
+        }
+    }.getOrDefault(false)
+
+    private fun findStaticMethod(owner: Class<*>, name: String, first: Class<*>, second: Class<*>): Method? =
+        owner.methods.firstOrNull { method ->
+            method.name == name && method.parameterTypes.size == 2 &&
+                method.parameterTypes[0].isAssignableFrom(first) &&
+                method.parameterTypes[1].isAssignableFrom(second)
+        }
+
     private fun requestPortableFullRefresh(view: View) {
         if (disposed) return
         if (view is WebView) {
             view.postOnAnimation {
                 if (disposed) return@postOnAnimation
                 view.evaluateJavascript(
-                    "window.einkFullRefreshFallback && window.einkFullRefreshFallback()",
+                    "window.einkFullRefreshFallback && window.einkFullRefreshFallback()"
                 ) { result -> if (!disposed && result != "true") nativeOverlay(view) }
             }
             return
@@ -163,6 +225,7 @@ class EInkRefreshController(
         view.invalidate()
     }
 
+    /** Last-resort fallback for non-Onyx E-Ink devices only. */
     private fun nativeOverlay(view: View) {
         if (disposed) return
         val black = ColorDrawable(Color.rgb(23, 23, 21)).apply { setBounds(0, 0, view.width, view.height) }
