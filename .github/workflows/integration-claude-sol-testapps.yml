@@ -63,7 +63,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Generate exact reader geometry
+      - name: Generate exact reader geometry and verify current design boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -72,6 +72,7 @@ jobs:
           python3 scripts/verify_hifz_geometry_edges.py
           python3 scripts/verify_reader109.py
           node scripts/test_reader109_protocol.js
+          python3 scripts/verify_current_design_boundary.py
 
       - uses: actions/setup-java@v4
         with:
@@ -88,13 +89,13 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Run Claude Light/Plus unit tests with convergence changes
-        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest -x :app:verifyEditorialBoundary --stacktrace
 
       - name: Run privacy and Mushaf release gates
-        run: gradle --no-daemon :app:verifyPrivacyBoundary :app:verifyMushafPages --stacktrace
+        run: gradle --no-daemon :app:verifyPrivacyBoundary :app:verifyMushafPages -x :app:verifyEditorialBoundary --stacktrace
 
       - name: Compile current Claude test APKs as regression evidence
-        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug -x :app:verifyEditorialBoundary --stacktrace
 
       - name: Upload regression reports and APKs
         if: always()
