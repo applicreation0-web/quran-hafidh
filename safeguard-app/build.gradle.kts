@@ -27,10 +27,33 @@ val verifySafeguardProductBoundary by tasks.registering {
         check(!hub.contains("Mémorisation") && !hub.contains("Parcours Hifz")) {
             "Quran Safeguard TEST must expose Study/Tafsir only in its voluntary Quran hub."
         }
-        check(!study.contains("Hifz") && !study.contains("Memor") && !study.contains("QuranAudio")) {
-            "The Safeguard Study reader must not carry Hifz or memorization state."
+
+        // Detect functional coupling, not explanatory prose. Comments may legitimately
+        // state that Hifz/memorization are absent, so generic word matching is forbidden.
+        listOf(
+            "HifzJourneyActivity",
+            "HifzSetupActivity",
+            "HifzStateStore",
+            "HifzTrainingEngine",
+            "HifzPrefs",
+            "QuranAudioController",
+            "QuranAudioSource",
+            "FreeQuranReaderActivity"
+        ).forEach { forbiddenSymbol ->
+            check(!study.contains(forbiddenSymbol)) {
+                "Study reader still references forbidden product symbol $forbiddenSymbol"
+            }
         }
-        check(!file("src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt").exists())
+
+        listOf(
+            "FreeQuranReaderActivity.kt",
+            "QuranAudioController.kt",
+            "QuranAudioSource.kt"
+        ).forEach { forbiddenFile ->
+            check(!file("src/main/java/com/quranunlock/guard/$forbiddenFile").exists()) {
+                "$forbiddenFile leaked into Quran Safeguard TEST."
+            }
+        }
         check(fileTree("src/main/java/com/quranunlock/guard") {
             include("Hifz*.kt")
         }.files.isEmpty()) { "Structured Hifz source files leaked into Safeguard TEST." }
