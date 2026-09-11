@@ -39,10 +39,14 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(config.contains("MURAJAAH_ITQAN_MINUTES_WORKING = 30"))
         check(config.contains("MURAJAAH_MINUTES_WORKING = 60"))
         check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
-        check(session.contains("Stable sans aide") && session.contains("À revoir"))
+        check(!session.contains("Stable sans aide")) { "A fault-free recent review must not trigger promotion." }
+        check(!session.contains("markFirstRecentStable")) { "Recent Sabqi must stay recent until capacity pressure." }
+        check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Itqan." }
+        check(session.contains("rebalanceRecentWindow")) { "New Sabqi must enforce the sliding 30-minute recent window." }
+        check(session.contains("Revu sans aide") && session.contains("À renforcer"))
         check(session.contains("révélations") && session.contains("Révéler"))
         check(settings.contains("+ Ajouter une plage Itqān") && settings.contains("Début rotation Itqān"))
-        check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges") && prefs.contains("stableRecentLines"))
+        check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges"))
         check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
         check(reader.contains("hiddenCellsForLine") && reader.contains("setAudioVerse"))
         check(reader.contains("clearReveal") && reader.contains("revealSelection"))
