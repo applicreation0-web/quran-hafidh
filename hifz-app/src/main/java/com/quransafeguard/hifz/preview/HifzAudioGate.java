@@ -9,15 +9,17 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Explicit audio gate. The app never invents or hotlinks audio when redistribution/hosting
- * has not been approved. Enabling this later requires approved metadata plus a local/self-hosted source.
+ * Audio availability gate. Production redistribution remains disabled unless approved,
+ * while a user-imported private/offline pack can be used without network access.
  */
 public final class HifzAudioGate {
     public final String reciter;
     public final boolean redistributionApproved;
     public final String productionHost;
+    private final HifzAudioPack localPack;
 
     public HifzAudioGate(Context context) {
+        localPack = new HifzAudioPack(context);
         try {
             JSONObject o = new JSONObject(read(context));
             reciter = o.optString("reciter", "Al-Husary Muʿallim");
@@ -28,9 +30,11 @@ public final class HifzAudioGate {
         }
     }
 
-    public boolean available() { return redistributionApproved && !productionHost.trim().isEmpty(); }
+    /** Only an installed private local pack enables the in-app audio controls. */
+    public boolean available() { return localPack.installed(); }
     public String status() {
-        return available() ? "Audio disponible" : "Audio non activé : hébergement/redistribution à valider";
+        if (localPack.installed()) return "Pack audio local disponible (" + localPack.installedFileCount() + " versets)";
+        return "Audio non installé : importez un pack local Al-Husary Muʿallim dans Paramètres";
     }
 
     private static String read(Context context) throws Exception {
