@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Quran Safeguard</string>
+    <string name="accessibility_service_label">Quran Safeguard — Protection</string>
+    <string name="accessibility_description">Détecte uniquement l’application au premier plan afin de déclencher la pause Quran choisie. Le contenu de l’écran n’est pas lu.</string>
+</resources>
