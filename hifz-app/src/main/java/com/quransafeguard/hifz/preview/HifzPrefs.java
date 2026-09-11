@@ -23,11 +23,13 @@ public final class HifzPrefs {
     }
 
     private static final String NAME = "quran_hifz_preview_v1";
+    private static final String LEGACY_GATES = "hifz_preview_session_gates";
     private final SharedPreferences p;
 
     public HifzPrefs(Context context) {
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
         ensureSchema();
+        migrateLegacyGates(context);
     }
 
     private void ensureSchema() {
@@ -46,6 +48,7 @@ public final class HifzPrefs {
                 .putInt("sabqiAssisted", 0)
                 .putInt("itqanRep", 0)
                 .putInt("itqanAssisted", 0)
+                .putString("itqanUnitStart", "")
                 .putString("itqanUnitEnd", "")
                 .putString("recentSabqi", "[]")
                 .putLong("sabqiElapsedMs", 0L)
@@ -53,10 +56,35 @@ public final class HifzPrefs {
                 .putLong("murajaahElapsedMs", 0L)
                 .putFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING)
                 .putBoolean("forceEink", false)
+                .putString("lastSabqiDate", "")
+                .putString("lastSabqiLabel", "")
+                .putString("lastItqanDate", "")
+                .putString("lastItqanLabel", "")
+                .putString("lastMurajaahDate", "")
+                .putString("lastMurajaahLabel", "")
                 .apply();
         } else if (schema != PreviewConfig.SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
         }
+    }
+
+    private void migrateLegacyGates(Context context) {
+        SharedPreferences legacy = context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE);
+        if (legacy.getAll().isEmpty()) return;
+        SharedPreferences.Editor e = p.edit();
+        copyLegacyIfMissing(legacy, e, "lastSabqiDate");
+        copyLegacyIfMissing(legacy, e, "lastSabqiLabel");
+        copyLegacyIfMissing(legacy, e, "lastItqanDate");
+        copyLegacyIfMissing(legacy, e, "lastItqanLabel");
+        copyLegacyIfMissing(legacy, e, "lastMurajaahDate");
+        copyLegacyIfMissing(legacy, e, "lastMurajaahLabel");
+        e.apply();
+    }
+
+    private void copyLegacyIfMissing(SharedPreferences legacy, SharedPreferences.Editor e, String key) {
+        if (p.contains(key)) return;
+        String value = legacy.getString(key, "");
+        if (value != null && !value.isEmpty()) e.putString(key, value);
     }
 
     public int schema() { return p.getInt("schema", 0); }
@@ -89,16 +117,72 @@ public final class HifzPrefs {
         p.edit().putInt("sabqiRep", rep).putInt("sabqiAssisted", assisted).apply();
     }
 
+    /**
+     * Atomic Sabqi completion: recent queue, promotion, next cursor, reset counters/timer and
+     * day gate are committed together. A failed commit leaves the old SharedPreferences file.
+     */
+    public boolean completeSabqiBlock(int startLine, int endLine, VerseRef promotion,
+                                      int nextLineCursor, String date, String label) {
+        List<RecentSabqi> queue = recentSabqi();
+        queue.add(new RecentSabqi(startLine, endLine));
+        String queueJson = recentJson(queue);
+        VerseRef frontier = promotedFrontier();
+        SharedPreferences.Editor e = p.edit()
+            .putString("recentSabqi", queueJson)
+            .putInt("sabqiLineCursor", nextLineCursor)
+            .putInt("sabqiRep", 0)
+            .putInt("sabqiAssisted", 0)
+            .putLong("sabqiElapsedMs", 0L)
+            .putString("lastSabqiDate", date)
+            .putString("lastSabqiLabel", label);
+        if (promotion != null && GeometryRepository.ordinal(promotion) > GeometryRepository.ordinal(frontier)) {
+            e.putString("promotedFrontier", promotion.toString());
+        }
+        return e.commit();
+    }
+
     public int itqanRep() { return p.getInt("itqanRep", 0); }
     public int itqanAssisted() { return p.getInt("itqanAssisted", 0); }
-    public VerseRef itqanUnitEnd() {
-        String value = p.getString("itqanUnitEnd", "");
-        return value == null || value.isEmpty() ? null : GeometryRepository.parseVerse(value);
+    public VerseRef itqanUnitStart() { return optionalRef("itqanUnitStart"); }
+    public VerseRef itqanUnitEnd() { return optionalRef("itqanUnitEnd"); }
+
+    public void setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
+        p.edit()
+            .putInt("itqanRep", rep)
+            .putInt("itqanAssisted", assisted)
+            .putString("itqanUnitStart", unitStart == null ? "" : unitStart.toString())
+            .putString("itqanUnitEnd", unitEnd == null ? "" : unitEnd.toString())
+            .apply();
     }
-    public void setItqanProgress(int rep, int assisted, VerseRef unitEnd) {
-        p.edit().putInt("itqanRep", rep).putInt("itqanAssisted", assisted)
-            .putString("itqanUnitEnd", unitEnd == null ? "" : unitEnd.toString()).apply();
+
+    public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
+        return p.edit()
+            .putString("itqanCursor", nextCursor.toString())
+            .putInt("itqanRep", 0)
+            .putInt("itqanAssisted", 0)
+            .putString("itqanUnitStart", "")
+            .putString("itqanUnitEnd", "")
+            .putLong("itqanElapsedMs", 0L)
+            .putString("lastItqanDate", date)
+            .putString("lastItqanLabel", label)
+            .commit();
     }
+
+    public boolean completeMurajaah(VerseRef nextCursor, String date, String label) {
+        return p.edit()
+            .putString("murajaahCursor", nextCursor.toString())
+            .putLong("murajaahElapsedMs", 0L)
+            .putString("lastMurajaahDate", date)
+            .putString("lastMurajaahLabel", label)
+            .commit();
+    }
+
+    public String lastSabqiDate() { return p.getString("lastSabqiDate", ""); }
+    public String lastSabqiLabel() { return p.getString("lastSabqiLabel", ""); }
+    public String lastItqanDate() { return p.getString("lastItqanDate", ""); }
+    public String lastItqanLabel() { return p.getString("lastItqanLabel", ""); }
+    public String lastMurajaahDate() { return p.getString("lastMurajaahDate", ""); }
+    public String lastMurajaahLabel() { return p.getString("lastMurajaahLabel", ""); }
 
     public long elapsedFor(String mode) { return p.getLong(mode.toLowerCase() + "ElapsedMs", 0L); }
     public void setElapsedFor(String mode, long value) { p.edit().putLong(mode.toLowerCase() + "ElapsedMs", Math.max(0L, value)).apply(); }
@@ -138,6 +222,10 @@ public final class HifzPrefs {
     }
 
     private void saveRecent(List<RecentSabqi> queue) {
+        p.edit().putString("recentSabqi", recentJson(queue)).apply();
+    }
+
+    private String recentJson(List<RecentSabqi> queue) {
         JSONArray array = new JSONArray();
         try {
             for (RecentSabqi item : queue) {
@@ -149,7 +237,7 @@ public final class HifzPrefs {
         } catch (Exception error) {
             throw new IllegalStateException(error);
         }
-        p.edit().putString("recentSabqi", array.toString()).apply();
+        return array.toString();
     }
 
     public void resetPreviewState() {
@@ -158,6 +246,10 @@ public final class HifzPrefs {
     }
 
     private VerseRef ref(String key) { return GeometryRepository.parseVerse(required(key)); }
+    private VerseRef optionalRef(String key) {
+        String value = p.getString(key, "");
+        return value == null || value.isEmpty() ? null : GeometryRepository.parseVerse(value);
+    }
     private void putRef(String key, VerseRef value) { p.edit().putString(key, value.toString()).apply(); }
     private String required(String key) {
         String value = p.getString(key, null);
