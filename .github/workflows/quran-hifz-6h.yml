@@ -35,6 +35,26 @@ jobs:
           git -C third_party/quran-svg checkout --detach FETCH_HEAD
           test "$(git -C third_party/quran-svg rev-parse HEAD)" = "1b427fab77aae1403fe7e1f0b8c794a5384d5605"
 
+      - name: Set up pinned Tafsir corpus tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Rebuild audited Qurtubi and Qushayri assets from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          work="${RUNNER_TEMP}/tafsir-work"
+          mkdir -p "${src}" "${work}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+          python3 scripts/prepare_multitafsir_assets_0106.py \
+            --source-dir "${src}" \
+            --assets-dir app/src/plus/assets/tafsir \
+            --work-dir "${work}"
+
       - name: Audit Mushaf, geometry and Tafsir with Python
         run: python3 scripts/audit_quran_hifz_inputs.py
 
@@ -50,9 +70,9 @@ jobs:
           gradle-version: '9.5.0'
 
       - name: Unit tests
-        run: gradle :hifz-core:test --stacktrace
+        run: gradle :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
 
-      - name: Verify canonical 604-page Mushaf and geometry
+      - name: Verify canonical 604-page Mushaf, geometry and three Tafsir corpora
         run: gradle :hifz-app:verifyHifzMushafSource --stacktrace
 
       - name: Compile smoke APK
