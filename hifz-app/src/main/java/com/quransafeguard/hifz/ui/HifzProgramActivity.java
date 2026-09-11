@@ -66,7 +66,8 @@ public final class HifzProgramActivity extends android.app.Activity {
     }
 
     static String displayMode(String mode) {
-        if (HifzScheduleStore.SABQI.equals(mode)) return "Sabqi";
+        if (HifzScheduleStore.SABQI.equals(mode)) return "Sabqi · matin";
+        if (HifzScheduleStore.SABQI_REVIEW.equals(mode)) return "Sabqi · révision du soir";
         if (HifzScheduleStore.ITQAN.equals(mode)) return "Itqān";
         return "Murājaʿah";
     }
