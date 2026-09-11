@@ -187,11 +187,7 @@ jobs:
           arch: x86_64
           disk-size: 2048M
           disable-animations: true
-          script: |
-            set -eu
-            apk="$(find candidate -type f -name '*.apk' -print -quit)"
-            test -n "$apk" && test -s "$apk"
-            python3 scripts/runtime_hifz_smoke.py "$apk"
+          script: python3 scripts/runtime_hifz_smoke.py "$(find candidate -type f -name '*.apk' -print -quit)"
 
       - name: Upload runtime evidence
         if: always()
