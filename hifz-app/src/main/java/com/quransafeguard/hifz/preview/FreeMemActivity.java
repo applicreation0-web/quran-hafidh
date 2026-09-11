@@ -54,6 +54,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         Button prev=Ui.smallButton(this,"‹ Page",v->go(-1));Button audio=Ui.smallButton(this,"Audio",v->Toast.makeText(this,"Al-Husary Muʿallim : corpus local à installer séparément. Aucun compteur Hifz n’est modifié.",Toast.LENGTH_LONG).show());Button next=Ui.smallButton(this,"Page ›",v->go(1));
         Ui.weight(prev,1);Ui.weight(audio,1);Ui.weight(next,1);nav.addView(prev);nav.addView(audio);nav.addView(next);root.addView(nav);
         setContentView(root);
+        Ui.respectSystemBars(this, root, 0, 0, 0, 0);
         updateSelectionLabel();
     }
 
