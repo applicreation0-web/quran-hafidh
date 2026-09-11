@@ -55,8 +55,11 @@ jobs:
             --assets-dir app/src/plus/assets/tafsir \
             --work-dir "${work}"
 
-      - name: Audit Mushaf, geometry and Tafsir with Python
+      - name: Audit Mushaf, geometry and Jalalayn with Python
         run: python3 scripts/audit_quran_hifz_inputs.py
+
+      - name: Audit Qurtubi and Qushayri packages independently
+        run: python3 scripts/audit_quran_hifz_multitafsir.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
