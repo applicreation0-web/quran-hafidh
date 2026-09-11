@@ -267,24 +267,25 @@ public final class StudyReaderActivity extends android.app.Activity implements R
         final int requestTicket = tafsirGeneration.incrementAndGet();
         body.setText("Chargement · " + edition.displayName + "…");
         io.execute(() -> {
-            final String text;
+            String resolved;
             try {
                 TafsirRepository.Entry entry = new TafsirRepository(this).load(verse, edition);
                 if (entry == null) {
-                    text = "Aucun commentaire " + edition.displayName + " disponible pour ce verset.";
+                    resolved = "Aucun commentaire " + edition.displayName + " disponible pour ce verset.";
                 } else {
                     StringBuilder b = new StringBuilder(entry.commentary);
                     for (String note : entry.notes) b.append("\n\n").append(note);
-                    text = b.toString();
+                    resolved = b.toString();
                 }
             } catch (Throwable error) {
                 String message = error.getMessage();
-                text = edition.displayName + " indisponible"
+                resolved = edition.displayName + " indisponible"
                     + (message == null || message.isEmpty() ? "." : " : " + message);
             }
+            final String displayText = resolved;
             runOnUiThread(() -> {
                 if (isFinishing() || dialogTicket > requestTicket || requestTicket != tafsirGeneration.get()) return;
-                body.setText(text);
+                body.setText(displayText);
             });
         });
     }
