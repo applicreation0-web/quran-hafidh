@@ -1,10 +1,14 @@
 package com.quransafeguard.hifz.preview;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowInsets;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -13,6 +17,7 @@ final class Ui {
     private Ui() {}
     static final int INK = Color.rgb(18, 18, 17);
     static final int PAPER = Color.rgb(250, 248, 240);
+    static final int MUTED = Color.rgb(82, 79, 73);
 
     static int dp(Context c, int value) { return Math.round(value * c.getResources().getDisplayMetrics().density); }
 
@@ -52,5 +57,40 @@ final class Ui {
 
     static void weight(View view, float weight) {
         view.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, weight));
+    }
+
+    /**
+     * Keep all app chrome inside Android system bars. Quran Hifz never hides or draws
+     * controls below the status/navigation bars. Insets are additive to the caller's
+     * base padding so the same rule works on phones, tablets and BOOX.
+     */
+    static void respectSystemBars(Activity activity, View root, int left, int top, int right, int bottom) {
+        Window window = activity.getWindow();
+        window.setStatusBarColor(PAPER);
+        window.setNavigationBarColor(PAPER);
+        int flags = window.getDecorView().getSystemUiVisibility() | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        window.getDecorView().setSystemUiVisibility(flags);
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int insetLeft;
+            int insetTop;
+            int insetRight;
+            int insetBottom;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                insetLeft = bars.left;
+                insetTop = bars.top;
+                insetRight = bars.right;
+                insetBottom = bars.bottom;
+            } else {
+                insetLeft = insets.getSystemWindowInsetLeft();
+                insetTop = insets.getSystemWindowInsetTop();
+                insetRight = insets.getSystemWindowInsetRight();
+                insetBottom = insets.getSystemWindowInsetBottom();
+            }
+            view.setPadding(left + insetLeft, top + insetTop, right + insetRight, bottom + insetBottom);
+            return insets;
+        });
+        root.requestApplyInsets();
     }
 }
