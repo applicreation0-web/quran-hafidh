@@ -59,7 +59,7 @@ public final class MushafView extends WebView {
                 retried = true;
                 load(requestedPage, lastSelection, lastLineIds, lastMask);
             } else {
-                report("Page " + requestedPage + " non affichée (délai dépassé). Changez de page ou rouvrez l’écran.");
+                showFailure("Page " + requestedPage + " non affichée (délai dépassé). Revenez puis rouvrez la lecture.");
             }
         }
     };
@@ -68,7 +68,7 @@ public final class MushafView extends WebView {
     public MushafView(Context context) {
         super(context);
         prefs = new HifzPrefs(context);
-        setBackgroundColor(android.graphics.Color.WHITE);
+        setBackgroundColor(android.graphics.Color.rgb(250, 248, 242));
         WebSettings s = getSettings();
         s.setJavaScriptEnabled(true);
         s.setAllowFileAccess(false);
@@ -139,7 +139,7 @@ public final class MushafView extends WebView {
             loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             postDelayed(watchdog, PAGE_TIMEOUT_MS);
         } catch (Throwable error) {
-            report("Erreur Mushaf page " + page + " : " + safeMessage(error));
+            showFailure("Erreur Mushaf page " + page + " : " + safeMessage(error));
         }
     }
 
@@ -213,6 +213,32 @@ public final class MushafView extends WebView {
         return message == null || message.trim().isEmpty() ? error.getClass().getSimpleName() : message;
     }
 
+    private static String escapeHtml(String value) {
+        return value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;");
+    }
+
+    private void showFailure(String message) {
+        post(() -> {
+            removeCallbacks(watchdog);
+            ready = false;
+            pageShown = false;
+            pending = null;
+            setContentDescription("Erreur Mushaf : " + message);
+            String html = "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">" +
+                "<style>html,body{margin:0;width:100%;height:100%;background:#faf8f2;color:#121211;font-family:sans-serif}" +
+                "body{display:flex;align-items:center;justify-content:center;text-align:center}.box{max-width:28em;padding:24px}" +
+                "h2{font-size:18px;margin:0 0 12px}p{font-size:15px;line-height:1.45;margin:0}</style></head>" +
+                "<body><div class=\"box\"><h2>Mushaf indisponible</h2><p>" + escapeHtml(message) + "</p></div></body></html>";
+            loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            if (listener != null) listener.onError(message);
+        });
+    }
+
     private void report(String message) { post(() -> { if (listener != null) listener.onError(message); }); }
 
     private final class Bridge {
@@ -232,7 +258,7 @@ public final class MushafView extends WebView {
         }
 
         @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }
-        @JavascriptInterface public void error(String message) { report(message); }
+        @JavascriptInterface public void error(String message) { showFailure("Erreur d’affichage Mushaf : " + message); }
         @JavascriptInterface public void pageShown(int page) {
             post(() -> {
                 if (page != requestedPage) return;
