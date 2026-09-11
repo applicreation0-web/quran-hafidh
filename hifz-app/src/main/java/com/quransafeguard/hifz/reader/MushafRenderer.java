@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.reader;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.util.AttributeSet;
 import android.util.LruCache;
@@ -31,6 +32,8 @@ public final class MushafRenderer extends View implements AutoCloseable {
     private final AtomicInteger generation = new AtomicInteger();
     private final LruCache<Integer, SVG> cache = new LruCache<>(3);
     private final MushafRepository repository;
+    private final RectF renderedContent = new RectF();
+    private final RectF documentViewBox = new RectF();
 
     private Listener listener;
     private SVG document;
@@ -60,6 +63,41 @@ public final class MushafRenderer extends View implements AutoCloseable {
         return repository.isBundled(page);
     }
 
+    public RectF getRenderedContentRect() {
+        return new RectF(renderedContent);
+    }
+
+    public RectF getDocumentViewBox() {
+        return new RectF(documentViewBox);
+    }
+
+    /** Converts a touch in this View to the original SVG document coordinate space. */
+    public PointF mapViewToDocument(float viewX, float viewY) {
+        if (document == null || renderedContent.isEmpty() || documentViewBox.isEmpty()) return null;
+        if (!renderedContent.contains(viewX, viewY)) return null;
+        float x = documentViewBox.left
+            + ((viewX - renderedContent.left) / renderedContent.width()) * documentViewBox.width();
+        float y = documentViewBox.top
+            + ((viewY - renderedContent.top) / renderedContent.height()) * documentViewBox.height();
+        return new PointF(x, y);
+    }
+
+    /** Converts a rectangle in SVG document coordinates to this View's pixel coordinates. */
+    public RectF mapDocumentToView(RectF source) {
+        if (document == null || renderedContent.isEmpty() || documentViewBox.isEmpty() || source == null) {
+            return null;
+        }
+        float left = renderedContent.left
+            + ((source.left - documentViewBox.left) / documentViewBox.width()) * renderedContent.width();
+        float top = renderedContent.top
+            + ((source.top - documentViewBox.top) / documentViewBox.height()) * renderedContent.height();
+        float right = renderedContent.left
+            + ((source.right - documentViewBox.left) / documentViewBox.width()) * renderedContent.width();
+        float bottom = renderedContent.top
+            + ((source.bottom - documentViewBox.top) / documentViewBox.height()) * renderedContent.height();
+        return new RectF(left, top, right, bottom);
+    }
+
     public void showPage(int page) {
         if (closed) throw new IllegalStateException("MushafRenderer is closed");
         if (page < MushafRepository.FIRST_PAGE || page > MushafRepository.LAST_PAGE) {
@@ -70,10 +108,7 @@ public final class MushafRenderer extends View implements AutoCloseable {
         final int ticket = generation.incrementAndGet();
         SVG cached = cache.get(page);
         if (cached != null) {
-            document = cached;
-            currentPage = page;
-            invalidate();
-            if (listener != null) listener.onPageChanged(page);
+            applyDocument(page, cached);
             return;
         }
 
@@ -88,10 +123,7 @@ public final class MushafRenderer extends View implements AutoCloseable {
                 post(() -> {
                     if (closed || ticket != generation.get()) return;
                     cache.put(page, parsed);
-                    document = parsed;
-                    currentPage = page;
-                    invalidate();
-                    if (listener != null) listener.onPageChanged(page);
+                    applyDocument(page, parsed);
                 });
             } catch (Throwable error) {
                 post(() -> {
@@ -100,6 +132,16 @@ public final class MushafRenderer extends View implements AutoCloseable {
                 });
             }
         });
+    }
+
+    private void applyDocument(int page, SVG parsed) {
+        document = parsed;
+        RectF box = parsed.getDocumentViewBox();
+        documentViewBox.set(box);
+        currentPage = page;
+        updateRenderedContentRect();
+        invalidate();
+        if (listener != null) listener.onPageChanged(page);
     }
 
     public void nextPage() {
@@ -113,12 +155,32 @@ public final class MushafRenderer extends View implements AutoCloseable {
     }
 
     @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        updateRenderedContentRect();
+    }
+
+    private void updateRenderedContentRect() {
+        if (document == null || getWidth() <= 0 || getHeight() <= 0 || documentViewBox.isEmpty()) {
+            renderedContent.setEmpty();
+            return;
+        }
+        float scale = Math.min(getWidth() / documentViewBox.width(), getHeight() / documentViewBox.height());
+        float width = documentViewBox.width() * scale;
+        float height = documentViewBox.height() * scale;
+        float left = (getWidth() - width) * 0.5f;
+        float top = (getHeight() - height) * 0.5f;
+        renderedContent.set(left, top, left + width, top + height);
+    }
+
+    @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         canvas.drawColor(Color.WHITE);
         SVG svg = document;
-        if (svg == null || getWidth() <= 0 || getHeight() <= 0) return;
-        svg.renderToCanvas(canvas, new RectF(0f, 0f, getWidth(), getHeight()));
+        if (svg == null || renderedContent.isEmpty()) return;
+        // Explicit fit-center: never stretch/reflow the canonical Mushaf page.
+        svg.renderToCanvas(canvas, renderedContent);
     }
 
     @Override
@@ -129,5 +191,7 @@ public final class MushafRenderer extends View implements AutoCloseable {
         loader.shutdownNow();
         cache.evictAll();
         document = null;
+        renderedContent.setEmpty();
+        documentViewBox.setEmpty();
     }
 }
