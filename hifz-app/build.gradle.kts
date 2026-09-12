@@ -84,6 +84,7 @@ val verifyHifzConvergenceRules by tasks.registering {
             "Mask must be a continuous nested RTL band."
         }
         check(reader.contains("setAudioVerse") && reader.contains("clearReveal") && reader.contains("revealSelection"))
+        check(audio.contains("prepareAsync()")) { "Audio prepare must not block the UI thread." }
         check(audio.indexOf("player.start()") < audio.indexOf("mushaf.setAudioVerse(verse)")) {
             "Audio highlight must switch only after playback starts."
         }
@@ -138,6 +139,7 @@ tasks.named("preBuild").configure {
 dependencies {
     implementation(project(":hifz-core"))
     implementation("org.brotli:dec:0.1.2")
+    testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("junit:junit:4.13.2")
