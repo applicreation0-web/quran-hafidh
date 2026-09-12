@@ -2,11 +2,8 @@ package com.quransafeguard.hifz.preview;
 
 import org.junit.Test;
 
-import java.lang.reflect.Method;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 public final class PreviewConfigTest {
@@ -37,16 +34,19 @@ public final class PreviewConfigTest {
         assertEquals(0, PreviewConfig.itqanMaskForNextRep(-1));
     }
 
-    @Test public void recentMurajaahStopsAfterOnePassOrThirtyMinutes() throws Exception {
-        Method method;
-        try {
-            method = PreviewConfig.class.getMethod("recentMurajaahComplete", int.class, int.class, long.class);
-        } catch (NoSuchMethodException missing) {
-            method = null;
-        }
-        assertNotNull("PreviewConfig must expose the one-pass recent-window completion rule", method);
-        assertFalse((Boolean) method.invoke(null, 5, 15, 60_000L));
-        assertTrue((Boolean) method.invoke(null, 15, 15, 120_000L));
-        assertTrue((Boolean) method.invoke(null, 5, 15, 30L * 60_000L));
+    @Test public void fixedSessionsNeverRedistributeMinutes() {
+        assertEquals(30, PreviewConfig.SABQI_TODAY_REVIEW_MINUTES);
+        assertEquals(60, PreviewConfig.WEEKDAY_MURAJAAH_MINUTES);
+        assertEquals(30, PreviewConfig.WEEKEND_RECENT_REVIEW_MINUTES);
+        assertEquals(30, PreviewConfig.WEEKEND_MURAJAAH_MINUTES);
+    }
+
+    @Test public void recentSabqiIndexLoopsEvenWithOneBlockUntilTimerEnds() {
+        assertEquals(0, PreviewConfig.nextRecentReviewIndex(0, 1));
+        assertEquals(1, PreviewConfig.nextRecentReviewIndex(0, 3));
+        assertEquals(2, PreviewConfig.nextRecentReviewIndex(1, 3));
+        assertEquals(0, PreviewConfig.nextRecentReviewIndex(2, 3));
+        assertFalse(PreviewConfig.timedSessionComplete(29L * 60_000L + 59_000L, 30));
+        assertTrue(PreviewConfig.timedSessionComplete(30L * 60_000L, 30));
     }
 }
