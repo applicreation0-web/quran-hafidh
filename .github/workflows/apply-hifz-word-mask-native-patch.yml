@@ -1,0 +1,32 @@
+name: Apply Hifz word-mask native patch
+
+on:
+  push:
+    branches:
+      - release/hifz-0.7.3-word-mask
+
+permissions:
+  contents: write
+
+jobs:
+  patch-native:
+    if: ${{ !contains(github.event.head_commit.message, '[native-patch]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/hifz-0.7.3-word-mask
+      - name: Apply exact native repetition-seed patch
+        run: python3 scripts/apply_hifz_word_mask_native_patch.py
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'quran-hifz-ci'
+          git config user.email 'quran-hifz-ci@users.noreply.github.com'
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'ERROR: native patch produced no diff'; exit 1; }
+          git commit -m 'feat(hifz): reseed structured word mask each repetition [native-patch]'
+          git push origin HEAD:release/hifz-0.7.3-word-mask
