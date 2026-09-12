@@ -165,8 +165,8 @@ public final class MushafView extends WebView {
     public void setMask(int maskPercent) {
         lastMask = maskPercent;
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");", null));
-        eink.mask(this);
+            "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");",
+            ignored -> post(() -> eink.mask(this))));
     }
 
     public void setSelection(List<VerseRef> selection, List<String> lineIds) {
@@ -185,11 +185,9 @@ public final class MushafView extends WebView {
         }
         runWhenReady(() -> {
             StringBuilder script = new StringBuilder("window.HifzReader&&(");
-            if (geometry != null) {
-                script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
-            }
+            if (geometry != null) script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
             script.append("window.HifzReader.setSelection(").append(verses).append(',').append(lines).append("));");
-            evaluateJavascript(script.toString(), null);
+            evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this)));
         });
     }
 
@@ -197,8 +195,8 @@ public final class MushafView extends WebView {
     public void setAudioVerse(VerseRef verse) {
         String value = verse == null ? "null" : JSONObject.quote(verse.toString());
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setAudioVerse(" + value + ");", null));
-        eink.local(this);
+            "window.HifzReader&&window.HifzReader.setAudioVerse(" + value + ");",
+            ignored -> post(() -> eink.local(this))));
     }
 
     /** Keep the selected verse in the unobscured upper part before the bottom Tafsir opens. */
