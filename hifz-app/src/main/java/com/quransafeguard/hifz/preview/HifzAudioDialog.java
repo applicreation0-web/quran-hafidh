@@ -1,8 +1,10 @@
 package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
+import android.app.Application;
 import android.app.Dialog;
 import android.media.MediaPlayer;
+import android.os.Bundle;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -29,6 +31,17 @@ final class HifzAudioDialog {
     private int index;
     private boolean paused;
     private boolean preparing;
+    private boolean lifecycleRegistered;
+
+    private final Application.ActivityLifecycleCallbacks lifecycle = new Application.ActivityLifecycleCallbacks() {
+        @Override public void onActivityCreated(Activity a, Bundle b) {}
+        @Override public void onActivityStarted(Activity a) {}
+        @Override public void onActivityResumed(Activity a) {}
+        @Override public void onActivityPaused(Activity a) { if (a == activity) close(); }
+        @Override public void onActivityStopped(Activity a) {}
+        @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
+        @Override public void onActivityDestroyed(Activity a) { if (a == activity) close(); }
+    };
 
     HifzAudioDialog(Activity activity, MushafView mushaf, List<VerseRef> verses) {
         this.activity = activity;
@@ -79,8 +92,10 @@ final class HifzAudioDialog {
             releasePlayerOnly();
             mushaf.setAudioVerse(null);
             dialog = null;
+            unregisterLifecycle();
         });
         dialog.show();
+        registerLifecycle();
         Window w = dialog.getWindow();
         if (w != null) {
             w.setLayout(
@@ -99,6 +114,19 @@ final class HifzAudioDialog {
         }
         releasePlayerOnly();
         mushaf.setAudioVerse(null);
+        unregisterLifecycle();
+    }
+
+    private void registerLifecycle() {
+        if (lifecycleRegistered) return;
+        activity.getApplication().registerActivityLifecycleCallbacks(lifecycle);
+        lifecycleRegistered = true;
+    }
+
+    private void unregisterLifecycle() {
+        if (!lifecycleRegistered) return;
+        try { activity.getApplication().unregisterActivityLifecycleCallbacks(lifecycle); } catch (Throwable ignored) {}
+        lifecycleRegistered = false;
     }
 
     private void toggle() {
