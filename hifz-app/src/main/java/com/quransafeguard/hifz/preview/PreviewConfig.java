@@ -4,7 +4,7 @@ package com.quransafeguard.hifz.preview;
 public final class PreviewConfig {
     private PreviewConfig() {}
 
-    public static final int SCHEMA_VERSION = 2;
+    public static final int SCHEMA_VERSION = 3;
     public static final int SABQI_LINES = 5; // frozen
     public static final int SABQI_MINUTES_WORKING = 90;
     public static final int ITQAN_MINUTES_WORKING = 60;
@@ -42,7 +42,7 @@ public final class PreviewConfig {
     // Audio moves verse-by-verse and can run for long periods: clean more often than generic local UI.
     public static final int EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6;
 
-    /** Recent Sabqi gets one complete pass, capped at 30 minutes; unused time returns to old Itqan review. */
+    /** Legacy v2 helper retained until the runtime session migration is completed in the next task. */
     public static boolean recentMurajaahComplete(int reviewedLines, int totalRecentLines, long elapsedMs) {
         if (totalRecentLines <= 0) return true;
         if (reviewedLines >= totalRecentLines) return true;
