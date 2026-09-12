@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  unit-tests:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -21,5 +21,5 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Run Hifz unit tests
-        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
+      - name: Run Hifz tests and assemble
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:assembleDebug --stacktrace
