@@ -80,61 +80,63 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerPane.addView(mushaf, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         topControls = Ui.row(this);
+        topControls.setGravity(Gravity.CENTER_VERTICAL);
         topControls.setBackgroundColor(Ui.PAPER);
-        topControls.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
-        Button back=Ui.smallButton(this,"‹ Retour",v->finish());
-        pageLabel=Ui.text(this,"Lecture / Étude · "+page+" / 604",15,true);
+        topControls.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),Ui.dp(this,2));
+        Button back=Ui.roundButton(this,"‹","Retour",v->finish());
+        pageLabel=Ui.text(this,"Lecture · "+page+" / 604",14,true);
         Ui.weight(pageLabel,1f);pageLabel.setGravity(Gravity.CENTER);
         topControls.addView(back);topControls.addView(pageLabel);
-        FrameLayout.LayoutParams topLp=new FrameLayout.LayoutParams(overlayWidth(720),ViewGroup.LayoutParams.WRAP_CONTENT,Gravity.TOP|Gravity.CENTER_HORIZONTAL);
-        topLp.setMargins(Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,8),0);readerPane.addView(topControls,topLp);
+        FrameLayout.LayoutParams topLp=new FrameLayout.LayoutParams(overlayWidth(660),ViewGroup.LayoutParams.WRAP_CONTENT,Gravity.TOP|Gravity.CENTER_HORIZONTAL);
+        topLp.setMargins(Ui.dp(this,5),Ui.dp(this,3),Ui.dp(this,5),0);readerPane.addView(topControls,topLp);
 
         bottomControls=Ui.column(this);
+        bottomControls.setGravity(Gravity.CENTER_HORIZONTAL);
         bottomControls.setBackgroundColor(Ui.PAPER);
-        bottomControls.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,6));
-        LinearLayout buttons=Ui.row(this);
+        bottomControls.setPadding(Ui.dp(this,5),Ui.dp(this,2),Ui.dp(this,5),Ui.dp(this,3));
+        LinearLayout buttons=Ui.row(this);buttons.setGravity(Gravity.CENTER);
         // Arabic-book direction: next canonical page is on the LEFT, previous on the RIGHT.
-        Button next=Ui.smallButton(this,"Page suivante ›",v->go(1));
-        tafsirButton=Ui.smallButton(this,"Tafsir",v->openTafsir());tafsirButton.setEnabled(false);
-        Ui.weight(next,1);Ui.weight(tafsirButton,1);buttons.addView(next);buttons.addView(tafsirButton);
+        Button next=Ui.roundButton(this,"›","Page suivante",v->go(1));
+        tafsirButton=Ui.roundButton(this,"T","Tafsir",v->openTafsir());tafsirButton.setEnabled(false);
+        buttons.addView(next);buttons.addView(tafsirButton);
         if(new HifzAudioGate(this).available()){
-            audioButton=Ui.smallButton(this,"Audio",v->openAudio());audioButton.setEnabled(false);Ui.weight(audioButton,1);buttons.addView(audioButton);
+            audioButton=Ui.roundButton(this,"♪","Audio",v->openAudio());audioButton.setEnabled(false);buttons.addView(audioButton);
         }
-        Button prev=Ui.smallButton(this,"‹ Page précédente",v->go(-1));Ui.weight(prev,1);buttons.addView(prev);
+        Button prev=Ui.roundButton(this,"‹","Page précédente",v->go(-1));buttons.addView(prev);
         bottomControls.addView(buttons);
 
         pageSeek=new SeekBar(this);pageSeek.setMax(603);pageSeek.setProgress(page-1);
-        pageSeek.setLayoutDirection(View.LAYOUT_DIRECTION_RTL); // page 1 visually right, page 604 left
+        pageSeek.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         pageSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
-            @Override public void onProgressChanged(SeekBar seekBar,int progress,boolean fromUser){if(fromUser)pageLabel.setText("Lecture / Étude · "+(progress+1)+" / 604");}
+            @Override public void onProgressChanged(SeekBar seekBar,int progress,boolean fromUser){if(fromUser)pageLabel.setText("Lecture · "+(progress+1)+" / 604");}
             @Override public void onStartTrackingTouch(SeekBar seekBar){showControls();}
             @Override public void onStopTrackingTouch(SeekBar seekBar){setPage(seekBar.getProgress()+1);}
         });
         bottomControls.addView(pageSeek,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
-        FrameLayout.LayoutParams bottomLp=new FrameLayout.LayoutParams(overlayWidth(760),ViewGroup.LayoutParams.WRAP_CONTENT,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
-        bottomLp.setMargins(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,6));readerPane.addView(bottomControls,bottomLp);
+        FrameLayout.LayoutParams bottomLp=new FrameLayout.LayoutParams(overlayWidth(660),ViewGroup.LayoutParams.WRAP_CONTENT,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);
+        bottomLp.setMargins(Ui.dp(this,5),0,Ui.dp(this,5),Ui.dp(this,3));readerPane.addView(bottomControls,bottomLp);
         scheduleAutoHide();
     }
 
     private int overlayWidth(int maxDp){
         int screen=getResources().getDisplayMetrics().widthPixels;
         int usable=largeScreen?Math.round(screen*.58f):screen;
-        return Math.max(Ui.dp(this,280),Math.min(usable-Ui.dp(this,16),Ui.dp(this,maxDp)));
+        return Math.max(Ui.dp(this,280),Math.min(usable-Ui.dp(this,10),Ui.dp(this,maxDp)));
     }
 
     private void setPage(int requested){
         int next=Math.max(1,Math.min(604,requested));if(next==page){showControls();return;}
         closeSideTafsir();
-        page=next;selected=null;tafsirButton.setEnabled(false);tafsirButton.setText("Tafsir");if(audioButton!=null)audioButton.setEnabled(false);
+        page=next;selected=null;tafsirButton.setEnabled(false);tafsirButton.setContentDescription("Tafsir");if(audioButton!=null)audioButton.setEnabled(false);
         getSharedPreferences("hifz_study",MODE_PRIVATE).edit().putInt("page",page).apply();
-        pageLabel.setText("Lecture / Étude · "+page+" / 604");pageSeek.setProgress(page-1);
+        pageLabel.setText("Lecture · "+page+" / 604");pageSeek.setProgress(page-1);
         mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);showControls();
     }
     private void go(int delta){setPage(page+delta);}
 
     @Override public void onVerseTap(VerseRef verse){
-        selected=verse;tafsirButton.setEnabled(true);tafsirButton.setText("Tafsir "+verse.getSurah()+":"+verse.getAyah());
-        if(audioButton!=null)audioButton.setEnabled(true);
+        selected=verse;tafsirButton.setEnabled(true);tafsirButton.setContentDescription("Tafsir "+verse.getSurah()+":"+verse.getAyah());
+        if(audioButton!=null){audioButton.setEnabled(true);audioButton.setContentDescription("Audio "+verse.getSurah()+":"+verse.getAyah());}
         mushaf.setSelection(Collections.singletonList(verse),Collections.emptyList());showControls();
     }
     @Override public void onPageSwipe(int delta){go(delta);}
@@ -164,7 +166,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(w!=null){
             w.setGravity(Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);w.setWindowAnimations(0);w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             View content=findViewById(android.R.id.content);int availableHeight=content==null?getResources().getDisplayMetrics().heightPixels:content.getHeight();
-            w.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels-Ui.dp(this,16),Ui.dp(this,760)),Math.max(Ui.dp(this,220),Math.round(availableHeight*.50f)));
+            w.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels-Ui.dp(this,16),Ui.dp(this,760)),Math.max(Ui.dp(this,220),Math.round(availableHeight*.42f)));
         }
     }
 
@@ -177,8 +179,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void closeSideTafsir(){if(sideTafsir!=null){sideTafsir.removeAllViews();sideTafsir.setVisibility(View.GONE);}}
 
     private LinearLayout buildTafsirPanel(VerseRef verse,Runnable closeAction){
-        LinearLayout shell=Ui.column(this);shell.setPadding(Ui.dp(this,14),Ui.dp(this,8),Ui.dp(this,14),Ui.dp(this,10));
-        TextView title=Ui.text(this,"Tafsir · "+verse.getSurah()+":"+verse.getAyah(),17,true);shell.addView(title);
+        LinearLayout shell=Ui.column(this);shell.setPadding(Ui.dp(this,12),Ui.dp(this,7),Ui.dp(this,12),Ui.dp(this,8));
+        LinearLayout titleRow=Ui.row(this);
+        TextView title=Ui.text(this,"Tafsir · "+verse.getSurah()+":"+verse.getAyah(),17,true);Ui.weight(title,1);titleRow.addView(title);
+        titleRow.addView(Ui.roundButton(this,"×","Fermer le Tafsir",v->closeAction.run()));shell.addView(titleRow);
         TextView source=Ui.text(this,"Chargement des éditions vérifiées…",12,false);source.setTextColor(Ui.MUTED);source.setPadding(0,0,0,Ui.dp(this,4));shell.addView(source);
         LinearLayout editionRow=Ui.row(this);editionRow.setVisibility(View.GONE);shell.addView(editionRow);
 
@@ -188,10 +192,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         final MultiTafsirRepository.Edition[] currentEdition={MultiTafsirRepository.Edition.fromStorage(readingPrefs.getString(TAFSIR_EDITION_KEY,"jalalayn"))};
         final LinearLayout textColumn=Ui.column(this);textColumn.setPadding(0,0,0,0);
 
-        LinearLayout controls=Ui.row(this);
-        Button minus=Ui.smallButton(this,"A−",v->{fontSize[0]=Math.max(TAFSIR_MIN_SP,fontSize[0]-2f);readingPrefs.edit().putFloat(TAFSIR_FONT_KEY,fontSize[0]).apply();if(loaded[0]!=null)renderTafsir(textColumn,loaded[0],fontSize[0]);});
-        Button plus=Ui.smallButton(this,"A+",v->{fontSize[0]=Math.min(TAFSIR_MAX_SP,fontSize[0]+2f);readingPrefs.edit().putFloat(TAFSIR_FONT_KEY,fontSize[0]).apply();if(loaded[0]!=null)renderTafsir(textColumn,loaded[0],fontSize[0]);});
-        Button close=Ui.smallButton(this,"Fermer",v->closeAction.run());Ui.weight(minus,1);Ui.weight(plus,1);Ui.weight(close,1);controls.addView(minus);controls.addView(plus);controls.addView(close);shell.addView(controls);
+        LinearLayout controls=Ui.row(this);controls.setGravity(Gravity.CENTER);
+        Button minus=Ui.roundButton(this,"A−","Réduire le texte",v->{fontSize[0]=Math.max(TAFSIR_MIN_SP,fontSize[0]-2f);readingPrefs.edit().putFloat(TAFSIR_FONT_KEY,fontSize[0]).apply();if(loaded[0]!=null)renderTafsir(textColumn,loaded[0],fontSize[0]);});
+        Button plus=Ui.roundButton(this,"A+","Agrandir le texte",v->{fontSize[0]=Math.min(TAFSIR_MAX_SP,fontSize[0]+2f);readingPrefs.edit().putFloat(TAFSIR_FONT_KEY,fontSize[0]).apply();if(loaded[0]!=null)renderTafsir(textColumn,loaded[0],fontSize[0]);});
+        controls.addView(minus);controls.addView(plus);shell.addView(controls);
         ScrollView scroll=new ScrollView(this);textColumn.addView(tafsirText("Chargement…",fontSize[0],false));scroll.addView(textColumn);shell.addView(scroll,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
         io.execute(()->{
@@ -268,7 +272,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override public void onReady(){mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);}
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
-    @Override public void onPageShown(int shown){page=shown;pageLabel.setText("Lecture / Étude · "+shown+" / 604");pageSeek.setProgress(shown-1);}
+    @Override public void onPageShown(int shown){page=shown;pageLabel.setText("Lecture · "+shown+" / 604");pageSeek.setProgress(shown-1);}
     @Override public boolean onKeyDown(int keyCode,KeyEvent event){if(keyCode==KeyEvent.KEYCODE_PAGE_UP){go(-1);return true;}if(keyCode==KeyEvent.KEYCODE_PAGE_DOWN){go(1);return true;}return super.onKeyDown(keyCode,event);}
     @Override protected void onDestroy(){io.shutdownNow();if(mushaf!=null){mushaf.removeCallbacks(autoHide);mushaf.destroySafely();}super.onDestroy();}
 }
