@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Attach verified per-word Madani Mushaf boxes to the exact local Hifz geometry.
+"""Attach verified linguistic-word boxes to the exact local Hifz geometry.
 
-Runtime remains fully offline. Word coordinates are fetched only while producing the
-release asset, from one pinned public Git commit, then scaled to the local SVG viewBox.
-The displayed Mushaf SVG is never modified.
+Runtime remains fully offline. The public coordinate corpus is read only at build time
+from one pinned Git commit. Its page Y placement is deliberately *not* copied: the
+local KFQC SVG has special first/last-page framing, so source words are first grouped
+into physical text lines and then aligned, line-for-line, to the already-verified local
+geometry. Within each matched line only the relative horizontal word positions are
+transferred. The displayed Mushaf SVG itself is never modified.
 """
 from __future__ import annotations
 
@@ -24,7 +27,6 @@ SOURCE_WIDTH = 900.0
 SOURCE_HEIGHT = 1437.0
 EXPECTED_PAGES = 604
 EXPECTED_WORDS = 77320
-MAX_LINE_DISTANCE = 7.0
 
 
 def download_archive() -> bytes:
@@ -54,88 +56,156 @@ def page_sources(payload: bytes) -> dict[int, dict]:
                 page = int(basename.removeprefix("page-").removesuffix(".json"))
             except ValueError:
                 continue
-            if not 1 <= page <= 604:
+            if not 1 <= page <= EXPECTED_PAGES:
                 continue
             fileobj = archive.extractfile(member)
-            if fileobj is None:
-                continue
-            result[page] = json.loads(fileobj.read().decode("utf-8"))
+            if fileobj is not None:
+                result[page] = json.loads(fileobj.read().decode("utf-8"))
     if len(result) != EXPECTED_PAGES:
         raise RuntimeError(f"word-coordinate source has {len(result)} pages, expected {EXPECTED_PAGES}")
     return result
 
 
-def interval_distance(value: float, low: float, high: float) -> float:
-    if low <= value <= high:
-        return 0.0
-    return low - value if value < low else value - high
+def parsed_words(page: int, source: dict) -> list[dict]:
+    coords = source.get("coords", {})
+    if not isinstance(coords, dict) or not coords:
+        raise RuntimeError(f"page {page}: invalid/empty coordinate payload")
+    words: list[dict] = []
+    for word_id, coord in coords.items():
+        parts = word_id.split(":")
+        if len(parts) != 3 or not all(part.isdigit() for part in parts):
+            raise RuntimeError(f"page {page}: invalid word id {word_id!r}")
+        box = coord.get("h")
+        if not isinstance(box, dict):
+            raise RuntimeError(f"page {page} word {word_id}: missing highlight box")
+        x, y, w, h = (float(box[key]) for key in ("x", "y", "w", "h"))
+        if not all(math.isfinite(value) for value in (x, y, w, h)) or w <= 0 or h <= 0:
+            raise RuntimeError(f"page {page} word {word_id}: invalid highlight box")
+        if x < -1 or y < -1 or x + w > SOURCE_WIDTH + 1 or y + h > SOURCE_HEIGHT + 1:
+            raise RuntimeError(f"page {page} word {word_id}: source box outside 900x1437 page")
+        words.append({
+            "id": word_id,
+            "verse": f"{int(parts[0])}:{int(parts[1])}",
+            "ordinal": tuple(map(int, parts)),
+            "x0": x,
+            "x1": x + w,
+            "cy": y + h / 2.0,
+        })
+    return words
 
 
-def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float]:
+def cluster_into_exact_lines(words: list[dict], line_count: int) -> list[list[dict]]:
+    """Split source words into exactly the local number of physical lines.
+
+    In a Madani page, inter-line vertical gaps are much larger than within-line
+    diacritic variation. Selecting the N-1 largest adjacent centre gaps avoids any
+    dependence on absolute page Y offsets (important on pages 1/2 and surah pages).
+    """
+    if line_count <= 0 or len(words) < line_count:
+        raise RuntimeError(f"cannot cluster {len(words)} words into {line_count} lines")
+    ordered = sorted(words, key=lambda word: (word["cy"], -word["x0"], word["ordinal"]))
+    if line_count == 1:
+        return [ordered]
+    gaps = [ordered[i + 1]["cy"] - ordered[i]["cy"] for i in range(len(ordered) - 1)]
+    cuts = sorted(sorted(range(len(gaps)), key=lambda i: gaps[i], reverse=True)[: line_count - 1])
+    clusters: list[list[dict]] = []
+    start = 0
+    for cut in cuts:
+        clusters.append(ordered[start : cut + 1])
+        start = cut + 1
+    clusters.append(ordered[start:])
+    if len(clusters) != line_count or any(not cluster for cluster in clusters):
+        raise RuntimeError(f"line clustering produced {len(clusters)} groups, expected {line_count}")
+    return clusters
+
+
+def local_line_span(line: dict) -> tuple[float, float]:
+    cells = line.get("cells", [])
+    if not cells:
+        raise RuntimeError(f"local line {line.get('id')} has no ink cells")
+    left = min(float(cell[0]) for cell in cells)
+    right = max(float(cell[1]) for cell in cells)
+    if not right > left:
+        raise RuntimeError(f"local line {line.get('id')} has invalid horizontal extent")
+    return left, right
+
+
+def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float]:
     seen: set[str] = set()
     total = 0
-    worst_distance = 0.0
-    for page in range(1, 605):
+    worst_scale = 0.0
+    smallest_source_gap = math.inf
+
+    for page in range(1, EXPECTED_PAGES + 1):
         page_geo = root["pages"][str(page)]
-        view = page_geo["viewBox"]
-        vx, vy, vw, vh = map(float, view)
-        sx, sy = vw / SOURCE_WIDTH, vh / SOURCE_HEIGHT
         lines = page_geo["lines"]
         for line in lines:
             line["words"] = []
 
-        coords = sources[page].get("coords", {})
-        if not isinstance(coords, dict):
-            raise RuntimeError(f"page {page}: invalid coordinate payload")
-        for word_id, coord in coords.items():
-            parts = word_id.split(":")
-            if len(parts) != 3 or not all(part.isdigit() for part in parts):
-                raise RuntimeError(f"page {page}: invalid word id {word_id!r}")
-            if word_id in seen:
-                raise RuntimeError(f"duplicate word coordinate {word_id}")
-            seen.add(word_id)
-            verse = f"{int(parts[0])}:{int(parts[1])}"
-            box = coord.get("h")
-            if not isinstance(box, dict):
-                raise RuntimeError(f"page {page} word {word_id}: missing highlight box")
-            x = vx + float(box["x"]) * sx
-            y = vy + float(box["y"]) * sy
-            w = float(box["w"]) * sx
-            h = float(box["h"]) * sy
-            if not all(math.isfinite(v) for v in (x, y, w, h)) or w <= 0 or h <= 0:
-                raise RuntimeError(f"page {page} word {word_id}: invalid box")
-            if x < vx - 1 or y < vy - 1 or x + w > vx + vw + 1 or y + h > vy + vh + 1:
-                raise RuntimeError(f"page {page} word {word_id}: box outside local viewBox")
+        source_words = parsed_words(page, sources[page])
+        clusters = cluster_into_exact_lines(source_words, len(lines))
 
-            cy = y + h / 2.0
-            verse_lines = [line for line in lines if verse in line.get("verses", [])]
-            if not verse_lines:
-                raise RuntimeError(f"page {page} word {word_id}: verse absent from local geometry")
-            best = min(verse_lines, key=lambda line: interval_distance(cy, float(line["top"]), float(line["bottom"])))
-            distance = interval_distance(cy, float(best["top"]), float(best["bottom"]))
-            worst_distance = max(worst_distance, distance)
-            if distance > MAX_LINE_DISTANCE:
+        for source_line, local_line in zip(clusters, lines):
+            source_verses = {word["verse"] for word in source_line}
+            local_verses = set(map(str, local_line.get("verses", [])))
+            unexpected = sorted(source_verses - local_verses)
+            if unexpected:
                 raise RuntimeError(
-                    f"page {page} word {word_id}: source/local line mismatch {distance:.3f} SVG units"
+                    f"page {page} line {local_line.get('id')}: source/local verse-layout mismatch {unexpected}; "
+                    f"source={sorted(source_verses)} local={sorted(local_verses)}"
                 )
-            best["words"].append({
-                "id": word_id,
-                "verse": verse,
-                "kind": "word",
-                "x": round(x, 3),
-                "y": round(y, 3),
-                "w": round(w, 3),
-                "h": round(h, 3),
-            })
-            total += 1
 
-        # Canonical word order inside every physical line: verse ordinal then word position.
-        for line in lines:
-            line["words"].sort(key=lambda word: tuple(map(int, word["id"].split(":"))))
+            src_left = min(word["x0"] for word in source_line)
+            src_right = max(word["x1"] for word in source_line)
+            if not src_right > src_left:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: collapsed source extent")
+            dst_left, dst_right = local_line_span(local_line)
+            scale = (dst_right - dst_left) / (src_right - src_left)
+            worst_scale = max(worst_scale, scale)
+            if not 0.15 <= scale <= 0.85:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: implausible x scale {scale:.4f}")
+
+            line_top = float(local_line["top"]) + 0.6
+            line_bottom = float(local_line["bottom"]) - 0.6
+            line_height = line_bottom - line_top
+            if line_height <= 1:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: invalid local line height")
+
+            for word in source_line:
+                word_id = word["id"]
+                if word_id in seen:
+                    raise RuntimeError(f"duplicate word coordinate {word_id}")
+                seen.add(word_id)
+                x0 = dst_left + (word["x0"] - src_left) * scale
+                x1 = dst_left + (word["x1"] - src_left) * scale
+                width = x1 - x0
+                if width <= 0:
+                    raise RuntimeError(f"page {page} word {word_id}: collapsed local word width")
+                local_line["words"].append({
+                    "id": word_id,
+                    "verse": word["verse"],
+                    "kind": "word",
+                    "x": round(x0, 3),
+                    "y": round(line_top, 3),
+                    "w": round(width, 3),
+                    "h": round(line_height, 3),
+                })
+                total += 1
+
+            # Preserve an audit signal for the source line separation quality.
+            centers = sorted(word["cy"] for word in source_line)
+            if len(centers) > 1:
+                local_gaps = [b - a for a, b in zip(centers, centers[1:]) if b > a]
+                if local_gaps:
+                    smallest_source_gap = min(smallest_source_gap, min(local_gaps))
+
+            local_line["words"].sort(key=lambda word: tuple(map(int, word["id"].split(":"))))
 
     if total != EXPECTED_WORDS or len(seen) != EXPECTED_WORDS:
         raise RuntimeError(f"word count mismatch: {total} / unique {len(seen)}, expected {EXPECTED_WORDS}")
-    return total, worst_distance
+    if smallest_source_gap is math.inf:
+        smallest_source_gap = 0.0
+    return total, worst_scale, smallest_source_gap
 
 
 def main() -> None:
@@ -143,7 +213,7 @@ def main() -> None:
         raise RuntimeError("generate exact Hifz geometry before attaching word coordinates")
     root = json.loads(GEOMETRY.read_text(encoding="utf-8"))
     sources = page_sources(download_archive())
-    total, worst = attach_words(root, sources)
+    total, worst_scale, smallest_gap = attach_words(root, sources)
     root["wordGeometrySource"] = {
         "repository": SOURCE_REPO,
         "commit": SOURCE_COMMIT,
@@ -151,6 +221,7 @@ def main() -> None:
         "sourceWidth": int(SOURCE_WIDTH),
         "sourceHeight": int(SOURCE_HEIGHT),
         "wordCount": total,
+        "alignment": "source physical-line rank -> verified local line; per-line affine X; local Y band",
         "runtimeNetwork": False,
     }
     GEOMETRY.write_text(json.dumps(root, separators=(",", ":")), encoding="utf-8")
@@ -160,10 +231,15 @@ def main() -> None:
         "wordMaskUnit": "linguistic words; random cumulative selection; verse markers excluded",
         "wordCoordinateSource": f"https://github.com/{SOURCE_REPO}@{SOURCE_COMMIT}",
         "wordCoordinateCount": total,
-        "wordCoordinateWorstLineDistance": round(worst, 3),
+        "wordCoordinateAlignment": "physical-line rank + verse-layout gate + per-line affine X",
+        "wordCoordinateWorstXScale": round(worst_scale, 6),
+        "wordCoordinateSmallestPositiveIntraLineCenterGap": round(smallest_gap, 3),
     })
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} worstLineDistance={worst:.3f}")
+    print(
+        f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} "
+        f"worstXScale={worst_scale:.4f}"
+    )
 
 
 if __name__ == "__main__":
