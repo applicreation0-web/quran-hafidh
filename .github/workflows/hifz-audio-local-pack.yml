@@ -1,0 +1,60 @@
+name: Quran Hifz local Husary audio pack
+
+on:
+  push:
+    branches:
+      - integration/hifz-boox-polish-0.7
+    paths:
+      - '.github/workflows/hifz-audio-local-pack.yml'
+      - 'scripts/prepare_husary_muallim_audio.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare-local-audio-pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch and verify Al-Husary Muallim personal corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          out='dist/Quran-Hifz-Husary-Muallim'
+          python3 scripts/prepare_husary_muallim_audio.py --clean --delivery local-zip-import --output "$out"
+          count="$(find "$out" -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9][0-9][0-9].mp3' | wc -l | tr -d ' ')"
+          test "$count" = 6236
+          test -s "$out/001001.mp3"
+          test -s "$out/002075.mp3"
+          test -s "$out/114006.mp3"
+          test -s "$out/source.json"
+          test -s "$out/sha256.txt"
+          test -s "$out/upstream_checksum.md5"
+          test -s "$out/PACK_README.txt"
+          grep -q '"fileCount": 6236' "$out/source.json"
+          grep -q '"delivery": "local-zip-import"' "$out/source.json"
+          grep -q 'Quran-Hifz-Husary-Muallim.zip' "$out/source.json"
+          grep -q 'https://everyayah.com/data/Husary_Muallim_128kbps/' "$out/source.json"
+          test "$(wc -l < "$out/sha256.txt" | tr -d ' ')" = 6236
+          du -sh "$out" | tee "$out/PACK_SIZE.txt"
+          printf 'HEAD=%s\nAUDIO_COUNT=%s\nDELIVERY=local-zip-import\n' "$GITHUB_SHA" "$count" > "$out/PACK_BUILD.txt"
+
+      - name: Upload import-ready local audio pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quran-Hifz-Husary-Muallim
+          path: dist/Quran-Hifz-Husary-Muallim/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+# Downloading this private artifact produces Quran-Hifz-Husary-Muallim.zip.
+# Keep that ZIP in Téléchargements/QuranHifz/ and import it once from Quran Hifz Settings.
