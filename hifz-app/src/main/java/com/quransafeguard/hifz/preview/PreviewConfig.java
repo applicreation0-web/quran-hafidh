@@ -42,6 +42,13 @@ public final class PreviewConfig {
     // Audio moves verse-by-verse and can run for long periods: clean more often than generic local UI.
     public static final int EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6;
 
+    /** Recent Sabqi gets one complete pass, capped at 30 minutes; unused time returns to old Itqan review. */
+    public static boolean recentMurajaahComplete(int reviewedLines, int totalRecentLines, long elapsedMs) {
+        if (totalRecentLines <= 0) return true;
+        if (reviewedLines >= totalRecentLines) return true;
+        return elapsedMs >= MURAJAAH_RECENT_SABQI_MINUTES_WORKING * 60_000L;
+    }
+
     public static int sabqiMaskForNextRep(int completed) {
         if (completed < 0 || completed >= SABQI_TOTAL_REPS) return 0;
         int next = completed + 1;
