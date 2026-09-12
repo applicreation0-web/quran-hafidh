@@ -86,11 +86,15 @@ public final class MainActivity extends android.app.Activity {
         try{
             SessionType kind=scheduled.getType();
             switch(kind){
-                case SABQI:{int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());if(cursor<g.firstLineIndex(prefs.sabqiStart())||cursor>g.lastLineIndex(prefs.sabqiEnd()))detail="Sabqi · curseur à repositionner";else{GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);detail="Sabqi · "+range(b.startVerse,b.endVerse)+" · "+(prefs.sabqiRep()>0?(prefs.sabqiRep()+1)+"/37":"37 répétitions");}break;}
+                case SABQI:{
+                    int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
+                    if(cursor<g.firstLineIndex(prefs.sabqiStart())||cursor>g.lastLineIndex(prefs.sabqiEnd()))detail="Sabqi · curseur à repositionner";
+                    else{GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);int rep=prefs.sabqiRep();String state=rep>=PreviewConfig.SABQI_TOTAL_REPS?"✓ prêt à valider":rep>0?"reprise "+(rep+1)+"/37":"37 répétitions";detail="Sabqi · "+range(b.startVerse,b.endVerse)+" · "+state;}break;
+                }
                 case ITQAN:{
                     if(!prefs.isItqanCursorValid()){detail="Itqān · curseur hors des plages";break;}
                     int rep=prefs.itqanRep();VerseRef start=prefs.itqanUnitStart(),end=prefs.itqanUnitEnd();
-                    if(rep>0&&start!=null&&end!=null)detail="Itqān · "+range(start,end)+" · reprise "+(rep+1)+"/30";
+                    if(rep>0&&start!=null&&end!=null){String state=rep>=PreviewConfig.ITQAN_TOTAL_REPS?"✓ prêt à valider":"reprise "+(rep+1)+"/30";detail="Itqān · "+range(start,end)+" · "+state;}
                     else{GeometryRepository.VerseUnit u=g.eligiblePageUnit(prefs.itqanCursor(),prefs.corpus());detail="Itqān · "+range(u.start,u.end)+" · ×30";}break;
                 }
                 case MURAJAAH:{detail="Murājaʿah · Bloc "+prefs.murajaahPhase()+" · "+prefs.recentSabqi().size()+" bloc(s) Sabqi récent";break;}
@@ -110,7 +114,7 @@ public final class MainActivity extends android.app.Activity {
             LinearLayout row=Ui.row(this);row.setPadding(0,Ui.dp(this,4),0,Ui.dp(this,4));
             addCell(row,item.day,0.45f,true);addCell(row,item.morning,2.2f,false);addCell(row,item.evening,2.2f,false);addCell(row,item.state,0.9f,false);dashboard.addView(row);
         }
-        TextView note=Ui.text(this,"Les passages futurs sont des projections locales depuis les curseurs réels ; ils ne déplacent aucun curseur. Les séances validées restent l’historique de référence.",11,false);note.setPadding(0,Ui.dp(this,5),0,0);dashboard.addView(note);
+        TextView note=Ui.text(this,"Passages futurs = projection locale depuis les curseurs réels, sans déplacement. ✓ n’apparaît qu’après validation enregistrée.",11,false);note.setPadding(0,Ui.dp(this,5),0,0);dashboard.addView(note);
     }
 
     private void addCell(LinearLayout row,String value,float weight,boolean bold){
