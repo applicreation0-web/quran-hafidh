@@ -32,10 +32,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
- * Personal/offline Al-Husary Muallim pack. The durable 0.7 delivery path is a local ZIP imported
- * once from the BOOX file picker. Runtime Android code never downloads audio and audio state never
- * mutates Hifz repetitions, promotions or cursors. Embedded assets remain readable only as a legacy
- * fallback for earlier experimental builds.
+ * Personal/offline Al-Husary Muallim pack. Import is staged, verified, then activated atomically.
+ * Runtime Android code never downloads audio and audio state never mutates Hifz progress.
  */
 final class HifzAudioPack {
     static final int EXPECTED_VERSE_FILES = 6236;
@@ -49,6 +47,14 @@ final class HifzAudioPack {
     private static final String VERIFIED_MARKER = ".verified-6236-v1";
     private static final String EMBEDDED_ROOT = "audio/husary-muallim";
     private static final String EMBEDDED_MANIFEST = EMBEDDED_ROOT + "/source.json";
+    private static final String BACKUP_DIR = "husary-muallim.previous";
+    private static final String IMPORT_PREFIX = "husary-muallim.importing-";
+
+    // Import needs room for the verified extracted pack while the downloaded ZIP remains in Downloads.
+    private static final long MIN_IMPORT_FREE_BYTES = 3_200_000_000L;
+    private static final long MAX_VERSE_BYTES = 15L * 1024L * 1024L;
+    private static final long MAX_METADATA_BYTES = 16L * 1024L * 1024L;
+    private static final long MAX_TOTAL_EXTRACTED_BYTES = 4_000_000_000L;
 
     static final class ImportResult {
         final boolean ok;
@@ -75,10 +81,10 @@ final class HifzAudioPack {
     HifzAudioPack(Context context) {
         this.context = context.getApplicationContext();
         this.dir = new File(this.context.getFilesDir(), "audio/husary-muallim");
+        recoverInterruptedActivation();
     }
 
     boolean installed() { return localInstalled() || embeddedInstalled(); }
-
     boolean embeddedInstalled() { return embedded().valid; }
 
     int installedFileCount() {
@@ -131,18 +137,22 @@ final class HifzAudioPack {
         if (!parent.exists() && !parent.mkdirs()) return new ImportResult(false, 0, "Impossible de créer le dossier audio interne.");
         if (!parent.isDirectory() || !parent.canWrite()) return new ImportResult(false, 0, "Dossier audio interne non accessible en écriture.");
 
-        // Keep a stable staging directory and clear its contents instead of requiring the directory
-        // itself to be deleted. Some Android/BOOX file systems can keep the directory entry alive
-        // briefly after a large failed import; mkdirs() would then return false even though the
-        // existing empty directory is perfectly reusable.
-        File staging = new File(parent, "husary-muallim.importing");
-        if (!prepareEmptyDirectory(staging)) {
+        recoverInterruptedActivation();
+        cleanupStaleImports(parent);
+        long usable = parent.getUsableSpace();
+        if (usable > 0L && usable < MIN_IMPORT_FREE_BYTES) {
             return new ImportResult(false, 0,
-                "Impossible de préparer l’import audio. Fermez Quran Hifz, rouvrez-le puis réessayez.");
+                "Espace insuffisant pour installer l’audio. Libérez au moins 3,2 Go puis réessayez.");
+        }
+
+        File staging = new File(parent, IMPORT_PREFIX + System.currentTimeMillis());
+        if (!staging.mkdirs() || !staging.isDirectory()) {
+            return new ImportResult(false, 0, "Impossible de préparer l’import audio.");
         }
 
         Set<String> copiedNames = new HashSet<>();
         ContentResolver resolver = context.getContentResolver();
+        long totalExtracted = 0L;
         try (InputStream raw = resolver.openInputStream(uri)) {
             if (raw == null) throw new IllegalStateException("Fichier sélectionné illisible");
             try (ZipInputStream zip = new ZipInputStream(new BufferedInputStream(raw))) {
@@ -158,11 +168,22 @@ final class HifzAudioPack {
                         if (!isCanonicalVerseFile(name)) throw new IllegalStateException("Fichier verset hors canon : " + name);
                         if (!copiedNames.add(name)) throw new IllegalStateException("Verset dupliqué dans le pack : " + name);
                     }
+                    long declared = entry.getSize();
+                    long maxEntry = verseFile ? MAX_VERSE_BYTES : MAX_METADATA_BYTES;
+                    if (declared > maxEntry) throw new IllegalStateException("Entrée audio anormalement volumineuse : " + name);
+
                     File target = new File(staging, name);
+                    long entryBytes = 0L;
                     try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(target))) {
                         int n;
                         while ((n = zip.read(buffer)) != -1) {
-                            if (n > 0) out.write(buffer, 0, n);
+                            if (n <= 0) continue;
+                            entryBytes += n;
+                            totalExtracted += n;
+                            if (entryBytes > maxEntry || totalExtracted > MAX_TOTAL_EXTRACTED_BYTES) {
+                                throw new IllegalStateException("Pack audio trop volumineux ou invalide");
+                            }
+                            out.write(buffer, 0, n);
                         }
                     }
                     if (target.length() <= 0) throw new IllegalStateException("Fichier vide : " + name);
@@ -171,31 +192,62 @@ final class HifzAudioPack {
             }
 
             if (copiedNames.size() != EXPECTED_VERSE_FILES || !hasAllCanonicalFiles(staging)) {
-                clearDirectory(staging);
-                return new ImportResult(false, copiedNames.size(),
-                    "Pack incomplet : " + copiedNames.size() + " / " + EXPECTED_VERSE_FILES + " versets canoniques trouvés.");
+                throw new IllegalStateException(
+                    "Pack incomplet : " + copiedNames.size() + " / " + EXPECTED_VERSE_FILES + " versets canoniques trouvés");
             }
 
             verifySourceMetadata(staging);
             verifySha256Manifest(staging);
             writeVerifiedMarker(staging);
-
-            deleteRecursive(dir);
-            if (!staging.renameTo(dir)) {
-                if (!dir.mkdirs() && !dir.isDirectory()) throw new IllegalStateException("Impossible d’activer le pack importé");
-                File[] files = staging.listFiles();
-                if (files == null) throw new IllegalStateException("Pack importé illisible");
-                for (File source : files) copyFile(source, new File(dir, source.getName()));
-                clearDirectory(staging);
-            }
+            activateVerifiedPack(staging);
             return new ImportResult(true, EXPECTED_VERSE_FILES,
                 "✓ 6 236 / 6 236 versets vérifiés · Al-Husary Muʿallim · audio hors ligne prêt.");
         } catch (Throwable error) {
-            clearDirectory(staging);
+            deleteRecursive(staging);
             String message = error.getMessage();
             return new ImportResult(false, copiedNames.size(),
                 "Import audio impossible : " + (message == null ? error.getClass().getSimpleName() : message));
         }
+    }
+
+    private void activateVerifiedPack(File staging) throws Exception {
+        File parent = dir.getParentFile();
+        if (parent == null) throw new IllegalStateException("Dossier audio interne indisponible");
+        File backup = new File(parent, BACKUP_DIR);
+        deleteRecursive(backup);
+
+        boolean hadCurrent = dir.exists();
+        if (hadCurrent && !dir.renameTo(backup)) {
+            throw new IllegalStateException("Impossible de sécuriser le pack audio existant");
+        }
+        if (!staging.renameTo(dir)) {
+            if (hadCurrent && backup.exists()) backup.renameTo(dir);
+            throw new IllegalStateException("Impossible d’activer le pack audio vérifié");
+        }
+        if (!isVerifiedLocalDirectory(dir)) {
+            deleteRecursive(dir);
+            if (hadCurrent && backup.exists()) backup.renameTo(dir);
+            throw new IllegalStateException("Vérification finale du pack audio échouée");
+        }
+        deleteRecursive(backup);
+    }
+
+    /** Recover the last known-good pack if Android stopped the app between the two atomic renames. */
+    private void recoverInterruptedActivation() {
+        File parent = dir.getParentFile();
+        if (parent == null || !parent.isDirectory()) return;
+        File backup = new File(parent, BACKUP_DIR);
+        if (dir.exists()) {
+            if (isVerifiedLocalDirectory(dir)) deleteRecursive(backup);
+            return;
+        }
+        if (isVerifiedLocalDirectory(backup)) backup.renameTo(dir);
+    }
+
+    private static void cleanupStaleImports(File parent) {
+        File[] stale = parent.listFiles((folder, name) -> name.startsWith(IMPORT_PREFIX));
+        if (stale == null) return;
+        for (File file : stale) deleteRecursive(file);
     }
 
     private EmbeddedInfo embedded() {
@@ -227,13 +279,16 @@ final class HifzAudioPack {
         }
     }
 
-    private boolean localInstalled() {
-        return new File(dir, VERIFIED_MARKER).isFile()
-            && new File(dir, SOURCE_JSON).isFile()
-            && new File(dir, SHA256_MANIFEST).isFile()
-            && fileNamed("001001.mp3").isFile()
-            && fileNamed("114006.mp3").isFile()
-            && countVerseFiles(dir) == EXPECTED_VERSE_FILES;
+    private boolean localInstalled() { return isVerifiedLocalDirectory(dir); }
+
+    private static boolean isVerifiedLocalDirectory(File folder) {
+        return folder != null && folder.isDirectory()
+            && new File(folder, VERIFIED_MARKER).isFile()
+            && new File(folder, SOURCE_JSON).isFile()
+            && new File(folder, SHA256_MANIFEST).isFile()
+            && new File(folder, "001001.mp3").isFile()
+            && new File(folder, "114006.mp3").isFile()
+            && countVerseFiles(folder) == EXPECTED_VERSE_FILES;
     }
 
     private static boolean hasAllCanonicalFiles(File folder) {
@@ -331,17 +386,6 @@ final class HifzAudioPack {
         return files == null ? 0 : files.length;
     }
 
-    private static void copyFile(File source, File target) throws Exception {
-        try (InputStream in = new FileInputStream(source);
-             BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(target))) {
-            byte[] buffer = new byte[64 * 1024];
-            int n;
-            while ((n = in.read(buffer)) != -1) {
-                if (n > 0) out.write(buffer, 0, n);
-            }
-        }
-    }
-
     private static String readUtf8(InputStream input) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
@@ -350,25 +394,6 @@ final class HifzAudioPack {
             if (n > 0) out.write(buffer, 0, n);
         }
         return new String(out.toByteArray(), StandardCharsets.UTF_8);
-    }
-
-    private static boolean prepareEmptyDirectory(File folder) {
-        if (folder.exists()) {
-            if (!folder.isDirectory()) {
-                if (!folder.delete()) return false;
-            } else {
-                clearDirectory(folder);
-                File[] remaining = folder.listFiles();
-                return remaining != null && remaining.length == 0;
-            }
-        }
-        return folder.mkdirs() || folder.isDirectory();
-    }
-
-    private static void clearDirectory(File folder) {
-        if (folder == null || !folder.isDirectory()) return;
-        File[] children = folder.listFiles();
-        if (children != null) for (File child : children) deleteRecursive(child);
     }
 
     private static void deleteRecursive(File file) {
