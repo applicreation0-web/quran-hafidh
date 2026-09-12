@@ -53,8 +53,9 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         counter = Ui.text(this,"Répétitions · "+count,12,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
         LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
-        reps.addView(Ui.iconButton(this,"−","Retirer une répétition",v->{if(count>0)count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();}));
-        reps.addView(Ui.iconButton(this,"+","Ajouter une répétition",v->{count++;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();}));
+        Button decrement=Ui.iconButton(this,"−","Retirer",v->{if(count>0)count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
+        Ui.setButtonIcon(decrement,R.drawable.ic_ui_remove);reps.addView(decrement);
+        reps.addView(Ui.iconButton(this,"+","Ajouter",v->{count++;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();}));
         reps.addView(Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();counter.setText("Répétitions · 0");mushaf.localCounterChanged();}));
         root.addView(reps);
 
