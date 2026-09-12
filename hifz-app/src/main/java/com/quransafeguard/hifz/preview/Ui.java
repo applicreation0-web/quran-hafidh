@@ -45,7 +45,16 @@ final class Ui {
     /** Compact text action. */
     static Button smallButton(Context context, String label, View.OnClickListener listener) {
         Button button = styled(new Button(context), context, 13.5f, dp(context, 13));
-        button.setText(label);
+        String shown = label;
+        int iconRes = iconFor(label, label);
+        if (label != null && label.toLowerCase(Locale.ROOT).contains("audio")) shown = "Écouter";
+        button.setText(shown);
+        if (iconRes != 0 && label != null && label.toLowerCase(Locale.ROOT).contains("audio")) {
+            button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
+            button.setCompoundDrawableTintList(iconTint());
+            button.setCompoundDrawablePadding(dp(context, 6));
+        }
+        button.setContentDescription(shown);
         button.setOnClickListener(listener);
         button.setMinWidth(dp(context, 44));
         button.setMinHeight(dp(context, 40));
