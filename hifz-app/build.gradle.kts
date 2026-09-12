@@ -110,11 +110,11 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.quransafeguard.hifz.installtest1"
+        applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
         versionCode = 7
-        versionName = "0.7-boox-polish-test"
+        versionName = "0.7-boox"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -122,7 +122,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            // Exact personal test package; no suffix so this signed test candidate updates the prior test package.
+            // Stable Quran Hifz package: preserves imported audio and progress across future updates.
         }
         getByName("release") {
             isMinifyEnabled = false
