@@ -234,7 +234,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             renderMode();return;
         }
         currentMask=PreviewConfig.sabqiMaskForNextRep(rep);
-        if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        mushaf.setMask(currentMask, maskDrawKey());
         updateRevealButton();
         if (currentPage != unitFirstPage) { currentPage = unitFirstPage; showCurrent(); }
         updateSabqiProgress(rep,reveals);
@@ -356,7 +356,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep);if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep);mushaf.setMask(currentMask, maskDrawKey());
         updateRevealButton();if(currentPage!=unitFirstPage){currentPage=unitFirstPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
@@ -499,7 +499,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
-    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask);}
+    private String maskDrawKey(){
+        if(SABQI.equals(mode))return "SABQI|rep:"+prefs.sabqiRep();
+        if(ITQAN.equals(mode))return "ITQAN|rep:"+prefs.itqanRep();
+        return "MURAJAAH";
+    }
+    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,maskDrawKey());}
 
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));
