@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=4,user-scalable=yes">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
 <style>
-:root{--paper:#faf8f2;--sheet:#fffdf8;--sel:#000;--sel-op:.07;--audio-op:.16;--mask:#e8e4da;--reveal-pad:0px}
+:root{--paper:#faf8f2;--sheet:#fffdf8;--sel:#000;--sel-op:.07;--audio:#171717;--mask:#e8e4da;--reveal-pad:0px}
 html{-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;background:var(--paper);color:#000;-webkit-user-select:none;user-select:none}
 *{box-sizing:border-box}
@@ -15,11 +15,13 @@ html,body{margin:0;width:100%;background:var(--paper);color:#000;-webkit-user-se
 .ayahPolygon{pointer-events:all;cursor:pointer;fill:var(--sel)!important;fill-opacity:0;stroke:none!important;outline:none}
 .ayahPolygon:focus,.ayahPolygon:focus-visible{outline:none}
 .ayahPolygon.selected{fill-opacity:var(--sel-op)}
-.ayahPolygon.audio{fill-opacity:var(--audio-op)}
-.ayahPolygon.selected.audio{fill-opacity:max(var(--sel-op),var(--audio-op))}
+/* Audio changes every verse: outline only, no large gray repaint. This limits E-Ink ghosting. */
+.ayahPolygon.audio{fill-opacity:0;stroke:var(--audio)!important;stroke-width:1.15;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.ayahPolygon.selected.audio{fill-opacity:var(--sel-op);stroke:var(--audio)!important}
 .masklayer{pointer-events:none}
 .maskcell{fill:var(--mask)}
-body.eink{--paper:#fff;--sheet:#fff;--sel-op:.10;--audio-op:.20;--mask:#cfcfcf}
+body.eink{--paper:#fff;--sheet:#fff;--sel-op:.075;--mask:#e2e2e2}
+body.eink .ayahPolygon.audio{stroke-width:1.35}
 .eink *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 </style>
 </head>
