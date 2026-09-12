@@ -1,5 +1,6 @@
 package com.quransafeguard.hifz.core
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,5 +56,21 @@ class HifzCoreTest {
         assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.plusDays(4).dayOfWeek))
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(5).dayOfWeek))
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(6).dayOfWeek))
+    }
+
+    @Test fun tuesdayAndThursdayAddEveningMurajaahWithoutReplacingItqan() {
+        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.TUESDAY))
+        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.THURSDAY))
+
+        val method = try {
+            HifzSchedule::class.java.getMethod("hasEveningMurajaah", DayOfWeek::class.java)
+        } catch (_: NoSuchMethodException) {
+            null
+        }
+        assertTrue(method != null, "HifzSchedule must expose Tue/Thu evening Murajaah without replacing daytime Itqan")
+        assertTrue(method!!.invoke(HifzSchedule, DayOfWeek.TUESDAY) as Boolean)
+        assertTrue(method.invoke(HifzSchedule, DayOfWeek.THURSDAY) as Boolean)
+        assertFalse(method.invoke(HifzSchedule, DayOfWeek.MONDAY) as Boolean)
+        assertFalse(method.invoke(HifzSchedule, DayOfWeek.SATURDAY) as Boolean)
     }
 }
