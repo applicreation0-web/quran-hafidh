@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """Attach pinned linguistic-word boxes to the exact local Hifz geometry.
 
-The coordinate corpus is fetched only at build time from one pinned Git commit.
-Runtime remains fully offline and the shipped KFQC SVG pages are never modified.
+The public coordinate corpus is used only at build time from one pinned commit.
+Runtime remains offline and the canonical KFQC SVG pages are never modified.
 
-The upstream boxes are expressed on a 900x1437 image of the same 604-page Madani
-pagination. We therefore scale each word directly into the local SVG viewBox instead
-of stretching source lines to local ink spans. Each scaled word is then associated
-with the nearest verified local physical line only for Hifz 5-line filtering. This
-keeps word rectangles true to the page coordinate system and avoids line-width
-warping on short/surah-opening lines.
+Upstream words already share a common Y value for each physical Mushaf text line.
+We therefore recover those natural source lines, require their count to match the
+verified local Quran-line count, pair lines in reading order, and transfer only the
+relative horizontal word geometry into each exact local line band. This avoids using
+absolute page margins (which differ on framed/surah pages) and avoids inventing line
+breaks from generic gap heuristics.
 """
 from __future__ import annotations
 
 import io
 import json
 import math
+import statistics
 import tarfile
 import urllib.request
 from pathlib import Path
@@ -30,6 +31,7 @@ SOURCE_WIDTH = 900.0
 SOURCE_HEIGHT = 1437.0
 EXPECTED_PAGES = 604
 EXPECTED_WORDS = 77320
+SOURCE_LINE_Y_TOLERANCE = 6.0
 
 
 def download_archive() -> bytes:
@@ -42,7 +44,7 @@ def download_archive() -> bytes:
             if len(payload) < 1_000_000:
                 raise RuntimeError(f"coordinate archive unexpectedly small: {len(payload)} bytes")
             return payload
-        except Exception as exc:  # pragma: no cover - retry path is CI/network dependent
+        except Exception as exc:  # pragma: no cover
             last = exc
     raise RuntimeError(f"cannot fetch pinned Quran word coordinates: {last}")
 
@@ -90,71 +92,64 @@ def parsed_words(page: int, source: dict) -> list[dict]:
             "id": word_id,
             "verse": f"{int(parts[0])}:{int(parts[1])}",
             "ordinal": tuple(map(int, parts)),
-            "x": x,
+            "x0": x,
+            "x1": x + w,
             "y": y,
-            "w": w,
-            "h": h,
+            "cy": y + h / 2.0,
         })
     return words
 
 
-def scale_word(word: dict, view_box: list[float]) -> dict:
-    vx, vy, vw, vh = map(float, view_box)
-    sx = vw / SOURCE_WIDTH
-    sy = vh / SOURCE_HEIGHT
-    return {
-        "id": word["id"],
-        "verse": word["verse"],
-        "kind": "word",
-        "x": vx + word["x"] * sx,
-        "y": vy + word["y"] * sy,
-        "w": word["w"] * sx,
-        "h": word["h"] * sy,
-    }
+def natural_source_lines(words: list[dict]) -> list[list[dict]]:
+    """Recover physical source lines from the coordinate data's own Y bands."""
+    ordered = sorted(words, key=lambda word: (word["cy"], -word["x0"], word["ordinal"]))
+    lines: list[list[dict]] = []
+    centers: list[float] = []
+    for word in ordered:
+        if not lines:
+            lines.append([word]); centers.append(word["cy"]); continue
+        if abs(word["cy"] - centers[-1]) <= SOURCE_LINE_Y_TOLERANCE:
+            lines[-1].append(word)
+            centers[-1] = statistics.median(item["cy"] for item in lines[-1])
+        else:
+            lines.append([word]); centers.append(word["cy"])
+    return lines
 
 
-def choose_line(lines: list[dict], word: dict) -> tuple[int, float]:
-    top = float(word["y"])
-    bottom = top + float(word["h"])
-    center = (top + bottom) / 2.0
-    best_index = -1
-    best_overlap = -1.0
-    best_distance = math.inf
-    for index, line in enumerate(lines):
-        line_top = float(line["top"])
-        line_bottom = float(line["bottom"])
-        overlap = max(0.0, min(bottom, line_bottom) - max(top, line_top))
-        line_center = (line_top + line_bottom) / 2.0
-        distance = abs(center - line_center)
-        if overlap > best_overlap + 1e-9 or (abs(overlap - best_overlap) <= 1e-9 and distance < best_distance):
-            best_index = index
-            best_overlap = overlap
-            best_distance = distance
-    if best_index < 0:
-        raise RuntimeError("cannot associate scaled word with a local line")
-    return best_index, best_distance
+def local_line_span(line: dict) -> tuple[float, float]:
+    cells = line.get("cells", [])
+    if not cells:
+        raise RuntimeError(f"local line {line.get('id')} has no ink cells")
+    left = min(float(cell[0]) for cell in cells)
+    right = max(float(cell[1]) for cell in cells)
+    if not right > left:
+        raise RuntimeError(f"local line {line.get('id')} has invalid horizontal extent")
+    return left, right
 
 
-def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, int]:
+def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float, int]:
     seen: set[str] = set()
     total = 0
-    max_line_center_distance = 0.0
+    min_scale = math.inf
+    max_scale = 0.0
     adjacent_boundary_tolerances = 0
 
     for page in range(1, EXPECTED_PAGES + 1):
         page_geo = root["pages"][str(page)]
-        lines = page_geo["lines"]
-        view_box = page_geo.get("viewBox")
-        if not isinstance(view_box, list) or len(view_box) != 4:
-            raise RuntimeError(f"page {page}: missing local SVG viewBox")
-        if not lines:
-            raise RuntimeError(f"page {page}: local geometry has no Quran lines")
-        for line in lines:
+        local_lines = page_geo["lines"]
+        for line in local_lines:
             line["words"] = []
 
         source_words = parsed_words(page, sources[page])
+        source_lines = natural_source_lines(source_words)
+        if len(source_lines) != len(local_lines):
+            raise RuntimeError(
+                f"page {page}: natural source/local line-count mismatch "
+                f"{len(source_lines)} != {len(local_lines)}"
+            )
+
         source_page_verses = {word["verse"] for word in source_words}
-        local_page_verses = {str(verse) for line in lines for verse in line.get("verses", [])}
+        local_page_verses = {str(verse) for line in local_lines for verse in line.get("verses", [])}
         if source_page_verses != local_page_verses:
             missing = sorted(source_page_verses - local_page_verses)
             extra = sorted(local_page_verses - source_page_verses)
@@ -162,54 +157,67 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, int]
                 f"page {page}: source/local pagination mismatch; missing={missing[:6]} extra={extra[:6]}"
             )
 
-        vx, vy, vw, vh = map(float, view_box)
-        for raw_word in source_words:
-            word_id = raw_word["id"]
-            if word_id in seen:
-                raise RuntimeError(f"duplicate word coordinate {word_id}")
-            seen.add(word_id)
-            word = scale_word(raw_word, view_box)
-            if (
-                word["x"] < vx - 0.5
-                or word["y"] < vy - 0.5
-                or word["x"] + word["w"] > vx + vw + 0.5
-                or word["y"] + word["h"] > vy + vh + 0.5
-            ):
-                raise RuntimeError(f"page {page} word {word_id}: scaled box outside local SVG viewBox")
+        for line_index, (source_line, local_line) in enumerate(zip(source_lines, local_lines)):
+            source_verses = {word["verse"] for word in source_line}
+            current_verses = set(map(str, local_line.get("verses", [])))
+            allowed_verses = set(current_verses)
+            if line_index > 0:
+                allowed_verses.update(map(str, local_lines[line_index - 1].get("verses", [])))
+            if line_index + 1 < len(local_lines):
+                allowed_verses.update(map(str, local_lines[line_index + 1].get("verses", [])))
+            unexpected = sorted(source_verses - allowed_verses)
+            if unexpected:
+                raise RuntimeError(
+                    f"page {page} line {local_line.get('id')}: non-adjacent verse-layout mismatch {unexpected}; "
+                    f"source={sorted(source_verses)} local={sorted(current_verses)}"
+                )
+            adjacent_boundary_tolerances += len(source_verses - current_verses)
 
-            line_index, distance = choose_line(lines, word)
-            max_line_center_distance = max(max_line_center_distance, distance)
-            current_verses = set(map(str, lines[line_index].get("verses", [])))
-            if word["verse"] not in current_verses:
-                adjacent = set()
-                if line_index > 0:
-                    adjacent.update(map(str, lines[line_index - 1].get("verses", [])))
-                if line_index + 1 < len(lines):
-                    adjacent.update(map(str, lines[line_index + 1].get("verses", [])))
-                if word["verse"] not in adjacent:
-                    raise RuntimeError(
-                        f"page {page} word {word_id}: scaled Y maps to non-adjacent local verse line; "
-                        f"line={lines[line_index].get('id')} verse={word['verse']}"
-                    )
-                adjacent_boundary_tolerances += 1
+            src_left = min(word["x0"] for word in source_line)
+            src_right = max(word["x1"] for word in source_line)
+            if not src_right > src_left:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: collapsed source extent")
+            dst_left, dst_right = local_line_span(local_line)
+            scale = (dst_right - dst_left) / (src_right - src_left)
+            min_scale = min(min_scale, scale)
+            max_scale = max(max_scale, scale)
+            # A real line mapping may be strongly compressed on framed opening pages,
+            # but a value outside this broad guard indicates a wrong physical-line pair.
+            if not 0.08 <= scale <= 0.90:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: implausible x scale {scale:.4f}")
 
-            lines[line_index]["words"].append({
-                "id": word_id,
-                "verse": word["verse"],
-                "kind": "word",
-                "x": round(word["x"], 3),
-                "y": round(word["y"], 3),
-                "w": round(word["w"], 3),
-                "h": round(word["h"], 3),
-            })
-            total += 1
+            line_top = float(local_line["top"]) + 0.6
+            line_bottom = float(local_line["bottom"]) - 0.6
+            line_height = line_bottom - line_top
+            if line_height <= 1:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: invalid local line height")
 
-        for line in lines:
-            line["words"].sort(key=lambda item: tuple(map(int, item["id"].split(":"))))
+            for word in source_line:
+                word_id = word["id"]
+                if word_id in seen:
+                    raise RuntimeError(f"duplicate word coordinate {word_id}")
+                seen.add(word_id)
+                x0 = dst_left + (word["x0"] - src_left) * scale
+                x1 = dst_left + (word["x1"] - src_left) * scale
+                width = x1 - x0
+                if width <= 0:
+                    raise RuntimeError(f"page {page} word {word_id}: collapsed local word width")
+                local_line["words"].append({
+                    "id": word_id,
+                    "verse": word["verse"],
+                    "kind": "word",
+                    "x": round(x0, 3),
+                    "y": round(line_top, 3),
+                    "w": round(width, 3),
+                    "h": round(line_height, 3),
+                })
+                total += 1
+
+            local_line["words"].sort(key=lambda item: tuple(map(int, item["id"].split(":"))))
 
     if total != EXPECTED_WORDS or len(seen) != EXPECTED_WORDS:
         raise RuntimeError(f"word count mismatch: {total} / unique {len(seen)}, expected {EXPECTED_WORDS}")
-    return total, max_line_center_distance, adjacent_boundary_tolerances
+    return total, min_scale, max_scale, adjacent_boundary_tolerances
 
 
 def main() -> None:
@@ -217,7 +225,7 @@ def main() -> None:
         raise RuntimeError("generate exact Hifz geometry before attaching word coordinates")
     root = json.loads(GEOMETRY.read_text(encoding="utf-8"))
     sources = page_sources(download_archive())
-    total, max_distance, boundary_tolerances = attach_words(root, sources)
+    total, min_scale, max_scale, boundary_tolerances = attach_words(root, sources)
     root["wordGeometrySource"] = {
         "repository": SOURCE_REPO,
         "commit": SOURCE_COMMIT,
@@ -225,7 +233,7 @@ def main() -> None:
         "sourceWidth": int(SOURCE_WIDTH),
         "sourceHeight": int(SOURCE_HEIGHT),
         "wordCount": total,
-        "alignment": "direct source-page box -> local SVG viewBox scaling; nearest verified local line only for Hifz filtering",
+        "alignment": "natural source Y-bands -> verified local line rank; adjacent verse-boundary gate; per-line affine X; local Y band",
         "adjacentBoundaryToleranceCount": boundary_tolerances,
         "runtimeNetwork": False,
     }
@@ -236,14 +244,15 @@ def main() -> None:
         "wordMaskUnit": "linguistic words; random selection; verse markers excluded",
         "wordCoordinateSource": f"https://github.com/{SOURCE_REPO}@{SOURCE_COMMIT}",
         "wordCoordinateCount": total,
-        "wordCoordinateAlignment": "direct 900x1437 source-page scaling into exact local SVG viewBox",
+        "wordCoordinateAlignment": "natural source Y-bands + local line rank + per-line affine X",
         "wordCoordinateAdjacentBoundaryToleranceCount": boundary_tolerances,
-        "wordCoordinateMaxNearestLineCenterDistance": round(max_distance, 3),
+        "wordCoordinateMinXScale": round(min_scale, 6),
+        "wordCoordinateMaxXScale": round(max_scale, 6),
     })
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(
         f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} "
-        f"adjacentBoundaryTolerances={boundary_tolerances} maxLineCenterDistance={max_distance:.3f}"
+        f"adjacentBoundaryTolerances={boundary_tolerances} xScale={min_scale:.4f}..{max_scale:.4f}"
     )
 
 
