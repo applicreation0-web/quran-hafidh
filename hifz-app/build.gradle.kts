@@ -65,7 +65,8 @@ val verifyHifzConvergenceRules by tasks.registering {
         }
         check(mushaf.contains("eink.audio(this)")) { "Audio highlight must use the dedicated BOOX refresh path." }
         check(eink.contains("REGAL") && eink.contains("GU") && eink.contains("GC")) { "BOOX partial/full refresh preference missing." }
-        check(settings.contains("Quran-Hifz-Husary-Muallim.zip") && settings.contains("Choisir le pack")) {
+        check(settings.contains("HifzAudioPack.PACK_FILE_NAME") && settings.contains("Choisir le pack")
+                && audioPack.contains("Quran-Hifz-Husary-Muallim.zip") && audioPack.contains("Téléchargements/QuranHifz/")) {
             "The durable local audio import path must remain explicit in Settings."
         }
         check(audioPack.contains("VERIFIED_MARKER") && audioPack.contains("sha256.txt")) {
