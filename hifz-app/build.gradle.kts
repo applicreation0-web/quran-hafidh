@@ -52,6 +52,7 @@ val verifyHifzConvergenceRules by tasks.registering {
         val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
         val reader = file("src/main/assets/hifzreader/reader.js").readText()
         val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
+        val audio = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioDialog.java").readText()
         check(config.contains("MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 30"))
         check(config.contains("MURAJAAH_ITQAN_MINUTES_WORKING = 30"))
         check(config.contains("MURAJAAH_MINUTES_WORKING = 60"))
@@ -60,13 +61,21 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(!session.contains("markFirstRecentStable")) { "Recent Sabqi must stay recent until capacity pressure." }
         check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Itqan." }
         check(session.contains("rebalanceRecentWindow")) { "New Sabqi must enforce the sliding 30-minute recent window." }
-        check(session.contains("Revu sans aide") && session.contains("À renforcer"))
+        check(session.contains("À renforcer"))
         check(session.contains("révélations") && session.contains("Révéler"))
-        check(settings.contains("+ Ajouter une plage Itqān") && settings.contains("Début rotation Itqān"))
+        check(session.contains("prêt à valider") && session.contains("validateSabqi") && session.contains("validateItqan")) {
+            "Sabqi/Itqan completion must require explicit persisted validation."
+        }
+        check(settings.contains("Ajouter plage") && settings.contains("Début de rotation Itqān"))
         check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges"))
         check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
-        check(reader.contains("hiddenCellsForLine") && reader.contains("setAudioVerse"))
-        check(reader.contains("clearReveal") && reader.contains("revealSelection"))
+        check(reader.contains("hiddenBandForLine") && reader.contains("cells.slice(n-take)")) {
+            "Mask must be a continuous nested RTL band."
+        }
+        check(reader.contains("setAudioVerse") && reader.contains("clearReveal") && reader.contains("revealSelection"))
+        check(audio.indexOf("player.start()") < audio.indexOf("mushaf.setAudioVerse(verse)")) {
+            "Audio highlight must switch only after playback starts."
+        }
     }
 }
 
