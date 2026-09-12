@@ -52,14 +52,17 @@ assert.ok(boxes.every(b=>b.w>0&&b.h>0&&b.w<100),'mask must stay word-sized, not 
 
 // Native contract: the repetition number must reach the JS seed, including repeated reps at the same percentage.
 const session=fs.readFileSync(path.join(__dirname,'../hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java'),'utf8');
+const freeMem=fs.readFileSync(path.join(__dirname,'../hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java'),'utf8');
 const mushaf=fs.readFileSync(path.join(__dirname,'../hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java'),'utf8');
 assert.ok(session.includes('maskDrawKey()'),'structured sessions must derive a repetition-specific mask draw key');
 assert.ok(session.includes('mushaf.setMask(currentMask, maskDrawKey())'),'every completed repetition must push the new random draw key');
-assert.ok(session.includes('mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,maskDrawKey())'),'first render must use the same repetition-specific draw key');
+assert.ok(session.includes('mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,maskDrawKey())'),'first structured render must use the same repetition-specific draw key');
+assert.ok(freeMem.includes('maskDrawKey()'),'free memorisation must derive its random draw from the repetition counter');
+assert.ok(freeMem.includes('mushaf.setMask(mask, maskDrawKey())'),'free-memorisation repetition changes must reshuffle the masked words');
+assert.ok(freeMem.includes('mushaf.show(page,refs,lines,mask,maskDrawKey())'),'free-memorisation initial render must use its repetition-specific draw key');
 assert.ok(mushaf.includes('setMask(int maskPercent, String drawKey)'),'native reader bridge must accept an explicit random draw key');
 assert.ok(mushaf.includes('show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, String drawKey)'),'initial WebView boot must accept the draw key');
 assert.ok(mushaf.includes('.put("maskSeed", drawKey'),'draw key must be injected into the offline WebView boot payload');
-assert.ok(reader.toString || true);
 const readerSource=fs.readFileSync(path.join(__dirname,'../hifz-app/src/main/assets/hifzreader/reader.js'),'utf8');
 assert.ok(readerSource.includes('let drawKey=String(boot.maskSeed||\'\')'),'JS reader must retain the native repetition draw key');
 assert.ok(readerSource.includes('setMask(hidden,key)'),'runtime mask update must accept a new repetition draw key');
