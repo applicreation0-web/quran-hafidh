@@ -7,9 +7,10 @@
   "zipBaseUrl": "https://everyayah.com/data/Husary_Muallim_128kbps/zips",
   "filePattern": "SSSAAA.mp3",
   "expectedVerseFiles": 6236,
-  "delivery": "build-time-personal-embedded",
+  "delivery": "user-initiated-local-import",
+  "bundledInApk": false,
   "runtimeNetwork": false,
   "personalUseOnly": true,
   "redistributionApproved": false,
-  "rightsNote": "The upstream recordings are referenced for this strictly personal build. No public redistribution permission has been established; do not publish or redistribute an APK containing the audio bytes without permission from the relevant rightsholder/producer."
+  "rightsNote": "The upstream recordings are referenced for this strictly personal Quran Hifz installation. No public redistribution permission has been established; do not publish or redistribute the audio pack without permission from the relevant rightsholder/producer."
 }
