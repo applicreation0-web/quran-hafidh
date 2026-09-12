@@ -1,0 +1,22 @@
+name: Quran Hifz BOOX vertical-fit contract
+
+on:
+  push:
+    branches:
+      - release/hifz-0.7.3-word-mask
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vertical-fit-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify full Mushaf fits vertically without cropping
+        run: node scripts/test_hifz_vertical_fit.js
