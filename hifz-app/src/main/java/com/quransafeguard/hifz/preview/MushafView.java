@@ -53,6 +53,7 @@ public final class MushafView extends WebView {
     private List<VerseRef> lastSelection;
     private List<String> lastLineIds;
     private int lastMask;
+    private String lastMaskSeed = "";
     private float touchDownX, touchDownY;
 
     private final Runnable watchdog = new Runnable() {
@@ -60,7 +61,7 @@ public final class MushafView extends WebView {
             if (pageShown || requestedPage == 0) return;
             if (!retried) {
                 retried = true;
-                load(requestedPage, lastSelection, lastLineIds, lastMask);
+                load(requestedPage, lastSelection, lastLineIds, lastMask, lastMaskSeed);
             } else {
                 showFailure("Page " + requestedPage + " non affichée (délai dépassé). Revenez puis rouvrez la lecture.");
             }
@@ -118,11 +119,15 @@ public final class MushafView extends WebView {
     }
 
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
-        retried = false;
-        load(page, selection, lineIds, maskPercent);
+        show(page, selection, lineIds, maskPercent, lastMaskSeed);
     }
 
-    private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
+    public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, String drawKey) {
+        retried = false;
+        load(page, selection, lineIds, maskPercent, drawKey);
+    }
+
+    private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, String drawKey) {
         removeCallbacks(watchdog);
         requestedPage = page;
         pageShown = false;
@@ -131,6 +136,7 @@ public final class MushafView extends WebView {
         lastSelection = selection;
         lastLineIds = lineIds;
         lastMask = maskPercent;
+        lastMaskSeed = drawKey == null ? "" : drawKey;
         try {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
@@ -147,6 +153,7 @@ public final class MushafView extends WebView {
                 .put("selection", verses)
                 .put("lines", lines)
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
+                .put("maskSeed", lastMaskSeed)
                 .put("eink", eink.isEink(prefs))
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
@@ -160,9 +167,15 @@ public final class MushafView extends WebView {
     }
 
     public void setMask(int maskPercent) {
+        setMask(maskPercent, lastMaskSeed);
+    }
+
+    public void setMask(int maskPercent, String drawKey) {
         lastMask = maskPercent;
+        lastMaskSeed = drawKey == null ? "" : drawKey;
+        final String keyJson = JSONObject.quote(lastMaskSeed);
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");",
+            "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + "," + keyJson + ");",
             ignored -> post(() -> eink.mask(this))));
     }
 
