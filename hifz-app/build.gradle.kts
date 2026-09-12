@@ -3,13 +3,30 @@ plugins {
 }
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
+val personalHusaryDir = rootProject.file("private/hifz-audio/husary-muallim")
+
+val verifyPersonalEmbeddedAudio by tasks.registering {
+    doLast {
+        if (!personalHusaryDir.exists()) return@doLast
+        val mp3 = personalHusaryDir.listFiles { file -> file.isFile && Regex("[0-9]{6}\\.mp3").matches(file.name) }?.toList().orEmpty()
+        check(mp3.size == 6236) { "Personal Husary embedded corpus must contain exactly 6,236 ayah MP3s, found ${mp3.size}." }
+        check(personalHusaryDir.resolve("001001.mp3").isFile) { "Missing embedded 001001.mp3" }
+        check(personalHusaryDir.resolve("114006.mp3").isFile) { "Missing embedded 114006.mp3" }
+        check(personalHusaryDir.resolve("source.json").isFile) { "Missing embedded audio source.json evidence" }
+        check(personalHusaryDir.resolve("sha256.txt").isFile) { "Missing embedded audio sha256.txt evidence" }
+    }
+}
 
 val prepareHifzAssets by tasks.registering(Sync::class) {
+    dependsOn(verifyPersonalEmbeddedAudio)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/audio.json")) { into("reader109") }
     from(rootProject.file("app/src/plus/assets/tafsir")) { into("tafsir") }
+    if (personalHusaryDir.exists()) {
+        from(personalHusaryDir) { into("audio/husary-muallim") }
+    }
 }
 
 val verifyHifzProductBoundary by tasks.registering {
@@ -61,12 +78,15 @@ android {
         applicationId = "com.quransafeguard.hifz.installtest1"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.6-boox-convergence-test"
+        versionCode = 7
+        versionName = "0.7-boox-polish-test"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
+    androidResources {
+        noCompress += "mp3"
+    }
 
     buildTypes {
         getByName("debug") {
