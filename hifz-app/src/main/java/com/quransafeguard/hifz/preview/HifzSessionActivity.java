@@ -277,7 +277,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
             program.setText("Itqān — unité validée");
-            progress.setText((prefs.lastItqanLabel().isEmpty()?"×30 terminé":prefs.lastItqanLabel())+"\nLe curseur est sauvegardé pour le prochain créneau.");
+            progress.setText((prefs.lastItqanLabel().isEmpty()?"×"+PreviewConfig.ITQAN_TOTAL_REPS+" terminé":prefs.lastItqanLabel())+"\nLe curseur est sauvegardé pour le prochain créneau.");
             return;
         }
         EligibleCorpus corpus=prefs.corpus();
@@ -303,20 +303,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
         if(rep>=PreviewConfig.ITQAN_TOTAL_REPS){
             awaitingValidation=true;sessionCompleted=true;clock.pause();currentMask=0;
-            program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×30");
-            progress.setText("30/30 · prêt à valider · révélations "+prefs.itqanAssisted()+"\nLe curseur ne bouge qu’après validation.");
+            program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS);
+            progress.setText(PreviewConfig.ITQAN_TOTAL_REPS+"/"+PreviewConfig.ITQAN_TOTAL_REPS+" · prêt à valider · révélations "+prefs.itqanAssisted()+"\nLe curseur ne bouge qu’après validation.");
             showCurrent();addRoundAction("✓","Valider",v->validateItqan());return;
         }
         sessionCompleted=false;
         currentMask=PreviewConfig.itqanMaskForNextRep(rep);
-        program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×30 · corpus cyclique");
+        program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS+" · corpus cyclique");
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
         revealButton=Ui.roundButton(this,"◉","Révéler",null);configureRevealButton(revealButton);actions.addView(revealButton);updateRevealButton();
     }
 
     private void updateItqanProgress(int rep,int reveals){
-        progress.setText("Suivante "+Math.min(rep+1,30)+"/30 · masque "+currentMask+"% · révélations "+reveals);
+        progress.setText("Suivante "+Math.min(rep+1,PreviewConfig.ITQAN_TOTAL_REPS)+"/"+PreviewConfig.ITQAN_TOTAL_REPS+" · masque "+currentMask+"% · révélations "+reveals);
         eink.local(progress);
     }
 
@@ -339,7 +339,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void validateItqan(){
         if(itqanUnit==null||prefs.itqanRep()<PreviewConfig.ITQAN_TOTAL_REPS)return;
         VerseRef next=prefs.corpus().next(itqanUnit.end);
-        String label=itqanUnit.start+" → "+itqanUnit.end+" · ×30 · révélations "+prefs.itqanAssisted();
+        String label=itqanUnit.start+" → "+itqanUnit.end+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS+" · révélations "+prefs.itqanAssisted();
         boolean ok=prefs.completeItqanUnit(next,LocalDate.now().toString(),label);
         if(!ok){onError("Impossible d’enregistrer atomiquement la validation Itqān.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
