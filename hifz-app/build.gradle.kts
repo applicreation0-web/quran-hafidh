@@ -3,36 +3,13 @@ plugins {
 }
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
-val personalHusaryDir = rootProject.file("private/hifz-audio/husary-muallim")
-
-val verifyPersonalEmbeddedAudio by tasks.registering {
-    doLast {
-        if (!personalHusaryDir.exists()) return@doLast
-        val mp3 = personalHusaryDir.listFiles { file -> file.isFile && Regex("[0-9]{6}\\.mp3").matches(file.name) }?.toList().orEmpty()
-        check(mp3.size == 6236) { "Personal Husary embedded corpus must contain exactly 6,236 ayah MP3s, found ${mp3.size}." }
-        check(personalHusaryDir.resolve("001001.mp3").isFile) { "Missing embedded 001001.mp3" }
-        check(personalHusaryDir.resolve("114006.mp3").isFile) { "Missing embedded 114006.mp3" }
-        check(personalHusaryDir.resolve("source.json").isFile) { "Missing embedded audio source.json evidence" }
-        check(personalHusaryDir.resolve("sha256.txt").isFile) { "Missing embedded audio sha256.txt evidence" }
-        check(personalHusaryDir.resolve("upstream_checksum.md5").isFile) { "Missing preserved EveryAyah checksum evidence" }
-        val source = personalHusaryDir.resolve("source.json").readText()
-        check(source.contains("https://everyayah.com/data/Husary_Muallim_128kbps/")) { "Embedded audio source directory is not explicit." }
-        check(source.contains("000_checksum.md5")) { "Embedded audio checksum source is not explicit." }
-        check(source.contains("\"fileCount\": 6236")) { "Embedded audio source evidence has wrong file count." }
-        check(source.contains("\"delivery\": \"embedded-in-personal-apk\"")) { "Embedded audio delivery evidence missing." }
-    }
-}
 
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(verifyPersonalEmbeddedAudio)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/audio.json")) { into("reader109") }
     from(rootProject.file("app/src/plus/assets/tafsir")) { into("tafsir") }
-    if (personalHusaryDir.exists()) {
-        from(personalHusaryDir) { into("audio/husary-muallim") }
-    }
 }
 
 val verifyHifzProductBoundary by tasks.registering {
@@ -58,6 +35,7 @@ val verifyHifzConvergenceRules by tasks.registering {
         val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
         val reader = file("src/main/assets/hifzreader/reader.js").readText()
         val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
+        val audioPack = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioPack.java").readText()
         val audio = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioDialog.java").readText()
         val mushaf = file("src/main/java/com/quransafeguard/hifz/preview/MushafView.java").readText()
         val eink = file("src/main/java/com/quransafeguard/hifz/preview/EinkController.java").readText()
@@ -87,6 +65,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         }
         check(mushaf.contains("eink.audio(this)")) { "Audio highlight must use the dedicated BOOX refresh path." }
         check(eink.contains("REGAL") && eink.contains("GU") && eink.contains("GC")) { "BOOX partial/full refresh preference missing." }
+        check(settings.contains("Quran-Hifz-Husary-Muallim.zip") && settings.contains("Choisir le pack")) {
+            "The durable local audio import path must remain explicit in Settings."
+        }
+        check(audioPack.contains("VERIFIED_MARKER") && audioPack.contains("sha256.txt")) {
+            "Local audio packs must be structurally and cryptographically verified before activation."
+        }
     }
 }
 
@@ -104,9 +88,6 @@ android {
     }
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
-    androidResources {
-        noCompress += "mp3"
-    }
 
     buildTypes {
         getByName("debug") {
