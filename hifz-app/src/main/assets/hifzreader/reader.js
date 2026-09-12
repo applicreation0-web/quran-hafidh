@@ -119,6 +119,20 @@ function markerLayer(svg,polys){
   return g;
 }
 
+function selectionClip(svg,polys,layer){
+  if(!polys.length)return null;
+  const defs=document.createElementNS(NS,'defs');
+  const clip=document.createElementNS(NS,'clipPath');
+  clip.id='hifz-word-mask-selection-clip';
+  polys.forEach(p=>{
+    const q=p.cloneNode(false);
+    q.removeAttribute('class');q.removeAttribute('style');q.removeAttribute('fill');q.removeAttribute('fill-opacity');
+    clip.appendChild(q);
+  });
+  defs.appendChild(clip);layer.appendChild(defs);
+  return 'url(#hifz-word-mask-selection-clip)';
+}
+
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
@@ -137,6 +151,10 @@ function render(){
   if(!boxes.length)return;
 
   const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
+  const polys=selectedPolygons(svg);
+  const clipUrl=selectionClip(svg,polys,layer);
+  const masks=document.createElementNS(NS,'g');
+  if(clipUrl)masks.setAttribute('clip-path',clipUrl);
   boxes.forEach(box=>{
     const inset=Math.min(.35,box.w*.025);
     const el=document.createElementNS(NS,'rect');
@@ -144,9 +162,10 @@ function render(){
     el.setAttribute('x',box.x+inset);el.setAttribute('y',box.y);
     el.setAttribute('width',Math.max(.5,box.w-inset*2));el.setAttribute('height',box.h);
     el.setAttribute('rx','2');el.setAttribute('ry','2');
-    layer.appendChild(el);
+    masks.appendChild(el);
   });
-  const polys=selectedPolygons(svg);
+  layer.appendChild(masks);
+  // Verse rosettes are redrawn above masks; they are never part of the random word set.
   if(polys.length)layer.appendChild(markerLayer(svg,polys));
   svg.appendChild(layer);
 }
