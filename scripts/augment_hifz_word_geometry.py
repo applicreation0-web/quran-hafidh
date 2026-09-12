@@ -6,9 +6,9 @@ Runtime remains offline and the canonical KFQC SVG pages are never modified.
 
 Upstream words expose natural physical text-line Y bands. Those source lines are
 matched monotonically to the already-verified local Quran lines by verse overlap and
-rank. This deliberately tolerates an occasional extra local detector band without
-changing the existing Hifz geometry or fabricating a source line. Relative horizontal
-word positions are then transferred into the matched local line band.
+rank. The local Hifz geometry remains authoritative: an occasional extra local band is
+skipped, while an occasional detector-merged local band may receive two adjacent
+source lines. Relative word geometry is transferred only into the matched local band.
 """
 from __future__ import annotations
 
@@ -127,18 +127,16 @@ def _local_verses(line: dict) -> set[str]:
 
 
 def match_source_lines(source_lines: list[list[dict]], local_lines: list[dict]) -> list[int]:
-    """Return a strictly increasing local-line index for every source word line.
+    """Map every source word line monotonically onto existing local Hifz lines.
 
-    Existing local Hifz geometry is authoritative and never rewritten. When it has an
-    extra detector band, dynamic programming skips that band. Pairing is driven first
-    by verse overlap and only then by proportional reading-order proximity, which also
-    keeps long verses spanning many adjacent lines stable.
+    The local geometry is never rewritten. If the local detector has one or more
+    surplus bands, they may be skipped. If it has merged adjacent physical bands,
+    adjacent source lines may share one local line. Verse overlap dominates the score;
+    reading-order proximity only resolves otherwise equivalent choices.
     """
     n, m = len(source_lines), len(local_lines)
     if n == 0 or m == 0:
         raise RuntimeError("cannot align empty source/local Quran lines")
-    if n > m:
-        raise RuntimeError(f"source has more physical word lines than local geometry: {n} > {m}")
 
     source_sets = [_source_verses(line) for line in source_lines]
     local_sets = [_local_verses(line) for line in local_lines]
@@ -150,44 +148,76 @@ def match_source_lines(source_lines: list[list[dict]], local_lines: list[dict]) 
         missing = len(source - local)
         extra = len(local - source)
         target = 0.0 if n == 1 else i * (m - 1) / (n - 1)
-        # Missing source verses are by far the strongest signal. Exact overlap wins;
-        # rank resolves ties for long verses repeated across neighbouring lines.
         return missing * 10_000.0 - common * 1_000.0 + extra * 20.0 + abs(j - target)
 
     inf = float("inf")
+
+    if n <= m:
+        # Strictly increasing: source lines stay distinct and surplus local detector
+        # bands are skipped rather than fabricating linguistic lines.
+        dp = [[inf] * m for _ in range(n)]
+        prev = [[-1] * m for _ in range(n)]
+        for j in range(0, m - n + 1):
+            dp[0][j] = cost(0, j)
+        for i in range(1, n):
+            j_min = i
+            j_max = m - (n - i)
+            for j in range(j_min, j_max + 1):
+                best_value = inf
+                best_prev = -1
+                for k in range(i - 1, j):
+                    value = dp[i - 1][k]
+                    if value == inf:
+                        continue
+                    value += cost(i, j)
+                    if value < best_value:
+                        best_value = value
+                        best_prev = k
+                dp[i][j] = best_value
+                prev[i][j] = best_prev
+        end = min(range(n - 1, m), key=lambda j: dp[n - 1][j])
+        if dp[n - 1][end] == inf:
+            raise RuntimeError(f"cannot monotonically align {n} source lines to {m} local lines")
+        mapping = [0] * n
+        mapping[-1] = end
+        for i in range(n - 1, 0, -1):
+            mapping[i - 1] = prev[i][mapping[i]]
+        if any(mapping[i] >= mapping[i + 1] for i in range(n - 1)):
+            raise RuntimeError(f"non-monotonic source/local word-line mapping: {mapping}")
+        return mapping
+
+    # Source has more physical lines than the detector. Start at local 0 and end at
+    # local m-1; each source step may stay on the current local band (a detector merge)
+    # or advance by exactly one. This guarantees every existing Hifz line is preserved
+    # and used at least once, with the fewest necessary merges.
     dp = [[inf] * m for _ in range(n)]
     prev = [[-1] * m for _ in range(n)]
-
-    # Leave enough local lines for every remaining source line.
-    for j in range(0, m - n + 1):
-        dp[0][j] = cost(0, j)
-
+    dp[0][0] = cost(0, 0)
+    merge_penalty = 250.0
     for i in range(1, n):
-        j_min = i
-        j_max = m - (n - i)
+        j_min = max(0, m - n + i)
+        j_max = min(i, m - 1)
         for j in range(j_min, j_max + 1):
-            best_value = inf
-            best_prev = -1
-            for k in range(i - 1, j):
-                value = dp[i - 1][k]
-                if value == inf:
-                    continue
-                value += cost(i, j)
-                if value < best_value:
-                    best_value = value
-                    best_prev = k
-            dp[i][j] = best_value
-            prev[i][j] = best_prev
-
-    end = min(range(n - 1, m), key=lambda j: dp[n - 1][j])
-    if dp[n - 1][end] == inf:
-        raise RuntimeError(f"cannot monotonically align {n} source lines to {m} local lines")
+            stay = dp[i - 1][j] + merge_penalty if dp[i - 1][j] != inf else inf
+            advance = dp[i - 1][j - 1] if j > 0 else inf
+            if advance <= stay:
+                dp[i][j] = advance + cost(i, j)
+                prev[i][j] = j - 1
+            else:
+                dp[i][j] = stay + cost(i, j)
+                prev[i][j] = j
+    if dp[n - 1][m - 1] == inf:
+        raise RuntimeError(f"cannot merge-align {n} source lines to {m} local lines")
     mapping = [0] * n
-    mapping[-1] = end
+    mapping[-1] = m - 1
     for i in range(n - 1, 0, -1):
         mapping[i - 1] = prev[i][mapping[i]]
-    if any(mapping[i] >= mapping[i + 1] for i in range(n - 1)):
-        raise RuntimeError(f"non-monotonic source/local word-line mapping: {mapping}")
+    if mapping[0] != 0 or mapping[-1] != m - 1:
+        raise RuntimeError(f"merged mapping does not cover local geometry: {mapping}")
+    if any(mapping[i] > mapping[i + 1] or mapping[i + 1] - mapping[i] > 1 for i in range(n - 1)):
+        raise RuntimeError(f"invalid merged source/local word-line mapping: {mapping}")
+    if len(set(mapping)) != m:
+        raise RuntimeError(f"merged mapping skipped a local Hifz line: {mapping}")
     return mapping
 
 
@@ -202,13 +232,14 @@ def local_line_span(line: dict) -> tuple[float, float]:
     return left, right
 
 
-def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float, int, int]:
+def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float, int, int, int]:
     seen: set[str] = set()
     total = 0
     min_scale = math.inf
     max_scale = 0.0
     adjacent_boundary_tolerances = 0
     skipped_local_bands = 0
+    merged_source_bands = 0
 
     for page in range(1, EXPECTED_PAGES + 1):
         page_geo = root["pages"][str(page)]
@@ -218,8 +249,21 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
 
         source_words = parsed_words(page, sources[page])
         source_lines = natural_source_lines(source_words)
-        mapping = match_source_lines(source_lines, local_lines)
-        skipped_local_bands += len(local_lines) - len(source_lines)
+        try:
+            mapping = match_source_lines(source_lines, local_lines)
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"page {page}: {exc}; sourceLineVerses="
+                f"{[sorted(_source_verses(line)) for line in source_lines]}; "
+                f"localLineVerses={[sorted(_local_verses(line)) for line in local_lines]}"
+            ) from exc
+
+        used_local = set(mapping)
+        skipped_local_bands += len(local_lines) - len(used_local)
+        merged_source_bands += len(source_lines) - len(used_local)
+        source_indices_by_local: dict[int, list[int]] = {}
+        for source_index, local_index in enumerate(mapping):
+            source_indices_by_local.setdefault(local_index, []).append(source_index)
 
         source_page_verses = {word["verse"] for word in source_words}
         local_page_verses = {str(verse) for line in local_lines for verse in line.get("verses", [])}
@@ -261,11 +305,25 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
                     f"page {page} line {local_line.get('id')}: implausible x scale {scale:.4f}; mapping={mapping}"
                 )
 
-            line_top = float(local_line["top"]) + 0.6
-            line_bottom = float(local_line["bottom"]) - 0.6
+            full_top = float(local_line["top"]) + 0.6
+            full_bottom = float(local_line["bottom"]) - 0.6
+            full_height = full_bottom - full_top
+            if full_height <= 1:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: invalid local line height")
+
+            group = source_indices_by_local[line_index]
+            slot = group.index(source_index)
+            group_count = len(group)
+            # If the local detector merged two physical bands, preserve their vertical
+            # order by subdividing only that existing local band. No Hifz line is added.
+            line_top = full_top + full_height * slot / group_count
+            line_bottom = full_top + full_height * (slot + 1) / group_count
             line_height = line_bottom - line_top
             if line_height <= 1:
-                raise RuntimeError(f"page {page} line {local_line.get('id')}: invalid local line height")
+                raise RuntimeError(
+                    f"page {page} line {local_line.get('id')}: merged word sub-band too small "
+                    f"({line_height:.3f}) for {group_count} source lines"
+                )
 
             for word in source_line:
                 word_id = word["id"]
@@ -288,11 +346,12 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
                 })
                 total += 1
 
+        for local_line in local_lines:
             local_line["words"].sort(key=lambda item: tuple(map(int, item["id"].split(":"))))
 
     if total != EXPECTED_WORDS or len(seen) != EXPECTED_WORDS:
         raise RuntimeError(f"word count mismatch: {total} / unique {len(seen)}, expected {EXPECTED_WORDS}")
-    return total, min_scale, max_scale, adjacent_boundary_tolerances, skipped_local_bands
+    return total, min_scale, max_scale, adjacent_boundary_tolerances, skipped_local_bands, merged_source_bands
 
 
 def main() -> None:
@@ -300,7 +359,7 @@ def main() -> None:
         raise RuntimeError("generate exact Hifz geometry before attaching word coordinates")
     root = json.loads(GEOMETRY.read_text(encoding="utf-8"))
     sources = page_sources(download_archive())
-    total, min_scale, max_scale, boundary_tolerances, skipped_bands = attach_words(root, sources)
+    total, min_scale, max_scale, boundary_tolerances, skipped_bands, merged_bands = attach_words(root, sources)
     root["wordGeometrySource"] = {
         "repository": SOURCE_REPO,
         "commit": SOURCE_COMMIT,
@@ -308,9 +367,10 @@ def main() -> None:
         "sourceWidth": int(SOURCE_WIDTH),
         "sourceHeight": int(SOURCE_HEIGHT),
         "wordCount": total,
-        "alignment": "natural source Y-bands -> monotonic verse/rank matched verified local line; per-line affine X; local Y band",
+        "alignment": "natural source Y-bands -> monotonic verse/rank matched verified local lines; surplus local bands skipped; adjacent source bands may share detector-merged local line; per-source-line affine X",
         "adjacentBoundaryToleranceCount": boundary_tolerances,
         "skippedLocalDetectorBandCount": skipped_bands,
+        "mergedSourceBandCount": merged_bands,
         "runtimeNetwork": False,
     }
     GEOMETRY.write_text(json.dumps(root, separators=(",", ":")), encoding="utf-8")
@@ -320,15 +380,17 @@ def main() -> None:
         "wordMaskUnit": "linguistic words; random selection; verse markers excluded",
         "wordCoordinateSource": f"https://github.com/{SOURCE_REPO}@{SOURCE_COMMIT}",
         "wordCoordinateCount": total,
-        "wordCoordinateAlignment": "natural source Y-bands + monotonic verse/rank local-line match + per-line affine X",
+        "wordCoordinateAlignment": "monotonic verse/rank source-to-local alignment; surplus local bands skipped; detector-merged local bands subdivided for adjacent source lines",
         "wordCoordinateAdjacentBoundaryToleranceCount": boundary_tolerances,
         "wordCoordinateSkippedLocalDetectorBandCount": skipped_bands,
+        "wordCoordinateMergedSourceBandCount": merged_bands,
         "wordCoordinateMinXScale": round(min_scale, 6),
         "wordCoordinateMaxXScale": round(max_scale, 6),
     })
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(
-        f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} skippedLocalBands={skipped_bands} "
+        f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} "
+        f"skippedLocalBands={skipped_bands} mergedSourceBands={merged_bands} "
         f"adjacentBoundaryTolerances={boundary_tolerances} xScale={min_scale:.4f}..{max_scale:.4f}"
     )
 
