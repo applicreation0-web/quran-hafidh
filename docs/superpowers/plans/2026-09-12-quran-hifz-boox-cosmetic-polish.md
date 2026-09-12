@@ -4,6 +4,8 @@
 
 Polish `integration/hifz-boox-polish-0.7` without changing Hifz semantics, Quran data, Mushaf geometry/rendering, repetition quotas, cursor rules, audio corpus, or Tafsir content.
 
+Implementation tree was applied in commit `f41b2afb1adb15ce5959cd3a21ca94a65b898a63` after the cosmetic contract was first proven red.
+
 ## P0 — Audio surface
 
 - Keep the existing asynchronous MediaPlayer lifecycle and verse-level Mushaf highlight.
