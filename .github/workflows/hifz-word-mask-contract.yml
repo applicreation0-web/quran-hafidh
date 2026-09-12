@@ -1,0 +1,22 @@
+name: Quran Hifz random word mask contract
+
+on:
+  push:
+    branches:
+      - release/hifz-0.7.3-word-mask
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  word-mask-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify random cumulative word-mask behavior
+        run: node scripts/test_hifz_word_mask.js
