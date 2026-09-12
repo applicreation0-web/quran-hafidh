@@ -32,8 +32,12 @@ public final class PreviewConfig {
     public static final int SPEED_MIN_LINES = 20;
     public static final int SPEED_MIN_SECONDS = 300;
     public static final double SPEED_MAX_CHANGE_RATIO = 0.10;
-    // Personal BOOX default: a page change gets a full cleanup. Local counters/masks remain local.
+
+    // BOOX refresh policy. Page changes get a full GC cleanup; small changes use REGAL/GU
+    // and periodically trigger GC so audio highlighting/counters do not build up ghosting.
     public static final int EINK_FULL_CLEAN_PAGE_INTERVAL_WORKING = 1;
+    public static final int EINK_LOCAL_CHANGES_BEFORE_FULL_CLEAN_WORKING = 12;
+    public static final int EINK_MASK_CHANGES_BEFORE_FULL_CLEAN_WORKING = 4;
 
     public static int sabqiMaskForNextRep(int completed) {
         if (completed < 0 || completed >= SABQI_TOTAL_REPS) return 0;
