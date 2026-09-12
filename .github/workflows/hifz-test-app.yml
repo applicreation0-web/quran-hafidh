@@ -98,7 +98,8 @@ jobs:
           p=Path('app/src/main/assets/reader109/geometry.json')
           root=json.loads(p.read_text())
           source=root['wordGeometrySource']
-          assert source['commit']=='ed24b7fbf60a052ac58e694d5728ab4c4d59f96d'
+          assert source['coordinateCommit']=='ed24b7fbf60a052ac58e694d5728ab4c4d59f96d'
+          assert source['layoutCommit']=='72116ce4d405d67823804f0eed795c1e6409b4af'
           assert source['wordCount']==77320
           assert source['runtimeNetwork'] is False
           assert len(root['pages'])==604
@@ -111,7 +112,9 @@ jobs:
           assert len(set(ids))==77320
           assert all(w.get('kind')=='word' for w in words)
           assert all(w.get('verse') for w in words)
-          print('HIFZ_WORD_GEOMETRY_PACK_OK pages=604 words=77320')
+          page120=[w['id'] for line in root['pages']['120']['lines'] for w in line.get('words',[])]
+          assert '5:77:1' in page120
+          print('HIFZ_WORD_GEOMETRY_PACK_OK pages=604 words=77320 page120=5:77')
           PY
 
       - uses: actions/setup-java@v4
@@ -186,13 +189,16 @@ jobs:
           with zipfile.ZipFile(apk) as z:
               geometry=json.loads(z.read('assets/reader109/geometry.json'))
               source=geometry['wordGeometrySource']
-              assert source['commit']=='ed24b7fbf60a052ac58e694d5728ab4c4d59f96d'
+              assert source['coordinateCommit']=='ed24b7fbf60a052ac58e694d5728ab4c4d59f96d'
+              assert source['layoutCommit']=='72116ce4d405d67823804f0eed795c1e6409b4af'
               assert source['wordCount']==77320
               words=[]
               for page in geometry['pages'].values():
                   for line in page['lines']:
                       words.extend(line.get('words',[]))
               assert len(words)==77320 and len({w['id'] for w in words})==77320
+              page120=[w['id'] for line in geometry['pages']['120']['lines'] for w in line.get('words',[])]
+              assert '5:77:1' in page120
               for name, parts, expected, table in specs:
                   compressed = b''.join(z.read(f'assets/tafsir/{name}.gz.part{i:02d}') for i in range(parts))
                   raw = gzip.decompress(compressed)
@@ -215,7 +221,8 @@ jobs:
           echo "VERSION_CODE=10" | tee -a hifz-app-build-info.txt
           echo "VERSION_NAME=0.7.3-boox" | tee -a hifz-app-build-info.txt
           echo "WORD_MASK=random-cumulative-linguistic-words" | tee -a hifz-app-build-info.txt
-          echo "WORD_GEOMETRY_SOURCE_COMMIT=ed24b7fbf60a052ac58e694d5728ab4c4d59f96d" | tee -a hifz-app-build-info.txt
+          echo "WORD_COORDINATE_SOURCE_COMMIT=ed24b7fbf60a052ac58e694d5728ab4c4d59f96d" | tee -a hifz-app-build-info.txt
+          echo "WORD_LAYOUT_SOURCE_COMMIT=72116ce4d405d67823804f0eed795c1e6409b4af" | tee -a hifz-app-build-info.txt
           echo "AUDIO_DELIVERY=separate-local-pack" | tee -a hifz-app-build-info.txt
 
       - name: Upload official unsigned release evidence
