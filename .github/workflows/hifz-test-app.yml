@@ -128,7 +128,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee hifz-app-signature.txt
           grep -q 'Verified' hifz-app-signature.txt
           apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
-          grep -q 'package="com.quransafeguard.hifz.installtest1"' hifz-app-manifest.xml
+          grep -q 'package="com.quransafeguard.hifz"' hifz-app-manifest.xml
           grep -q 'Quran Hifz' hifz-app-manifest.xml
           grep -q 'configChanges=' hifz-app-manifest.xml
           if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
