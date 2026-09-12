@@ -48,6 +48,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean repActionLocked;
     private boolean hasShown;
     private boolean sessionCompleted;
+    private boolean awaitingValidation;
     private int unitFirstPage = 1;
     private int unitLastPage = 1;
     private boolean revealedThisRep;
@@ -66,7 +67,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahBlockAElapsedMs = prefs.murajaahBlockAElapsedMs();
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
-            if (timerText != null) timerText.setText("Temps actif : " + SessionClock.format(elapsed) + " · repère " + targetMinutes() + " min");
+            if (timerText != null) timerText.setText("Actif " + SessionClock.format(elapsed) + " · repère " + targetMinutes() + " min");
             long bucket = elapsed / 5_000L;
             if (bucket != lastCheckpointBucket) {
                 lastCheckpointBucket = bucket;
@@ -84,25 +85,22 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void buildUi() {
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
-        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
-        top.addView(Ui.smallButton(this,"‹ Retour",v->finish()));
-        heading = Ui.text(this, displayModeName(), 18, true); Ui.weight(heading,1f); heading.setGravity(Gravity.CENTER); top.addView(heading); root.addView(top);
-        program = Ui.text(this,"Chargement du programme…",15,true); program.setPadding(Ui.dp(this,12),4,Ui.dp(this,12),2); root.addView(program);
-        timerText = Ui.text(this,"",13,false); timerText.setPadding(Ui.dp(this,12),2,Ui.dp(this,12),2); root.addView(timerText);
-        progress = Ui.text(this,"",14,false); progress.setPadding(Ui.dp(this,12),2,Ui.dp(this,12),6); root.addView(progress);
+        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,8),Ui.dp(this,3),Ui.dp(this,8),Ui.dp(this,2));
+        top.addView(Ui.roundButton(this,"‹","Retour",v->finish()));
+        heading = Ui.text(this, displayModeName(), 17, true); Ui.weight(heading,1f); heading.setGravity(Gravity.CENTER); top.addView(heading); root.addView(top);
+        program = Ui.text(this,"Chargement du programme…",13.5f,true); program.setPadding(Ui.dp(this,10),1,Ui.dp(this,10),1); root.addView(program);
+        timerText = Ui.text(this,"",11.5f,false); timerText.setPadding(Ui.dp(this,10),1,Ui.dp(this,10),1); root.addView(timerText);
+        progress = Ui.text(this,"",12.5f,false); progress.setPadding(Ui.dp(this,10),1,Ui.dp(this,10),Ui.dp(this,3)); root.addView(progress);
         mushaf = new MushafView(this); mushaf.setListener(this); root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
-        actions = Ui.row(this); actions.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4)); root.addView(actions);
+        actions = Ui.row(this); actions.setGravity(Gravity.CENTER); actions.setPadding(Ui.dp(this,6),Ui.dp(this,2),Ui.dp(this,6),Ui.dp(this,2)); root.addView(actions);
 
         // Arabic-book direction: next canonical page (+1) is visually on the LEFT; previous (-1) on the RIGHT.
-        LinearLayout nav=Ui.row(this);nav.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,8));
-        nextPage=Ui.smallButton(this,"Page suivante ›",v->goPage(1));
-        prevPage=Ui.smallButton(this,"‹ Page précédente",v->goPage(-1));
-        Ui.weight(nextPage,1);nav.addView(nextPage);
-        if (new HifzAudioGate(this).available()) {
-            Button audio = Ui.smallButton(this,"Audio",v->openAudio());
-            Ui.weight(audio,1);nav.addView(audio);
-        }
-        Ui.weight(prevPage,1);nav.addView(prevPage);root.addView(nav);
+        LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);nav.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),Ui.dp(this,5));
+        nextPage=Ui.roundButton(this,"›","Page suivante",v->goPage(1));
+        prevPage=Ui.roundButton(this,"‹","Page précédente",v->goPage(-1));
+        nav.addView(nextPage);
+        if (new HifzAudioGate(this).available()) nav.addView(Ui.roundButton(this,"♪","Audio",v->openAudio()));
+        nav.addView(prevPage);root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
@@ -110,6 +108,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void renderMode() {
         actions.removeAllViews();
         revealButton = null;
+        awaitingValidation = false;
         unitFirstPage = 1;
         unitLastPage = 1;
         try {
@@ -130,7 +129,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String today = LocalDate.now().toString();
         if (today.equals(prefs.lastSabqiDate())) {
             sessionCompleted = true;
-            program.setText("Sabqi — séance du jour terminée");
+            program.setText("Sabqi — séance validée");
             progress.setText((prefs.lastSabqiLabel().isEmpty() ? "Bloc terminé" : prefs.lastSabqiLabel())
                 + "\nLe bloc reste dans la fenêtre Sabqi récent jusqu’à saturation des 30 min.");
             return;
@@ -159,18 +158,31 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         unitFirstPage = currentPage;
         unitLastPage = geometry.line(sabqiBlock.endLineIndex).page;
         currentSelection = sabqiBlock.verses; currentLineIds = sabqiBlock.lineIds;
-        int rep = prefs.sabqiRep(); currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
-        program.setText("Sabqi · " + sabqiBlock.verseLabel() + " · 5 lignes · 37 répétitions"
+        int rep = prefs.sabqiRep();
+        if (rep >= PreviewConfig.SABQI_TOTAL_REPS) {
+            awaitingValidation = true;
+            sessionCompleted = true;
+            clock.pause();
+            currentMask = 0;
+            program.setText("Sabqi · " + sabqiBlock.verseLabel() + " · 5 lignes");
+            progress.setText("37/37 · prêt à valider · révélations " + prefs.sabqiAssisted()
+                + "\nLe curseur et Sabqi récent ne bougent qu’après validation.");
+            showCurrent();
+            addRoundAction("✓","Valider",v->validateSabqi());
+            return;
+        }
+        sessionCompleted = false;
+        currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
+        program.setText("Sabqi · " + sabqiBlock.verseLabel() + " · 5 lignes"
             + (unitLastPage > unitFirstPage ? " · pages " + unitFirstPage + "–" + unitLastPage : ""));
         updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
-        Button done=Ui.smallButton(this,"Répétition faite",v->completeSabqiRep());
-        Ui.weight(done,2);actions.addView(done);
-        revealButton = createRevealButton();Ui.weight(revealButton,1);actions.addView(revealButton);updateRevealButton();
+        addRoundAction("↻","Répétition",v->completeSabqiRep());
+        revealButton = Ui.roundButton(this,"◉","Révéler",null);configureRevealButton(revealButton);actions.addView(revealButton);updateRevealButton();
     }
 
     private void updateSabqiProgress(int rep, int reveals) {
-        progress.setText("Suivante : " + Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + "/37 · masque " + currentMask + "% · révélations " + reveals);
+        progress.setText("Suivante " + Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + "/37 · masque " + currentMask + "% · révélations " + reveals);
         eink.local(progress);
     }
 
@@ -187,30 +199,36 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
         int oldMask=currentMask;
         rep++; int reveals=prefs.sabqiAssisted()+(revealed?1:0);
-        if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
-            String label=sabqiBlock.verseLabel()+" · révélations "+reveals;
-            boolean ok = prefs.completeSabqiBlock(
-                sabqiBlock.startLineIndex,
-                sabqiBlock.endLineIndex,
-                sabqiBlock.endLineIndex+1,
-                LocalDate.now().toString(),
-                label
-            );
-            if (!ok) { onError("Impossible d’enregistrer atomiquement la fin du bloc Sabqi."); return; }
-            // New Sabqi first enters recent review. Only capacity pressure caused by the new arrival
-            // may evict the oldest WHOLE verses into Itqan; review quality never promotes by itself.
-            rebalanceRecentWindow();
-            closeClockForCompletedSession();
-            mushaf.cycleCompleted();
-            renderMode();
-            return;
-        }
         if(!prefs.setSabqiProgress(rep,reveals)){onError("Impossible d’enregistrer la répétition Sabqi.");return;}
+        if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
+            currentMask=0;mushaf.setMask(0);
+            long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
+            awaitingValidation=true;sessionCompleted=true;
+            renderMode();return;
+        }
         currentMask=PreviewConfig.sabqiMaskForNextRep(rep);
         if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();
         if (currentPage != unitFirstPage) { currentPage = unitFirstPage; showCurrent(); updatePageButtons(); }
         updateSabqiProgress(rep,reveals);
+    }
+
+    private void validateSabqi() {
+        if (sabqiBlock==null || prefs.sabqiRep()<PreviewConfig.SABQI_TOTAL_REPS) return;
+        String label=sabqiBlock.verseLabel()+" · 37/37 · révélations "+prefs.sabqiAssisted();
+        boolean ok = prefs.completeSabqiBlock(
+            sabqiBlock.startLineIndex,
+            sabqiBlock.endLineIndex,
+            sabqiBlock.endLineIndex+1,
+            LocalDate.now().toString(),
+            label
+        );
+        if (!ok) { onError("Impossible d’enregistrer atomiquement la validation Sabqi."); return; }
+        rebalanceRecentWindow();
+        awaitingValidation=false;
+        closeClockForCompletedSession();
+        mushaf.cycleCompleted();
+        renderMode();
     }
 
     /**
@@ -243,7 +261,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 break;
             }
         }
-        if (safeEnd < oldestStart || blocksToRemove <= 0) return; // keep a temporary over-capacity window rather than cut a verse
+        if (safeEnd < oldestStart || blocksToRemove <= 0) return;
 
         ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
         if (complete.isEmpty()) return;
@@ -258,8 +276,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String today=LocalDate.now().toString();
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
-            program.setText("Itqān — unité du jour terminée");
-            progress.setText((prefs.lastItqanLabel().isEmpty()?"×30 terminé":prefs.lastItqanLabel())+"\nLe curseur a été sauvegardé pour le prochain créneau.");
+            program.setText("Itqān — unité validée");
+            progress.setText((prefs.lastItqanLabel().isEmpty()?"×30 terminé":prefs.lastItqanLabel())+"\nLe curseur est sauvegardé pour le prochain créneau.");
             return;
         }
         EligibleCorpus corpus=prefs.corpus();
@@ -283,43 +301,57 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             currentPage=itqanUnit.page;unitFirstPage=unitLastPage=currentPage;
         }
         currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
+        if(rep>=PreviewConfig.ITQAN_TOTAL_REPS){
+            awaitingValidation=true;sessionCompleted=true;clock.pause();currentMask=0;
+            program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×30");
+            progress.setText("30/30 · prêt à valider · révélations "+prefs.itqanAssisted()+"\nLe curseur ne bouge qu’après validation.");
+            showCurrent();addRoundAction("✓","Valider",v->validateItqan());return;
+        }
+        sessionCompleted=false;
         currentMask=PreviewConfig.itqanMaskForNextRep(rep);
         program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×30 · corpus cyclique");
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
-        Button done=Ui.smallButton(this,"Répétition faite",v->completeItqanRep());
-        Ui.weight(done,2);actions.addView(done);
-        revealButton=createRevealButton();Ui.weight(revealButton,1);actions.addView(revealButton);updateRevealButton();
+        addRoundAction("↻","Répétition",v->completeItqanRep());
+        revealButton=Ui.roundButton(this,"◉","Révéler",null);configureRevealButton(revealButton);actions.addView(revealButton);updateRevealButton();
     }
 
     private void updateItqanProgress(int rep,int reveals){
-        progress.setText("Suivante : "+Math.min(rep+1,30)+"/30 · masque "+currentMask+"% · révélations "+reveals);
+        progress.setText("Suivante "+Math.min(rep+1,30)+"/30 · masque "+currentMask+"% · révélations "+reveals);
         eink.local(progress);
     }
 
     private void completeItqanRep(){
         if (!takeRepLock()) return;
         boolean revealed=consumeReveal();
-        int rep=prefs.itqanRep();if(rep>=30)return;
+        int rep=prefs.itqanRep();if(rep>=PreviewConfig.ITQAN_TOTAL_REPS)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
-        if(rep>=30){
-            VerseRef next=prefs.corpus().next(itqanUnit.end);
-            String label=itqanUnit.start+" → "+itqanUnit.end+" · ×30 · révélations "+reveals;
-            boolean ok=prefs.completeItqanUnit(next,LocalDate.now().toString(),label);
-            if(!ok){onError("Impossible d’enregistrer atomiquement la fin de l’unité Itqān.");return;}
-            closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();return;
-        }
         if(!prefs.setItqanProgress(rep,reveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition Itqān.");return;}
+        if(rep>=PreviewConfig.ITQAN_TOTAL_REPS){
+            currentMask=0;mushaf.setMask(0);
+            long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
+            awaitingValidation=true;sessionCompleted=true;renderMode();return;
+        }
         currentMask=PreviewConfig.itqanMaskForNextRep(rep);if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();if(currentPage!=unitFirstPage){currentPage=unitFirstPage;showCurrent();updatePageButtons();}
         updateItqanProgress(rep,reveals);
     }
 
+    private void validateItqan(){
+        if(itqanUnit==null||prefs.itqanRep()<PreviewConfig.ITQAN_TOTAL_REPS)return;
+        VerseRef next=prefs.corpus().next(itqanUnit.end);
+        String label=itqanUnit.start+" → "+itqanUnit.end+" · ×30 · révélations "+prefs.itqanAssisted();
+        boolean ok=prefs.completeItqanUnit(next,LocalDate.now().toString(),label);
+        if(!ok){onError("Impossible d’enregistrer atomiquement la validation Itqān.");return;}
+        awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
+    }
+
     private void renderMurajaah(){
         String today=LocalDate.now().toString();
         if(today.equals(prefs.lastMurajaahDate())){
-            sessionCompleted=true;program.setText("Murājaʿah — séance du jour terminée");
+            sessionCompleted=true;program.setText("Murājaʿah — séance validée");
             progress.setText(prefs.lastMurajaahLabel().isEmpty()?"Curseur sauvegardé":prefs.lastMurajaahLabel());return;
         }
+        sessionCompleted=false;
         murajaahBlockB = "B".equals(prefs.murajaahPhase());
         if (!murajaahBlockB) renderRecentMurajaah(); else renderOldMurajaah();
     }
@@ -338,12 +370,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentSelection=b.verses;currentLineIds=b.lineIds;currentMask=0;
         int capacity=(int)Math.floor(PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60.0/prefs.recentSecondsPerLine());
         program.setText("Murājaʿah · Bloc A · Sabqi récent · 30 min\n"+b.verseLabel());
-        progress.setText("Fenêtre récente : "+recent.size()+" bloc(s) · capacité estimée "+capacity+" lignes · déjà revues "+recentLinesDone
-            +"\nMême sans faute, ce passage reste récent tant que la fenêtre tient dans 30 min.");
+        progress.setText("Fenêtre récente "+recent.size()+" bloc(s) · capacité ~"+capacity+" lignes · revues "+recentLinesDone
+            +"\nLa promotion reste pilotée par la capacité, jamais par l’absence de faute.");
         showCurrent();
-        Button reviewed=Ui.smallButton(this,"Revu sans aide",v->reviewRecent(false));
-        Button difficult=Ui.smallButton(this,"À renforcer",v->reviewRecent(true));
-        Ui.weight(reviewed,1);Ui.weight(difficult,1);actions.addView(reviewed);actions.addView(difficult);
+        addRoundAction("✓","Revu",v->reviewRecent(false));
+        addRoundAction("!","À renforcer",v->reviewRecent(true));
     }
 
     /** Review quality is a signal only. It never removes/promotes/reorders recent material. */
@@ -353,7 +384,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         recentLinesDone+=PreviewConfig.SABQI_LINES;
         long elapsed=clock.elapsedMs();
         prefs.setMurajaahRuntime("A",null,recentLinesDone,elapsed,0L);
-        // Difficult passages may be signalled in the UI; chronology and promotion remain capacity-driven.
         if (elapsed>=PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60_000L) transitionToBlockB(elapsed);
         else renderMode();
     }
@@ -385,7 +415,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             +(murajaahActualEnd==null?"\nTouchez le dernier verset réellement terminé.":"\nFin réelle sélectionnée : "+murajaahActualEnd));
         showCurrent();
         if(murajaahActualEnd!=null)mushaf.setSelection(Collections.singletonList(murajaahActualEnd),geometry.lineIdsForVerseRange(murajaahActualEnd,murajaahActualEnd));
-        Button finish=Ui.smallButton(this,"Terminer au verset choisi",v->finishMurajaah());Ui.weight(finish,1);actions.addView(finish);
+        Button finish=Ui.roundButton(this,"✓","Valider",v->finishMurajaah());finish.setEnabled(murajaahActualEnd!=null);actions.addView(finish);
     }
 
     private void finishMurajaah(){
@@ -397,7 +427,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         calibrateOldSpeed(murajaahPlan.start,murajaahActualEnd,blockBElapsed);
         String label="Réel : "+murajaahPlan.start+" → "+murajaahActualEnd+" · prochain curseur "+next;
         boolean ok=prefs.completeMurajaah(next,LocalDate.now().toString(),label);
-        if(!ok){onError("Impossible d’enregistrer la fin de la Murājaʿah.");return;}
+        if(!ok){onError("Impossible d’enregistrer la validation Murājaʿah.");return;}
         if(!prefs.itqanCursor().equals(itqanBefore)){
             prefs.setItqanCursor(itqanBefore);onError("État Murājaʿah incohérent annulé : curseur Itqān restauré.");return;
         }
@@ -411,7 +441,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void calibrateOldSpeed(VerseRef start,VerseRef end,long elapsedMs){
-        if(GeometryRepository.ordinal(end)<GeometryRepository.ordinal(start))return; // wrapped cycle: not a contiguous physical-line measure
+        if(GeometryRepository.ordinal(end)<GeometryRepository.ordinal(start))return;
         int lines=geometry.lineCountForVerseRange(start,end);
         if(lines<PreviewConfig.SPEED_MIN_LINES || elapsedMs<PreviewConfig.SPEED_MIN_SECONDS*1000L)return;
         double measured=(elapsedMs/1000.0)/lines,old=prefs.murajaahSecondsPerLine();
@@ -437,9 +467,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onVerseTap(VerseRef verse){
         if(MURAJAAH.equals(mode)&&murajaahBlockB&&murajaahPlan!=null&&prefs.corpus().contains(verse)){
             murajaahActualEnd=verse;
-            progress.setText("Fin réelle sélectionnée : "+verse+"\nCette borne réelle devient la référence Murājaʿah.");
+            progress.setText("Fin réelle sélectionnée : "+verse+"\n✓ Valider enregistrera cette borne.");
             eink.local(progress);mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
             checkpointMurajaah(clock.elapsedMs());
+            renderMode();
         }
     }
 
@@ -462,8 +493,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         nextPage.setEnabled(free?currentPage<604:currentPage<unitLastPage);
     }
 
-    private Button createRevealButton() {
-        Button button=Ui.smallButton(this,"Révéler",null);
+    private void addRoundAction(String symbol,String label,View.OnClickListener listener){
+        LinearLayout box=Ui.roundAction(this,symbol,label,listener);actions.addView(box);
+    }
+
+    private void configureRevealButton(Button button) {
         button.setOnTouchListener((view,event)->{
             int action=event.getActionMasked();
             if(action==android.view.MotionEvent.ACTION_DOWN){
@@ -473,23 +507,24 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 view.setPressed(false);mushaf.setMask(currentMask);if(action==android.view.MotionEvent.ACTION_UP)view.performClick();return true;
             }
             return false;
-        });return button;
+        });
     }
 
     private boolean consumeReveal(){boolean revealed=revealedThisRep;revealedThisRep=false;return revealed;}
     private void updateRevealButton(){if(revealButton!=null)revealButton.setEnabled(currentMask>0);}
     private void openAudio(){new HifzAudioDialog(this,mushaf,currentSelection).show();}
 
-    private void closeClockForCompletedSession(){sessionCompleted=true;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);}
+    private void closeClockForCompletedSession(){sessionCompleted=true;awaitingValidation=false;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);}
     private int targetMinutes(){return SABQI.equals(mode)?PreviewConfig.SABQI_MINUTES_WORKING:ITQAN.equals(mode)?PreviewConfig.ITQAN_MINUTES_WORKING:PreviewConfig.MURAJAAH_MINUTES_WORKING;}
     private String displayModeName(){return SABQI.equals(mode)?"Sabqi":ITQAN.equals(mode)?"Itqān":"Murājaʿah";}
     @Override public void onReady(){if(!hasShown)showCurrent();}
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int page){currentPage=page;updatePageButtons();}
-    @Override protected void onResume(){super.onResume();if(!sessionCompleted)clock.resume();}
+    @Override protected void onResume(){super.onResume();if(!sessionCompleted&&!awaitingValidation)clock.resume();}
     @Override protected void onPause(){
         long elapsed=clock.pause();
-        if(sessionCompleted)prefs.setElapsedFor(mode,0L);else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
+        if(sessionCompleted&&!awaitingValidation)prefs.setElapsedFor(mode,0L);
+        else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
     @Override protected void onDestroy(){if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
