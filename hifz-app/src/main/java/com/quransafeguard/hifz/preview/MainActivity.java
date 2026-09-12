@@ -145,6 +145,12 @@ public final class MainActivity extends android.app.Activity {
         LocalDate date = LocalDate.now();
         ScheduledSession scheduled = HifzSchedule.INSTANCE.scheduled(date, prefs.programStartDate(), date);
         if (scheduled == null) return;
+        String todayKey = date.toString();
+        boolean eveningMurajaah = HifzSchedule.INSTANCE.hasEveningMurajaah(date.getDayOfWeek());
+        if (eveningMurajaah && todayKey.equals(prefs.lastItqanDate()) && !todayKey.equals(prefs.lastMurajaahDate())) {
+            openMode(HifzSessionActivity.MURAJAAH);
+            return;
+        }
         switch (scheduled.getType()) {
             case SABQI: openMode(HifzSessionActivity.SABQI); break;
             case ITQAN: openMode(HifzSessionActivity.ITQAN); break;
@@ -165,6 +171,16 @@ public final class MainActivity extends android.app.Activity {
         }
         String detail;
         try {
+            String todayKey = date.toString();
+            boolean eveningMurajaah = HifzSchedule.INSTANCE.hasEveningMurajaah(date.getDayOfWeek());
+            if (eveningMurajaah && todayKey.equals(prefs.lastItqanDate())) {
+                detail = todayKey.equals(prefs.lastMurajaahDate())
+                    ? "Itqān ✓ · Murājaʿah ✓"
+                    : "Soir · Murājaʿah · Bloc " + prefs.murajaahPhase();
+                today.setText(detail);
+                todayAction.setEnabled(true);
+                return;
+            }
             SessionType kind = scheduled.getType();
             switch (kind) {
                 case SABQI: {

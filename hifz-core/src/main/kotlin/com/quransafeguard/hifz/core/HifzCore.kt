@@ -125,6 +125,9 @@ object HifzSchedule {
         DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> SessionType.MURAJAAH
     }
 
+    fun hasEveningMurajaah(day: DayOfWeek): Boolean =
+        day == DayOfWeek.TUESDAY || day == DayOfWeek.THURSDAY
+
     fun scheduled(date: LocalDate, programStartDate: LocalDate, today: LocalDate): ScheduledSession? {
         if (date < programStartDate) return null
         return ScheduledSession(date, typeFor(date.dayOfWeek), overdue = date < today)

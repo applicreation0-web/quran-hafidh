@@ -1,5 +1,6 @@
 package com.quransafeguard.hifz.core
 
+import java.time.DayOfWeek
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,5 +56,14 @@ class HifzCoreTest {
         assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.plusDays(4).dayOfWeek))
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(5).dayOfWeek))
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(6).dayOfWeek))
+    }
+
+    @Test fun tuesdayAndThursdayAddEveningMurajaahWithoutReplacingItqan() {
+        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.TUESDAY))
+        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.THURSDAY))
+        assertTrue(HifzSchedule.hasEveningMurajaah(DayOfWeek.TUESDAY))
+        assertTrue(HifzSchedule.hasEveningMurajaah(DayOfWeek.THURSDAY))
+        assertFalse(HifzSchedule.hasEveningMurajaah(DayOfWeek.MONDAY))
+        assertFalse(HifzSchedule.hasEveningMurajaah(DayOfWeek.SATURDAY))
     }
 }

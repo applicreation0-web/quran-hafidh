@@ -384,7 +384,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void renderRecentMurajaah() {
         List<HifzPrefs.RecentSabqi> recent=prefs.recentSabqi();
         long elapsed=clock.elapsedMs();
-        if(recent.isEmpty() || elapsed>=PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60_000L){
+        int totalRecentLines=recentLineCount(recent);
+        if(recent.isEmpty() || PreviewConfig.recentMurajaahComplete(recentLinesDone,totalRecentLines,elapsed)){
             transitionToBlockB(elapsed);return;
         }
         int reviewIndex=(recentLinesDone/PreviewConfig.SABQI_LINES)%recent.size();
@@ -403,12 +404,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Review quality is a signal only. It never removes/promotes/reorders recent material. */
     private void reviewRecent(boolean difficult) {
         if (!takeRepLock()) return;
-        if (prefs.recentSabqi().isEmpty()) { transitionToBlockB(clock.elapsedMs()); return; }
+        List<HifzPrefs.RecentSabqi> recent=prefs.recentSabqi();
+        if (recent.isEmpty()) { transitionToBlockB(clock.elapsedMs()); return; }
         recentLinesDone+=PreviewConfig.SABQI_LINES;
         long elapsed=clock.elapsedMs();
         prefs.setMurajaahRuntime("A",null,recentLinesDone,elapsed,0L);
-        if (elapsed>=PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60_000L) transitionToBlockB(elapsed);
+        if (PreviewConfig.recentMurajaahComplete(recentLinesDone,recentLineCount(recent),elapsed)) transitionToBlockB(elapsed);
         else renderMode();
+    }
+
+    private int recentLineCount(List<HifzPrefs.RecentSabqi> recent) {
+        int total=0;
+        for(HifzPrefs.RecentSabqi item:recent) total+=Math.max(0,item.endLine-item.startLine+1);
+        return total;
     }
 
     private void transitionToBlockB(long elapsed) {
