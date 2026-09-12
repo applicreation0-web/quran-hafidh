@@ -29,12 +29,6 @@ function prepare(){
 }
 document.addEventListener('click',()=>N?.surfaceTap?.());
 
-function stableHash(text){
-  let h=2166136261>>>0;
-  for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)>>>0}
-  return h;
-}
-
 function insideSelection(polys,x,y){
   const svg=currentSvg();if(!svg)return false;
   const pt=svg.createSVGPoint();pt.x=x;pt.y=y;
@@ -52,30 +46,29 @@ function maskCandidates(lines,polys){
       cells.push({line:li,index:ci,x0,x1,top,bottom});
     });
     cells.sort((a,b)=>a.x0-b.x0);
-    if(cells.length)byLine.push({id:String(line.id),cells});
+    if(cells.length)byLine.push({id:String(line.id),top,bottom,cells});
   });
   return byLine;
 }
 
-/* Expand a hidden cell to the midpoint of its neighbours: no letter slivers between masked words. */
-function widenedRect(cell,lineCells){
-  const i=lineCells.indexOf(cell),prev=lineCells[i-1],next=lineCells[i+1];
-  const left=prev?Math.min(cell.x0,(prev.x1+cell.x0)/2):cell.x0-3;
-  const right=next?Math.max(cell.x1,(cell.x1+next.x0)/2):cell.x1+3;
-  return {x:left-0.8,y:cell.top-0.8,width:(right-left)+1.6,height:(cell.bottom-cell.top)+1.6};
-}
-
 /*
- * One coherent segment per physical line. 25% is contained in 50%, then 75%, then 100%.
- * A stable per-line direction avoids a distracting identical edge on every line while preserving nesting.
+ * One continuous rounded band per physical line. Arabic reading starts on the right, so 25%
+ * hides the rightmost quarter, 50% contains that quarter, 75% contains the half, and 100%
+ * covers the selected line. The selection clip keeps the band inside the actual selected verses.
  */
-function hiddenCellsForLine(line,percent){
+function hiddenBandForLine(line,percent){
   const cells=line.cells,n=cells.length;
-  if(percent<=0||!n)return [];
-  if(percent>=100)return [...cells];
-  const take=Math.max(1,Math.min(n,Math.ceil(n*percent/100)));
-  const fromRight=(stableHash(line.id)&1)===0;
-  return fromRight?cells.slice(n-take):cells.slice(0,take);
+  if(percent<=0||!n)return null;
+  const take=percent>=100?n:Math.max(1,Math.min(n,Math.ceil(n*percent/100)));
+  const chosen=cells.slice(n-take); // rightmost contiguous cells: RTL progression
+  const left=Math.min(...chosen.map(c=>c.x0));
+  const right=Math.max(...chosen.map(c=>c.x1));
+  return {
+    x:left-2.2,
+    y:line.top-1.5,
+    width:(right-left)+4.4,
+    height:(line.bottom-line.top)+3.0
+  };
 }
 
 /* Re-copy ayah rosettes above mask so structural markers stay visible. */
@@ -121,14 +114,12 @@ function render(){
   if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
 
   byLine.forEach(line=>{
-    const hidden=new Set(hiddenCellsForLine(line,clamped));
-    line.cells.forEach(cell=>{
-      if(!hidden.has(cell))return;
-      const r=widenedRect(cell,line.cells),el=document.createElementNS(NS,'rect');
-      el.setAttribute('class','maskcell');
-      el.setAttribute('x',r.x);el.setAttribute('y',r.y);el.setAttribute('width',r.width);el.setAttribute('height',r.height);
-      group.appendChild(el);
-    });
+    const band=hiddenBandForLine(line,clamped);if(!band)return;
+    const el=document.createElementNS(NS,'rect');
+    el.setAttribute('class','maskcell');
+    el.setAttribute('x',band.x);el.setAttribute('y',band.y);el.setAttribute('width',band.width);el.setAttribute('height',band.height);
+    el.setAttribute('rx','4');el.setAttribute('ry','4');
+    group.appendChild(el);
   });
   layer.appendChild(group);
   if(polys.length)layer.appendChild(markerLayer(svg,polys));
