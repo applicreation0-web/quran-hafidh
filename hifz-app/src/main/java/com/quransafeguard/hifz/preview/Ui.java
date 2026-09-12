@@ -42,9 +42,9 @@ final class Ui {
         return button;
     }
 
-    /** Compact text action. */
+    /** Compact text action, reserved for tabs and explicit text choices. */
     static Button smallButton(Context context, String label, View.OnClickListener listener) {
-        Button button = styled(new Button(context), context, 13.5f, dp(context, 13));
+        Button button = styled(new Button(context), context, 13.5f, dp(context, 10));
         String shown = label;
         int iconRes = iconFor(label, label);
         if (label != null && label.toLowerCase(Locale.ROOT).contains("audio")) shown = "Écouter";
@@ -52,7 +52,7 @@ final class Ui {
         if (iconRes != 0) {
             button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
             button.setCompoundDrawableTintList(iconTint());
-            button.setCompoundDrawablePadding(dp(context, 6));
+            button.setCompoundDrawablePadding(dp(context, 5));
         }
         button.setContentDescription(shown);
         button.setOnClickListener(listener);
@@ -61,51 +61,57 @@ final class Ui {
         return button;
     }
 
-    /** Small utility control. Pictograms are selected by semantic label, never by arbitrary glyph style. */
-    static Button roundButton(Context context, String symbol, String description, View.OnClickListener listener) {
+    /** 44dp hit target with a quiet 24dp pictogram and no permanent visible circle. */
+    static Button iconButton(Context context, String symbol, String description, View.OnClickListener listener) {
         Button button = new Button(context);
         button.setAllCaps(false);
-        int iconRes = iconFor(description, symbol);
-        if (iconRes != 0) {
-            button.setText("");
-            button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            button.setCompoundDrawableTintList(iconTint());
-        } else {
-            button.setText(symbol);
-            button.setTextSize(17f);
-            button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        }
         button.setGravity(Gravity.CENTER);
         button.setContentDescription(description);
         button.setOnClickListener(listener);
         button.setStateListAnimator(null);
         button.setElevation(0f);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setMinWidth(0);
+        button.setMinHeight(0);
+        button.setPadding(dp(context, 10), dp(context, 10), dp(context, 10), dp(context, 10));
         int size = dp(context, 44);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-        int gap = dp(context, 4);
-        params.setMargins(gap, gap, gap, gap);
+        params.setMargins(dp(context, 1), 0, dp(context, 1), 0);
         button.setLayoutParams(params);
-        button.setMinWidth(0); button.setMinHeight(0);
-        button.setPadding(dp(context, 9), dp(context, 9), dp(context, 9), dp(context, 9));
-        int stroke = Math.max(1, dp(context, 1));
-        StateListDrawable bg = new StateListDrawable();
-        bg.addState(new int[]{-android.R.attr.state_enabled}, shape(PAPER, LINE, size / 2, stroke));
-        bg.addState(new int[]{android.R.attr.state_pressed}, shape(INK, INK, size / 2, stroke));
-        bg.addState(new int[]{android.R.attr.state_selected}, shape(INK, INK, size / 2, stroke));
-        bg.addState(new int[]{}, shape(PAPER, INK, size / 2, stroke));
-        button.setBackground(bg);
-        button.setTextColor(iconTint());
+        int iconRes = iconFor(description, symbol);
+        if (iconRes != 0) {
+            button.setText("");
+            setButtonIcon(button, iconRes);
+        } else {
+            button.setText(symbol);
+            button.setTextSize(17f);
+            button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+            button.setTextColor(iconTintFlat());
+        }
         return button;
     }
 
-    /** Symbol + caption action with one visual grammar across all screens. */
+    /** Legacy API retained for call sites; visual grammar is now the light icon hit-target. */
+    static Button roundButton(Context context, String symbol, String description, View.OnClickListener listener) {
+        return iconButton(context, symbol, description, listener);
+    }
+
+    static void setButtonIcon(Button button, int iconRes) {
+        if (button == null) return;
+        button.setText("");
+        button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
+        button.setCompoundDrawableTintList(iconTintFlat());
+    }
+
+    /** Icon + short caption with one compact grammar across all Hifz modes. */
     static LinearLayout roundAction(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout box = column(context);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(dp(context,3),dp(context,1),dp(context,3),dp(context,1));
-        Button b = roundButton(context, symbol, label, listener);
+        box.setPadding(dp(context,2),0,dp(context,2),0);
+        Button b = iconButton(context, symbol, label, listener);
         box.addView(b);
-        TextView caption = text(context, label, 10.5f, false);
+        TextView caption = text(context, label, 9.5f, false);
+        caption.setTextColor(MUTED);
         caption.setGravity(Gravity.CENTER);
         caption.setSingleLine(true);
         box.addView(caption, new LinearLayout.LayoutParams(
@@ -113,12 +119,11 @@ final class Ui {
         return box;
     }
 
-    /** Ebook-style home action. */
+    /** Ebook-style home action: large hit target, intentionally no card chrome. */
     static LinearLayout cardAction(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout card = column(context);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(context,8),dp(context,9),dp(context,8),dp(context,8));
-        card.setBackground(shape(SURFACE, LINE, dp(context,14), Math.max(1, dp(context,1))));
+        card.setPadding(dp(context,8),dp(context,7),dp(context,8),dp(context,7));
         card.setClickable(true);
         card.setFocusable(true);
         card.setContentDescription(label);
@@ -129,7 +134,7 @@ final class Ui {
         if (iconRes != 0) {
             icon.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
             icon.setCompoundDrawableTintList(ColorStateList.valueOf(INK));
-            icon.setMinHeight(dp(context, 26));
+            icon.setMinHeight(dp(context, 25));
         } else {
             icon.setText(symbol);
         }
@@ -141,37 +146,78 @@ final class Ui {
         caption.setSingleLine(true);
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cp.topMargin = dp(context,3);
+        cp.topMargin = dp(context,2);
         card.addView(caption, cp);
         return card;
     }
 
-    /** Hifz mode card: stable pictogram + name + one short protocol cue. */
+    /** Hifz mode entry: same icon family, same optical weight, only a short protocol cue. */
     static LinearLayout modeCard(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout card = cardAction(context, symbol, label, listener);
         if (card.getChildCount() > 1 && card.getChildAt(1) instanceof TextView) {
             TextView title = (TextView) card.getChildAt(1);
-            title.setTextSize(13.5f);
+            title.setTextSize(12.5f);
             title.setTypeface(Typeface.SERIF, Typeface.BOLD);
         }
         String lower = label.toLowerCase(Locale.ROOT);
         String cue = lower.contains("sabqi") ? "5 lignes" : lower.contains("itq") ? "×40" : lower.contains("mur") ? "Révision" : "";
         if (!cue.isEmpty()) {
-            TextView subtitle = text(context, cue, 9.5f, false);
+            TextView subtitle = text(context, cue, 9f, false);
             subtitle.setTextColor(MUTED);
             subtitle.setGravity(Gravity.CENTER);
             subtitle.setSingleLine(true);
             card.addView(subtitle, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
-        card.setPadding(dp(context,8),dp(context,9),dp(context,8),dp(context,8));
+        card.setPadding(dp(context,7),dp(context,7),dp(context,7),dp(context,7));
         return card;
+    }
+
+    /** Liseuse-style setting: label on the left, current value/action on the right. */
+    static LinearLayout settingRow(Context context, String label, String value, View.OnClickListener listener) {
+        LinearLayout row = row(context);
+        row.setPadding(dp(context, 2), dp(context, 5), dp(context, 2), dp(context, 5));
+        row.setMinHeight(dp(context, 48));
+        TextView name = text(context, label, 13f, false);
+        Ui.weight(name, 1f);
+        name.setPadding(dp(context, 4), 0, dp(context, 6), 0);
+        row.addView(name);
+        TextView current = text(context, value == null ? "" : value, 12f, false);
+        current.setTextColor(MUTED);
+        current.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        current.setMaxLines(2);
+        row.addView(current, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (listener != null) {
+            TextView chevron = text(context, "›", 20f, false);
+            chevron.setTextColor(MUTED);
+            chevron.setGravity(Gravity.CENTER);
+            chevron.setPadding(dp(context, 7), 0, 0, 0);
+            row.addView(chevron, new LinearLayout.LayoutParams(dp(context, 24), dp(context, 44)));
+            row.setClickable(true);
+            row.setFocusable(true);
+            row.setOnClickListener(listener);
+        }
+        return row;
+    }
+
+    static TextView settingValue(LinearLayout row) {
+        if (row == null || row.getChildCount() < 2 || !(row.getChildAt(1) instanceof TextView)) return null;
+        return (TextView) row.getChildAt(1);
+    }
+
+    static View divider(Context context) {
+        View line = new View(context);
+        line.setBackgroundColor(LINE);
+        line.setLayoutParams(new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
+        return line;
     }
 
     static void setChosen(Button button, boolean chosen) { button.setSelected(chosen); }
 
     static void panel(View view) {
-        view.setBackground(shape(SURFACE, LINE, dp(view.getContext(), 14), Math.max(1, dp(view.getContext(), 1))));
+        view.setBackground(shape(SURFACE, LINE, dp(view.getContext(), 12), Math.max(1, dp(view.getContext(), 1))));
     }
 
     static LinearLayout column(Context context) {
@@ -195,7 +241,7 @@ final class Ui {
         view.setText(value);
         view.setTextSize(sizeSp);
         view.setTextColor(INK);
-        view.setLineSpacing(0f, 1.10f);
+        view.setLineSpacing(0f, 1.08f);
         if (bold) view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         return view;
     }
@@ -260,10 +306,19 @@ final class Ui {
             new int[]{LINE,PAPER,PAPER,INK});
     }
 
+    private static ColorStateList iconTintFlat() {
+        return new ColorStateList(
+            new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
+            new int[]{LINE,MUTED,INK,INK});
+    }
+
     private static int iconFor(String semantic, String fallbackSymbol) {
         String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer")) return R.drawable.ic_ui_close;
+        if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
+        if (s.contains("suivant")) return R.drawable.ic_ui_next;
+        if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
         if (s.equals("lecture")) return R.drawable.ic_ui_reading;
         if (s.contains("mémor")) return R.drawable.ic_ui_memorize;

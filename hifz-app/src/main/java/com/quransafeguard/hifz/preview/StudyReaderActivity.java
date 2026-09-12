@@ -46,9 +46,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef selected;
     private TextView pageLabel;
     private Button tafsirButton, audioButton;
-    private LinearLayout topControls, bottomControls, rootRow, sideTafsir;
+    private LinearLayout topControls, readerActions, pageRail, audioHost, rootRow, sideTafsir;
     private FrameLayout readerPane;
     private SeekBar pageSeek;
+    private HifzAudioDialog audioPlayer;
     private boolean controlsVisible = true;
     private boolean largeScreen;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -76,40 +77,52 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             Ui.respectSystemBars(this, readerPane, 0, 0, 0, 0);
         }
 
-        mushaf = new MushafView(this);
-        mushaf.setListener(this);
-        readerPane.addView(mushaf, new FrameLayout.LayoutParams(
+        LinearLayout readerStack = Ui.column(this);
+        readerStack.setPadding(0, 0, 0, 0);
+        readerPane.addView(readerStack, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         topControls = Ui.row(this);
         topControls.setGravity(Gravity.CENTER_VERTICAL);
         topControls.setBackgroundColor(Ui.PAPER);
-        topControls.setPadding(Ui.dp(this, 4), Ui.dp(this, 1), Ui.dp(this, 4), Ui.dp(this, 1));
-        Button back = Ui.roundButton(this, "‹", "Retour", v -> finish());
-        pageLabel = Ui.bookText(this, "Lecture · " + page + " / 604", 13.5f, true);
+        topControls.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
+        Button back = Ui.iconButton(this, "‹", "Retour", v -> finish());
+        pageLabel = Ui.bookText(this, "Lecture · " + page + " / 604", 13f, true);
         Ui.weight(pageLabel, 1f);
         pageLabel.setGravity(Gravity.CENTER);
+        TextView balance = Ui.text(this, "", 1f, false);
+        balance.setMinWidth(Ui.dp(this, 44));
         topControls.addView(back);
         topControls.addView(pageLabel);
-        FrameLayout.LayoutParams topLp = new FrameLayout.LayoutParams(
-            overlayWidth(660), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        topLp.setMargins(Ui.dp(this, 4), Ui.dp(this, 2), Ui.dp(this, 4), 0);
-        readerPane.addView(topControls, topLp);
+        topControls.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
+        readerStack.addView(topControls, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        bottomControls = Ui.column(this);
-        bottomControls.setGravity(Gravity.CENTER_HORIZONTAL);
-        bottomControls.setBackgroundColor(Ui.PAPER);
-        bottomControls.setPadding(Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2));
-        LinearLayout buttons = Ui.row(this);
-        buttons.setGravity(Gravity.CENTER);
+        audioHost = Ui.column(this);
+        audioHost.setPadding(0, 0, 0, 0);
+        audioHost.setVisibility(View.GONE);
+        readerStack.addView(audioHost, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        mushaf = new MushafView(this);
+        mushaf.setListener(this);
+        readerStack.addView(mushaf, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        readerActions = Ui.row(this);
+        readerActions.setGravity(Gravity.CENTER);
+        readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
         tafsirButton = Ui.smallButton(this, "Tafsir", v -> openTafsir());
         tafsirButton.setEnabled(false);
         audioButton = Ui.smallButton(this, "♪ Audio", v -> openAudio());
         audioButton.setEnabled(false);
-        buttons.addView(tafsirButton);
-        buttons.addView(audioButton);
-        bottomControls.addView(buttons);
+        readerActions.addView(tafsirButton);
+        readerActions.addView(audioButton);
+        readerStack.addView(readerActions, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        pageRail = Ui.row(this);
+        pageRail.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), Ui.dp(this, 1));
         pageSeek = new SeekBar(this);
         pageSeek.setMax(603);
         pageSeek.setProgress(page - 1);
@@ -121,24 +134,16 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             @Override public void onStartTrackingTouch(SeekBar seekBar) { showControls(); }
             @Override public void onStopTrackingTouch(SeekBar seekBar) { setPage(seekBar.getProgress() + 1); }
         });
-        bottomControls.addView(pageSeek, new LinearLayout.LayoutParams(
+        pageRail.addView(pageSeek, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        readerStack.addView(pageRail, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        FrameLayout.LayoutParams bottomLp = new FrameLayout.LayoutParams(
-            overlayWidth(660), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        bottomLp.setMargins(Ui.dp(this, 5), 0, Ui.dp(this, 5), Ui.dp(this, 2));
-        readerPane.addView(bottomControls, bottomLp);
         scheduleAutoHide();
-    }
-
-    private int overlayWidth(int maxDp) {
-        int screen = getResources().getDisplayMetrics().widthPixels;
-        int usable = largeScreen ? Math.round(screen * .58f) : screen;
-        return Math.max(Ui.dp(this, 280), Math.min(usable - Ui.dp(this, 10), Ui.dp(this, maxDp)));
     }
 
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
+        closeAudio();
         closeSideTafsir();
         page = next;
         selected = null;
@@ -155,6 +160,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void go(int delta) { setPage(page + delta); }
 
     @Override public void onVerseTap(VerseRef verse) {
+        closeAudio();
         selected = verse;
         tafsirButton.setEnabled(true);
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
@@ -170,15 +176,18 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void showControls() {
         controlsVisible = true;
         topControls.setVisibility(View.VISIBLE);
-        bottomControls.setVisibility(View.VISIBLE);
+        readerActions.setVisibility(View.VISIBLE);
+        pageRail.setVisibility(View.VISIBLE);
         scheduleAutoHide();
     }
 
     private void hideControls() {
-        if (topControls == null || bottomControls == null) return;
+        if (topControls == null || readerActions == null || pageRail == null) return;
         controlsVisible = false;
-        topControls.setVisibility(View.GONE);
-        bottomControls.setVisibility(View.GONE);
+        // INVISIBLE preserves the reader geometry and avoids a full-page reflow/refresh on BOOX.
+        topControls.setVisibility(View.INVISIBLE);
+        readerActions.setVisibility(View.INVISIBLE);
+        pageRail.setVisibility(View.INVISIBLE);
         if (mushaf != null) mushaf.removeCallbacks(autoHide);
     }
 
@@ -190,12 +199,22 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void openAudio() {
         List<VerseRef> verses = selected == null ? Collections.emptyList() : Collections.singletonList(selected);
-        new HifzAudioDialog(this, mushaf, verses).show();
+        closeAudio();
+        audioPlayer = new HifzAudioDialog(this, mushaf, verses);
+        audioPlayer.attachInline(audioHost);
+        showControls();
+    }
+
+    private void closeAudio() {
+        HifzAudioDialog current = audioPlayer;
+        audioPlayer = null;
+        if (current != null) current.detachInline();
     }
 
     private void openTafsir() {
         final VerseRef verse = selected;
         if (verse == null) return;
+        closeAudio();
         if (largeScreen) { openSideTafsir(verse); return; }
         hideControls();
         mushaf.revealSelectionAboveBottomPanel();
@@ -465,6 +484,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return super.onKeyDown(keyCode, event);
     }
     @Override protected void onDestroy() {
+        closeAudio();
         io.shutdownNow();
         if (mushaf != null) {
             mushaf.removeCallbacks(autoHide);

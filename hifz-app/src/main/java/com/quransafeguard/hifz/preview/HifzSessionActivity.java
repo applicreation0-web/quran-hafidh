@@ -32,7 +32,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private GeometryRepository geometry;
     private MushafView mushaf;
     private TextView program, progress, timerText;
-    private LinearLayout actions;
+    private LinearLayout actions, audioHost;
+    private HifzAudioDialog audioPlayer;
     private SessionClock clock;
     private final EinkController eink = new EinkController();
     private long lastCheckpointBucket = -1L;
@@ -87,30 +88,41 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void buildUi() {
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
-        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,6),Ui.dp(this,2),Ui.dp(this,6),0);
-        top.addView(Ui.roundButton(this,"","Retour",v->finish()));
+        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);
+        top.addView(Ui.iconButton(this,"","Retour",v->finish()));
         program = Ui.text(this,"Chargement…",12.5f,true);
         Ui.weight(program,1f);
         program.setGravity(Gravity.CENTER_VERTICAL);
-        program.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),0);
+        program.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
         program.setMaxLines(1);
         top.addView(program);
         root.addView(top);
-        timerText = Ui.text(this,"",10.8f,false);
+
+        LinearLayout meta = Ui.row(this);
+        meta.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,2));
+        progress = Ui.text(this,"",10.8f,false);
+        progress.setTextColor(Ui.MUTED);
+        progress.setMaxLines(1);
+        Ui.weight(progress,1f);
+        meta.addView(progress);
+        timerText = Ui.text(this,"",10.5f,false);
         timerText.setTextColor(Ui.MUTED);
-        timerText.setPadding(Ui.dp(this,10),0,Ui.dp(this,10),0);
-        root.addView(timerText);
-        progress = Ui.text(this,"",11.5f,false);
-        progress.setPadding(Ui.dp(this,10),0,Ui.dp(this,10),Ui.dp(this,2));
-        progress.setMaxLines(2);
-        root.addView(progress);
+        timerText.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        meta.addView(timerText);
+        root.addView(meta);
+
+        audioHost = Ui.column(this);
+        audioHost.setPadding(0,0,0,0);
+        audioHost.setVisibility(View.GONE);
+        root.addView(audioHost, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         mushaf = new MushafView(this); mushaf.setListener(this);
         root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
         LinearLayout controlBar = Ui.row(this);
         controlBar.setGravity(Gravity.CENTER);
-        controlBar.setPadding(Ui.dp(this,4),Ui.dp(this,1),Ui.dp(this,4),Ui.dp(this,3));
+        controlBar.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
@@ -122,6 +134,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void renderMode() {
+        closeAudio();
         actions.removeAllViews();
         revealButton = null;
         awaitingValidation = false;
@@ -492,7 +505,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int target=Math.max(1,Math.min(604,currentPage+delta));
         boolean limited=SABQI.equals(mode)||ITQAN.equals(mode)||(MURAJAAH.equals(mode)&&!murajaahBlockB);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
-        if(target==currentPage)return;currentPage=target;showCurrent();
+        if(target==currentPage)return;closeAudio();currentPage=target;showCurrent();
     }
 
     private void addRoundAction(String symbol,String label,View.OnClickListener listener){
@@ -522,7 +535,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             startActivity(new Intent(this,SettingsActivity.class));
             return;
         }
-        new HifzAudioDialog(this,mushaf,currentSelection).show();
+        closeAudio();
+        audioPlayer=new HifzAudioDialog(this,mushaf,currentSelection);
+        audioPlayer.attachInline(audioHost);
+    }
+
+    private void closeAudio(){
+        HifzAudioDialog current=audioPlayer;
+        audioPlayer=null;
+        if(current!=null)current.detachInline();
     }
 
     private void closeClockForCompletedSession(){sessionCompleted=true;awaitingValidation=false;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);}
@@ -538,6 +559,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

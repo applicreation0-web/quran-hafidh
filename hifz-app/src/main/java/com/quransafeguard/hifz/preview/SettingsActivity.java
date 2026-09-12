@@ -7,9 +7,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.view.Gravity;
-import android.view.WindowManager;
 import android.view.View;
-import android.widget.Button;
+import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
 import android.widget.ScrollView;
@@ -30,9 +29,8 @@ public final class SettingsActivity extends android.app.Activity {
     private static final int REQUEST_AUDIO_ZIP = 4103;
     private HifzPrefs prefs;
     private GeometryRepository geometry;
-    private LinearLayout rangesBox;
+    private LinearLayout rangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, audioSetting;
     private TextView sabqiStatus, itqanStatus, murajaahStatus, audioStatus;
-    private Button sabqiStartButton, sabqiEndButton, rotationButton;
 
     private interface VerseChosen { void accept(VerseRef verse); }
 
@@ -43,53 +41,54 @@ public final class SettingsActivity extends android.app.Activity {
 
         ScrollView scroll = new ScrollView(this);scroll.setFillViewport(true);
         LinearLayout root = Ui.column(this);scroll.addView(root);
-        LinearLayout top=Ui.row(this);top.addView(Ui.roundButton(this,"","Retour",v->finish()));
-        TextView title=Ui.bookText(this,"Paramètres Hifz",20,true);Ui.weight(title,1);title.setGravity(Gravity.CENTER);top.addView(title);root.addView(top);
+        LinearLayout top=Ui.row(this);top.setPadding(0,0,0,Ui.dp(this,2));
+        top.addView(Ui.iconButton(this,"","Retour",v->finish()));
+        TextView title=Ui.bookText(this,"Paramètres Hifz",18,true);Ui.weight(title,1);title.setGravity(Gravity.CENTER);top.addView(title);
+        TextView balance=Ui.text(this,"",1,false);top.addView(balance,new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,44)));
+        root.addView(top);
 
         section(root,"Parcours");
-        root.addView(Ui.text(this,"Sabqi · 5 lignes · 37   |   Itqān · ×"+PreviewConfig.ITQAN_TOTAL_REPS+"\nMurājaʿah · 30 min récent + 30 min Itqān",12.5f,false));
+        TextView protocol=Ui.text(this,"Sabqi · 5 lignes · 37   ·   Itqān · ×"+PreviewConfig.ITQAN_TOTAL_REPS+"   ·   Murājaʿah · 30 + 30 min",11f,false);
+        protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
 
-        sabqiStatus=Ui.text(this,"",12.5f,false);sabqiStatus.setPadding(0,Ui.dp(this,7),0,Ui.dp(this,3));root.addView(sabqiStatus);
-        LinearLayout sabqiButtons=Ui.row(this);sabqiButtons.setGravity(Gravity.CENTER);
-        sabqiStartButton=Ui.smallButton(this,"Début",v->chooseVerse("Début Sabqi",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
-        sabqiEndButton=Ui.smallButton(this,"Fin",v->chooseVerse("Fin Sabqi",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
-        LinearLayout.LayoutParams compact=new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT);
-        compact.setMargins(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
-        sabqiButtons.addView(sabqiStartButton,new LinearLayout.LayoutParams(compact));
-        sabqiButtons.addView(sabqiEndButton,new LinearLayout.LayoutParams(compact));
-        root.addView(sabqiButtons);
+        sabqiStartRow=Ui.settingRow(this,"Début Sabqi",prefs.sabqiStart().toString(),v->chooseVerse("Début Sabqi",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
+        root.addView(sabqiStartRow);root.addView(Ui.divider(this));
+        sabqiEndRow=Ui.settingRow(this,"Fin Sabqi",prefs.sabqiEnd().toString(),v->chooseVerse("Fin Sabqi",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
+        root.addView(sabqiEndRow);
+        sabqiStatus=Ui.text(this,"",11f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));root.addView(sabqiStatus);
 
         section(root,"Itqān · plages");
-        rangesBox=Ui.column(this);rangesBox.setPadding(0,Ui.dp(this,2),0,0);root.addView(rangesBox);
-        LinearLayout addRow=Ui.row(this);addRow.setGravity(Gravity.CENTER);addRow.addView(Ui.smallButton(this,"Ajouter",v->chooseRange(null,-1)));root.addView(addRow);
-        itqanStatus=Ui.text(this,"",11.5f,false);itqanStatus.setPadding(0,Ui.dp(this,4),0,Ui.dp(this,2));root.addView(itqanStatus);
-        LinearLayout rotationRow=Ui.row(this);rotationRow.setGravity(Gravity.CENTER);
-        rotationButton=Ui.smallButton(this,"Rotation",v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart));
-        rotationRow.addView(rotationButton);
-        rotationRow.addView(Ui.smallButton(this,"Repositionner Murājaʿah",v->confirmMurajaahReposition()));root.addView(rotationRow);
+        rangesBox=Ui.column(this);rangesBox.setPadding(0,0,0,0);root.addView(rangesBox);
+        root.addView(Ui.divider(this));
+        root.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseRange(null,-1)));
+        itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(itqanStatus);
+        rotationSetting=Ui.settingRow(this,"Début de rotation Itqān",prefs.itqanRotationStart().toString(),
+            v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart));
+        root.addView(rotationSetting);root.addView(Ui.divider(this));
+        root.addView(Ui.settingRow(this,"Repositionner Murājaʿah","Bloc A",v->confirmMurajaahReposition()));
 
         section(root,"Murājaʿah");
-        murajaahStatus=Ui.text(this,"",12.5f,false);root.addView(murajaahStatus);
+        murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(murajaahStatus);
 
-        section(root,"Audio Al-Husary Muʿallim");
-        audioStatus=Ui.text(this,"",12.5f,false);root.addView(audioStatus);
-        LinearLayout audioActions=Ui.row(this);audioActions.setGravity(Gravity.CENTER);
-        audioActions.addView(Ui.smallButton(this,"Choisir le pack",v->selectAudioZip()));root.addView(audioActions);
+        section(root,"Audio");
+        audioSetting=Ui.settingRow(this,"Al-Husary Muʿallim","Choisir le pack",v->selectAudioZip());
+        audioStatus=Ui.settingValue(audioSetting);root.addView(audioSetting);
 
         section(root,"Affichage");
-        Switch eink=new Switch(this);eink.setText("Optimisation E‑Ink / BOOX");eink.setChecked(prefs.forceEink());eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));root.addView(eink);
+        LinearLayout einkRow=Ui.row(this);einkRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));einkRow.setMinHeight(Ui.dp(this,48));
+        TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",13f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
+        Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);root.addView(einkRow);
 
         section(root,"Avancé");
-        LinearLayout diagnostics=Ui.row(this);diagnostics.setGravity(Gravity.CENTER);
-        diagnostics.addView(Ui.smallButton(this,"Diagnostic",v->showDiagnostic()));
-        diagnostics.addView(Ui.smallButton(this,"Réinitialiser",v->confirmReset()));root.addView(diagnostics);
+        root.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));root.addView(Ui.divider(this));
+        root.addView(Ui.settingRow(this,"Réinitialiser","État de test",v->confirmReset()));
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
     }
 
     private void section(LinearLayout root,String title){
-        TextView view=Ui.bookText(this,title,16,true);view.setPadding(0,Ui.dp(this,14),0,Ui.dp(this,4));root.addView(view);
+        TextView view=Ui.bookText(this,title,15,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
     }
 
     private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshMurajaah();refreshAudio();}
@@ -98,9 +97,10 @@ public final class SettingsActivity extends android.app.Activity {
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
         int total=last-first+1;
         boolean aligned=total>0&&total%PreviewConfig.SABQI_LINES==0;
-        sabqiStatus.setText("Sabqi · "+total+" lignes"+(aligned?"":" · ⚠ fin à ajuster"));
-        sabqiStartButton.setText("Début · "+prefs.sabqiStart());
-        sabqiEndButton.setText("Fin · "+prefs.sabqiEnd());
+        sabqiStatus.setText(total+" lignes"+(aligned?"":" · ⚠ fin à ajuster"));
+        TextView startValue=Ui.settingValue(sabqiStartRow),endValue=Ui.settingValue(sabqiEndRow);
+        if(startValue!=null)startValue.setText(prefs.sabqiStart().toString());
+        if(endValue!=null)endValue.setText(prefs.sabqiEnd().toString());
     }
 
     private void setSabqiBound(boolean isStart,VerseRef verse){
@@ -119,10 +119,12 @@ public final class SettingsActivity extends android.app.Activity {
     private void refreshRanges(){
         rangesBox.removeAllViews();List<VerseRange> ranges=prefs.itqanRanges();
         for(int i=0;i<ranges.size();i++){
-            final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);
-            TextView label=Ui.text(this,"Plage "+(i+1)+" · "+range.getStart()+" → "+range.getEndInclusive(),12.5f,false);Ui.weight(label,1);row.addView(label);
-            row.addView(Ui.roundButton(this,"","Modifier la plage",v->chooseRange(range,index)));
-            row.addView(Ui.roundButton(this,"","Supprimer la plage",v->removeRange(index)));rangesBox.addView(row);
+            final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinHeight(Ui.dp(this,46));
+            TextView label=Ui.text(this,"Plage "+(i+1),12.5f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
+            TextView value=Ui.text(this,range.getStart()+" → "+range.getEndInclusive(),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
+            row.addView(Ui.iconButton(this,"","Modifier la plage",v->chooseRange(range,index)));
+            row.addView(Ui.iconButton(this,"","Supprimer la plage",v->removeRange(index)));rangesBox.addView(row);
+            if(i+1<ranges.size())rangesBox.addView(Ui.divider(this));
         }
     }
 
@@ -156,7 +158,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshItqan(){
-        rotationButton.setText("Rotation · "+prefs.itqanRotationStart());
+        TextView rotationValue=Ui.settingValue(rotationSetting);if(rotationValue!=null)rotationValue.setText(prefs.itqanRotationStart().toString());
         boolean invalid=!prefs.isItqanCursorValid()||!prefs.isMurajaahCursorValid();
         itqanStatus.setText(invalid?"⚠ Curseur à repositionner":"");
         itqanStatus.setVisibility(invalid?View.VISIBLE:View.GONE);
@@ -186,8 +188,8 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void refreshAudio(){
         HifzAudioPack pack=new HifzAudioPack(this);
-        if(pack.installed()) audioStatus.setText("✓ Audio hors ligne prêt · 6 236 versets");
-        else audioStatus.setText("Pack audio non installé · choisissez le ZIP Husary Muʿallim");
+        if(pack.installed()) audioStatus.setText("✓ prêt · 6 236 versets");
+        else audioStatus.setText("Choisir le pack");
     }
 
     private void selectAudioZip(){
@@ -210,7 +212,7 @@ public final class SettingsActivity extends android.app.Activity {
             int flags=data.getFlags()&Intent.FLAG_GRANT_READ_URI_PERMISSION;
             if(flags!=0)getContentResolver().takePersistableUriPermission(uri,flags);
         }catch(SecurityException ignored){}
-        audioStatus.setText("Import et vérification… gardez Quran Hifz ouvert.");
+        audioStatus.setText("Import et vérification…");
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         new Thread(()->{
             HifzAudioPack.ImportResult result=new HifzAudioPack(getApplicationContext()).importZip(uri);

@@ -43,38 +43,41 @@ public final class MainActivity extends android.app.Activity {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         LinearLayout root = Ui.column(this);
-        int side = Ui.dp(this, 18), bottom = Ui.dp(this, 24);
-        root.setPadding(side, Ui.dp(this, 12), side, bottom);
+        int side = Ui.dp(this, 18), bottom = Ui.dp(this, 22);
+        root.setPadding(side, Ui.dp(this, 8), side, bottom);
         int screen = getResources().getDisplayMetrics().widthPixels;
         int contentWidth = Math.max(Ui.dp(this, 300), Math.min(screen - Ui.dp(this, 18), Ui.dp(this, 900)));
         holder.addView(root, new FrameLayout.LayoutParams(
             contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
 
-        TextView title = Ui.bookText(this, "Quran Hifz", 28, true);
+        TextView title = Ui.bookText(this, "Quran Hifz", 24, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
-        title.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 10));
+        title.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 5));
         root.addView(title);
 
         todayAction = Ui.column(this);
-        todayAction.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
-        Ui.panel(todayAction);
+        todayAction.setPadding(Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 6));
         todayAction.setClickable(true);
         todayAction.setFocusable(true);
         todayAction.setEnabled(false);
         todayAction.setContentDescription("Ouvrir la séance du jour");
         todayAction.setOnClickListener(v -> openToday());
-        TextView todayCaption = Ui.text(this, "Aujourd’hui", 10.5f, false);
-        todayCaption.setTextColor(Ui.MUTED);
-        todayAction.addView(todayCaption);
-        today = Ui.bookText(this, "…", 16, true);
-        today.setPadding(0, Ui.dp(this, 2), 0, 0);
-        todayAction.addView(today);
+        LinearLayout todayRow = Ui.row(this);
+        TextView todayCaption = Ui.bookText(this, "Aujourd’hui", 13, true);
+        Ui.weight(todayCaption, 1f);
+        todayRow.addView(todayCaption);
+        today = Ui.text(this, "…", 12, false);
+        today.setTextColor(Ui.MUTED);
+        today.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        todayRow.addView(today);
+        todayAction.addView(todayRow);
         root.addView(todayAction);
+        root.addView(Ui.divider(this));
 
-        // The Today card is the session launcher. Keep only the three global destinations here.
+        // The Today row is the session launcher. Keep only the three global destinations here.
         LinearLayout primary = Ui.row(this);
         primary.setGravity(Gravity.CENTER);
-        primary.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
+        primary.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 3));
         LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -83,16 +86,15 @@ public final class MainActivity extends android.app.Activity {
         addWeighted(primary, settings, 1f);
         root.addView(primary);
 
-        TextView dashTitle = Ui.bookText(this, "Semaine", 20, true);
-        dashTitle.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 6));
+        TextView dashTitle = Ui.bookText(this, "Semaine", 17, true);
+        dashTitle.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 3));
         root.addView(dashTitle);
         dashboard = Ui.column(this);
-        dashboard.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 8), Ui.dp(this, 6));
-        Ui.panel(dashboard);
+        dashboard.setPadding(0, 0, 0, 0);
         root.addView(dashboard);
 
-        TextView directTitle = Ui.bookText(this, "Accès rapide", 17, true);
-        directTitle.setPadding(0, Ui.dp(this, 16), 0, Ui.dp(this, 5));
+        TextView directTitle = Ui.bookText(this, "Accès rapide", 15, true);
+        directTitle.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 2));
         root.addView(directTitle);
         LinearLayout direct = Ui.row(this);
         direct.setGravity(Gravity.CENTER);
@@ -208,27 +210,30 @@ public final class MainActivity extends android.app.Activity {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
         LinearLayout header = Ui.row(this);
-        header.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 3));
+        header.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 2));
         addCell(header, "Jour", 0.62f, true, true);
         addCell(header, "Matin", 2.05f, true, false);
         addCell(header, "Soir", 2.05f, true, false);
         addCell(header, "État", 1.05f, true, false);
         dashboard.addView(header);
+        dashboard.addView(Ui.divider(this));
 
         List<WeeklyDashboardPlanner.Row> rows = new WeeklyDashboardPlanner(prefs, geometry, ledger).week(LocalDate.now());
-        for (WeeklyDashboardPlanner.Row item : rows) {
+        for (int i = 0; i < rows.size(); i++) {
+            WeeklyDashboardPlanner.Row item = rows.get(i);
             LinearLayout row = Ui.row(this);
-            row.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
+            row.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
             addCell(row, item.day, 0.62f, true, true);
             addCell(row, compactSession(item.morning), 2.05f, false, false);
             addCell(row, compactSession(item.evening), 2.05f, false, false);
             addCell(row, compactState(item.state), 1.05f, false, false);
             dashboard.addView(row);
+            if (i + 1 < rows.size()) dashboard.addView(Ui.divider(this));
         }
     }
 
     private void addCell(LinearLayout row, String value, float weight, boolean bold, boolean singleLine) {
-        TextView cell = Ui.text(this, value, 11.2f, bold);
+        TextView cell = Ui.text(this, value, 10.8f, bold);
         cell.setPadding(Ui.dp(this, 4), Ui.dp(this, 2), Ui.dp(this, 4), Ui.dp(this, 2));
         cell.setSingleLine(singleLine);
         cell.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight));
@@ -237,7 +242,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void addWeighted(LinearLayout row, View view, float weight) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight);
-        int gap = Ui.dp(this, 3);
+        int gap = Ui.dp(this, 2);
         lp.setMargins(gap, gap, gap, gap);
         row.addView(view, lp);
     }

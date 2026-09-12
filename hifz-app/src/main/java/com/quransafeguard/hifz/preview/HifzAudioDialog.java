@@ -2,12 +2,10 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.app.Application;
-import android.app.Dialog;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.Gravity;
-import android.view.ViewGroup;
-import android.view.Window;
+import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -18,13 +16,18 @@ import com.quransafeguard.hifz.core.VerseRef;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Audio controls deliberately isolated from HifzPrefs/repetition/cursor state. */
+/**
+ * Legacy class name retained for source stability. The audio surface is now strictly inline:
+ * no modal window, no dim layer, and no overlap with the Mushaf.
+ */
 final class HifzAudioDialog {
     private final Activity activity;
     private final MushafView mushaf;
     private final HifzAudioPack pack;
     private final ArrayList<VerseRef> queue;
-    private Dialog dialog;
+    private final EinkController eink = new EinkController();
+    private LinearLayout host;
+    private LinearLayout panel;
     private MediaPlayer player;
     private TextView title;
     private Button playPause;
@@ -37,10 +40,10 @@ final class HifzAudioDialog {
         @Override public void onActivityCreated(Activity a, Bundle b) {}
         @Override public void onActivityStarted(Activity a) {}
         @Override public void onActivityResumed(Activity a) {}
-        @Override public void onActivityPaused(Activity a) { if (a == activity) close(); }
+        @Override public void onActivityPaused(Activity a) { if (a == activity) detachInline(); }
         @Override public void onActivityStopped(Activity a) {}
         @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
-        @Override public void onActivityDestroyed(Activity a) { if (a == activity) close(); }
+        @Override public void onActivityDestroyed(Activity a) { if (a == activity) detachInline(); }
     };
 
     HifzAudioDialog(Activity activity, MushafView mushaf, List<VerseRef> verses) {
@@ -50,7 +53,8 @@ final class HifzAudioDialog {
         this.queue = new ArrayList<>(verses == null ? java.util.Collections.emptyList() : verses);
     }
 
-    void show() {
+    void attachInline(LinearLayout target) {
+        if (target == null) return;
         if (!pack.installed()) {
             Toast.makeText(activity, "Pack audio non installé · Paramètres › Audio", Toast.LENGTH_LONG).show();
             return;
@@ -60,62 +64,60 @@ final class HifzAudioDialog {
             return;
         }
 
-        close();
-        dialog = new Dialog(activity);
-        LinearLayout shell = Ui.column(activity);
-        shell.setPadding(Ui.dp(activity, 14), Ui.dp(activity, 10), Ui.dp(activity, 14), Ui.dp(activity, 10));
-        title = Ui.bookText(activity, "Al-Husary Muʿallim", 16, true);
-        title.setGravity(Gravity.CENTER_HORIZONTAL);
-        shell.addView(title);
+        detachInline();
+        host = target;
+        host.removeAllViews();
+        host.setVisibility(View.VISIBLE);
+        host.setPadding(Ui.dp(activity, 6), 0, Ui.dp(activity, 6), 0);
 
-        LinearLayout row = Ui.row(activity);
-        row.setGravity(Gravity.CENTER);
-        Button previous = Ui.roundButton(activity, "‹", "Verset précédent", v -> previous());
-        playPause = Ui.roundButton(activity, "▶", "Lire / pause", v -> toggle());
-        Button next = Ui.roundButton(activity, "›", "Verset suivant", v -> next());
-        Button repeat = Ui.roundButton(activity, "↻", "Répéter le verset", v -> playCurrent(false));
-        Button close = Ui.roundButton(activity, "×", "Fermer", v -> close());
-        row.addView(previous);
-        row.addView(playPause);
-        row.addView(next);
-        row.addView(repeat);
-        row.addView(close);
-        shell.addView(row);
+        panel = Ui.row(activity);
+        panel.setGravity(Gravity.CENTER_VERTICAL);
+        panel.setPadding(Ui.dp(activity, 4), 0, Ui.dp(activity, 2), 0);
 
-        TextView source = Ui.text(activity, pack.sourceLabel(), 10.5f, false);
-        source.setTextColor(Ui.MUTED);
-        source.setGravity(Gravity.CENTER_HORIZONTAL);
-        shell.addView(source);
+        title = Ui.bookText(activity, "Al-Husary Muʿallim", 11.5f, true);
+        title.setSingleLine(true);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setPadding(Ui.dp(activity, 4), 0, Ui.dp(activity, 6), 0);
+        Ui.weight(title, 1f);
+        panel.addView(title);
 
-        dialog.setContentView(shell);
-        dialog.setOnDismissListener(d -> {
-            releasePlayerOnly();
-            mushaf.setAudioVerse(null);
-            dialog = null;
-            unregisterLifecycle();
-        });
-        dialog.show();
+        Button previous = Ui.iconButton(activity, "‹", "Verset précédent", v -> previous());
+        playPause = Ui.iconButton(activity, "▶", "Lire / pause", v -> toggle());
+        Button next = Ui.iconButton(activity, "›", "Verset suivant", v -> next());
+        Button repeat = Ui.iconButton(activity, "↻", "Répéter le verset", v -> playCurrent(false));
+        Button close = Ui.iconButton(activity, "×", "Fermer", v -> detachInline());
+        panel.addView(previous);
+        panel.addView(playPause);
+        panel.addView(next);
+        panel.addView(repeat);
+        panel.addView(close);
+        host.addView(panel, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        host.addView(Ui.divider(activity));
+
         registerLifecycle();
-        Window w = dialog.getWindow();
-        if (w != null) {
-            w.setLayout(
-                Math.min(activity.getResources().getDisplayMetrics().widthPixels - Ui.dp(activity, 24), Ui.dp(activity, 620)),
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-            w.setWindowAnimations(0);
-        }
         updateIdentity();
+        setPlayIcon(false);
+        eink.local(host);
     }
 
-    void close() {
-        Dialog current = dialog;
-        dialog = null;
-        if (current != null && current.isShowing()) {
-            try { current.dismiss(); } catch (Throwable ignored) {}
-        }
+    void detachInline() {
         releasePlayerOnly();
         mushaf.setAudioVerse(null);
+        LinearLayout currentHost = host;
+        host = null;
+        panel = null;
+        title = null;
+        playPause = null;
+        if (currentHost != null) {
+            currentHost.removeAllViews();
+            currentHost.setVisibility(View.GONE);
+            eink.local(currentHost);
+        }
         unregisterLifecycle();
     }
+
+    void close() { detachInline(); }
 
     private void registerLifecycle() {
         if (lifecycleRegistered) return;
@@ -134,13 +136,13 @@ final class HifzAudioDialog {
         if (player != null && player.isPlaying()) {
             player.pause();
             paused = true;
-            playPause.setText("▶");
+            setPlayIcon(false);
             return;
         }
         if (player != null && paused) {
             player.start();
             paused = false;
-            playPause.setText("Ⅱ");
+            setPlayIcon(true);
             return;
         }
         playCurrent(true);
@@ -172,7 +174,7 @@ final class HifzAudioDialog {
                 try {
                     player.start();
                     mushaf.setAudioVerse(verse);
-                    playPause.setText("Ⅱ");
+                    setPlayIcon(true);
                 } catch (Throwable error) {
                     releasePlayerOnly();
                     mushaf.setAudioVerse(null);
@@ -182,7 +184,7 @@ final class HifzAudioDialog {
             candidate.setOnCompletionListener(done -> {
                 if (player != candidate) return;
                 releasePlayerOnly();
-                if (playPause != null) playPause.setText("▶");
+                setPlayIcon(false);
                 if (allowAutoNext && index + 1 < queue.size()) {
                     index++;
                     playCurrent(true);
@@ -210,6 +212,14 @@ final class HifzAudioDialog {
         if (title == null || queue.isEmpty()) return;
         VerseRef verse = queue.get(index);
         title.setText("Al-Husary Muʿallim · " + verse + " · " + (index + 1) + "/" + queue.size());
+        if (host != null) eink.local(host);
+    }
+
+    private void setPlayIcon(boolean playing) {
+        if (playPause == null) return;
+        Ui.setButtonIcon(playPause, playing ? R.drawable.ic_ui_pause : R.drawable.ic_ui_play);
+        playPause.setContentDescription(playing ? "Pause" : "Lire");
+        if (host != null) eink.local(host);
     }
 
     private void releasePlayerOnly() {
@@ -225,5 +235,6 @@ final class HifzAudioDialog {
             try { current.release(); } catch (Throwable ignored) {}
         }
         paused = false;
+        setPlayIcon(false);
     }
 }
