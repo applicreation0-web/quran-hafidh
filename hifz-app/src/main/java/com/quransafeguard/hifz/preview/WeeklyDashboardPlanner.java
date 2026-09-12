@@ -1,0 +1,153 @@
+package com.quransafeguard.hifz.preview;
+
+import com.quransafeguard.hifz.core.EligibleCorpus;
+import com.quransafeguard.hifz.core.HifzSchedule;
+import com.quransafeguard.hifz.core.ScheduledSession;
+import com.quransafeguard.hifz.core.SessionType;
+import com.quransafeguard.hifz.core.VerseRef;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+/** Read-only weekly projection. It never writes or moves a Hifz cursor. */
+final class WeeklyDashboardPlanner {
+    static final class Row {
+        final LocalDate date;
+        final String day;
+        final String morning;
+        final String evening;
+        final String state;
+        Row(LocalDate date,String day,String morning,String evening,String state){
+            this.date=date;this.day=day;this.morning=morning;this.evening=evening;this.state=state;
+        }
+    }
+
+    private final HifzPrefs prefs;
+    private final GeometryRepository geometry;
+    private final DashboardLedger ledger;
+
+    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger){
+        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;
+    }
+
+    List<Row> week(LocalDate today){
+        ArrayList<Row> out=new ArrayList<>();
+        LocalDate monday=today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        int sabqiCursor=currentSabqiCursor();
+        VerseRef itqanCursor=prefs.itqanCursor();
+        VerseRef murajaahCursor=prefs.murajaahCursor();
+        EligibleCorpus corpus=prefs.corpus();
+        ArrayList<HifzPrefs.RecentSabqi> projectedRecent=new ArrayList<>(prefs.recentSabqi());
+
+        for(int i=0;i<7;i++){
+            LocalDate date=monday.plusDays(i);
+            ScheduledSession scheduled=HifzSchedule.INSTANCE.scheduled(date,prefs.programStartDate(),date);
+            if(scheduled==null){out.add(new Row(date,day(date),"—","—","Parcours non démarré"));continue;}
+            String type=modeFor(scheduled.getType());
+            DashboardLedger.Record actual=ledger.find(date,type);
+            if(actual!=null){
+                out.add(new Row(date,day(date),"✓ "+compact(actual.label),eveningForActual(type,actual.label),"Validée"));
+                continue;
+            }
+            if(date.isBefore(today)){
+                String state=date.isBefore(ledger.started())?"Historique pré-0.7 non enregistré":"Non validée";
+                out.add(new Row(date,day(date),"—","—",state));
+                continue;
+            }
+
+            if(scheduled.getType()==SessionType.SABQI){
+                GeometryRepository.FiveLineBlock b=safeSabqi(sabqiCursor);
+                if(b==null){out.add(new Row(date,day(date),"Sabqi · plage à vérifier","—","À vérifier"));continue;}
+                String range=range(b.startVerse,b.endVerse)+(b.endsInsideVerse?" · fin partielle":"");
+                String state=date.equals(today)&&prefs.sabqiRep()>0?"En cours "+(prefs.sabqiRep()+1)+"/37":"À faire";
+                out.add(new Row(date,day(date),"Sabqi · "+range,"Révision courte · "+range,state));
+                projectedRecent.add(new HifzPrefs.RecentSabqi(b.startLineIndex,b.endLineIndex));
+                sabqiCursor=b.endLineIndex+1;
+            }else if(scheduled.getType()==SessionType.ITQAN){
+                if(!corpus.contains(itqanCursor)){out.add(new Row(date,day(date),"Itqān · curseur hors corpus","—","À vérifier"));continue;}
+                GeometryRepository.VerseUnit unit=geometry.eligiblePageUnit(itqanCursor,corpus);
+                String state=date.equals(today)&&prefs.itqanRep()>0?"En cours "+(prefs.itqanRep()+1)+"/30":"À faire";
+                out.add(new Row(date,day(date),"Itqān ×30 · "+range(unit.start,unit.end),"—",state));
+                itqanCursor=corpus.next(unit.end);
+            }else{
+                String recentRange=recentRange(projectedRecent);
+                int lines=(int)Math.floor((PreviewConfig.MURAJAAH_ITQAN_MINUTES_WORKING*60.0)/prefs.murajaahSecondsPerLine());
+                lines=Math.max(1,lines);
+                String old;
+                if(corpus.contains(murajaahCursor)){
+                    GeometryRepository.EligibleLinePlan plan=geometry.planEligibleLines(murajaahCursor,lines,corpus);
+                    old=range(plan.start,plan.actualPlannedEnd);
+                    murajaahCursor=corpus.next(plan.actualPlannedEnd);
+                }else old="curseur à repositionner";
+                String morning="Murājaʿah A · "+(recentRange.isEmpty()?"aucun Sabqi récent":recentRange);
+                String evening="Murājaʿah B · "+old;
+                String state=date.equals(today)?("B".equals(prefs.murajaahPhase())?"En cours · Bloc B":"En cours · Bloc A"):"À faire";
+                out.add(new Row(date,day(date),morning,evening,state));
+            }
+        }
+        return out;
+    }
+
+    private int currentSabqiCursor(){
+        int cursor=prefs.sabqiLineCursor();
+        return cursor<0?geometry.firstLineIndex(prefs.sabqiStart()):cursor;
+    }
+
+    private GeometryRepository.FiveLineBlock safeSabqi(int cursor){
+        try{
+            if(cursor<geometry.firstLineIndex(prefs.sabqiStart()))return null;
+            if(cursor+PreviewConfig.SABQI_LINES-1>geometry.lastLineIndex(prefs.sabqiEnd()))return null;
+            return geometry.fiveLineBlock(cursor);
+        }catch(RuntimeException e){return null;}
+    }
+
+    private String recentRange(List<HifzPrefs.RecentSabqi> recent){
+        if(recent.isEmpty())return "";
+        try{
+            GeometryRepository.FiveLineBlock first=geometry.fiveLineBlock(recent.get(0).startLine);
+            GeometryRepository.FiveLineBlock last=geometry.fiveLineBlock(recent.get(recent.size()-1).startLine);
+            return range(first.startVerse,last.endVerse);
+        }catch(RuntimeException e){return "fenêtre récente à vérifier";}
+    }
+
+    private static String range(VerseRef a,VerseRef b){
+        if(a.getSurah()==b.getSurah())return "Sourate "+a.getSurah()+" · v."+a.getAyah()+"–"+b.getAyah();
+        return "Sourate "+a.getSurah()+" v."+a.getAyah()+" → Sourate "+b.getSurah()+" v."+b.getAyah();
+    }
+
+    private static String compact(String label){
+        if(label==null||label.isEmpty())return "Séance enregistrée";
+        return label.replace(" · révélations 0","");
+    }
+
+    private static String eveningForActual(String type,String label){
+        if(HifzSessionActivity.SABQI.equals(type))return "Révision courte · "+compact(label);
+        return "—";
+    }
+
+    private static String modeFor(SessionType type){
+        switch(type){
+            case SABQI:return HifzSessionActivity.SABQI;
+            case ITQAN:return HifzSessionActivity.ITQAN;
+            case MURAJAAH:return HifzSessionActivity.MURAJAAH;
+            default:throw new IllegalArgumentException("Unsupported session type: "+type);
+        }
+    }
+
+    private static String day(LocalDate date){
+        switch(date.getDayOfWeek()){
+            case MONDAY:return "Lun";
+            case TUESDAY:return "Mar";
+            case WEDNESDAY:return "Mer";
+            case THURSDAY:return "Jeu";
+            case FRIDAY:return "Ven";
+            case SATURDAY:return "Sam";
+            case SUNDAY:return "Dim";
+            default:return date.getDayOfWeek().toString();
+        }
+    }
+}
