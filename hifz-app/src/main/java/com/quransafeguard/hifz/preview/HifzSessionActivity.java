@@ -31,7 +31,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private HifzPrefs prefs;
     private GeometryRepository geometry;
     private MushafView mushaf;
-    private TextView heading, program, progress, timerText;
+    private TextView program, progress, timerText;
     private LinearLayout actions;
     private SessionClock clock;
     private final EinkController eink = new EinkController();
@@ -89,12 +89,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,6),Ui.dp(this,2),Ui.dp(this,6),0);
         top.addView(Ui.roundButton(this,"","Retour",v->finish()));
-        heading = Ui.bookText(this, displayModeName(), 16.5f, true); Ui.weight(heading,1f); heading.setGravity(Gravity.CENTER); top.addView(heading); root.addView(top);
-
         program = Ui.text(this,"Chargement…",12.5f,true);
-        program.setPadding(Ui.dp(this,10),0,Ui.dp(this,10),0);
-        program.setMaxLines(2);
-        root.addView(program);
+        Ui.weight(program,1f);
+        program.setGravity(Gravity.CENTER_VERTICAL);
+        program.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),0);
+        program.setMaxLines(1);
+        top.addView(program);
+        root.addView(top);
         timerText = Ui.text(this,"",10.8f,false);
         timerText.setTextColor(Ui.MUTED);
         timerText.setPadding(Ui.dp(this,10),0,Ui.dp(this,10),0);
@@ -107,14 +108,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         mushaf = new MushafView(this); mushaf.setListener(this);
         root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
-        actions = Ui.row(this); actions.setGravity(Gravity.CENTER);
-        actions.setPadding(Ui.dp(this,4),Ui.dp(this,1),Ui.dp(this,4),0);
-        root.addView(actions);
-
-        LinearLayout audioBar = Ui.row(this); audioBar.setGravity(Gravity.CENTER);
-        audioBar.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));
-        audioBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
-        root.addView(audioBar);
+        LinearLayout controlBar = Ui.row(this);
+        controlBar.setGravity(Gravity.CENTER);
+        controlBar.setPadding(Ui.dp(this,4),Ui.dp(this,1),Ui.dp(this,4),Ui.dp(this,3));
+        actions = Ui.row(this);
+        actions.setGravity(Gravity.CENTER);
+        controlBar.addView(actions);
+        controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
+        root.addView(controlBar);
 
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
