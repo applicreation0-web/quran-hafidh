@@ -68,7 +68,6 @@ jobs:
               ('qurtubi', 'qurtubi_en.sqlite.gz.b64.part*', 432, '0106-qurtubi-hide-verse-labels-v1', 'qurtubi'),
               ('qushayri', 'qushayri_en.sqlite.gz.b64.part*', 720, '0106-qushayri-source-semantics-v1', 'qushayri'),
           ]
-          # Keep the historical Jalalayn filename exactly as shipped.
           checks[0] = ('jalalayn', 'al_jalalayn_en.sqlite.gz.part*', 6236, None, None)
           for name, pattern, expected, revision, edition_id in checks:
               parts = sorted(root.glob(pattern))
@@ -116,7 +115,10 @@ jobs:
         with:
           gradle-version: '9.5.0'
       - name: Run shared primitives, live app-engine tests and product-boundary gate
-        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary --stacktrace
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary --stacktrace 2>&1 | tee hifz-gradle.log
       - name: Assemble Quran Hifz APK for durable local signing
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
       - name: Inspect packaged APK boundary corpus and signature
@@ -167,6 +169,7 @@ jobs:
             hifz-app-signature.txt
             hifz-app-sha256.txt
             hifz-app-build-info.txt
+            hifz-gradle.log
             geometry-report.json
           if-no-files-found: warn
           retention-days: 14
