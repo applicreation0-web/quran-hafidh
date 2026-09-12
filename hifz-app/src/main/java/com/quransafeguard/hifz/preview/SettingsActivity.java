@@ -7,6 +7,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.view.Gravity;
+import android.view.WindowManager;
+import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.NumberPicker;
@@ -30,6 +32,7 @@ public final class SettingsActivity extends android.app.Activity {
     private GeometryRepository geometry;
     private LinearLayout rangesBox;
     private TextView sabqiStatus, itqanStatus, murajaahStatus, audioStatus;
+    private Button sabqiStartButton, sabqiEndButton, rotationButton;
 
     private interface VerseChosen { void accept(VerseRef verse); }
 
@@ -48,17 +51,22 @@ public final class SettingsActivity extends android.app.Activity {
 
         sabqiStatus=Ui.text(this,"",12.5f,false);sabqiStatus.setPadding(0,Ui.dp(this,7),0,Ui.dp(this,3));root.addView(sabqiStatus);
         LinearLayout sabqiButtons=Ui.row(this);sabqiButtons.setGravity(Gravity.CENTER);
-        Button start=Ui.smallButton(this,"Début",v->chooseVerse("Début Sabqi",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
-        Button end=Ui.smallButton(this,"Fin",v->chooseVerse("Fin Sabqi",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
-        Ui.weight(start,1);Ui.weight(end,1);sabqiButtons.addView(start);sabqiButtons.addView(end);root.addView(sabqiButtons);
+        sabqiStartButton=Ui.smallButton(this,"Début",v->chooseVerse("Début Sabqi",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
+        sabqiEndButton=Ui.smallButton(this,"Fin",v->chooseVerse("Fin Sabqi",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
+        LinearLayout.LayoutParams compact=new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.WRAP_CONTENT);
+        compact.setMargins(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
+        sabqiButtons.addView(sabqiStartButton,new LinearLayout.LayoutParams(compact));
+        sabqiButtons.addView(sabqiEndButton,new LinearLayout.LayoutParams(compact));
+        root.addView(sabqiButtons);
 
         section(root,"Itqān · plages");
         rangesBox=Ui.column(this);rangesBox.setPadding(0,Ui.dp(this,2),0,0);root.addView(rangesBox);
-        LinearLayout addRow=Ui.row(this);addRow.setGravity(Gravity.CENTER);addRow.addView(Ui.roundAction(this,"","Ajouter",v->chooseRange(null,-1)));root.addView(addRow);
-        itqanStatus=Ui.text(this,"",12.5f,false);itqanStatus.setPadding(0,Ui.dp(this,6),0,Ui.dp(this,3));root.addView(itqanStatus);
+        LinearLayout addRow=Ui.row(this);addRow.setGravity(Gravity.CENTER);addRow.addView(Ui.smallButton(this,"Ajouter",v->chooseRange(null,-1)));root.addView(addRow);
+        itqanStatus=Ui.text(this,"",11.5f,false);itqanStatus.setPadding(0,Ui.dp(this,4),0,Ui.dp(this,2));root.addView(itqanStatus);
         LinearLayout rotationRow=Ui.row(this);rotationRow.setGravity(Gravity.CENTER);
-        rotationRow.addView(Ui.roundAction(this,"","Rotation",v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart)));
-        rotationRow.addView(Ui.roundAction(this,"","Murājaʿah",v->confirmMurajaahReposition()));root.addView(rotationRow);
+        rotationButton=Ui.smallButton(this,"Rotation",v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart));
+        rotationRow.addView(rotationButton);
+        rotationRow.addView(Ui.smallButton(this,"Repositionner Murājaʿah",v->confirmMurajaahReposition()));root.addView(rotationRow);
 
         section(root,"Murājaʿah");
         murajaahStatus=Ui.text(this,"",12.5f,false);root.addView(murajaahStatus);
@@ -66,15 +74,15 @@ public final class SettingsActivity extends android.app.Activity {
         section(root,"Audio Al-Husary Muʿallim");
         audioStatus=Ui.text(this,"",12.5f,false);root.addView(audioStatus);
         LinearLayout audioActions=Ui.row(this);audioActions.setGravity(Gravity.CENTER);
-        audioActions.addView(Ui.roundAction(this,"","Choisir le pack",v->selectAudioZip()));root.addView(audioActions);
+        audioActions.addView(Ui.smallButton(this,"Choisir le pack",v->selectAudioZip()));root.addView(audioActions);
 
         section(root,"Affichage");
         Switch eink=new Switch(this);eink.setText("Optimisation E‑Ink / BOOX");eink.setChecked(prefs.forceEink());eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));root.addView(eink);
 
         section(root,"Avancé");
         LinearLayout diagnostics=Ui.row(this);diagnostics.setGravity(Gravity.CENTER);
-        diagnostics.addView(Ui.roundAction(this,"","Diagnostic",v->showDiagnostic()));
-        diagnostics.addView(Ui.roundAction(this,"↺","Réinitialiser",v->confirmReset()));root.addView(diagnostics);
+        diagnostics.addView(Ui.smallButton(this,"Diagnostic",v->showDiagnostic()));
+        diagnostics.addView(Ui.smallButton(this,"Réinitialiser",v->confirmReset()));root.addView(diagnostics);
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
@@ -90,7 +98,9 @@ public final class SettingsActivity extends android.app.Activity {
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
         int total=last-first+1;
         boolean aligned=total>0&&total%PreviewConfig.SABQI_LINES==0;
-        sabqiStatus.setText("Sabqi · "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · "+total+" lignes"+(aligned?"":" · ⚠ fin à ajuster"));
+        sabqiStatus.setText("Sabqi · "+total+" lignes"+(aligned?"":" · ⚠ fin à ajuster"));
+        sabqiStartButton.setText("Début · "+prefs.sabqiStart());
+        sabqiEndButton.setText("Fin · "+prefs.sabqiEnd());
     }
 
     private void setSabqiBound(boolean isStart,VerseRef verse){
@@ -146,9 +156,10 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshItqan(){
-        String state="Rotation · "+prefs.itqanRotationStart();
-        if(!prefs.isItqanCursorValid()||!prefs.isMurajaahCursorValid())state+=" · ⚠ curseur à repositionner";
-        itqanStatus.setText(state);
+        rotationButton.setText("Rotation · "+prefs.itqanRotationStart());
+        boolean invalid=!prefs.isItqanCursorValid()||!prefs.isMurajaahCursorValid();
+        itqanStatus.setText(invalid?"⚠ Curseur à repositionner":"");
+        itqanStatus.setVisibility(invalid?View.VISIBLE:View.GONE);
     }
 
     private void setRotationStart(VerseRef verse){
@@ -200,9 +211,11 @@ public final class SettingsActivity extends android.app.Activity {
             if(flags!=0)getContentResolver().takePersistableUriPermission(uri,flags);
         }catch(SecurityException ignored){}
         audioStatus.setText("Import et vérification… gardez Quran Hifz ouvert.");
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         new Thread(()->{
             HifzAudioPack.ImportResult result=new HifzAudioPack(getApplicationContext()).importZip(uri);
             runOnUiThread(()->{
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 if(result.ok){refreshAudio();Toast.makeText(this,"Audio installé.",Toast.LENGTH_LONG).show();}
                 else{audioStatus.setText(result.message);Toast.makeText(this,result.message,Toast.LENGTH_LONG).show();}
             });
