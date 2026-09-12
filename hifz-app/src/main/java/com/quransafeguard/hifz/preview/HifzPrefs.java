@@ -336,6 +336,7 @@ public final class HifzPrefs {
         p.edit().putInt("recentSabqiReviewIndex", Math.max(0, value)).apply();
     }
     public String lastRecentSabqiReviewDate() { return p.getString("lastRecentSabqiReviewDate", ""); }
+    public String lastRecentSabqiReviewLabel() { return p.getString("lastRecentSabqiReviewLabel", ""); }
     public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
         return p.edit()
             .putLong("recent_sabqi_reviewElapsedMs", 0L)

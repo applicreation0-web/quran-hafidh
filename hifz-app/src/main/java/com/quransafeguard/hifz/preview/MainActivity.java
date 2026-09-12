@@ -10,9 +10,9 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.quransafeguard.hifz.core.DailyPlan;
 import com.quransafeguard.hifz.core.HifzSchedule;
-import com.quransafeguard.hifz.core.ScheduledSession;
-import com.quransafeguard.hifz.core.SessionType;
+import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
@@ -142,20 +142,38 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void openToday() {
-        LocalDate date = LocalDate.now();
-        ScheduledSession scheduled = HifzSchedule.INSTANCE.scheduled(date, prefs.programStartDate(), date);
-        if (scheduled == null) return;
-        String todayKey = date.toString();
-        boolean eveningMurajaah = HifzSchedule.INSTANCE.hasEveningMurajaah(date.getDayOfWeek());
-        if (eveningMurajaah && todayKey.equals(prefs.lastItqanDate()) && !todayKey.equals(prefs.lastMurajaahDate())) {
-            openMode(HifzSessionActivity.MURAJAAH);
-            return;
+        String mode = firstIncompleteMode(LocalDate.now());
+        if (mode != null) openMode(mode);
+    }
+
+    private String firstIncompleteMode(LocalDate date) {
+        if (date.isBefore(prefs.programStartDate())) return null;
+        DailyPlan plan = HifzSchedule.INSTANCE.planFor(date.getDayOfWeek());
+        if (!isComplete(date, plan.getMorning().getKind())) return modeFor(plan.getMorning().getKind());
+        if (!isComplete(date, plan.getEvening().getKind())) return modeFor(plan.getEvening().getKind());
+        return null;
+    }
+
+    private boolean isComplete(LocalDate date, SessionKind kind) {
+        String key = date.toString();
+        switch (kind) {
+            case SABQI_NEW: return key.equals(prefs.lastSabqiDate());
+            case SABQI_TODAY_REVIEW: return key.equals(prefs.lastSabqiTodayReviewDate());
+            case ITQAN: return key.equals(prefs.lastItqanDate());
+            case RECENT_SABQI_REVIEW: return key.equals(prefs.lastRecentSabqiReviewDate());
+            case OLD_ITQAN_MURAJAAH: return key.equals(prefs.lastMurajaahDate());
+            default: return false;
         }
-        switch (scheduled.getType()) {
-            case SABQI: openMode(HifzSessionActivity.SABQI); break;
-            case ITQAN: openMode(HifzSessionActivity.ITQAN); break;
-            case MURAJAAH: openMode(HifzSessionActivity.MURAJAAH); break;
-            default: throw new IllegalStateException("Unsupported Hifz session type: " + scheduled.getType());
+    }
+
+    private static String modeFor(SessionKind kind) {
+        switch (kind) {
+            case SABQI_NEW: return HifzSessionActivity.SABQI;
+            case SABQI_TODAY_REVIEW: return HifzSessionActivity.SABQI_TODAY_REVIEW;
+            case ITQAN: return HifzSessionActivity.ITQAN;
+            case RECENT_SABQI_REVIEW: return HifzSessionActivity.RECENT_SABQI_REVIEW;
+            case OLD_ITQAN_MURAJAAH: return HifzSessionActivity.MURAJAAH;
+            default: throw new IllegalArgumentException("Unsupported session kind: " + kind);
         }
     }
 
@@ -163,60 +181,53 @@ public final class MainActivity extends android.app.Activity {
         GeometryRepository g = geometry;
         if (g == null) { today.setText("…"); return; }
         LocalDate date = LocalDate.now();
-        ScheduledSession scheduled = HifzSchedule.INSTANCE.scheduled(date, prefs.programStartDate(), date);
-        if (scheduled == null) {
+        if (date.isBefore(prefs.programStartDate())) {
             today.setText("Parcours non démarré");
+            todayAction.setEnabled(false);
+            return;
+        }
+        DailyPlan plan = HifzSchedule.INSTANCE.planFor(date.getDayOfWeek());
+        SessionKind next = !isComplete(date, plan.getMorning().getKind())
+            ? plan.getMorning().getKind()
+            : !isComplete(date, plan.getEvening().getKind()) ? plan.getEvening().getKind() : null;
+        if (next == null) {
+            today.setText("Matin ✓ · Soir ✓");
             todayAction.setEnabled(false);
             return;
         }
         String detail;
         try {
-            String todayKey = date.toString();
-            boolean eveningMurajaah = HifzSchedule.INSTANCE.hasEveningMurajaah(date.getDayOfWeek());
-            if (eveningMurajaah && todayKey.equals(prefs.lastItqanDate())) {
-                detail = todayKey.equals(prefs.lastMurajaahDate())
-                    ? "Itqān ✓ · Murājaʿah ✓"
-                    : "Soir · Murājaʿah · Bloc " + prefs.murajaahPhase();
-                today.setText(detail);
-                todayAction.setEnabled(true);
-                return;
-            }
-            SessionType kind = scheduled.getType();
-            switch (kind) {
-                case SABQI: {
+            switch (next) {
+                case SABQI_NEW: {
                     int cursor = prefs.sabqiLineCursor();
                     if (cursor < 0) cursor = g.firstLineIndex(prefs.sabqiStart());
-                    if (cursor < g.firstLineIndex(prefs.sabqiStart()) || cursor > g.lastLineIndex(prefs.sabqiEnd())) {
-                        detail = "Sabqi · à repositionner";
-                    } else {
-                        GeometryRepository.FiveLineBlock b = g.fiveLineBlock(cursor);
-                        int rep = prefs.sabqiRep();
-                        String state = rep >= PreviewConfig.SABQI_TOTAL_REPS ? "prêt à valider" : rep > 0 ? (rep + 1) + "/37" : "37 répétitions";
-                        detail = "Sabqi · " + shortRange(b.startVerse, b.endVerse) + " · " + state;
-                    }
+                    GeometryRepository.FiveLineBlock b = g.fiveLineBlock(cursor);
+                    detail = "Matin · Sabqi · " + shortRange(b.startVerse,b.endVerse) + " · 5 lignes";
                     break;
                 }
+                case SABQI_TODAY_REVIEW:
+                    detail = "Soir · Sabqi du jour · 30 min";
+                    break;
                 case ITQAN: {
-                    if (!prefs.isItqanCursorValid()) { detail = "Itqān · à repositionner"; break; }
-                    int rep = prefs.itqanRep();
-                    VerseRef start = prefs.itqanUnitStart(), end = prefs.itqanUnitEnd();
-                    if (rep > 0 && start != null && end != null) {
-                        String state = rep >= PreviewConfig.ITQAN_TOTAL_REPS ? "prêt à valider" : (rep + 1) + "/" + PreviewConfig.ITQAN_TOTAL_REPS;
-                        detail = "Itqān · " + shortRange(start, end) + " · " + state;
-                    } else {
-                        GeometryRepository.VerseUnit u = g.eligiblePageUnit(prefs.itqanCursor(), prefs.corpus());
-                        detail = "Itqān · " + shortRange(u.start, u.end) + " · ×" + PreviewConfig.ITQAN_TOTAL_REPS;
+                    VerseRef start=prefs.itqanUnitStart(), end=prefs.itqanUnitEnd();
+                    if(start==null||end==null){
+                        GeometryRepository.VerseUnit u=g.eligiblePageUnit(prefs.itqanCursor(),prefs.itqanWorkCorpus());
+                        start=u.start;end=u.end;
                     }
+                    detail="Matin · Itqān · "+shortRange(start,end)+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS;
                     break;
                 }
-                case MURAJAAH:
-                    detail = "Murājaʿah · Bloc " + prefs.murajaahPhase();
+                case RECENT_SABQI_REVIEW:
+                    detail="Matin · Sabqi récent · 30 min";
+                    break;
+                case OLD_ITQAN_MURAJAAH:
+                    detail="Soir · Murājaʿah · "+plan.getEvening().getTargetMinutes()+" min";
                     break;
                 default:
-                    throw new IllegalStateException("Unsupported Hifz session type: " + kind);
+                    detail="Parcours à vérifier";
             }
         } catch (RuntimeException error) {
-            detail = "Parcours à vérifier";
+            detail="Parcours à vérifier";
         }
         today.setText(detail);
         todayAction.setEnabled(true);

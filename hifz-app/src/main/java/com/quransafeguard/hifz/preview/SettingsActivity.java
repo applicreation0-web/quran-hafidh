@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/** BOOX-oriented configuration. Cursor changes are always explicit. */
+/** BOOX-oriented configuration. Rotation anchor is editable; live cursors are read-only. */
 public final class SettingsActivity extends android.app.Activity {
     private static final int REQUEST_AUDIO_ZIP = 4103;
     private HifzPrefs prefs;
@@ -48,7 +48,7 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(top);
 
         section(root,"Parcours");
-        TextView protocol=Ui.text(this,"Sabqi · 5 lignes · 37   ·   Itqān · ×"+PreviewConfig.ITQAN_TOTAL_REPS+"   ·   Murājaʿah · 30 + 30 min",11f,false);
+        TextView protocol=Ui.text(this,"Lun/Mer/Ven · Sabqi 5 lignes + 30 min   ·   Mar/Jeu · Itqān ×"+PreviewConfig.ITQAN_TOTAL_REPS+" + Murājaʿah 60 min   ·   Week-end · 30 + 30 min",11f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
 
         sabqiStartRow=Ui.settingRow(this,"Début Sabqi",prefs.sabqiStart().toString(),v->chooseVerse("Début Sabqi",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
@@ -64,8 +64,7 @@ public final class SettingsActivity extends android.app.Activity {
         itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(itqanStatus);
         rotationSetting=Ui.settingRow(this,"Début de rotation Itqān",prefs.itqanRotationStart().toString(),
             v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart));
-        root.addView(rotationSetting);root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Repositionner Murājaʿah","Bloc A",v->confirmMurajaahReposition()));
+        root.addView(rotationSetting);
 
         section(root,"Murājaʿah");
         murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(murajaahStatus);
@@ -160,30 +159,24 @@ public final class SettingsActivity extends android.app.Activity {
     private void refreshItqan(){
         TextView rotationValue=Ui.settingValue(rotationSetting);if(rotationValue!=null)rotationValue.setText(prefs.itqanRotationStart().toString());
         boolean invalid=!prefs.isItqanCursorValid()||!prefs.isMurajaahCursorValid();
-        itqanStatus.setText(invalid?"⚠ Curseur à repositionner":"");
-        itqanStatus.setVisibility(invalid?View.VISIBLE:View.GONE);
+        itqanStatus.setText((invalid?"⚠ ":"")+"Curseur Itqān · "+prefs.itqanCursor()+"   ·   Murājaʿah · "+prefs.murajaahCursor());
+        itqanStatus.setTextColor(Ui.MUTED);
+        itqanStatus.setVisibility(View.VISIBLE);
     }
 
     private void setRotationStart(VerseRef verse){
-        if(!prefs.corpus().contains(verse)){Toast.makeText(this,"Ce verset n’appartient à aucune plage Itqān.",Toast.LENGTH_LONG).show();return;}
-        prefs.setItqanRotationStart(verse);refreshItqan();
-        new AlertDialog.Builder(this).setTitle("Rotation enregistrée")
-            .setMessage("Repositionner le curseur Itqān sur "+verse+" ? L’unité ×"+PreviewConfig.ITQAN_TOTAL_REPS+" en cours sera remise à zéro.")
-            .setNegativeButton("Garder",null)
-            .setPositiveButton("Repositionner",(d,w)->{prefs.setItqanCursor(verse);prefs.setItqanProgress(0,0,null,null);prefs.setElapsedFor(HifzSessionActivity.ITQAN,0L);refreshItqan();}).show();
-    }
-
-    private void confirmMurajaahReposition(){
-        VerseRef target=prefs.itqanRotationStart();
-        if(!prefs.corpus().contains(target)){Toast.makeText(this,"Choisissez d’abord une rotation valide.",Toast.LENGTH_LONG).show();return;}
-        new AlertDialog.Builder(this).setTitle("Repositionner Murājaʿah ?")
-            .setMessage("Repartir de "+target+" au Bloc A ?")
-            .setNegativeButton("Annuler",null)
-            .setPositiveButton("Repositionner",(d,w)->{prefs.setMurajaahCursor(target);prefs.setElapsedFor(HifzSessionActivity.MURAJAAH,0L);prefs.setMurajaahRuntime("A",null,0,0L,0L);refreshItqan();refreshMurajaah();}).show();
+        if(!prefs.itqanWorkCorpus().contains(verse)){
+            Toast.makeText(this,"Ce verset n’appartient à aucune plage Itqān.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        prefs.setItqanRotationStart(verse);
+        refreshItqan();
+        Toast.makeText(this,"Début de rotation enregistré. Les curseurs actuels restent inchangés.",Toast.LENGTH_LONG).show();
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("30 min Sabqi récent + 30 min Itqān · Bloc "+prefs.murajaahPhase());
+        murajaahStatus.setText("Mar/Jeu · 60 min   ·   Sam/Dim · 30 min   ·   curseur "+prefs.murajaahCursor());
+        murajaahStatus.setTextColor(Ui.MUTED);
     }
 
     private void refreshAudio(){
@@ -239,7 +232,8 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nSabqi : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
             +"\nPlages Itqān : "+prefs.itqanRanges().size()+"\nPlages promues : "+prefs.promotedRanges().size()
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nCurseur Itqān : "+prefs.itqanCursor()
-            +"\nCurseur Murājaʿah : "+prefs.murajaahCursor()+"\nPhase Murājaʿah : "+prefs.murajaahPhase()
+            +"\nCurseur Murājaʿah : "+prefs.murajaahCursor()
+            +"\nPromotions à consolider : "+prefs.unconsolidatedPromotedRanges().size()
             +"\nFile Sabqi récent : "+prefs.recentSabqi().size()+"\nVitesse récent : "+String.format(Locale.ROOT,"%.2f",prefs.recentSecondsPerLine())+" s/ligne"
             +"\nVitesse ancien : "+String.format(Locale.ROOT,"%.2f",prefs.murajaahSecondsPerLine())+" s/ligne";
         new AlertDialog.Builder(this).setTitle("Diagnostic Hifz").setMessage(state).setPositiveButton("Fermer",null).show();

@@ -36,7 +36,9 @@ final class DashboardLedger {
 
     void capture(HifzPrefs prefs){
         upsert(prefs.lastSabqiDate(),HifzSessionActivity.SABQI,prefs.lastSabqiLabel());
+        upsert(prefs.lastSabqiTodayReviewDate(),HifzSessionActivity.SABQI_TODAY_REVIEW,prefs.lastSabqiTodayReviewLabel());
         upsert(prefs.lastItqanDate(),HifzSessionActivity.ITQAN,prefs.lastItqanLabel());
+        upsert(prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,prefs.lastRecentSabqiReviewLabel());
         upsert(prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel());
     }
 
