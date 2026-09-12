@@ -64,6 +64,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(!session.contains("Page suivante") && !session.contains("Page précédente")) {
             "Tablet Hifz sessions must use swipe/hardware page turns, not permanent page buttons."
         }
+        check(!session.contains("heading = Ui.bookText")) {
+            "Sabqi, Itqan and Murajaah must not waste Mushaf height on a separate mode title."
+        }
+        check(session.contains("LinearLayout controlBar = Ui.row(this)")) {
+            "Session actions and offline audio must share one compact bottom control row."
+        }
         check(session.contains("Écouter") && session.contains("gate.installed()")) {
             "Audio control must stay visible and route to Settings until the local pack is installed."
         }
