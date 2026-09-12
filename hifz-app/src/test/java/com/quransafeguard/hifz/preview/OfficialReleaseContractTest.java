@@ -23,21 +23,22 @@ public final class OfficialReleaseContractTest {
     @Test public void readerBootMaskAndRevealUseOfficialContract() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         String index = read("hifz-app/src/main/assets/hifzreader/index.html");
+        String wordGeometry = read("scripts/augment_hifz_word_geometry.py");
 
         assertTrue("prepare must complete before native ready", reader.indexOf("prepare();") < reader.indexOf("N?.ready();"));
         assertTrue("runtime E-Ink setter required", reader.contains("setEink(value)"));
         assertTrue("line ids must be normalized", reader.contains("new Set") && reader.contains("String("));
+        assertTrue("mask must be word based", reader.contains("maskedWordIds") && reader.contains("eligibleWordsForMask") && reader.contains("maskBoxesForPage"));
+        assertTrue("mask percentages must be cumulative for one deterministic random order", reader.contains("shuffledWords") && reader.contains("Math.round(ordered.length*p/100)"));
+        assertFalse("old source-ink segment mask must not remain active", reader.contains("hiddenSegmentsForLine") || reader.contains("function hiddenBandForLine"));
         assertFalse("mask must not be based on cell count", reader.contains("Math.ceil(n*percent/100)"));
-        assertFalse("mask must not slice N cells", reader.contains("cells.slice(n-take)"));
-        assertTrue("mask must use independent source-ink segments", reader.contains("hiddenSegmentsForLine") && reader.contains("segments.forEach"));
-        assertFalse("mask must never collapse a line into one min/max solid band", reader.contains("function hiddenBandForLine"));
-        assertTrue("mask percentage must use accumulated source-ink width", reader.contains("const totalWidth=") && reader.contains("const targetWidth=totalWidth*fraction"));
-        assertTrue("mask must clip the boundary ink group to exact remaining width", reader.contains("Math.min(cellWidth,remaining)"));
         assertFalse("non-scrollable reader must not call window.scrollBy", reader.contains("window.scrollBy"));
         assertTrue("reveal must use an explicit Mushaf translation", reader.contains("--reveal-shift") || reader.contains("translateY"));
         assertFalse("opening Tafsir must not pre-shift the whole centered page using reveal padding", reader.contains("padding-bottom:var(--reveal-pad)"));
         assertTrue("CSP must explicitly allow the local boot nonce", index.contains("'nonce-hifz-local'"));
         assertTrue("reader must force light color scheme", index.contains("color-scheme:light") || index.contains("color-scheme: light"));
+        assertTrue("word coordinates must be pinned to an exact source commit", wordGeometry.contains("ed24b7fbf60a052ac58e694d5728ab4c4d59f96d"));
+        assertTrue("word-coordinate gate must enforce all 77,320 Quran words", wordGeometry.contains("EXPECTED_WORDS = 77320"));
     }
 
     @Test public void tafsirUiAndPackagingAreCompactAndUnified() throws Exception {
@@ -56,7 +57,7 @@ public final class OfficialReleaseContractTest {
 
     @Test public void officialVersionIsIncremented() throws Exception {
         String gradle = read("hifz-app/build.gradle.kts");
-        assertTrue("hotfix update must increment versionCode beyond installed 0.7.1", gradle.contains("versionCode = 9"));
-        assertTrue("official hotfix must identify the 0.7.2 BOOX release", gradle.contains("versionName = \"0.7.2-boox\""));
+        assertTrue("word-mask release must increment versionCode beyond installed 0.7.2", gradle.contains("versionCode = 10"));
+        assertTrue("official word-mask release must identify 0.7.3 BOOX", gradle.contains("versionName = \"0.7.3-boox\""));
     }
 }
