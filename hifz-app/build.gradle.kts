@@ -27,6 +27,39 @@ val verifyHifzProductBoundary by tasks.registering {
     }
 }
 
+val verifyHifzCosmeticContract by tasks.registering {
+    doLast {
+        val audio = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioDialog.java").readText()
+        val session = file("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java").readText()
+        val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
+        val settings = file("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java").readText()
+        val main = file("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java").readText()
+        val ui = file("src/main/java/com/quransafeguard/hifz/preview/Ui.java").readText()
+
+        check(!audio.contains("android.app.Dialog") && !audio.contains("new Dialog(")) {
+            "BOOX audio must be inline, never a modal Dialog."
+        }
+        check(audio.contains("attachInline") && audio.contains("detachInline")) {
+            "Audio controller must expose explicit inline attach/detach lifecycle."
+        }
+        check(session.contains("audioHost") && study.contains("audioHost")) {
+            "Structured sessions and Study reader must reserve a non-overlay inline audio host below the header."
+        }
+        check(ui.contains("iconButton") && ui.contains("settingRow")) {
+            "Compact icon hit-targets and settings rows are required by the BOOX cosmetic contract."
+        }
+        check(settings.contains("Ui.settingRow")) {
+            "Settings must be predominantly row-based instead of button-card based."
+        }
+        check(!main.contains("Ui.panel(todayAction)")) {
+            "Home Today launcher must stay lightweight rather than render as a dashboard card."
+        }
+        check(study.contains("readerActions") && study.contains("pageRail")) {
+            "Reader actions and page slider must be separate compact surfaces."
+        }
+    }
+}
+
 val verifyHifzConvergenceRules by tasks.registering {
     doLast {
         val config = file("src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java").readText()
@@ -153,6 +186,7 @@ android {
 tasks.named("preBuild").configure {
     dependsOn(prepareHifzAssets)
     dependsOn(verifyHifzProductBoundary)
+    dependsOn(verifyHifzCosmeticContract)
     dependsOn(verifyHifzConvergenceRules)
 }
 
