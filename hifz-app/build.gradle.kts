@@ -3,13 +3,28 @@ plugins {
 }
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
+val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
+val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
+val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
+
+val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
+    inputs.dir(hifzTafsirSourceDir)
+    inputs.file(rootProject.file("scripts/prepare_hifz_tafsir_release.py"))
+    outputs.dir(generatedHifzTafsirDir)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/prepare_hifz_tafsir_release.py").absolutePath,
+        hifzTafsirSourceDir.absolutePath,
+        generatedHifzTafsirDir.absolutePath
+    )
+}
 
 val prepareHifzAssets by tasks.registering(Sync::class) {
+    dependsOn(prepareHifzTafsirRelease)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
-    from(rootProject.file("app/src/main/assets/reader109/audio.json")) { into("reader109") }
-    from(rootProject.file("app/src/plus/assets/tafsir")) { into("tafsir") }
+    from(generatedHifzTafsirDir) { into("tafsir") }
 }
 
 val verifyHifzProductBoundary by tasks.registering {
@@ -56,6 +71,9 @@ val verifyHifzCosmeticContract by tasks.registering {
         }
         check(study.contains("readerActions") && study.contains("pageRail")) {
             "Reader actions and page slider must be separate compact surfaces."
+        }
+        check(study.contains("title.setSingleLine(true)") && study.contains("tafsirTextControl") && study.contains("tafsirEditionButton")) {
+            "Tafsir header and edition controls must remain compact liseuse surfaces."
         }
     }
 }
@@ -119,10 +137,11 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(manifest.contains("ic_quran_hifz_logo")) { "Quran Hifz launcher icon must use the Mushaf/rehal identity." }
 
         check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
-        check(reader.contains("hiddenBandForLine") && reader.contains("cells.slice(n-take)")) {
-            "Mask must be a continuous nested RTL band."
+        check(reader.contains("hiddenBandForLine") && reader.contains("const hiddenWidth=span*fraction") && !reader.contains("cells.slice(n-take)")) {
+            "Mask must be a continuous width-accurate nested RTL band."
         }
-        check(reader.contains("setAudioVerse") && reader.contains("clearReveal") && reader.contains("revealSelection"))
+        check(reader.contains("setAudioVerse") && reader.contains("setEink(value)") && reader.contains("clearReveal") && reader.contains("revealSelection"))
+        check(!reader.contains("window.scrollBy") && !reader.contains("--reveal-pad")) { "Tafsir reveal must never scroll or pre-shift the whole reader." }
         check(audio.contains("prepareAsync()")) { "Audio prepare must not block the UI thread." }
         check(audio.indexOf("player.start()") < audio.indexOf("mushaf.setAudioVerse(verse)")) {
             "Audio highlight must switch only after playback starts."
@@ -152,8 +171,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.7-boox"
+        versionCode = 8
+        versionName = "0.7.1-boox"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -173,12 +192,12 @@ android {
 
     buildTypes {
         getByName("debug") {
-            // CI produces an unprivileged, non-debuggable candidate; durable signing happens after verification.
             isDebuggable = false
         }
         getByName("release") {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            isDebuggable = false
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
         }
     }
 }

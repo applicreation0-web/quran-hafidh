@@ -137,10 +137,11 @@ public final class MushafView extends WebView {
             String svg = readPageSvg(page);
             String geometry = lineIds.isEmpty() ? null : GeometryRepository.get(getContext()).pageGeometryJson(page);
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
+            if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
             JSONArray verses = new JSONArray();
             for (VerseRef ref : selection) verses.put(ref.toString());
             JSONArray lines = new JSONArray();
-            for (String id : lineIds) lines.put(id);
+            for (String id : lineIds) lines.put(String.valueOf(id));
             JSONObject boot = new JSONObject()
                 .put("page", page)
                 .put("selection", verses)
@@ -150,11 +151,7 @@ public final class MushafView extends WebView {
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
-            html = html
-                .replace("script-src 'self';", "script-src 'nonce-" + INLINE_NONCE + "';")
-                .replace("connect-src 'self'", "connect-src 'none'")
-                .replace(SCRIPT_TAG, inline)
-                .replace(SVG_SLOT, svg);
+            html = html.replace(SCRIPT_TAG, inline).replace(SVG_SLOT, svg);
             loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
             postDelayed(watchdog, PAGE_TIMEOUT_MS);
         } catch (Throwable error) {
@@ -175,7 +172,7 @@ public final class MushafView extends WebView {
         JSONArray verses = new JSONArray();
         for (VerseRef ref : selection) verses.put(ref.toString());
         JSONArray lines = new JSONArray();
-        for (String id : lineIds) lines.put(id);
+        for (String id : lineIds) lines.put(String.valueOf(id));
         final String geometry;
         try {
             geometry = lineIds.isEmpty() ? null : GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
@@ -199,15 +196,24 @@ public final class MushafView extends WebView {
             ignored -> post(() -> eink.audio(this))));
     }
 
-    /** Keep the selected verse in the unobscured upper part before the bottom Tafsir opens. */
+    /** Runtime recovery path: E-Ink may be changed after the initial WebView boot. */
+    public void setEink(boolean enabled) {
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setEink(" + enabled + ");",
+            ignored -> post(() -> eink.local(this))));
+    }
+
+    /** Move only if the selected verse would be obscured by the phone Tafsir panel. */
     public void revealSelectionAboveBottomPanel() {
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.revealSelection(0.46);", null));
+            "window.HifzReader&&window.HifzReader.revealSelection(0.46);",
+            ignored -> post(() -> eink.local(this))));
     }
 
     public void clearReveal() {
         runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.clearReveal&&window.HifzReader.clearReveal();", null));
+            "window.HifzReader&&window.HifzReader.clearReveal&&window.HifzReader.clearReveal();",
+            ignored -> post(() -> eink.local(this))));
     }
 
     public void localCounterChanged() { eink.local(this); }

@@ -2,10 +2,13 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Dialog;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextUtils;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.text.style.SuperscriptSpan;
@@ -145,6 +148,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (next == page) { showControls(); return; }
         closeAudio();
         closeSideTafsir();
+        mushaf.clearReveal();
         page = next;
         selected = null;
         tafsirButton.setEnabled(false);
@@ -184,7 +188,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void hideControls() {
         if (topControls == null || readerActions == null || pageRail == null) return;
         controlsVisible = false;
-        // INVISIBLE preserves the reader geometry and avoids a full-page reflow/refresh on BOOX.
+        // INVISIBLE preserves reader geometry and avoids a full-page BOOX reflow.
         topControls.setVisibility(View.INVISIBLE);
         readerActions.setVisibility(View.INVISIBLE);
         pageRail.setVisibility(View.INVISIBLE);
@@ -265,39 +269,47 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         };
 
         LinearLayout shell = Ui.column(this);
-        shell.setPadding(Ui.dp(this, 10), Ui.dp(this, 5), Ui.dp(this, 10), Ui.dp(this, 7));
+        shell.setPadding(Ui.dp(this, 8), Ui.dp(this, 3), Ui.dp(this, 8), Ui.dp(this, 6));
 
         LinearLayout titleRow = Ui.row(this);
-        TextView title = Ui.bookText(this, "Tafsir · " + verse.getSurah() + ":" + verse.getAyah(), 16, true);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = Ui.bookText(this, "Tafsir · " + verse.getSurah() + ":" + verse.getAyah(), 13.5f, true);
+        title.setSingleLine(true);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setPadding(Ui.dp(this, 3), 0, Ui.dp(this, 4), 0);
         Ui.weight(title, 1);
         titleRow.addView(title);
 
         TextView source = Ui.text(this, "", 10.5f, false);
         source.setTextColor(Ui.MUTED);
-        source.setPadding(Ui.dp(this, 2), 0, Ui.dp(this, 2), Ui.dp(this, 4));
+        source.setPadding(Ui.dp(this, 2), 0, Ui.dp(this, 2), Ui.dp(this, 3));
         source.setVisibility(View.GONE);
 
-        Button minus = Ui.smallButton(this, "A−", v -> {
+        Button minus = tafsirTextControl("A−", "Réduire le texte", v -> {
             fontSize[0] = Math.max(TAFSIR_MIN_SP, fontSize[0] - 2f);
             readingPrefs.edit().putFloat(TAFSIR_FONT_KEY, fontSize[0]).apply();
             if (loaded[0] != null) renderTafsirText(loaded[0], fontSize[0]);
         });
-        Button plus = Ui.smallButton(this, "A+", v -> {
+        Button plus = tafsirTextControl("A+", "Agrandir le texte", v -> {
             fontSize[0] = Math.min(TAFSIR_MAX_SP, fontSize[0] + 2f);
             readingPrefs.edit().putFloat(TAFSIR_FONT_KEY, fontSize[0]).apply();
             if (loaded[0] != null) renderTafsirText(loaded[0], fontSize[0]);
         });
-        Button info = Ui.roundButton(this, "i", "Référence", v ->
+        Button info = Ui.iconButton(this, "i", "Référence", v ->
             source.setVisibility(source.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
-        Button close = Ui.roundButton(this, "×", "Fermer le Tafsir", v -> closeAction.run());
+        Button close = Ui.iconButton(this, "×", "Fermer le Tafsir", v -> closeAction.run());
         titleRow.addView(minus);
         titleRow.addView(plus);
         titleRow.addView(info);
         titleRow.addView(close);
-        shell.addView(titleRow);
+        shell.addView(titleRow, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 44)));
         shell.addView(source);
 
         LinearLayout editionRow = Ui.row(this);
+        editionRow.setGravity(Gravity.CENTER_VERTICAL);
+        editionRow.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 2));
         editionRow.setVisibility(View.GONE);
         shell.addView(editionRow);
 
@@ -327,13 +339,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
                     for (MultiTafsirRepository.Edition edition : MultiTafsirRepository.Edition.values()) {
                         final boolean covered = available.containsKey(edition);
-                        Button editionButton = Ui.smallButton(this,
+                        Button editionButton = tafsirEditionButton(
                             covered ? edition.displayName : edition.displayName + " · —", v -> {
                                 if (!available.containsKey(edition)) return;
                                 ViewGroup row = (ViewGroup) v.getParent();
                                 for (int i = 0; i < row.getChildCount(); i++) {
                                     View child = row.getChildAt(i);
-                                    if (child instanceof Button) Ui.setChosen((Button) child, child == v);
+                                    if (child instanceof Button) styleTafsirEditionButton((Button) child, child == v);
                                 }
                                 currentEdition[0] = edition;
                                 readingPrefs.edit().putString(TAFSIR_EDITION_KEY, edition.storageValue).apply();
@@ -343,9 +355,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                                 renderTafsir(textColumn, entry, fontSize[0]);
                             });
                         editionButton.setEnabled(covered);
-                        Ui.setChosen(editionButton, covered && edition == currentEdition[0]);
-                        Ui.weight(editionButton, 1);
-                        editionRow.addView(editionButton);
+                        styleTafsirEditionButton(editionButton, covered && edition == currentEdition[0]);
+                        LinearLayout.LayoutParams tabLp = new LinearLayout.LayoutParams(0, Ui.dp(this, 36), 1f);
+                        tabLp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
+                        editionRow.addView(editionButton, tabLp);
                     }
 
                     if (available.isEmpty()) {
@@ -367,6 +380,53 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             }
         });
         return shell;
+    }
+
+    private Button tafsirTextControl(String label, String description, View.OnClickListener listener) {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText(label);
+        button.setTextSize(13f);
+        button.setTextColor(Ui.INK);
+        button.setGravity(Gravity.CENTER);
+        button.setContentDescription(description);
+        button.setOnClickListener(listener);
+        button.setStateListAnimator(null);
+        button.setElevation(0f);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setMinimumWidth(0);
+        button.setMinimumHeight(0);
+        button.setPadding(Ui.dp(this, 3), 0, Ui.dp(this, 3), 0);
+        button.setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
+        return button;
+    }
+
+    private Button tafsirEditionButton(String label, View.OnClickListener listener) {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText(label);
+        button.setTextSize(11.5f);
+        button.setTextColor(Ui.INK);
+        button.setGravity(Gravity.CENTER);
+        button.setOnClickListener(listener);
+        button.setStateListAnimator(null);
+        button.setElevation(0f);
+        button.setMinimumWidth(0);
+        button.setMinimumHeight(0);
+        button.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
+        button.setSingleLine(true);
+        button.setEllipsize(TextUtils.TruncateAt.END);
+        return button;
+    }
+
+    private void styleTafsirEditionButton(Button button, boolean selectedState) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(selectedState ? Ui.LINE : Ui.PAPER);
+        background.setStroke(Ui.dp(this, 1), selectedState ? Ui.MUTED : Ui.LINE);
+        background.setCornerRadius(Ui.dp(this, 6));
+        button.setBackground(background);
+        button.setTextColor(Ui.INK);
+        button.setTypeface(Typeface.DEFAULT, selectedState ? Typeface.BOLD : Typeface.NORMAL);
     }
 
     private LinearLayout activeTafsirTarget;

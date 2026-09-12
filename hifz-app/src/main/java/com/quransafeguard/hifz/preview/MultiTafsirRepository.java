@@ -3,7 +3,6 @@ package com.quransafeguard.hifz.preview;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.util.Base64;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -20,12 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
-/**
- * Hifz port of the audited Safeguard multi-Tafsir repository.
- *
- * No commentary is synthesized or merged. Each edition remains source-backed and
- * is shown only when its verified local corpus contains the selected verse.
- */
+/** Local audited multi-Tafsir repository. No commentary is synthesized or merged. */
 public final class MultiTafsirRepository {
     public enum Edition {
         JALALAYN("jalalayn", "Jalalayn"),
@@ -58,23 +52,15 @@ public final class MultiTafsirRepository {
             this.presentationRevision = presentationRevision;
         }
         String assetPart(int index) {
-            return String.format(java.util.Locale.ROOT, "tafsir/%s.gz.b64.part%02d", databaseName, index);
+            return String.format(java.util.Locale.ROOT, "tafsir/%s.gz.part%02d", databaseName, index);
         }
     }
 
     private static final CorpusSpec QURTUBI = new CorpusSpec(
-        Edition.QURTUBI,
-        "qurtubi_en.sqlite",
-        4,
-        432,
-        "0106-qurtubi-hide-verse-labels-v1"
+        Edition.QURTUBI, "qurtubi_en.sqlite", 4, 432, "0106-qurtubi-hide-verse-labels-v1"
     );
     private static final CorpusSpec QUSHAYRI = new CorpusSpec(
-        Edition.QUSHAYRI,
-        "qushayri_en.sqlite",
-        2,
-        720,
-        "0106-qushayri-source-semantics-v1"
+        Edition.QUSHAYRI, "qushayri_en.sqlite", 2, 720, "0106-qushayri-source-semantics-v1"
     );
 
     private final Context app;
@@ -110,21 +96,11 @@ public final class MultiTafsirRepository {
                 "SELECT id, verse_start, verse_end, segment_no, verse_translation, commentary " +
                     "FROM tafsir_entry WHERE surah=? AND verse_start<=? AND verse_end>=? " +
                     "ORDER BY verse_start, verse_end, segment_no, id",
-                new String[]{
-                    Integer.toString(verse.getSurah()),
-                    Integer.toString(verse.getAyah()),
-                    Integer.toString(verse.getAyah())
-                }
+                new String[]{Integer.toString(verse.getSurah()), Integer.toString(verse.getAyah()), Integer.toString(verse.getAyah())}
             )) {
                 while (cursor.moveToNext()) {
-                    rows.add(new Row(
-                        cursor.getLong(0),
-                        cursor.getInt(1),
-                        cursor.getInt(2),
-                        cursor.getInt(3),
-                        clean(cursor.getString(4)),
-                        clean(cursor.getString(5))
-                    ));
+                    rows.add(new Row(cursor.getLong(0), cursor.getInt(1), cursor.getInt(2), cursor.getInt(3),
+                        clean(cursor.getString(4)), clean(cursor.getString(5))));
                 }
             }
             if (rows.isEmpty()) return null;
@@ -161,9 +137,7 @@ public final class MultiTafsirRepository {
                 output.add(new TafsirRepository.Run(TafsirRepository.RunStyle.BOLD_ITALIC, row.translation));
                 if (!row.commentary.isEmpty()) output.add(new TafsirRepository.Run(TafsirRepository.RunStyle.REGULAR, "\n"));
             }
-            if (!row.commentary.isEmpty()) {
-                output.add(new TafsirRepository.Run(TafsirRepository.RunStyle.REGULAR, row.commentary));
-            }
+            if (!row.commentary.isEmpty()) output.add(new TafsirRepository.Run(TafsirRepository.RunStyle.REGULAR, row.commentary));
         }
     }
 
@@ -178,8 +152,7 @@ public final class MultiTafsirRepository {
             StringBuilder semanticText = new StringBuilder();
             int semanticCount = 0;
             try (Cursor cursor = database.rawQuery(
-                "SELECT style,text FROM tafsir_run WHERE entry_id=? ORDER BY run_no",
-                new String[]{Long.toString(row.id)}
+                "SELECT style,text FROM tafsir_run WHERE entry_id=? ORDER BY run_no", new String[]{Long.toString(row.id)}
             )) {
                 while (cursor.moveToNext()) {
                     String style = cursor.getString(0);
@@ -206,16 +179,13 @@ public final class MultiTafsirRepository {
         File destination = new File(directory, spec.databaseName);
         if (destination.isFile() && databaseMatches(destination, spec)) return destination;
 
-        ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+        ByteArrayOutputStream compressed = new ByteArrayOutputStream();
         for (int i = 0; i < spec.partCount; i++) {
-            try (InputStream input = app.getAssets().open(spec.assetPart(i))) {
-                copy(input, encoded);
-            }
+            try (InputStream input = app.getAssets().open(spec.assetPart(i))) { copy(input, compressed); }
         }
-        byte[] compressed = Base64.decode(encoded.toByteArray(), Base64.DEFAULT);
         File temporary = new File(directory, spec.databaseName + ".tmp-" + android.os.Process.myPid());
         try {
-            try (GZIPInputStream input = new GZIPInputStream(new ByteArrayInputStream(compressed));
+            try (GZIPInputStream input = new GZIPInputStream(new ByteArrayInputStream(compressed.toByteArray()));
                  FileOutputStream output = new FileOutputStream(temporary)) {
                 byte[] buffer = new byte[64 * 1024];
                 int count;
@@ -238,15 +208,9 @@ public final class MultiTafsirRepository {
                 file.getAbsolutePath(), null,
                 SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
             );
-            try {
-                verifyMetadata(database, spec);
-                return true;
-            } finally {
-                database.close();
-            }
-        } catch (Throwable ignored) {
-            return false;
-        }
+            try { verifyMetadata(database, spec); return true; }
+            finally { database.close(); }
+        } catch (Throwable ignored) { return false; }
     }
 
     private void verifyMetadata(SQLiteDatabase database, CorpusSpec spec) {
@@ -260,6 +224,10 @@ public final class MultiTafsirRepository {
         if (!Integer.toString(spec.expectedEntries).equals(metadata(database, "entry_count"))) throw new IllegalStateException("Unexpected Tafsir entry count metadata");
         if (!"false".equals(metadata(database, "arabic_included"))) throw new IllegalStateException("Unexpected Tafsir Arabic payload flag");
         if (!spec.presentationRevision.equals(metadata(database, "presentation_revision"))) throw new IllegalStateException("Unexpected Tafsir presentation revision");
+        if (!"true".equals(metadata(database, "personal_use_only"))) throw new IllegalStateException("Tafsir personal-use metadata missing");
+        if (!"false".equals(metadata(database, "redistribution_approved"))) throw new IllegalStateException("Tafsir redistribution metadata mismatch");
+        String rights = metadata(database, "rights_note");
+        if (rights == null || rights.trim().isEmpty()) throw new IllegalStateException("Tafsir rights note missing");
         int rowCount;
         try (Cursor count = database.rawQuery("SELECT COUNT(*) FROM tafsir_entry", null)) {
             if (!count.moveToFirst()) throw new IllegalStateException("Tafsir row count unavailable");
@@ -282,11 +250,8 @@ public final class MultiTafsirRepository {
     }
 
     private boolean assetExists(String path) {
-        try (InputStream ignored = app.getAssets().open(path)) {
-            return true;
-        } catch (IOException missing) {
-            return false;
-        }
+        try (InputStream ignored = app.getAssets().open(path)) { return true; }
+        catch (IOException missing) { return false; }
     }
 
     private static void copy(InputStream input, ByteArrayOutputStream output) throws IOException {
