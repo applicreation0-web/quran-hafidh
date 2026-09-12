@@ -1,0 +1,144 @@
+name: Quran Hifz personal embedded Husary
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - integration/hifz-boox-polish-0.7
+    paths:
+      - docs/audio/TRIGGER_PERSONAL_AUDIO_BUILD
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-personal-embedded-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject canonical Mushaf and Tafsir
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+          rm -rf app/src/main/assets/mushaf app/src/plus/assets/tafsir
+          mkdir -p app/src/main/assets/mushaf/hafs/kfqc/svg-br app/src/plus/assets/tafsir
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br app/src/main/assets/mushaf/hafs/kfqc/svg-br/
+          cp baseline109/extracted/assets/tafsir/* app/src/plus/assets/tafsir/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -type f -name '*.svg.br' | wc -l | tr -d ' ')" = 604
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate exact Hifz geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+
+      - name: Fetch and verify Husary Muallim 128kbps personal corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_husary_muallim_embedded.py --clean
+          test "$(find private/hifz-audio/husary-muallim -maxdepth 1 -type f -name '[0-9][0-9][0-9][0-9][0-9][0-9].mp3' | wc -l | tr -d ' ')" = 6236
+          test -s private/hifz-audio/husary-muallim/source.json
+          test -s private/hifz-audio/husary-muallim/sha256.txt
+          du -sh private/hifz-audio/husary-muallim | tee hifz-audio-size.txt
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Hifz tests and product boundary
+        run: gradle --no-daemon :hifz-core:test :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzConvergenceRules --stacktrace
+
+      - name: Assemble personal embedded-audio APK
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+
+      - name: Verify embedded audio and APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" > hifz-personal-signature.txt
+          grep -q 'Verified' hifz-personal-signature.txt
+          apkanalyzer manifest print "$apk" > hifz-personal-manifest.xml
+          if grep -Eqi 'android.permission.INTERNET|AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-personal-manifest.xml; then exit 1; fi
+          unzip -l "$apk" > hifz-personal-apk-list.txt
+          count="$(grep -E 'assets/audio/husary-muallim/[0-9]{6}\.mp3' hifz-personal-apk-list.txt | wc -l | tr -d ' ')"
+          test "$count" = 6236
+          grep -q 'assets/audio/husary-muallim/source.json' hifz-personal-apk-list.txt
+          sha256sum "$apk" | tee hifz-personal-apk-sha256.txt
+          stat -c '%s bytes' "$apk" | tee hifz-personal-apk-size.txt
+          cp "$apk" Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk
+
+      - name: Prepare private draft-release chunks
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk='Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk'
+          size="$(stat -c '%s' "$apk")"
+          mkdir -p personal-delivery
+          cp hifz-personal-apk-sha256.txt hifz-personal-apk-size.txt hifz-audio-size.txt personal-delivery/
+          cp private/hifz-audio/husary-muallim/source.json personal-delivery/audio-source.json
+          if [ "$size" -lt 1900000000 ]; then
+            mv "$apk" personal-delivery/
+            echo 'single' > personal-delivery/DELIVERY_MODE.txt
+          else
+            split -b 1800M -d -a 2 "$apk" personal-delivery/Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk.part
+            echo 'split' > personal-delivery/DELIVERY_MODE.txt
+            cat > personal-delivery/REASSEMBLE.txt <<'EOF'
+          Reassemble all parts in filename order before installation.
+          Linux/macOS: cat Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk.part* > Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk
+          Windows PowerShell: cmd /c copy /b Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk.part00+Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk.part01 Quran-Hifz-0.7-BOOX-PERSONAL-HUSARY.apk
+          Then verify SHA-256 against hifz-personal-apk-sha256.txt before sideloading.
+          EOF
+          fi
+          ls -lh personal-delivery/
+
+      - name: Create private draft release for personal delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="hifz-0.7-personal-audio-${GITHUB_SHA::8}"
+          title="Quran Hifz 0.7 personal embedded Husary ${GITHUB_SHA::8}"
+          printf '%s\n' \
+            'PRIVATE PERSONAL BUILD — DRAFT, NOT PUBLISHED.' \
+            'Contains embedded Al-Husary Muallim audio sourced at build time from EveryAyah Husary_Muallim_128kbps.' \
+            'Do not publish or redistribute without rights clearance.' \
+            "Commit: $GITHUB_SHA" > personal-delivery/RELEASE_NOTES.txt
+          gh release create "$tag" --target "$GITHUB_SHA" --draft --title "$title" --notes-file personal-delivery/RELEASE_NOTES.txt
+          gh release upload "$tag" personal-delivery/* --clobber
+          echo "$tag" | tee hifz-personal-draft-tag.txt
