@@ -49,7 +49,7 @@ final class Ui {
         int iconRes = iconFor(label, label);
         if (label != null && label.toLowerCase(Locale.ROOT).contains("audio")) shown = "Écouter";
         button.setText(shown);
-        if (iconRes != 0 && label != null && label.toLowerCase(Locale.ROOT).contains("audio")) {
+        if (iconRes != 0) {
             button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
             button.setCompoundDrawableTintList(iconTint());
             button.setCompoundDrawablePadding(dp(context, 6));
@@ -86,7 +86,7 @@ final class Ui {
         params.setMargins(gap, gap, gap, gap);
         button.setLayoutParams(params);
         button.setMinWidth(0); button.setMinHeight(0);
-        button.setPadding(dp(context, 10), dp(context, 10), dp(context, 10), dp(context, 10));
+        button.setPadding(dp(context, 9), dp(context, 9), dp(context, 9), dp(context, 9));
         int stroke = Math.max(1, dp(context, 1));
         StateListDrawable bg = new StateListDrawable();
         bg.addState(new int[]{-android.R.attr.state_enabled}, shape(PAPER, LINE, size / 2, stroke));
@@ -270,9 +270,13 @@ final class Ui {
         if (s.contains("param")) return R.drawable.ic_ui_settings;
         if (s.equals("séance")) return R.drawable.ic_ui_session;
         if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_audio;
-        if (s.contains("répétition") || s.contains("rotation") || s.contains("réinitial")) return R.drawable.ic_ui_repeat;
+        if (s.contains("réinitial") || s.contains("remettre à zéro")) return R.drawable.ic_ui_reset;
+        if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
+        if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
         if (s.contains("valider") || s.equals("revu") || s.contains("termin")) return R.drawable.ic_ui_validate;
+        if (s.startsWith("début")) return R.drawable.ic_ui_start;
+        if (s.startsWith("fin")) return R.drawable.ic_ui_end;
         if (s.contains("ajouter")) return R.drawable.ic_ui_add;
         if (s.contains("modifier")) return R.drawable.ic_ui_edit;
         if (s.contains("supprimer")) return R.drawable.ic_ui_delete;
