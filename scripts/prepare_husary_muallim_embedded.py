@@ -4,11 +4,18 @@
 Runtime Android code never downloads audio. This build-time helper fetches the original
 per-surah EveryAyah ZIPs, extracts only canonical ayah MP3s, verifies the exact 6,236
 Hafs keys, and writes source + SHA-256 evidence next to the audio.
+
+Canonical upstream source used by this personal build:
+  directory: https://everyayah.com/data/Husary_Muallim_128kbps/
+  surah zips: https://everyayah.com/data/Husary_Muallim_128kbps/zips/SSS.zip
+  checksum:  https://everyayah.com/data/Husary_Muallim_128kbps/000_checksum.md5
+  full zip:  https://everyayah.com/data/Husary_Muallim_128kbps/000_versebyverse.zip
 """
 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import shutil
@@ -18,7 +25,12 @@ import zipfile
 from pathlib import Path
 
 BASE = "https://everyayah.com/data/Husary_Muallim_128kbps"
+DIRECTORY_URL = BASE + "/"
 ZIP_BASE = BASE + "/zips"
+ZIP_TEMPLATE = ZIP_BASE + "/{surah:03d}.zip"
+UPSTREAM_CHECKSUM_URL = BASE + "/000_checksum.md5"
+FULL_ARCHIVE_URL = BASE + "/000_versebyverse.zip"
+LANDING_PAGE = "https://everyayah.com/recitations_ayat.html"
 DEFAULT_OUTPUT = Path("private/hifz-audio/husary-muallim")
 AYAHS = [
     7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,
@@ -44,14 +56,14 @@ def sha256(path: Path) -> str:
 
 def download(url: str, target: Path) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": "Quran-Hifz-personal-build/0.7"})
-    with urllib.request.urlopen(req, timeout=120) as src, target.open("wb") as out:
+    with urllib.request.urlopen(req, timeout=180) as src, target.open("wb") as out:
         shutil.copyfileobj(src, out, length=1024 * 1024)
 
 
 def fetch_surah(surah: int, output: Path, tmp: Path) -> None:
     expected = {f"{surah:03d}{ayah:03d}.mp3" for ayah in range(1, AYAHS[surah - 1] + 1)}
     archive = tmp / f"{surah:03d}.zip"
-    url = f"{ZIP_BASE}/{surah:03d}.zip"
+    url = ZIP_TEMPLATE.format(surah=surah)
     print(f"[{surah:03d}/114] {url}")
     download(url, archive)
     found: set[str] = set()
@@ -100,6 +112,15 @@ def verify(output: Path) -> tuple[list[str], str]:
     return lines, manifest_hash.hexdigest()
 
 
+def save_upstream_evidence(output: Path) -> tuple[str, str]:
+    """Preserve the provider checksum file byte-for-byte for later provenance audits."""
+    target = output / "upstream_checksum.md5"
+    download(UPSTREAM_CHECKSUM_URL, target)
+    if target.stat().st_size <= 0:
+        raise RuntimeError("EveryAyah checksum evidence is empty")
+    return target.name, sha256(target)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -116,32 +137,46 @@ def main() -> int:
         with tempfile.TemporaryDirectory(prefix="quran-hifz-husary-") as temp:
             tmp = Path(temp)
             for surah in range(1, 115):
-                # Resume support: skip a surah only when all its canonical files already exist and are non-empty.
                 names = [output / f"{surah:03d}{ayah:03d}.mp3" for ayah in range(1, AYAHS[surah - 1] + 1)]
                 if all(p.is_file() and p.stat().st_size > 0 for p in names):
                     print(f"[{surah:03d}/114] already complete")
                     continue
                 fetch_surah(surah, output, tmp)
+        checksum_name, checksum_sha256 = save_upstream_evidence(output)
+    else:
+        checksum_path = output / "upstream_checksum.md5"
+        if not checksum_path.is_file() or checksum_path.stat().st_size <= 0:
+            raise RuntimeError("missing upstream_checksum.md5 evidence")
+        checksum_name, checksum_sha256 = checksum_path.name, sha256(checksum_path)
 
     lines, aggregate = verify(output)
     (output / "sha256.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     source = {
-        "schema": 1,
+        "schema": 2,
         "reciter": "Mahmoud Khalil Al-Husary — Muʿallim (Hafṣ)",
         "source": "EveryAyah / VerseByVerseQuran · Husary_Muallim_128kbps",
-        "landingPage": "https://everyayah.com/recitations_ayat.html",
+        "landingPage": LANDING_PAGE,
+        "sourceDirectory": DIRECTORY_URL,
         "baseUrl": BASE,
-        "zipBaseUrl": ZIP_BASE,
+        "perSurahZipTemplate": ZIP_TEMPLATE,
+        "fullArchiveUrl": FULL_ARCHIVE_URL,
+        "upstreamChecksumUrl": UPSTREAM_CHECKSUM_URL,
+        "upstreamChecksumFile": checksum_name,
+        "upstreamChecksumSha256": checksum_sha256,
         "filePattern": "SSSAAA.mp3",
         "fileCount": EXPECTED_COUNT,
         "sha256Manifest": aggregate,
+        "preparedUtc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat(),
         "runtimeNetwork": False,
+        "delivery": "embedded-in-personal-apk",
         "personalUseOnly": True,
         "redistributionApproved": False,
     }
     (output / "source.json").write_text(json.dumps(source, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"OK: {EXPECTED_COUNT} canonical ayah files")
     print(f"sha256 manifest: {aggregate}")
+    print(f"provider checksum evidence sha256: {checksum_sha256}")
+    print(f"source directory: {DIRECTORY_URL}")
     print(f"output: {output.resolve()}")
     return 0
 
