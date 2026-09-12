@@ -3,7 +3,9 @@ package com.quransafeguard.hifz.preview;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.DocumentsContract;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -65,15 +67,13 @@ public final class SettingsActivity extends android.app.Activity {
 
         section(root,"Audio Al-Husary Muʿallim");
         audioStatus=Ui.text(this,"",12.5f,false);root.addView(audioStatus);
-        HifzAudioPack audioPack=new HifzAudioPack(this);
-        HifzAudioGate audioGate=new HifzAudioGate(this);
-        if(!audioPack.embeddedInstalled()){
-            LinearLayout fallback=Ui.row(this);fallback.setGravity(Gravity.CENTER);
-            fallback.addView(Ui.roundAction(this,"+","Import secours",v->selectAudioZip()));root.addView(fallback);
-        }
+        LinearLayout audioActions=Ui.row(this);audioActions.setGravity(Gravity.CENTER);
+        audioActions.addView(Ui.roundAction(this,"↓","Choisir le pack",v->selectAudioZip()));root.addView(audioActions);
         TextView audioNote=Ui.text(this,
-            "Chemin APK : assets/audio/husary-muallim/\nSource : "+audioGate.baseUrl+"\n"
-            +"Format : 6 236 fichiers SSSAAA.mp3. Lecture locale uniquement ; aucune permission INTERNET. L’audio ne modifie jamais répétitions, promotions ou curseurs.",
+            "Fichier attendu : "+HifzAudioPack.PACK_FILE_NAME+"\n"
+            +"Dossier conseillé : "+HifzAudioPack.RECOMMENDED_FOLDER+"\n"
+            +"Source corpus : EveryAyah · Husary_Muallim_128kbps\n"
+            +"Le pack est importé une seule fois puis conservé dans l’espace privé de Quran Hifz. Gardez aussi le ZIP dans Téléchargements pour une réinstallation. Aucune permission INTERNET ; l’audio ne modifie jamais répétitions, promotions ou curseurs.",
             11.5f,false);audioNote.setPadding(0,Ui.dp(this,4),0,0);root.addView(audioNote);
 
         section(root,"Affichage BOOX");
@@ -188,23 +188,32 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void refreshAudio(){
         HifzAudioPack pack=new HifzAudioPack(this);
-        if(pack.embeddedInstalled())audioStatus.setText("✓ Embedded · "+pack.installedFileCount()+" versets · "+pack.sourceLabel());
-        else if(pack.installed())audioStatus.setText("✓ Pack local secours · "+pack.installedFileCount()+" versets");
-        else audioStatus.setText("Audio non embarqué dans ce build. Le build personnel final doit intégrer les 6 236 versets.");
+        if(pack.installed()){
+            audioStatus.setText("✓ 6 236 / 6 236 versets vérifiés\n✓ Al-Husary Muʿallim\n✓ Audio hors ligne prêt");
+        }else{
+            audioStatus.setText("Audio non installé\nFichier attendu : "+HifzAudioPack.PACK_FILE_NAME+"\nDossier conseillé : "+HifzAudioPack.RECOMMENDED_FOLDER);
+        }
     }
 
     private void selectAudioZip(){
-        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("*/*");
-        startActivityForResult(Intent.createChooser(intent,"Choisir le ZIP Al-Husary Muʿallim"),REQUEST_AUDIO_ZIP);
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/zip");
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+            Uri downloads=Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADownload");
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI,downloads);
+        }
+        startActivityForResult(Intent.createChooser(intent,"Choisir "+HifzAudioPack.PACK_FILE_NAME),REQUEST_AUDIO_ZIP);
     }
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
         if(requestCode!=REQUEST_AUDIO_ZIP||resultCode!=RESULT_OK||data==null)return;Uri uri=data.getData();if(uri==null)return;
-        audioStatus.setText("Import et vérification du pack audio…");
+        audioStatus.setText("Import puis vérification SHA-256 des 6 236 versets…\nCette étape peut prendre quelques minutes sur BOOX.");
         new Thread(()->{
             HifzAudioPack.ImportResult result=new HifzAudioPack(getApplicationContext()).importZip(uri);
-            runOnUiThread(()->{audioStatus.setText(result.message);if(!result.ok)Toast.makeText(this,result.message,Toast.LENGTH_LONG).show();});
+            runOnUiThread(()->{
+                if(result.ok){refreshAudio();Toast.makeText(this,"Pack Al-Husary Muʿallim installé.",Toast.LENGTH_LONG).show();}
+                else{audioStatus.setText(result.message);Toast.makeText(this,result.message,Toast.LENGTH_LONG).show();}
+            });
         },"hifz-audio-import").start();
     }
 
