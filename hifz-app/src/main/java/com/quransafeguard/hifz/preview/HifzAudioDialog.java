@@ -13,7 +13,6 @@ import android.widget.Toast;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +38,7 @@ final class HifzAudioDialog {
 
     void show() {
         if (!pack.installed()) {
-            Toast.makeText(activity, "Installez d’abord le pack audio local dans Paramètres.", Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "Audio Al-Husary Muʿallim non intégré à ce build.", Toast.LENGTH_LONG).show();
             return;
         }
         if (queue.isEmpty()) {
@@ -64,6 +63,9 @@ final class HifzAudioDialog {
         Button close = Ui.smallButton(activity,"Fermer",v->dialog.dismiss());
         Ui.weight(repeat,1);Ui.weight(close,1);second.addView(repeat);second.addView(close);shell.addView(second);
 
+        TextView source = Ui.text(activity,"Source embarquée : "+pack.sourceLabel(),11,false);
+        source.setGravity(Gravity.CENTER_HORIZONTAL);shell.addView(source);
+
         dialog.setContentView(shell);
         dialog.setOnDismissListener(d->{release();mushaf.setAudioVerse(null);});
         dialog.show();
@@ -77,7 +79,9 @@ final class HifzAudioDialog {
             player.pause();paused=true;playPause.setText("Reprendre");return;
         }
         if (player != null && paused) {
-            player.start();paused=false;playPause.setText("Pause");return;
+            player.start();paused=false;playPause.setText("Pause");
+            // Highlight remains on the paused verse; no extra E-Ink repaint on resume.
+            return;
         }
         playCurrent(true);
     }
@@ -89,25 +93,34 @@ final class HifzAudioDialog {
         releasePlayerOnly();
         paused=false;
         VerseRef verse=queue.get(index);
-        File file=pack.fileFor(verse);
-        if(!file.isFile()){
+        if(!pack.hasVerse(verse)){
+            mushaf.setAudioVerse(null);
             Toast.makeText(activity,"Audio manquant pour "+verse,Toast.LENGTH_LONG).show();return;
         }
         try {
             player=new MediaPlayer();
-            player.setDataSource(file.getAbsolutePath());
+            pack.setDataSource(player,verse);
             player.setOnCompletionListener(done->{
                 releasePlayerOnly();
                 playPause.setText("Lire");
-                if(allowAutoNext && index+1<queue.size()){index++;playCurrent(true);}
+                if(allowAutoNext && index+1<queue.size()){
+                    index++;
+                    // Keep the just-finished verse outlined during preparation; switch only after
+                    // the next MediaPlayer has actually started. This avoids a false early highlight.
+                    playCurrent(true);
+                } else {
+                    mushaf.setAudioVerse(null);
+                }
             });
             player.prepare();
-            mushaf.setAudioVerse(verse);
             updateIdentity();
             player.start();
+            // Synchronization contract: verse highlight changes only after playback starts.
+            mushaf.setAudioVerse(verse);
             playPause.setText("Pause");
         } catch (Throwable error) {
             releasePlayerOnly();
+            mushaf.setAudioVerse(null);
             String message=error.getMessage();
             Toast.makeText(activity,"Lecture audio impossible : "+(message==null?error.getClass().getSimpleName():message),Toast.LENGTH_LONG).show();
         }
@@ -117,7 +130,6 @@ final class HifzAudioDialog {
         if(title==null||queue.isEmpty())return;
         VerseRef verse=queue.get(index);
         title.setText("Al-Husary Muʿallim · "+verse+" · "+(index+1)+"/"+queue.size());
-        mushaf.setAudioVerse(verse);
     }
 
     private void releasePlayerOnly(){
