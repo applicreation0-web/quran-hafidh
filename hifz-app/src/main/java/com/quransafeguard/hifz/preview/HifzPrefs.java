@@ -73,14 +73,20 @@ public final class HifzPrefs {
                 .putString("stableRecentLines", "[]")
                 .putLong("sabqiElapsedMs", 0L)
                 .putLong("itqanElapsedMs", 0L)
+                .putLong("sabqi_today_reviewElapsedMs", 0L)
+                .putLong("recent_sabqi_reviewElapsedMs", 0L)
                 .putLong("murajaahElapsedMs", 0L)
+                .putString("sabqiTodayReviewDate", "")
+                .putInt("sabqiTodayReviewStartLine", -1)
+                .putInt("sabqiTodayReviewEndLine", -1)
+                .putString("lastSabqiTodayReviewDate", "")
+                .putString("lastSabqiTodayReviewLabel", "")
+                .putInt("recentSabqiReviewIndex", 0)
+                .putString("lastRecentSabqiReviewDate", "")
+                .putString("lastRecentSabqiReviewLabel", "")
+                .putString("murajaahActualEnd", "")
                 .putFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING)
                 .putFloat("recentSecPerLine", (float) PreviewConfig.INITIAL_RECENT_SECONDS_PER_LINE_WORKING)
-                .putString("murajaahPhase", "A")
-                .putString("murajaahActualEnd", "")
-                .putInt("murajaahRecentLinesDone", 0)
-                .putLong("murajaahBlockAElapsedMs", 0L)
-                .putLong("murajaahBlockBElapsedMs", 0L)
                 .putBoolean("forceEink", false)
                 .putString("lastSabqiDate", "")
                 .putString("lastSabqiLabel", "")
@@ -134,9 +140,21 @@ public final class HifzPrefs {
      */
     private void migrateV2ToV3() {
         String historical = p.getString("promotedRanges", "[]");
+        long legacyRecentElapsed = p.getLong("murajaahBlockAElapsedMs", 0L);
+        long legacyOldElapsed = p.getLong("murajaahBlockBElapsedMs", 0L);
+        String legacyActualEnd = p.getString("murajaahActualEnd", "");
+        int legacyRecentIndex = Math.max(0, p.getInt("murajaahRecentLinesDone", 0) / PreviewConfig.SABQI_LINES);
         SharedPreferences.Editor e = p.edit()
             .putString("unconsolidatedPromotedRanges", historical == null ? "[]" : historical)
             .putString("legacyMurajaahPromotedRanges", historical == null ? "[]" : historical)
+            .putLong("recent_sabqi_reviewElapsedMs", legacyRecentElapsed)
+            .putInt("recentSabqiReviewIndex", legacyRecentIndex)
+            .putLong("murajaahElapsedMs", legacyOldElapsed)
+            .putString("murajaahActualEnd", legacyActualEnd == null ? "" : legacyActualEnd)
+            .remove("murajaahPhase")
+            .remove("murajaahRecentLinesDone")
+            .remove("murajaahBlockAElapsedMs")
+            .remove("murajaahBlockBElapsedMs")
             .putInt("schema", 3);
         if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v2 to v3");
     }
@@ -241,6 +259,10 @@ public final class HifzPrefs {
             .putInt("sabqiRep", 0)
             .putInt("sabqiAssisted", 0)
             .putLong("sabqiElapsedMs", 0L)
+            .putString("sabqiTodayReviewDate", date)
+            .putInt("sabqiTodayReviewStartLine", startLine)
+            .putInt("sabqiTodayReviewEndLine", endLine)
+            .putLong("sabqi_today_reviewElapsedMs", 0L)
             .putString("lastSabqiDate", date)
             .putString("lastSabqiLabel", label)
             .commit();
@@ -279,32 +301,60 @@ public final class HifzPrefs {
             .commit();
     }
 
-    public String murajaahPhase() { return p.getString("murajaahPhase", "A"); }
-    public VerseRef murajaahActualEnd() { return optionalRef("murajaahActualEnd"); }
-    public int murajaahRecentLinesDone() { return p.getInt("murajaahRecentLinesDone", 0); }
-    public long murajaahBlockAElapsedMs() { return p.getLong("murajaahBlockAElapsedMs", 0L); }
-    public long murajaahBlockBElapsedMs() { return p.getLong("murajaahBlockBElapsedMs", 0L); }
-
-    public boolean setMurajaahRuntime(String phase, VerseRef actualEnd, int recentLinesDone,
-                                      long blockAElapsedMs, long blockBElapsedMs) {
+    /** Atomically advances the natural Itqan cycle and consolidates any completed promoted overlap. */
+    public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
+                                                   VerseRef nextCursor, String date, String label) {
+        List<VerseRange> pending = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
         return p.edit()
-            .putString("murajaahPhase", "B".equals(phase) ? "B" : "A")
-            .putString("murajaahActualEnd", actualEnd == null ? "" : actualEnd.toString())
-            .putInt("murajaahRecentLinesDone", Math.max(0, recentLinesDone))
-            .putLong("murajaahBlockAElapsedMs", Math.max(0L, blockAElapsedMs))
-            .putLong("murajaahBlockBElapsedMs", Math.max(0L, blockBElapsedMs))
+            .putString("unconsolidatedPromotedRanges", rangesJson(pending))
+            .putString("itqanCursor", nextCursor.toString())
+            .putInt("itqanRep", 0)
+            .putInt("itqanAssisted", 0)
+            .putString("itqanUnitStart", "")
+            .putString("itqanUnitEnd", "")
+            .putLong("itqanElapsedMs", 0L)
+            .putString("lastItqanDate", date)
+            .putString("lastItqanLabel", label)
             .commit();
+    }
+
+    public String sabqiTodayReviewDate() { return p.getString("sabqiTodayReviewDate", ""); }
+    public int sabqiTodayReviewStartLine() { return p.getInt("sabqiTodayReviewStartLine", -1); }
+    public int sabqiTodayReviewEndLine() { return p.getInt("sabqiTodayReviewEndLine", -1); }
+    public String lastSabqiTodayReviewDate() { return p.getString("lastSabqiTodayReviewDate", ""); }
+    public String lastSabqiTodayReviewLabel() { return p.getString("lastSabqiTodayReviewLabel", ""); }
+    public boolean completeSabqiTodayReview(String date, String label) {
+        return p.edit()
+            .putLong("sabqi_today_reviewElapsedMs", 0L)
+            .putString("lastSabqiTodayReviewDate", date)
+            .putString("lastSabqiTodayReviewLabel", label)
+            .commit();
+    }
+
+    public int recentSabqiReviewIndex() { return Math.max(0, p.getInt("recentSabqiReviewIndex", 0)); }
+    public void setRecentSabqiReviewIndex(int value) {
+        p.edit().putInt("recentSabqiReviewIndex", Math.max(0, value)).apply();
+    }
+    public String lastRecentSabqiReviewDate() { return p.getString("lastRecentSabqiReviewDate", ""); }
+    public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
+        return p.edit()
+            .putLong("recent_sabqi_reviewElapsedMs", 0L)
+            .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
+            .putString("lastRecentSabqiReviewDate", date)
+            .putString("lastRecentSabqiReviewLabel", label)
+            .commit();
+    }
+
+    public VerseRef murajaahActualEnd() { return optionalRef("murajaahActualEnd"); }
+    public void setMurajaahActualEnd(VerseRef value) {
+        p.edit().putString("murajaahActualEnd", value == null ? "" : value.toString()).apply();
     }
 
     public boolean completeMurajaah(VerseRef nextCursor, String date, String label) {
         return p.edit()
             .putString("murajaahCursor", nextCursor.toString())
             .putLong("murajaahElapsedMs", 0L)
-            .putString("murajaahPhase", "A")
             .putString("murajaahActualEnd", "")
-            .putInt("murajaahRecentLinesDone", 0)
-            .putLong("murajaahBlockAElapsedMs", 0L)
-            .putLong("murajaahBlockBElapsedMs", 0L)
             .putString("lastMurajaahDate", date)
             .putString("lastMurajaahLabel", label)
             .commit();
