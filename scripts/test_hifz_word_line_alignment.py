@@ -12,8 +12,6 @@ def local_line(line_id, *verses):
     return {"id": line_id, "verses": list(verses), "cells": [[0.0, 100.0]], "top": 0.0, "bottom": 10.0}
 
 
-# A local detector may contain one extra verified physical band. Word geometry must
-# still align genuine linguistic source lines without changing the Hifz geometry.
 source = [source_line(f"3:{195+i}") for i in range(14)]
 local = [local_line(f"76:{i}", f"3:{195+i}") for i in range(7)]
 local.append(local_line("76:7", "3:201"))
@@ -25,8 +23,6 @@ assert mapping == sorted(mapping)
 assert len(set(mapping)) == 14
 assert 7 not in mapping, mapping
 
-# The inverse mismatch is also real: the detector may merge two adjacent physical
-# text bands into one local Hifz line. Preserve all source words without adding lines.
 source_merged = [source_line(f"4:{1+i}") for i in range(14)]
 local_merged = [local_line(f"77:{i}", f"4:{1+i}") for i in range(6)]
 local_merged.append(local_line("77:6", "4:7", "4:8"))
@@ -39,14 +35,13 @@ assert len(set(mapping_merged)) == 13
 assert mapping_merged[6] == mapping_merged[7] == 6, mapping_merged
 assert mapping_merged[0] == 0 and mapping_merged[-1] == 12
 
-# Long verses spanning adjacent lines remain monotonic.
 source2 = [source_line("2:282"), source_line("2:282"), source_line("2:282")]
 local2 = [local_line("48:0", "2:282"), local_line("48:1", "2:282"), local_line("48:2", "2:282")]
 assert match_source_lines(source2, local2) == [0, 1, 2]
 
 # Cross-page regression: coordinate boxes can use a different page break, while QPC
 # V2 correctly places 5:77 on the local page. The width source page must be ignored.
-def coord(x, y, w=30.0, h=20.0):
+def coord(x, y, w=40.0, h=20.0):
     return {"h": {"x": x, "y": y, "w": w, "h": h}}
 
 old_pages, old_words = aug.EXPECTED_PAGES, aug.EXPECTED_WORDS
@@ -70,7 +65,7 @@ try:
         2: {"coords": {
             "5:77:1": coord(700, 20),
             "5:77:2": coord(600, 20),
-            "5:78:1": coord(700, 100),
+            "5:78:1": coord(700, 100, 80.0),
         }},
     }
     qpc_layout = {
