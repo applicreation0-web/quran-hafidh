@@ -8,6 +8,7 @@ reader = Path('hifz-app/src/main/assets/hifzreader/reader.js').read_text()
 # existing source-ink cells, measures the requested percentage by ink width, clips only
 # the boundary cell, and redraws verse-number rosettes above the masks.
 assert 'function randomOrderKeys' in reader, 'missing non-deterministic cell ordering'
+assert 'function seededRandom' in reader and 'maskEntropy' in reader, 'random draw must survive WebView page reloads within one session'
 assert 'function randomSegmentsForCells' in reader, 'missing source-ink segment renderer'
 assert 'function hiddenBandForLine' not in reader, 'single bounding band would recreate the slab regression'
 assert 'totalWidth*fraction' in reader, 'mask percentage must be source-ink-width based'

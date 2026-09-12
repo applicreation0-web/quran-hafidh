@@ -28,6 +28,7 @@ public final class OfficialReleaseContractTest {
         assertTrue("runtime E-Ink setter required", reader.contains("setEink(value)"));
         assertTrue("line ids must be normalized", reader.contains("new Set") && reader.contains("String("));
         assertTrue("mask must randomize existing source-ink cells", reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells"));
+        assertTrue("random mask draw must survive WebView page reloads", reader.contains("seededRandom") && reader.contains("maskEntropy"));
         assertTrue("mask percentages must accumulate by source-ink width", reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)"));
         assertTrue("verse-number rosettes must be redrawn above masks", reader.contains("markerLayer(svg,polys)"));
         assertFalse("final mask must not depend on linguistic word geometry", reader.contains("line.words") || reader.contains("maskedWordIds"));

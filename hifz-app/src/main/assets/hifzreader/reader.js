@@ -7,6 +7,7 @@ let currentPage=Number(boot.page||1);
 let selected=(boot.selection||[]).map(String);
 let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
+const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
 let audioVerse=null;
 let maskOrderSignature='';
@@ -50,19 +51,26 @@ function maskCandidates(lines,polys){
   return out;
 }
 
-function randomUnit(){
-  try{
-    const c=(typeof globalThis!=='undefined'&&globalThis.crypto)||null;
-    if(c&&typeof c.getRandomValues==='function'){
-      const a=new Uint32Array(1);c.getRandomValues(a);return a[0]/4294967296;
-    }
-  }catch(_e){}
-  return Math.random();
+function hashSeed(value){
+  let h=2166136261>>>0;
+  const s=String(value);
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  return h||0x9e3779b9;
+}
+
+function seededRandom(seed){
+  let x=hashSeed(seed);
+  return ()=>{
+    x^=(x<<13);x>>>=0;
+    x^=(x>>>17);x>>>=0;
+    x^=(x<<5);x>>>=0;
+    return x/4294967296;
+  };
 }
 
 function randomOrderKeys(cells,rng){
   const out=(cells||[]).map(c=>String(c.key));
-  const draw=typeof rng==='function'?rng:randomUnit;
+  const draw=typeof rng==='function'?rng:Math.random;
   for(let i=out.length-1;i>0;i--){
     const r=Math.max(0,Math.min(0.999999999999,Number(draw())||0));
     const j=Math.floor(r*(i+1));
@@ -76,7 +84,7 @@ function currentRandomOrder(cells){
   const signature=selected.join(',')+'|'+lineIds.join(',')+'|'+keys.join(',');
   if(signature!==maskOrderSignature){
     maskOrderSignature=signature;
-    maskOrder=randomOrderKeys(cells);
+    maskOrder=randomOrderKeys(cells,seededRandom(maskEntropy+'|'+signature));
   }
   return maskOrder;
 }
@@ -202,6 +210,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom};
 prepare();
 N?.ready();

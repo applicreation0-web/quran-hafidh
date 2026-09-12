@@ -139,7 +139,8 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
         check(reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells")
                 && reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)")
-                && reader.contains("markerLayer(svg,polys)") && !reader.contains("line.words")
+                && reader.contains("markerLayer(svg,polys)") && reader.contains("seededRandom")
+                && reader.contains("maskEntropy") && !reader.contains("line.words")
                 && !reader.contains("function hiddenBandForLine")) {
             "Mask must randomize existing source-ink groups, preserve cumulative percentages, and keep verse markers above masks."
         }

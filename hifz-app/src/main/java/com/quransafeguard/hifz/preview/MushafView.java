@@ -46,6 +46,7 @@ public final class MushafView extends WebView {
     private Runnable pending;
     private final HifzPrefs prefs;
     private final EinkController eink = new EinkController();
+    private final String maskEntropy = java.util.UUID.randomUUID().toString();
 
     private int requestedPage = 0;
     private boolean pageShown;
@@ -147,6 +148,7 @@ public final class MushafView extends WebView {
                 .put("selection", verses)
                 .put("lines", lines)
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
+                .put("maskEntropy", maskEntropy)
                 .put("eink", eink.isEink(prefs))
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
