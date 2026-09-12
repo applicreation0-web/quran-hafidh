@@ -61,16 +61,9 @@ class HifzCoreTest {
     @Test fun tuesdayAndThursdayAddEveningMurajaahWithoutReplacingItqan() {
         assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.TUESDAY))
         assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.THURSDAY))
-
-        val method = try {
-            HifzSchedule::class.java.getMethod("hasEveningMurajaah", DayOfWeek::class.java)
-        } catch (_: NoSuchMethodException) {
-            null
-        }
-        assertTrue(method != null, "HifzSchedule must expose Tue/Thu evening Murajaah without replacing daytime Itqan")
-        assertTrue(method!!.invoke(HifzSchedule, DayOfWeek.TUESDAY) as Boolean)
-        assertTrue(method.invoke(HifzSchedule, DayOfWeek.THURSDAY) as Boolean)
-        assertFalse(method.invoke(HifzSchedule, DayOfWeek.MONDAY) as Boolean)
-        assertFalse(method.invoke(HifzSchedule, DayOfWeek.SATURDAY) as Boolean)
+        assertTrue(HifzSchedule.hasEveningMurajaah(DayOfWeek.TUESDAY))
+        assertTrue(HifzSchedule.hasEveningMurajaah(DayOfWeek.THURSDAY))
+        assertFalse(HifzSchedule.hasEveningMurajaah(DayOfWeek.MONDAY))
+        assertFalse(HifzSchedule.hasEveningMurajaah(DayOfWeek.SATURDAY))
     }
 }
