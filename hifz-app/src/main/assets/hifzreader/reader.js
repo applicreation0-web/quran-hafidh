@@ -50,22 +50,31 @@ function maskCandidates(lines,polys){
   return byLine;
 }
 
-/* Exact visual width from the right of the selected physical line (RTL). */
-function hiddenBandForLine(line,percent){
-  const cells=line.cells;
-  if(percent<=0||!cells.length)return null;
-  const left=Math.min(...cells.map(c=>c.x0));
-  const right=Math.max(...cells.map(c=>c.x1));
-  const span=Math.max(0,right-left);
-  if(!span)return null;
+/*
+ * Exact visual percentage over the selected source-ink groups, from right to left.
+ * Each source-ink group stays independent so whitespace is never painted over.
+ * The last group may be clipped so 25/50/75/100 reflect the actual masked ink width.
+ */
+function hiddenSegmentsForLine(line,percent){
   const fraction=Math.max(0,Math.min(1,Number(percent)/100));
-  const hiddenWidth=span*fraction;
-  return {
-    x:(right-hiddenWidth)-2.2,
-    y:line.top-1.5,
-    width:hiddenWidth+4.4,
-    height:(line.bottom-line.top)+3.0
-  };
+  if(!fraction||!line.cells||!line.cells.length)return [];
+  const cells=[...line.cells].sort((a,b)=>b.x1-a.x1);
+  const totalWidth=cells.reduce((sum,cell)=>sum+Math.max(0,cell.x1-cell.x0),0);
+  if(!totalWidth)return [];
+  const targetWidth=totalWidth*fraction;
+  let remaining=targetWidth;
+  const y=line.top+0.6;
+  const height=Math.max(0,(line.bottom-line.top)-1.2);
+  const segments=[];
+  for(const cell of cells){
+    if(remaining<=0.0001)break;
+    const cellWidth=Math.max(0,cell.x1-cell.x0);
+    if(!cellWidth)continue;
+    const hiddenWidth=Math.min(cellWidth,remaining);
+    segments.push({x:cell.x1-hiddenWidth,y,width:hiddenWidth,height});
+    remaining-=hiddenWidth;
+  }
+  return segments;
 }
 
 function markerLayer(svg,polys){
@@ -111,12 +120,15 @@ function render(){
   if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
 
   byLine.forEach(line=>{
-    const band=hiddenBandForLine(line,clamped);if(!band)return;
-    const el=document.createElementNS(NS,'rect');
-    el.setAttribute('class','maskcell');
-    el.setAttribute('x',band.x);el.setAttribute('y',band.y);el.setAttribute('width',band.width);el.setAttribute('height',band.height);
-    el.setAttribute('rx','4');el.setAttribute('ry','4');
-    group.appendChild(el);
+    const segments=hiddenSegmentsForLine(line,clamped);
+    segments.forEach(segment=>{
+      const el=document.createElementNS(NS,'rect');
+      el.setAttribute('class','maskcell');
+      el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
+      el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
+      el.setAttribute('rx','2');el.setAttribute('ry','2');
+      group.appendChild(el);
+    });
   });
   layer.appendChild(group);
   if(polys.length)layer.appendChild(markerLayer(svg,polys));
@@ -159,5 +171,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
+if(typeof module!=='undefined'&&module.exports)module.exports={hiddenSegmentsForLine};
 prepare();
 N?.ready();
