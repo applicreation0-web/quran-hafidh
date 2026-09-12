@@ -1,5 +1,5 @@
 'use strict';
-/* Quran Hifz local reader: canonical SVG, deterministic nested masks, no network. */
+/* Quran Hifz local reader: canonical SVG, non-deterministic random source-ink masks, no network. */
 const N=window.HifzNative;
 const boot=window.HIFZ_BOOT||{};
 let pageGeo=boot.geometry||null;
@@ -9,6 +9,8 @@ let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
 let eink=!!boot.eink;
 let audioVerse=null;
+let maskOrderSignature='';
+let maskOrder=[];
 const NS='http://www.w3.org/2000/svg';
 const mushaf=document.getElementById('mushaf');
 
@@ -36,42 +38,67 @@ function insideSelection(polys,x,y){
 }
 
 function maskCandidates(lines,polys){
-  const byLine=[];
-  lines.forEach((line,li)=>{
-    const top=Number(line.top),bottom=Number(line.bottom),cells=[];
+  const out=[];
+  lines.forEach(line=>{
+    const top=Number(line.top),bottom=Number(line.bottom);
     (line.cells||[]).forEach((cell,ci)=>{
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      cells.push({line:li,index:ci,x0,x1,top,bottom});
+      out.push({key:String(line.id)+':'+ci,lineId:String(line.id),index:ci,x0,x1,top,bottom});
     });
-    cells.sort((a,b)=>a.x0-b.x0);
-    if(cells.length)byLine.push({id:String(line.id),top,bottom,cells});
   });
-  return byLine;
+  return out;
 }
 
-/*
- * Exact visual percentage over the selected source-ink groups, from right to left.
- * Each source-ink group stays independent so whitespace is never painted over.
- * The last group may be clipped so 25/50/75/100 reflect the actual masked ink width.
- */
-function hiddenSegmentsForLine(line,percent){
+function randomUnit(){
+  try{
+    const c=(typeof globalThis!=='undefined'&&globalThis.crypto)||null;
+    if(c&&typeof c.getRandomValues==='function'){
+      const a=new Uint32Array(1);c.getRandomValues(a);return a[0]/4294967296;
+    }
+  }catch(_e){}
+  return Math.random();
+}
+
+function randomOrderKeys(cells,rng){
+  const out=(cells||[]).map(c=>String(c.key));
+  const draw=typeof rng==='function'?rng:randomUnit;
+  for(let i=out.length-1;i>0;i--){
+    const r=Math.max(0,Math.min(0.999999999999,Number(draw())||0));
+    const j=Math.floor(r*(i+1));
+    const t=out[i];out[i]=out[j];out[j]=t;
+  }
+  return out;
+}
+
+function currentRandomOrder(cells){
+  const keys=(cells||[]).map(c=>String(c.key)).sort();
+  const signature=selected.join(',')+'|'+lineIds.join(',')+'|'+keys.join(',');
+  if(signature!==maskOrderSignature){
+    maskOrderSignature=signature;
+    maskOrder=randomOrderKeys(cells);
+  }
+  return maskOrder;
+}
+
+/* Random cumulative masking over real source-ink groups. 25% is a fresh draw for a
+ * new passage; 50/75/100 extend that same draw. Whitespace is never bridged. */
+function randomSegmentsForCells(cells,percent,order){
   const fraction=Math.max(0,Math.min(1,Number(percent)/100));
-  if(!fraction||!line.cells||!line.cells.length)return [];
-  const cells=[...line.cells].sort((a,b)=>b.x1-a.x1);
-  const totalWidth=cells.reduce((sum,cell)=>sum+Math.max(0,cell.x1-cell.x0),0);
+  if(!fraction||!cells||!cells.length)return [];
+  const map=new Map(cells.map(c=>[String(c.key),c]));
+  const ordered=(order||[]).map(k=>map.get(String(k))).filter(Boolean);
+  const seen=new Set(ordered.map(c=>String(c.key)));
+  cells.forEach(c=>{if(!seen.has(String(c.key)))ordered.push(c)});
+  const totalWidth=cells.reduce((sum,c)=>sum+Math.max(0,c.x1-c.x0),0);
   if(!totalWidth)return [];
-  const targetWidth=totalWidth*fraction;
-  let remaining=targetWidth;
-  const y=line.top+0.6;
-  const height=Math.max(0,(line.bottom-line.top)-1.2);
+  let remaining=totalWidth*fraction;
   const segments=[];
-  for(const cell of cells){
+  for(const cell of ordered){
     if(remaining<=0.0001)break;
-    const cellWidth=Math.max(0,cell.x1-cell.x0);
-    if(!cellWidth)continue;
+    const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({x:cell.x1-hiddenWidth,y,width:hiddenWidth,height});
+    segments.push({key:String(cell.key),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
     remaining-=hiddenWidth;
   }
   return segments;
@@ -109,7 +136,8 @@ function render(){
   if(!clamped||!pageGeo||!lineIds.length)return;
   const wanted=new Set(lineIds.map(String));
   const lines=(pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)));if(!lines.length)return;
-  const polys=selectedPolygons(svg),byLine=maskCandidates(lines,polys);if(!byLine.length)return;
+  const polys=selectedPolygons(svg),cells=maskCandidates(lines,polys);if(!cells.length)return;
+  const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
 
   const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
   const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
@@ -118,19 +146,16 @@ function render(){
   defs.appendChild(clip);layer.appendChild(defs);
   const group=document.createElementNS(NS,'g');
   if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
-
-  byLine.forEach(line=>{
-    const segments=hiddenSegmentsForLine(line,clamped);
-    segments.forEach(segment=>{
-      const el=document.createElementNS(NS,'rect');
-      el.setAttribute('class','maskcell');
-      el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-      el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-      el.setAttribute('rx','2');el.setAttribute('ry','2');
-      group.appendChild(el);
-    });
+  segments.forEach(segment=>{
+    const el=document.createElementNS(NS,'rect');
+    el.setAttribute('class','maskcell');
+    el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
+    el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
+    el.setAttribute('rx','2');el.setAttribute('ry','2');
+    group.appendChild(el);
   });
   layer.appendChild(group);
+  // Verse-number rosettes are deliberately redrawn above the random masks.
   if(polys.length)layer.appendChild(markerLayer(svg,polys));
   svg.appendChild(layer);
 }
@@ -163,7 +188,13 @@ function clearReveal(){document.documentElement.style.setProperty('--reveal-shif
 window.HifzReader={
   setGeometry(geometry){pageGeo=geometry||null;render()},
   setMask(hidden){mask=Number(hidden||0);render()},
-  setSelection(selection,lines){selected=(selection||[]).map(String);lineIds=(lines||[]).map(String);clearReveal();render()},
+  setSelection(selection,lines){
+    const nextSelected=(selection||[]).map(String),nextLines=(lines||[]).map(String);
+    const changed=nextSelected.join(',')!==selected.join(',')||nextLines.join(',')!==lineIds.join(',');
+    selected=nextSelected;lineIds=nextLines;
+    if(changed){maskOrderSignature='';maskOrder=[];}
+    clearReveal();render();
+  },
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setEink(value){eink=!!value;render()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
@@ -171,6 +202,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={hiddenSegmentsForLine};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells};
 prepare();
 N?.ready();
