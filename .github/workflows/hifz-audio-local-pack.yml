@@ -53,7 +53,9 @@ jobs:
           name: Quran-Hifz-Husary-Muallim
           path: dist/Quran-Hifz-Husary-Muallim/
           if-no-files-found: error
-          compression-level: 0
+          # Use real DEFLATE instead of STORED entries. Android's streaming ZIP reader can misread
+          # GitHub's >2 GiB STORED/data-descriptor artifact and expose 001001.mp3 as zero bytes.
+          compression-level: 1
           retention-days: 30
 
 # Downloading this private artifact produces Quran-Hifz-Husary-Muallim.zip.
