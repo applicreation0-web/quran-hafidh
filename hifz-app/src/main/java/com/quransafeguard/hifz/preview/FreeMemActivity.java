@@ -36,21 +36,21 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         end = parseOptional(state.getString("end", ""));
 
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
-        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4));
-        top.addView(Ui.smallButton(this,"‹ Retour",v->finish()));
-        title = Ui.text(this,"Mémorisation libre · "+page+" / 604",15,true); Ui.weight(title,1f); title.setGravity(Gravity.CENTER); top.addView(title); root.addView(top);
+        LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,6),Ui.dp(this,2),Ui.dp(this,6),Ui.dp(this,2));
+        top.addView(Ui.roundButton(this,"‹","Retour",v->finish()));
+        title = Ui.text(this,"Mémorisation libre · "+page+" / 604",14,true); Ui.weight(title,1f); title.setGravity(Gravity.CENTER); top.addView(title); root.addView(top);
 
-        selection = Ui.text(this,"",14,false); selection.setPadding(Ui.dp(this,12),4,Ui.dp(this,12),4); root.addView(selection);
+        selection = Ui.text(this,"",12.5f,false); selection.setPadding(Ui.dp(this,10),2,Ui.dp(this,10),2); root.addView(selection);
         mushaf = new MushafView(this); mushaf.setListener(this); root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
-        counter = Ui.text(this,"Répétitions manuelles : "+count,15,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
-        LinearLayout reps=Ui.row(this);
-        Button minus=Ui.smallButton(this,"−1",v->{if(count>0)count--;save();counter.setText("Répétitions manuelles : "+count);mushaf.localCounterChanged();});
-        Button plus=Ui.smallButton(this,"+1",v->{count++;save();counter.setText("Répétitions manuelles : "+count);mushaf.localCounterChanged();});
-        Button reset=Ui.smallButton(this,"Remise à 0",v->{count=0;save();counter.setText("Répétitions manuelles : 0");mushaf.localCounterChanged();});
-        Ui.weight(minus,1);Ui.weight(plus,1);Ui.weight(reset,1);reps.addView(minus);reps.addView(plus);reps.addView(reset);root.addView(reps);
+        counter = Ui.text(this,"Répétitions · "+count,13,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
+        LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
+        reps.addView(Ui.roundButton(this,"−","Retirer une répétition",v->{if(count>0)count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();}));
+        reps.addView(Ui.roundButton(this,"+","Ajouter une répétition",v->{count++;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();}));
+        reps.addView(Ui.roundButton(this,"↺","Remettre à zéro",v->{count=0;save();counter.setText("Répétitions · 0");mushaf.localCounterChanged();}));
+        root.addView(reps);
 
-        LinearLayout masks=Ui.row(this);
+        LinearLayout masks=Ui.row(this);masks.setGravity(Gravity.CENTER);
         for(int value:new int[]{0,25,50,75,100}){
             Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
             b.setTag(value);maskButtons.add(b);Ui.weight(b,1);masks.addView(b);
@@ -58,15 +58,10 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         root.addView(masks);
 
         // Arabic-book direction: next page (+1) on the left, previous (-1) on the right.
-        LinearLayout nav=Ui.row(this);
-        Button next=Ui.smallButton(this,"Page suivante ›",v->go(1));
-        Button prev=Ui.smallButton(this,"‹ Page précédente",v->go(-1));
-        Ui.weight(next,1);nav.addView(next);
-        if (new HifzAudioGate(this).available()) {
-            Button audio=Ui.smallButton(this,"Audio",v->openAudio());
-            Ui.weight(audio,1);nav.addView(audio);
-        }
-        Ui.weight(prev,1);nav.addView(prev);root.addView(nav);
+        LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);
+        nav.addView(Ui.roundButton(this,"›","Page suivante",v->go(1)));
+        if (new HifzAudioGate(this).available()) nav.addView(Ui.roundButton(this,"♪","Audio",v->openAudio()));
+        nav.addView(Ui.roundButton(this,"‹","Page précédente",v->go(-1)));root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
         updateSelectionLabel();
@@ -82,7 +77,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         page=Math.max(1,Math.min(604,page+d));
         start=end=null; count=0; mask=0;
         save();
-        counter.setText("Répétitions manuelles : 0");
+        counter.setText("Répétitions · 0");
         updateSelectionLabel();updateMaskButtons();
         mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
         title.setText("Mémorisation libre · "+page+" / 604");
@@ -99,8 +94,8 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     }
 
     private void updateSelectionLabel(){
-        if(start==null||end==null) selection.setText("Touchez un verset pour commencer la sélection.");
-        else selection.setText("Passage libre : "+start+" → "+end+" · masque "+mask+"%\nAucun curseur Sabqi / Itqān / Murājaʿah n’est modifié.");
+        if(start==null||end==null) selection.setText("Touchez un verset pour choisir le passage.");
+        else selection.setText("Passage · "+start+" → "+end+" · masque "+mask+"% · indépendant du Parcours Hifz");
     }
 
     private void updateMaskButtons() {
@@ -114,7 +109,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     @Override public void onVerseTap(VerseRef verse){
         if(start==null){start=end=verse;}
         else if(start.equals(end)){if(GeometryRepository.ordinal(verse)<GeometryRepository.ordinal(start)){end=start;start=verse;}else end=verse;}
-        else {start=end=verse;count=0;counter.setText("Répétitions manuelles : 0");}
+        else {start=end=verse;count=0;counter.setText("Répétitions · 0");}
         List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
         mushaf.setSelection(refs,lines);mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();save();
     }
