@@ -83,6 +83,18 @@ class EligibleCorpus private constructor(val ranges: List<VerseRange>) {
         return if (index + 1 < ranges.size) ranges[index + 1].start else ranges.first().start
     }
 
+    /**
+     * Advances the single cyclic Itqan cursor while making the configured anchor explicit.
+     * The corpus itself stays in canonical order: starting at the anchor naturally visits the
+     * later Quran first, wraps after the final eligible range, then visits earlier eligible
+     * material until the cursor reaches the same anchor again. Growing the corpus never
+     * teleports the current cursor.
+     */
+    fun nextAnchored(current: VerseRef, anchor: VerseRef): VerseRef {
+        require(contains(anchor)) { "$anchor outside eligible corpus" }
+        return next(current)
+    }
+
     fun advance(current: VerseRef, steps: Int): VerseRef {
         require(steps >= 0)
         var p = current
@@ -116,6 +128,17 @@ class EligibleCorpus private constructor(val ranges: List<VerseRange>) {
 
 enum class SessionType { SABQI, ITQAN, MURAJAAH }
 
+enum class SessionKind {
+    SABQI_NEW,
+    SABQI_TODAY_REVIEW,
+    ITQAN,
+    RECENT_SABQI_REVIEW,
+    OLD_ITQAN_MURAJAAH
+}
+
+data class PlannedSession(val kind: SessionKind, val targetMinutes: Int)
+data class DailyPlan(val morning: PlannedSession, val evening: PlannedSession)
+
 data class ScheduledSession(val date: LocalDate, val type: SessionType, val overdue: Boolean = false)
 
 object HifzSchedule {
@@ -125,6 +148,23 @@ object HifzSchedule {
         DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> SessionType.MURAJAAH
     }
 
+    /** Definitive two-session weekly plan. A zero target means repetition-driven, not timed. */
+    fun planFor(day: DayOfWeek): DailyPlan = when (day) {
+        DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
+            PlannedSession(SessionKind.SABQI_NEW, 0),
+            PlannedSession(SessionKind.SABQI_TODAY_REVIEW, 30)
+        )
+        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> DailyPlan(
+            PlannedSession(SessionKind.ITQAN, 0),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 60)
+        )
+        DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> DailyPlan(
+            PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 30),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 30)
+        )
+    }
+
+    /** Legacy compatibility helper. Runtime migration replaces this with planFor(). */
     fun hasEveningMurajaah(day: DayOfWeek): Boolean =
         day == DayOfWeek.TUESDAY || day == DayOfWeek.THURSDAY
 
