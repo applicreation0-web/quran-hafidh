@@ -68,6 +68,20 @@ public final class OfficialReleaseContractTest {
         assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
     }
 
+    @Test public void timedResumeAndEmptyWeekendHaveExplicitNonTransferPaths() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+
+        assertTrue("expired timed work must be committed after process death", session.contains("completeExpiredTimedSession"));
+        assertTrue("empty recent Sabqi must complete truthfully without opening old Itqan", session.contains("completeEmptyRecentSabqiSession"));
+        assertTrue("Today must open the first incomplete morning/evening plan entry", main.contains("firstIncompleteMode") && main.contains("planFor"));
+        assertTrue("dashboard must share the domain schedule", dashboard.contains("planFor"));
+        assertFalse("dashboard must not retain A/B transfer projection", dashboard.contains("secondsA") || dashboard.contains("availableB") || dashboard.contains("Murājaʿah A") || dashboard.contains("Murājaʿah B"));
+        assertFalse("settings must not offer daily cursor reposition buttons", settings.contains("Repositionner Murājaʿah"));
+    }
+
     @Test public void tafsirUiAndPackagingAreCompactAndUnified() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String multi = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MultiTafsirRepository.java");
