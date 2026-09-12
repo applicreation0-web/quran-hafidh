@@ -1,9 +1,10 @@
-name: Quran Hifz 0.7.1 official candidate
+name: Quran Hifz 0.7.2 official candidate
 
 on:
   push:
     branches:
       - release/hifz-0.7.1-official
+      - release/hifz-0.7.2-mask-hotfix
   workflow_dispatch:
 
 permissions:
@@ -106,6 +107,13 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
+      - name: Verify mask regression behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_hifz_mask_hotfix.py
+          node scripts/test_hifz_mask_segments.js
+
       - name: Run complete Hifz regression and product-boundary suite
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
 
@@ -120,8 +128,8 @@ jobs:
           test -n "$apk" && test -s "$apk"
           apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
           test "$(apkanalyzer manifest application-id "$apk")" = "com.quransafeguard.hifz"
-          test "$(apkanalyzer manifest version-code "$apk")" = "8"
-          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.1-boox"
+          test "$(apkanalyzer manifest version-code "$apk")" = "9"
+          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.2-boox"
           grep -q 'Quran Hifz' hifz-app-manifest.xml
           if grep -q 'android:debuggable="true"' hifz-app-manifest.xml; then exit 1; fi
           grep -q 'configChanges=' hifz-app-manifest.xml
@@ -171,15 +179,15 @@ jobs:
           echo "APK=$apk" | tee hifz-app-build-info.txt
           echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
           echo "PACKAGE=com.quransafeguard.hifz" | tee -a hifz-app-build-info.txt
-          echo "VERSION_CODE=8" | tee -a hifz-app-build-info.txt
-          echo "VERSION_NAME=0.7.1-boox" | tee -a hifz-app-build-info.txt
+          echo "VERSION_CODE=9" | tee -a hifz-app-build-info.txt
+          echo "VERSION_NAME=0.7.2-boox" | tee -a hifz-app-build-info.txt
           echo "AUDIO_DELIVERY=separate-local-pack" | tee -a hifz-app-build-info.txt
 
       - name: Upload official unsigned release evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-hifz-0.7.1-official-unsigned-${{ github.sha }}
+          name: quran-hifz-0.7.2-official-unsigned-${{ github.sha }}
           path: |
             hifz-app/build/outputs/apk/release/*.apk
             hifz-core/build/test-results/

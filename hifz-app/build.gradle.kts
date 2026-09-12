@@ -137,8 +137,10 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(manifest.contains("ic_quran_hifz_logo")) { "Quran Hifz launcher icon must use the Mushaf/rehal identity." }
 
         check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
-        check(reader.contains("hiddenBandForLine") && reader.contains("const hiddenWidth=span*fraction") && !reader.contains("cells.slice(n-take)")) {
-            "Mask must be a continuous width-accurate nested RTL band."
+        check(reader.contains("hiddenSegmentsForLine") && reader.contains("const targetWidth=totalWidth*fraction")
+                && reader.contains("Math.min(cellWidth,remaining)") && reader.contains("segments.forEach")
+                && !reader.contains("function hiddenBandForLine")) {
+            "Mask must use width-accurate source-ink segments and must never paint one solid line slab."
         }
         check(reader.contains("setAudioVerse") && reader.contains("setEink(value)") && reader.contains("clearReveal") && reader.contains("revealSelection"))
         check(!reader.contains("window.scrollBy") && !reader.contains("--reveal-pad")) { "Tafsir reveal must never scroll or pre-shift the whole reader." }
@@ -171,8 +173,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.7.1-boox"
+        versionCode = 9
+        versionName = "0.7.2-boox"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

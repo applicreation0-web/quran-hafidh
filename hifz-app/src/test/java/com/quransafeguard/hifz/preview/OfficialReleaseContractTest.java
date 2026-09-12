@@ -29,6 +29,10 @@ public final class OfficialReleaseContractTest {
         assertTrue("line ids must be normalized", reader.contains("new Set") && reader.contains("String("));
         assertFalse("mask must not be based on cell count", reader.contains("Math.ceil(n*percent/100)"));
         assertFalse("mask must not slice N cells", reader.contains("cells.slice(n-take)"));
+        assertTrue("mask must use independent source-ink segments", reader.contains("hiddenSegmentsForLine") && reader.contains("segments.forEach"));
+        assertFalse("mask must never collapse a line into one min/max solid band", reader.contains("function hiddenBandForLine"));
+        assertTrue("mask percentage must use accumulated source-ink width", reader.contains("const totalWidth=") && reader.contains("const targetWidth=totalWidth*fraction"));
+        assertTrue("mask must clip the boundary ink group to exact remaining width", reader.contains("Math.min(cellWidth,remaining)"));
         assertFalse("non-scrollable reader must not call window.scrollBy", reader.contains("window.scrollBy"));
         assertTrue("reveal must use an explicit Mushaf translation", reader.contains("--reveal-shift") || reader.contains("translateY"));
         assertFalse("opening Tafsir must not pre-shift the whole centered page using reveal padding", reader.contains("padding-bottom:var(--reveal-pad)"));
@@ -52,7 +56,7 @@ public final class OfficialReleaseContractTest {
 
     @Test public void officialVersionIsIncremented() throws Exception {
         String gradle = read("hifz-app/build.gradle.kts");
-        assertTrue("official update must increment versionCode", gradle.contains("versionCode = 8"));
-        assertTrue("official update must identify the 0.7.1 BOOX release", gradle.contains("versionName = \"0.7.1-boox\""));
+        assertTrue("hotfix update must increment versionCode beyond installed 0.7.1", gradle.contains("versionCode = 9"));
+        assertTrue("official hotfix must identify the 0.7.2 BOOX release", gradle.contains("versionName = \"0.7.2-boox\""));
     }
 }
