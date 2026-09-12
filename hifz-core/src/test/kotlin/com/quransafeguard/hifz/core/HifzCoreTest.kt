@@ -31,6 +31,20 @@ class HifzCoreTest {
         assertEquals(VerseRef(50,1), corpus.next(VerseRef(2,20)))
     }
 
+    @Test fun anchoredCycleTraversesAfterAnchorThenEarlierCorpusBeforeWrapping() {
+        val corpus = EligibleCorpus.of(listOf(
+            VerseRange(VerseRef(2,1), VerseRef(2,2)),
+            VerseRange(VerseRef(49,1), VerseRef(49,2)),
+            VerseRange(VerseRef(114,6), VerseRef(114,6))
+        ))
+        val anchor = VerseRef(49,1)
+        assertEquals(VerseRef(49,2), corpus.nextAnchored(VerseRef(49,1), anchor))
+        assertEquals(VerseRef(114,6), corpus.nextAnchored(VerseRef(49,2), anchor))
+        assertEquals(VerseRef(2,1), corpus.nextAnchored(VerseRef(114,6), anchor))
+        assertEquals(VerseRef(2,2), corpus.nextAnchored(VerseRef(2,1), anchor))
+        assertEquals(anchor, corpus.nextAnchored(VerseRef(2,2), anchor))
+    }
+
     @Test fun corpusExtensionNeverRequiresCursorTeleportation() {
         val before = EligibleCorpus.of(listOf(VerseRange(VerseRef(49,1), VerseRef(114,6))))
         val cursor = VerseRef(52,10)
@@ -47,7 +61,24 @@ class HifzCoreTest {
         assertEquals(SessionType.SABQI, HifzSchedule.scheduled(start, start, today)?.type)
     }
 
-    @Test fun weeklyScheduleMatchesFrozenWeekdays() {
+    @Test fun weeklyMorningAndEveningPlansMatchFrozenEngine() {
+        fun assertPlan(day: DayOfWeek, morning: SessionKind, evening: SessionKind, morningMinutes: Int, eveningMinutes: Int) {
+            val plan = HifzSchedule.planFor(day)
+            assertEquals(morning, plan.morning.kind)
+            assertEquals(evening, plan.evening.kind)
+            assertEquals(morningMinutes, plan.morning.targetMinutes)
+            assertEquals(eveningMinutes, plan.evening.targetMinutes)
+        }
+        assertPlan(DayOfWeek.MONDAY, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
+        assertPlan(DayOfWeek.TUESDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 0, 60)
+        assertPlan(DayOfWeek.WEDNESDAY, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
+        assertPlan(DayOfWeek.THURSDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 0, 60)
+        assertPlan(DayOfWeek.FRIDAY, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
+        assertPlan(DayOfWeek.SATURDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 30, 30)
+        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 30, 30)
+    }
+
+    @Test fun legacyMorningTypeStillMatchesScheduleForCompatibility() {
         val monday = LocalDate.of(2026,9,14)
         assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.dayOfWeek))
         assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(monday.plusDays(1).dayOfWeek))
@@ -56,14 +87,5 @@ class HifzCoreTest {
         assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.plusDays(4).dayOfWeek))
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(5).dayOfWeek))
         assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(6).dayOfWeek))
-    }
-
-    @Test fun tuesdayAndThursdayAddEveningMurajaahWithoutReplacingItqan() {
-        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.TUESDAY))
-        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(DayOfWeek.THURSDAY))
-        assertTrue(HifzSchedule.hasEveningMurajaah(DayOfWeek.TUESDAY))
-        assertTrue(HifzSchedule.hasEveningMurajaah(DayOfWeek.THURSDAY))
-        assertFalse(HifzSchedule.hasEveningMurajaah(DayOfWeek.MONDAY))
-        assertFalse(HifzSchedule.hasEveningMurajaah(DayOfWeek.SATURDAY))
     }
 }
