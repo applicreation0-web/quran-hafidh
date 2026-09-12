@@ -120,12 +120,25 @@ android {
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
 
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("HIFZ_KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("HIFZ_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("HIFZ_KEY_ALIAS")
+                keyPassword = System.getenv("HIFZ_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             // Stable Quran Hifz package: preserves imported audio and progress across future updates.
         }
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }
