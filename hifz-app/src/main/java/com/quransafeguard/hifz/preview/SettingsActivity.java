@@ -45,7 +45,7 @@ public final class SettingsActivity extends android.app.Activity {
         TextView title=Ui.text(this,"Paramètres Hifz",21,true);Ui.weight(title,1);title.setGravity(Gravity.CENTER);top.addView(title);root.addView(top);
 
         section(root,"Parcours Hifz");
-        root.addView(Ui.text(this,"Lun / Mer / Ven · Sabqi · 5 lignes · 37 répétitions\nMar / Jeu · Itqān ×30\nSam / Dim · Murājaʿah : 30 min Sabqi récent + 30 min cycle Itqān",13.5f,false));
+        root.addView(Ui.text(this,"Lun / Mer / Ven · Sabqi · 5 lignes · 37 répétitions\nMar / Jeu · Itqān ×"+PreviewConfig.ITQAN_TOTAL_REPS+"\nSam / Dim · Murājaʿah : 30 min Sabqi récent + 30 min cycle Itqān",13.5f,false));
 
         sabqiStatus=Ui.text(this,"",13.5f,false);sabqiStatus.setPadding(0,Ui.dp(this,8),0,Ui.dp(this,4));root.addView(sabqiStatus);
         LinearLayout sabqiButtons=Ui.row(this);sabqiButtons.setGravity(Gravity.CENTER);
@@ -166,7 +166,7 @@ public final class SettingsActivity extends android.app.Activity {
         if(!prefs.corpus().contains(verse)){Toast.makeText(this,"Ce verset n’appartient à aucune plage Itqān éligible.",Toast.LENGTH_LONG).show();return;}
         prefs.setItqanRotationStart(verse);refreshItqan();
         new AlertDialog.Builder(this).setTitle("Début de rotation enregistré")
-            .setMessage("Repositionner maintenant le curseur Itqān sur "+verse+" ? Cela remet l’unité ×30 en cours à zéro. Sinon le curseur actuel est conservé.")
+            .setMessage("Repositionner maintenant le curseur Itqān sur "+verse+" ? Cela remet l’unité ×"+PreviewConfig.ITQAN_TOTAL_REPS+" en cours à zéro. Sinon le curseur actuel est conservé.")
             .setNegativeButton("Garder le curseur",null)
             .setPositiveButton("Repositionner Itqān",(d,w)->{prefs.setItqanCursor(verse);prefs.setItqanProgress(0,0,null,null);prefs.setElapsedFor(HifzSessionActivity.ITQAN,0L);refreshItqan();}).show();
     }
