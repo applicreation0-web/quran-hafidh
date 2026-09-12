@@ -11,6 +11,12 @@ public final class PreviewConfig {
     public static final int MURAJAAH_MINUTES_WORKING = 60;
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
+    // Fixed, independent sessions. Minutes are never redistributed between session types.
+    public static final int SABQI_TODAY_REVIEW_MINUTES = 30;
+    public static final int WEEKDAY_MURAJAAH_MINUTES = 60;
+    public static final int WEEKEND_RECENT_REVIEW_MINUTES = 30;
+    public static final int WEEKEND_MURAJAAH_MINUTES = 30;
+
     public static final int SABQI_VISIBLE_REPS = 15;
     public static final int SABQI_25_REPS = 5;
     public static final int SABQI_50_REPS = 5;
@@ -47,6 +53,18 @@ public final class PreviewConfig {
         if (totalRecentLines <= 0) return true;
         if (reviewedLines >= totalRecentLines) return true;
         return elapsedMs >= MURAJAAH_RECENT_SABQI_MINUTES_WORKING * 60_000L;
+    }
+
+    /** Stable cyclic traversal of recent Sabqi, including the one-block case. */
+    public static int nextRecentReviewIndex(int currentIndex, int blockCount) {
+        if (blockCount <= 0) return -1;
+        return Math.floorMod(currentIndex + 1, blockCount);
+    }
+
+    /** Completion is governed only by the fixed foreground-session duration. */
+    public static boolean timedSessionComplete(long elapsedMs, int durationMinutes) {
+        if (durationMinutes <= 0) return true;
+        return elapsedMs >= durationMinutes * 60_000L;
     }
 
     public static int sabqiMaskForNextRep(int completed) {
