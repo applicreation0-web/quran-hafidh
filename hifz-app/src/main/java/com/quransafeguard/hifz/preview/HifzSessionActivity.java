@@ -140,6 +140,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         unitFirstPage = 1;
         unitLastPage = 1;
         try {
+            if (completeExpiredTimedSession()) { renderMode(); return; }
             if (SABQI.equals(mode)) renderSabqi();
             else if (SABQI_TODAY_REVIEW.equals(mode)) renderSabqiTodayReview();
             else if (ITQAN.equals(mode)) renderItqan();
@@ -336,6 +337,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
         if (recent.isEmpty()) {
+            if (completeEmptyRecentSabqiSession()) { renderMode(); return; }
             sessionCompleted = true;
             program.setText("Sabqi récent · aucun passage");
             progress.setText("Aucun ancien Itqān n’est ouvert à la place.");
@@ -368,6 +370,37 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         recentReviewIndex = PreviewConfig.nextRecentReviewIndex(recentReviewIndex, recent.size());
         prefs.setRecentSabqiReviewIndex(recentReviewIndex);
         renderMode();
+    }
+
+    /** Commit a timed session whose foreground clock reached its limit before process death. */
+    private boolean completeExpiredTimedSession() {
+        if (!isTimedMode() || !PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes())) return false;
+        String today = LocalDate.now().toString();
+        if (SABQI_TODAY_REVIEW.equals(mode)
+                && !today.equals(prefs.lastSabqiTodayReviewDate())
+                && today.equals(prefs.sabqiTodayReviewDate())) {
+            timedSessionLimitReached = true;
+            prefs.completeSabqiTodayReview(today, "Mêmes 5 lignes · 30 min");
+            closeClockForCompletedSession();
+            return true;
+        }
+        if (RECENT_SABQI_REVIEW.equals(mode)
+                && !today.equals(prefs.lastRecentSabqiReviewDate())) {
+            timedSessionLimitReached = true;
+            prefs.completeRecentSabqiReview(today, recentReviewIndex, "Sabqi récent · 30 min");
+            closeClockForCompletedSession();
+            return true;
+        }
+        return false;
+    }
+
+    /** Empty recent work is completed explicitly and never falls through to old Itqan. */
+    private boolean completeEmptyRecentSabqiSession() {
+        String today = LocalDate.now().toString();
+        if (today.equals(prefs.lastRecentSabqiReviewDate())) return false;
+        boolean ok = prefs.completeRecentSabqiReview(today, 0, "Aucun Sabqi récent");
+        if (ok) closeClockForCompletedSession();
+        return ok;
     }
 
     private void onTimedSessionLimit(long elapsed) {
