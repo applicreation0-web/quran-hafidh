@@ -6,6 +6,7 @@ on:
       - integration/hifz-test-app
       - integration/hifz-boox-final-convergence
       - integration/hifz-boox-polish-0.7
+      - release/hifz-0.7.1-official
   workflow_dispatch:
 
 permissions:
@@ -68,7 +69,6 @@ jobs:
               ('qurtubi', 'qurtubi_en.sqlite.gz.b64.part*', 432, '0106-qurtubi-hide-verse-labels-v1', 'qurtubi'),
               ('qushayri', 'qushayri_en.sqlite.gz.b64.part*', 720, '0106-qushayri-source-semantics-v1', 'qushayri'),
           ]
-          # Keep the historical Jalalayn filename exactly as shipped.
           checks[0] = ('jalalayn', 'al_jalalayn_en.sqlite.gz.part*', 6236, None, None)
           for name, pattern, expected, revision, edition_id in checks:
               parts = sorted(root.glob(pattern))
