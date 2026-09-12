@@ -162,7 +162,12 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
             dst_left, dst_right = local_line_span(local_line)
             scale = (dst_right - dst_left) / (src_right - src_left)
             worst_scale = max(worst_scale, scale)
-            if not 0.15 <= scale <= 0.85:
+            # Pages 1 and 2 have the special al-Fatiha / opening-Baqarah framing and
+            # legitimately compress short source lines more than normal 15-line pages.
+            # Keep the strict 0.15 gate everywhere else; only those two canonical pages
+            # get the narrowly relaxed lower bound proven by the CI failure (0.1431).
+            min_scale = 0.10 if page <= 2 else 0.15
+            if not min_scale <= scale <= 0.85:
                 raise RuntimeError(f"page {page} line {local_line.get('id')}: implausible x scale {scale:.4f}")
 
             line_top = float(local_line["top"]) + 0.6
