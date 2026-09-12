@@ -42,6 +42,20 @@ public final class OfficialReleaseContractTest {
         assertTrue("reader must reserve vertical safety room", index.contains("calc((100vh - 4px) * 345 / 550)"));
     }
 
+    @Test public void schemaV3SeparatesItqanWorkFromConsolidatedMurajaah() throws Exception {
+        String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+
+        assertTrue("snowball engine requires schema v3", config.contains("SCHEMA_VERSION = 3"));
+        assertTrue("v2 state needs an explicit non-destructive migration", prefs.contains("migrateV2ToV3"));
+        assertTrue("unconsolidated promoted material must be durable", prefs.contains("unconsolidatedPromotedRanges"));
+        assertTrue("historical promoted material must retain migration-time Murajaah visibility", prefs.contains("legacyMurajaahPromotedRanges"));
+        assertTrue("Itqan work corpus must include all promoted material", prefs.contains("itqanWorkCorpus()"));
+        assertTrue("Murajaah corpus must have its own consolidated view", prefs.contains("murajaahCorpus()"));
+        assertTrue("x40 validation must be able to consolidate promoted material", prefs.contains("markPromotedConsolidated"));
+        assertFalse("cycle philosophy forbids a priority promotion queue", prefs.contains("pendingPromotedItqan"));
+    }
+
     @Test public void tafsirUiAndPackagingAreCompactAndUnified() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String multi = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MultiTafsirRepository.java");
