@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  core:
+  engine-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +17,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - run: gradle --no-daemon :hifz-core:test --stacktrace
+      - run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
