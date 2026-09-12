@@ -56,6 +56,18 @@ public final class OfficialReleaseContractTest {
         assertFalse("cycle philosophy forbids a priority promotion queue", prefs.contains("pendingPromotedItqan"));
     }
 
+    @Test public void runtimeUsesIndependentFixedSessionsWithoutHiddenTransfer() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue("same-day Sabqi review must be a real runtime mode", session.contains("SABQI_TODAY_REVIEW"));
+        assertTrue("weekend recent Sabqi review must be a real runtime mode", session.contains("RECENT_SABQI_REVIEW"));
+        assertTrue("old Itqan Murajaah must use the consolidated corpus only", session.contains("murajaahCorpus()"));
+        assertTrue("Itqan must advance through the anchored cycle", session.contains("nextAnchored"));
+        assertTrue("Itqan completion must consolidate naturally encountered promoted material", session.contains("completeItqanUnitAndConsolidate"));
+        assertFalse("mixed A/B Murajaah phase must be removed", session.contains("murajaahBlockB") || session.contains("transitionToBlockB"));
+        assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
+        assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
+    }
+
     @Test public void tafsirUiAndPackagingAreCompactAndUnified() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String multi = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MultiTafsirRepository.java");
