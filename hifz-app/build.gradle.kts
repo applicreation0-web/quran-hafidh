@@ -14,6 +14,12 @@ val verifyPersonalEmbeddedAudio by tasks.registering {
         check(personalHusaryDir.resolve("114006.mp3").isFile) { "Missing embedded 114006.mp3" }
         check(personalHusaryDir.resolve("source.json").isFile) { "Missing embedded audio source.json evidence" }
         check(personalHusaryDir.resolve("sha256.txt").isFile) { "Missing embedded audio sha256.txt evidence" }
+        check(personalHusaryDir.resolve("upstream_checksum.md5").isFile) { "Missing preserved EveryAyah checksum evidence" }
+        val source = personalHusaryDir.resolve("source.json").readText()
+        check(source.contains("https://everyayah.com/data/Husary_Muallim_128kbps/")) { "Embedded audio source directory is not explicit." }
+        check(source.contains("000_checksum.md5")) { "Embedded audio checksum source is not explicit." }
+        check(source.contains("\"fileCount\": 6236")) { "Embedded audio source evidence has wrong file count." }
+        check(source.contains("\"delivery\": \"embedded-in-personal-apk\"")) { "Embedded audio delivery evidence missing." }
     }
 }
 
@@ -53,9 +59,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         val reader = file("src/main/assets/hifzreader/reader.js").readText()
         val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
         val audio = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioDialog.java").readText()
+        val mushaf = file("src/main/java/com/quransafeguard/hifz/preview/MushafView.java").readText()
+        val eink = file("src/main/java/com/quransafeguard/hifz/preview/EinkController.java").readText()
         check(config.contains("MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 30"))
         check(config.contains("MURAJAAH_ITQAN_MINUTES_WORKING = 30"))
         check(config.contains("MURAJAAH_MINUTES_WORKING = 60"))
+        check(config.contains("EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6")) { "Audio needs its own anti-ghosting cleanup cadence." }
         check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
         check(!session.contains("Stable sans aide")) { "A fault-free recent review must not trigger promotion." }
         check(!session.contains("markFirstRecentStable")) { "Recent Sabqi must stay recent until capacity pressure." }
@@ -76,6 +85,8 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(audio.indexOf("player.start()") < audio.indexOf("mushaf.setAudioVerse(verse)")) {
             "Audio highlight must switch only after playback starts."
         }
+        check(mushaf.contains("eink.audio(this)")) { "Audio highlight must use the dedicated BOOX refresh path." }
+        check(eink.contains("REGAL") && eink.contains("GU") && eink.contains("GC")) { "BOOX partial/full refresh preference missing." }
     }
 }
 
