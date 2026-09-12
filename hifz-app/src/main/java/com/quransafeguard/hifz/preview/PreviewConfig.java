@@ -34,10 +34,12 @@ public final class PreviewConfig {
     public static final double SPEED_MAX_CHANGE_RATIO = 0.10;
 
     // BOOX refresh policy. Page changes get a full GC cleanup; small changes use REGAL/GU
-    // and periodically trigger GC so audio highlighting/counters do not build up ghosting.
+    // and periodically trigger GC so counters, masks and audio outlines do not accumulate ghosting.
     public static final int EINK_FULL_CLEAN_PAGE_INTERVAL_WORKING = 1;
     public static final int EINK_LOCAL_CHANGES_BEFORE_FULL_CLEAN_WORKING = 12;
     public static final int EINK_MASK_CHANGES_BEFORE_FULL_CLEAN_WORKING = 4;
+    // Audio moves verse-by-verse and can run for long periods: clean more often than generic local UI.
+    public static final int EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6;
 
     public static int sabqiMaskForNextRep(int completed) {
         if (completed < 0 || completed >= SABQI_TOTAL_REPS) return 0;
