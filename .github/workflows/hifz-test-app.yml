@@ -64,10 +64,12 @@ jobs:
 
           root = Path('app/src/plus/assets/tafsir')
           checks = [
-              ('jalalayn', 'al_jalalayn_en.sqlite.gz.part*', 6236, None, None),
+              ('jalalayn', 'al_jalayn_en.sqlite.gz.part*', 6236, None, None),
               ('qurtubi', 'qurtubi_en.sqlite.gz.b64.part*', 432, '0106-qurtubi-hide-verse-labels-v1', 'qurtubi'),
               ('qushayri', 'qushayri_en.sqlite.gz.b64.part*', 720, '0106-qushayri-source-semantics-v1', 'qushayri'),
           ]
+          # Keep the historical Jalalayn filename exactly as shipped.
+          checks[0] = ('jalalayn', 'al_jalalayn_en.sqlite.gz.part*', 6236, None, None)
           for name, pattern, expected, revision, edition_id in checks:
               parts = sorted(root.glob(pattern))
               assert parts, f'{name}: no parts'
@@ -113,8 +115,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Run Hifz oracle and product-boundary gate
-        run: gradle --no-daemon :hifz-core:test :hifz-app:verifyHifzProductBoundary --stacktrace
+      - name: Run shared primitives, live app-engine tests and product-boundary gate
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary --stacktrace
       - name: Assemble isolated Quran Hifz TEST APK
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
       - name: Inspect packaged APK boundary corpus and signature
@@ -128,6 +130,7 @@ jobs:
           apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
           grep -q 'package="com.quransafeguard.hifz.installtest1"' hifz-app-manifest.xml
           grep -q 'Quran Hifz' hifz-app-manifest.xml
+          grep -q 'configChanges=' hifz-app-manifest.xml
           if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
           unzip -l "$apk" > hifz-app-apk-list.txt
           grep -q 'assets/reader109/geometry.json' hifz-app-apk-list.txt
@@ -156,6 +159,8 @@ jobs:
             hifz-app/build/outputs/apk/debug/*.apk
             hifz-core/build/test-results/
             hifz-core/build/reports/tests/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
             hifz-app-manifest.xml
             hifz-app-apk-list.txt
             hifz-app-signature.txt
