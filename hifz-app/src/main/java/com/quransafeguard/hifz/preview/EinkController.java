@@ -11,6 +11,7 @@ public final class EinkController {
     private int pageChangesSinceFull = 0;
     private int localChangesSinceFull = 0;
     private int maskChangesSinceFull = 0;
+    private int audioChangesSinceFull = 0;
 
     public boolean isEink(HifzPrefs prefs) {
         if (prefs.forceEink()) return true;
@@ -19,16 +20,25 @@ public final class EinkController {
     }
 
     /**
-     * Small changes (counter, audio verse outline, selection marker) prefer a BOOX partial mode.
+     * Small changes (counter, selection marker) prefer a BOOX partial mode.
      * A periodic GC cleanup prevents long sessions from accumulating ghosting.
      */
     public void local(View view) {
         if (view == null) return;
         localChangesSinceFull++;
         if (localChangesSinceFull >= PreviewConfig.EINK_LOCAL_CHANGES_BEFORE_FULL_CLEAN_WORKING) {
-            full(view);
-            localChangesSinceFull = 0;
-            maskChangesSinceFull = 0;
+            fullAndReset(view);
+            return;
+        }
+        if (!tryOnyxPartial(view)) view.invalidate();
+    }
+
+    /** Audio highlighting changes verse-by-verse for long periods, so use a stricter cleanup cadence. */
+    public void audio(View view) {
+        if (view == null) return;
+        audioChangesSinceFull++;
+        if (audioChangesSinceFull >= PreviewConfig.EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING) {
+            fullAndReset(view);
             return;
         }
         if (!tryOnyxPartial(view)) view.invalidate();
@@ -39,9 +49,7 @@ public final class EinkController {
         if (view == null) return;
         maskChangesSinceFull++;
         if (maskChangesSinceFull >= PreviewConfig.EINK_MASK_CHANGES_BEFORE_FULL_CLEAN_WORKING) {
-            full(view);
-            maskChangesSinceFull = 0;
-            localChangesSinceFull = 0;
+            fullAndReset(view);
             return;
         }
         if (!tryOnyxPartial(view)) view.invalidate();
@@ -52,10 +60,7 @@ public final class EinkController {
         if (!isEink(prefs)) { view.invalidate(); return; }
         pageChangesSinceFull++;
         if (pageChangesSinceFull >= PreviewConfig.EINK_FULL_CLEAN_PAGE_INTERVAL_WORKING) {
-            full(view);
-            pageChangesSinceFull = 0;
-            localChangesSinceFull = 0;
-            maskChangesSinceFull = 0;
+            fullAndReset(view);
         } else if (!tryOnyxPartial(view)) {
             view.invalidate();
         }
@@ -64,9 +69,19 @@ public final class EinkController {
     public void cycleCompleted(View view, HifzPrefs prefs) {
         if (view == null) return;
         if (isEink(prefs)) full(view); else view.invalidate();
+        resetCounters();
+    }
+
+    private void fullAndReset(View view) {
+        full(view);
+        resetCounters();
+    }
+
+    private void resetCounters() {
         pageChangesSinceFull = 0;
         localChangesSinceFull = 0;
         maskChangesSinceFull = 0;
+        audioChangesSinceFull = 0;
     }
 
     private void full(View view) {
