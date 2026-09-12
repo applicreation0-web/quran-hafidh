@@ -38,75 +38,89 @@ final class HifzAudioDialog {
 
     void show() {
         if (!pack.installed()) {
-            Toast.makeText(activity, "Audio Al-Husary Muʿallim non intégré à ce build.", Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "Pack audio non installé · Paramètres › Audio", Toast.LENGTH_LONG).show();
             return;
         }
         if (queue.isEmpty()) {
-            Toast.makeText(activity, "Sélectionnez d’abord un verset ou un passage.", Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "Sélectionnez un verset.", Toast.LENGTH_LONG).show();
             return;
         }
+
         dialog = new Dialog(activity);
         LinearLayout shell = Ui.column(activity);
-        shell.setPadding(Ui.dp(activity,16),Ui.dp(activity,12),Ui.dp(activity,16),Ui.dp(activity,12));
-        title = Ui.text(activity,"Audio Al-Husary Muʿallim",17,true);
-        title.setGravity(Gravity.CENTER_HORIZONTAL);shell.addView(title);
+        shell.setPadding(Ui.dp(activity, 14), Ui.dp(activity, 10), Ui.dp(activity, 14), Ui.dp(activity, 10));
+        title = Ui.bookText(activity, "Al-Husary Muʿallim", 16, true);
+        title.setGravity(Gravity.CENTER_HORIZONTAL);
+        shell.addView(title);
 
         LinearLayout row = Ui.row(activity);
-        Button previous = Ui.smallButton(activity,"← Verset",v->previous());
-        playPause = Ui.smallButton(activity,"Lire",v->toggle());
-        Button next = Ui.smallButton(activity,"Verset →",v->next());
-        Ui.weight(previous,1);Ui.weight(playPause,1);Ui.weight(next,1);
-        row.addView(previous);row.addView(playPause);row.addView(next);shell.addView(row);
+        row.setGravity(Gravity.CENTER);
+        Button previous = Ui.roundButton(activity, "‹", "Verset précédent", v -> previous());
+        playPause = Ui.roundButton(activity, "▶", "Lire / pause", v -> toggle());
+        Button next = Ui.roundButton(activity, "›", "Verset suivant", v -> next());
+        Button repeat = Ui.roundButton(activity, "↻", "Répéter le verset", v -> playCurrent(false));
+        Button close = Ui.roundButton(activity, "×", "Fermer", v -> dialog.dismiss());
+        row.addView(previous);
+        row.addView(playPause);
+        row.addView(next);
+        row.addView(repeat);
+        row.addView(close);
+        shell.addView(row);
 
-        LinearLayout second = Ui.row(activity);
-        Button repeat = Ui.smallButton(activity,"Répéter",v->playCurrent(false));
-        Button close = Ui.smallButton(activity,"Fermer",v->dialog.dismiss());
-        Ui.weight(repeat,1);Ui.weight(close,1);second.addView(repeat);second.addView(close);shell.addView(second);
-
-        TextView source = Ui.text(activity,"Source embarquée : "+pack.sourceLabel(),11,false);
-        source.setGravity(Gravity.CENTER_HORIZONTAL);shell.addView(source);
+        TextView source = Ui.text(activity, pack.sourceLabel(), 10.5f, false);
+        source.setTextColor(Ui.MUTED);
+        source.setGravity(Gravity.CENTER_HORIZONTAL);
+        shell.addView(source);
 
         dialog.setContentView(shell);
-        dialog.setOnDismissListener(d->{release();mushaf.setAudioVerse(null);});
+        dialog.setOnDismissListener(d -> { release(); mushaf.setAudioVerse(null); });
         dialog.show();
-        Window w=dialog.getWindow();
-        if(w!=null){w.setLayout(Math.min(activity.getResources().getDisplayMetrics().widthPixels-Ui.dp(activity,24),Ui.dp(activity,620)),ViewGroup.LayoutParams.WRAP_CONTENT);w.setWindowAnimations(0);}
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setLayout(
+                Math.min(activity.getResources().getDisplayMetrics().widthPixels - Ui.dp(activity, 24), Ui.dp(activity, 620)),
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setWindowAnimations(0);
+        }
         updateIdentity();
     }
 
     private void toggle() {
         if (player != null && player.isPlaying()) {
-            player.pause();paused=true;playPause.setText("Reprendre");return;
+            player.pause();
+            paused = true;
+            playPause.setText("▶");
+            return;
         }
         if (player != null && paused) {
-            player.start();paused=false;playPause.setText("Pause");
-            // Highlight remains on the paused verse; no extra E-Ink repaint on resume.
+            player.start();
+            paused = false;
+            playPause.setText("Ⅱ");
             return;
         }
         playCurrent(true);
     }
 
-    private void previous(){if(index>0){index--;playCurrent(true);}}
-    private void next(){if(index+1<queue.size()){index++;playCurrent(true);}}
+    private void previous() { if (index > 0) { index--; playCurrent(true); } }
+    private void next() { if (index + 1 < queue.size()) { index++; playCurrent(true); } }
 
     private void playCurrent(boolean allowAutoNext) {
         releasePlayerOnly();
-        paused=false;
-        VerseRef verse=queue.get(index);
-        if(!pack.hasVerse(verse)){
+        paused = false;
+        VerseRef verse = queue.get(index);
+        if (!pack.hasVerse(verse)) {
             mushaf.setAudioVerse(null);
-            Toast.makeText(activity,"Audio manquant pour "+verse,Toast.LENGTH_LONG).show();return;
+            Toast.makeText(activity, "Audio manquant · " + verse, Toast.LENGTH_LONG).show();
+            return;
         }
         try {
-            player=new MediaPlayer();
-            pack.setDataSource(player,verse);
-            player.setOnCompletionListener(done->{
+            player = new MediaPlayer();
+            pack.setDataSource(player, verse);
+            player.setOnCompletionListener(done -> {
                 releasePlayerOnly();
-                playPause.setText("Lire");
-                if(allowAutoNext && index+1<queue.size()){
+                playPause.setText("▶");
+                if (allowAutoNext && index + 1 < queue.size()) {
                     index++;
-                    // Keep the just-finished verse outlined during preparation; switch only after
-                    // the next MediaPlayer has actually started. This avoids a false early highlight.
                     playCurrent(true);
                 } else {
                     mushaf.setAudioVerse(null);
@@ -115,27 +129,29 @@ final class HifzAudioDialog {
             player.prepare();
             updateIdentity();
             player.start();
-            // Synchronization contract: verse highlight changes only after playback starts.
             mushaf.setAudioVerse(verse);
-            playPause.setText("Pause");
+            playPause.setText("Ⅱ");
         } catch (Throwable error) {
             releasePlayerOnly();
             mushaf.setAudioVerse(null);
-            String message=error.getMessage();
-            Toast.makeText(activity,"Lecture audio impossible : "+(message==null?error.getClass().getSimpleName():message),Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "Lecture audio impossible", Toast.LENGTH_LONG).show();
         }
     }
 
-    private void updateIdentity(){
-        if(title==null||queue.isEmpty())return;
-        VerseRef verse=queue.get(index);
-        title.setText("Al-Husary Muʿallim · "+verse+" · "+(index+1)+"/"+queue.size());
+    private void updateIdentity() {
+        if (title == null || queue.isEmpty()) return;
+        VerseRef verse = queue.get(index);
+        title.setText("Al-Husary Muʿallim · " + verse + " · " + (index + 1) + "/" + queue.size());
     }
 
-    private void releasePlayerOnly(){
-        if(player!=null){try{player.stop();}catch(Throwable ignored){}player.release();player=null;}
-        paused=false;
+    private void releasePlayerOnly() {
+        if (player != null) {
+            try { player.stop(); } catch (Throwable ignored) {}
+            player.release();
+            player = null;
+        }
+        paused = false;
     }
 
-    private void release(){releasePlayerOnly();}
+    private void release() { releasePlayerOnly(); }
 }
