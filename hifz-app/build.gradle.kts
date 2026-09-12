@@ -140,7 +140,8 @@ android {
 
     buildTypes {
         getByName("debug") {
-            // Stable Quran Hifz package: preserves imported audio and progress across future updates.
+            // CI produces an unprivileged, non-debuggable candidate; durable signing happens after verification.
+            isDebuggable = false
         }
         getByName("release") {
             isMinifyEnabled = false
