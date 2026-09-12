@@ -131,6 +131,10 @@ jobs:
           if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
           unzip -l "$apk" > hifz-app-apk-list.txt
           grep -q 'assets/reader109/geometry.json' hifz-app-apk-list.txt
+          if grep -Eq 'assets/audio/husary-muallim/[0-9]{6}\.mp3' hifz-app-apk-list.txt; then
+            echo 'ERROR: 0.7 durable test APK must stay lightweight; Husary audio belongs in the separate local pack.' >&2
+            exit 1
+          fi
           page_count="$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' hifz-app-apk-list.txt | wc -l | tr -d ' ')"
           test "$page_count" = 604
           jalalayn_count="$(grep -E 'assets/tafsir/al_jalalayn_en\.sqlite\.gz\.part[0-9]{2}' hifz-app-apk-list.txt | wc -l | tr -d ' ')"
@@ -142,6 +146,7 @@ jobs:
           sha256sum "$apk" | tee hifz-app-sha256.txt
           echo "APK=$apk" | tee hifz-app-build-info.txt
           echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
+          echo "AUDIO_DELIVERY=separate-local-pack" | tee -a hifz-app-build-info.txt
       - name: Upload Hifz TEST evidence
         if: always()
         uses: actions/upload-artifact@v4
