@@ -177,7 +177,7 @@ final class Ui {
     static LinearLayout settingRow(Context context, String label, String value, View.OnClickListener listener) {
         LinearLayout row = row(context);
         row.setPadding(dp(context, 2), dp(context, 5), dp(context, 2), dp(context, 5));
-        row.setMinHeight(dp(context, 48));
+        row.setMinimumHeight(dp(context, 48));
         TextView name = text(context, label, 13f, false);
         Ui.weight(name, 1f);
         name.setPadding(dp(context, 4), 0, dp(context, 6), 0);
