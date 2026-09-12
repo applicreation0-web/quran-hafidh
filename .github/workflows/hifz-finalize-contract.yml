@@ -1,4 +1,4 @@
-name: Quran Hifz one-shot finalize contracts
+name: Quran Hifz one-shot finalize build contract
 
 on:
   push:
@@ -17,41 +17,24 @@ jobs:
         with:
           ref: release/hifz-0.7.3-final
           fetch-depth: 0
-      - name: Finalize release contracts and CI
+      - name: Finalize build contract
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          def one(path,old,new):
-              p=Path(path); t=p.read_text(); n=t.count(old)
-              if n!=1: raise SystemExit(f'{path}: expected one match, got {n}: {old[:60]!r}')
-              p.write_text(t.replace(old,new,1))
-
-          g='hifz-app/build.gradle.kts'
-          one(g,
-          '''        check(reader.contains("hiddenSegmentsForLine") && reader.contains("const targetWidth=totalWidth*fraction")\n                && reader.contains("Math.min(cellWidth,remaining)") && reader.contains("segments.forEach")\n                && !reader.contains("function hiddenBandForLine")) {\n            "Mask must use width-accurate source-ink segments and must never paint one solid line slab."\n        }\n''',
-          '''        check(reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells")\n                && reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)")\n                && reader.contains("markerLayer(svg,polys)") && !reader.contains("line.words")\n                && !reader.contains("function hiddenBandForLine")) {\n            "Mask must randomize existing source-ink groups, preserve cumulative percentages, and keep verse markers above masks."\n        }\n''')
-          one(g,'        versionCode = 9\n        versionName = "0.7.2-boox"\n','        versionCode = 10\n        versionName = "0.7.3-boox"\n')
-
-          w='.github/workflows/hifz-test-app.yml'
-          one(w,'name: Quran Hifz 0.7.2 official candidate','name: Quran Hifz 0.7.3 final candidate')
-          one(w,'      - release/hifz-0.7.2-mask-hotfix\n','      - release/hifz-0.7.2-mask-hotfix\n      - release/hifz-0.7.3-final\n')
-          one(w,
-          '''          python3 scripts/verify_hifz_mask_hotfix.py\n          node scripts/test_hifz_mask_segments.js\n''',
-          '''          python3 scripts/verify_hifz_mask_hotfix.py\n          node scripts/test_hifz_mask_segments.js\n          node scripts/test_hifz_vertical_fit.js\n          test ! -e scripts/augment_hifz_word_geometry.py\n          test ! -e scripts/test_hifz_word_line_alignment.py\n          test ! -e scripts/test_hifz_word_mask.js\n          test ! -e hifz-app/src/main/assets/licenses/quran-word-coordinates-MIT.txt\n          ! grep -R -E 'mushaf-layout|Quran-coordinate|line\\.words|maskedWordIds' hifz-app/src/main scripts --exclude='*.class'\n''')
-          one(w,'test "$(apkanalyzer manifest version-code "$apk")" = "9"','test "$(apkanalyzer manifest version-code "$apk")" = "10"')
-          one(w,'test "$(apkanalyzer manifest version-name "$apk")" = "0.7.2-boox"','test "$(apkanalyzer manifest version-name "$apk")" = "0.7.3-boox"')
-          one(w,'echo "VERSION_CODE=9" | tee -a hifz-app-build-info.txt','echo "VERSION_CODE=10" | tee -a hifz-app-build-info.txt')
-          one(w,'echo "VERSION_NAME=0.7.2-boox" | tee -a hifz-app-build-info.txt','echo "VERSION_NAME=0.7.3-boox" | tee -a hifz-app-build-info.txt')
-          p=Path(w); t=p.read_text(); old='quran-hifz-0.7.2-official-unsigned-';
-          if t.count(old)!=1: raise SystemExit(f'{w}: artifact prefix count {t.count(old)}')
-          p.write_text(t.replace(old,'quran-hifz-0.7.3-final-unsigned-',1))
+          p=Path('hifz-app/build.gradle.kts'); t=p.read_text()
+          old='''        check(reader.contains("hiddenSegmentsForLine") && reader.contains("const targetWidth=totalWidth*fraction")\n                && reader.contains("Math.min(cellWidth,remaining)") && reader.contains("segments.forEach")\n                && !reader.contains("function hiddenBandForLine")) {\n            "Mask must use width-accurate source-ink segments and must never paint one solid line slab."\n        }\n'''
+          new='''        check(reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells")\n                && reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)")\n                && reader.contains("markerLayer(svg,polys)") && !reader.contains("line.words")\n                && !reader.contains("function hiddenBandForLine")) {\n            "Mask must randomize existing source-ink groups, preserve cumulative percentages, and keep verse markers above masks."\n        }\n'''
+          if t.count(old)!=1: raise SystemExit(f'mask contract count={t.count(old)}')
+          t=t.replace(old,new,1)
+          oldv='        versionCode = 9\n        versionName = "0.7.2-boox"\n'
+          if t.count(oldv)!=1: raise SystemExit(f'version count={t.count(oldv)}')
+          p.write_text(t.replace(oldv,'        versionCode = 10\n        versionName = "0.7.3-boox"\n',1))
           PY
-          rm .github/workflows/hifz-finalize-contract.yml
           git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add hifz-app/build.gradle.kts .github/workflows/hifz-test-app.yml .github/workflows/hifz-finalize-contract.yml
-          git commit -m 'release(hifz): prepare 0.7.3 final audit candidate'
+          git add hifz-app/build.gradle.kts
+          git commit -m 'release(hifz): set 0.7.3 final runtime contract'
           git push origin HEAD:release/hifz-0.7.3-final
