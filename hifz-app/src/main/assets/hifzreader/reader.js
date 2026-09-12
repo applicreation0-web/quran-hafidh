@@ -1,5 +1,5 @@
 'use strict';
-/* Quran Hifz local reader: canonical SVG, deterministic nested masks, no network. */
+/* Quran Hifz local reader: canonical SVG, deterministic random word masks, no network. */
 const N=window.HifzNative;
 const boot=window.HIFZ_BOOT||{};
 let pageGeo=boot.geometry||null;
@@ -29,52 +29,74 @@ function prepare(){
 }
 document.addEventListener('click',()=>N?.surfaceTap?.());
 
-function insideSelection(polys,x,y){
-  const svg=currentSvg();if(!svg)return false;
-  const pt=svg.createSVGPoint();pt.x=x;pt.y=y;
-  return polys.some(p=>{try{return p.isPointInFill(pt)}catch(_e){return false}});
-}
-
-function maskCandidates(lines,polys){
-  const byLine=[];
-  lines.forEach((line,li)=>{
-    const top=Number(line.top),bottom=Number(line.bottom),cells=[];
-    (line.cells||[]).forEach((cell,ci)=>{
-      const x0=Number(cell[0]),x1=Number(cell[1]);
-      if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      cells.push({line:li,index:ci,x0,x1,top,bottom});
-    });
-    cells.sort((a,b)=>a.x0-b.x0);
-    if(cells.length)byLine.push({id:String(line.id),top,bottom,cells});
-  });
-  return byLine;
-}
-
-/*
- * Exact visual percentage over the selected source-ink groups, from right to left.
- * Each source-ink group stays independent so whitespace is never painted over.
- * The last group may be clipped so 25/50/75/100 reflect the actual masked ink width.
- */
-function hiddenSegmentsForLine(line,percent){
-  const fraction=Math.max(0,Math.min(1,Number(percent)/100));
-  if(!fraction||!line.cells||!line.cells.length)return [];
-  const cells=[...line.cells].sort((a,b)=>b.x1-a.x1);
-  const totalWidth=cells.reduce((sum,cell)=>sum+Math.max(0,cell.x1-cell.x0),0);
-  if(!totalWidth)return [];
-  const targetWidth=totalWidth*fraction;
-  let remaining=targetWidth;
-  const y=line.top+0.6;
-  const height=Math.max(0,(line.bottom-line.top)-1.2);
-  const segments=[];
-  for(const cell of cells){
-    if(remaining<=0.0001)break;
-    const cellWidth=Math.max(0,cell.x1-cell.x0);
-    if(!cellWidth)continue;
-    const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({x:cell.x1-hiddenWidth,y,width:hiddenWidth,height});
-    remaining-=hiddenWidth;
+function hash32(text){
+  let h=2166136261>>>0;
+  for(let i=0;i<text.length;i++){
+    h^=text.charCodeAt(i);
+    h=Math.imul(h,16777619)>>>0;
   }
-  return segments;
+  return h>>>0;
+}
+function nextRandom(state){
+  let x=state>>>0;
+  x^=x<<13;x^=x>>>17;x^=x<<5;
+  return x>>>0;
+}
+function canonicalWords(words){
+  const unique=new Map();
+  (words||[]).forEach(word=>{
+    if(word&&word.kind!=='marker'&&word.id&&!unique.has(String(word.id))) unique.set(String(word.id),word);
+  });
+  return [...unique.values()].sort((a,b)=>String(a.id)<String(b.id)?-1:String(a.id)>String(b.id)?1:0);
+}
+function shuffledWords(words,seed){
+  const out=canonicalWords(words);
+  let state=hash32(String(seed||'hifz-word-mask'))||0x9e3779b9;
+  for(let i=out.length-1;i>0;i--){
+    state=nextRandom(state);
+    const j=state%(i+1);
+    const tmp=out[i];out[i]=out[j];out[j]=tmp;
+  }
+  return out;
+}
+function maskedWordIds(words,percent,seed){
+  const ordered=shuffledWords(words,seed);
+  const p=Math.max(0,Math.min(100,Number(percent)||0));
+  if(!ordered.length||p<=0)return [];
+  let count=Math.round(ordered.length*p/100);
+  if(count<1)count=1;
+  if(p>=100)count=ordered.length;
+  return ordered.slice(0,Math.min(count,ordered.length)).map(word=>String(word.id));
+}
+function eligibleWordsForMask(geometry,selection,lines){
+  if(!geometry)return [];
+  const wantedLines=new Set((lines||[]).map(String));
+  const wantedVerses=new Set((selection||[]).map(String));
+  if(!wantedLines.size||!wantedVerses.size)return [];
+  const out=[];
+  (geometry.lines||[]).forEach(line=>{
+    if(!wantedLines.has(String(line.id)))return;
+    (line.words||[]).forEach(word=>{
+      if(word&&word.kind!=='marker'&&wantedVerses.has(String(word.verse)))out.push(word);
+    });
+  });
+  return canonicalWords(out);
+}
+function maskBoxesForPage(geometry,maskedIds){
+  if(!geometry)return [];
+  const wanted=maskedIds instanceof Set?maskedIds:new Set((maskedIds||[]).map(String));
+  const out=[];
+  (geometry.lines||[]).forEach(line=>(line.words||[]).forEach(word=>{
+    if(!word||word.kind==='marker'||!wanted.has(String(word.id)))return;
+    const x=Number(word.x),y=Number(word.y),w=Number(word.w),h=Number(word.h);
+    if(!(w>0&&h>0)&&Number.isFinite(x)&&Number.isFinite(y))return;
+    if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0)return;
+    out.push({id:String(word.id),x,y,w,h});
+  }));
+  return out;
+}
+function maskSeed(){
+  return selected.join(',')+'|'+lineIds.join(',');
 }
 
 function markerLayer(svg,polys){
@@ -88,7 +110,7 @@ function markerLayer(svg,polys){
     const full=inv.multiply(ctm),b=m.getBBox();
     const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
     const c=pt.matrixTransform(full);
-    if(!insideSelection(polys,c.x,c.y))return;
+    if(!polys.some(p=>{try{return p.isPointInFill(c)}catch(_e){return false}}))return;
     const wrap=document.createElementNS(NS,'g');
     wrap.setAttribute('transform',`matrix(${full.a} ${full.b} ${full.c} ${full.d} ${full.e} ${full.f})`);
     [...m.childNodes].forEach(n=>wrap.appendChild(n.cloneNode(true)));
@@ -106,31 +128,25 @@ function render(){
   });
   svg.querySelectorAll('.masklayer').forEach(n=>n.remove());
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
-  if(!clamped||!pageGeo||!lineIds.length)return;
-  const wanted=new Set(lineIds.map(String));
-  const lines=(pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)));if(!lines.length)return;
-  const polys=selectedPolygons(svg),byLine=maskCandidates(lines,polys);if(!byLine.length)return;
+  if(!clamped||!pageGeo||!lineIds.length||!selected.length)return;
+
+  const words=eligibleWordsForMask(pageGeo,selected,lineIds);
+  if(!words.length)return;
+  const hidden=new Set(maskedWordIds(words,clamped,maskSeed()));
+  const boxes=maskBoxesForPage(pageGeo,hidden);
+  if(!boxes.length)return;
 
   const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
-  const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
-  clip.id='hifz-selection-clip';
-  polys.forEach(p=>{const q=p.cloneNode(false);q.removeAttribute('class');q.removeAttribute('style');clip.appendChild(q)});
-  defs.appendChild(clip);layer.appendChild(defs);
-  const group=document.createElementNS(NS,'g');
-  if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
-
-  byLine.forEach(line=>{
-    const segments=hiddenSegmentsForLine(line,clamped);
-    segments.forEach(segment=>{
-      const el=document.createElementNS(NS,'rect');
-      el.setAttribute('class','maskcell');
-      el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-      el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-      el.setAttribute('rx','2');el.setAttribute('ry','2');
-      group.appendChild(el);
-    });
+  boxes.forEach(box=>{
+    const inset=Math.min(.35,box.w*.025);
+    const el=document.createElementNS(NS,'rect');
+    el.setAttribute('class','maskcell');
+    el.setAttribute('x',box.x+inset);el.setAttribute('y',box.y);
+    el.setAttribute('width',Math.max(.5,box.w-inset*2));el.setAttribute('height',box.h);
+    el.setAttribute('rx','2');el.setAttribute('ry','2');
+    layer.appendChild(el);
   });
-  layer.appendChild(group);
+  const polys=selectedPolygons(svg);
   if(polys.length)layer.appendChild(markerLayer(svg,polys));
   svg.appendChild(layer);
 }
@@ -171,6 +187,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={hiddenSegmentsForLine};
+if(typeof module!=='undefined'&&module.exports)module.exports={maskedWordIds,eligibleWordsForMask,maskBoxesForPage};
 prepare();
 N?.ready();
