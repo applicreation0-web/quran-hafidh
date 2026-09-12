@@ -76,8 +76,8 @@ final class WeeklyDashboardPlanner {
                     unit=new GeometryRepository.VerseUnit(geometry.pageForVerse(savedStart),savedStart,savedEnd,
                         geometry.versesForRange(savedStart,savedEnd),geometry.lineIdsForVerseRange(savedStart,savedEnd));
                 }else unit=geometry.eligiblePageUnit(itqanCursor,corpus);
-                String state=rep>=PreviewConfig.ITQAN_TOTAL_REPS?"✓ À valider":rep>0?"En cours "+(rep+1)+"/30":"À faire";
-                out.add(new Row(date,day(date),"Itqān ×30 · "+range(unit.start,unit.end),"—",state));
+                String state=rep>=PreviewConfig.ITQAN_TOTAL_REPS?"✓ À valider":rep>0?"En cours "+(rep+1)+"/"+PreviewConfig.ITQAN_TOTAL_REPS:"À faire";
+                out.add(new Row(date,day(date),"Itqān ×"+PreviewConfig.ITQAN_TOTAL_REPS+" · "+range(unit.start,unit.end),"—",state));
                 itqanCursor=corpus.next(unit.end);
             }else{
                 String recentRange=recentRange(projectedRecent);
