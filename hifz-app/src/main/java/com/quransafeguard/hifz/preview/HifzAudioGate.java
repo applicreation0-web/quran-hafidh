@@ -31,13 +31,16 @@ public final class HifzAudioGate {
         }
     }
 
-    public boolean available() { return localPack.installed(); }
+    /** The control remains visible even before the local pack has been imported. */
+    public boolean available() { return true; }
+
+    public boolean installed() { return localPack.installed(); }
 
     public String status() {
         if (localPack.installed()) {
-            return "Audio embarqué disponible · " + localPack.installedFileCount() + " versets · " + localPack.sourceLabel();
+            return "Al-Husary Muʿallim · " + localPack.installedFileCount() + " versets · hors ligne";
         }
-        return "Audio non embarqué dans ce build personnel";
+        return "Pack audio à installer";
     }
 
     private static String read(Context context) throws Exception {
