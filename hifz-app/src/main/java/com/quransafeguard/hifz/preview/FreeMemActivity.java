@@ -53,15 +53,15 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         counter = Ui.text(this,"Répétitions · "+count,12,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
         LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
-        Button decrement=Ui.iconButton(this,"−","Retirer",v->{if(count>0)count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
+        Button decrement=Ui.iconButton(this,"−","Retirer",v->{if(count>0)count--;save();counter.setText("Répétitions · "+count);refreshMaskDraw();});
         Ui.setButtonIcon(decrement,R.drawable.ic_ui_remove);reps.addView(decrement);
-        reps.addView(Ui.iconButton(this,"+","Ajouter",v->{count++;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();}));
-        reps.addView(Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();counter.setText("Répétitions · 0");mushaf.localCounterChanged();}));
+        reps.addView(Ui.iconButton(this,"+","Ajouter",v->{count++;save();counter.setText("Répétitions · "+count);refreshMaskDraw();}));
+        reps.addView(Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();counter.setText("Répétitions · 0");refreshMaskDraw();}));
         root.addView(reps);
 
         LinearLayout masks=Ui.row(this);masks.setGravity(Gravity.CENTER);
         for(int value:new int[]{0,25,50,75,100}){
-            Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
+            Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask, maskDrawKey());updateSelectionLabel();updateMaskButtons();});
             b.setTag(value);maskButtons.add(b);Ui.weight(b,1);masks.addView(b);
         }
         root.addView(masks);
@@ -82,6 +82,12 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         catch (RuntimeException ignored) { return null; }
     }
 
+    private String maskDrawKey(){return "FREE|page:"+page+"|rep:"+count;}
+    private void refreshMaskDraw(){
+        if(start!=null&&end!=null)mushaf.setMask(mask, maskDrawKey());
+        else mushaf.localCounterChanged();
+    }
+
     private void go(int d){
         closeAudio();
         page=Math.max(1,Math.min(604,page+d));
@@ -89,7 +95,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         save();
         counter.setText("Répétitions · 0");
         updateSelectionLabel();updateMaskButtons();
-        mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
+        mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0,maskDrawKey());
         title.setText("Mémorisation libre · "+page+" / 604");
     }
 
@@ -128,14 +134,14 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         else if(start.equals(end)){if(GeometryRepository.ordinal(verse)<GeometryRepository.ordinal(start)){end=start;start=verse;}else end=verse;}
         else {start=end=verse;count=0;counter.setText("Répétitions · 0");}
         List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
-        mushaf.setSelection(refs,lines);mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();save();
+        mushaf.setSelection(refs,lines);mushaf.setMask(mask, maskDrawKey());updateSelectionLabel();updateMaskButtons();save();
     }
     @Override public void onPageSwipe(int delta){go(delta);}
     @Override public void onReady(){
         if(start!=null&&end!=null){
             List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
-            mushaf.show(page,refs,lines,mask);
-        } else mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
+            mushaf.show(page,refs,lines,mask,maskDrawKey());
+        } else mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0,maskDrawKey());
     }
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int shown){page=shown;title.setText("Mémorisation libre · "+shown+" / 604");}
