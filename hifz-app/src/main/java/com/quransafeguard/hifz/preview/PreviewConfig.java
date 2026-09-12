@@ -18,12 +18,13 @@ public final class PreviewConfig {
     public static final int SABQI_100_REPS = 7;
     public static final int SABQI_TOTAL_REPS = 37;
 
-    public static final int ITQAN_VISIBLE_REPS_WORKING = 10;
+    // Itqan ×40: strengthen both initial exposure and final unaided recall.
+    public static final int ITQAN_VISIBLE_REPS_WORKING = 15;
     public static final int ITQAN_25_REPS_WORKING = 5;
     public static final int ITQAN_50_REPS_WORKING = 5;
     public static final int ITQAN_75_REPS_WORKING = 5;
-    public static final int ITQAN_100_REPS_WORKING = 5;
-    public static final int ITQAN_TOTAL_REPS = 30;
+    public static final int ITQAN_100_REPS_WORKING = 10;
+    public static final int ITQAN_TOTAL_REPS = 40;
 
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
     public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
