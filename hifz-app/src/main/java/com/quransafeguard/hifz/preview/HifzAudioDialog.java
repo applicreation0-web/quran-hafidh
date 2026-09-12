@@ -28,6 +28,7 @@ final class HifzAudioDialog {
     private Button playPause;
     private int index;
     private boolean paused;
+    private boolean preparing;
 
     HifzAudioDialog(Activity activity, MushafView mushaf, List<VerseRef> verses) {
         this.activity = activity;
@@ -46,6 +47,7 @@ final class HifzAudioDialog {
             return;
         }
 
+        close();
         dialog = new Dialog(activity);
         LinearLayout shell = Ui.column(activity);
         shell.setPadding(Ui.dp(activity, 14), Ui.dp(activity, 10), Ui.dp(activity, 14), Ui.dp(activity, 10));
@@ -59,7 +61,7 @@ final class HifzAudioDialog {
         playPause = Ui.roundButton(activity, "▶", "Lire / pause", v -> toggle());
         Button next = Ui.roundButton(activity, "›", "Verset suivant", v -> next());
         Button repeat = Ui.roundButton(activity, "↻", "Répéter le verset", v -> playCurrent(false));
-        Button close = Ui.roundButton(activity, "×", "Fermer", v -> dialog.dismiss());
+        Button close = Ui.roundButton(activity, "×", "Fermer", v -> close());
         row.addView(previous);
         row.addView(playPause);
         row.addView(next);
@@ -73,7 +75,11 @@ final class HifzAudioDialog {
         shell.addView(source);
 
         dialog.setContentView(shell);
-        dialog.setOnDismissListener(d -> { release(); mushaf.setAudioVerse(null); });
+        dialog.setOnDismissListener(d -> {
+            releasePlayerOnly();
+            mushaf.setAudioVerse(null);
+            dialog = null;
+        });
         dialog.show();
         Window w = dialog.getWindow();
         if (w != null) {
@@ -85,7 +91,18 @@ final class HifzAudioDialog {
         updateIdentity();
     }
 
+    void close() {
+        Dialog current = dialog;
+        dialog = null;
+        if (current != null && current.isShowing()) {
+            try { current.dismiss(); } catch (Throwable ignored) {}
+        }
+        releasePlayerOnly();
+        mushaf.setAudioVerse(null);
+    }
+
     private void toggle() {
+        if (preparing) return;
         if (player != null && player.isPlaying()) {
             player.pause();
             paused = true;
@@ -114,11 +131,30 @@ final class HifzAudioDialog {
             return;
         }
         try {
-            player = new MediaPlayer();
-            pack.setDataSource(player, verse);
-            player.setOnCompletionListener(done -> {
+            final MediaPlayer candidate = new MediaPlayer();
+            player = candidate;
+            preparing = true;
+            if (playPause != null) playPause.setEnabled(false);
+            pack.setDataSource(candidate, verse);
+            candidate.setOnPreparedListener(ready -> {
+                if (player != candidate) return;
+                preparing = false;
+                if (playPause != null) playPause.setEnabled(true);
+                updateIdentity();
+                try {
+                    player.start();
+                    mushaf.setAudioVerse(verse);
+                    playPause.setText("Ⅱ");
+                } catch (Throwable error) {
+                    releasePlayerOnly();
+                    mushaf.setAudioVerse(null);
+                    Toast.makeText(activity, "Lecture audio impossible", Toast.LENGTH_LONG).show();
+                }
+            });
+            candidate.setOnCompletionListener(done -> {
+                if (player != candidate) return;
                 releasePlayerOnly();
-                playPause.setText("▶");
+                if (playPause != null) playPause.setText("▶");
                 if (allowAutoNext && index + 1 < queue.size()) {
                     index++;
                     playCurrent(true);
@@ -126,11 +162,15 @@ final class HifzAudioDialog {
                     mushaf.setAudioVerse(null);
                 }
             });
-            player.prepare();
-            updateIdentity();
-            player.start();
-            mushaf.setAudioVerse(verse);
-            playPause.setText("Ⅱ");
+            candidate.setOnErrorListener((failed, what, extra) -> {
+                if (player == candidate) {
+                    releasePlayerOnly();
+                    mushaf.setAudioVerse(null);
+                    Toast.makeText(activity, "Lecture audio impossible", Toast.LENGTH_LONG).show();
+                }
+                return true;
+            });
+            candidate.prepareAsync();
         } catch (Throwable error) {
             releasePlayerOnly();
             mushaf.setAudioVerse(null);
@@ -145,13 +185,17 @@ final class HifzAudioDialog {
     }
 
     private void releasePlayerOnly() {
-        if (player != null) {
-            try { player.stop(); } catch (Throwable ignored) {}
-            player.release();
-            player = null;
+        preparing = false;
+        if (playPause != null) playPause.setEnabled(true);
+        MediaPlayer current = player;
+        player = null;
+        if (current != null) {
+            try { current.setOnPreparedListener(null); } catch (Throwable ignored) {}
+            try { current.setOnCompletionListener(null); } catch (Throwable ignored) {}
+            try { current.setOnErrorListener(null); } catch (Throwable ignored) {}
+            try { current.stop(); } catch (Throwable ignored) {}
+            try { current.release(); } catch (Throwable ignored) {}
         }
         paused = false;
     }
-
-    private void release() { releasePlayerOnly(); }
 }
