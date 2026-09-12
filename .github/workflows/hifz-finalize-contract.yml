@@ -44,7 +44,9 @@ jobs:
           one(w,'test "$(apkanalyzer manifest version-name "$apk")" = "0.7.2-boox"','test "$(apkanalyzer manifest version-name "$apk")" = "0.7.3-boox"')
           one(w,'echo "VERSION_CODE=9" | tee -a hifz-app-build-info.txt','echo "VERSION_CODE=10" | tee -a hifz-app-build-info.txt')
           one(w,'echo "VERSION_NAME=0.7.2-boox" | tee -a hifz-app-build-info.txt','echo "VERSION_NAME=0.7.3-boox" | tee -a hifz-app-build-info.txt')
-          one(w,'name: quran-hifz-0.7.2-official-unsigned-${{ github.sha }}','name: quran-hifz-0.7.3-final-unsigned-${{ github.sha }}')
+          p=Path(w); t=p.read_text(); old='quran-hifz-0.7.2-official-unsigned-';
+          if t.count(old)!=1: raise SystemExit(f'{w}: artifact prefix count {t.count(old)}')
+          p.write_text(t.replace(old,'quran-hifz-0.7.3-final-unsigned-',1))
           PY
           rm .github/workflows/hifz-finalize-contract.yml
           git diff --check
