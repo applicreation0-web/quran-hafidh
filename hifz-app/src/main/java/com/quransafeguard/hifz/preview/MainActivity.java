@@ -50,31 +50,34 @@ public final class MainActivity extends android.app.Activity {
         holder.addView(root, new FrameLayout.LayoutParams(
             contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
 
-        TextView title = Ui.bookText(this, "Quran Hifz", 29, true);
+        TextView title = Ui.bookText(this, "Quran Hifz", 28, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
-        title.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 12));
+        title.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 10));
         root.addView(title);
 
-        LinearLayout todayPanel = Ui.column(this);
-        todayPanel.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
-        Ui.panel(todayPanel);
+        todayAction = Ui.column(this);
+        todayAction.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
+        Ui.panel(todayAction);
+        todayAction.setClickable(true);
+        todayAction.setFocusable(true);
+        todayAction.setEnabled(false);
+        todayAction.setContentDescription("Ouvrir la séance du jour");
+        todayAction.setOnClickListener(v -> openToday());
         TextView todayCaption = Ui.text(this, "Aujourd’hui", 10.5f, false);
         todayCaption.setTextColor(Ui.MUTED);
-        todayPanel.addView(todayCaption);
+        todayAction.addView(todayCaption);
         today = Ui.bookText(this, "…", 16, true);
         today.setPadding(0, Ui.dp(this, 2), 0, 0);
-        todayPanel.addView(today);
-        root.addView(todayPanel);
+        todayAction.addView(today);
+        root.addView(todayAction);
 
+        // The Today card is the session launcher. Keep only the three global destinations here.
         LinearLayout primary = Ui.row(this);
         primary.setGravity(Gravity.CENTER);
         primary.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
-        todayAction = Ui.cardAction(this, "▶", "Séance", v -> openToday());
-        todayAction.setEnabled(false);
-        LinearLayout study = Ui.cardAction(this, "▤", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout free = Ui.cardAction(this, "M", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
-        LinearLayout settings = Ui.cardAction(this, "⚙", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
-        addWeighted(primary, todayAction, 1f);
+        LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
+        LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
         addWeighted(primary, study, 1f);
         addWeighted(primary, free, 1f);
         addWeighted(primary, settings, 1f);
@@ -93,9 +96,9 @@ public final class MainActivity extends android.app.Activity {
         root.addView(directTitle);
         LinearLayout direct = Ui.row(this);
         direct.setGravity(Gravity.CENTER);
-        LinearLayout sabqi = Ui.modeCard(this, "✦", "Sabqi", v -> openMode(HifzSessionActivity.SABQI));
-        LinearLayout itqan = Ui.modeCard(this, "▤", "Itqān", v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout murajaah = Ui.modeCard(this, "↻", "Murājaʿah", v -> openMode(HifzSessionActivity.MURAJAAH));
+        LinearLayout sabqi = Ui.modeCard(this, "", "Sabqi", v -> openMode(HifzSessionActivity.SABQI));
+        LinearLayout itqan = Ui.modeCard(this, "", "Itqān", v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout murajaah = Ui.modeCard(this, "", "Murājaʿah", v -> openMode(HifzSessionActivity.MURAJAAH));
         addWeighted(direct, sabqi, 1f);
         addWeighted(direct, itqan, 1f);
         addWeighted(direct, murajaah, 1f);
