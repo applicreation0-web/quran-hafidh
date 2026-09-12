@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.quransafeguard.hifz.core.EligibleCorpus;
+import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -56,6 +57,8 @@ public final class HifzPrefs {
                 .putString("sabqiEnd", "2:286")
                 .putString("itqanRanges", defaultItqanRangesJson())
                 .putString("promotedRanges", "[]")
+                .putString("unconsolidatedPromotedRanges", "[]")
+                .putString("legacyMurajaahPromotedRanges", "[]")
                 .putString("itqanRotationStart", "49:1")
                 .putString("itqanCursor", "49:1")
                 .putString("murajaahCursor", "49:1")
@@ -85,11 +88,15 @@ public final class HifzPrefs {
                 .putString("lastItqanLabel", "")
                 .putString("lastMurajaahDate", "")
                 .putString("lastMurajaahLabel", "");
-            e.apply();
+            if (!e.commit()) throw new IllegalStateException("Unable to initialize Hifz schema");
             return;
         }
         if (schema == 1) {
             migrateV1ToV2();
+            schema = 2;
+        }
+        if (schema == 2) {
+            migrateV2ToV3();
             return;
         }
         if (schema != PreviewConfig.SCHEMA_VERSION) {
@@ -116,8 +123,22 @@ public final class HifzPrefs {
             .putInt("murajaahRecentLinesDone", p.getInt("murajaahRecentLinesDone", 0))
             .putLong("murajaahBlockAElapsedMs", p.getLong("murajaahBlockAElapsedMs", 0L))
             .putLong("murajaahBlockBElapsedMs", p.getLong("murajaahBlockBElapsedMs", 0L))
-            .putInt("schema", PreviewConfig.SCHEMA_VERSION);
-        e.commit();
+            .putInt("schema", 2);
+        if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v1 to v2");
+    }
+
+    /**
+     * Schema v3 introduces snowball consolidation state without moving any existing cursor.
+     * Existing promoted ranges stay visible to Murajaah for migration compatibility, but are
+     * also marked unconsolidated so their next natural-cycle Itqan encounter performs a real ×40.
+     */
+    private void migrateV2ToV3() {
+        String historical = p.getString("promotedRanges", "[]");
+        SharedPreferences.Editor e = p.edit()
+            .putString("unconsolidatedPromotedRanges", historical == null ? "[]" : historical)
+            .putString("legacyMurajaahPromotedRanges", historical == null ? "[]" : historical)
+            .putInt("schema", 3);
+        if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v2 to v3");
     }
 
     private void migrateLegacyGates(Context context) {
@@ -143,7 +164,7 @@ public final class HifzPrefs {
     public LocalDate programStartDate() { return LocalDate.parse(required("programStartDate")); }
     public void setProgramStartDate(LocalDate value) { p.edit().putString("programStartDate", value.toString()).apply(); }
 
-    // Legacy diagnostics retained for migration visibility; corpus() below is authoritative in schema v2.
+    // Legacy diagnostics retained for migration visibility; schema v3 corpus APIs below are authoritative.
     public VerseRef lowerBound() { return safeRef(p.getString("lowerBound", "2:1"), new VerseRef(2,1)); }
     public VerseRef promotedFrontier() { return safeRef(p.getString("promotedFrontier", "2:74"), new VerseRef(2,74)); }
     public VerseRef upperTailStart() { return safeRef(p.getString("upperTailStart", "49:1"), new VerseRef(49,1)); }
@@ -156,6 +177,8 @@ public final class HifzPrefs {
 
     public List<VerseRange> itqanRanges() { return parseRanges("itqanRanges"); }
     public List<VerseRange> promotedRanges() { return parseRangesAllowEmpty("promotedRanges"); }
+    public List<VerseRange> unconsolidatedPromotedRanges() { return parseRangesAllowEmpty("unconsolidatedPromotedRanges"); }
+    public List<VerseRange> legacyMurajaahPromotedRanges() { return parseRangesAllowEmpty("legacyMurajaahPromotedRanges"); }
 
     public boolean setItqanRanges(List<VerseRange> ranges) {
         if (ranges == null || ranges.isEmpty()) return false;
@@ -171,15 +194,34 @@ public final class HifzPrefs {
     public void setItqanCursor(VerseRef value) { putRef("itqanCursor", value); }
     public void setMurajaahCursor(VerseRef value) { putRef("murajaahCursor", value); }
 
-    public EligibleCorpus corpus() {
+    /** All base Itqan plus every snowball promotion, irrespective of consolidation status. */
+    public EligibleCorpus itqanWorkCorpus() {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(promotedRanges());
         return EligibleCorpus.Companion.of(all);
     }
 
-    public boolean isItqanCursorValid() { try { return corpus().contains(itqanCursor()); } catch (RuntimeException e) { return false; } }
-    public boolean isMurajaahCursorValid() { try { return corpus().contains(murajaahCursor()); } catch (RuntimeException e) { return false; } }
-    public boolean isRotationStartValid() { try { return corpus().contains(itqanRotationStart()); } catch (RuntimeException e) { return false; } }
+    /** Compatibility alias while the runtime migration is staged. */
+    public EligibleCorpus corpus() { return itqanWorkCorpus(); }
+
+    /**
+     * Murajaah sees base Itqan, all already-consolidated promotions, and historical promoted
+     * ranges retained during v2->v3 migration. Fresh unconsolidated promotions stay hidden.
+     */
+    public EligibleCorpus murajaahCorpus() {
+        ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
+        all.addAll(legacyMurajaahPromotedRanges());
+        List<VerseRange> consolidated = new ArrayList<>(promotedRanges());
+        for (VerseRange pending : unconsolidatedPromotedRanges()) {
+            consolidated = subtractCoverage(consolidated, pending.getStart(), pending.getEndInclusive());
+        }
+        all.addAll(consolidated);
+        return EligibleCorpus.Companion.of(all);
+    }
+
+    public boolean isItqanCursorValid() { try { return itqanWorkCorpus().contains(itqanCursor()); } catch (RuntimeException e) { return false; } }
+    public boolean isMurajaahCursorValid() { try { return murajaahCorpus().contains(murajaahCursor()); } catch (RuntimeException e) { return false; } }
+    public boolean isRotationStartValid() { try { return itqanWorkCorpus().contains(itqanRotationStart()); } catch (RuntimeException e) { return false; } }
 
     public int sabqiLineCursor() { return p.getInt("sabqiLineCursor", -1); }
     public void setSabqiLineCursor(int value) { p.edit().putInt("sabqiLineCursor", value).apply(); }
@@ -189,7 +231,7 @@ public final class HifzPrefs {
         return p.edit().putInt("sabqiRep", rep).putInt("sabqiAssisted", assisted).commit();
     }
 
-    /** Sabqi completion queues the five-line block; promotion is deliberately deferred to recent review. */
+    /** Sabqi completion queues the five-line block; promotion is deliberately deferred to recent-window pressure. */
     public boolean completeSabqiBlock(int startLine, int endLine, int nextLineCursor, String date, String label) {
         List<RecentSabqi> queue = recentSabqi();
         queue.add(new RecentSabqi(startLine, endLine));
@@ -204,7 +246,7 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /** Compatibility overload: the promotion argument is intentionally ignored in schema v2. */
+    /** Compatibility overload: promotion is handled by the sliding-window rebalance. */
     public boolean completeSabqiBlock(int startLine, int endLine, VerseRef ignoredPromotion,
                                       int nextLineCursor, String date, String label) {
         return completeSabqiBlock(startLine, endLine, nextLineCursor, date, label);
@@ -353,32 +395,42 @@ public final class HifzPrefs {
         return mergeIntervals(out);
     }
 
+    /**
+     * Idempotently grows the Itqan snowball. Only verses not already promoted are added to the
+     * unconsolidated set, so a restart/recalculation can never re-open a completed ×40 passage.
+     */
     public boolean addPromotedVerses(List<VerseRef> verses) {
         if (verses == null || verses.isEmpty()) return true;
-        ArrayList<VerseRef> ordered = new ArrayList<>(verses);
-        ordered.sort(Comparator.comparingInt(GeometryRepository::ordinal));
-        ArrayList<VerseRange> additions = new ArrayList<>();
-        VerseRef start = ordered.get(0);
-        VerseRef previous = start;
-        for (int i = 1; i < ordered.size(); i++) {
-            VerseRef current = ordered.get(i);
-            if (GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1) {
-                previous = current;
-            } else {
-                additions.add(new VerseRange(start, previous));
-                start = previous = current;
-            }
-        }
-        additions.add(new VerseRange(start, previous));
+        ArrayList<VerseRef> fresh = new ArrayList<>();
+        for (VerseRef verse : verses) if (!isPromoted(verse)) fresh.add(verse);
+        if (fresh.isEmpty()) return true;
+        fresh.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        List<VerseRange> additions = rangesFromVerses(fresh);
+
         ArrayList<VerseRange> all = new ArrayList<>(promotedRanges());
         all.addAll(additions);
-        List<VerseRange> normalized = normalizeRanges(all);
-        return p.edit().putString("promotedRanges", rangesJson(normalized)).commit();
+        ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
+        pending.addAll(additions);
+        return p.edit()
+            .putString("promotedRanges", rangesJson(normalizeRanges(all)))
+            .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
+            .commit();
     }
 
     public boolean isPromoted(VerseRef verse) {
         for (VerseRange range : promotedRanges()) if (range.contains(verse)) return true;
         return false;
+    }
+
+    public boolean isUnconsolidatedPromoted(VerseRef verse) {
+        for (VerseRange range : unconsolidatedPromotedRanges()) if (range.contains(verse)) return true;
+        return false;
+    }
+
+    /** Mark only the completed overlap consolidated; unrelated pending promotions remain queued in-place. */
+    public boolean markPromotedConsolidated(VerseRef start, VerseRef endInclusive) {
+        List<VerseRange> next = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
+        return p.edit().putString("unconsolidatedPromotedRanges", rangesJson(next)).commit();
     }
 
     private void saveRecent(List<RecentSabqi> queue) {
@@ -423,6 +475,46 @@ public final class HifzPrefs {
     private static List<VerseRange> normalizeRanges(List<VerseRange> ranges) {
         if (ranges == null || ranges.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(EligibleCorpus.Companion.of(ranges).getRanges());
+    }
+
+    private static List<VerseRange> rangesFromVerses(List<VerseRef> orderedVerses) {
+        ArrayList<VerseRange> additions = new ArrayList<>();
+        if (orderedVerses.isEmpty()) return additions;
+        VerseRef start = orderedVerses.get(0);
+        VerseRef previous = start;
+        for (int i = 1; i < orderedVerses.size(); i++) {
+            VerseRef current = orderedVerses.get(i);
+            if (GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1) {
+                previous = current;
+            } else {
+                additions.add(new VerseRange(start, previous));
+                start = previous = current;
+            }
+        }
+        additions.add(new VerseRange(start, previous));
+        return additions;
+    }
+
+    private static List<VerseRange> subtractCoverage(List<VerseRange> source, VerseRef cutStart, VerseRef cutEndInclusive) {
+        int cutA = GeometryRepository.ordinal(cutStart);
+        int cutB = GeometryRepository.ordinal(cutEndInclusive);
+        if (cutB < cutA) { int swap = cutA; cutA = cutB; cutB = swap; }
+        ArrayList<VerseRange> out = new ArrayList<>();
+        for (VerseRange range : source) {
+            int a = GeometryRepository.ordinal(range.getStart());
+            int b = GeometryRepository.ordinal(range.getEndInclusive());
+            if (cutB < a || cutA > b) {
+                out.add(range);
+                continue;
+            }
+            if (a < cutA) {
+                out.add(new VerseRange(range.getStart(), QuranCanon.INSTANCE.fromOrdinal(cutA - 1)));
+            }
+            if (cutB < b) {
+                out.add(new VerseRange(QuranCanon.INSTANCE.fromOrdinal(cutB + 1), range.getEndInclusive()));
+            }
+        }
+        return normalizeRanges(out);
     }
 
     private static String defaultItqanRangesJson() {
