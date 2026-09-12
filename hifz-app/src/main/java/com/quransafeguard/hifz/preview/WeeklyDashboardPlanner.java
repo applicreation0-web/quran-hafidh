@@ -11,7 +11,6 @@ import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /** Read-only weekly projection. It never writes or moves a Hifz cursor. */
 final class WeeklyDashboardPlanner {
@@ -63,24 +62,35 @@ final class WeeklyDashboardPlanner {
                 GeometryRepository.FiveLineBlock b=safeSabqi(sabqiCursor);
                 if(b==null){out.add(new Row(date,day(date),"Sabqi · plage à vérifier","—","À vérifier"));continue;}
                 String range=range(b.startVerse,b.endVerse)+(b.endsInsideVerse?" · fin partielle":"");
-                String state=date.equals(today)&&prefs.sabqiRep()>0?"En cours "+(prefs.sabqiRep()+1)+"/37":"À faire";
+                int rep=date.equals(today)?prefs.sabqiRep():0;
+                String state=rep>=PreviewConfig.SABQI_TOTAL_REPS?"✓ À valider":rep>0?"En cours "+(rep+1)+"/37":"À faire";
                 out.add(new Row(date,day(date),"Sabqi · "+range,"Révision courte · "+range,state));
                 projectedRecent.add(new HifzPrefs.RecentSabqi(b.startLineIndex,b.endLineIndex));
                 sabqiCursor=b.endLineIndex+1;
             }else if(scheduled.getType()==SessionType.ITQAN){
                 if(!corpus.contains(itqanCursor)){out.add(new Row(date,day(date),"Itqān · curseur hors corpus","—","À vérifier"));continue;}
-                GeometryRepository.VerseUnit unit=geometry.eligiblePageUnit(itqanCursor,corpus);
-                String state=date.equals(today)&&prefs.itqanRep()>0?"En cours "+(prefs.itqanRep()+1)+"/30":"À faire";
+                GeometryRepository.VerseUnit unit;
+                int rep=date.equals(today)?prefs.itqanRep():0;
+                VerseRef savedStart=date.equals(today)?prefs.itqanUnitStart():null,savedEnd=date.equals(today)?prefs.itqanUnitEnd():null;
+                if(rep>0&&savedStart!=null&&savedEnd!=null){
+                    unit=new GeometryRepository.VerseUnit(geometry.pageForVerse(savedStart),savedStart,savedEnd,
+                        geometry.versesForRange(savedStart,savedEnd),geometry.lineIdsForVerseRange(savedStart,savedEnd));
+                }else unit=geometry.eligiblePageUnit(itqanCursor,corpus);
+                String state=rep>=PreviewConfig.ITQAN_TOTAL_REPS?"✓ À valider":rep>0?"En cours "+(rep+1)+"/30":"À faire";
                 out.add(new Row(date,day(date),"Itqān ×30 · "+range(unit.start,unit.end),"—",state));
                 itqanCursor=corpus.next(unit.end);
             }else{
                 String recentRange=recentRange(projectedRecent);
-                int lines=(int)Math.floor((PreviewConfig.MURAJAAH_ITQAN_MINUTES_WORKING*60.0)/prefs.murajaahSecondsPerLine());
-                lines=Math.max(1,lines);
+                int recentLines=recentLineCount(projectedRecent);
+                double secondsA=Math.min(PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60.0,
+                    recentLines*prefs.recentSecondsPerLine());
+                double availableBSeconds=PreviewConfig.MURAJAAH_ITQAN_MINUTES_WORKING*60.0+
+                    Math.max(0.0,PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING*60.0-secondsA);
+                int lines=(int)Math.floor(availableBSeconds/prefs.murajaahSecondsPerLine());lines=Math.max(1,lines);
                 String old;
                 if(corpus.contains(murajaahCursor)){
                     GeometryRepository.EligibleLinePlan plan=geometry.planEligibleLines(murajaahCursor,lines,corpus);
-                    old=range(plan.start,plan.actualPlannedEnd);
+                    old=range(plan.start,plan.actualPlannedEnd)+" · ~"+Math.round(availableBSeconds/60.0)+" min";
                     murajaahCursor=corpus.next(plan.actualPlannedEnd);
                 }else old="curseur à repositionner";
                 String morning="Murājaʿah A · "+(recentRange.isEmpty()?"aucun Sabqi récent":recentRange);
@@ -103,6 +113,10 @@ final class WeeklyDashboardPlanner {
             if(cursor+PreviewConfig.SABQI_LINES-1>geometry.lastLineIndex(prefs.sabqiEnd()))return null;
             return geometry.fiveLineBlock(cursor);
         }catch(RuntimeException e){return null;}
+    }
+
+    private int recentLineCount(List<HifzPrefs.RecentSabqi> recent){
+        int count=0;for(HifzPrefs.RecentSabqi item:recent)count+=Math.max(0,item.endLine-item.startLine+1);return count;
     }
 
     private String recentRange(List<HifzPrefs.RecentSabqi> recent){
