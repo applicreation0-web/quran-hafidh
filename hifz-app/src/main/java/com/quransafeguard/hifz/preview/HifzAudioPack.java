@@ -129,9 +129,17 @@ final class HifzAudioPack {
         File parent = dir.getParentFile();
         if (parent == null) return new ImportResult(false, 0, "Dossier audio interne indisponible.");
         if (!parent.exists() && !parent.mkdirs()) return new ImportResult(false, 0, "Impossible de créer le dossier audio interne.");
+        if (!parent.isDirectory() || !parent.canWrite()) return new ImportResult(false, 0, "Dossier audio interne non accessible en écriture.");
+
+        // Keep a stable staging directory and clear its contents instead of requiring the directory
+        // itself to be deleted. Some Android/BOOX file systems can keep the directory entry alive
+        // briefly after a large failed import; mkdirs() would then return false even though the
+        // existing empty directory is perfectly reusable.
         File staging = new File(parent, "husary-muallim.importing");
-        deleteRecursive(staging);
-        if (!staging.mkdirs()) return new ImportResult(false, 0, "Impossible de préparer l’import audio.");
+        if (!prepareEmptyDirectory(staging)) {
+            return new ImportResult(false, 0,
+                "Impossible de préparer l’import audio. Fermez Quran Hifz, rouvrez-le puis réessayez.");
+        }
 
         Set<String> copiedNames = new HashSet<>();
         ContentResolver resolver = context.getContentResolver();
@@ -153,7 +161,9 @@ final class HifzAudioPack {
                     File target = new File(staging, name);
                     try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(target))) {
                         int n;
-                        while ((n = zip.read(buffer)) >= 0) out.write(buffer, 0, n);
+                        while ((n = zip.read(buffer)) != -1) {
+                            if (n > 0) out.write(buffer, 0, n);
+                        }
                     }
                     if (target.length() <= 0) throw new IllegalStateException("Fichier vide : " + name);
                     zip.closeEntry();
@@ -161,7 +171,7 @@ final class HifzAudioPack {
             }
 
             if (copiedNames.size() != EXPECTED_VERSE_FILES || !hasAllCanonicalFiles(staging)) {
-                deleteRecursive(staging);
+                clearDirectory(staging);
                 return new ImportResult(false, copiedNames.size(),
                     "Pack incomplet : " + copiedNames.size() + " / " + EXPECTED_VERSE_FILES + " versets canoniques trouvés.");
             }
@@ -172,16 +182,16 @@ final class HifzAudioPack {
 
             deleteRecursive(dir);
             if (!staging.renameTo(dir)) {
-                if (!dir.mkdirs()) throw new IllegalStateException("Impossible d’activer le pack importé");
+                if (!dir.mkdirs() && !dir.isDirectory()) throw new IllegalStateException("Impossible d’activer le pack importé");
                 File[] files = staging.listFiles();
                 if (files == null) throw new IllegalStateException("Pack importé illisible");
                 for (File source : files) copyFile(source, new File(dir, source.getName()));
-                deleteRecursive(staging);
+                clearDirectory(staging);
             }
             return new ImportResult(true, EXPECTED_VERSE_FILES,
                 "✓ 6 236 / 6 236 versets vérifiés · Al-Husary Muʿallim · audio hors ligne prêt.");
         } catch (Throwable error) {
-            deleteRecursive(staging);
+            clearDirectory(staging);
             String message = error.getMessage();
             return new ImportResult(false, copiedNames.size(),
                 "Import audio impossible : " + (message == null ? error.getClass().getSimpleName() : message));
@@ -301,7 +311,9 @@ final class HifzAudioPack {
         try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
             byte[] buffer = new byte[128 * 1024];
             int n;
-            while ((n = in.read(buffer)) >= 0) digest.update(buffer, 0, n);
+            while ((n = in.read(buffer)) != -1) {
+                if (n > 0) digest.update(buffer, 0, n);
+            }
         }
         StringBuilder hex = new StringBuilder(64);
         for (byte b : digest.digest()) hex.append(String.format(Locale.ROOT, "%02x", b & 0xff));
@@ -324,7 +336,9 @@ final class HifzAudioPack {
              BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(target))) {
             byte[] buffer = new byte[64 * 1024];
             int n;
-            while ((n = in.read(buffer)) >= 0) out.write(buffer, 0, n);
+            while ((n = in.read(buffer)) != -1) {
+                if (n > 0) out.write(buffer, 0, n);
+            }
         }
     }
 
@@ -332,8 +346,29 @@ final class HifzAudioPack {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         int n;
-        while ((n = input.read(buffer)) >= 0) out.write(buffer, 0, n);
+        while ((n = input.read(buffer)) != -1) {
+            if (n > 0) out.write(buffer, 0, n);
+        }
         return new String(out.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    private static boolean prepareEmptyDirectory(File folder) {
+        if (folder.exists()) {
+            if (!folder.isDirectory()) {
+                if (!folder.delete()) return false;
+            } else {
+                clearDirectory(folder);
+                File[] remaining = folder.listFiles();
+                return remaining != null && remaining.length == 0;
+            }
+        }
+        return folder.mkdirs() || folder.isDirectory();
+    }
+
+    private static void clearDirectory(File folder) {
+        if (folder == null || !folder.isDirectory()) return;
+        File[] children = folder.listFiles();
+        if (children != null) for (File child : children) deleteRecursive(child);
     }
 
     private static void deleteRecursive(File file) {
