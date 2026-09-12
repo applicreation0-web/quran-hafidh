@@ -3,8 +3,8 @@ package com.quransafeguard.hifz.preview;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -26,106 +26,238 @@ public final class MainActivity extends android.app.Activity {
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
     private TextView today;
-    private Button todayButton;
+    private LinearLayout todayAction;
     private LinearLayout dashboard;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
-        super.onCreate(state);prefs=new HifzPrefs(this);ledger=new DashboardLedger(this);
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
-        FrameLayout holder=new FrameLayout(this);holder.setBackgroundColor(Ui.PAPER);scroll.addView(holder,new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
-        LinearLayout root=Ui.column(this);int side=Ui.dp(this,18),bottom=Ui.dp(this,24);root.setPadding(side,side,side,bottom);
-        int screen=getResources().getDisplayMetrics().widthPixels;int contentWidth=Math.max(Ui.dp(this,300),Math.min(screen-Ui.dp(this,18),Ui.dp(this,900)));
-        holder.addView(root,new FrameLayout.LayoutParams(contentWidth,ViewGroup.LayoutParams.WRAP_CONTENT,Gravity.TOP|Gravity.CENTER_HORIZONTAL));
+        super.onCreate(state);
+        prefs = new HifzPrefs(this);
+        ledger = new DashboardLedger(this);
 
-        TextView title=Ui.text(this,"Quran Hifz",28,true);title.setGravity(Gravity.CENTER_HORIZONTAL);root.addView(title);
-        TextView subtitle=Ui.text(this,"BOOX Go 10.3 Gen II · offline · données locales",13,false);subtitle.setGravity(Gravity.CENTER_HORIZONTAL);subtitle.setPadding(0,Ui.dp(this,2),0,Ui.dp(this,12));root.addView(subtitle);
-        today=Ui.text(this,"Initialisation locale du parcours…",16,true);today.setGravity(Gravity.CENTER_HORIZONTAL);today.setPadding(0,0,0,Ui.dp(this,8));root.addView(today);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        FrameLayout holder = new FrameLayout(this);
+        holder.setBackgroundColor(Ui.PAPER);
+        scroll.addView(holder, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        LinearLayout primary=Ui.row(this);primary.setGravity(Gravity.CENTER);
-        LinearLayout todayAction=Ui.roundAction(this,"▶","Séance",v->openToday());todayButton=(Button)todayAction.getChildAt(0);todayButton.setEnabled(false);
-        LinearLayout study=Ui.roundAction(this,"◫","Lecture",v->startActivity(new Intent(this,StudyReaderActivity.class)));
-        LinearLayout free=Ui.roundAction(this,"M","Mémoriser",v->startActivity(new Intent(this,FreeMemActivity.class)));
-        LinearLayout settings=Ui.roundAction(this,"⚙","Paramètres",v->startActivity(new Intent(this,SettingsActivity.class)));
-        primary.addView(todayAction);primary.addView(study);primary.addView(free);primary.addView(settings);root.addView(primary);
+        LinearLayout root = Ui.column(this);
+        int side = Ui.dp(this, 18), bottom = Ui.dp(this, 24);
+        root.setPadding(side, Ui.dp(this, 12), side, bottom);
+        int screen = getResources().getDisplayMetrics().widthPixels;
+        int contentWidth = Math.max(Ui.dp(this, 300), Math.min(screen - Ui.dp(this, 18), Ui.dp(this, 900)));
+        holder.addView(root, new FrameLayout.LayoutParams(
+            contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
 
-        TextView dashTitle=Ui.text(this,"Semaine",18,true);dashTitle.setPadding(0,Ui.dp(this,16),0,Ui.dp(this,5));root.addView(dashTitle);
-        dashboard=Ui.column(this);dashboard.setPadding(0,0,0,0);root.addView(dashboard);
+        TextView title = Ui.bookText(this, "Quran Hifz", 29, true);
+        title.setGravity(Gravity.CENTER_HORIZONTAL);
+        title.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 12));
+        root.addView(title);
 
-        TextView directTitle=Ui.text(this,"Accès direct",15,true);directTitle.setPadding(0,Ui.dp(this,16),0,Ui.dp(this,3));root.addView(directTitle);
-        LinearLayout direct=Ui.row(this);direct.setGravity(Gravity.CENTER);
-        direct.addView(Ui.roundAction(this,"S","Sabqi",v->openMode(HifzSessionActivity.SABQI)));
-        direct.addView(Ui.roundAction(this,"I","Itqān",v->openMode(HifzSessionActivity.ITQAN)));
-        direct.addView(Ui.roundAction(this,"R","Murājaʿah",v->openMode(HifzSessionActivity.MURAJAAH)));
+        LinearLayout todayPanel = Ui.column(this);
+        todayPanel.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 10));
+        Ui.panel(todayPanel);
+        TextView todayCaption = Ui.text(this, "Aujourd’hui", 10.5f, false);
+        todayCaption.setTextColor(Ui.MUTED);
+        todayPanel.addView(todayCaption);
+        today = Ui.bookText(this, "…", 16, true);
+        today.setPadding(0, Ui.dp(this, 2), 0, 0);
+        todayPanel.addView(today);
+        root.addView(todayPanel);
+
+        LinearLayout primary = Ui.row(this);
+        primary.setGravity(Gravity.CENTER);
+        primary.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
+        todayAction = Ui.cardAction(this, "▶", "Séance", v -> openToday());
+        todayAction.setEnabled(false);
+        LinearLayout study = Ui.cardAction(this, "▤", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
+        LinearLayout free = Ui.cardAction(this, "M", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        LinearLayout settings = Ui.cardAction(this, "⚙", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
+        addWeighted(primary, todayAction, 1f);
+        addWeighted(primary, study, 1f);
+        addWeighted(primary, free, 1f);
+        addWeighted(primary, settings, 1f);
+        root.addView(primary);
+
+        TextView dashTitle = Ui.bookText(this, "Semaine", 20, true);
+        dashTitle.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 6));
+        root.addView(dashTitle);
+        dashboard = Ui.column(this);
+        dashboard.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 8), Ui.dp(this, 6));
+        Ui.panel(dashboard);
+        root.addView(dashboard);
+
+        TextView directTitle = Ui.bookText(this, "Accès rapide", 17, true);
+        directTitle.setPadding(0, Ui.dp(this, 16), 0, Ui.dp(this, 5));
+        root.addView(directTitle);
+        LinearLayout direct = Ui.row(this);
+        direct.setGravity(Gravity.CENTER);
+        LinearLayout sabqi = Ui.modeCard(this, "✦", "Sabqi", v -> openMode(HifzSessionActivity.SABQI));
+        LinearLayout itqan = Ui.modeCard(this, "▤", "Itqān", v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout murajaah = Ui.modeCard(this, "↻", "Murājaʿah", v -> openMode(HifzSessionActivity.MURAJAAH));
+        addWeighted(direct, sabqi, 1f);
+        addWeighted(direct, itqan, 1f);
+        addWeighted(direct, murajaah, 1f);
         root.addView(direct);
 
-        setContentView(scroll);Ui.respectSystemBars(this,holder,0,0,0,0);
-        localLoader.execute(()->{
-            try{GeometryRepository loaded=GeometryRepository.get(getApplicationContext());geometry=loaded;runOnUiThread(()->{todayButton.setEnabled(true);ledger.capture(prefs);refreshAll();});}
-            catch(Throwable error){runOnUiThread(()->{today.setText("Géométrie locale indisponible");todayButton.setEnabled(false);});}
+        setContentView(scroll);
+        Ui.respectSystemBars(this, holder, 0, 0, 0, 0);
+
+        localLoader.execute(() -> {
+            try {
+                GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
+                geometry = loaded;
+                runOnUiThread(() -> {
+                    todayAction.setEnabled(true);
+                    ledger.capture(prefs);
+                    refreshAll();
+                });
+            } catch (Throwable error) {
+                runOnUiThread(() -> {
+                    today.setText("Parcours indisponible");
+                    todayAction.setEnabled(false);
+                });
+            }
         });
     }
 
-    @Override protected void onResume(){
-        super.onResume();prefs=new HifzPrefs(this);if(ledger==null)ledger=new DashboardLedger(this);ledger.capture(prefs);if(today!=null&&geometry!=null)refreshAll();
+    @Override protected void onResume() {
+        super.onResume();
+        prefs = new HifzPrefs(this);
+        if (ledger == null) ledger = new DashboardLedger(this);
+        ledger.capture(prefs);
+        if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll(){refreshToday();refreshDashboard();}
+    private void refreshAll() { refreshToday(); refreshDashboard(); }
 
-    private void openMode(String mode){startActivity(new Intent(this,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode));}
-    private void openToday(){
-        LocalDate date=LocalDate.now();ScheduledSession scheduled=HifzSchedule.INSTANCE.scheduled(date,prefs.programStartDate(),date);if(scheduled==null)return;
-        switch(scheduled.getType()){case SABQI:openMode(HifzSessionActivity.SABQI);break;case ITQAN:openMode(HifzSessionActivity.ITQAN);break;case MURAJAAH:openMode(HifzSessionActivity.MURAJAAH);break;default:throw new IllegalStateException("Unsupported Hifz session type: "+scheduled.getType());}
+    private void openMode(String mode) {
+        startActivity(new Intent(this, HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE, mode));
     }
 
-    private void refreshToday(){
-        GeometryRepository g=geometry;if(g==null){today.setText("Initialisation locale du parcours…");return;}
-        LocalDate date=LocalDate.now();ScheduledSession scheduled=HifzSchedule.INSTANCE.scheduled(date,prefs.programStartDate(),date);
-        if(scheduled==null){today.setText("Aujourd’hui · parcours structuré non démarré");todayButton.setEnabled(false);return;}
-        String detail;
-        try{
-            SessionType kind=scheduled.getType();
-            switch(kind){
-                case SABQI:{
-                    int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
-                    if(cursor<g.firstLineIndex(prefs.sabqiStart())||cursor>g.lastLineIndex(prefs.sabqiEnd()))detail="Sabqi · curseur à repositionner";
-                    else{GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);int rep=prefs.sabqiRep();String state=rep>=PreviewConfig.SABQI_TOTAL_REPS?"✓ prêt à valider":rep>0?"reprise "+(rep+1)+"/37":"37 répétitions";detail="Sabqi · "+range(b.startVerse,b.endVerse)+" · "+state;}break;
-                }
-                case ITQAN:{
-                    if(!prefs.isItqanCursorValid()){detail="Itqān · curseur hors des plages";break;}
-                    int rep=prefs.itqanRep();VerseRef start=prefs.itqanUnitStart(),end=prefs.itqanUnitEnd();
-                    if(rep>0&&start!=null&&end!=null){String state=rep>=PreviewConfig.ITQAN_TOTAL_REPS?"✓ prêt à valider":"reprise "+(rep+1)+"/30";detail="Itqān · "+range(start,end)+" · "+state;}
-                    else{GeometryRepository.VerseUnit u=g.eligiblePageUnit(prefs.itqanCursor(),prefs.corpus());detail="Itqān · "+range(u.start,u.end)+" · ×30";}break;
-                }
-                case MURAJAAH:{detail="Murājaʿah · Bloc "+prefs.murajaahPhase()+" · "+prefs.recentSabqi().size()+" bloc(s) Sabqi récent";break;}
-                default:throw new IllegalStateException("Unsupported Hifz session type: "+kind);
-            }
-        }catch(RuntimeException error){detail="Parcours à vérifier · "+(error.getMessage()==null?error.getClass().getSimpleName():error.getMessage());}
-        today.setText("Aujourd’hui · "+detail);todayButton.setEnabled(true);
-    }
-
-    private void refreshDashboard(){
-        if(dashboard==null||geometry==null)return;
-        dashboard.removeAllViews();
-        LinearLayout header=Ui.row(this);header.setPadding(0,Ui.dp(this,2),0,Ui.dp(this,4));
-        addCell(header,"Jour",0.45f,true);addCell(header,"Matin",2.2f,true);addCell(header,"Soir",2.2f,true);addCell(header,"État",0.9f,true);dashboard.addView(header);
-        List<WeeklyDashboardPlanner.Row> rows=new WeeklyDashboardPlanner(prefs,geometry,ledger).week(LocalDate.now());
-        for(WeeklyDashboardPlanner.Row item:rows){
-            LinearLayout row=Ui.row(this);row.setPadding(0,Ui.dp(this,4),0,Ui.dp(this,4));
-            addCell(row,item.day,0.45f,true);addCell(row,item.morning,2.2f,false);addCell(row,item.evening,2.2f,false);addCell(row,item.state,0.9f,false);dashboard.addView(row);
+    private void openToday() {
+        LocalDate date = LocalDate.now();
+        ScheduledSession scheduled = HifzSchedule.INSTANCE.scheduled(date, prefs.programStartDate(), date);
+        if (scheduled == null) return;
+        switch (scheduled.getType()) {
+            case SABQI: openMode(HifzSessionActivity.SABQI); break;
+            case ITQAN: openMode(HifzSessionActivity.ITQAN); break;
+            case MURAJAAH: openMode(HifzSessionActivity.MURAJAAH); break;
+            default: throw new IllegalStateException("Unsupported Hifz session type: " + scheduled.getType());
         }
-        TextView note=Ui.text(this,"Passages futurs = projection locale depuis les curseurs réels, sans déplacement. ✓ n’apparaît qu’après validation enregistrée.",11,false);note.setPadding(0,Ui.dp(this,5),0,0);dashboard.addView(note);
     }
 
-    private void addCell(LinearLayout row,String value,float weight,boolean bold){
-        TextView cell=Ui.text(this,value,11.5f,bold);cell.setPadding(Ui.dp(this,4),Ui.dp(this,2),Ui.dp(this,4),Ui.dp(this,2));
-        cell.setLayoutParams(new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,weight));row.addView(cell);
+    private void refreshToday() {
+        GeometryRepository g = geometry;
+        if (g == null) { today.setText("…"); return; }
+        LocalDate date = LocalDate.now();
+        ScheduledSession scheduled = HifzSchedule.INSTANCE.scheduled(date, prefs.programStartDate(), date);
+        if (scheduled == null) {
+            today.setText("Parcours non démarré");
+            todayAction.setEnabled(false);
+            return;
+        }
+        String detail;
+        try {
+            SessionType kind = scheduled.getType();
+            switch (kind) {
+                case SABQI: {
+                    int cursor = prefs.sabqiLineCursor();
+                    if (cursor < 0) cursor = g.firstLineIndex(prefs.sabqiStart());
+                    if (cursor < g.firstLineIndex(prefs.sabqiStart()) || cursor > g.lastLineIndex(prefs.sabqiEnd())) {
+                        detail = "Sabqi · à repositionner";
+                    } else {
+                        GeometryRepository.FiveLineBlock b = g.fiveLineBlock(cursor);
+                        int rep = prefs.sabqiRep();
+                        String state = rep >= PreviewConfig.SABQI_TOTAL_REPS ? "prêt à valider" : rep > 0 ? (rep + 1) + "/37" : "37 répétitions";
+                        detail = "Sabqi · " + shortRange(b.startVerse, b.endVerse) + " · " + state;
+                    }
+                    break;
+                }
+                case ITQAN: {
+                    if (!prefs.isItqanCursorValid()) { detail = "Itqān · à repositionner"; break; }
+                    int rep = prefs.itqanRep();
+                    VerseRef start = prefs.itqanUnitStart(), end = prefs.itqanUnitEnd();
+                    if (rep > 0 && start != null && end != null) {
+                        String state = rep >= PreviewConfig.ITQAN_TOTAL_REPS ? "prêt à valider" : (rep + 1) + "/30";
+                        detail = "Itqān · " + shortRange(start, end) + " · " + state;
+                    } else {
+                        GeometryRepository.VerseUnit u = g.eligiblePageUnit(prefs.itqanCursor(), prefs.corpus());
+                        detail = "Itqān · " + shortRange(u.start, u.end) + " · ×30";
+                    }
+                    break;
+                }
+                case MURAJAAH:
+                    detail = "Murājaʿah · Bloc " + prefs.murajaahPhase();
+                    break;
+                default:
+                    throw new IllegalStateException("Unsupported Hifz session type: " + kind);
+            }
+        } catch (RuntimeException error) {
+            detail = "Parcours à vérifier";
+        }
+        today.setText(detail);
+        todayAction.setEnabled(true);
     }
 
-    private static String range(VerseRef a,VerseRef b){
-        if(a.getSurah()==b.getSurah())return "Sourate "+a.getSurah()+" · v."+a.getAyah()+"–"+b.getAyah();
-        return "Sourate "+a.getSurah()+" v."+a.getAyah()+" → "+b.getSurah()+":"+b.getAyah();
+    private void refreshDashboard() {
+        if (dashboard == null || geometry == null) return;
+        dashboard.removeAllViews();
+        LinearLayout header = Ui.row(this);
+        header.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 3));
+        addCell(header, "Jour", 0.62f, true, true);
+        addCell(header, "Matin", 2.05f, true, false);
+        addCell(header, "Soir", 2.05f, true, false);
+        addCell(header, "État", 1.05f, true, false);
+        dashboard.addView(header);
+
+        List<WeeklyDashboardPlanner.Row> rows = new WeeklyDashboardPlanner(prefs, geometry, ledger).week(LocalDate.now());
+        for (WeeklyDashboardPlanner.Row item : rows) {
+            LinearLayout row = Ui.row(this);
+            row.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
+            addCell(row, item.day, 0.62f, true, true);
+            addCell(row, compactSession(item.morning), 2.05f, false, false);
+            addCell(row, compactSession(item.evening), 2.05f, false, false);
+            addCell(row, compactState(item.state), 1.05f, false, false);
+            dashboard.addView(row);
+        }
     }
 
-    @Override protected void onDestroy(){localLoader.shutdownNow();super.onDestroy();}
+    private void addCell(LinearLayout row, String value, float weight, boolean bold, boolean singleLine) {
+        TextView cell = Ui.text(this, value, 11.2f, bold);
+        cell.setPadding(Ui.dp(this, 4), Ui.dp(this, 2), Ui.dp(this, 4), Ui.dp(this, 2));
+        cell.setSingleLine(singleLine);
+        cell.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight));
+        row.addView(cell);
+    }
+
+    private void addWeighted(LinearLayout row, View view, float weight) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight);
+        int gap = Ui.dp(this, 3);
+        lp.setMargins(gap, gap, gap, gap);
+        row.addView(view, lp);
+    }
+
+    private static String compactState(String state) {
+        if (state == null || state.trim().isEmpty()) return "—";
+        if (state.contains("Parcours non démarré")) return "—";
+        if (state.startsWith("En cours")) return "En cours";
+        return state;
+    }
+
+    private static String compactSession(String value) {
+        if (value == null || value.trim().isEmpty()) return "—";
+        return value.replace("Sourate ", "S.").replace("v.", "");
+    }
+
+    private static String shortRange(VerseRef a, VerseRef b) {
+        if (a.getSurah() == b.getSurah()) return a.getSurah() + ":" + a.getAyah() + "–" + b.getAyah();
+        return a.getSurah() + ":" + a.getAyah() + " → " + b.getSurah() + ":" + b.getAyah();
+    }
+
+    @Override protected void onDestroy() {
+        localLoader.shutdownNow();
+        super.onDestroy();
+    }
 }
