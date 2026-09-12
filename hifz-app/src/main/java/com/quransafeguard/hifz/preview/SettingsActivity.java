@@ -75,7 +75,7 @@ public final class SettingsActivity extends android.app.Activity {
         audioStatus=Ui.settingValue(audioSetting);root.addView(audioSetting);
 
         section(root,"Affichage");
-        LinearLayout einkRow=Ui.row(this);einkRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));einkRow.setMinHeight(Ui.dp(this,48));
+        LinearLayout einkRow=Ui.row(this);einkRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));einkRow.setMinimumHeight(Ui.dp(this,48));
         TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",13f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
         Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);root.addView(einkRow);
 
@@ -119,7 +119,7 @@ public final class SettingsActivity extends android.app.Activity {
     private void refreshRanges(){
         rangesBox.removeAllViews();List<VerseRange> ranges=prefs.itqanRanges();
         for(int i=0;i<ranges.size();i++){
-            final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinHeight(Ui.dp(this,46));
+            final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinimumHeight(Ui.dp(this,46));
             TextView label=Ui.text(this,"Plage "+(i+1),12.5f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
             TextView value=Ui.text(this,range.getStart()+" → "+range.getEndInclusive(),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
             row.addView(Ui.iconButton(this,"","Modifier la plage",v->chooseRange(range,index)));
