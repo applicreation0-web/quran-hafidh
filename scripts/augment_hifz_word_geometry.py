@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-"""Attach pinned linguistic-word boxes to the exact local Hifz geometry.
+"""Attach linguistic-word mask boxes to the exact local Hifz geometry.
 
-The public coordinate corpus is used only at build time from one pinned commit.
-Runtime remains offline and the canonical KFQC SVG pages are never modified.
+Two pinned build-time inputs are deliberately separated:
 
-Upstream words expose natural physical text-line Y bands. Those source lines are
-matched monotonically to the already-verified local Quran lines by verse overlap and
-rank. The local Hifz geometry remains authoritative: an occasional extra local band is
-skipped, while an occasional detector-merged local band may receive two adjacent
-source lines. Relative word geometry is transferred only into the matched local band.
+* Quran-coordinate supplies only per-word highlight widths. Its page breaks are not
+  trusted because they differ from the QPC V2 Mushaf used by Quran Hifz.
+* mushaf-layout supplies QPC V2 page/line/word order. This is the authoritative
+  physical line layout for placing those words onto the existing local SVG geometry.
+
+Runtime remains fully offline. The canonical 604 SVG pages and the already-verified
+Hifz line geometry are never rewritten; this script only adds a `words` list to each
+existing local line.
 """
 from __future__ import annotations
 
 import io
 import json
 import math
-import statistics
 import tarfile
 import urllib.request
 from pathlib import Path
@@ -23,32 +24,37 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY = ROOT / "app/src/main/assets/reader109/geometry.json"
 REPORT = ROOT / "geometry-report.json"
-SOURCE_REPO = "bodoorzahera/Quran-coordinate"
-SOURCE_COMMIT = "ed24b7fbf60a052ac58e694d5728ab4c4d59f96d"
-SOURCE_URL = f"https://codeload.github.com/{SOURCE_REPO}/tar.gz/{SOURCE_COMMIT}"
-SOURCE_WIDTH = 900.0
-SOURCE_HEIGHT = 1437.0
+
+COORD_REPO = "bodoorzahera/Quran-coordinate"
+COORD_COMMIT = "ed24b7fbf60a052ac58e694d5728ab4c4d59f96d"
+COORD_URL = f"https://codeload.github.com/{COORD_REPO}/tar.gz/{COORD_COMMIT}"
+COORD_WIDTH = 900.0
+COORD_HEIGHT = 1437.0
+
+LAYOUT_REPO = "zonetecde/mushaf-layout"
+LAYOUT_COMMIT = "72116ce4d405d67823804f0eed795c1e6409b4af"
+LAYOUT_URL = f"https://codeload.github.com/{LAYOUT_REPO}/tar.gz/{LAYOUT_COMMIT}"
+
 EXPECTED_PAGES = 604
 EXPECTED_WORDS = 77320
-SOURCE_LINE_Y_TOLERANCE = 6.0
 
 
-def download_archive() -> bytes:
-    request = urllib.request.Request(SOURCE_URL, headers={"User-Agent": "Quran-Hifz-build/0.7.3"})
+def download_archive(url: str, label: str, minimum_size: int) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": "Quran-Hifz-build/0.7.3"})
     last = None
     for _ in range(3):
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with urllib.request.urlopen(request, timeout=90) as response:
                 payload = response.read()
-            if len(payload) < 1_000_000:
-                raise RuntimeError(f"coordinate archive unexpectedly small: {len(payload)} bytes")
+            if len(payload) < minimum_size:
+                raise RuntimeError(f"{label} archive unexpectedly small: {len(payload)} bytes")
             return payload
         except Exception as exc:  # pragma: no cover
             last = exc
-    raise RuntimeError(f"cannot fetch pinned Quran word coordinates: {last}")
+    raise RuntimeError(f"cannot fetch pinned {label}: {last}")
 
 
-def page_sources(payload: bytes) -> dict[int, dict]:
+def coordinate_pages(payload: bytes) -> dict[int, dict]:
     result: dict[int, dict] = {}
     with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
         for member in archive.getmembers():
@@ -70,52 +76,83 @@ def page_sources(payload: bytes) -> dict[int, dict]:
     return result
 
 
-def parsed_words(page: int, source: dict) -> list[dict]:
-    coords = source.get("coords", {})
-    if not isinstance(coords, dict) or not coords:
-        raise RuntimeError(f"page {page}: invalid/empty coordinate payload")
-    words: list[dict] = []
-    for word_id, coord in coords.items():
-        parts = word_id.split(":")
-        if len(parts) != 3 or not all(part.isdigit() for part in parts):
-            raise RuntimeError(f"page {page}: invalid word id {word_id!r}")
-        box = coord.get("h")
-        if not isinstance(box, dict):
-            raise RuntimeError(f"page {page} word {word_id}: missing highlight box")
-        x, y, w, h = (float(box[key]) for key in ("x", "y", "w", "h"))
-        if not all(math.isfinite(value) for value in (x, y, w, h)) or w <= 0 or h <= 0:
-            raise RuntimeError(f"page {page} word {word_id}: invalid highlight box")
-        if x < -1 or y < -1 or x + w > SOURCE_WIDTH + 1 or y + h > SOURCE_HEIGHT + 1:
-            raise RuntimeError(f"page {page} word {word_id}: source box outside 900x1437 page")
-        words.append({
-            "id": word_id,
-            "verse": f"{int(parts[0])}:{int(parts[1])}",
-            "ordinal": tuple(map(int, parts)),
-            "x0": x,
-            "x1": x + w,
-            "y": y,
-            "cy": y + h / 2.0,
-        })
-    return words
+def coordinate_word_widths(sources: dict[int, dict]) -> dict[str, float]:
+    """Return global word-id -> width; source page placement is intentionally ignored."""
+    widths: dict[str, float] = {}
+    for page, source in sources.items():
+        coords = source.get("coords", {})
+        if not isinstance(coords, dict) or not coords:
+            raise RuntimeError(f"coordinate page {page}: invalid/empty coordinate payload")
+        for word_id, coord in coords.items():
+            parts = word_id.split(":")
+            if len(parts) != 3 or not all(part.isdigit() for part in parts):
+                raise RuntimeError(f"coordinate page {page}: invalid word id {word_id!r}")
+            box = coord.get("h")
+            if not isinstance(box, dict):
+                raise RuntimeError(f"coordinate page {page} word {word_id}: missing highlight box")
+            x, y, w, h = (float(box[key]) for key in ("x", "y", "w", "h"))
+            if not all(math.isfinite(value) for value in (x, y, w, h)) or w <= 0 or h <= 0:
+                raise RuntimeError(f"coordinate page {page} word {word_id}: invalid highlight box")
+            if x < -1 or y < -1 or x + w > COORD_WIDTH + 1 or y + h > COORD_HEIGHT + 1:
+                raise RuntimeError(f"coordinate page {page} word {word_id}: box outside 900x1437 page")
+            if word_id in widths:
+                raise RuntimeError(f"duplicate coordinate word id {word_id}")
+            widths[word_id] = w
+    if len(widths) != EXPECTED_WORDS:
+        raise RuntimeError(f"coordinate source word count {len(widths)} != {EXPECTED_WORDS}")
+    return widths
 
 
-def natural_source_lines(words: list[dict]) -> list[list[dict]]:
-    """Recover physical source lines from the coordinate data's own Y bands."""
-    ordered = sorted(words, key=lambda word: (word["cy"], -word["x0"], word["ordinal"]))
-    lines: list[list[dict]] = []
-    centers: list[float] = []
-    for word in ordered:
-        if not lines:
-            lines.append([word])
-            centers.append(word["cy"])
-            continue
-        if abs(word["cy"] - centers[-1]) <= SOURCE_LINE_Y_TOLERANCE:
-            lines[-1].append(word)
-            centers[-1] = statistics.median(item["cy"] for item in lines[-1])
-        else:
-            lines.append([word])
-            centers.append(word["cy"])
-    return lines
+def layout_pages(payload: bytes) -> dict[int, list[list[dict]]]:
+    """Parse pinned QPC V2 text-line layout; headers/basmala are never mask candidates."""
+    result: dict[int, list[list[dict]]] = {}
+    seen: set[str] = set()
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
+        for member in archive.getmembers():
+            name = member.name
+            if "/mushaf/page-" not in name or not name.endswith(".json"):
+                continue
+            basename = Path(name).name
+            try:
+                page = int(basename.removeprefix("page-").removesuffix(".json"))
+            except ValueError:
+                continue
+            if not 1 <= page <= EXPECTED_PAGES:
+                continue
+            fileobj = archive.extractfile(member)
+            if fileobj is None:
+                continue
+            document = json.loads(fileobj.read().decode("utf-8"))
+            if int(document.get("page", page)) != page:
+                raise RuntimeError(f"layout page number mismatch for file {basename}")
+            text_lines: list[tuple[int, list[dict]]] = []
+            for row in document.get("lines", []):
+                if row.get("type") != "text":
+                    continue
+                line_number = int(row.get("line", 0))
+                words: list[dict] = []
+                for item in row.get("words", []):
+                    word_id = str(item.get("location", ""))
+                    parts = word_id.split(":")
+                    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+                        raise RuntimeError(f"layout page {page}: invalid word id {word_id!r}")
+                    if word_id in seen:
+                        raise RuntimeError(f"duplicate layout word id {word_id}")
+                    seen.add(word_id)
+                    words.append({
+                        "id": word_id,
+                        "verse": f"{int(parts[0])}:{int(parts[1])}",
+                        "ordinal": tuple(map(int, parts)),
+                    })
+                if words:
+                    text_lines.append((line_number, words))
+            text_lines.sort(key=lambda pair: pair[0])
+            result[page] = [words for _line_number, words in text_lines]
+    if len(result) != EXPECTED_PAGES:
+        raise RuntimeError(f"QPC layout source has {len(result)} pages, expected {EXPECTED_PAGES}")
+    if len(seen) != EXPECTED_WORDS:
+        raise RuntimeError(f"QPC layout word count {len(seen)} != {EXPECTED_WORDS}")
+    return result
 
 
 def _source_verses(line: list[dict]) -> set[str]:
@@ -127,13 +164,7 @@ def _local_verses(line: dict) -> set[str]:
 
 
 def match_source_lines(source_lines: list[list[dict]], local_lines: list[dict]) -> list[int]:
-    """Map every source word line monotonically onto existing local Hifz lines.
-
-    The local geometry is never rewritten. If the local detector has one or more
-    surplus bands, they may be skipped. If it has merged adjacent physical bands,
-    adjacent source lines may share one local line. Verse overlap dominates the score;
-    reading-order proximity only resolves otherwise equivalent choices.
-    """
+    """Map QPC text lines monotonically onto the unchanged verified local Hifz lines."""
     n, m = len(source_lines), len(local_lines)
     if n == 0 or m == 0:
         raise RuntimeError("cannot align empty source/local Quran lines")
@@ -151,10 +182,7 @@ def match_source_lines(source_lines: list[list[dict]], local_lines: list[dict]) 
         return missing * 10_000.0 - common * 1_000.0 + extra * 20.0 + abs(j - target)
 
     inf = float("inf")
-
     if n <= m:
-        # Strictly increasing: source lines stay distinct and surplus local detector
-        # bands are skipped rather than fabricating linguistic lines.
         dp = [[inf] * m for _ in range(n)]
         prev = [[-1] * m for _ in range(n)]
         for j in range(0, m - n + 1):
@@ -186,10 +214,6 @@ def match_source_lines(source_lines: list[list[dict]], local_lines: list[dict]) 
             raise RuntimeError(f"non-monotonic source/local word-line mapping: {mapping}")
         return mapping
 
-    # Source has more physical lines than the detector. Start at local 0 and end at
-    # local m-1; each source step may stay on the current local band (a detector merge)
-    # or advance by exactly one. This guarantees every existing Hifz line is preserved
-    # and used at least once, with the fewest necessary merges.
     dp = [[inf] * m for _ in range(n)]
     prev = [[-1] * m for _ in range(n)]
     dp[0][0] = cost(0, 0)
@@ -232,7 +256,27 @@ def local_line_span(line: dict) -> tuple[float, float]:
     return left, right
 
 
-def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float, int, int, int]:
+def _layout_word_ids(layout: dict[int, list[list[dict]]]) -> set[str]:
+    return {word["id"] for lines in layout.values() for line in lines for word in line}
+
+
+def attach_words(
+    root: dict,
+    coordinate_sources: dict[int, dict],
+    qpc_layout: dict[int, list[list[dict]]],
+) -> tuple[int, float, float, int, int, int]:
+    widths = coordinate_word_widths(coordinate_sources)
+    layout_ids = _layout_word_ids(qpc_layout)
+    width_ids = set(widths)
+    if layout_ids != width_ids:
+        missing_width = sorted(layout_ids - width_ids)
+        unused_width = sorted(width_ids - layout_ids)
+        raise RuntimeError(
+            "coordinate/QPC linguistic word sets differ; "
+            f"missingWidth={missing_width[:8]} unusedWidth={unused_width[:8]} "
+            f"layout={len(layout_ids)} coordinate={len(width_ids)}"
+        )
+
     seen: set[str] = set()
     total = 0
     min_scale = math.inf
@@ -247,8 +291,19 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
         for line in local_lines:
             line["words"] = []
 
-        source_words = parsed_words(page, sources[page])
-        source_lines = natural_source_lines(source_words)
+        source_lines = qpc_layout[page]
+        if not source_lines:
+            raise RuntimeError(f"QPC layout page {page}: no text lines")
+
+        local_page_verses = {str(verse) for line in local_lines for verse in line.get("verses", [])}
+        source_page_verses = {word["verse"] for line in source_lines for word in line}
+        if source_page_verses != local_page_verses:
+            missing = sorted(source_page_verses - local_page_verses)
+            extra = sorted(local_page_verses - source_page_verses)
+            raise RuntimeError(
+                f"page {page}: QPC/local pagination mismatch; missing={missing[:6]} extra={extra[:6]}"
+            )
+
         try:
             mapping = match_source_lines(source_lines, local_lines)
         except RuntimeError as exc:
@@ -264,15 +319,6 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
         source_indices_by_local: dict[int, list[int]] = {}
         for source_index, local_index in enumerate(mapping):
             source_indices_by_local.setdefault(local_index, []).append(source_index)
-
-        source_page_verses = {word["verse"] for word in source_words}
-        local_page_verses = {str(verse) for line in local_lines for verse in line.get("verses", [])}
-        if source_page_verses != local_page_verses:
-            missing = sorted(source_page_verses - local_page_verses)
-            extra = sorted(local_page_verses - source_page_verses)
-            raise RuntimeError(
-                f"page {page}: source/local pagination mismatch; missing={missing[:6]} extra={extra[:6]}"
-            )
 
         for source_index, source_line in enumerate(source_lines):
             line_index = mapping[source_index]
@@ -292,21 +338,20 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
                 )
             adjacent_boundary_tolerances += len(source_verses - current_verses)
 
-            src_left = min(word["x0"] for word in source_line)
-            src_right = max(word["x1"] for word in source_line)
-            if not src_right > src_left:
-                raise RuntimeError(f"page {page} line {local_line.get('id')}: collapsed source extent")
             dst_left, dst_right = local_line_span(local_line)
-            scale = (dst_right - dst_left) / (src_right - src_left)
+            source_total_width = sum(widths[word["id"]] for word in source_line)
+            if source_total_width <= 0:
+                raise RuntimeError(f"page {page} line {local_line.get('id')}: invalid source word widths")
+            scale = (dst_right - dst_left) / source_total_width
             min_scale = min(min_scale, scale)
             max_scale = max(max_scale, scale)
-            if not 0.08 <= scale <= 0.90:
+            if not 0.08 <= scale <= 1.2:
                 raise RuntimeError(
-                    f"page {page} line {local_line.get('id')}: implausible x scale {scale:.4f}; mapping={mapping}"
+                    f"page {page} line {local_line.get('id')}: implausible word-width scale {scale:.4f}; mapping={mapping}"
                 )
 
-            full_top = float(local_line["top"]) + 0.6
-            full_bottom = float(local_line["bottom"]) - 0.6
+            full_top = float(local_line["top"]) + 0.8
+            full_bottom = float(local_line["bottom"]) - 0.8
             full_height = full_bottom - full_top
             if full_height <= 1:
                 raise RuntimeError(f"page {page} line {local_line.get('id')}: invalid local line height")
@@ -314,8 +359,6 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
             group = source_indices_by_local[line_index]
             slot = group.index(source_index)
             group_count = len(group)
-            # If the local detector merged two physical bands, preserve their vertical
-            # order by subdividing only that existing local band. No Hifz line is added.
             line_top = full_top + full_height * slot / group_count
             line_bottom = full_top + full_height * (slot + 1) / group_count
             line_height = line_bottom - line_top
@@ -325,25 +368,27 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
                     f"({line_height:.3f}) for {group_count} source lines"
                 )
 
+            cursor = dst_right
             for word in source_line:
                 word_id = word["id"]
                 if word_id in seen:
-                    raise RuntimeError(f"duplicate word coordinate {word_id}")
+                    raise RuntimeError(f"duplicate packaged word coordinate {word_id}")
                 seen.add(word_id)
-                x0 = dst_left + (word["x0"] - src_left) * scale
-                x1 = dst_left + (word["x1"] - src_left) * scale
-                width = x1 - x0
-                if width <= 0:
-                    raise RuntimeError(f"page {page} word {word_id}: collapsed local word width")
+                raw_width = widths[word_id] * scale
+                x0 = cursor - raw_width
+                inset = min(0.35, raw_width * 0.035)
+                box_x = x0 + inset
+                box_width = max(0.5, raw_width - inset * 2)
                 local_line["words"].append({
                     "id": word_id,
                     "verse": word["verse"],
                     "kind": "word",
-                    "x": round(x0, 3),
+                    "x": round(box_x, 3),
                     "y": round(line_top, 3),
-                    "w": round(width, 3),
+                    "w": round(box_width, 3),
                     "h": round(line_height, 3),
                 })
+                cursor = x0
                 total += 1
 
         for local_line in local_lines:
@@ -358,16 +403,29 @@ def main() -> None:
     if not GEOMETRY.is_file():
         raise RuntimeError("generate exact Hifz geometry before attaching word coordinates")
     root = json.loads(GEOMETRY.read_text(encoding="utf-8"))
-    sources = page_sources(download_archive())
-    total, min_scale, max_scale, boundary_tolerances, skipped_bands, merged_bands = attach_words(root, sources)
+
+    coordinate_payload = download_archive(COORD_URL, "Quran word coordinates", 1_000_000)
+    layout_payload = download_archive(LAYOUT_URL, "QPC V2 Mushaf layout", 1_000_000)
+    coordinate_sources = coordinate_pages(coordinate_payload)
+    qpc_layout = layout_pages(layout_payload)
+
+    page120_ids = {word["id"] for line in qpc_layout[120] for word in line}
+    if "5:77:1" not in page120_ids:
+        raise RuntimeError("QPC V2 layout regression: 5:77:1 must be on page 120")
+
+    total, min_scale, max_scale, boundary_tolerances, skipped_bands, merged_bands = attach_words(
+        root, coordinate_sources, qpc_layout
+    )
     root["wordGeometrySource"] = {
-        "repository": SOURCE_REPO,
-        "commit": SOURCE_COMMIT,
-        "license": "MIT coordinates; upstream Mushaf source assets retain their own terms",
-        "sourceWidth": int(SOURCE_WIDTH),
-        "sourceHeight": int(SOURCE_HEIGHT),
+        "coordinateRepository": COORD_REPO,
+        "coordinateCommit": COORD_COMMIT,
+        "coordinateLicense": "MIT",
+        "layoutRepository": LAYOUT_REPO,
+        "layoutCommit": LAYOUT_COMMIT,
+        "layoutBasis": "QPC V2 604-page Madani Mushaf page/line/word mapping",
+        "layoutRightsNote": "Pinned public build-time layout metadata; raw upstream files are not bundled in the APK.",
         "wordCount": total,
-        "alignment": "natural source Y-bands -> monotonic verse/rank matched verified local lines; surplus local bands skipped; adjacent source bands may share detector-merged local line; per-source-line affine X",
+        "alignment": "QPC V2 page/line order -> monotonic verse/rank matched verified local lines; Quran-coordinate used only for per-word width ratios",
         "adjacentBoundaryToleranceCount": boundary_tolerances,
         "skippedLocalDetectorBandCount": skipped_bands,
         "mergedSourceBandCount": merged_bands,
@@ -377,21 +435,22 @@ def main() -> None:
 
     report = json.loads(REPORT.read_text(encoding="utf-8")) if REPORT.is_file() else {}
     report.update({
-        "wordMaskUnit": "linguistic words; random selection; verse markers excluded",
-        "wordCoordinateSource": f"https://github.com/{SOURCE_REPO}@{SOURCE_COMMIT}",
+        "wordMaskUnit": "linguistic words; deterministic-random selection; verse markers excluded",
+        "wordCoordinateSource": f"https://github.com/{COORD_REPO}@{COORD_COMMIT}",
+        "wordLayoutSource": f"https://github.com/{LAYOUT_REPO}@{LAYOUT_COMMIT}",
         "wordCoordinateCount": total,
-        "wordCoordinateAlignment": "monotonic verse/rank source-to-local alignment; surplus local bands skipped; detector-merged local bands subdivided for adjacent source lines",
+        "wordCoordinateAlignment": "QPC V2 page/line mapping + coordinate-source word width ratios + unchanged local Hifz line bands",
         "wordCoordinateAdjacentBoundaryToleranceCount": boundary_tolerances,
         "wordCoordinateSkippedLocalDetectorBandCount": skipped_bands,
         "wordCoordinateMergedSourceBandCount": merged_bands,
-        "wordCoordinateMinXScale": round(min_scale, 6),
-        "wordCoordinateMaxXScale": round(max_scale, 6),
+        "wordCoordinateMinWidthScale": round(min_scale, 6),
+        "wordCoordinateMaxWidthScale": round(max_scale, 6),
     })
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(
         f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} "
         f"skippedLocalBands={skipped_bands} mergedSourceBands={merged_bands} "
-        f"adjacentBoundaryTolerances={boundary_tolerances} xScale={min_scale:.4f}..{max_scale:.4f}"
+        f"adjacentBoundaryTolerances={boundary_tolerances} widthScale={min_scale:.4f}..{max_scale:.4f}"
     )
 
 
