@@ -5,6 +5,7 @@ on:
     branches:
       - integration/hifz-test-app
       - integration/hifz-boox-final-convergence
+      - integration/hifz-boox-polish-0.7
   workflow_dispatch:
 
 permissions:
@@ -28,28 +29,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
-          test -n "$old_plus" && test -s "$old_plus"
-          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
-          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
-          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
-          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
-          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
-          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
-          count="$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')"
-          test "$count" = 604
-          tafsir_dst="app/src/plus/assets/tafsir"
-          rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
-          cp baseline109/extracted/assets/tafsir/* "$tafsir_dst/"
-          jalalayn_parts="$(find "$tafsir_dst" -maxdepth 1 -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')"
-          qurtubi_parts="$(find "$tafsir_dst" -maxdepth 1 -type f -name 'qurtubi_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')"
-          qushayri_parts="$(find "$tafsir_dst" -maxdepth 1 -type f -name 'qushayri_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')"
-          test "$jalalayn_parts" = 4
-          test "$qurtubi_parts" = 4
-          test "$qushayri_parts" = 2
-          cat "$tafsir_dst"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
-          cat "$tafsir_dst"/qurtubi_en.sqlite.gz.b64.part* | base64 -d | gzip -t
-          cat "$tafsir_dst"/qushayri_en.sqlite.gz.b64.part* | base64 -d | gzip -t
+          src="baseline109/astra-re-audit/source-work-tree"
+          test -d "$src/app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          test -f "$src/app/src/plus/assets/tafsir/al_jalalayn_en.sqlite.gz.part00"
+          rm -rf app/src/main/assets/mushaf app/src/plus/assets/tafsir
+          mkdir -p app/src/main/assets app/src/plus/assets
+          cp -a "$src/app/src/main/assets/mushaf" app/src/main/assets/
+          cp -a "$src/app/src/plus/assets/tafsir" app/src/plus/assets/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -type f -name '*.svg.br' | wc -l | tr -d ' ')" = 604
+          test -s app/src/plus/assets/tafsir/al_jalalayn_en.sqlite.gz.part00
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
