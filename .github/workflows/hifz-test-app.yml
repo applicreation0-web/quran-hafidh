@@ -115,30 +115,15 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Restore durable Quran Hifz signing key
-        shell: bash
-        env:
-          HIFZ_KEYSTORE_BASE64: ${{ secrets.HIFZ_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          test -n "$HIFZ_KEYSTORE_BASE64"
-          printf '%s' "$HIFZ_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/quran-hifz-release.jks"
-          test -s "$RUNNER_TEMP/quran-hifz-release.jks"
-          chmod 600 "$RUNNER_TEMP/quran-hifz-release.jks"
       - name: Run shared primitives, live app-engine tests and product-boundary gate
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary --stacktrace
-      - name: Assemble signed Quran Hifz 0.7 BOOX APK
-        env:
-          HIFZ_KEYSTORE_PATH: ${{ runner.temp }}/quran-hifz-release.jks
-          HIFZ_KEYSTORE_PASSWORD: ${{ secrets.HIFZ_KEYSTORE_PASSWORD }}
-          HIFZ_KEY_ALIAS: ${{ secrets.HIFZ_KEY_ALIAS }}
-          HIFZ_KEY_PASSWORD: ${{ secrets.HIFZ_KEY_PASSWORD }}
-        run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
+      - name: Assemble Quran Hifz APK for durable local signing
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
       - name: Inspect packaged APK boundary corpus and signature
         shell: bash
         run: |
           set -euo pipefail
-          apk="$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
           test -n "$apk" && test -s "$apk"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee hifz-app-signature.txt
           grep -q 'Verified' hifz-app-signature.txt
@@ -172,7 +157,7 @@ jobs:
         with:
           name: quran-hifz-0.7-boox-${{ github.sha }}
           path: |
-            hifz-app/build/outputs/apk/release/*.apk
+            hifz-app/build/outputs/apk/debug/*.apk
             hifz-core/build/test-results/
             hifz-core/build/reports/tests/
             hifz-app/build/test-results/
