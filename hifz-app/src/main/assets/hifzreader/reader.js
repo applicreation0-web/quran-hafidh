@@ -7,6 +7,7 @@ let currentPage=Number(boot.page||1);
 let selected=(boot.selection||[]).map(String);
 let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
+let drawKey=String(boot.maskSeed||'');
 let eink=!!boot.eink;
 let audioVerse=null;
 const NS='http://www.w3.org/2000/svg';
@@ -89,14 +90,13 @@ function maskBoxesForPage(geometry,maskedIds){
   (geometry.lines||[]).forEach(line=>(line.words||[]).forEach(word=>{
     if(!word||word.kind==='marker'||!wanted.has(String(word.id)))return;
     const x=Number(word.x),y=Number(word.y),w=Number(word.w),h=Number(word.h);
-    if(!(w>0&&h>0)&&Number.isFinite(x)&&Number.isFinite(y))return;
     if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0)return;
     out.push({id:String(word.id),x,y,w,h});
   }));
   return out;
 }
 function maskSeed(){
-  return selected.join(',')+'|'+lineIds.join(',');
+  return selected.join(',')+'|'+lineIds.join(',')+'|'+drawKey;
 }
 
 function markerLayer(svg,polys){
@@ -178,7 +178,7 @@ function clearReveal(){document.documentElement.style.setProperty('--reveal-shif
 
 window.HifzReader={
   setGeometry(geometry){pageGeo=geometry||null;render()},
-  setMask(hidden){mask=Number(hidden||0);render()},
+  setMask(hidden,key){mask=Number(hidden||0);if(key!==undefined&&key!==null)drawKey=String(key);render()},
   setSelection(selection,lines){selected=(selection||[]).map(String);lineIds=(lines||[]).map(String);clearReveal();render()},
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setEink(value){eink=!!value;render()},
