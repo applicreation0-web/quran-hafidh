@@ -130,11 +130,12 @@ def local_line_span(line: dict) -> tuple[float, float]:
     return left, right
 
 
-def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float]:
+def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, float, int]:
     seen: set[str] = set()
     total = 0
     worst_scale = 0.0
     smallest_source_gap = math.inf
+    boundary_verse_tolerances = 0
 
     for page in range(1, EXPECTED_PAGES + 1):
         page_geo = root["pages"][str(page)]
@@ -145,15 +146,27 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
         source_words = parsed_words(page, sources[page])
         clusters = cluster_into_exact_lines(source_words, len(lines))
 
-        for source_line, local_line in zip(clusters, lines):
+        for line_index, (source_line, local_line) in enumerate(zip(clusters, lines)):
             source_verses = {word["verse"] for word in source_line}
             local_verses = set(map(str, local_line.get("verses", [])))
-            unexpected = sorted(source_verses - local_verses)
+
+            # The existing local line index was derived from ayah-polygon vertical overlap,
+            # while the pinned word source is grouped by glyph centres. At a verse boundary
+            # one of those methods can assign the first/last word to the neighbouring line.
+            # Tolerate *only* that one-line boundary ambiguity; a non-adjacent mismatch still
+            # aborts the release build and protects against a bad page/line alignment.
+            allowed_verses = set(local_verses)
+            if line_index > 0:
+                allowed_verses.update(map(str, lines[line_index - 1].get("verses", [])))
+            if line_index + 1 < len(lines):
+                allowed_verses.update(map(str, lines[line_index + 1].get("verses", [])))
+            unexpected = sorted(source_verses - allowed_verses)
             if unexpected:
                 raise RuntimeError(
-                    f"page {page} line {local_line.get('id')}: source/local verse-layout mismatch {unexpected}; "
+                    f"page {page} line {local_line.get('id')}: non-adjacent source/local verse-layout mismatch {unexpected}; "
                     f"source={sorted(source_verses)} local={sorted(local_verses)}"
                 )
+            boundary_verse_tolerances += len(source_verses - local_verses)
 
             src_left = min(word["x0"] for word in source_line)
             src_right = max(word["x1"] for word in source_line)
@@ -197,7 +210,6 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
                 })
                 total += 1
 
-            # Preserve an audit signal for the source line separation quality.
             centers = sorted(word["cy"] for word in source_line)
             if len(centers) > 1:
                 local_gaps = [b - a for a, b in zip(centers, centers[1:]) if b > a]
@@ -210,7 +222,7 @@ def attach_words(root: dict, sources: dict[int, dict]) -> tuple[int, float, floa
         raise RuntimeError(f"word count mismatch: {total} / unique {len(seen)}, expected {EXPECTED_WORDS}")
     if smallest_source_gap is math.inf:
         smallest_source_gap = 0.0
-    return total, worst_scale, smallest_source_gap
+    return total, worst_scale, smallest_source_gap, boundary_verse_tolerances
 
 
 def main() -> None:
@@ -218,7 +230,7 @@ def main() -> None:
         raise RuntimeError("generate exact Hifz geometry before attaching word coordinates")
     root = json.loads(GEOMETRY.read_text(encoding="utf-8"))
     sources = page_sources(download_archive())
-    total, worst_scale, smallest_gap = attach_words(root, sources)
+    total, worst_scale, smallest_gap, boundary_tolerances = attach_words(root, sources)
     root["wordGeometrySource"] = {
         "repository": SOURCE_REPO,
         "commit": SOURCE_COMMIT,
@@ -226,7 +238,8 @@ def main() -> None:
         "sourceWidth": int(SOURCE_WIDTH),
         "sourceHeight": int(SOURCE_HEIGHT),
         "wordCount": total,
-        "alignment": "source physical-line rank -> verified local line; per-line affine X; local Y band",
+        "alignment": "source physical-line rank -> verified local line; adjacent-line verse-boundary tolerance; per-line affine X; local Y band",
+        "boundaryVerseToleranceCount": boundary_tolerances,
         "runtimeNetwork": False,
     }
     GEOMETRY.write_text(json.dumps(root, separators=(",", ":")), encoding="utf-8")
@@ -236,14 +249,15 @@ def main() -> None:
         "wordMaskUnit": "linguistic words; random cumulative selection; verse markers excluded",
         "wordCoordinateSource": f"https://github.com/{SOURCE_REPO}@{SOURCE_COMMIT}",
         "wordCoordinateCount": total,
-        "wordCoordinateAlignment": "physical-line rank + verse-layout gate + per-line affine X",
+        "wordCoordinateAlignment": "physical-line rank + adjacent-line verse-boundary gate + per-line affine X",
+        "wordCoordinateBoundaryVerseToleranceCount": boundary_tolerances,
         "wordCoordinateWorstXScale": round(worst_scale, 6),
         "wordCoordinateSmallestPositiveIntraLineCenterGap": round(smallest_gap, 3),
     })
     REPORT.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(
         f"HIFZ_WORD_GEOMETRY_OK pages={EXPECTED_PAGES} words={total} "
-        f"worstXScale={worst_scale:.4f}"
+        f"boundaryVerseTolerances={boundary_tolerances} worstXScale={worst_scale:.4f}"
     )
 
 
