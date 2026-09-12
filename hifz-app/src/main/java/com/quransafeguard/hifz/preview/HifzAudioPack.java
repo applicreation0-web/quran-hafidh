@@ -50,7 +50,6 @@ final class HifzAudioPack {
     private static final String BACKUP_DIR = "husary-muallim.previous";
     private static final String IMPORT_PREFIX = "husary-muallim.importing-";
 
-    // Import needs room for the verified extracted pack while the downloaded ZIP remains in Downloads.
     private static final long MIN_IMPORT_FREE_BYTES = 3_200_000_000L;
     private static final long MAX_VERSE_BYTES = 15L * 1024L * 1024L;
     private static final long MAX_METADATA_BYTES = 16L * 1024L * 1024L;
@@ -66,6 +65,7 @@ final class HifzAudioPack {
     private final Context context;
     private final File dir;
     private volatile EmbeddedInfo embeddedInfo;
+    private volatile Boolean localInstalledCache;
 
     private static final class EmbeddedInfo {
         final int count;
@@ -100,12 +100,11 @@ final class HifzAudioPack {
         return "Aucun pack audio valide";
     }
 
-    /** Configure the player from the durable local pack first, then a legacy embedded fallback. */
     void setDataSource(MediaPlayer player, VerseRef verse) throws Exception {
         String name = fileNameFor(verse);
         if (localInstalled()) {
             File local = fileNamed(name);
-            if (!local.isFile()) throw new IllegalStateException("Audio local manquant pour " + verse);
+            if (!local.isFile() || local.length() <= 0) throw new IllegalStateException("Audio local manquant pour " + verse);
             player.setDataSource(local.getAbsolutePath());
             return;
         }
@@ -120,7 +119,10 @@ final class HifzAudioPack {
 
     boolean hasVerse(VerseRef verse) {
         String name = fileNameFor(verse);
-        if (localInstalled()) return fileNamed(name).isFile();
+        if (localInstalled()) {
+            File local = fileNamed(name);
+            return local.isFile() && local.length() > 0;
+        }
         if (embeddedInstalled()) {
             try (AssetFileDescriptor ignored = context.getAssets().openFd(EMBEDDED_ROOT + "/" + name)) {
                 return true;
@@ -200,10 +202,12 @@ final class HifzAudioPack {
             verifySha256Manifest(staging);
             writeVerifiedMarker(staging);
             activateVerifiedPack(staging);
+            localInstalledCache = Boolean.TRUE;
             return new ImportResult(true, EXPECTED_VERSE_FILES,
                 "✓ 6 236 / 6 236 versets vérifiés · Al-Husary Muʿallim · audio hors ligne prêt.");
         } catch (Throwable error) {
             deleteRecursive(staging);
+            localInstalledCache = null;
             String message = error.getMessage();
             return new ImportResult(false, copiedNames.size(),
                 "Import audio impossible : " + (message == null ? error.getClass().getSimpleName() : message));
@@ -232,7 +236,6 @@ final class HifzAudioPack {
         deleteRecursive(backup);
     }
 
-    /** Recover the last known-good pack if Android stopped the app between the two atomic renames. */
     private void recoverInterruptedActivation() {
         File parent = dir.getParentFile();
         if (parent == null || !parent.isDirectory()) return;
@@ -242,6 +245,7 @@ final class HifzAudioPack {
             return;
         }
         if (isVerifiedLocalDirectory(backup)) backup.renameTo(dir);
+        localInstalledCache = null;
     }
 
     private static void cleanupStaleImports(File parent) {
@@ -279,16 +283,24 @@ final class HifzAudioPack {
         }
     }
 
-    private boolean localInstalled() { return isVerifiedLocalDirectory(dir); }
+    private boolean localInstalled() {
+        Boolean cached = localInstalledCache;
+        if (cached != null) return cached;
+        boolean valid = isVerifiedLocalDirectory(dir);
+        localInstalledCache = valid;
+        return valid;
+    }
 
+    /** The marker is written only after all 6,236 files and SHA-256 values have been verified. */
     private static boolean isVerifiedLocalDirectory(File folder) {
+        File first = folder == null ? null : new File(folder, "001001.mp3");
+        File last = folder == null ? null : new File(folder, "114006.mp3");
         return folder != null && folder.isDirectory()
             && new File(folder, VERIFIED_MARKER).isFile()
             && new File(folder, SOURCE_JSON).isFile()
             && new File(folder, SHA256_MANIFEST).isFile()
-            && new File(folder, "001001.mp3").isFile()
-            && new File(folder, "114006.mp3").isFile()
-            && countVerseFiles(folder) == EXPECTED_VERSE_FILES;
+            && first != null && first.isFile() && first.length() > 0
+            && last != null && last.isFile() && last.length() > 0;
     }
 
     private static boolean hasAllCanonicalFiles(File folder) {
@@ -380,11 +392,6 @@ final class HifzAudioPack {
     }
 
     private File fileNamed(String name) { return new File(dir, name); }
-
-    private static int countVerseFiles(File folder) {
-        File[] files = folder.listFiles((d, name) -> VERSE_FILE.matcher(name).matches());
-        return files == null ? 0 : files.length;
-    }
 
     private static String readUtf8(InputStream input) throws Exception {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
