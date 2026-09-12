@@ -1,10 +1,11 @@
-name: Quran Hifz 0.7.2 official candidate
+name: Quran Hifz 0.7.3 official candidate
 
 on:
   push:
     branches:
       - release/hifz-0.7.1-official
       - release/hifz-0.7.2-mask-hotfix
+      - release/hifz-0.7.3-word-mask
   workflow_dispatch:
 
 permissions:
@@ -81,14 +82,37 @@ jobs:
           print('TAFSIR_SOURCE_CORPORA_OK')
           PY
 
-      - name: Generate exact Hifz geometry
+      - name: Generate exact Hifz geometry and attach pinned word boxes
         shell: bash
         run: |
           set -euo pipefail
           pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
           python3 scripts/build_reader109_geometry.py
           python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/augment_hifz_word_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
           test -s app/src/main/assets/reader109/geometry.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('app/src/main/assets/reader109/geometry.json')
+          root=json.loads(p.read_text())
+          source=root['wordGeometrySource']
+          assert source['commit']=='ed24b7fbf60a052ac58e694d5728ab4c4d59f96d'
+          assert source['wordCount']==77320
+          assert source['runtimeNetwork'] is False
+          assert len(root['pages'])==604
+          words=[]
+          for page in root['pages'].values():
+              for line in page['lines']:
+                  words.extend(line.get('words',[]))
+          assert len(words)==77320, len(words)
+          ids=[w['id'] for w in words]
+          assert len(set(ids))==77320
+          assert all(w.get('kind')=='word' for w in words)
+          assert all(w.get('verse') for w in words)
+          print('HIFZ_WORD_GEOMETRY_PACK_OK pages=604 words=77320')
+          PY
 
       - uses: actions/setup-java@v4
         with:
@@ -107,12 +131,12 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Verify mask regression behavior
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 scripts/verify_hifz_mask_hotfix.py
-          node scripts/test_hifz_mask_segments.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify random cumulative word-mask behavior
+        run: node scripts/test_hifz_word_mask.js
 
       - name: Run complete Hifz regression and product-boundary suite
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
@@ -128,8 +152,8 @@ jobs:
           test -n "$apk" && test -s "$apk"
           apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
           test "$(apkanalyzer manifest application-id "$apk")" = "com.quransafeguard.hifz"
-          test "$(apkanalyzer manifest version-code "$apk")" = "9"
-          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.2-boox"
+          test "$(apkanalyzer manifest version-code "$apk")" = "10"
+          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.3-boox"
           grep -q 'Quran Hifz' hifz-app-manifest.xml
           if grep -q 'android:debuggable="true"' hifz-app-manifest.xml; then exit 1; fi
           grep -q 'configChanges=' hifz-app-manifest.xml
@@ -152,7 +176,7 @@ jobs:
           test "$(grep -E 'assets/tafsir/qushayri_en\.sqlite\.gz\.part[0-9]{2}' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 2
 
           APK_PATH="$apk" python3 - <<'PY'
-          import gzip, os, sqlite3, tempfile, zipfile
+          import gzip, json, os, sqlite3, tempfile, zipfile
           apk = os.environ['APK_PATH']
           specs = [
               ('al_jalalayn_en.sqlite', 4, 6236, 'verse_commentary'),
@@ -160,6 +184,15 @@ jobs:
               ('qushayri_en.sqlite', 2, 720, 'tafsir_entry'),
           ]
           with zipfile.ZipFile(apk) as z:
+              geometry=json.loads(z.read('assets/reader109/geometry.json'))
+              source=geometry['wordGeometrySource']
+              assert source['commit']=='ed24b7fbf60a052ac58e694d5728ab4c4d59f96d'
+              assert source['wordCount']==77320
+              words=[]
+              for page in geometry['pages'].values():
+                  for line in page['lines']:
+                      words.extend(line.get('words',[]))
+              assert len(words)==77320 and len({w['id'] for w in words})==77320
               for name, parts, expected, table in specs:
                   compressed = b''.join(z.read(f'assets/tafsir/{name}.gz.part{i:02d}') for i in range(parts))
                   raw = gzip.decompress(compressed)
@@ -172,22 +205,24 @@ jobs:
                       assert meta.get('redistribution_approved') == 'false'
                       assert meta.get('rights_note','').strip()
                       db.close()
-          print('PACKAGED_TAFSIR_RELEASE_OK')
+          print('PACKAGED_HIFZ_0_7_3_RELEASE_OK')
           PY
 
           sha256sum "$apk" | tee hifz-app-sha256.txt
           echo "APK=$apk" | tee hifz-app-build-info.txt
           echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
           echo "PACKAGE=com.quransafeguard.hifz" | tee -a hifz-app-build-info.txt
-          echo "VERSION_CODE=9" | tee -a hifz-app-build-info.txt
-          echo "VERSION_NAME=0.7.2-boox" | tee -a hifz-app-build-info.txt
+          echo "VERSION_CODE=10" | tee -a hifz-app-build-info.txt
+          echo "VERSION_NAME=0.7.3-boox" | tee -a hifz-app-build-info.txt
+          echo "WORD_MASK=random-cumulative-linguistic-words" | tee -a hifz-app-build-info.txt
+          echo "WORD_GEOMETRY_SOURCE_COMMIT=ed24b7fbf60a052ac58e694d5728ab4c4d59f96d" | tee -a hifz-app-build-info.txt
           echo "AUDIO_DELIVERY=separate-local-pack" | tee -a hifz-app-build-info.txt
 
       - name: Upload official unsigned release evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-hifz-0.7.2-official-unsigned-${{ github.sha }}
+          name: quran-hifz-0.7.3-official-unsigned-${{ github.sha }}
           path: |
             hifz-app/build/outputs/apk/release/*.apk
             hifz-core/build/test-results/
