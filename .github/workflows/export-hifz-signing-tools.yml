@@ -1,0 +1,41 @@
+name: Export Android signing tools for local Quran Hifz signing
+
+on:
+  push:
+    branches:
+      - tooling/hifz-signing-tools-36
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+      - name: Install Android build tools 36.0.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "build-tools;36.0.0"
+          test -x "$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -x "$ANDROID_HOME/build-tools/36.0.0/zipalign"
+      - name: Stage signing tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p hifz-signing-tools
+          cp -a "$ANDROID_HOME/build-tools/36.0.0/." hifz-signing-tools/
+          printf 'SOURCE=Android SDK build-tools 36.0.0\n' > hifz-signing-tools/SOURCE.txt
+          sha256sum hifz-signing-tools/apksigner hifz-signing-tools/lib/apksigner.jar hifz-signing-tools/zipalign > hifz-signing-tools/SHA256SUMS.txt
+      - name: Upload signing tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36.0.0-for-local-signing
+          path: hifz-signing-tools/
+          if-no-files-found: error
+          retention-days: 2
