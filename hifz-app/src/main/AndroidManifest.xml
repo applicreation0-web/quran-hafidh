@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:allowBackup="false"
+        android:icon="@drawable/ic_quran_hifz_logo"
+        android:roundIcon="@drawable/ic_quran_hifz_logo"
         android:label="Quran Hifz"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
