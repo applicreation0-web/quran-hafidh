@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -38,49 +39,57 @@ public final class SettingsActivity extends android.app.Activity {
 
         ScrollView scroll = new ScrollView(this);scroll.setFillViewport(true);
         LinearLayout root = Ui.column(this);scroll.addView(root);
-        LinearLayout top=Ui.row(this);top.addView(Ui.smallButton(this,"‹ Retour",v->finish()));
-        TextView title=Ui.text(this,"Paramètres Hifz",22,true);Ui.weight(title,1);top.addView(title);root.addView(top);
+        LinearLayout top=Ui.row(this);top.addView(Ui.roundButton(this,"‹","Retour",v->finish()));
+        TextView title=Ui.text(this,"Paramètres Hifz",21,true);Ui.weight(title,1);title.setGravity(Gravity.CENTER);top.addView(title);root.addView(top);
 
         section(root,"Parcours Hifz");
-        root.addView(Ui.text(this,"Lun / Mer / Ven · Sabqi · 5 lignes · 37 répétitions\nMar / Jeu · Itqān ×30\nSam / Dim · Murājaʿah : 30 min Sabqi récent + 30 min cycle Itqān",14,false));
+        root.addView(Ui.text(this,"Lun / Mer / Ven · Sabqi · 5 lignes · 37 répétitions\nMar / Jeu · Itqān ×30\nSam / Dim · Murājaʿah : 30 min Sabqi récent + 30 min cycle Itqān",13.5f,false));
 
-        sabqiStatus=Ui.text(this,"",14,false);sabqiStatus.setPadding(0,Ui.dp(this,8),0,Ui.dp(this,4));root.addView(sabqiStatus);
-        LinearLayout sabqiButtons=Ui.row(this);
+        sabqiStatus=Ui.text(this,"",13.5f,false);sabqiStatus.setPadding(0,Ui.dp(this,8),0,Ui.dp(this,4));root.addView(sabqiStatus);
+        LinearLayout sabqiButtons=Ui.row(this);sabqiButtons.setGravity(Gravity.CENTER);
         Button start=Ui.smallButton(this,"Début Sabqi",v->chooseVerse("Début Sabqi",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
         Button end=Ui.smallButton(this,"Fin Sabqi",v->chooseVerse("Fin Sabqi",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
         Ui.weight(start,1);Ui.weight(end,1);sabqiButtons.addView(start);sabqiButtons.addView(end);root.addView(sabqiButtons);
 
         section(root,"Itqān · plages multiples");
-        root.addView(Ui.text(this,"Les plages sont fusionnées si elles se chevauchent ou se touchent. Les trous sont sautés. Modifier les plages ne déplace jamais un curseur silencieusement.",13,false));
+        root.addView(Ui.text(this,"Chevauchements/adjacences fusionnés, trous sautés. Aucun curseur n’est déplacé silencieusement.",12.5f,false));
         rangesBox=Ui.column(this);rangesBox.setPadding(0,Ui.dp(this,4),0,0);root.addView(rangesBox);
-        root.addView(Ui.button(this,"+ Ajouter une plage Itqān",v->chooseRange(null,-1)));
-        itqanStatus=Ui.text(this,"",14,false);itqanStatus.setPadding(0,Ui.dp(this,8),0,Ui.dp(this,4));root.addView(itqanStatus);
-        LinearLayout rotationRow=Ui.row(this);
-        Button rotation=Ui.smallButton(this,"Début rotation Itqān",v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart));
-        Button repairMurajaah=Ui.smallButton(this,"Repositionner Murājaʿah",v->confirmMurajaahReposition());
-        Ui.weight(rotation,1);Ui.weight(repairMurajaah,1);rotationRow.addView(rotation);rotationRow.addView(repairMurajaah);root.addView(rotationRow);
+        LinearLayout addRow=Ui.row(this);addRow.setGravity(Gravity.CENTER);addRow.addView(Ui.roundAction(this,"+","Ajouter plage",v->chooseRange(null,-1)));root.addView(addRow);
+        itqanStatus=Ui.text(this,"",13.5f,false);itqanStatus.setPadding(0,Ui.dp(this,8),0,Ui.dp(this,4));root.addView(itqanStatus);
+        LinearLayout rotationRow=Ui.row(this);rotationRow.setGravity(Gravity.CENTER);
+        rotationRow.addView(Ui.roundAction(this,"↻","Début rotation",v->chooseVerse("Début de rotation Itqān",prefs.itqanRotationStart(),this::setRotationStart)));
+        rotationRow.addView(Ui.roundAction(this,"R","Murājaʿah",v->confirmMurajaahReposition()));root.addView(rotationRow);
 
         section(root,"Murājaʿah");
-        murajaahStatus=Ui.text(this,"",14,false);root.addView(murajaahStatus);
+        murajaahStatus=Ui.text(this,"",13.5f,false);root.addView(murajaahStatus);
 
         section(root,"Audio Al-Husary Muʿallim");
-        audioStatus=Ui.text(this,"",13,false);root.addView(audioStatus);
-        root.addView(Ui.button(this,"Installer / remplacer le pack audio local",v->selectAudioZip()));
-        TextView audioNote=Ui.text(this,"Import local uniquement. Aucun téléchargement. Le pack doit contenir les 6 236 fichiers versets nommés 001001.mp3 … 114006.mp3. L’audio ne modifie jamais répétitions, révélations, promotions ou curseurs.",12,false);root.addView(audioNote);
+        audioStatus=Ui.text(this,"",12.5f,false);root.addView(audioStatus);
+        HifzAudioPack audioPack=new HifzAudioPack(this);
+        HifzAudioGate audioGate=new HifzAudioGate(this);
+        if(!audioPack.embeddedInstalled()){
+            LinearLayout fallback=Ui.row(this);fallback.setGravity(Gravity.CENTER);
+            fallback.addView(Ui.roundAction(this,"+","Import secours",v->selectAudioZip()));root.addView(fallback);
+        }
+        TextView audioNote=Ui.text(this,
+            "Chemin APK : assets/audio/husary-muallim/\nSource : "+audioGate.baseUrl+"\n"
+            +"Format : 6 236 fichiers SSSAAA.mp3. Lecture locale uniquement ; aucune permission INTERNET. L’audio ne modifie jamais répétitions, promotions ou curseurs.",
+            11.5f,false);audioNote.setPadding(0,Ui.dp(this,4),0,0);root.addView(audioNote);
 
         section(root,"Affichage BOOX");
         Switch eink=new Switch(this);eink.setText("Optimisation E‑Ink / BOOX");eink.setChecked(prefs.forceEink());eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));root.addView(eink);
 
         section(root,"Diagnostic");
-        root.addView(Ui.button(this,"Voir le diagnostic Hifz",v->showDiagnostic()));
-        root.addView(Ui.button(this,"Réinitialiser l’état de test",v->confirmReset()));
+        LinearLayout diagnostics=Ui.row(this);diagnostics.setGravity(Gravity.CENTER);
+        diagnostics.addView(Ui.roundAction(this,"i","Diagnostic",v->showDiagnostic()));
+        diagnostics.addView(Ui.roundAction(this,"↺","Réinitialiser",v->confirmReset()));root.addView(diagnostics);
 
-        setContentView(scroll);int inset=Ui.dp(this,16);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
+        setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
     }
 
     private void section(LinearLayout root,String title){
-        TextView view=Ui.text(this,title,17,true);view.setPadding(0,Ui.dp(this,18),0,Ui.dp(this,6));root.addView(view);
+        TextView view=Ui.text(this,title,16.5f,true);view.setPadding(0,Ui.dp(this,16),0,Ui.dp(this,5));root.addView(view);
     }
 
     private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshMurajaah();refreshAudio();}
@@ -109,8 +118,9 @@ public final class SettingsActivity extends android.app.Activity {
         rangesBox.removeAllViews();List<VerseRange> ranges=prefs.itqanRanges();
         for(int i=0;i<ranges.size();i++){
             final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);
-            TextView label=Ui.text(this,"Plage "+(i+1)+" · "+range.getStart()+" → "+range.getEndInclusive(),13,false);Ui.weight(label,2);row.addView(label);
-            Button edit=Ui.smallButton(this,"Modifier",v->chooseRange(range,index));Button remove=Ui.smallButton(this,"Supprimer",v->removeRange(index));Ui.weight(edit,1);Ui.weight(remove,1);row.addView(edit);row.addView(remove);rangesBox.addView(row);
+            TextView label=Ui.text(this,"Plage "+(i+1)+" · "+range.getStart()+" → "+range.getEndInclusive(),12.5f,false);Ui.weight(label,1);row.addView(label);
+            row.addView(Ui.roundButton(this,"✎","Modifier la plage",v->chooseRange(range,index)));
+            row.addView(Ui.roundButton(this,"×","Supprimer la plage",v->removeRange(index)));rangesBox.addView(row);
         }
     }
 
@@ -173,10 +183,16 @@ public final class SettingsActivity extends android.app.Activity {
     private void refreshMurajaah(){
         murajaahStatus.setText("Bloc A · Sabqi récent : 30 min · "+String.format(Locale.ROOT,"%.2f",prefs.recentSecondsPerLine())+" s/ligne estimées\n"
             +"Bloc B · ancien Itqān : 30 min + temps A inutilisé · "+String.format(Locale.ROOT,"%.2f",prefs.murajaahSecondsPerLine())+" s/ligne estimées\n"
-            +"File Sabqi récent : "+prefs.recentSabqi().size()+" bloc(s) · phase persistée : "+prefs.murajaahPhase());
+            +"File Sabqi récent : "+prefs.recentSabqi().size()+" bloc(s) · phase : "+prefs.murajaahPhase());
     }
 
-    private void refreshAudio(){HifzAudioPack pack=new HifzAudioPack(this);audioStatus.setText(pack.installed()?"Pack local installé · "+pack.installedFileCount()+" versets":"Aucun pack audio local valide installé.");}
+    private void refreshAudio(){
+        HifzAudioPack pack=new HifzAudioPack(this);
+        if(pack.embeddedInstalled())audioStatus.setText("✓ Embedded · "+pack.installedFileCount()+" versets · "+pack.sourceLabel());
+        else if(pack.installed())audioStatus.setText("✓ Pack local secours · "+pack.installedFileCount()+" versets");
+        else audioStatus.setText("Audio non embarqué dans ce build. Le build personnel final doit intégrer les 6 236 versets.");
+    }
+
     private void selectAudioZip(){
         Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("*/*");
         startActivityForResult(Intent.createChooser(intent,"Choisir le ZIP Al-Husary Muʿallim"),REQUEST_AUDIO_ZIP);
