@@ -196,7 +196,7 @@ public final class MushafView extends WebView {
         String value = verse == null ? "null" : JSONObject.quote(verse.toString());
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setAudioVerse(" + value + ");",
-            ignored -> post(() -> eink.local(this))));
+            ignored -> post(() -> eink.audio(this))));
     }
 
     /** Keep the selected verse in the unobscured upper part before the bottom Tafsir opens. */
