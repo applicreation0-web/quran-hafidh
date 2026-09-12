@@ -180,11 +180,11 @@ public final class MainActivity extends android.app.Activity {
                     int rep = prefs.itqanRep();
                     VerseRef start = prefs.itqanUnitStart(), end = prefs.itqanUnitEnd();
                     if (rep > 0 && start != null && end != null) {
-                        String state = rep >= PreviewConfig.ITQAN_TOTAL_REPS ? "prêt à valider" : (rep + 1) + "/30";
+                        String state = rep >= PreviewConfig.ITQAN_TOTAL_REPS ? "prêt à valider" : (rep + 1) + "/" + PreviewConfig.ITQAN_TOTAL_REPS;
                         detail = "Itqān · " + shortRange(start, end) + " · " + state;
                     } else {
                         GeometryRepository.VerseUnit u = g.eligiblePageUnit(prefs.itqanCursor(), prefs.corpus());
-                        detail = "Itqān · " + shortRange(u.start, u.end) + " · ×30";
+                        detail = "Itqān · " + shortRange(u.start, u.end) + " · ×" + PreviewConfig.ITQAN_TOTAL_REPS;
                     }
                     break;
                 }
