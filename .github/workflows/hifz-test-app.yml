@@ -10,6 +10,8 @@ on:
       - feat/hifz-0.7.3-lot2-cadence
       - fix/hifz-0.7.3-final-ui-polish
       - work/hifz-0.7.3-spec-update
+      - work/hifz-0.7.3-finalize-all
+      - work/hifz-0.7.3-claude-all-fixes
   workflow_dispatch:
 
 permissions:
@@ -181,7 +183,12 @@ jobs:
           echo no | avdmanager create avd --force --name hifz-ci --package "system-images;android-35;default;x86_64"
           sudo chmod 666 /dev/kvm || true
           "$ANDROID_HOME/emulator/emulator" -avd hifz-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
-          adb wait-for-device
+          if ! timeout 90s adb wait-for-device; then
+            echo 'Android emulator did not register with adb within 90 seconds' >&2
+            adb devices -l >&2 || true
+            cat emulator.log >&2 || true
+            exit 1
+          fi
           booted=0
           for i in $(seq 1 120); do
             if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
