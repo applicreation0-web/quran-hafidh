@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 final class HifzSessionMetricsStore {
     private static final String PREFS = "quran_hifz_preview_v1";
     private static final String RECENT_LINES = "recentSessionReviewedLines";
+    private static final String LAST_ANCHORING = "lastAnchoringMetrics";
     private final SharedPreferences p;
 
     HifzSessionMetricsStore(Context context) {
@@ -21,4 +22,10 @@ final class HifzSessionMetricsStore {
     }
 
     void clearConsolidation() { p.edit().remove(RECENT_LINES).apply(); }
+
+    void recordAnchoring(String metrics) {
+        p.edit().putString(LAST_ANCHORING, metrics == null ? "" : metrics).apply();
+    }
+
+    String lastAnchoring() { return p.getString(LAST_ANCHORING, ""); }
 }
