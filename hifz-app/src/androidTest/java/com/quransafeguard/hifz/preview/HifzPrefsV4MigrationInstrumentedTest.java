@@ -40,6 +40,25 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 74)));
         assertEquals(new VerseRef(49, 1), prefs.itqanCursor());
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
+        AnchoringQueue.Entry first = prefs.currentAnchoringEntry(GeometryRepository.get(context));
+        assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, first.origin);
+        assertEquals(AnchoringQueue.Protocol.LIGHT, first.protocol);
+    }
+
+    @Test public void validatedAnchoringPageJoinsMaintenanceWithoutTeleportingItsCursor() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        GeometryRepository geometry = GeometryRepository.get(context);
+        AnchoringQueue.Entry first = prefs.currentAnchoringEntry(geometry);
+        VerseRef start = GeometryRepository.parseVerse(first.start);
+        VerseRef end = GeometryRepository.parseVerse(first.end);
+        VerseRef naturalMaintenanceCursor = prefs.murajaahCursor();
+
+        assertFalse(prefs.murajaahCorpus().contains(start));
+        assertTrue(prefs.completeItqanUnitAndConsolidate(start, end,
+            prefs.itqanWorkCorpus().next(end), "2026-09-13", "validation test"));
+
+        assertTrue(prefs.murajaahCorpus().contains(start));
+        assertEquals(naturalMaintenanceCursor, prefs.murajaahCursor());
     }
 
     @Test public void schemaThreeMigrationIsAtomicAndPreservesUnrelatedProgress() {

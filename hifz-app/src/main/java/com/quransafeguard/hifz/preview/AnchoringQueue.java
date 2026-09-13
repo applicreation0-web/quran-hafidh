@@ -53,4 +53,16 @@ public final class AnchoringQueue {
         next.add(insertion, displayed);
         return new Deferral(next, Math.min(displayedIndex, next.size() - 1));
     }
+
+    public static Deferral failAndDefer(List<Entry> source, int displayedIndex, int places) {
+        if (source == null || displayedIndex < 0 || displayedIndex >= source.size()) {
+            throw new IllegalArgumentException("displayed anchoring index outside queue");
+        }
+        ArrayList<Entry> failed = new ArrayList<>(source);
+        Entry current = failed.get(displayedIndex);
+        int failures = current.failures + 1;
+        Protocol protocol = failures >= 3 ? Protocol.FULL : current.protocol;
+        failed.set(displayedIndex, new Entry(current.start, current.end, current.origin, protocol, failures));
+        return defer(failed, displayedIndex, places);
+    }
 }

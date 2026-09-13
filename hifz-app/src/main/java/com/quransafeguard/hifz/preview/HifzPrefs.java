@@ -15,8 +15,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 /** Versioned local persistence. Structured Hifz and free memorization are intentionally isolated. */
@@ -64,6 +66,7 @@ public final class HifzPrefs {
                 .putString("legacyMurajaahPromotedRanges", "[]")
                 .putString("anchoringQueue", "[]")
                 .putBoolean("anchoringQueueInitialized", false)
+                .putInt("anchoringQueueIndex", 0)
                 .putString("itqanRotationStart", "49:1")
                 .putString("itqanCursor", "49:1")
                 .putString("murajaahCursor", "2:1")
@@ -72,6 +75,7 @@ public final class HifzPrefs {
                 .putInt("sabqiAssisted", 0)
                 .putInt("itqanRep", 0)
                 .putInt("itqanAssisted", 0)
+                .putInt("itqanFinalReveals", 0)
                 .putString("itqanUnitStart", "")
                 .putString("itqanUnitEnd", "")
                 .putString("recentSabqi", "[]")
@@ -199,6 +203,8 @@ public final class HifzPrefs {
             .putString("murajaahCursor", murajaah.toString())
             .putString("anchoringQueue", p.getString("anchoringQueue", "[]"))
             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
+            .putInt("anchoringQueueIndex", Math.max(0, p.getInt("anchoringQueueIndex", 0)))
+            .putInt("itqanFinalReveals", Math.max(0, p.getInt("itqanFinalReveals", 0)))
             .putBoolean("murajaahSpeedCalibrated", p.getBoolean("murajaahSpeedCalibrated", false))
             .putInt("murajaahSpeedSamples", Math.max(0, p.getInt("murajaahSpeedSamples", 0)))
             .putBoolean("recentSpeedCalibrated", p.getBoolean("recentSpeedCalibrated", false))
@@ -346,13 +352,20 @@ public final class HifzPrefs {
 
     public int itqanRep() { return p.getInt("itqanRep", 0); }
     public int itqanAssisted() { return p.getInt("itqanAssisted", 0); }
+    public int itqanFinalReveals() { return p.getInt("itqanFinalReveals", 0); }
     public VerseRef itqanUnitStart() { return optionalRef("itqanUnitStart"); }
     public VerseRef itqanUnitEnd() { return optionalRef("itqanUnitEnd"); }
 
     public boolean setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
+        return setItqanProgress(rep, assisted, itqanFinalReveals(), unitStart, unitEnd);
+    }
+
+    public boolean setItqanProgress(int rep, int assisted, int finalReveals,
+                                     VerseRef unitStart, VerseRef unitEnd) {
         return p.edit()
             .putInt("itqanRep", rep)
             .putInt("itqanAssisted", assisted)
+            .putInt("itqanFinalReveals", Math.max(0, finalReveals))
             .putString("itqanUnitStart", unitStart == null ? "" : unitStart.toString())
             .putString("itqanUnitEnd", unitEnd == null ? "" : unitEnd.toString())
             .commit();
@@ -363,6 +376,7 @@ public final class HifzPrefs {
             .putString("itqanCursor", nextCursor.toString())
             .putInt("itqanRep", 0)
             .putInt("itqanAssisted", 0)
+            .putInt("itqanFinalReveals", 0)
             .putString("itqanUnitStart", "")
             .putString("itqanUnitEnd", "")
             .putLong("itqanElapsedMs", 0L)
@@ -375,16 +389,113 @@ public final class HifzPrefs {
     public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
                                                    VerseRef nextCursor, String date, String label) {
         List<VerseRange> pending = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
+        List<AnchoringQueue.Entry> queue = anchoringQueue();
+        int currentIndex = anchoringQueueIndex(queue.size());
+        int completedIndex = findAnchoringEntry(queue, start, endInclusive);
+        if (completedIndex >= 0) {
+            queue.remove(completedIndex);
+            if (!queue.isEmpty()) currentIndex = Math.min(completedIndex, queue.size() - 1);
+            else currentIndex = 0;
+        }
+        VerseRef storedNext = queue.isEmpty() ? nextCursor
+            : GeometryRepository.parseVerse(queue.get(currentIndex).start);
         return p.edit()
             .putString("unconsolidatedPromotedRanges", rangesJson(pending))
-            .putString("itqanCursor", nextCursor.toString())
+            .putString("anchoringQueue", anchoringQueueJson(queue))
+            .putInt("anchoringQueueIndex", currentIndex)
+            .putString("itqanCursor", storedNext.toString())
             .putInt("itqanRep", 0)
             .putInt("itqanAssisted", 0)
+            .putInt("itqanFinalReveals", 0)
             .putString("itqanUnitStart", "")
             .putString("itqanUnitEnd", "")
             .putLong("itqanElapsedMs", 0L)
             .putString("lastItqanDate", date)
             .putString("lastItqanLabel", label)
+            .commit();
+    }
+
+    public List<AnchoringQueue.Entry> anchoringQueue() {
+        ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(p.getString("anchoringQueue", "[]"));
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject o = array.getJSONObject(i);
+                out.add(new AnchoringQueue.Entry(
+                    o.getString("start"), o.getString("end"),
+                    AnchoringQueue.Origin.valueOf(o.getString("origin")),
+                    AnchoringQueue.Protocol.valueOf(o.getString("protocol")),
+                    o.optInt("failures", 0)));
+            }
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt anchoring queue", error);
+        }
+        return out;
+    }
+
+    public int anchoringQueueIndex(int size) {
+        if (size <= 0) return 0;
+        return Math.floorMod(p.getInt("anchoringQueueIndex", 0), size);
+    }
+
+    /** Reconcile pending page units while retaining failure/protocol state and explicit deferrals. */
+    public boolean reconcileAnchoringQueue(GeometryRepository geometry) {
+        List<VerseRange> pendingRanges = unconsolidatedPromotedRanges();
+        LinkedHashMap<String, AnchoringQueue.Entry> expected = new LinkedHashMap<>();
+        if (!pendingRanges.isEmpty()) {
+            EligibleCorpus pendingCorpus = EligibleCorpus.Companion.of(pendingRanges);
+            for (VerseRange range : pendingRanges) {
+                VerseRef cursor = range.getStart();
+                while (range.contains(cursor)) {
+                    GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(cursor, pendingCorpus);
+                    String key = anchoringKey(unit.start.toString(), unit.end.toString());
+                    boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
+                    expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
+                        reconstruction ? AnchoringQueue.Origin.RECONSTRUCTION : AnchoringQueue.Origin.PROMOTED,
+                        reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
+                    VerseRef next = pendingCorpus.next(unit.end);
+                    if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
+                    cursor = next;
+                }
+            }
+        }
+
+        ArrayList<AnchoringQueue.Entry> next = new ArrayList<>();
+        for (AnchoringQueue.Entry existing : anchoringQueue()) {
+            String key = anchoringKey(existing.start, existing.end);
+            if (expected.remove(key) != null) next.add(existing);
+        }
+        next.addAll(expected.values());
+        int index = anchoringQueueIndex(next.size());
+        return p.edit()
+            .putString("anchoringQueue", anchoringQueueJson(next))
+            .putBoolean("anchoringQueueInitialized", true)
+            .putInt("anchoringQueueIndex", index)
+            .commit();
+    }
+
+    public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
+        if (!reconcileAnchoringQueue(geometry)) throw new IllegalStateException("Unable to persist anchoring queue");
+        List<AnchoringQueue.Entry> queue = anchoringQueue();
+        return queue.isEmpty() ? null : queue.get(anchoringQueueIndex(queue.size()));
+    }
+
+    /** Fail and defer the exact page displayed, even when it is not the physical queue head. */
+    public boolean failAndDeferAnchoring(VerseRef displayedStart, VerseRef displayedEnd) {
+        List<AnchoringQueue.Entry> queue = anchoringQueue();
+        int displayedIndex = findAnchoringEntry(queue, displayedStart, displayedEnd);
+        if (displayedIndex < 0) return false;
+        AnchoringQueue.Deferral deferred = AnchoringQueue.failAndDefer(queue, displayedIndex, 3);
+        VerseRef next = GeometryRepository.parseVerse(deferred.entries.get(deferred.nextIndex).start);
+        return p.edit()
+            .putString("anchoringQueue", anchoringQueueJson(deferred.entries))
+            .putInt("anchoringQueueIndex", deferred.nextIndex)
+            .putString("itqanCursor", next.toString())
+            .putInt("itqanRep", 0)
+            .putInt("itqanAssisted", 0)
+            .putInt("itqanFinalReveals", 0)
+            .putString("itqanUnitStart", "")
+            .putString("itqanUnitEnd", "")
             .commit();
     }
 
@@ -661,6 +772,36 @@ public final class HifzPrefs {
                 JSONObject o = new JSONObject();
                 o.put("start", range.getStart().toString());
                 o.put("end", range.getEndInclusive().toString());
+                array.put(o);
+            }
+        } catch (Exception error) {
+            throw new IllegalStateException(error);
+        }
+        return array.toString();
+    }
+
+    private static int findAnchoringEntry(List<AnchoringQueue.Entry> queue,
+                                          VerseRef start, VerseRef endInclusive) {
+        String wanted = anchoringKey(start.toString(), endInclusive.toString());
+        for (int i = 0; i < queue.size(); i++) {
+            AnchoringQueue.Entry entry = queue.get(i);
+            if (wanted.equals(anchoringKey(entry.start, entry.end))) return i;
+        }
+        return -1;
+    }
+
+    private static String anchoringKey(String start, String end) { return start + "|" + end; }
+
+    private static String anchoringQueueJson(List<AnchoringQueue.Entry> entries) {
+        JSONArray array = new JSONArray();
+        try {
+            for (AnchoringQueue.Entry entry : entries) {
+                JSONObject o = new JSONObject();
+                o.put("start", entry.start);
+                o.put("end", entry.end);
+                o.put("origin", entry.origin.name());
+                o.put("protocol", entry.protocol.name());
+                o.put("failures", entry.failures);
                 array.put(o);
             }
         } catch (Exception error) {

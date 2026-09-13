@@ -25,6 +25,13 @@ public final class PreviewConfig {
     public static final int ITQAN_100_REPS_WORKING = 10;
     public static final int ITQAN_TOTAL_REPS = 40;
 
+    public static final int ITQAN_LIGHT_VISIBLE_REPS = 5;
+    public static final int ITQAN_LIGHT_25_REPS = 0;
+    public static final int ITQAN_LIGHT_50_REPS = 5;
+    public static final int ITQAN_LIGHT_75_REPS = 5;
+    public static final int ITQAN_LIGHT_100_REPS = 10;
+    public static final int ITQAN_LIGHT_TOTAL_REPS = 25;
+
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
     public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
     public static final int SPEED_MIN_LINES = 20;
@@ -66,16 +73,37 @@ public final class PreviewConfig {
     }
 
     public static int itqanMaskForNextRep(int completed) {
-        if (completed < 0 || completed >= ITQAN_TOTAL_REPS) return 0;
+        return itqanMaskForNextRep(completed, AnchoringQueue.Protocol.FULL);
+    }
+
+    public static int itqanTotalReps(AnchoringQueue.Protocol protocol) {
+        return protocol == AnchoringQueue.Protocol.LIGHT ? ITQAN_LIGHT_TOTAL_REPS : ITQAN_TOTAL_REPS;
+    }
+
+    public static int itqanMaskForNextRep(int completed, AnchoringQueue.Protocol protocol) {
+        int total = itqanTotalReps(protocol);
+        if (completed < 0 || completed >= total) return 0;
         int next = completed + 1;
-        int a = ITQAN_VISIBLE_REPS_WORKING;
-        int b = a + ITQAN_25_REPS_WORKING;
-        int c = b + ITQAN_50_REPS_WORKING;
-        int d = c + ITQAN_75_REPS_WORKING;
+        boolean light = protocol == AnchoringQueue.Protocol.LIGHT;
+        int a = light ? ITQAN_LIGHT_VISIBLE_REPS : ITQAN_VISIBLE_REPS_WORKING;
+        int b = a + (light ? ITQAN_LIGHT_25_REPS : ITQAN_25_REPS_WORKING);
+        int c = b + (light ? ITQAN_LIGHT_50_REPS : ITQAN_50_REPS_WORKING);
+        int d = c + (light ? ITQAN_LIGHT_75_REPS : ITQAN_75_REPS_WORKING);
         if (next <= a) return 0;
         if (next <= b) return 25;
         if (next <= c) return 50;
         if (next <= d) return 75;
         return 100;
+    }
+
+    public static boolean isItqanValidationRep(int completedBefore, AnchoringQueue.Protocol protocol) {
+        int next = completedBefore + 1;
+        int total = itqanTotalReps(protocol);
+        return next >= total - 1 && next <= total
+            && itqanMaskForNextRep(completedBefore, protocol) == 100;
+    }
+
+    public static boolean itqanValidationPassed(int finalStageReveals) {
+        return finalStageReveals < 2;
     }
 }

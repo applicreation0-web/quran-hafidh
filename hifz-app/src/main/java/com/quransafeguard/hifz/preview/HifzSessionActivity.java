@@ -49,6 +49,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private int currentMask = 0;
     private GeometryRepository.FiveLineBlock sabqiBlock;
     private GeometryRepository.VerseUnit itqanUnit;
+    private AnchoringQueue.Entry anchoringEntry;
+    private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
     private GeometryRepository.EligibleLinePlan murajaahPlan;
     private VerseRef murajaahActualEnd;
     private boolean timedSessionLimitReached;
@@ -433,16 +435,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
             program.setText("Itqān · unité validée");
-            progress.setText(prefs.lastItqanLabel().isEmpty()?"×"+PreviewConfig.ITQAN_TOTAL_REPS+" terminé":prefs.lastItqanLabel());
+            progress.setText(prefs.lastItqanLabel().isEmpty()?"Ancrage terminé":prefs.lastItqanLabel());
             return;
         }
-        EligibleCorpus corpus=prefs.itqanWorkCorpus();
-        if (!prefs.isItqanCursorValid()) {
+        anchoringEntry = prefs.currentAnchoringEntry(geometry);
+        if (anchoringEntry == null) {
             sessionCompleted = true;
-            program.setText("Itqān · curseur à repositionner");
-            progress.setText("Vérifiez les plages Itqān.");
+            program.setText("Itqān · aucune page en attente");
+            progress.setText("Toutes les pages promues sont acquises.");
             return;
         }
+        itqanTargetReps = PreviewConfig.itqanTotalReps(anchoringEntry.protocol);
         int rep=prefs.itqanRep();
         VerseRef savedStart=prefs.itqanUnitStart();
         VerseRef savedEnd=prefs.itqanUnitEnd();
@@ -453,19 +456,24 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             List<String> lineIds=geometry.lineIdsForVerseRange(savedStart,savedEnd);
             itqanUnit=new GeometryRepository.VerseUnit(currentPage,savedStart,savedEnd,verses,lineIds);
         } else {
-            itqanUnit=geometry.eligiblePageUnit(prefs.itqanCursor(),corpus);
+            VerseRef entryStart = GeometryRepository.parseVerse(anchoringEntry.start);
+            VerseRef entryEnd = GeometryRepository.parseVerse(anchoringEntry.end);
+            int page = geometry.pageForVerse(entryStart);
+            itqanUnit = new GeometryRepository.VerseUnit(page, entryStart, entryEnd,
+                geometry.versesForRange(entryStart, entryEnd),
+                geometry.lineIdsForVerseRange(entryStart, entryEnd));
             currentPage=itqanUnit.page;unitFirstPage=unitLastPage=currentPage;
         }
         currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
-        if(rep>=PreviewConfig.ITQAN_TOTAL_REPS){
+        if(rep>=itqanTargetReps){
             awaitingValidation=true;sessionCompleted=true;clock.pause();currentMask=0;
-            program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS);
-            progress.setText(PreviewConfig.ITQAN_TOTAL_REPS+"/"+PreviewConfig.ITQAN_TOTAL_REPS+" · prêt à valider · révélations "+prefs.itqanAssisted());
+            program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps);
+            progress.setText(itqanTargetReps+"/"+itqanTargetReps+" · prêt à valider · révélations finales "+prefs.itqanFinalReveals());
             showCurrent();addRoundAction("✓","Valider",v->validateItqan());return;
         }
         sessionCompleted=false;
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep);
-        program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS);
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep, anchoringEntry.protocol);
+        program.setText("Itqān · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps);
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
         LinearLayout revealAction = Ui.roundAction(this,"","Révéler",null);
@@ -476,31 +484,41 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateItqanProgress(int rep,int reveals){
-        progress.setText(Math.min(rep+1,PreviewConfig.ITQAN_TOTAL_REPS)+"/"+PreviewConfig.ITQAN_TOTAL_REPS+" · masque "+currentMask+"% · révélations "+reveals);
+        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · masque "+currentMask+"% · révélations "+reveals);
         eink.local(progress);
     }
 
     private void completeItqanRep(){
         if (!takeRepLock()) return;
         boolean revealed=consumeReveal();
-        int rep=prefs.itqanRep();if(rep>=PreviewConfig.ITQAN_TOTAL_REPS)return;
+        int rep=prefs.itqanRep();if(rep>=itqanTargetReps)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
-        if(!prefs.setItqanProgress(rep,reveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition Itqān.");return;}
-        if(rep>=PreviewConfig.ITQAN_TOTAL_REPS){
+        int finalReveals = prefs.itqanFinalReveals()
+            + (revealed && PreviewConfig.isItqanValidationRep(rep - 1, anchoringEntry.protocol) ? 1 : 0);
+        if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition Itqān.");return;}
+        if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep);if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep, anchoringEntry.protocol);if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();if(currentPage!=unitFirstPage){currentPage=unitFirstPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
 
     private void validateItqan(){
-        if(itqanUnit==null||prefs.itqanRep()<PreviewConfig.ITQAN_TOTAL_REPS)return;
+        if(itqanUnit==null||anchoringEntry==null||prefs.itqanRep()<itqanTargetReps)return;
+        if (!PreviewConfig.itqanValidationPassed(prefs.itqanFinalReveals())) {
+            if (!prefs.failAndDeferAnchoring(itqanUnit.start, itqanUnit.end)) {
+                onError("Impossible d’enregistrer le report de cette page d’Itqān.");
+                return;
+            }
+            awaitingValidation=false;sessionCompleted=false;mushaf.cycleCompleted();renderMode();
+            return;
+        }
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
         VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.itqanRotationStart());
-        String label=itqanUnit.start+" → "+itqanUnit.end+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS+" · révélations "+prefs.itqanAssisted();
+        String label=itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps+" · révélations finales "+prefs.itqanFinalReveals();
         boolean ok=prefs.completeItqanUnitAndConsolidate(itqanUnit.start,itqanUnit.end,next,LocalDate.now().toString(),label);
         if(!ok){onError("Impossible d’enregistrer atomiquement la validation Itqān.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
