@@ -8,7 +8,7 @@ import java.util.List;
 public final class AnchoringQueue {
     private AnchoringQueue() {}
 
-    public enum Origin { RECONSTRUCTION, PROMOTED }
+    public enum Origin { RECONSTRUCTION, PROMOTED, FORCED_PROMOTION }
     public enum Protocol { LIGHT, FULL }
 
     public static final class Entry {
@@ -41,10 +41,26 @@ public final class AnchoringQueue {
         }
     }
 
+    public static Origin originFor(boolean reconstruction, boolean forcedPromotion) {
+        if (reconstruction) return Origin.RECONSTRUCTION;
+        return forcedPromotion ? Origin.FORCED_PROMOTION : Origin.PROMOTED;
+    }
+
+    /** Return the cyclic visit order beginning at the persisted current index. */
+    public static List<Entry> visitOrder(List<Entry> source, int currentIndex) {
+        if (source == null || source.isEmpty()) return Collections.emptyList();
+        int start = Math.max(0, Math.min(currentIndex, source.size() - 1));
+        ArrayList<Entry> out = new ArrayList<>(source.size());
+        for (int step = 0; step < source.size(); step++) {
+            out.add(source.get((start + step) % source.size()));
+        }
+        return Collections.unmodifiableList(out);
+    }
+
     /**
-     * Move the page actually displayed behind {@code places} following entries in cyclic visit
-     * order. Returning the next page at index zero keeps the persisted queue unambiguous even when
-     * the deferral wraps past the physical end of the list.
+     * Move the page actually displayed behind {@code places} following distinct entries in cyclic
+     * visit order. With only one page, +3 cannot be represented without an immediate replay, so
+     * {@code nextIndex == -1} explicitly means retry on a later Ancrage session.
      */
     public static Deferral defer(List<Entry> source, int displayedIndex, int places) {
         if (source == null || source.isEmpty()) throw new IllegalArgumentException("anchoring queue required");
@@ -52,13 +68,16 @@ public final class AnchoringQueue {
             throw new IllegalArgumentException("displayed anchoring index outside queue");
         }
         Entry displayed = source.get(displayedIndex);
-        ArrayList<Entry> visitOrder = new ArrayList<>(source.size());
-        for (int step = 1; step < source.size(); step++) {
-            visitOrder.add(source.get((displayedIndex + step) % source.size()));
+        if (source.size() == 1) {
+            return new Deferral(Collections.singletonList(displayed), -1);
         }
-        int insertion = Math.min(Math.max(0, places), visitOrder.size());
-        visitOrder.add(insertion, displayed);
-        return new Deferral(visitOrder, 0);
+        ArrayList<Entry> otherVisits = new ArrayList<>(source.size() - 1);
+        for (int step = 1; step < source.size(); step++) {
+            otherVisits.add(source.get((displayedIndex + step) % source.size()));
+        }
+        int insertion = Math.min(Math.max(0, places), otherVisits.size());
+        otherVisits.add(insertion, displayed);
+        return new Deferral(otherVisits, 0);
     }
 
     public static Deferral failAndDefer(List<Entry> source, int displayedIndex, int places) {
