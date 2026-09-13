@@ -53,10 +53,11 @@ final class WeeklyDashboardPlanner {
         ArrayList<HifzPrefs.RecentSabqi> projectedRecent=new ArrayList<>(prefs.recentSabqi());
         boolean consolidationActivated=prefs.recentConsolidationActivatedOn()!=null;
 
-        prefs.currentAnchoringEntry(geometry); // reconcile once if cache is invalidated
+        prefs.currentAnchoringEntry(geometry);
         List<AnchoringQueue.Entry> projectedAnchoring=AnchoringQueue.visitOrder(
             prefs.anchoringQueue(),prefs.anchoringQueueIndex());
         int projectedAnchoringIndex=0;
+        int projectedItqanBlockIndex=prefs.itqanBlockIndex();
 
         for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
@@ -89,10 +90,25 @@ final class WeeklyDashboardPlanner {
                     else if(date.equals(today)&&prefs.anchoringDeferredToday()) morning="Ancrage · page reportée";
                     else if(projectedAnchoringIndex>=projectedAnchoring.size()) morning="Ancrage · aucune page en attente";
                     else {
-                        AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex++);
+                        AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex);
                         VerseRef start=GeometryRepository.parseVerse(entry.start);
                         VerseRef end=GeometryRepository.parseVerse(entry.end);
-                        morning="Ancrage · "+range(start,end)
+                        List<VerseRef> verses=geometry.versesForRange(start,end);
+                        boolean fractionated=prefs.isFractionatedUnit(verses);
+                        String fractionLabel="";
+                        if(fractionated){
+                            int lineCount=geometry.lineIdsForVerseRange(start,end).size();
+                            int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(lineCount));
+                            int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                            fractionLabel=" · bloc "+(block+1)+"/"+blocks;
+                            block++;
+                            if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
+                            else projectedItqanBlockIndex=block;
+                        }else{
+                            projectedItqanBlockIndex=0;
+                            projectedAnchoringIndex++;
+                        }
+                        morning="Ancrage · "+range(start,end)+fractionLabel
                             +(entry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
                     }
                     break;
