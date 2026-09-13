@@ -6,13 +6,12 @@ import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-/** Read-only weekly projection. Dashboard and runtime share HifzSchedule.planFor(). */
+/** Read-only sliding seven-day projection. Dashboard and runtime share HifzSchedule.planFor(). */
 final class WeeklyDashboardPlanner {
     static final class Row {
         final LocalDate date;
@@ -39,21 +38,29 @@ final class WeeklyDashboardPlanner {
         this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;
     }
 
+    static List<LocalDate> window(LocalDate today){
+        if(today==null)return Collections.emptyList();
+        ArrayList<LocalDate> out=new ArrayList<>(7);
+        for(int i=0;i<7;i++)out.add(today.plusDays(i));
+        return Collections.unmodifiableList(out);
+    }
+
     List<Row> week(LocalDate today){
         ArrayList<Row> out=new ArrayList<>();
-        LocalDate monday=today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         int sabqiCursor=currentSabqiCursor();
-        VerseRef itqanCursor=prefs.itqanCursor();
         VerseRef murajaahCursor=prefs.murajaahCursor();
-        EligibleCorpus itqanCorpus=prefs.itqanWorkCorpus();
         EligibleCorpus murajaahCorpus=prefs.murajaahCorpus();
         ArrayList<HifzPrefs.RecentSabqi> projectedRecent=new ArrayList<>(prefs.recentSabqi());
         boolean consolidationActivated=prefs.recentConsolidationActivatedOn()!=null;
 
-        for(int i=0;i<7;i++){
-            LocalDate date=monday.plusDays(i);
+        prefs.currentAnchoringEntry(geometry); // reconcile once if cache is invalidated
+        List<AnchoringQueue.Entry> projectedAnchoring=AnchoringQueue.visitOrder(
+            prefs.anchoringQueue(),prefs.anchoringQueueIndex());
+        int projectedAnchoringIndex=0;
+
+        for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
-                out.add(new Row(date,day(date),"—","—","Parcours non démarré"));
+                out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
                 continue;
             }
             DailyPlan plan=HifzSchedule.INSTANCE.planFor(date.getDayOfWeek(),projectedRecent.size(),consolidationActivated);
@@ -79,11 +86,13 @@ final class WeeklyDashboardPlanner {
                 }
                 case ITQAN: {
                     if(morningActual!=null) morning="✓ "+compact(morningActual.label);
-                    else if(!itqanCorpus.contains(itqanCursor)) morning="Ancrage · position hors corpus";
+                    else if(projectedAnchoringIndex>=projectedAnchoring.size()) morning="Ancrage · aucune page en attente";
                     else {
-                        GeometryRepository.VerseUnit unit=geometry.eligiblePageUnit(itqanCursor,itqanCorpus);
-                        morning="Ancrage · "+range(unit.start,unit.end);
-                        itqanCursor=itqanCorpus.nextAnchored(unit.end,prefs.itqanRotationStart());
+                        AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex++);
+                        VerseRef start=GeometryRepository.parseVerse(entry.start);
+                        VerseRef end=GeometryRepository.parseVerse(entry.end);
+                        morning="Ancrage · "+range(start,end)
+                            +(entry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
                     }
                     break;
                 }
@@ -121,8 +130,7 @@ final class WeeklyDashboardPlanner {
             boolean morningDone=morningActual!=null;
             boolean eveningDone=eveningActual!=null;
             String state=morningDone&&eveningDone?"Validées":morningDone?"Soir à faire":"À faire";
-            if(date.isBefore(today)&&(!morningDone||!eveningDone)) state="Non validée";
-            out.add(new Row(date,day(date),morning,evening,state));
+            out.add(new Row(date,day(date,today),morning,evening,state));
         }
         return out;
     }
@@ -159,8 +167,9 @@ final class WeeklyDashboardPlanner {
     private String recentRange(List<HifzPrefs.RecentSabqi> recent){
         if(recent.isEmpty())return "aucun passage";
         try{
-            GeometryRepository.FiveLineBlock first=geometry.fiveLineBlock(recent.get(0).startLine);
-            GeometryRepository.FiveLineBlock last=geometry.fiveLineBlock(recent.get(recent.size()-1).startLine);
+            List<HifzPrefs.RecentSabqi> canonical=HifzPrefs.canonicalRecentOrder(recent);
+            GeometryRepository.FiveLineBlock first=geometry.fiveLineBlock(canonical.get(0).startLine);
+            GeometryRepository.FiveLineBlock last=geometry.fiveLineBlock(canonical.get(canonical.size()-1).startLine);
             return range(first.startVerse,last.endVerse);
         }catch(RuntimeException e){return "fenêtre à vérifier";}
     }
@@ -186,7 +195,8 @@ final class WeeklyDashboardPlanner {
         }
     }
 
-    private static String day(LocalDate date){
+    static String day(LocalDate date,LocalDate today){
+        if(date!=null&&date.equals(today))return "Aujourd’hui";
         switch(date.getDayOfWeek()){
             case MONDAY:return "Lun";
             case TUESDAY:return "Mar";
