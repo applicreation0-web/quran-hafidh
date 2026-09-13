@@ -19,15 +19,16 @@ public final class Lot2SourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void oneMurajaahCadenceDrivesAllRuntimeSizing() throws Exception {
+    @Test public void maintenanceAndConsolidationUseIndependentCadences() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String speeds = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
         assertTrue(session.contains("HifzCadence.targetLines"));
-        assertTrue(session.contains("HifzCadence.targetFiveLineCapacity"));
-        assertTrue(session.contains("HifzCadence.recalibrate"));
-        assertFalse(session.contains("recentSecondsPerLine()"));
-        assertFalse(prefs.contains("public double recentSecondsPerLine()"));
-        assertFalse(prefs.contains("public void setRecentSecondsPerLine"));
+        assertTrue(session.contains("speedStore.maintenanceSecondsPerLine()"));
+        assertTrue(session.contains("speedStore.calibrateMaintenance"));
+        assertTrue(session.contains("speedStore.calibrateConsolidation"));
+        assertTrue(speeds.contains("murajaahSecPerLine"));
+        assertTrue(speeds.contains("recentSecPerLine"));
+        assertFalse(session.contains("calibrateOldSpeed"));
     }
 
     @Test public void advisoryIsWedFriOnlyAndNeverBecomesScheduledSession() throws Exception {
@@ -36,6 +37,7 @@ public final class Lot2SourceContractTest {
         assertTrue(main.contains("recentSabqiAdvisory"));
         assertTrue(main.contains("DayOfWeek.WEDNESDAY") && main.contains("DayOfWeek.FRIDAY"));
         assertTrue(main.contains("HifzCadence.advisoryFiveLineRange"));
+        assertTrue(main.contains("speedStore.consolidationSecondsPerLine()"));
         assertTrue(main.contains("prefs.recentSabqi().isEmpty()"));
         assertTrue(core.contains("EVENING_REVIEW_MINUTES = 30"));
         assertTrue(core.contains("ANCHORING_ENVELOPE_MINUTES = 60"));
@@ -44,21 +46,27 @@ public final class Lot2SourceContractTest {
         assertFalse(core.contains("MICRO_REVIEW"));
     }
 
-    @Test public void effectiveItqanCorpusIsVisibleButNotEditable() throws Exception {
+    @Test public void effectiveAnchoringCorpusIsVisibleButNotDirectlyEditable() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(prefs.contains("effectiveItqanRanges()"));
-        assertTrue(settings.contains("Corpus Itqān réel"));
-        assertTrue(settings.contains("À consolider ×40"));
+        assertTrue(settings.contains("Corpus d’ancrage"));
+        assertTrue(settings.contains("En attente d’ancrage"));
         assertTrue(settings.contains("prefs.effectiveItqanRanges()"));
         assertTrue(settings.contains("prefs.unconsolidatedPromotedRanges()"));
         assertFalse(settings.contains("Modifier le corpus réel"));
         assertFalse(settings.contains("Supprimer du corpus réel"));
     }
 
-    @Test public void fixedRepetitionsAndFixedScheduleRemainUntouched() throws Exception {
+    @Test public void anchoringKeepsFullAndReconstructionProtocolsDistinct() throws Exception {
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
         assertTrue(config.contains("SABQI_TOTAL_REPS = 37"));
         assertTrue(config.contains("ITQAN_TOTAL_REPS = 40"));
+        assertTrue(config.contains("ITQAN_LIGHT_TOTAL_REPS = 30"));
+        assertTrue(config.contains("ITQAN_LIGHT_VISIBLE_REPS = 15"));
+        assertTrue(config.contains("ITQAN_LIGHT_25_REPS = 0"));
+        assertTrue(config.contains("ITQAN_LIGHT_50_REPS = 5"));
+        assertTrue(config.contains("ITQAN_LIGHT_75_REPS = 5"));
+        assertTrue(config.contains("ITQAN_LIGHT_100_REPS = 5"));
     }
 }
