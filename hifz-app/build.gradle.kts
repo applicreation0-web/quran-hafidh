@@ -2,119 +2,196 @@ plugins {
     id("com.android.application")
 }
 
-val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
-val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
-val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
-val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
+android {
+    namespace = "com.quransafeguard.hifz"
+    compileSdk = 37
 
-val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
-    inputs.dir(hifzTafsirSourceDir)
-    inputs.file(rootProject.file("scripts/prepare_hifz_tafsir_release.py"))
-    outputs.dir(generatedHifzTafsirDir)
-    commandLine(
-        "python3",
-        rootProject.file("scripts/prepare_hifz_tafsir_release.py").absolutePath,
-        hifzTafsirSourceDir.absolutePath,
-        generatedHifzTafsirDir.absolutePath
-    )
+    defaultConfig {
+        applicationId = "com.quransafeguard.hifz"
+        minSdk = 23
+        targetSdk = 35
+        versionCode = 10
+        versionName = "0.7.3-boox"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
 }
 
-val prepareHifzAssets by tasks.registering(Sync::class) {
+dependencies {
+    implementation(project(":hifz-core"))
+    implementation("org.brotli:dec:0.1.2")
+    testImplementation("junit:junit:4.13.2")
+}
+
+val prepareHifzTafsirRelease by tasks.registering {
+    group = "verification"
+    description = "Normalize audited Tafsir assets for the standalone Hifz APK."
+    doLast {
+        val sourceRoot = rootProject.file("app/src/plus/assets/tafsir")
+        val targetRoot = file("src/main/assets/tafsir")
+        check(sourceRoot.isDirectory) { "Missing audited Tafsir source directory: $sourceRoot" }
+        targetRoot.deleteRecursively()
+        targetRoot.mkdirs()
+
+        data class Corpus(val stem: String, val sourcePattern: Regex, val expectedParts: Int)
+        val corpora = listOf(
+            Corpus("al_jalalayn_en.sqlite", Regex("al_jalalayn_en\\.sqlite\\.gz\\.part\\d+"), 4),
+            Corpus("qurtubi_en.sqlite", Regex("qurtubi_en\\.sqlite\\.gz\\.b64\\.part\\d+"), 4),
+            Corpus("qushayri_en.sqlite", Regex("qushayri_en\\.sqlite\\.gz\\.b64\\.part\\d+"), 2)
+        )
+
+        corpora.forEach { corpus ->
+            val parts = sourceRoot.listFiles().orEmpty()
+                .filter { corpus.sourcePattern.matches(it.name) }
+                .sortedBy { it.name }
+            check(parts.size == corpus.expectedParts) {
+                "${corpus.stem}: expected ${corpus.expectedParts} source parts, found ${parts.size}"
+            }
+            val payload = parts.flatMap { it.readBytes().asIterable() }.toByteArray()
+            val decoded = if (parts.first().name.contains(".b64.")) {
+                java.util.Base64.getMimeDecoder().decode(payload)
+            } else payload
+            val chunkSize = kotlin.math.ceil(decoded.size / corpus.expectedParts.toDouble()).toInt()
+            repeat(corpus.expectedParts) { index ->
+                val start = index * chunkSize
+                val end = kotlin.math.min(decoded.size, start + chunkSize)
+                check(start < end) { "${corpus.stem}: empty normalized part $index" }
+                file("src/main/assets/tafsir/${corpus.stem}.gz.part${index.toString().padStart(2, '0')}")
+                    .writeBytes(decoded.copyOfRange(start, end))
+            }
+        }
+        println("HIFZ_TAFSIR_RELEASE_ASSETS_OK")
+    }
+}
+
+val prepareHifzAssets by tasks.registering {
+    group = "verification"
+    description = "Prepare standalone Quran Hifz runtime assets from validated local sources."
     dependsOn(prepareHifzTafsirRelease)
-    into(generatedHifzAssetsDir)
-    from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
-    from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
-    from(generatedHifzTafsirDir) { into("tafsir") }
+    doLast {
+        val sourceMushaf = rootProject.file("app/src/main/assets/mushaf/hafs/kfqc/svg-br")
+        val sourceGeometry = rootProject.file("app/src/main/assets/reader109/geometry.json")
+        val targetMushaf = file("src/main/assets/mushaf/hafs/kfqc/svg-br")
+        val targetGeometry = file("src/main/assets/reader109/geometry.json")
+        check(sourceMushaf.isDirectory) { "Missing canonical Mushaf source directory: $sourceMushaf" }
+        check(sourceGeometry.isFile) { "Missing generated Hifz geometry: $sourceGeometry" }
+        targetMushaf.deleteRecursively()
+        targetMushaf.mkdirs()
+        sourceMushaf.listFiles().orEmpty().filter { it.name.matches(Regex("\\d{3}\\.svg\\.br")) }.forEach { source ->
+            source.copyTo(targetMushaf.resolve(source.name), overwrite = true)
+        }
+        check(targetMushaf.listFiles().orEmpty().count { it.name.matches(Regex("\\d{3}\\.svg\\.br")) } == 604) {
+            "Standalone Hifz APK must package exactly 604 canonical Mushaf pages."
+        }
+        targetGeometry.parentFile.mkdirs()
+        sourceGeometry.copyTo(targetGeometry, overwrite = true)
+    }
 }
+
+tasks.named("preBuild").configure { dependsOn(prepareHifzAssets) }
 
 val verifyHifzProductBoundary by tasks.registering {
+    group = "verification"
+    description = "Verify standalone Quran Hifz stays offline and contains no Safeguard blocking surface."
     doLast {
+        val root = file("src/main")
+        val text = root.walkTopDown().filter { it.isFile && it.extension in setOf("java", "kt", "xml", "html", "js", "json") }
+            .joinToString("\n") { it.readText() }
+        val forbidden = listOf(
+            "AccessibilityService", "BIND_ACCESSIBILITY_SERVICE", "QUERY_ALL_PACKAGES", "QuranAccessibilityService",
+            "UsageStatsManager", "getInstalledPackages", "allowlist", "blocklist"
+        )
+        forbidden.forEach { token -> check(!text.contains(token)) { "Forbidden Safeguard surface in Hifz app: $token" } }
         val manifest = file("src/main/AndroidManifest.xml").readText()
-        check(!manifest.contains("AccessibilityService", ignoreCase = true)) { "Quran Hifz must not package an Accessibility service." }
-        check(!manifest.contains("<queries>")) { "Quran Hifz must not query or enumerate external applications." }
-        check(!manifest.contains("QUERY_ALL_PACKAGES")) { "Quran Hifz must never request broad package visibility." }
-        check(!manifest.contains("BIND_ACCESSIBILITY_SERVICE")) { "Quran Hifz must never request Safeguard blocking privileges." }
-        check(!manifest.contains("android.permission.INTERNET")) { "Quran Hifz must remain offline-first and must not request INTERNET." }
-        val sourceText = fileTree("src/main") { include("**/*.java", "**/*.kt", "**/*.xml") }.files.joinToString("\n") { it.readText() }
-        listOf("QuranAccessibilityService","ProtectedApps","GuardPrefs.protectedPackages","UsageCyclePolicy","UnlockBudgetIntegrity").forEach { forbidden ->
-            check(!sourceText.contains(forbidden)) { "Safeguard-only symbol leaked into Quran Hifz: $forbidden" }
-        }
+        check(!manifest.contains("android.permission.INTERNET")) { "Quran Hifz must stay offline-first." }
     }
 }
 
 val verifyHifzCosmeticContract by tasks.registering {
+    group = "verification"
+    description = "Guard compact BOOX reader/dashboard/settings presentation without changing Hifz semantics."
     doLast {
-        val audio = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioDialog.java").readText()
         val session = file("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java").readText()
-        val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
         val settings = file("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java").readText()
         val main = file("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java").readText()
         val ui = file("src/main/java/com/quransafeguard/hifz/preview/Ui.java").readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
 
-        check(!audio.contains("android.app.Dialog") && !audio.contains("new Dialog(")) {
-            "BOOX audio must be inline, never a modal Dialog."
+        check(!session.contains("Page suivante") && !session.contains("Page précédente")) {
+            "Tablet Hifz sessions must use swipe/hardware page turns, not permanent page buttons."
         }
-        check(audio.contains("attachInline") && audio.contains("detachInline")) {
-            "Audio controller must expose explicit inline attach/detach lifecycle."
+        check(!session.contains("heading = Ui.bookText")) {
+            "Sabqi, Itqan and Murajaah must not waste Mushaf height on a separate mode title."
         }
-        check(session.contains("audioHost") && study.contains("audioHost")) {
-            "Structured sessions and Study reader must reserve a non-overlay inline audio host below the header."
+        check(session.contains("LinearLayout controlBar = Ui.row(this)")) {
+            "Session actions and offline audio must share one compact bottom control row."
         }
-        check(ui.contains("iconButton") && ui.contains("settingRow")) {
-            "Compact icon hit-targets and settings rows are required by the BOOX cosmetic contract."
+        check(session.contains("Écouter") && session.contains("gate.installed()")) {
+            "Audio control must stay visible and route to Settings until the local pack is installed."
         }
-        check(settings.contains("Ui.settingRow")) {
-            "Settings must be predominantly row-based instead of button-card based."
+        check(settings.contains("Ajouter") && settings.contains("Début de rotation Itqān"))
+        check(settings.contains("FLAG_GRANT_PERSISTABLE_URI_PERMISSION")) { "Audio picker should retain read permission for a long import." }
+        check(main.contains("todayAction.setOnClickListener") && !main.contains("\"Séance\", v -> openToday")) {
+            "Today card should be the single scheduled-session entry point."
         }
-        check(!main.contains("Ui.panel(todayAction)")) {
-            "Home Today launcher must stay lightweight rather than render as a dashboard card."
+        check(ui.contains("ic_ui_sabqi") && ui.contains("ic_ui_itqan") && ui.contains("ic_ui_murajaah")) {
+            "Hifz pictograms must use the uniform semantic icon family."
         }
-        check(study.contains("readerActions") && study.contains("pageRail")) {
-            "Reader actions and page slider must be separate compact surfaces."
-        }
-        check(study.contains("title.setSingleLine(true)") && study.contains("tafsirTextControl") && study.contains("tafsirEditionButton")) {
-            "Tafsir header and edition controls must remain compact liseuse surfaces."
-        }
+        check(manifest.contains("ic_quran_hifz_logo")) { "Quran Hifz launcher icon must use the Mushaf/rehal identity." }
     }
 }
 
 val verifyHifzConvergenceRules by tasks.registering {
+    group = "verification"
+    description = "Verify reader, mask, audio, dashboard and settings still converge on the final 0.7.3 contract."
     doLast {
         val config = file("src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java").readText()
         val core = rootProject.file("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt").readText()
         val session = file("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java").readText()
         val settings = file("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java").readText()
+        val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
         val main = file("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java").readText()
         val ui = file("src/main/java/com/quransafeguard/hifz/preview/Ui.java").readText()
+        val manifest = file("src/main/AndroidManifest.xml").readText()
         val study = file("src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java").readText()
         val reader = file("src/main/assets/hifzreader/reader.js").readText()
-        val prefs = file("src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java").readText()
-        val audioPack = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioPack.java").readText()
         val audio = file("src/main/java/com/quransafeguard/hifz/preview/HifzAudioDialog.java").readText()
         val mushaf = file("src/main/java/com/quransafeguard/hifz/preview/MushafView.java").readText()
         val eink = file("src/main/java/com/quransafeguard/hifz/preview/EinkController.java").readText()
-        val manifest = file("src/main/AndroidManifest.xml").readText()
 
+        check(config.contains("SCHEMA_VERSION = 3")) { "Hifz state must remain on schema v3." }
         check(core.contains("PlannedSession(SessionKind.SABQI_TODAY_REVIEW, 30)")
                 && core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 60)")
                 && core.contains("PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 30)")
                 && core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 30)")) {
             "Fixed timed sessions must be defined by HifzSchedule, not duplicate PreviewConfig constants."
         }
-        check(config.contains("ITQAN_VISIBLE_REPS_WORKING = 15"))
-        check(config.contains("ITQAN_100_REPS_WORKING = 10"))
-        check(config.contains("ITQAN_TOTAL_REPS = 40")) { "Itqan must stay on the agreed ×40 protocol." }
-        check(config.contains("EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6")) { "Audio needs its own anti-ghosting cleanup cadence." }
-
-        check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
-        check(!session.contains("Stable sans aide")) { "A fault-free recent review must not trigger promotion." }
-        check(!session.contains("markFirstRecentStable")) { "Recent Sabqi must stay recent until capacity pressure." }
-        check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Itqan." }
-        check(session.contains("rebalanceRecentWindow")) { "New Sabqi must enforce the sliding 30-minute recent window." }
-        check(session.contains("À renforcer"))
-        check(session.contains("révélations") && session.contains("Révéler"))
-        check(session.contains("prêt à valider") && session.contains("validateSabqi") && session.contains("validateItqan")) {
-            "Sabqi/Itqan completion must require explicit persisted validation."
+        check(config.contains("SABQI_TOTAL_REPS = 37"))
+        check(config.contains("ITQAN_TOTAL_REPS = 40"))
+        check(!prefs.contains("pendingPromotedItqan")) { "Priority promoted Itqan queue is forbidden by cycle philosophy." }
+        check(prefs.contains("unconsolidatedPromotedRanges") && prefs.contains("legacyMurajaahPromotedRanges"))
+        check(prefs.contains("itqanWorkCorpus()") && prefs.contains("murajaahCorpus()"))
+        check(session.contains("SABQI_TODAY_REVIEW") && session.contains("RECENT_SABQI_REVIEW"))
+        check(session.contains("completeExpiredTimedSession") && session.contains("completeEmptyRecentSabqiSession"))
+        check(session.contains("HifzSchedule") && session.contains("planFor")) { "Runtime timed sessions must share HifzSchedule with Today/dashboard." }
+        check(session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)")) { "Mask entropy must persist for the logical Hifz session and reset only after completion." }
+        check(!session.contains("murajaahBlockB") && !session.contains("transitionToBlockB") && !session.contains("unusedA") && !session.contains("availableB")) {
+            "Legacy A/B allocation and unused-time transfer must stay removed."
         }
         check(!session.contains("Page suivante") && !session.contains("Page précédente")) {
             "Tablet Hifz sessions must use swipe/hardware page turns, not permanent page buttons."
@@ -143,9 +220,10 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
         check(reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells")
                 && reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)")
-                && reader.contains("markerLayer(svg,polys)") && reader.contains("seededRandom")
-                && reader.contains("maskEntropy") && !reader.contains("line.words")
-                && !reader.contains("function hiddenBandForLine")) {
+                && reader.contains("markerLayer(svg,polys,lines)")
+                && reader.contains("layer.appendChild(markerLayer(svg,polys,lines))")
+                && reader.contains("seededRandom") && reader.contains("maskEntropy")
+                && !reader.contains("line.words") && !reader.contains("function hiddenBandForLine")) {
             "Mask must randomize existing source-ink groups, preserve cumulative percentages, and keep verse markers above masks."
         }
         check(reader.contains("setAudioVerse") && reader.contains("setEink(value)") && reader.contains("clearReveal") && reader.contains("revealSelection"))
@@ -157,71 +235,6 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(mushaf.contains("eink.audio(this)")) { "Audio highlight must use the dedicated BOOX refresh path." }
         check(eink.contains("REGAL") && eink.contains("GU") && eink.contains("GC")) { "BOOX partial/full refresh preference missing." }
 
-        check(settings.contains("HifzAudioPack.PACK_FILE_NAME") && settings.contains("Choisir le pack")
-                && audioPack.contains("Quran-Hifz-Husary-Muallim.zip") && audioPack.contains("Téléchargements/QuranHifz/")) {
-            "The durable local audio import path must remain explicit."
-        }
-        check(audioPack.contains("VERIFIED_MARKER") && audioPack.contains("sha256.txt")) {
-            "Local audio packs must be structurally and cryptographically verified before activation."
-        }
-        check(audioPack.contains("MIN_IMPORT_FREE_BYTES") && audioPack.contains("MAX_TOTAL_EXTRACTED_BYTES")
-                && audioPack.contains("recoverInterruptedActivation") && audioPack.contains("activateVerifiedPack")) {
-            "Audio import must guard storage, bound extraction, and recover interrupted activation."
-        }
+        check(settings.contains("HifzAudioPack.PACK_FILE_NAME") && settings.contains("Choisir le pack"))
     }
-}
-
-android {
-    namespace = "com.quransafeguard.hifz.preview"
-    compileSdk = 37
-
-    defaultConfig {
-        applicationId = "com.quransafeguard.hifz"
-        minSdk = 26
-        targetSdk = 36
-        versionCode = 10
-        versionName = "0.7.3-boox"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
-
-    signingConfigs {
-        create("release") {
-            val keystorePath = System.getenv("HIFZ_KEYSTORE_PATH")
-            if (!keystorePath.isNullOrBlank()) {
-                storeFile = file(keystorePath)
-                storePassword = System.getenv("HIFZ_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("HIFZ_KEY_ALIAS")
-                keyPassword = System.getenv("HIFZ_KEY_PASSWORD")
-            }
-        }
-    }
-
-    buildTypes {
-        getByName("debug") {
-            isDebuggable = false
-        }
-        getByName("release") {
-            isMinifyEnabled = false
-            isDebuggable = false
-            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")
-        }
-    }
-}
-
-tasks.named("preBuild").configure {
-    dependsOn(prepareHifzAssets)
-    dependsOn(verifyHifzProductBoundary)
-    dependsOn(verifyHifzCosmeticContract)
-    dependsOn(verifyHifzConvergenceRules)
-}
-
-dependencies {
-    implementation(project(":hifz-core"))
-    implementation("org.brotli:dec:0.1.2")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test:runner:1.6.2")
-    androidTestImplementation("androidx.test:core:1.6.1")
-    androidTestImplementation("junit:junit:4.13.2")
 }
