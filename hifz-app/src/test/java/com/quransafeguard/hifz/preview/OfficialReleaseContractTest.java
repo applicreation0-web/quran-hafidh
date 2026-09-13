@@ -30,7 +30,7 @@ public final class OfficialReleaseContractTest {
         assertTrue("mask must randomize existing source-ink cells", reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells"));
         assertTrue("random mask draw must survive WebView page reloads", reader.contains("seededRandom") && reader.contains("maskEntropy"));
         assertTrue("mask percentages must accumulate by source-ink width", reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)"));
-        assertTrue("verse-number rosettes must be redrawn above masks", reader.contains("markerLayer(svg,polys)"));
+        assertTrue("verse-number rosettes must be redrawn above masks", reader.contains("markerLayer(svg,polys,lines)") && reader.contains("layer.appendChild(markerLayer(svg,polys,lines))"));
         assertFalse("final mask must not depend on linguistic word geometry", reader.contains("line.words") || reader.contains("maskedWordIds"));
         assertFalse("mask must never collapse a line into one min/max solid band", reader.contains("function hiddenBandForLine"));
         assertFalse("non-scrollable reader must not call window.scrollBy", reader.contains("window.scrollBy"));
@@ -40,10 +40,6 @@ public final class OfficialReleaseContractTest {
         assertTrue("reader must force light color scheme", index.contains("color-scheme:light") || index.contains("color-scheme: light"));
         assertFalse("BOOX reader must not enlarge the Mushaf beyond the reading zone", index.contains("--mushaf-scale") || index.contains("scale(var(--mushaf-scale))"));
         assertTrue("reader must reserve vertical safety room", index.contains("calc((100vh - 4px) * 345 / 550)"));
-        assertTrue("user zoom must not override canonical BOOX fit", index.contains("maximum-scale=1") && index.contains("user-scalable=no"));
-        String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
-        assertTrue("WebView built-in zoom must stay disabled", mushaf.contains("setBuiltInZoomControls(false)"));
-        assertFalse("mask entropy must not be regenerated per WebView instance", mushaf.contains("UUID.randomUUID"));
         assertTrue("user zoom must not override canonical BOOX fit", index.contains("maximum-scale=1") && index.contains("user-scalable=no"));
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
         assertTrue("WebView built-in zoom must stay disabled", mushaf.contains("setBuiltInZoomControls(false)"));
@@ -74,8 +70,6 @@ public final class OfficialReleaseContractTest {
         assertFalse("mixed A/B Murajaah phase must be removed", session.contains("murajaahBlockB") || session.contains("transitionToBlockB"));
         assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
         assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
-        assertTrue("runtime timed durations must consume HifzSchedule", session.contains("HifzSchedule") && session.contains("planFor"));
-        assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
         assertTrue("runtime timed durations must consume HifzSchedule", session.contains("HifzSchedule") && session.contains("planFor"));
         assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
     }
