@@ -182,7 +182,7 @@ jobs:
           set -euo pipefail
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           mkdir -p "$ANDROID_AVD_HOME"
-          printf 'no\nno\n' | avdmanager create avd --force --name hifz-ci --package "system-images;android-35;default;x86_64"
+          avdmanager create avd --force --name hifz-ci --package "system-images;android-35;default;x86_64" --device "pixel"
           if ! "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fxq hifz-ci; then
             echo 'Android AVD creation failed: hifz-ci is not registered' >&2
             avdmanager list avd >&2 || true
