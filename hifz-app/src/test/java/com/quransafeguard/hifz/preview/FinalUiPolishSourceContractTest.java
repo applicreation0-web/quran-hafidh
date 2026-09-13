@@ -80,6 +80,20 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(session.contains("return \"Entretien\""));
         assertTrue(settings.contains("section(root,\"Repères\")"));
         assertTrue(settings.contains("Une page entière travaillée en profondeur"));
+        assertTrue(settings.contains("addRepere(root,\"Ancrage fractionné\""));
+        assertTrue(settings.contains("addRepere(root,\"J10\""));
+    }
+
+    @Test public void settingsExposeReadableSeparatedSpeedsAndJ10State() throws Exception {
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        String speed = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
+        assertTrue(settings.contains("section(root,\"Vitesses\")"));
+        assertTrue(settings.contains("speedStore.maintenanceSummary()"));
+        assertTrue(settings.contains("speedStore.consolidationSummary()"));
+        assertTrue(settings.contains("section(root,\"J10\")"));
+        assertTrue(settings.contains("Intervalle maximal · 10 jours"));
+        assertTrue(speed.contains("s/ligne"));
+        assertFalse(speed.contains("+ \"L/\""));
     }
 
     @Test public void fractionatedAnchoringIsExplicitOnHomeAndWeeklyProjection() throws Exception {
