@@ -1,0 +1,507 @@
+name: Hifz one-time audit closure
+
+on:
+  push:
+    branches: [work/hifz-0.7.3-spec-update]
+    paths:
+      - '.github/workflows/hifz-one-time-audit-closure.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.3-spec-update
+          fetch-depth: 0
+      - name: Apply guarded production closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def rep(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, got {count}')
+              return text.replace(old, new, 1)
+
+          def between(text, start, end, new, label):
+              a = text.find(start)
+              if a < 0: raise SystemExit(f'{label}: start marker absent')
+              b = text.find(end, a)
+              if b < 0: raise SystemExit(f'{label}: end marker absent')
+              return text[:a] + new + text[b:]
+
+          # ---- HifzPrefs ----
+          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java')
+          s = path.read_text()
+          s = rep(s,
+              '                .putString("legacyMurajaahPromotedRanges", "[]")\n                .putString("anchoringQueue", "[]")',
+              '                .putString("legacyMurajaahPromotedRanges", "[]")\n                .putString("forcedPromotedRanges", "[]")\n                .putString("anchoringQueue", "[]")',
+              'fresh forced promotions')
+          s = rep(s,
+              '                .putInt("anchoringQueueIndex", 0)\n                .putString("itqanRotationStart", "49:1")',
+              '                .putInt("anchoringQueueIndex", 0)\n                .putString("anchoringRetryAfterDate", "")\n                .putString("itqanRotationStart", "49:1")',
+              'fresh retry date')
+          s = rep(s,
+              '                .putString("recentConsolidationActivatedOn", "")\n                .putLong("sabqiElapsedMs", 0L)',
+              '                .putString("recentConsolidationActivatedOn", "")\n                .putString("consolidationAttendanceDates", "[]")\n                .putLong("sabqiElapsedMs", 0L)',
+              'fresh attendance')
+          s = rep(s,
+              '            .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))\n            .putString("recentSabqi", recent)',
+              '            .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))\n            .putString("forcedPromotedRanges", "[]")\n            .putString("recentSabqi", recent)',
+              'migration forced promotions')
+          s = rep(s,
+              '            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)\n            .putString("murajaahCursor", murajaah.toString())',
+              '            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)\n            .putString("consolidationAttendanceDates", "[]")\n            .putString("murajaahCursor", murajaah.toString())',
+              'migration attendance')
+          s = rep(s,
+              '            .putInt("anchoringQueueIndex", Math.max(0, p.getInt("anchoringQueueIndex", 0)))\n            .putInt("itqanFinalReveals", Math.max(0, p.getInt("itqanFinalReveals", 0)))',
+              '            .putInt("anchoringQueueIndex", Math.max(0, p.getInt("anchoringQueueIndex", 0)))\n            .putString("anchoringRetryAfterDate", "")\n            .putInt("itqanFinalReveals", Math.max(0, p.getInt("itqanFinalReveals", 0)))',
+              'migration retry')
+          old_repair = '''        if (p.contains("stableRecentLines")
+                  && !p.edit().remove("stableRecentLines").commit()) {
+              throw new IllegalStateException("Unable to clean obsolete Hifz stable-line state");
+          }
+'''
+          new_repair = '''        boolean repairV4 = p.contains("stableRecentLines")
+              || !p.contains("consolidationAttendanceDates")
+              || !p.contains("forcedPromotedRanges")
+              || !p.contains("anchoringRetryAfterDate");
+          if (repairV4) {
+              SharedPreferences.Editor repair = p.edit().remove("stableRecentLines");
+              if (!p.contains("consolidationAttendanceDates")) repair.putString("consolidationAttendanceDates", "[]");
+              if (!p.contains("forcedPromotedRanges")) repair.putString("forcedPromotedRanges", "[]");
+              if (!p.contains("anchoringRetryAfterDate")) repair.putString("anchoringRetryAfterDate", "");
+              if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v4 optional state");
+          }
+'''
+          s = rep(s, old_repair, new_repair, 'schema4 repair')
+          s = rep(s,
+              '    public List<VerseRange> legacyMurajaahPromotedRanges() { return parseRangesAllowEmpty("legacyMurajaahPromotedRanges"); }\n',
+              '''    public List<VerseRange> legacyMurajaahPromotedRanges() { return parseRangesAllowEmpty("legacyMurajaahPromotedRanges"); }
+      public List<VerseRange> forcedPromotedRanges() { return parseRangesAllowEmpty("forcedPromotedRanges"); }
+
+      public List<LocalDate> consolidationAttendanceDates() {
+          ArrayList<LocalDate> out = new ArrayList<>();
+          try {
+              JSONArray array = new JSONArray(p.getString("consolidationAttendanceDates", "[]"));
+              for (int i = 0; i < array.length(); i++) {
+                  LocalDate date = safeDate(array.getString(i), null);
+                  if (date != null) out = new ArrayList<>(ConsolidationAttendance.add(out, date));
+              }
+          } catch (Exception error) {
+              throw new IllegalStateException("Corrupt Consolidation attendance", error);
+          }
+          return Collections.unmodifiableList(out);
+      }
+
+      public List<LocalDate> consolidationAttendanceDates(LocalDate fromInclusive, LocalDate throughInclusive) {
+          return Collections.unmodifiableList(ConsolidationAttendance.between(
+              consolidationAttendanceDates(), fromInclusive, throughInclusive));
+      }
+''',
+              'state accessors')
+
+          new_complete = '''    /** Atomically advances the natural Itqan cycle and consolidates the exact completed queue entry. */
+      public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
+                                                     VerseRef nextCursor, String date, String label) {
+          List<AnchoringQueue.Entry> queue = anchoringQueue();
+          int completedIndex = findAnchoringEntry(queue, start, endInclusive);
+          if (completedIndex < 0) return false;
+          List<VerseRange> pending = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
+          List<VerseRange> forced = subtractCoverage(forcedPromotedRanges(), start, endInclusive);
+          int currentIndex = anchoringQueueIndex(queue.size());
+          queue.remove(completedIndex);
+          if (!queue.isEmpty()) currentIndex = Math.min(completedIndex, queue.size() - 1);
+          else currentIndex = 0;
+          VerseRef storedNext = queue.isEmpty() ? nextCursor
+              : GeometryRepository.parseVerse(queue.get(currentIndex).start);
+          return p.edit()
+              .putString("unconsolidatedPromotedRanges", rangesJson(pending))
+              .putString("forcedPromotedRanges", rangesJson(forced))
+              .putString("anchoringQueue", anchoringQueueJson(queue))
+              .putBoolean("anchoringQueueInitialized", true)
+              .putInt("anchoringQueueIndex", currentIndex)
+              .putString("anchoringRetryAfterDate", "")
+              .putString("itqanCursor", storedNext.toString())
+              .putInt("itqanRep", 0)
+              .putInt("itqanAssisted", 0)
+              .putInt("itqanFinalReveals", 0)
+              .putString("itqanUnitStart", "")
+              .putString("itqanUnitEnd", "")
+              .putLong("itqanElapsedMs", 0L)
+              .putString("lastItqanDate", date)
+              .putString("lastItqanLabel", label)
+              .commit();
+      }
+
+'''
+          s = between(s,
+              '    /** Atomically advances the natural Itqan cycle and consolidates any completed promoted overlap. */',
+              '    public List<AnchoringQueue.Entry> anchoringQueue()',
+              new_complete,
+              'complete ancrage')
+
+          queue_block = '''    public List<AnchoringQueue.Entry> anchoringQueue() {
+          ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
+          try {
+              JSONArray array = new JSONArray(p.getString("anchoringQueue", "[]"));
+              for (int i = 0; i < array.length(); i++) {
+                  JSONObject o = array.getJSONObject(i);
+                  out.add(new AnchoringQueue.Entry(
+                      o.getString("start"), o.getString("end"),
+                      AnchoringQueue.Origin.valueOf(o.getString("origin")),
+                      AnchoringQueue.Protocol.valueOf(o.getString("protocol")),
+                      o.optInt("failures", 0)));
+              }
+          } catch (Exception error) {
+              throw new IllegalStateException("Corrupt anchoring queue", error);
+          }
+          return out;
+      }
+
+      public int anchoringQueueIndex(int size) {
+          if (size <= 0) return 0;
+          return Math.floorMod(p.getInt("anchoringQueueIndex", 0), size);
+      }
+
+      public int anchoringQueueIndex() { return anchoringQueueIndex(anchoringQueue().size()); }
+
+      public boolean anchoringDeferredToday() {
+          String value = p.getString("anchoringRetryAfterDate", "");
+          LocalDate retry = safeDate(value, null);
+          return retry != null && !LocalDate.now().isAfter(retry);
+      }
+
+      private static boolean overlaps(List<VerseRange> ranges, VerseRef start, VerseRef endInclusive) {
+          int a = GeometryRepository.ordinal(start), b = GeometryRepository.ordinal(endInclusive);
+          for (VerseRange range : ranges) {
+              int ra = GeometryRepository.ordinal(range.getStart());
+              int rb = GeometryRepository.ordinal(range.getEndInclusive());
+              if (a <= rb && b >= ra) return true;
+          }
+          return false;
+      }
+
+      /** Reconcile pending page units while retaining failure/protocol state and explicit deferrals. */
+      public boolean reconcileAnchoringQueue(GeometryRepository geometry) {
+          List<VerseRange> pendingRanges = unconsolidatedPromotedRanges();
+          List<VerseRange> forcedRanges = forcedPromotedRanges();
+          LinkedHashMap<String, AnchoringQueue.Entry> expected = new LinkedHashMap<>();
+          if (!pendingRanges.isEmpty()) {
+              EligibleCorpus pendingCorpus = EligibleCorpus.Companion.of(pendingRanges);
+              for (VerseRange range : pendingRanges) {
+                  VerseRef cursor = range.getStart();
+                  while (range.contains(cursor)) {
+                      GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(cursor, pendingCorpus);
+                      String key = anchoringKey(unit.start.toString(), unit.end.toString());
+                      boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
+                      boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
+                      expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
+                          AnchoringQueue.originFor(reconstruction, forced),
+                          reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
+                      VerseRef next = pendingCorpus.next(unit.end);
+                      if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
+                      cursor = next;
+                  }
+              }
+          }
+
+          ArrayList<AnchoringQueue.Entry> next = new ArrayList<>();
+          for (AnchoringQueue.Entry existing : anchoringQueue()) {
+              String key = anchoringKey(existing.start, existing.end);
+              AnchoringQueue.Entry wanted = expected.remove(key);
+              if (wanted != null) {
+                  next.add(new AnchoringQueue.Entry(existing.start, existing.end, wanted.origin,
+                      existing.protocol, existing.failures));
+              }
+          }
+          next.addAll(expected.values());
+          int index = anchoringQueueIndex(next.size());
+          return p.edit()
+              .putString("anchoringQueue", anchoringQueueJson(next))
+              .putBoolean("anchoringQueueInitialized", true)
+              .putInt("anchoringQueueIndex", index)
+              .commit();
+      }
+
+      public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
+          if (!p.getBoolean("anchoringQueueInitialized", false)
+                  && !reconcileAnchoringQueue(geometry)) {
+              throw new IllegalStateException("Unable to persist anchoring queue");
+          }
+          String retryText = p.getString("anchoringRetryAfterDate", "");
+          LocalDate retry = safeDate(retryText, null);
+          if (retry != null) {
+              if (!LocalDate.now().isAfter(retry)) return null;
+              if (!p.edit().putString("anchoringRetryAfterDate", "").commit()) {
+                  throw new IllegalStateException("Unable to clear Ancrage retry deferral");
+              }
+          }
+          List<AnchoringQueue.Entry> queue = anchoringQueue();
+          return queue.isEmpty() ? null : queue.get(anchoringQueueIndex(queue.size()));
+      }
+
+      /** Fail and defer the exact page displayed, even when it is not the physical queue head. */
+      public boolean failAndDeferAnchoring(VerseRef displayedStart, VerseRef displayedEnd) {
+          List<AnchoringQueue.Entry> queue = anchoringQueue();
+          int displayedIndex = findAnchoringEntry(queue, displayedStart, displayedEnd);
+          if (displayedIndex < 0) return false;
+          AnchoringQueue.Deferral deferred = AnchoringQueue.failAndDefer(queue, displayedIndex, 3);
+          int storedIndex = deferred.nextIndex < 0 ? 0 : deferred.nextIndex;
+          VerseRef next = GeometryRepository.parseVerse(deferred.entries.get(storedIndex).start);
+          String retryAfter = deferred.nextIndex < 0 ? LocalDate.now().toString() : "";
+          return p.edit()
+              .putString("anchoringQueue", anchoringQueueJson(deferred.entries))
+              .putBoolean("anchoringQueueInitialized", true)
+              .putInt("anchoringQueueIndex", storedIndex)
+              .putString("anchoringRetryAfterDate", retryAfter)
+              .putString("itqanCursor", next.toString())
+              .putInt("itqanRep", 0)
+              .putInt("itqanAssisted", 0)
+              .putInt("itqanFinalReveals", 0)
+              .putString("itqanUnitStart", "")
+              .putString("itqanUnitEnd", "")
+              .putLong("itqanElapsedMs", 0L)
+              .commit();
+      }
+
+'''
+          s = between(s,
+              '    public List<AnchoringQueue.Entry> anchoringQueue()',
+              '    public String sabqiTodayReviewDate()',
+              queue_block,
+              'anchoring queue block')
+
+          old_recent_complete = '''    public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
+          return p.edit()
+              .putLong("recent_sabqi_reviewElapsedMs", 0L)
+              .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
+              .putString("lastRecentSabqiReviewDate", date)
+              .putString("lastRecentSabqiReviewLabel", label)
+              .commit();
+      }
+'''
+          new_recent_complete = '''    public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
+          LocalDate completed = safeDate(date, LocalDate.now());
+          List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
+          return p.edit()
+              .putLong("recent_sabqi_reviewElapsedMs", 0L)
+              .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
+              .putString("lastRecentSabqiReviewDate", date)
+              .putString("lastRecentSabqiReviewLabel", label)
+              .putString("consolidationAttendanceDates", attendanceJson(attendance))
+              .commit();
+      }
+'''
+          s = rep(s, old_recent_complete, new_recent_complete, 'Consolidation attendance commit')
+          s = rep(s,
+              '    public long elapsedFor(String mode) { return p.getLong(mode.toLowerCase() + "ElapsedMs", 0L); }\n    public void setElapsedFor(String mode, long value) { p.edit().putLong(mode.toLowerCase() + "ElapsedMs", Math.max(0L, value)).apply(); }',
+              '''    static String elapsedKey(String mode) {
+          if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("elapsed mode required");
+          return mode.toLowerCase(Locale.ROOT) + "ElapsedMs";
+      }
+      public long elapsedFor(String mode) { return p.getLong(elapsedKey(mode), 0L); }
+      public void setElapsedFor(String mode, long value) { p.edit().putLong(elapsedKey(mode), Math.max(0L, value)).apply(); }''',
+              'locale elapsed key')
+
+          new_promote = '''    /**
+       * Idempotently grows the Itqan snowball. Forced overflow promotion is retained separately so
+       * the user can see why that material entered Ancrage.
+       */
+      public boolean addPromotedVerses(List<VerseRef> verses) {
+          return addPromotedVerses(verses, false);
+      }
+
+      public boolean addPromotedVerses(List<VerseRef> verses, boolean forcedPromotion) {
+          if (verses == null || verses.isEmpty()) return true;
+          ArrayList<VerseRef> fresh = new ArrayList<>();
+          for (VerseRef verse : verses) if (!isPromoted(verse)) fresh.add(verse);
+          if (fresh.isEmpty()) return true;
+          fresh.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+          List<VerseRange> additions = rangesFromVerses(fresh);
+
+          ArrayList<VerseRange> all = new ArrayList<>(promotedRanges());
+          all.addAll(additions);
+          ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
+          pending.addAll(additions);
+          ArrayList<VerseRange> forced = new ArrayList<>(forcedPromotedRanges());
+          if (forcedPromotion) forced.addAll(additions);
+          return p.edit()
+              .putString("promotedRanges", rangesJson(normalizeRanges(all)))
+              .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
+              .putString("forcedPromotedRanges", rangesJson(normalizeRanges(forced)))
+              .putBoolean("anchoringQueueInitialized", false)
+              .commit();
+      }
+
+      public boolean isPromoted(VerseRef verse) {
+          for (VerseRange range : promotedRanges()) if (range.contains(verse)) return true;
+          return false;
+      }
+
+      public boolean isUnconsolidatedPromoted(VerseRef verse) {
+          for (VerseRange range : unconsolidatedPromotedRanges()) if (range.contains(verse)) return true;
+          return false;
+      }
+
+      public boolean isForcedPromoted(VerseRef verse) {
+          for (VerseRange range : forcedPromotedRanges()) if (range.contains(verse)) return true;
+          return false;
+      }
+
+      /** Mark only the completed overlap consolidated; unrelated pending promotions remain queued in-place. */
+      public boolean markPromotedConsolidated(VerseRef start, VerseRef endInclusive) {
+          List<VerseRange> next = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
+          List<VerseRange> forced = subtractCoverage(forcedPromotedRanges(), start, endInclusive);
+          return p.edit()
+              .putString("unconsolidatedPromotedRanges", rangesJson(next))
+              .putString("forcedPromotedRanges", rangesJson(forced))
+              .putBoolean("anchoringQueueInitialized", false)
+              .commit();
+      }
+
+'''
+          s = between(s,
+              '    /**\n     * Idempotently grows the Itqan snowball.',
+              '    private void saveRecent(List<RecentSabqi> queue)',
+              new_promote,
+              'promotion block')
+
+          s = rep(s,
+              '    private static String rangesJson(List<VerseRange> ranges) {',
+              '''    private static String attendanceJson(List<LocalDate> dates) {
+          JSONArray array = new JSONArray();
+          for (LocalDate date : ConsolidationAttendance.add(dates, null)) array.put(date.toString());
+          return array.toString();
+      }
+
+      private static String rangesJson(List<VerseRange> ranges) {''',
+              'attendance serializer')
+          path.write_text(s)
+
+          # ---- HifzSessionActivity ----
+          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java')
+          s = path.read_text()
+          s = rep(s,
+              '                timerText.setText(SessionClock.format(elapsed) + " / " + String.format(Locale.ROOT, "%02d:00", targetMinutes()));',
+              '                timerText.setText(SessionTimerPolicy.label(mode, elapsed, targetMinutes()));',
+              'timer label')
+          s = rep(s,
+              '''    DashboardLedger ledger = new DashboardLedger(this);
+      List<LocalDate> completed = activation == null
+          ? Collections.emptyList()
+          : ledger.completedDates(RECENT_SABQI_REVIEW, plannedStart, today);''',
+              '''    List<LocalDate> completed = activation == null
+          ? Collections.emptyList()
+          : prefs.consolidationAttendanceDates(plannedStart, today);''',
+              'rebalance durable attendance')
+          s = rep(s,
+              '    if (!prefs.addPromotedVerses(complete)) {',
+              '    if (!prefs.addPromotedVerses(complete, forceOldest)) {',
+              'forced promotion recording')
+          s = rep(s,
+              '''        List<LocalDate> completed = activation == null
+              ? Collections.emptyList()
+              : new DashboardLedger(this).completedDates(RECENT_SABQI_REVIEW, plannedStart, today);''',
+              '''        List<LocalDate> completed = activation == null
+              ? Collections.emptyList()
+              : prefs.consolidationAttendanceDates(plannedStart, today);''',
+              'promotion status durable attendance')
+          old_status = '        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), recentReviewIndex == 0);'
+          new_status = '''        List<HifzPrefs.RecentSabqi> canonicalRecent = HifzPrefs.canonicalRecentOrder(recent);
+          boolean canonicalOldest = !canonicalRecent.isEmpty()
+              && canonicalRecent.get(0).startLine == item.startLine
+              && canonicalRecent.get(0).endLine == item.endLine;
+          RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), canonicalOldest);'''
+          s = rep(s, old_status, new_status, 'canonical promotion status')
+          s = rep(s,
+              '''        progress.setText("Bloc " + (recentReviewIndex + 1) + "/" + recent.size()
+              + " · " + status.ageDays + " j · " + attendance);''',
+              '''        progress.setText("Bloc " + (recentReviewIndex + 1) + "/" + recent.size()
+              + " · " + status.ageDays + " j · " + attendance
+              + (status.forced ? " · promotion de sécurité" : ""));''',
+              'forced promotion UI')
+          s = rep(s,
+              '''        boolean ok = prefs.completeRecentSabqiReview(today, 0, "Consolidation · aucun bloc récent");
+          if (ok) closeClockForCompletedSession();
+          return ok;''',
+              '''        boolean ok = prefs.completeRecentSabqiReview(today, 0, "Consolidation · aucun bloc récent");
+          if (ok) {
+              captureConsolidationAndRebalance();
+              closeClockForCompletedSession();
+          }
+          return ok;''',
+              'empty consolidation capture')
+          s = rep(s,
+              '''        if (anchoringEntry == null) {
+              sessionCompleted = true;
+              program.setText("Ancrage · aucune page en attente");
+              progress.setText("Toutes les pages en attente sont acquises.");
+              return;
+          }''',
+              '''        if (anchoringEntry == null) {
+              sessionCompleted = true;
+              clock.pause();
+              if (prefs.anchoringDeferredToday()) {
+                  program.setText("Ancrage · page reportée");
+                  progress.setText("Cette page reviendra à la prochaine séance d’Ancrage.");
+              } else {
+                  program.setText("Ancrage · aucune page en attente");
+                  progress.setText("Toutes les pages en attente sont acquises.");
+              }
+              return;
+          }''',
+              'single-page deferral UI')
+          s = rep(s,
+              '            program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps);',
+              '            program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps\n                +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":""));',
+              'forced completed Ancrage header')
+          s = rep(s,
+              '        program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps);',
+              '        program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps\n            +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":""));',
+              'forced Ancrage header')
+          old_finish = '''        VerseRef itqanBefore = prefs.itqanCursor();
+          EligibleCorpus corpus = prefs.murajaahCorpus();'''
+          s = rep(s, old_finish, '        EligibleCorpus corpus = prefs.murajaahCorpus();', 'remove unreachable cursor snapshot')
+          s = rep(s,
+              '''        if (!ok) { onError("Impossible d’enregistrer la validation de l’Entretien."); return; }
+          if (!prefs.itqanCursor().equals(itqanBefore)) {
+              prefs.setItqanCursor(itqanBefore);
+              onError("État d’Entretien incohérent annulé : curseur d’Ancrage restauré.");
+              return;
+          }
+          closeClockForCompletedSession();''',
+              '''        if (!ok) { onError("Impossible d’enregistrer la validation de l’Entretien."); return; }
+          closeClockForCompletedSession();''',
+              'remove unreachable cursor restore')
+          path.write_text(s)
+
+          # ---- MainActivity ----
+          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java')
+          s = path.read_text()
+          s = rep(s,
+              '''                GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
+                  geometry = loaded;''',
+              '''                GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
+                  prefs.currentAnchoringEntry(loaded); // prewarm/reconcile queue off the UI thread
+                  geometry = loaded;''',
+              'prewarm anchoring queue')
+          path.write_text(s)
+          PY
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/hifz-one-time-audit-closure.yml
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
+          git diff --cached --check
+          git commit -m 'fix(hifz): close persistence and runtime audit gaps'
+          git push origin HEAD:work/hifz-0.7.3-spec-update
