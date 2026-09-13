@@ -67,10 +67,10 @@ final class WeeklyDashboardPlanner {
                 case SABQI_NEW: {
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
                     if(morningActual!=null) morning="✓ "+compact(morningActual.label);
-                    else if(block==null) morning="Sabqi · plage à vérifier";
+                    else if(block==null) morning="Leçon neuve · plage à vérifier";
                     else {
                         projectedMorningRange=range(block.startVerse,block.endVerse);
-                        morning="Sabqi · "+projectedMorningRange+" · 5 lignes";
+                        morning="Leçon neuve · "+projectedMorningRange+" · 5 lignes";
                         projectedRecent.add(new HifzPrefs.RecentSabqi(block.startLineIndex,block.endLineIndex));
                         sabqiCursor=block.endLineIndex+1;
                     }
@@ -78,17 +78,17 @@ final class WeeklyDashboardPlanner {
                 }
                 case ITQAN: {
                     if(morningActual!=null) morning="✓ "+compact(morningActual.label);
-                    else if(!itqanCorpus.contains(itqanCursor)) morning="Itqān · curseur hors corpus";
+                    else if(!itqanCorpus.contains(itqanCursor)) morning="Ancrage · position hors corpus";
                     else {
                         GeometryRepository.VerseUnit unit=geometry.eligiblePageUnit(itqanCursor,itqanCorpus);
-                        morning="Itqān ×"+PreviewConfig.ITQAN_TOTAL_REPS+" · "+range(unit.start,unit.end);
+                        morning="Ancrage · "+range(unit.start,unit.end);
                         itqanCursor=itqanCorpus.nextAnchored(unit.end,prefs.itqanRotationStart());
                     }
                     break;
                 }
                 case RECENT_SABQI_REVIEW:
                     morning=morningActual!=null?"✓ "+compact(morningActual.label)
-                        :"Sabqi récent · "+recentRange(projectedRecent)+" · "+plan.getMorning().getTargetMinutes()+" min";
+                        :"Consolidation · "+recentRange(projectedRecent)+" · "+plan.getMorning().getTargetMinutes()+" min";
                     break;
                 default:
                     morning="—";
@@ -102,14 +102,14 @@ final class WeeklyDashboardPlanner {
                         String exact=date.equals(today)&&date.toString().equals(prefs.sabqiTodayReviewDate())
                             ? rangeForLines(prefs.sabqiTodayReviewStartLine(),prefs.sabqiTodayReviewEndLine())
                             : projectedMorningRange;
-                        evening="Sabqi du jour · "+(exact.isEmpty()?"mêmes 5 lignes":exact)+" · "+plan.getEvening().getTargetMinutes()+" min";
+                        evening="Reprise du soir · "+(exact.isEmpty()?"mêmes 5 lignes":exact)+" · "+plan.getEvening().getTargetMinutes()+" min";
                     }
                     break;
                 case OLD_ITQAN_MURAJAAH:
                     if(eveningActual!=null) evening="✓ "+compact(eveningActual.label);
                     else {
                         Projection p=projectMurajaah(murajaahCursor,murajaahCorpus,plan.getEvening().getTargetMinutes());
-                        evening="Murājaʿah · "+p.label;
+                        evening="Entretien · "+p.label;
                         murajaahCursor=p.next;
                     }
                     break;
@@ -127,8 +127,8 @@ final class WeeklyDashboardPlanner {
     }
 
     private Projection projectMurajaah(VerseRef cursor,EligibleCorpus corpus,int minutes){
-        if(!corpus.contains(cursor)) return new Projection("curseur à vérifier",cursor);
-        int lines=Math.max(1,(int)Math.floor(minutes*60.0/prefs.murajaahSecondsPerLine()));
+        if(!corpus.contains(cursor)) return new Projection("position à vérifier",cursor);
+        int lines=HifzCadence.targetLines(minutes,prefs.murajaahSecondsPerLine());
         GeometryRepository.EligibleLinePlan plan=geometry.planEligibleLines(cursor,lines,corpus);
         return new Projection(range(plan.start,plan.actualPlannedEnd)+" · "+minutes+" min",
             corpus.next(plan.actualPlannedEnd));
