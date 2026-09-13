@@ -41,17 +41,24 @@ public final class AnchoringQueue {
         }
     }
 
-    /** Move the page actually displayed behind {@code places} following entries. */
+    /**
+     * Move the page actually displayed behind {@code places} following entries in cyclic visit
+     * order. Returning the next page at index zero keeps the persisted queue unambiguous even when
+     * the deferral wraps past the physical end of the list.
+     */
     public static Deferral defer(List<Entry> source, int displayedIndex, int places) {
         if (source == null || source.isEmpty()) throw new IllegalArgumentException("anchoring queue required");
         if (displayedIndex < 0 || displayedIndex >= source.size()) {
             throw new IllegalArgumentException("displayed anchoring index outside queue");
         }
-        ArrayList<Entry> next = new ArrayList<>(source);
-        Entry displayed = next.remove(displayedIndex);
-        int insertion = Math.min(next.size(), displayedIndex + Math.max(0, places));
-        next.add(insertion, displayed);
-        return new Deferral(next, Math.min(displayedIndex, next.size() - 1));
+        Entry displayed = source.get(displayedIndex);
+        ArrayList<Entry> visitOrder = new ArrayList<>(source.size());
+        for (int step = 1; step < source.size(); step++) {
+            visitOrder.add(source.get((displayedIndex + step) % source.size()));
+        }
+        int insertion = Math.min(Math.max(0, places), visitOrder.size());
+        visitOrder.add(insertion, displayed);
+        return new Deferral(visitOrder, 0);
     }
 
     public static Deferral failAndDefer(List<Entry> source, int displayedIndex, int places) {
