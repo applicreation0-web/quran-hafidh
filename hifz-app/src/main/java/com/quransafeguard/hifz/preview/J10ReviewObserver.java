@@ -32,22 +32,26 @@ final class J10ReviewObserver {
 
     void onPreferenceChanged(String key, LocalDate today) {
         if (key == null || today == null) return;
-        planner.syncAcquired(today);
         switch (key) {
             case "recentSabqi":
+                planner.syncAcquired(today);
                 reconcileRecent(today);
                 break;
             case "lastSabqiDate":
             case "lastSabqiTodayReviewDate":
+                planner.syncAcquired(today);
                 creditCurrentSabqi(today);
                 break;
             case "lastItqanDate":
+                planner.syncAcquired(today);
                 creditItqan(today);
                 break;
             case "lastMurajaahDate":
+                planner.syncAcquired(today);
                 creditMurajaah(today);
                 break;
             default:
+                // Repetition counters, masks, timers and cursors must not trigger an O(Mushaf) J10 scan.
                 break;
         }
     }
