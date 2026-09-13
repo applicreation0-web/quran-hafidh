@@ -11,7 +11,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.quransafeguard.hifz.core.DailyPlan;
 import com.quransafeguard.hifz.core.EligibleCorpus;
 import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
@@ -274,51 +273,53 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Calendar/attendance promotion; speed never determines when a recent block leaves the queue. */
-    private void rebalanceRecentWindow() {
-        List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
-        if (recent.isEmpty()) return;
-        LocalDate today = LocalDate.now();
-        LocalDate activation = prefs.recentConsolidationActivatedOn();
-        if (activation == null && recent.size() <= RecentPromotionPolicy.MAX_RECENT_BLOCKS) return;
-        LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
-        DashboardLedger ledger = new DashboardLedger(this);
-        List<LocalDate> completed = activation == null
-            ? Collections.emptyList()
-            : ledger.completedDates(RECENT_SABQI_REVIEW, plannedStart, today);
+    /** Calendar/attendance promotion; display order never determines mastery order. */
+private void rebalanceRecentWindow() {
+    List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
+    if (recent.isEmpty()) return;
+    List<HifzPrefs.RecentSabqi> canonical = HifzPrefs.canonicalRecentOrder(recent);
+    LocalDate today = LocalDate.now();
+    LocalDate activation = prefs.recentConsolidationActivatedOn();
+    if (activation == null && recent.size() <= RecentPromotionPolicy.MAX_RECENT_BLOCKS) return;
+    LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
+    DashboardLedger ledger = new DashboardLedger(this);
+    List<LocalDate> completed = activation == null
+        ? Collections.emptyList()
+        : ledger.completedDates(RECENT_SABQI_REVIEW, plannedStart, today);
 
-        int oldestStart = recent.get(0).startLine;
-        int safeEnd = -1;
-        int safeBlocks = 0;
-        boolean forceOldest = recent.size() > RecentPromotionPolicy.MAX_RECENT_BLOCKS;
-        for (int i = 0; i < recent.size(); i++) {
-            HifzPrefs.RecentSabqi item = recent.get(i);
-            RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
-                item.addedOn, today, plannedStart, completed, recent.size(), i == 0);
-            boolean include = decision.promote || (forceOldest && safeEnd < 0);
-            if (!include) break;
-            GeometryRepository.FiveLineBlock block = geometry.fiveLineBlock(item.startLine);
-            if (!block.endsInsideVerse) {
-                safeEnd = item.endLine;
-                safeBlocks = i + 1;
-                if (forceOldest) break;
-            }
+    int oldestStart = canonical.get(0).startLine;
+    int safeEnd = -1;
+    int safeBlocks = 0;
+    boolean forceOldest = canonical.size() > RecentPromotionPolicy.MAX_RECENT_BLOCKS;
+    for (int i = 0; i < canonical.size(); i++) {
+        HifzPrefs.RecentSabqi item = canonical.get(i);
+        if (i > 0 && item.startLine != canonical.get(i - 1).endLine + 1) break;
+        RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
+            item.addedOn, today, plannedStart, completed, canonical.size(), i == 0);
+        boolean include = decision.promote || (forceOldest && safeEnd < 0);
+        if (!include) break;
+        GeometryRepository.FiveLineBlock block = geometry.fiveLineBlock(item.startLine);
+        if (!block.endsInsideVerse) {
+            safeEnd = item.endLine;
+            safeBlocks = i + 1;
+            if (forceOldest) break;
         }
-        if (safeEnd < oldestStart || safeBlocks <= 0) return;
-
-        ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
-        if (complete.isEmpty()) return;
-        if (!prefs.addPromotedVerses(complete)) {
-            onError("Impossible d’enregistrer la promotion de la Consolidation.");
-            return;
-        }
-        int previousReviewIndex = prefs.recentSabqiReviewIndex();
-        for (int i = 0; i < safeBlocks; i++) prefs.removeFirstRecentSabqi();
-        int remaining = prefs.recentSabqi().size();
-        int adjusted = remaining <= 0 ? 0 : Math.floorMod(Math.max(0, previousReviewIndex - safeBlocks), remaining);
-        prefs.setRecentSabqiReviewIndex(adjusted);
-        recentReviewIndex = adjusted;
     }
+    if (safeEnd < oldestStart || safeBlocks <= 0) return;
+
+    ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
+    if (complete.isEmpty()) return;
+    if (!prefs.addPromotedVerses(complete)) {
+        onError("Impossible d’enregistrer la promotion de la Consolidation.");
+        return;
+    }
+    List<HifzPrefs.RecentSabqi> promotedBlocks = new ArrayList<>(canonical.subList(0, safeBlocks));
+    if (!prefs.removeRecentBlocks(promotedBlocks)) {
+        onError("Impossible de retirer les blocs promus de la Consolidation.");
+        return;
+    }
+    recentReviewIndex = prefs.recentSabqiReviewIndex();
+}
 
     private RecentPromotionPolicy.Decision promotionStatus(HifzPrefs.RecentSabqi item, int blockCount, boolean oldest) {
         LocalDate today = LocalDate.now();
@@ -779,20 +780,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean isTimedMode() {
         return SABQI_TODAY_REVIEW.equals(mode) || RECENT_SABQI_REVIEW.equals(mode) || MURAJAAH.equals(mode);
     }
-    private int scheduledTargetMinutes(SessionKind kind) {
-        DailyPlan plan = HifzSchedule.INSTANCE.planFor(
-            LocalDate.now().getDayOfWeek(), prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
-        if (plan.getMorning().getKind() == kind) return plan.getMorning().getTargetMinutes();
-        if (plan.getEvening().getKind() == kind) return plan.getEvening().getTargetMinutes();
-        throw new IllegalStateException("Mode " + kind + " absent du planning " + LocalDate.now().getDayOfWeek());
-    }
     private int targetMinutes(){
-        if (SABQI.equals(mode)) return scheduledTargetMinutes(SessionKind.SABQI_NEW);
-        if (SABQI_TODAY_REVIEW.equals(mode)) return scheduledTargetMinutes(SessionKind.SABQI_TODAY_REVIEW);
-        if (ITQAN.equals(mode)) return scheduledTargetMinutes(SessionKind.ITQAN);
-        if (RECENT_SABQI_REVIEW.equals(mode)) return scheduledTargetMinutes(SessionKind.RECENT_SABQI_REVIEW);
-        return scheduledTargetMinutes(SessionKind.OLD_ITQAN_MURAJAAH);
-    }
+    SessionKind kind;
+    if (SABQI.equals(mode)) kind = SessionKind.SABQI_NEW;
+    else if (SABQI_TODAY_REVIEW.equals(mode)) kind = SessionKind.SABQI_TODAY_REVIEW;
+    else if (ITQAN.equals(mode)) kind = SessionKind.ITQAN;
+    else if (RECENT_SABQI_REVIEW.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
+    else kind = SessionKind.OLD_ITQAN_MURAJAAH;
+    return HifzSchedule.INSTANCE.targetMinutesFor(kind);
+}
     private String displayModeName(){
         if (SABQI.equals(mode)) return "Leçon neuve";
         if (SABQI_TODAY_REVIEW.equals(mode)) return "Reprise du soir";

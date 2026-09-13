@@ -653,6 +653,46 @@ public final class HifzPrefs {
         return out;
     }
 
+    static List<RecentSabqi> canonicalRecentOrder(List<RecentSabqi> source) {
+    ArrayList<RecentSabqi> out = new ArrayList<>(source == null ? Collections.emptyList() : source);
+    out.sort(Comparator.comparingInt((RecentSabqi item) -> item.startLine)
+        .thenComparingInt(item -> item.endLine));
+    return out;
+}
+
+private static boolean sameRecentBlock(RecentSabqi left, RecentSabqi right) {
+    return left.startLine == right.startLine && left.endLine == right.endLine;
+}
+
+static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<RecentSabqi> removed) {
+    ArrayList<RecentSabqi> out = new ArrayList<>();
+    List<RecentSabqi> safeRemoved = removed == null ? Collections.emptyList() : removed;
+    for (RecentSabqi item : source == null ? Collections.<RecentSabqi>emptyList() : source) {
+        boolean drop = false;
+        for (RecentSabqi candidate : safeRemoved) {
+            if (sameRecentBlock(item, candidate)) { drop = true; break; }
+        }
+        if (!drop) out.add(item);
+    }
+    return out;
+}
+
+public boolean removeRecentBlocks(List<RecentSabqi> removed) {
+    List<RecentSabqi> source = recentSabqi();
+    if (source.isEmpty()) return true;
+    int currentAt = Math.floorMod(p.getInt("recentSabqiReviewIndex", 0), source.size());
+    RecentSabqi displayed = source.get(currentAt);
+    List<RecentSabqi> next = withoutRecentBlocks(source, removed);
+    int nextIndex = 0;
+    for (int i = 0; i < next.size(); i++) {
+        if (sameRecentBlock(next.get(i), displayed)) { nextIndex = i; break; }
+    }
+    return p.edit()
+        .putString("recentSabqi", recentJson(next))
+        .putInt("recentSabqiReviewIndex", next.isEmpty() ? 0 : nextIndex)
+        .commit();
+}
+
     static int indexAfterDeferral(int index, int size) {
         if (size <= 0) return 0;
         int at = Math.floorMod(index, size);
