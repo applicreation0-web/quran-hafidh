@@ -625,7 +625,7 @@ public final class HifzPrefs {
         }
         next.addAll(expected.values());
         int index = anchoringQueueIndex(next.size());
-        boolean keepCurrent = p.getInt("itqanBlockIndex", 0) > 0;
+        boolean keepCurrent = p.getInt("itqanBlockIndex", 0) > 0 || p.getInt("itqanRep", 0) > 0;
         next = new ArrayList<>(AnchoringQueue.mergeWithPromotionPriority(
             next, index, keepCurrent, Collections.emptyList()));
         index = 0;
@@ -650,6 +650,15 @@ public final class HifzPrefs {
             }
         }
         List<AnchoringQueue.Entry> queue = anchoringQueue();
+        if (!queue.isEmpty() && p.getInt("itqanRep", 0) > 0) {
+            VerseRef savedStart = itqanUnitStart();
+            VerseRef savedEnd = itqanUnitEnd();
+            if (savedStart != null && savedEnd != null) {
+                AnchoringQueue.Entry inProgress = AnchoringQueue.findByRange(
+                    queue, savedStart.toString(), savedEnd.toString());
+                if (inProgress != null) return inProgress;
+            }
+        }
         return queue.isEmpty() ? null : queue.get(anchoringQueueIndex(queue.size()));
     }
 
