@@ -47,9 +47,10 @@ public final class FinalUiPolishSourceContractTest {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         assertFalse("Study Tafsir must not use the vertical icon-over-caption action", study.contains("Ui.roundAction(this, \"\", \"Tafsir\""));
         assertTrue("Study Tafsir must use a dedicated flat action", study.contains("tafsirReaderAction()"));
-        assertTrue("Tafsir needs a BOOX-friendly invisible hit height", study.contains("button.setMinimumHeight(Ui.dp(this, 48))"));
-        assertTrue("Tafsir needs a BOOX-friendly invisible hit width", study.contains("button.setMinimumWidth(Ui.dp(this, 96))"));
-        assertTrue("page slider must be clearly separated from Tafsir action", study.contains("railParams.topMargin = Ui.dp(this, 12)"));
+        assertTrue("Tafsir needs a BOOX-friendly invisible hit height", study.contains("button.setMinimumHeight(Ui.dp(this, 56))"));
+        assertTrue("Tafsir needs a wider BOOX-friendly invisible hit width", study.contains("button.setMinimumWidth(Ui.dp(this, 160))"));
+        assertTrue("page slider must be clearly separated from Tafsir action", study.contains("railParams.topMargin = Ui.dp(this, 20)"));
+        assertTrue("Tafsir action row itself must preserve the full touch height", study.contains("readerActions.setMinimumHeight(Ui.dp(this, 56))"));
     }
 
     @Test public void audioRemainsAvailableInHifzAndFreeMemOnly() throws Exception {
