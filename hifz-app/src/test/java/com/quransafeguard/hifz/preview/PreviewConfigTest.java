@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import org.junit.Test;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -87,5 +88,49 @@ public final class PreviewConfigTest {
         assertEquals(0, PreviewConfig.nextRecentReviewIndex(2, 3));
         assertFalse(PreviewConfig.timedSessionComplete(29L * 60_000L + 59_000L, 30));
         assertTrue(PreviewConfig.timedSessionComplete(30L * 60_000L, 30));
+    }
+
+    @Test public void fractionatedAnchoringUsesBalancedFiveLineBlocksForOneToTwentyLines() {
+        for (int n = 1; n <= 20; n++) {
+            int[] sizes = PreviewConfig.fractionatedBlockSizes(n);
+            assertEquals((n + PreviewConfig.SABQI_LINES - 1) / PreviewConfig.SABQI_LINES, sizes.length);
+            int sum = 0, min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
+            for (int size : sizes) {
+                assertTrue(size > 0);
+                sum += size;
+                min = Math.min(min, size);
+                max = Math.max(max, size);
+            }
+            assertEquals(n, sum);
+            assertTrue(max - min <= 1);
+        }
+        assertEquals(1, PreviewConfig.fractionatedBlockSizes(0).length);
+        assertEquals(0, PreviewConfig.fractionatedBlockSizes(0)[0]);
+    }
+
+    @Test public void fractionatedAnchoringNamedSplitsAndOffsetsAreExactAndClamped() {
+        assertArrayEquals(new int[]{4}, PreviewConfig.fractionatedBlockSizes(4));
+        assertArrayEquals(new int[]{3,3}, PreviewConfig.fractionatedBlockSizes(6));
+        assertArrayEquals(new int[]{4,3}, PreviewConfig.fractionatedBlockSizes(7));
+        assertArrayEquals(new int[]{5,4}, PreviewConfig.fractionatedBlockSizes(9));
+        assertArrayEquals(new int[]{5,4,4}, PreviewConfig.fractionatedBlockSizes(13));
+        assertArrayEquals(new int[]{5,5,5}, PreviewConfig.fractionatedBlockSizes(15));
+
+        assertEquals(3, PreviewConfig.fractionatedBlockCount(13));
+        assertEquals(0, PreviewConfig.fractionatedBlockStart(13, -4));
+        assertEquals(5, PreviewConfig.fractionatedBlockLength(13, -4));
+        assertEquals(5, PreviewConfig.fractionatedBlockStart(13, 1));
+        assertEquals(4, PreviewConfig.fractionatedBlockLength(13, 1));
+        assertEquals(9, PreviewConfig.fractionatedBlockStart(13, 99));
+        assertEquals(4, PreviewConfig.fractionatedBlockLength(13, 99));
+    }
+
+    @Test public void fractionatedAnchoringAlwaysUsesTheLightThirtyFiveRepProfile() {
+        assertEquals(35, PreviewConfig.ITQAN_LIGHT_TOTAL_REPS);
+        for (int completed = 0; completed < 35; completed++) {
+            int next = completed + 1;
+            int expected = next <= 20 ? 0 : next <= 25 ? 50 : next <= 30 ? 75 : 100;
+            assertEquals(expected, PreviewConfig.itqanMaskForNextRep(completed, AnchoringQueue.Protocol.LIGHT));
+        }
     }
 }
