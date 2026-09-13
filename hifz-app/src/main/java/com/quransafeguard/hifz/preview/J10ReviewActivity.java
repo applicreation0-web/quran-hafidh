@@ -1,6 +1,8 @@
 package com.quransafeguard.hifz.preview;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.Gravity;
@@ -10,6 +12,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.quransafeguard.hifz.core.HifzSchedule;
+import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
@@ -31,6 +35,23 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private boolean shown;
     private String hostMode;
     private long activeStartedAt = -1L;
+    private final Handler hostBudgetHandler = new Handler(Looper.getMainLooper());
+    private final Runnable hostBudgetWatchdog = new Runnable() {
+        @Override public void run() {
+            if (hostMode == null || activeStartedAt < 0L || isFinishing()) return;
+            if (PreviewConfig.timedSessionComplete(hostElapsedIncludingActive(), hostTargetMinutes())) {
+                LocalDate today = LocalDate.now();
+                if (persistActiveHostTime(false)) {
+                    if (!hostBudgetStore.markSlotConsumed(hostMode, today)) {
+                        Log.e("QuranHifz", "Unable to persist J10-preempted host slot for " + hostMode);
+                    }
+                    finish();
+                    return;
+                }
+            }
+            hostBudgetHandler.postDelayed(this, 1000L);
+        }
+    };
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -136,21 +157,47 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     @Override protected void onResume() {
         super.onResume();
         activeStartedAt = SystemClock.elapsedRealtime();
+        hostBudgetHandler.removeCallbacks(hostBudgetWatchdog);
+        hostBudgetHandler.post(hostBudgetWatchdog);
     }
 
     @Override protected void onPause() {
-        if (activeStartedAt >= 0L && hostMode != null) {
-            long consumed = Math.max(0L, SystemClock.elapsedRealtime() - activeStartedAt);
-            LocalDate today = LocalDate.now();
-            if (consumed > 0L && hostBudgetStore.addConsumed(hostMode, today, consumed)) {
-                prefs.setElapsedFor(hostMode,
-                    J10SessionBudget.addConsumed(prefs.elapsedFor(hostMode), consumed));
-            } else if (consumed > 0L) {
-                Log.e("QuranHifz", "Unable to persist J10 host-slot consumption for " + hostMode);
-            }
-        }
-        activeStartedAt = -1L;
+        hostBudgetHandler.removeCallbacks(hostBudgetWatchdog);
+        persistActiveHostTime(false);
         super.onPause();
+    }
+
+    private long hostElapsedIncludingActive() {
+        long active = activeStartedAt < 0L ? 0L
+            : Math.max(0L, SystemClock.elapsedRealtime() - activeStartedAt);
+        return J10SessionBudget.addConsumed(prefs.elapsedFor(hostMode), active);
+    }
+
+    private boolean persistActiveHostTime(boolean keepActive) {
+        if (activeStartedAt < 0L || hostMode == null) return true;
+        long now = SystemClock.elapsedRealtime();
+        long consumed = Math.max(0L, now - activeStartedAt);
+        if (consumed <= 0L) {
+            activeStartedAt = keepActive ? now : -1L;
+            return true;
+        }
+        LocalDate today = LocalDate.now();
+        if (!hostBudgetStore.addConsumed(hostMode, today, consumed)) {
+            Log.e("QuranHifz", "Unable to persist J10 host-slot consumption for " + hostMode);
+            return false;
+        }
+        prefs.setElapsedFor(hostMode,
+            J10SessionBudget.addConsumed(prefs.elapsedFor(hostMode), consumed));
+        activeStartedAt = keepActive ? now : -1L;
+        return true;
+    }
+
+    private int hostTargetMinutes() {
+        SessionKind kind;
+        if (HifzSessionActivity.SABQI_TODAY_REVIEW.equals(hostMode)) kind = SessionKind.SABQI_TODAY_REVIEW;
+        else if (HifzSessionActivity.RECENT_SABQI_REVIEW.equals(hostMode)) kind = SessionKind.RECENT_SABQI_REVIEW;
+        else kind = SessionKind.OLD_ITQAN_MURAJAAH;
+        return HifzSchedule.INSTANCE.targetMinutesFor(kind);
     }
 
     @Override public void onBackPressed() { moveTaskToBack(true); }
@@ -162,6 +209,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     }
 
     @Override protected void onDestroy() {
+        hostBudgetHandler.removeCallbacksAndMessages(null);
         if (mushaf != null) mushaf.destroySafely();
         super.onDestroy();
     }
