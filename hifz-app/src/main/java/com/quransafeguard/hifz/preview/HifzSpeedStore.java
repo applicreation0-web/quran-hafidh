@@ -3,6 +3,8 @@ package com.quransafeguard.hifz.preview;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.Locale;
+
 /** Schema-v4 speed state. Entretien and Consolidation never update each other's calibration. */
 final class HifzSpeedStore {
     private static final String PREFS = "quran_hifz_preview_v1";
@@ -51,9 +53,28 @@ final class HifzSpeedStore {
         return result;
     }
 
+    String maintenanceSummary() {
+        return speedSummary(maintenanceSecondsPerLine(), maintenanceCalibrated(), maintenanceSamples());
+    }
+
+    String consolidationSummary() {
+        return speedSummary(consolidationSecondsPerLine(), consolidationCalibrated(), consolidationSamples());
+    }
+
+    private static String speedSummary(double secondsPerLine, boolean calibrated, int samples) {
+        String state = calibrated
+            ? Math.max(1, samples) + (samples == 1 ? " mesure" : " mesures")
+            : "estimation";
+        return String.format(Locale.ROOT, "%.1f s/ligne · %s", Math.max(0.0, secondsPerLine), state);
+    }
+
     static String instrumentationLabel(int lines, long elapsedMs, SpeedCalibrationPolicy.Result result) {
-        long seconds = Math.max(0L, elapsedMs / 1000L);
-        String suffix = result == null || result.status != SpeedCalibrationPolicy.Status.REJECTED ? "" : "·skip";
-        return Math.max(0, lines) + "L/" + seconds + "s" + suffix;
+        int safeLines = Math.max(0, lines);
+        if (result == null) return safeLines + " lignes";
+        if (result.status == SpeedCalibrationPolicy.Status.REJECTED) {
+            return safeLines + " lignes · mesure non retenue";
+        }
+        return safeLines + " lignes · "
+            + String.format(Locale.ROOT, "%.1f s/ligne", Math.max(0.0, result.secondsPerLine));
     }
 }
