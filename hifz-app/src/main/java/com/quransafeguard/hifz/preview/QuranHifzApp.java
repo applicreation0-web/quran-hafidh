@@ -65,6 +65,13 @@ public final class QuranHifzApp extends Application
             try {
                 String hostMode = activity.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
                 if (!isReusableJ10Host(hostMode)) return;
+
+                // A host slot fully substituted by J10 is closed, not credited as its normal protocol.
+                if (new J10HostBudgetStore(this).isSlotConsumed(hostMode, LocalDate.now())) {
+                    activity.finish();
+                    return;
+                }
+
                 J10ReviewPlanner p = ensurePlanner();
                 J10ReviewPlanner.PriorityGroup priority = p.priorityGroup(LocalDate.now());
                 if (!priority.isEmpty() && !openingPriority) {
