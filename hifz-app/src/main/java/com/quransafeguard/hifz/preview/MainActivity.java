@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
+    private J10HostBudgetStore hostBudgetStore;
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
     private TextView today;
@@ -37,6 +38,7 @@ public final class MainActivity extends android.app.Activity {
         super.onCreate(state);
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
+        hostBudgetStore = new J10HostBudgetStore(this);
         ledger = new DashboardLedger(this);
 
         ScrollView scroll = new ScrollView(this);
@@ -121,7 +123,7 @@ public final class MainActivity extends android.app.Activity {
         localLoader.execute(() -> {
             try {
                 GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
-                prefs.currentAnchoringEntry(loaded); // prewarm/reconcile queue off the UI thread
+                prefs.currentAnchoringEntry(loaded);
                 geometry = loaded;
                 runOnUiThread(() -> {
                     todayAction.setEnabled(true);
@@ -141,6 +143,7 @@ public final class MainActivity extends android.app.Activity {
         super.onResume();
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
+        if (hostBudgetStore == null) hostBudgetStore = new J10HostBudgetStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
         if (today != null && geometry != null) refreshAll();
@@ -171,6 +174,12 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private boolean isComplete(LocalDate date, SessionKind kind) {
+        if (normalProtocolComplete(date, kind)) return true;
+        String mode = modeFor(kind);
+        return hostBudgetStore != null && hostBudgetStore.isSlotConsumed(mode, date);
+    }
+
+    private boolean normalProtocolComplete(LocalDate date, SessionKind kind) {
         String key = date.toString();
         switch (kind) {
             case SABQI_NEW: return key.equals(prefs.lastSabqiDate());
@@ -180,6 +189,16 @@ public final class MainActivity extends android.app.Activity {
             case OLD_ITQAN_MURAJAAH: return key.equals(prefs.lastMurajaahDate());
             default: return false;
         }
+    }
+
+    private boolean hasJ10ConsumedSlot(LocalDate date, DailyPlan plan) {
+        if (hostBudgetStore == null || plan == null) return false;
+        SessionKind[] kinds = {plan.getMorning().getKind(), plan.getEvening().getKind()};
+        for (SessionKind kind : kinds) {
+            String mode = modeFor(kind);
+            if (!normalProtocolComplete(date, kind) && hostBudgetStore.isSlotConsumed(mode, date)) return true;
+        }
+        return false;
     }
 
     private static String modeFor(SessionKind kind) {
@@ -207,7 +226,9 @@ public final class MainActivity extends android.app.Activity {
             ? plan.getMorning().getKind()
             : !isComplete(date, plan.getEvening().getKind()) ? plan.getEvening().getKind() : null;
         if (next == null) {
-            today.setText("Matin ✓ · Soir ✓");
+            today.setText(hasJ10ConsumedSlot(date, plan)
+                ? "Créneau J10 utilisé · programme du jour terminé"
+                : "Matin ✓ · Soir ✓");
             todayAction.setEnabled(false);
             return;
         }
@@ -235,8 +256,18 @@ public final class MainActivity extends android.app.Activity {
                         start = GeometryRepository.parseVerse(entry.start);
                         end = GeometryRepository.parseVerse(entry.end);
                     }
-                    int reps = entry == null ? PreviewConfig.ITQAN_TOTAL_REPS : PreviewConfig.itqanTotalReps(entry.protocol);
-                    detail="Matin · Ancrage · "+shortRange(start,end)+" · ×"+reps;
+                    boolean fractionated = prefs.isFractionatedUnit(g.versesForRange(start, end));
+                    if (fractionated) {
+                        int lineCount = g.lineIdsForVerseRange(start, end).size();
+                        int blocks = Math.max(1, PreviewConfig.fractionatedBlockCount(lineCount));
+                        int block = Math.max(0, Math.min(prefs.itqanBlockIndex(), blocks - 1));
+                        detail = "Matin · Ancrage fractionné · " + shortRange(start,end)
+                            + " · bloc " + (block + 1) + "/" + blocks
+                            + " · ×" + PreviewConfig.ITQAN_LIGHT_TOTAL_REPS;
+                    } else {
+                        int reps = entry == null ? PreviewConfig.ITQAN_TOTAL_REPS : PreviewConfig.itqanTotalReps(entry.protocol);
+                        detail="Matin · Ancrage · "+shortRange(start,end)+" · ×"+reps;
+                    }
                     break;
                 }
                 case RECENT_SABQI_REVIEW:
@@ -281,7 +312,7 @@ public final class MainActivity extends android.app.Activity {
         dashboard.addView(header);
         dashboard.addView(Ui.divider(this));
 
-        List<WeeklyDashboardPlanner.Row> rows = new WeeklyDashboardPlanner(prefs, geometry, ledger).week(LocalDate.now());
+        List<WeeklyDashboardPlanner.Row> rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, hostBudgetStore).week(LocalDate.now());
         for (int i = 0; i < rows.size(); i++) {
             WeeklyDashboardPlanner.Row item = rows.get(i);
             LinearLayout row = Ui.row(this);
