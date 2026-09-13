@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/** Final BOOX UI contract: study stays audio-free and Tafsir source chrome stays minimal. */
+/** Final BOOX UI contract: study stays audio-free and Hifz chrome stays explicit and e-ink safe. */
 public final class FinalUiPolishSourceContractTest {
     private static String read(String repoPath) throws Exception {
         Path direct = Paths.get(repoPath);
@@ -60,5 +60,38 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(session.contains("Écouter"));
         assertTrue(free.contains("HifzAudioDialog"));
         assertTrue(free.contains("Audio"));
+    }
+
+    @Test public void userFacingHifzVocabularyUsesPlainFrenchNames() throws Exception {
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        assertTrue(main.contains("\"Leçon neuve\""));
+        assertTrue(main.contains("\"Ancrage\""));
+        assertTrue(main.contains("\"Entretien\""));
+        assertTrue(session.contains("return \"Leçon neuve\""));
+        assertTrue(session.contains("return \"Reprise du soir\""));
+        assertTrue(session.contains("return \"Consolidation\""));
+        assertTrue(session.contains("return \"Ancrage\""));
+        assertTrue(session.contains("return \"Entretien\""));
+        assertTrue(settings.contains("section(root,\"Repères\")"));
+        assertTrue(settings.contains("Une page entière travaillée en profondeur"));
+    }
+
+    @Test public void semanticHifzIconsStayMonochromeOutlineAndTwentyFourDp() throws Exception {
+        String[] files = {
+            "ic_hifz_new_lesson.xml", "ic_hifz_evening_review.xml", "ic_hifz_consolidation.xml",
+            "ic_hifz_anchoring.xml", "ic_hifz_maintenance.xml", "ic_hifz_strengthen.xml",
+            "ic_hifz_pending.xml", "ic_hifz_acquired.xml"
+        };
+        for (String file : files) {
+            String xml = read("hifz-app/src/main/res/drawable/" + file);
+            assertTrue(file, xml.contains("android:width=\"24dp\""));
+            assertTrue(file, xml.contains("android:height=\"24dp\""));
+            assertTrue(file, xml.contains("android:fillColor=\"@android:color/transparent\""));
+            assertTrue(file, xml.contains("android:strokeWidth=\"2\""));
+            assertFalse(file, xml.contains("#808080"));
+            assertFalse(file, xml.contains("#888888"));
+        }
     }
 }
