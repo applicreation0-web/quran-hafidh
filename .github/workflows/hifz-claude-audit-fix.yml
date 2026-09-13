@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   claude-audit-regressions:
@@ -17,5 +17,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Apply minimal Claude audit fixes
+        run: python3 scripts/apply_hifz_claude_audit_fixes.py
       - name: Run Claude audit regression contracts
         run: python3 scripts/test_hifz_claude_audit_regressions.py
+      - name: Commit verified fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "No production fix diff to commit."
+            exit 0
+          fi
+          git config user.name "applicreation0-web"
+          git config user.email "applicreation0@gmail.com"
+          git add hifz-app hifz-core
+          git commit -m "fix(hifz): address Claude audit findings"
+          git push origin HEAD:fix/hifz-0.7.3-claude-audit
