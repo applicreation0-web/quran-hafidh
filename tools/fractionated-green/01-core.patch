@@ -1,0 +1,230 @@
+--- a/.github/workflows/hifz-test-app.yml
++++ b/.github/workflows/hifz-test-app.yml
+@@ -181,7 +181,7 @@
+           echo no | avdmanager create avd --force --name hifz-ci --package "system-images;android-35;default;x86_64"
+           sudo chmod 666 /dev/kvm || true
+           "$ANDROID_HOME/emulator/emulator" -avd hifz-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+-          adb wait-for-device
++          timeout 120 adb wait-for-device
+           booted=0
+           for i in $(seq 1 120); do
+             if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+--- a/hifz-app/build.gradle.kts
++++ b/hifz-app/build.gradle.kts
+@@ -121,6 +121,20 @@
+             "Reconstruction Ancrage must stay on 35 repetitions: 20 visible + 5/5/5 masked."
+         }
+         check(config.contains("EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6")) { "Audio needs its own anti-ghosting cleanup cadence." }
++        check(config.contains("fractionatedBlockSizes")
++                && config.contains("fractionatedBlockStart")
++                && config.contains("fractionatedBlockLength")) {
++            "Le découpage de l'Ancrage fractionné doit rester une fonction pure et testable."
++        }
++        check(session.contains("Ancrage fractionné")) {
++            "Le libellé visible de l'Ancrage fractionné est requis."
++        }
++        check(!session.contains("Consolidation fractionnée")) {
++            "Consolidation désigne RECENT_SABQI_REVIEW et ne doit pas nommer l'Ancrage."
++        }
++        check(settings.contains("Sourates difficiles à ancrer")) {
++            "Le drapeau durable d'Ancrage fractionné doit rester accessible dans les Paramètres."
++        }
+ 
+         check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
+         check(!session.contains("Stable sans aide")) { "A fault-free Consolidation must not directly promote a block." }
+--- a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java
++++ b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java
+@@ -110,4 +110,33 @@
+     public static boolean itqanValidationPassed(int finalStageReveals) {
+         return finalStageReveals < 2;
+     }
++    /** Balanced physical-line split for user-declared difficult Ancrage units. */
++    public static int[] fractionatedBlockSizes(int lineCount) {
++        if (lineCount <= 0) return new int[]{0};
++        int blockCount = (lineCount + SABQI_LINES - 1) / SABQI_LINES;
++        int base = lineCount / blockCount;
++        int longer = lineCount % blockCount;
++        int[] sizes = new int[blockCount];
++        for (int i = 0; i < blockCount; i++) sizes[i] = base + (i < longer ? 1 : 0);
++        return sizes;
++    }
++
++    public static int fractionatedBlockCount(int lineCount) {
++        return fractionatedBlockSizes(lineCount).length;
++    }
++
++    public static int fractionatedBlockStart(int lineCount, int blockIndex) {
++        int[] sizes = fractionatedBlockSizes(lineCount);
++        int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
++        int start = 0;
++        for (int i = 0; i < at; i++) start += sizes[i];
++        return start;
++    }
++
++    public static int fractionatedBlockLength(int lineCount, int blockIndex) {
++        int[] sizes = fractionatedBlockSizes(lineCount);
++        int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
++        return sizes[at];
++    }
++
+ }
+--- a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
++++ b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+@@ -17,6 +17,7 @@
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.LinkedHashMap;
++import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Locale;
+ import java.util.UUID;
+@@ -78,6 +79,8 @@
+                 .putBoolean("anchoringQueueInitialized", false)
+                 .putInt("anchoringQueueIndex", 0)
+                 .putString("anchoringRetryAfterDate", "")
++                .putString("hardAnchoringSurahs", "[]")
++                .putInt("itqanBlockIndex", 0)
+                 .putString("itqanRotationStart", "49:1")
+                 .putString("itqanCursor", "49:1")
+                 .putString("murajaahCursor", "2:1")
+@@ -140,12 +143,16 @@
+         boolean repairV4 = p.contains("stableRecentLines")
+             || !p.contains("consolidationAttendanceDates")
+             || !p.contains("forcedPromotedRanges")
+-            || !p.contains("anchoringRetryAfterDate");
++            || !p.contains("anchoringRetryAfterDate")
++            || !p.contains("hardAnchoringSurahs")
++            || !p.contains("itqanBlockIndex");
+         if (repairV4) {
+             SharedPreferences.Editor repair = p.edit().remove("stableRecentLines");
+             if (!p.contains("consolidationAttendanceDates")) repair.putString("consolidationAttendanceDates", "[]");
+             if (!p.contains("forcedPromotedRanges")) repair.putString("forcedPromotedRanges", "[]");
+             if (!p.contains("anchoringRetryAfterDate")) repair.putString("anchoringRetryAfterDate", "");
++            if (!p.contains("hardAnchoringSurahs")) repair.putString("hardAnchoringSurahs", "[]");
++            if (!p.contains("itqanBlockIndex")) repair.putInt("itqanBlockIndex", 0);
+             if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v4 optional state");
+         }
+     }
+@@ -238,6 +245,8 @@
+             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
+             .putInt("anchoringQueueIndex", Math.max(0, p.getInt("anchoringQueueIndex", 0)))
+             .putString("anchoringRetryAfterDate", "")
++            .putString("hardAnchoringSurahs", "[]")
++            .putInt("itqanBlockIndex", 0)
+             .putInt("itqanFinalReveals", Math.max(0, p.getInt("itqanFinalReveals", 0)))
+             .putBoolean("murajaahSpeedCalibrated", p.getBoolean("murajaahSpeedCalibrated", false))
+             .putInt("murajaahSpeedSamples", Math.max(0, p.getInt("murajaahSpeedSamples", 0)))
+@@ -419,9 +428,63 @@
+     public int itqanRep() { return p.getInt("itqanRep", 0); }
+     public int itqanAssisted() { return p.getInt("itqanAssisted", 0); }
+     public int itqanFinalReveals() { return p.getInt("itqanFinalReveals", 0); }
++    public int itqanBlockIndex() { return Math.max(0, p.getInt("itqanBlockIndex", 0)); }
+     public VerseRef itqanUnitStart() { return optionalRef("itqanUnitStart"); }
+     public VerseRef itqanUnitEnd() { return optionalRef("itqanUnitEnd"); }
+ 
++    public List<Integer> hardAnchoringSurahs() {
++        LinkedHashSet<Integer> unique = new LinkedHashSet<>();
++        try {
++            JSONArray array = new JSONArray(p.getString("hardAnchoringSurahs", "[]"));
++            for (int i = 0; i < array.length(); i++) {
++                int surah = array.optInt(i, -1);
++                if (surah >= 1 && surah <= 114) unique.add(surah);
++            }
++        } catch (Exception ignored) {
++            return Collections.emptyList();
++        }
++        ArrayList<Integer> out = new ArrayList<>(unique);
++        Collections.sort(out);
++        return out;
++    }
++
++    public boolean setHardAnchoringSurahs(List<Integer> surahs) {
++        LinkedHashSet<Integer> unique = new LinkedHashSet<>();
++        if (surahs != null) {
++            for (Integer value : surahs) if (value != null && value >= 1 && value <= 114) unique.add(value);
++        }
++        ArrayList<Integer> ordered = new ArrayList<>(unique);
++        Collections.sort(ordered);
++        JSONArray array = new JSONArray();
++        for (int value : ordered) array.put(value);
++        return p.edit().putString("hardAnchoringSurahs", array.toString()).commit();
++    }
++
++    static boolean containsHardAnchoringSurah(List<Integer> hardSurahs, List<VerseRef> unitVerses) {
++        if (hardSurahs == null || hardSurahs.isEmpty() || unitVerses == null || unitVerses.isEmpty()) return false;
++        for (VerseRef verse : unitVerses) if (verse != null && hardSurahs.contains(verse.getSurah())) return true;
++        return false;
++    }
++
++    public boolean isFractionatedUnit(List<VerseRef> unitVerses) {
++        return containsHardAnchoringSurah(hardAnchoringSurahs(), unitVerses);
++    }
++
++    /** Atomically closes one fractionated sub-block and advances the persisted block cursor. */
++    public boolean advanceItqanBlock(int nextBlockIndex, String date, String label) {
++        return p.edit()
++            .putInt("itqanBlockIndex", Math.max(0, nextBlockIndex))
++            .putInt("itqanRep", 0)
++            .putInt("itqanAssisted", 0)
++            .putInt("itqanFinalReveals", 0)
++            .putString("itqanUnitStart", "")
++            .putString("itqanUnitEnd", "")
++            .putLong("itqanElapsedMs", 0L)
++            .putString("lastItqanDate", date)
++            .putString("lastItqanLabel", label)
++            .commit();
++    }
++
+     public boolean setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
+         return setItqanProgress(rep, assisted, itqanFinalReveals(), unitStart, unitEnd);
+     }
+@@ -441,6 +504,7 @@
+         return p.edit()
+             .putString("itqanCursor", nextCursor.toString())
+             .putInt("itqanRep", 0)
++            .putInt("itqanBlockIndex", 0)
+             .putInt("itqanAssisted", 0)
+             .putInt("itqanFinalReveals", 0)
+             .putString("itqanUnitStart", "")
+@@ -474,6 +538,7 @@
+             .putString("anchoringRetryAfterDate", "")
+             .putString("itqanCursor", storedNext.toString())
+             .putInt("itqanRep", 0)
++            .putInt("itqanBlockIndex", 0)
+             .putInt("itqanAssisted", 0)
+             .putInt("itqanFinalReveals", 0)
+             .putString("itqanUnitStart", "")
+@@ -600,6 +665,7 @@
+             .putString("anchoringRetryAfterDate", retryAfter)
+             .putString("itqanCursor", next.toString())
+             .putInt("itqanRep", 0)
++            .putInt("itqanBlockIndex", 0)
+             .putInt("itqanAssisted", 0)
+             .putInt("itqanFinalReveals", 0)
+             .putString("itqanUnitStart", "")
+--- a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java
++++ b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java
+@@ -298,6 +298,23 @@
+         return result;
+     }
+ 
++    /** Ordered verses touching the supplied physical lines, restricted to the current Ancrage unit. */
++    public List<VerseRef> versesOnLines(List<String> lineIds, List<VerseRef> allowedVerses) {
++        if (lineIds == null || lineIds.isEmpty() || allowedVerses == null || allowedVerses.isEmpty()) {
++            return Collections.emptyList();
++        }
++        LinkedHashSet<String> wantedLines = new LinkedHashSet<>(lineIds);
++        LinkedHashSet<VerseRef> allowed = new LinkedHashSet<>(allowedVerses);
++        LinkedHashSet<VerseRef> selected = new LinkedHashSet<>();
++        for (LineMeta line : lines) {
++            if (!wantedLines.contains(line.id)) continue;
++            for (VerseRef verse : line.verses) if (allowed.contains(verse)) selected.add(verse);
++        }
++        ArrayList<VerseRef> result = new ArrayList<>(selected);
++        result.sort(Comparator.comparingInt(GeometryRepository::ordinal));
++        return result;
++    }
++
+     public static VerseRef parseVerse(String value) {
+         String[] parts = value.split(":");
+         if (parts.length != 2) throw new IllegalArgumentException("Invalid verse reference " + value);
