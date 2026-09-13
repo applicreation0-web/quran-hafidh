@@ -10,10 +10,10 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 
 public final class J10CapacityTest {
-    @Test public void tenDayCapacityUsesExistingWeeklySessionsOnly() {
+    @Test public void tenDayCapacityUsesOnlyReusableTimedReviewSessions() {
         LocalDate sunday = LocalDate.of(2026, 9, 13);
-        assertEquals(690, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 36, true));
-        assertEquals(750, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 0, false));
+        assertEquals(450, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 36, true));
+        assertEquals(390, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 0, false));
     }
 
     @Test public void normalPriorityTakesJ10J9AndKeepsContiguousGroupSmall() {
