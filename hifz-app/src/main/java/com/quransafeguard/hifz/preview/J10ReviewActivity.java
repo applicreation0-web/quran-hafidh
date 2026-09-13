@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
@@ -21,6 +22,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private J10ReviewPlanner.PriorityGroup group;
     private J10ReviewProgress reviewProgress;
     private HifzPrefs prefs;
+    private J10HostBudgetStore hostBudgetStore;
     private MushafView mushaf;
     private TextView title;
     private TextView status;
@@ -34,6 +36,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
         super.onCreate(state);
         planner = new J10ReviewPlanner(this);
         prefs = new HifzPrefs(this);
+        hostBudgetStore = new J10HostBudgetStore(this);
         hostMode = safeHostMode(getIntent().getStringExtra(EXTRA_HOST_MODE));
         buildUi();
         renderPriority();
@@ -138,7 +141,13 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     @Override protected void onPause() {
         if (activeStartedAt >= 0L && hostMode != null) {
             long consumed = Math.max(0L, SystemClock.elapsedRealtime() - activeStartedAt);
-            prefs.setElapsedFor(hostMode, J10SessionBudget.addConsumed(prefs.elapsedFor(hostMode), consumed));
+            LocalDate today = LocalDate.now();
+            if (consumed > 0L && hostBudgetStore.addConsumed(hostMode, today, consumed)) {
+                prefs.setElapsedFor(hostMode,
+                    J10SessionBudget.addConsumed(prefs.elapsedFor(hostMode), consumed));
+            } else if (consumed > 0L) {
+                Log.e("QuranHifz", "Unable to persist J10 host-slot consumption for " + hostMode);
+            }
         }
         activeStartedAt = -1L;
         super.onPause();
@@ -158,9 +167,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     }
 
     private static String safeHostMode(String mode) {
-        if (HifzSessionActivity.SABQI.equals(mode)
-                || HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
-                || HifzSessionActivity.ITQAN.equals(mode)
+        if (HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
                 || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
                 || HifzSessionActivity.MURAJAAH.equals(mode)) return mode;
         return null;
