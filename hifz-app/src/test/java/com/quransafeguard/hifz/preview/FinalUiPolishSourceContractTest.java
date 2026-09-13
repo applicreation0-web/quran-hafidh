@@ -80,9 +80,9 @@ public final class FinalUiPolishSourceContractTest {
 
     @Test public void semanticHifzIconsStayMonochromeOutlineAndTwentyFourDp() throws Exception {
         String[] files = {
-            "ic_hifz_new_lesson.xml", "ic_hifz_evening_review.xml", "ic_hifz_consolidation.xml",
-            "ic_hifz_anchoring.xml", "ic_hifz_maintenance.xml", "ic_hifz_strengthen.xml",
-            "ic_hifz_pending.xml", "ic_hifz_acquired.xml"
+            "ic_hifz_new_lesson.xml", "ic_hifz_reprise.xml", "ic_hifz_consolidation.xml",
+            "ic_hifz_anchor.xml", "ic_hifz_maintenance.xml", "ic_hifz_strengthen.xml",
+            "ic_hifz_waiting.xml", "ic_hifz_acquired.xml"
         };
         for (String file : files) {
             String xml = read("hifz-app/src/main/res/drawable/" + file);
