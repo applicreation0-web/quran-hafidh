@@ -147,6 +147,11 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshAll() { refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
 
+    private DailyPlan planFor(LocalDate date) {
+        return HifzSchedule.INSTANCE.planFor(
+            date.getDayOfWeek(), prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
+    }
+
     private void openMode(String mode) {
         startActivity(new Intent(this, HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE, mode));
     }
@@ -158,7 +163,7 @@ public final class MainActivity extends android.app.Activity {
 
     private String firstIncompleteMode(LocalDate date) {
         if (date.isBefore(prefs.programStartDate())) return null;
-        DailyPlan plan = HifzSchedule.INSTANCE.planFor(date.getDayOfWeek(), prefs.recentSabqi().size());
+        DailyPlan plan = planFor(date);
         if (!isComplete(date, plan.getMorning().getKind())) return modeFor(plan.getMorning().getKind());
         if (!isComplete(date, plan.getEvening().getKind())) return modeFor(plan.getEvening().getKind());
         return null;
@@ -196,7 +201,7 @@ public final class MainActivity extends android.app.Activity {
             todayAction.setEnabled(false);
             return;
         }
-        DailyPlan plan = HifzSchedule.INSTANCE.planFor(date.getDayOfWeek(), prefs.recentSabqi().size());
+        DailyPlan plan = planFor(date);
         SessionKind next = !isComplete(date, plan.getMorning().getKind())
             ? plan.getMorning().getKind()
             : !isComplete(date, plan.getEvening().getKind()) ? plan.getEvening().getKind() : null;
