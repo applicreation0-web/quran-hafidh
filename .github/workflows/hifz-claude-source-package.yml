@@ -1,0 +1,43 @@
+name: Hifz Claude source package
+
+on:
+  push:
+    branches:
+      - helper/hifz-0.7.3-claude-package
+    paths:
+      - .github/workflows/hifz-claude-source-package.yml
+
+permissions:
+  contents: read
+
+jobs:
+  package-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact audited SHA
+        uses: actions/checkout@v4
+        with:
+          ref: 7c831587ec0144a33137014c987fe0ad706c2936
+          fetch-depth: 0
+
+      - name: Verify exact SHA and create source ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "7c831587ec0144a33137014c987fe0ad706c2936"
+          git archive \
+            --format=zip \
+            --prefix=quran-hifz-source-7c831587/ \
+            --output=quran-hifz-source-7c831587.zip \
+            7c831587ec0144a33137014c987fe0ad706c2936
+          sha256sum quran-hifz-source-7c831587.zip > quran-hifz-source-7c831587.sha256
+
+      - name: Upload exact source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-source-7c831587
+          path: |
+            quran-hifz-source-7c831587.zip
+            quran-hifz-source-7c831587.sha256
+          if-no-files-found: error
+          retention-days: 14
