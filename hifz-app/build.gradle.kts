@@ -1,3 +1,7 @@
+import java.util.Base64
+import kotlin.math.ceil
+import kotlin.math.min
+
 plugins {
     id("com.android.application")
 }
@@ -64,12 +68,12 @@ val prepareHifzTafsirRelease by tasks.registering {
             }
             val payload = parts.flatMap { it.readBytes().asIterable() }.toByteArray()
             val decoded = if (parts.first().name.contains(".b64.")) {
-                java.util.Base64.getMimeDecoder().decode(payload)
+                Base64.getMimeDecoder().decode(payload)
             } else payload
-            val chunkSize = kotlin.math.ceil(decoded.size / corpus.expectedParts.toDouble()).toInt()
+            val chunkSize = ceil(decoded.size / corpus.expectedParts.toDouble()).toInt()
             repeat(corpus.expectedParts) { index ->
                 val start = index * chunkSize
-                val end = kotlin.math.min(decoded.size, start + chunkSize)
+                val end = min(decoded.size, start + chunkSize)
                 check(start < end) { "${corpus.stem}: empty normalized part $index" }
                 file("src/main/assets/tafsir/${corpus.stem}.gz.part${index.toString().padStart(2, '0')}")
                     .writeBytes(decoded.copyOfRange(start, end))
