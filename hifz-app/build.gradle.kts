@@ -111,24 +111,32 @@ val verifyHifzConvergenceRules by tasks.registering {
         }
         check(config.contains("ITQAN_VISIBLE_REPS_WORKING = 15"))
         check(config.contains("ITQAN_100_REPS_WORKING = 10"))
-        check(config.contains("ITQAN_TOTAL_REPS = 40")) { "Itqan must stay on the agreed ×40 protocol." }
+        check(config.contains("ITQAN_TOTAL_REPS = 40")) { "Full promoted-page Ancrage must keep the ×40 protocol." }
+        check(config.contains("ITQAN_LIGHT_VISIBLE_REPS = 15")
+                && config.contains("ITQAN_LIGHT_25_REPS = 0")
+                && config.contains("ITQAN_LIGHT_50_REPS = 5")
+                && config.contains("ITQAN_LIGHT_75_REPS = 5")
+                && config.contains("ITQAN_LIGHT_100_REPS = 5")
+                && config.contains("ITQAN_LIGHT_TOTAL_REPS = 30")) {
+            "Reconstruction Ancrage must stay on 30 repetitions: 15 visible + 5/5/5 masked."
+        }
         check(config.contains("EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6")) { "Audio needs its own anti-ghosting cleanup cadence." }
 
         check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
-        check(!session.contains("Stable sans aide")) { "A fault-free recent review must not trigger promotion." }
-        check(!session.contains("markFirstRecentStable")) { "Recent Sabqi must stay recent until capacity pressure." }
-        check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Itqan." }
-        check(session.contains("rebalanceRecentWindow")) { "New Sabqi must enforce the sliding 30-minute recent window." }
+        check(!session.contains("Stable sans aide")) { "A fault-free Consolidation must not directly promote a block." }
+        check(!session.contains("markFirstRecentStable")) { "Consolidation actions must target the displayed block." }
+        check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Ancrage." }
+        check(session.contains("rebalanceRecentWindow")) { "Recent work must apply the calendar/attendance promotion rule." }
         check(session.contains("À renforcer"))
         check(session.contains("révélations") && session.contains("Révéler"))
         check(session.contains("prêt à valider") && session.contains("validateSabqi") && session.contains("validateItqan")) {
-            "Sabqi/Itqan completion must require explicit persisted validation."
+            "Leçon neuve and Ancrage completion must require explicit persisted validation."
         }
         check(!session.contains("Page suivante") && !session.contains("Page précédente")) {
             "Tablet Hifz sessions must use swipe/hardware page turns, not permanent page buttons."
         }
         check(!session.contains("heading = Ui.bookText")) {
-            "Sabqi, Itqan and Murajaah must not waste Mushaf height on a separate mode title."
+            "Structured Hifz modes must not waste Mushaf height on a separate mode title."
         }
         check(session.contains("LinearLayout controlBar = Ui.row(this)")) {
             "Session actions and offline audio must share one compact bottom control row."
@@ -137,14 +145,17 @@ val verifyHifzConvergenceRules by tasks.registering {
             "Audio control must stay visible and route to Settings until the local pack is installed."
         }
 
-        check(settings.contains("Ajouter") && settings.contains("Début de rotation Itqān"))
+        check(settings.contains("Ajouter") && settings.contains("Début de rotation d’ancrage"))
         check(settings.contains("FLAG_GRANT_PERSISTABLE_URI_PERMISSION")) { "Audio picker should retain read permission for a long import." }
         check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges"))
         check(main.contains("todayAction.setOnClickListener") && !main.contains("\"Séance\", v -> openToday")) {
             "Today card should be the single scheduled-session entry point."
         }
-        check(ui.contains("ic_ui_sabqi") && ui.contains("ic_ui_itqan") && ui.contains("ic_ui_murajaah")) {
-            "Hifz pictograms must use the uniform semantic icon family."
+        check(ui.contains("ic_hifz_new_lesson")
+                && ui.contains("ic_hifz_anchor")
+                && ui.contains("ic_hifz_maintenance")
+                && ui.contains("ic_hifz_consolidation")) {
+            "Hifz pictograms must use the explicit monochrome semantic icon family."
         }
         check(manifest.contains("ic_quran_hifz_logo")) { "Quran Hifz launcher icon must use the Mushaf/rehal identity." }
 
