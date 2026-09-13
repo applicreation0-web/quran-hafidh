@@ -17,7 +17,6 @@ import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -268,41 +267,66 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Sliding 30-minute recent-Sabqi window; promotion is capacity-driven and preserves whole verses. */
+    /** Calendar/attendance promotion; speed never determines when a recent block leaves the queue. */
     private void rebalanceRecentWindow() {
         List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
         if (recent.isEmpty()) return;
-        int recentWindowMinutes = HifzSchedule.INSTANCE.planFor(
-            DayOfWeek.SUNDAY, HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
-            .getMorning().getTargetMinutes();
-        int capacity = HifzCadence.targetFiveLineCapacity(recentWindowMinutes, prefs.murajaahSecondsPerLine());
-        int total = 0;
-        for (HifzPrefs.RecentSabqi item : recent) total += Math.max(0, item.endLine - item.startLine + 1);
-        if (total <= capacity) return;
+        LocalDate today = LocalDate.now();
+        LocalDate activation = prefs.recentConsolidationActivatedOn();
+        if (activation == null && recent.size() <= RecentPromotionPolicy.MAX_RECENT_BLOCKS) return;
+        LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
+        DashboardLedger ledger = new DashboardLedger(this);
+        List<LocalDate> completed = activation == null
+            ? Collections.emptyList()
+            : ledger.completedDates(RECENT_SABQI_REVIEW, plannedStart, today);
 
-        int overflow = total - capacity;
-        int removedLines = 0;
-        int blocksToRemove = 0;
         int oldestStart = recent.get(0).startLine;
         int safeEnd = -1;
-        for (HifzPrefs.RecentSabqi item : recent) {
-            removedLines += Math.max(0, item.endLine - item.startLine + 1);
-            blocksToRemove++;
+        int safeBlocks = 0;
+        boolean forceOldest = recent.size() > RecentPromotionPolicy.MAX_RECENT_BLOCKS;
+        for (int i = 0; i < recent.size(); i++) {
+            HifzPrefs.RecentSabqi item = recent.get(i);
+            RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
+                item.addedOn, today, plannedStart, completed, recent.size(), i == 0);
+            boolean include = decision.promote || (forceOldest && safeEnd < 0);
+            if (!include) break;
             GeometryRepository.FiveLineBlock block = geometry.fiveLineBlock(item.startLine);
-            if (removedLines >= overflow && !block.endsInsideVerse) {
+            if (!block.endsInsideVerse) {
                 safeEnd = item.endLine;
-                break;
+                safeBlocks = i + 1;
+                if (forceOldest) break;
             }
         }
-        if (safeEnd < oldestStart || blocksToRemove <= 0) return;
+        if (safeEnd < oldestStart || safeBlocks <= 0) return;
 
         ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
         if (complete.isEmpty()) return;
         if (!prefs.addPromotedVerses(complete)) {
-            onError("Impossible d’enregistrer la promotion de la fenêtre Sabqi récent.");
+            onError("Impossible d’enregistrer la promotion de la Consolidation.");
             return;
         }
-        for (int i = 0; i < blocksToRemove; i++) prefs.removeFirstRecentSabqi();
+        int previousReviewIndex = prefs.recentSabqiReviewIndex();
+        for (int i = 0; i < safeBlocks; i++) prefs.removeFirstRecentSabqi();
+        int remaining = prefs.recentSabqi().size();
+        int adjusted = remaining <= 0 ? 0 : Math.floorMod(Math.max(0, previousReviewIndex - safeBlocks), remaining);
+        prefs.setRecentSabqiReviewIndex(adjusted);
+        recentReviewIndex = adjusted;
+    }
+
+    private RecentPromotionPolicy.Decision promotionStatus(HifzPrefs.RecentSabqi item, int blockCount, boolean oldest) {
+        LocalDate today = LocalDate.now();
+        LocalDate activation = prefs.recentConsolidationActivatedOn();
+        LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
+        List<LocalDate> completed = activation == null
+            ? Collections.emptyList()
+            : new DashboardLedger(this).completedDates(RECENT_SABQI_REVIEW, plannedStart, today);
+        return RecentPromotionPolicy.evaluate(item.addedOn, today, plannedStart, completed, blockCount, oldest);
+    }
+
+    private void captureConsolidationAndRebalance() {
+        DashboardLedger ledger = new DashboardLedger(this);
+        ledger.capture(prefs);
+        rebalanceRecentWindow();
     }
 
     private void renderSabqiTodayReview() {
@@ -365,7 +389,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         program.setText("Sabqi récent · " + block.verseLabel());
-        progress.setText("Bloc " + (recentReviewIndex + 1) + "/" + recent.size() + " · boucle 30 min");
+        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), recentReviewIndex == 0);
+        String attendance = status.requiredSessions <= 0
+            ? "Consolidation à venir"
+            : status.completedSessions + "/" + status.requiredSessions + " séances";
+        progress.setText("Bloc " + (recentReviewIndex + 1) + "/" + recent.size()
+            + " · " + status.ageDays + " j · " + attendance);
         showCurrent();
         if (!timedSessionLimitReached) {
             addRoundAction("✓", "Revu", v -> advanceRecentReview());
@@ -397,7 +426,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (RECENT_SABQI_REVIEW.equals(mode)
                 && !today.equals(prefs.lastRecentSabqiReviewDate())) {
             timedSessionLimitReached = true;
-            prefs.completeRecentSabqiReview(today, recentReviewIndex, "Sabqi récent · 30 min");
+            if (!prefs.completeRecentSabqiReview(today, recentReviewIndex, "Sabqi récent · 30 min")) {
+                onError("Impossible d’enregistrer la Consolidation.");
+                return false;
+            }
+            captureConsolidationAndRebalance();
             closeClockForCompletedSession();
             return true;
         }
@@ -424,7 +457,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             closeClockForCompletedSession();
             renderMode();
         } else if (RECENT_SABQI_REVIEW.equals(mode)) {
-            prefs.completeRecentSabqiReview(today, recentReviewIndex, "Sabqi récent · 30 min");
+            if (!prefs.completeRecentSabqiReview(today, recentReviewIndex, "Sabqi récent · 30 min")) {
+                onError("Impossible d’enregistrer la Consolidation.");
+                return;
+            }
+            captureConsolidationAndRebalance();
             closeClockForCompletedSession();
             renderMode();
         } else if (MURAJAAH.equals(mode)) {
