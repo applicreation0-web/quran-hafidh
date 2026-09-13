@@ -1,0 +1,29 @@
+name: Quran Hifz workflow patch atelier
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.3-astra-fix-all
+    paths:
+      - scripts/apply_hifz_astra_fixes.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply official CI patch
+        run: python3 scripts/apply_hifz_astra_fixes.py
+      - name: Commit official CI patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name quran-hifz-ci
+          git config user.email actions@users.noreply.github.com
+          git add .github/workflows/hifz-test-app.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "fix(ci): bound emulator wait and trigger final work branches"
+          git push origin HEAD:work/hifz-0.7.3-astra-fix-all
