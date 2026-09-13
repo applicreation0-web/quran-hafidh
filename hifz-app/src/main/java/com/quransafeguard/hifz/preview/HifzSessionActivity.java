@@ -703,6 +703,7 @@ private void rebalanceRecentWindow() {
 
     private int countMurajaahLinesThrough(VerseRef through){
         if (murajaahPlan == null || through == null) return 0;
+        if (MurajaahTraversalPolicy.endpointAmbiguous(murajaahPlan.traversalVerses, through)) return 0;
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         for (VerseRef verse : murajaahPlan.traversalVerses) {
             ids.addAll(geometry.lineIdsForVerseRange(verse, verse));
