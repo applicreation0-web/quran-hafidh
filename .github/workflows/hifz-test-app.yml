@@ -6,6 +6,7 @@ on:
       - release/hifz-0.7.1-official
       - release/hifz-0.7.2-mask-hotfix
       - release/hifz-0.7.3-final
+      - fix/hifz-0.7.3-claude-audit
   workflow_dispatch:
 
 permissions:
@@ -112,6 +113,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/test_hifz_claude_audit_regressions.py
           python3 scripts/verify_hifz_mask_hotfix.py
           node scripts/test_hifz_mask_segments.js
           node scripts/test_hifz_vertical_fit.js
