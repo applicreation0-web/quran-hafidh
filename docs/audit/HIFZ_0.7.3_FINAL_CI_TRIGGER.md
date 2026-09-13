@@ -1,7 +1,8 @@
 # Quran Hifz 0.7.3 — final CI trigger
 
-This commit exists only to trigger the single official `hifz-test-app.yml` pipeline on the final candidate tree.
+This commit exists only to trigger the official `hifz-test-app.yml` pipeline on the post-Claude blocking-fix candidate tree.
 
-- Candidate parent: `e7c01869bb4efe4f6416c0a91ae73db7625b8a5f`
+- Candidate application parent: `37e2fc125b466880fe438b05f5e4464e419e466d`
+- Blocking fixes in scope: B1 already restored; B3 in-progress Anchoring protocol continuity.
 - Application code is unchanged by this marker.
-- Publication and signing remain NO-GO until the official pipeline and independent audit pass.
+- Publication and signing remain NO-GO until the official pipeline and final independent Claude review pass.
