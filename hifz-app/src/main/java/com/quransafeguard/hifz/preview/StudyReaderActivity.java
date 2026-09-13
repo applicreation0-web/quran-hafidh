@@ -108,9 +108,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions = Ui.row(this);
         readerActions.setGravity(Gravity.CENTER);
         readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
-        readerActions.setMinimumHeight(Ui.dp(this, 56));
+        readerActions.setMinimumHeight(Ui.dp(this, 60));
         tafsirButton = tafsirReaderAction();
-        tafsirButton.setEnabled(false);
         readerActions.addView(tafsirButton);
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -140,17 +139,18 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         Button button = new Button(this);
         button.setAllCaps(false);
         button.setText("Tafsir");
-        button.setTextSize(12.5f);
+        button.setTextSize(14.5f);
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         button.setTextColor(Ui.INK);
         button.setGravity(Gravity.CENTER);
-        button.setContentDescription("Tafsir");
+        button.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
         button.setOnClickListener(v -> openTafsir());
         button.setStateListAnimator(null);
         button.setElevation(0f);
         button.setBackgroundColor(Color.TRANSPARENT);
-        button.setMinimumHeight(Ui.dp(this, 56));
-        button.setMinimumWidth(Ui.dp(this, 160));
-        button.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+        button.setMinimumHeight(Ui.dp(this, 60));
+        button.setMinimumWidth(Ui.dp(this, 190));
+        button.setPadding(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
         return button;
     }
 
@@ -161,8 +161,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         mushaf.clearReveal();
         page = next;
         selected = null;
-        tafsirButton.setEnabled(false);
-        tafsirButton.setContentDescription("Tafsir");
+        tafsirButton.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         pageLabel.setText("Lecture · " + page + " / 604");
         pageSeek.setProgress(page - 1);
@@ -174,7 +173,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override public void onVerseTap(VerseRef verse) {
         selected = verse;
-        tafsirButton.setEnabled(true);
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
         showControls();
@@ -194,7 +192,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void hideControls() {
         if (topControls == null || readerActions == null || pageRail == null) return;
         controlsVisible = false;
-        // INVISIBLE preserves reader geometry and avoids a full-page BOOX reflow.
         topControls.setVisibility(View.INVISIBLE);
         readerActions.setVisibility(View.INVISIBLE);
         pageRail.setVisibility(View.INVISIBLE);
@@ -209,7 +206,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void openTafsir() {
         final VerseRef verse = selected;
-        if (verse == null) return;
+        if (verse == null) {
+            Toast.makeText(this, "Touchez d’abord un verset pour ouvrir le Tafsir.", Toast.LENGTH_LONG).show();
+            showControls();
+            return;
+        }
         if (largeScreen) { openSideTafsir(verse); return; }
         hideControls();
         mushaf.revealSelectionAboveBottomPanel();
