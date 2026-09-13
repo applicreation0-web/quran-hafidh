@@ -57,8 +57,8 @@ public class PreviewGeometryInstrumentedTest {
         HifzPrefs prefs = new HifzPrefs(context);
         prefs.resetPreviewState();
         VerseRef itqanBefore = prefs.itqanCursor();
-        VerseRef nextMurajaah = prefs.corpus().next(prefs.murajaahCursor());
-        prefs.setMurajaahCursor(nextMurajaah);
+        VerseRef nextMurajaah = prefs.murajaahCorpus().next(prefs.murajaahCursor());
+        assertTrue(prefs.completeMurajaah(nextMurajaah, "2026-09-13", "test rotation naturelle"));
         assertEquals(itqanBefore, prefs.itqanCursor());
         assertEquals(nextMurajaah, prefs.murajaahCursor());
     }
@@ -66,7 +66,8 @@ public class PreviewGeometryInstrumentedTest {
     @Test public void tafsirCorpusLoadsAnAuditedVerse() throws Exception {
         TafsirRepository.Entry entry = new TafsirRepository(context).load(new VerseRef(2,1));
         assertNotNull(entry);
-        assertFalse(entry.commentary.trim().isEmpty());
+        assertFalse(entry.commentaryRuns.isEmpty());
+        assertFalse(entry.commentaryRuns.get(0).text.trim().isEmpty());
     }
 
     @Test public void hifzPreviewDeclaresNoAccessibilityServiceOrBroadPackagePermission() throws Exception {
