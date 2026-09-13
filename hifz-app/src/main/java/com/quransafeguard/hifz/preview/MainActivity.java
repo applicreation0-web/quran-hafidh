@@ -15,6 +15,7 @@ import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -26,6 +27,7 @@ public final class MainActivity extends android.app.Activity {
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
     private TextView today;
+    private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
     private LinearLayout dashboard;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
@@ -73,6 +75,12 @@ public final class MainActivity extends android.app.Activity {
         todayAction.addView(todayRow);
         root.addView(todayAction);
         root.addView(Ui.divider(this));
+
+        recentSabqiAdvisory = Ui.text(this, "", 10.8f, false);
+        recentSabqiAdvisory.setTextColor(Ui.MUTED);
+        recentSabqiAdvisory.setPadding(Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6), Ui.dp(this, 4));
+        recentSabqiAdvisory.setVisibility(View.GONE);
+        root.addView(recentSabqiAdvisory);
 
         // The Today row is the session launcher. Keep only the three global destinations here.
         LinearLayout primary = Ui.row(this);
@@ -135,7 +143,7 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshToday(); refreshDashboard(); }
+    private void refreshAll() { refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
 
     private void openMode(String mode) {
         startActivity(new Intent(this, HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE, mode));
@@ -231,6 +239,20 @@ public final class MainActivity extends android.app.Activity {
         }
         today.setText(detail);
         todayAction.setEnabled(true);
+    }
+
+    private void refreshRecentSabqiAdvisory() {
+        if (recentSabqiAdvisory == null) return;
+        DayOfWeek day = LocalDate.now().getDayOfWeek();
+        boolean advisoryDay = day == DayOfWeek.WEDNESDAY || day == DayOfWeek.FRIDAY;
+        if (!advisoryDay || prefs.recentSabqi().isEmpty()) {
+            recentSabqiAdvisory.setVisibility(View.GONE);
+            recentSabqiAdvisory.setText("");
+            return;
+        }
+        int[] range = HifzCadence.advisoryFiveLineRange(prefs.murajaahSecondsPerLine());
+        recentSabqiAdvisory.setText("Sabqi récent · rappel libre 5–10 min · " + range[0] + "–" + range[1] + " lignes");
+        recentSabqiAdvisory.setVisibility(View.VISIBLE);
     }
 
     private void refreshDashboard() {
