@@ -42,6 +42,19 @@ public final class AnchoringQueueTest {
         assertEquals(0, result.nextIndex);
     }
 
+    @Test public void inProgressRangeKeepsItsOwnProtocolWhenQueueHeadChanges() {
+        List<AnchoringQueue.Entry> input = new ArrayList<>();
+        input.add(new AnchoringQueue.Entry("A", "A",
+            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 0));
+        input.add(new AnchoringQueue.Entry("B", "B",
+            AnchoringQueue.Origin.PROMOTED, AnchoringQueue.Protocol.FULL, 0));
+
+        AnchoringQueue.Entry resolved = AnchoringQueue.findByRange(input, "B", "B");
+
+        assertEquals("B", resolved.start);
+        assertEquals(AnchoringQueue.Protocol.FULL, resolved.protocol);
+    }
+
     @Test public void thirdFailureSwitchesThatPageToFullAndDefersItThreePlaces() {
         List<AnchoringQueue.Entry> input = entries("A", "B", "C", "D", "E", "F");
         input.set(2, new AnchoringQueue.Entry("C", "C",

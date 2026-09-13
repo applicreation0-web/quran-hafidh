@@ -95,6 +95,14 @@ public final class AnchoringQueue {
         return a != null && b != null && a.start.equals(b.start) && a.end.equals(b.end);
     }
 
+    public static Entry findByRange(List<Entry> source, String start, String end) {
+        if (source == null || start == null || end == null) return null;
+        for (Entry entry : source) {
+            if (entry != null && start.equals(entry.start) && end.equals(entry.end)) return entry;
+        }
+        return null;
+    }
+
     /**
      * Move the page actually displayed behind {@code places} following distinct entries in cyclic
      * visit order. With only one page, +3 cannot be represented without an immediate replay, so

@@ -557,6 +557,9 @@ private void rebalanceRecentWindow() {
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
             List<String> lineIds=geometry.lineIdsForVerseRange(savedStart,savedEnd);
             itqanUnit=new GeometryRepository.VerseUnit(currentPage,savedStart,savedEnd,verses,lineIds);
+            AnchoringQueue.Entry inProgress = AnchoringQueue.findByRange(
+                prefs.anchoringQueue(), savedStart.toString(), savedEnd.toString());
+            if (inProgress != null) anchoringEntry = inProgress;
         } else {
             VerseRef entryStart = GeometryRepository.parseVerse(anchoringEntry.start);
             VerseRef entryEnd = GeometryRepository.parseVerse(anchoringEntry.end);
