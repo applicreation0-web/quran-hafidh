@@ -26,19 +26,21 @@ jobs:
           path: target
           fetch-depth: 1
 
-      - name: Apply exact GREEN patch atomically
+      - name: Apply exact product GREEN patch atomically
         shell: bash
         run: |
           set -euo pipefail
           cd target
           test "$(git rev-parse HEAD)" = "0cba1cb934957c07be0af2241f3ed8b3b7bc07a1"
-          for patch in ../helper/tools/fractionated-green/*.patch; do
+          for patch in \
+            ../helper/tools/fractionated-green/00-product-core.patch \
+            ../helper/tools/fractionated-green/02-session.patch \
+            ../helper/tools/fractionated-green/03-ui-tests.patch; do
             git apply --check "$patch"
             git apply "$patch"
           done
 
           cat > /tmp/expected-files <<'EOF'
-          .github/workflows/hifz-test-app.yml
           hifz-app/build.gradle.kts
           hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzFractionatedAnchoringInstrumentedTest.java
           hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java
