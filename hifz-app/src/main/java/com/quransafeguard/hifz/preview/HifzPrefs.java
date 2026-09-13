@@ -73,9 +73,11 @@ public final class HifzPrefs {
                 .putString("promotedRanges", bootstrapReconstructionJson())
                 .putString("unconsolidatedPromotedRanges", bootstrapReconstructionJson())
                 .putString("legacyMurajaahPromotedRanges", "[]")
+                .putString("forcedPromotedRanges", "[]")
                 .putString("anchoringQueue", "[]")
                 .putBoolean("anchoringQueueInitialized", false)
                 .putInt("anchoringQueueIndex", 0)
+                .putString("anchoringRetryAfterDate", "")
                 .putString("itqanRotationStart", "49:1")
                 .putString("itqanCursor", "49:1")
                 .putString("murajaahCursor", "2:1")
@@ -89,6 +91,7 @@ public final class HifzPrefs {
                 .putString("itqanUnitEnd", "")
                 .putString("recentSabqi", "[]")
                 .putString("recentConsolidationActivatedOn", "")
+                .putString("consolidationAttendanceDates", "[]")
                 .putLong("sabqiElapsedMs", 0L)
                 .putLong("itqanElapsedMs", 0L)
                 .putLong("sabqi_today_reviewElapsedMs", 0L)
@@ -134,9 +137,16 @@ public final class HifzPrefs {
         if (schema != PreviewConfig.SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
         }
-        if (p.contains("stableRecentLines")
-                && !p.edit().remove("stableRecentLines").commit()) {
-            throw new IllegalStateException("Unable to clean obsolete Hifz stable-line state");
+        boolean repairV4 = p.contains("stableRecentLines")
+            || !p.contains("consolidationAttendanceDates")
+            || !p.contains("forcedPromotedRanges")
+            || !p.contains("anchoringRetryAfterDate");
+        if (repairV4) {
+            SharedPreferences.Editor repair = p.edit().remove("stableRecentLines");
+            if (!p.contains("consolidationAttendanceDates")) repair.putString("consolidationAttendanceDates", "[]");
+            if (!p.contains("forcedPromotedRanges")) repair.putString("forcedPromotedRanges", "[]");
+            if (!p.contains("anchoringRetryAfterDate")) repair.putString("anchoringRetryAfterDate", "");
+            if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v4 optional state");
         }
     }
 
@@ -219,12 +229,15 @@ public final class HifzPrefs {
             .putString("promotedRanges", rangesJson(normalizeRanges(promoted)))
             .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
             .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))
+            .putString("forcedPromotedRanges", "[]")
             .putString("recentSabqi", recent)
             .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
+            .putString("consolidationAttendanceDates", "[]")
             .putString("murajaahCursor", murajaah.toString())
             .putString("anchoringQueue", p.getString("anchoringQueue", "[]"))
             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
             .putInt("anchoringQueueIndex", Math.max(0, p.getInt("anchoringQueueIndex", 0)))
+            .putString("anchoringRetryAfterDate", "")
             .putInt("itqanFinalReveals", Math.max(0, p.getInt("itqanFinalReveals", 0)))
             .putBoolean("murajaahSpeedCalibrated", p.getBoolean("murajaahSpeedCalibrated", false))
             .putInt("murajaahSpeedSamples", Math.max(0, p.getInt("murajaahSpeedSamples", 0)))
@@ -295,6 +308,26 @@ public final class HifzPrefs {
     public List<VerseRange> promotedRanges() { return parseRangesAllowEmpty("promotedRanges"); }
     public List<VerseRange> unconsolidatedPromotedRanges() { return parseRangesAllowEmpty("unconsolidatedPromotedRanges"); }
     public List<VerseRange> legacyMurajaahPromotedRanges() { return parseRangesAllowEmpty("legacyMurajaahPromotedRanges"); }
+    public List<VerseRange> forcedPromotedRanges() { return parseRangesAllowEmpty("forcedPromotedRanges"); }
+
+    public List<LocalDate> consolidationAttendanceDates() {
+        ArrayList<LocalDate> out = new ArrayList<>();
+        try {
+            JSONArray array = new JSONArray(p.getString("consolidationAttendanceDates", "[]"));
+            for (int i = 0; i < array.length(); i++) {
+                LocalDate date = safeDate(array.getString(i), null);
+                if (date != null) out = new ArrayList<>(ConsolidationAttendance.add(out, date));
+            }
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt Consolidation attendance", error);
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    public List<LocalDate> consolidationAttendanceDates(LocalDate fromInclusive, LocalDate throughInclusive) {
+        return Collections.unmodifiableList(ConsolidationAttendance.between(
+            consolidationAttendanceDates(), fromInclusive, throughInclusive));
+    }
 
     /** Effective Itqan work corpus: configured base ranges plus every snowball promotion. Read-only to UI callers. */
     public List<VerseRange> effectiveItqanRanges() {
@@ -418,24 +451,27 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /** Atomically advances the natural Itqan cycle and consolidates any completed promoted overlap. */
+    /** Atomically advances the natural Itqan cycle and consolidates the exact completed queue entry. */
     public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
                                                    VerseRef nextCursor, String date, String label) {
-        List<VerseRange> pending = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
         List<AnchoringQueue.Entry> queue = anchoringQueue();
-        int currentIndex = anchoringQueueIndex(queue.size());
         int completedIndex = findAnchoringEntry(queue, start, endInclusive);
-        if (completedIndex >= 0) {
-            queue.remove(completedIndex);
-            if (!queue.isEmpty()) currentIndex = Math.min(completedIndex, queue.size() - 1);
-            else currentIndex = 0;
-        }
+        if (completedIndex < 0) return false;
+        List<VerseRange> pending = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
+        List<VerseRange> forced = subtractCoverage(forcedPromotedRanges(), start, endInclusive);
+        int currentIndex = anchoringQueueIndex(queue.size());
+        queue.remove(completedIndex);
+        if (!queue.isEmpty()) currentIndex = Math.min(completedIndex, queue.size() - 1);
+        else currentIndex = 0;
         VerseRef storedNext = queue.isEmpty() ? nextCursor
             : GeometryRepository.parseVerse(queue.get(currentIndex).start);
         return p.edit()
             .putString("unconsolidatedPromotedRanges", rangesJson(pending))
+            .putString("forcedPromotedRanges", rangesJson(forced))
             .putString("anchoringQueue", anchoringQueueJson(queue))
+            .putBoolean("anchoringQueueInitialized", true)
             .putInt("anchoringQueueIndex", currentIndex)
+            .putString("anchoringRetryAfterDate", "")
             .putString("itqanCursor", storedNext.toString())
             .putInt("itqanRep", 0)
             .putInt("itqanAssisted", 0)
@@ -471,9 +507,28 @@ public final class HifzPrefs {
         return Math.floorMod(p.getInt("anchoringQueueIndex", 0), size);
     }
 
+    public int anchoringQueueIndex() { return anchoringQueueIndex(anchoringQueue().size()); }
+
+    public boolean anchoringDeferredToday() {
+        String value = p.getString("anchoringRetryAfterDate", "");
+        LocalDate retry = safeDate(value, null);
+        return retry != null && !LocalDate.now().isAfter(retry);
+    }
+
+    private static boolean overlaps(List<VerseRange> ranges, VerseRef start, VerseRef endInclusive) {
+        int a = GeometryRepository.ordinal(start), b = GeometryRepository.ordinal(endInclusive);
+        for (VerseRange range : ranges) {
+            int ra = GeometryRepository.ordinal(range.getStart());
+            int rb = GeometryRepository.ordinal(range.getEndInclusive());
+            if (a <= rb && b >= ra) return true;
+        }
+        return false;
+    }
+
     /** Reconcile pending page units while retaining failure/protocol state and explicit deferrals. */
     public boolean reconcileAnchoringQueue(GeometryRepository geometry) {
         List<VerseRange> pendingRanges = unconsolidatedPromotedRanges();
+        List<VerseRange> forcedRanges = forcedPromotedRanges();
         LinkedHashMap<String, AnchoringQueue.Entry> expected = new LinkedHashMap<>();
         if (!pendingRanges.isEmpty()) {
             EligibleCorpus pendingCorpus = EligibleCorpus.Companion.of(pendingRanges);
@@ -483,8 +538,9 @@ public final class HifzPrefs {
                     GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(cursor, pendingCorpus);
                     String key = anchoringKey(unit.start.toString(), unit.end.toString());
                     boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
+                    boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
                     expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
-                        reconstruction ? AnchoringQueue.Origin.RECONSTRUCTION : AnchoringQueue.Origin.PROMOTED,
+                        AnchoringQueue.originFor(reconstruction, forced),
                         reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
                     VerseRef next = pendingCorpus.next(unit.end);
                     if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
@@ -496,7 +552,11 @@ public final class HifzPrefs {
         ArrayList<AnchoringQueue.Entry> next = new ArrayList<>();
         for (AnchoringQueue.Entry existing : anchoringQueue()) {
             String key = anchoringKey(existing.start, existing.end);
-            if (expected.remove(key) != null) next.add(existing);
+            AnchoringQueue.Entry wanted = expected.remove(key);
+            if (wanted != null) {
+                next.add(new AnchoringQueue.Entry(existing.start, existing.end, wanted.origin,
+                    existing.protocol, existing.failures));
+            }
         }
         next.addAll(expected.values());
         int index = anchoringQueueIndex(next.size());
@@ -508,7 +568,18 @@ public final class HifzPrefs {
     }
 
     public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
-        if (!reconcileAnchoringQueue(geometry)) throw new IllegalStateException("Unable to persist anchoring queue");
+        if (!p.getBoolean("anchoringQueueInitialized", false)
+                && !reconcileAnchoringQueue(geometry)) {
+            throw new IllegalStateException("Unable to persist anchoring queue");
+        }
+        String retryText = p.getString("anchoringRetryAfterDate", "");
+        LocalDate retry = safeDate(retryText, null);
+        if (retry != null) {
+            if (!LocalDate.now().isAfter(retry)) return null;
+            if (!p.edit().putString("anchoringRetryAfterDate", "").commit()) {
+                throw new IllegalStateException("Unable to clear Ancrage retry deferral");
+            }
+        }
         List<AnchoringQueue.Entry> queue = anchoringQueue();
         return queue.isEmpty() ? null : queue.get(anchoringQueueIndex(queue.size()));
     }
@@ -519,16 +590,21 @@ public final class HifzPrefs {
         int displayedIndex = findAnchoringEntry(queue, displayedStart, displayedEnd);
         if (displayedIndex < 0) return false;
         AnchoringQueue.Deferral deferred = AnchoringQueue.failAndDefer(queue, displayedIndex, 3);
-        VerseRef next = GeometryRepository.parseVerse(deferred.entries.get(deferred.nextIndex).start);
+        int storedIndex = deferred.nextIndex < 0 ? 0 : deferred.nextIndex;
+        VerseRef next = GeometryRepository.parseVerse(deferred.entries.get(storedIndex).start);
+        String retryAfter = deferred.nextIndex < 0 ? LocalDate.now().toString() : "";
         return p.edit()
             .putString("anchoringQueue", anchoringQueueJson(deferred.entries))
-            .putInt("anchoringQueueIndex", deferred.nextIndex)
+            .putBoolean("anchoringQueueInitialized", true)
+            .putInt("anchoringQueueIndex", storedIndex)
+            .putString("anchoringRetryAfterDate", retryAfter)
             .putString("itqanCursor", next.toString())
             .putInt("itqanRep", 0)
             .putInt("itqanAssisted", 0)
             .putInt("itqanFinalReveals", 0)
             .putString("itqanUnitStart", "")
             .putString("itqanUnitEnd", "")
+            .putLong("itqanElapsedMs", 0L)
             .commit();
     }
 
@@ -552,11 +628,14 @@ public final class HifzPrefs {
     public String lastRecentSabqiReviewDate() { return p.getString("lastRecentSabqiReviewDate", ""); }
     public String lastRecentSabqiReviewLabel() { return p.getString("lastRecentSabqiReviewLabel", ""); }
     public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
+        LocalDate completed = safeDate(date, LocalDate.now());
+        List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
         return p.edit()
             .putLong("recent_sabqi_reviewElapsedMs", 0L)
             .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
             .putString("lastRecentSabqiReviewDate", date)
             .putString("lastRecentSabqiReviewLabel", label)
+            .putString("consolidationAttendanceDates", attendanceJson(attendance))
             .commit();
     }
 
@@ -582,8 +661,12 @@ public final class HifzPrefs {
     public String lastMurajaahDate() { return p.getString("lastMurajaahDate", ""); }
     public String lastMurajaahLabel() { return p.getString("lastMurajaahLabel", ""); }
 
-    public long elapsedFor(String mode) { return p.getLong(mode.toLowerCase() + "ElapsedMs", 0L); }
-    public void setElapsedFor(String mode, long value) { p.edit().putLong(mode.toLowerCase() + "ElapsedMs", Math.max(0L, value)).apply(); }
+    static String elapsedKey(String mode) {
+        if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("elapsed mode required");
+        return mode.toLowerCase(Locale.ROOT) + "ElapsedMs";
+    }
+    public long elapsedFor(String mode) { return p.getLong(elapsedKey(mode), 0L); }
+    public void setElapsedFor(String mode, long value) { p.edit().putLong(elapsedKey(mode), Math.max(0L, value)).apply(); }
 
     public double murajaahSecondsPerLine() { return p.getFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING); }
     public void setMurajaahSecondsPerLine(double value) {
@@ -724,10 +807,14 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
     }
 
     /**
-     * Idempotently grows the Itqan snowball. Only verses not already promoted are added to the
-     * unconsolidated set, so a restart/recalculation can never re-open a completed ×40 passage.
+     * Idempotently grows the Itqan snowball. Forced overflow promotion is retained separately so
+     * the user can see why that material entered Ancrage.
      */
     public boolean addPromotedVerses(List<VerseRef> verses) {
+        return addPromotedVerses(verses, false);
+    }
+
+    public boolean addPromotedVerses(List<VerseRef> verses, boolean forcedPromotion) {
         if (verses == null || verses.isEmpty()) return true;
         ArrayList<VerseRef> fresh = new ArrayList<>();
         for (VerseRef verse : verses) if (!isPromoted(verse)) fresh.add(verse);
@@ -739,9 +826,13 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         all.addAll(additions);
         ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
         pending.addAll(additions);
+        ArrayList<VerseRange> forced = new ArrayList<>(forcedPromotedRanges());
+        if (forcedPromotion) forced.addAll(additions);
         return p.edit()
             .putString("promotedRanges", rangesJson(normalizeRanges(all)))
             .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
+            .putString("forcedPromotedRanges", rangesJson(normalizeRanges(forced)))
+            .putBoolean("anchoringQueueInitialized", false)
             .commit();
     }
 
@@ -755,10 +846,20 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         return false;
     }
 
+    public boolean isForcedPromoted(VerseRef verse) {
+        for (VerseRange range : forcedPromotedRanges()) if (range.contains(verse)) return true;
+        return false;
+    }
+
     /** Mark only the completed overlap consolidated; unrelated pending promotions remain queued in-place. */
     public boolean markPromotedConsolidated(VerseRef start, VerseRef endInclusive) {
         List<VerseRange> next = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
-        return p.edit().putString("unconsolidatedPromotedRanges", rangesJson(next)).commit();
+        List<VerseRange> forced = subtractCoverage(forcedPromotedRanges(), start, endInclusive);
+        return p.edit()
+            .putString("unconsolidatedPromotedRanges", rangesJson(next))
+            .putString("forcedPromotedRanges", rangesJson(forced))
+            .putBoolean("anchoringQueueInitialized", false)
+            .commit();
     }
 
     private void saveRecent(List<RecentSabqi> queue) {
@@ -889,6 +990,12 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
     private static boolean ordinalBetween(VerseRef value, VerseRef start, VerseRef endInclusive) {
         int ordinal = GeometryRepository.ordinal(value);
         return ordinal >= GeometryRepository.ordinal(start) && ordinal <= GeometryRepository.ordinal(endInclusive);
+    }
+
+    private static String attendanceJson(List<LocalDate> dates) {
+        JSONArray array = new JSONArray();
+        for (LocalDate date : ConsolidationAttendance.add(dates, null)) array.put(date.toString());
+        return array.toString();
     }
 
     private static String rangesJson(List<VerseRange> ranges) {

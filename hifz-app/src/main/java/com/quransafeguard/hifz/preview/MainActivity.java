@@ -121,6 +121,7 @@ public final class MainActivity extends android.app.Activity {
         localLoader.execute(() -> {
             try {
                 GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
+                prefs.currentAnchoringEntry(loaded); // prewarm/reconcile queue off the UI thread
                 geometry = loaded;
                 runOnUiThread(() -> {
                     todayAction.setEnabled(true);

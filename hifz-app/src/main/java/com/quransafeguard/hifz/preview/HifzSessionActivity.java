@@ -79,7 +79,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
             if (timerText != null) {
-                timerText.setText(SessionClock.format(elapsed) + " / " + String.format(Locale.ROOT, "%02d:00", targetMinutes()));
+                timerText.setText(SessionTimerPolicy.label(mode, elapsed, targetMinutes()));
             }
             long bucket = elapsed / 5_000L;
             if (bucket != lastCheckpointBucket) {
@@ -282,10 +282,9 @@ private void rebalanceRecentWindow() {
     LocalDate activation = prefs.recentConsolidationActivatedOn();
     if (activation == null && recent.size() <= RecentPromotionPolicy.MAX_RECENT_BLOCKS) return;
     LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
-    DashboardLedger ledger = new DashboardLedger(this);
     List<LocalDate> completed = activation == null
         ? Collections.emptyList()
-        : ledger.completedDates(RECENT_SABQI_REVIEW, plannedStart, today);
+        : prefs.consolidationAttendanceDates(plannedStart, today);
 
     int oldestStart = canonical.get(0).startLine;
     int safeEnd = -1;
@@ -309,7 +308,7 @@ private void rebalanceRecentWindow() {
 
     ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
     if (complete.isEmpty()) return;
-    if (!prefs.addPromotedVerses(complete)) {
+    if (!prefs.addPromotedVerses(complete, forceOldest)) {
         onError("Impossible d’enregistrer la promotion de la Consolidation.");
         return;
     }
@@ -327,7 +326,7 @@ private void rebalanceRecentWindow() {
         LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
         List<LocalDate> completed = activation == null
             ? Collections.emptyList()
-            : new DashboardLedger(this).completedDates(RECENT_SABQI_REVIEW, plannedStart, today);
+            : prefs.consolidationAttendanceDates(plannedStart, today);
         return RecentPromotionPolicy.evaluate(item.addedOn, today, plannedStart, completed, blockCount, oldest);
     }
 
@@ -397,12 +396,17 @@ private void rebalanceRecentWindow() {
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         program.setText("Consolidation · " + block.verseLabel());
-        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), recentReviewIndex == 0);
+        List<HifzPrefs.RecentSabqi> canonicalRecent = HifzPrefs.canonicalRecentOrder(recent);
+        boolean canonicalOldest = !canonicalRecent.isEmpty()
+            && canonicalRecent.get(0).startLine == item.startLine
+            && canonicalRecent.get(0).endLine == item.endLine;
+        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), canonicalOldest);
         String attendance = status.requiredSessions <= 0
             ? "Consolidation à venir"
             : status.completedSessions + "/" + status.requiredSessions + " séances";
         progress.setText("Bloc " + (recentReviewIndex + 1) + "/" + recent.size()
-            + " · " + status.ageDays + " j · " + attendance);
+            + " · " + status.ageDays + " j · " + attendance
+            + (status.forced ? " · promotion de sécurité" : ""));
         showCurrent();
         if (!timedSessionLimitReached) {
             addRoundAction("✓", "Revu", v -> markRecentReviewed());
@@ -483,7 +487,10 @@ private void rebalanceRecentWindow() {
         if (today.equals(prefs.lastRecentSabqiReviewDate())) return false;
         metricsStore.clearConsolidation();
         boolean ok = prefs.completeRecentSabqiReview(today, 0, "Consolidation · aucun bloc récent");
-        if (ok) closeClockForCompletedSession();
+        if (ok) {
+            captureConsolidationAndRebalance();
+            closeClockForCompletedSession();
+        }
         return ok;
     }
 
@@ -522,8 +529,14 @@ private void rebalanceRecentWindow() {
         anchoringEntry = prefs.currentAnchoringEntry(geometry);
         if (anchoringEntry == null) {
             sessionCompleted = true;
-            program.setText("Ancrage · aucune page en attente");
-            progress.setText("Toutes les pages en attente sont acquises.");
+            clock.pause();
+            if (prefs.anchoringDeferredToday()) {
+                program.setText("Ancrage · page reportée");
+                progress.setText("Cette page reviendra à la prochaine séance d’Ancrage.");
+            } else {
+                program.setText("Ancrage · aucune page en attente");
+                progress.setText("Toutes les pages en attente sont acquises.");
+            }
             return;
         }
         itqanTargetReps = PreviewConfig.itqanTotalReps(anchoringEntry.protocol);
@@ -548,13 +561,15 @@ private void rebalanceRecentWindow() {
         currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
         if(rep>=itqanTargetReps){
             awaitingValidation=true;sessionCompleted=true;clock.pause();currentMask=0;
-            program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps);
+            program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+                +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":""));
             progress.setText(itqanTargetReps+"/"+itqanTargetReps+" · prêt à valider · révélations finales "+prefs.itqanFinalReveals());
             showCurrent();addRoundAction("✓","Valider",v->validateItqan());return;
         }
         sessionCompleted=false;
         currentMask=PreviewConfig.itqanMaskForNextRep(rep, anchoringEntry.protocol);
-        program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps);
+        program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+            +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":""));
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
         LinearLayout revealAction = Ui.roundAction(this,"","Révéler",null);
@@ -671,7 +686,6 @@ private void rebalanceRecentWindow() {
             Toast.makeText(this, "Touchez d’abord le dernier verset réellement révisé.", Toast.LENGTH_LONG).show();
             return;
         }
-        VerseRef itqanBefore = prefs.itqanCursor();
         EligibleCorpus corpus = prefs.murajaahCorpus();
         VerseRef next = corpus.next(murajaahActualEnd);
         long elapsed = clock.elapsedMs();
@@ -683,11 +697,6 @@ private void rebalanceRecentWindow() {
             + " · prochain curseur " + next + " · " + raw;
         boolean ok = prefs.completeMurajaah(next, LocalDate.now().toString(), label);
         if (!ok) { onError("Impossible d’enregistrer la validation de l’Entretien."); return; }
-        if (!prefs.itqanCursor().equals(itqanBefore)) {
-            prefs.setItqanCursor(itqanBefore);
-            onError("État d’Entretien incohérent annulé : curseur d’Ancrage restauré.");
-            return;
-        }
         closeClockForCompletedSession();
         renderMode();
     }
