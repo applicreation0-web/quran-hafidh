@@ -50,6 +50,7 @@ final class J10HostBudgetStore {
 
     private static boolean supported(String mode) {
         return HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
+            || HifzSessionActivity.ITQAN.equals(mode)
             || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
             || HifzSessionActivity.MURAJAAH.equals(mode);
     }

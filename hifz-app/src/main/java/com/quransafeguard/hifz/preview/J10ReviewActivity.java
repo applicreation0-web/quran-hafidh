@@ -199,6 +199,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private int hostTargetMinutes() {
         SessionKind kind;
         if (HifzSessionActivity.SABQI_TODAY_REVIEW.equals(hostMode)) kind = SessionKind.SABQI_TODAY_REVIEW;
+        else if (HifzSessionActivity.ITQAN.equals(hostMode)) kind = SessionKind.ITQAN;
         else if (HifzSessionActivity.RECENT_SABQI_REVIEW.equals(hostMode)) kind = SessionKind.RECENT_SABQI_REVIEW;
         else kind = SessionKind.OLD_ITQAN_MURAJAAH;
         return HifzSchedule.INSTANCE.targetMinutesFor(kind);
@@ -220,6 +221,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
     private static String safeHostMode(String mode) {
         if (HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
+                || HifzSessionActivity.ITQAN.equals(mode)
                 || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
                 || HifzSessionActivity.MURAJAAH.equals(mode)) return mode;
         return null;

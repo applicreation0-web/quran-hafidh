@@ -21,7 +21,7 @@ import java.util.Map;
 
 /** Single acquired-line list feeding J10 review priority across the existing weekly sessions. */
 final class J10ReviewPlanner {
-    static final int MAX_PRIORITY_LINES = 15;
+    static final int MAX_PRIORITY_LINES = 5;
 
     static final class PriorityGroup {
         final List<Integer> lineIndexes;
@@ -244,6 +244,7 @@ final class J10ReviewPlanner {
 
     static boolean isReusableJ10Kind(SessionKind kind) {
         return kind == SessionKind.SABQI_TODAY_REVIEW
+            || kind == SessionKind.ITQAN
             || kind == SessionKind.RECENT_SABQI_REVIEW
             || kind == SessionKind.OLD_ITQAN_MURAJAAH;
     }

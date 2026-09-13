@@ -1,7 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 /** Pure, provisional speed calibration policy. Thresholds remain WORKING until BOOX field data. */
-final class SpeedCalibrationPolicy {
+final class SpeedCalibration {
     enum Status { ACCEPTED, ATYPICAL, REJECTED }
 
     static final class Result {
@@ -20,7 +20,7 @@ final class SpeedCalibrationPolicy {
         }
     }
 
-    private SpeedCalibrationPolicy() {}
+    private SpeedCalibration() {}
 
     static Result evaluate(double currentSecondsPerLine, boolean calibrated, int samples,
                            int reviewedLines, long activeElapsedMs) {

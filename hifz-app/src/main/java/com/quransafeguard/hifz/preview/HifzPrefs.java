@@ -551,18 +551,37 @@ public final class HifzPrefs {
 
     public List<AnchoringQueue.Entry> anchoringQueue() {
         ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
+        boolean repaired = false;
         try {
             JSONArray array = new JSONArray(p.getString("anchoringQueue", "[]"));
             for (int i = 0; i < array.length(); i++) {
-                JSONObject o = array.getJSONObject(i);
-                out.add(new AnchoringQueue.Entry(
-                    o.getString("start"), o.getString("end"),
-                    AnchoringQueue.Origin.valueOf(o.getString("origin")),
-                    AnchoringQueue.Protocol.valueOf(o.getString("protocol")),
-                    o.optInt("failures", 0)));
+                try {
+                    JSONObject o = array.getJSONObject(i);
+                    String start = o.getString("start");
+                    String end = o.getString("end");
+                    VerseRef startRef = GeometryRepository.parseVerse(start);
+                    VerseRef endRef = GeometryRepository.parseVerse(end);
+                    if (GeometryRepository.ordinal(startRef) > GeometryRepository.ordinal(endRef)) {
+                        repaired = true;
+                        continue;
+                    }
+                    out.add(new AnchoringQueue.Entry(
+                        start, end,
+                        AnchoringQueue.Origin.valueOf(o.getString("origin")),
+                        AnchoringQueue.Protocol.valueOf(o.getString("protocol")),
+                        Math.max(0, o.optInt("failures", 0))));
+                } catch (Exception malformedEntry) {
+                    repaired = true;
+                }
             }
-        } catch (Exception error) {
-            throw new IllegalStateException("Corrupt anchoring queue", error);
+        } catch (Exception malformedQueue) {
+            repaired = true;
+        }
+        if (repaired) {
+            p.edit()
+                .putString("anchoringQueue", anchoringQueueJson(out))
+                .putBoolean("anchoringQueueInitialized", false)
+                .commit();
         }
         return out;
     }
@@ -573,6 +592,11 @@ public final class HifzPrefs {
     }
 
     public int anchoringQueueIndex() { return anchoringQueueIndex(anchoringQueue().size()); }
+
+    public AnchoringQueue.Entry anchoringEntryFor(VerseRef start, VerseRef endInclusive) {
+        if (start == null || endInclusive == null) return null;
+        return AnchoringQueue.findByRange(anchoringQueue(), start.toString(), endInclusive.toString());
+    }
 
     public boolean anchoringDeferredToday() {
         String value = p.getString("anchoringRetryAfterDate", "");
@@ -650,6 +674,12 @@ public final class HifzPrefs {
             }
         }
         List<AnchoringQueue.Entry> queue = anchoringQueue();
+        if (!p.getBoolean("anchoringQueueInitialized", false)) {
+            if (!reconcileAnchoringQueue(geometry)) {
+                throw new IllegalStateException("Unable to repair anchoring queue");
+            }
+            queue = anchoringQueue();
+        }
         if (!queue.isEmpty() && p.getInt("itqanRep", 0) > 0) {
             VerseRef savedStart = itqanUnitStart();
             VerseRef savedEnd = itqanUnitEnd();
