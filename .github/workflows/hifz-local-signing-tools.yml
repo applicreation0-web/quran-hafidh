@@ -1,0 +1,34 @@
+name: Hifz local signing tools
+
+on:
+  push:
+    branches: [helper/hifz-local-signing-tools]
+
+permissions:
+  contents: read
+
+jobs:
+  package-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v3
+      - name: Install Android Build Tools 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "build-tools;36.0.0"
+          mkdir -p signing-tools/lib
+          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" signing-tools/
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" signing-tools/
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" signing-tools/lib/
+          chmod +x signing-tools/apksigner signing-tools/zipalign
+          sha256sum signing-tools/apksigner signing-tools/zipalign signing-tools/lib/apksigner.jar > signing-tools/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36-local-signing
+          path: signing-tools/
+          if-no-files-found: error
+          retention-days: 1
