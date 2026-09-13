@@ -154,8 +154,15 @@ object HifzSchedule {
         DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> SessionType.MURAJAAH
     }
 
-    /** A zero target means repetition-driven with no time envelope. */
-    fun planFor(day: DayOfWeek, recentBlockCount: Int): DailyPlan = when (day) {
+    fun planFor(day: DayOfWeek, recentBlockCount: Int): DailyPlan =
+        planFor(day, recentBlockCount, false)
+
+    /**
+     * A zero target means repetition-driven with no time envelope. Once Sunday Consolidation has
+     * been activated and persisted by the Android state layer, later promotions cannot revert the
+     * programme to four weekly Ancrage mornings simply because the recent queue dips below 36.
+     */
+    fun planFor(day: DayOfWeek, recentBlockCount: Int, consolidationActivated: Boolean): DailyPlan = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
             PlannedSession(SessionKind.SABQI_NEW, 0),
             PlannedSession(SessionKind.SABQI_TODAY_REVIEW, EVENING_REVIEW_MINUTES)
@@ -169,7 +176,7 @@ object HifzSchedule {
             PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
         )
         DayOfWeek.SUNDAY -> DailyPlan(
-            if (recentBlockCount >= RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
+            if (consolidationActivated || recentBlockCount >= RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
                 PlannedSession(SessionKind.RECENT_SABQI_REVIEW, CONSOLIDATION_MINUTES)
             else PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
             PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
