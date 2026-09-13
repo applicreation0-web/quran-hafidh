@@ -1,0 +1,38 @@
+name: Hifz fractionated source export
+
+on:
+  push:
+    branches: [helper/hifz-fractionated-source-export]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact application candidate
+        uses: actions/checkout@v4
+        with:
+          ref: eeb64d305bf2232b2994f9184ffa6725f0c35c09
+          fetch-depth: 1
+      - name: Verify exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "eeb64d305bf2232b2994f9184ffa6725f0c35c09"
+      - name: Package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=zip --output=quran-hifz-eeb64d3-source.zip HEAD
+          sha256sum quran-hifz-eeb64d3-source.zip > SOURCE_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-eeb64d3-source
+          path: |
+            quran-hifz-eeb64d3-source.zip
+            SOURCE_SHA256.txt
+          if-no-files-found: error
+          retention-days: 1
