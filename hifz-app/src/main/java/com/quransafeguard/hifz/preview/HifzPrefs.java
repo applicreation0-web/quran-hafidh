@@ -19,7 +19,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 
 /** Versioned local persistence. Structured Hifz and free memorization are intentionally isolated. */
@@ -28,14 +27,23 @@ public final class HifzPrefs {
         public final int startLine;
         public final int endLine;
         public final LocalDate addedOn;
+        public final int reviewStreak;
+
         RecentSabqi(int startLine, int endLine) {
-            this(startLine, endLine, LocalDate.now());
+            this(startLine, endLine, LocalDate.now(), 0);
         }
+
         RecentSabqi(int startLine, int endLine, LocalDate addedOn) {
+            this(startLine, endLine, addedOn, 0);
+        }
+
+        RecentSabqi(int startLine, int endLine, LocalDate addedOn, int reviewStreak) {
             this.startLine = startLine;
             this.endLine = endLine;
             this.addedOn = addedOn == null ? LocalDate.now() : addedOn;
+            this.reviewStreak = Math.max(0, reviewStreak);
         }
+
         @Override public String toString() { return startLine + "–" + endLine; }
     }
 
@@ -352,7 +360,7 @@ public final class HifzPrefs {
     public boolean completeSabqiBlock(int startLine, int endLine, int nextLineCursor, String date, String label) {
         List<RecentSabqi> queue = recentSabqi();
         LocalDate blockDate = safeDate(date, LocalDate.now());
-        queue.add(new RecentSabqi(startLine, endLine, blockDate));
+        queue.add(new RecentSabqi(startLine, endLine, blockDate, 0));
         String activation = p.getString("recentConsolidationActivatedOn", "");
         if ((activation == null || activation.isEmpty())
                 && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
@@ -600,8 +608,9 @@ public final class HifzPrefs {
                 JSONObject o = array.getJSONObject(i);
                 String addedText = o.optString("addedOn", "");
                 LocalDate addedOn = safeDate(addedText, fallback);
-                if (addedText == null || addedText.isEmpty()) needsRewrite = true;
-                out.add(new RecentSabqi(o.getInt("start"), o.getInt("end"), addedOn));
+                if (addedText == null || addedText.isEmpty() || !o.has("reviewStreak")) needsRewrite = true;
+                out.add(new RecentSabqi(o.getInt("start"), o.getInt("end"), addedOn,
+                    o.optInt("reviewStreak", 0)));
             }
         } catch (Exception error) {
             throw new IllegalStateException("Corrupt recent Sabqi queue", error);
@@ -613,7 +622,7 @@ public final class HifzPrefs {
     public void addRecentSabqi(int start, int end) {
         List<RecentSabqi> queue = recentSabqi();
         LocalDate now = LocalDate.now();
-        queue.add(new RecentSabqi(start, end, now));
+        queue.add(new RecentSabqi(start, end, now, 0));
         String activation = p.getString("recentConsolidationActivatedOn", "");
         if ((activation == null || activation.isEmpty())
                 && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
@@ -631,7 +640,55 @@ public final class HifzPrefs {
         saveRecent(queue);
     }
 
-    /** Mark the oldest recent block stable and preserve its line coverage for verse-level promotion. */
+    static List<RecentSabqi> markReviewed(List<RecentSabqi> source, int index) {
+        ArrayList<RecentSabqi> out = new ArrayList<>(source == null ? Collections.emptyList() : source);
+        if (out.isEmpty()) return out;
+        int at = Math.floorMod(index, out.size());
+        RecentSabqi item = out.get(at);
+        out.set(at, new RecentSabqi(item.startLine, item.endLine, item.addedOn, item.reviewStreak + 1));
+        return out;
+    }
+
+    static List<RecentSabqi> deferRecent(List<RecentSabqi> source, int index) {
+        ArrayList<RecentSabqi> out = new ArrayList<>(source == null ? Collections.emptyList() : source);
+        if (out.isEmpty()) return out;
+        int at = Math.floorMod(index, out.size());
+        RecentSabqi item = out.remove(at);
+        out.add(new RecentSabqi(item.startLine, item.endLine, item.addedOn, 0));
+        return out;
+    }
+
+    static int indexAfterDeferral(int index, int size) {
+        if (size <= 0) return 0;
+        int at = Math.floorMod(index, size);
+        return at >= size - 1 ? 0 : at;
+    }
+
+    public boolean markRecentReviewed(int index) {
+        List<RecentSabqi> source = recentSabqi();
+        if (source.isEmpty()) return false;
+        int at = Math.floorMod(index, source.size());
+        List<RecentSabqi> next = markReviewed(source, at);
+        int nextIndex = PreviewConfig.nextRecentReviewIndex(at, next.size());
+        return p.edit()
+            .putString("recentSabqi", recentJson(next))
+            .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
+            .commit();
+    }
+
+    public boolean deferRecentBlock(int index) {
+        List<RecentSabqi> source = recentSabqi();
+        if (source.isEmpty()) return false;
+        int at = Math.floorMod(index, source.size());
+        List<RecentSabqi> next = deferRecent(source, at);
+        int nextIndex = indexAfterDeferral(at, next.size());
+        return p.edit()
+            .putString("recentSabqi", recentJson(next))
+            .putInt("recentSabqiReviewIndex", nextIndex)
+            .commit();
+    }
+
+    /** Legacy quality machinery retained until the index-aware replacement is fully verified. */
     public boolean markFirstRecentStable() {
         List<RecentSabqi> queue = recentSabqi();
         if (queue.isEmpty()) return false;
@@ -645,7 +702,7 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /** Move a difficult block behind the other recent work instead of blocking the queue. */
+    /** Legacy head-only deferral retained until the index-aware replacement is fully verified. */
     public boolean deferFirstRecentSabqi() {
         List<RecentSabqi> queue = recentSabqi();
         if (queue.isEmpty()) return false;
@@ -718,6 +775,7 @@ public final class HifzPrefs {
                 o.put("start", item.startLine);
                 o.put("end", item.endLine);
                 o.put("addedOn", item.addedOn.toString());
+                o.put("reviewStreak", item.reviewStreak);
                 array.put(o);
             }
         } catch (Exception error) {
@@ -736,6 +794,7 @@ public final class HifzPrefs {
                 normalized.put("start", item.getInt("start"));
                 normalized.put("end", item.getInt("end"));
                 normalized.put("addedOn", safeDate(item.optString("addedOn", ""), fallback).toString());
+                normalized.put("reviewStreak", Math.max(0, item.optInt("reviewStreak", 0)));
                 out.put(normalized);
             }
         } catch (Exception error) {
