@@ -62,20 +62,30 @@ class HifzCoreTest {
     }
 
     @Test fun weeklyMorningAndEveningPlansMatchFrozenEngine() {
-        fun assertPlan(day: DayOfWeek, morning: SessionKind, evening: SessionKind, morningMinutes: Int, eveningMinutes: Int) {
-            val plan = HifzSchedule.planFor(day)
+        fun assertPlan(day: DayOfWeek, recentBlocks: Int, morning: SessionKind, evening: SessionKind, morningMinutes: Int, eveningMinutes: Int) {
+            val plan = HifzSchedule.planFor(day, recentBlocks)
             assertEquals(morning, plan.morning.kind)
             assertEquals(evening, plan.evening.kind)
             assertEquals(morningMinutes, plan.morning.targetMinutes)
             assertEquals(eveningMinutes, plan.evening.targetMinutes)
         }
-        assertPlan(DayOfWeek.MONDAY, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
-        assertPlan(DayOfWeek.TUESDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 0, 60)
-        assertPlan(DayOfWeek.WEDNESDAY, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
-        assertPlan(DayOfWeek.THURSDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 0, 60)
-        assertPlan(DayOfWeek.FRIDAY, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
-        assertPlan(DayOfWeek.SATURDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 30, 30)
-        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 30, 30)
+        assertPlan(DayOfWeek.MONDAY, 0, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
+        assertPlan(DayOfWeek.TUESDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.WEDNESDAY, 0, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
+        assertPlan(DayOfWeek.THURSDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.FRIDAY, 0, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
+        assertPlan(DayOfWeek.SATURDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.SUNDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+    }
+
+    @Test fun sundaySwitchesToConsolidationAtTheCentralizedThreshold() {
+        assertEquals(36, HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
+        assertEquals(SessionKind.ITQAN,
+            HifzSchedule.planFor(DayOfWeek.SUNDAY, 35).morning.kind)
+        val switched = HifzSchedule.planFor(DayOfWeek.SUNDAY, 36)
+        assertEquals(SessionKind.RECENT_SABQI_REVIEW, switched.morning.kind)
+        assertEquals(30, switched.morning.targetMinutes)
+        assertEquals(45, switched.evening.targetMinutes)
     }
 
     @Test fun legacyMorningTypeStillMatchesScheduleForCompatibility() {

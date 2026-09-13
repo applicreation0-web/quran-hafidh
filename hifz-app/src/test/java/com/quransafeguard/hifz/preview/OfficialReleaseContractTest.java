@@ -63,6 +63,8 @@ public final class OfficialReleaseContractTest {
 
     @Test public void runtimeUsesIndependentFixedSessionsWithoutHiddenTransfer() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
+        String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
         assertTrue("same-day Sabqi review must be a real runtime mode", session.contains("SABQI_TODAY_REVIEW"));
         assertTrue("weekend recent Sabqi review must be a real runtime mode", session.contains("RECENT_SABQI_REVIEW"));
         assertTrue("old Itqan Murajaah must use the consolidated corpus only", session.contains("murajaahCorpus()"));
@@ -72,6 +74,8 @@ public final class OfficialReleaseContractTest {
         assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
         assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
         assertTrue("runtime timed durations must consume HifzSchedule", session.contains("HifzSchedule") && session.contains("planFor"));
+        assertFalse("session durations must not be duplicated in PreviewConfig", config.contains("SABQI_MINUTES_WORKING") || config.contains("ITQAN_MINUTES_WORKING"));
+        assertFalse("contradictory evening helper must be removed", core.contains("hasEveningMurajaah"));
         assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
     }
 
