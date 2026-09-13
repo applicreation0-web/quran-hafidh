@@ -36,6 +36,11 @@ public final class PreviewConfig {
     public static final int SPEED_MIN_LINES = 20;
     public static final int SPEED_MIN_SECONDS = 300;
     public static final double SPEED_MAX_CHANGE_RATIO = 0.10;
+    public static final int SPEED_BOOTSTRAP_SAMPLES_WORKING = 3;
+    public static final double SPEED_ACCEPT_MIN_SECONDS_PER_LINE_WORKING = 3.5;
+    public static final double SPEED_ATYPICAL_SECONDS_PER_LINE_WORKING = 20.0;
+    public static final double SPEED_ACCEPT_MAX_SECONDS_PER_LINE_WORKING = 40.0;
+    public static final double SPEED_REJECT_DEVIATION_RATIO_WORKING = 0.50;
 
     // BOOX refresh policy. Page changes get a full GC cleanup; small changes use REGAL/GU
     // and periodically trigger GC so counters, masks and audio outlines do not accumulate ghosting.
