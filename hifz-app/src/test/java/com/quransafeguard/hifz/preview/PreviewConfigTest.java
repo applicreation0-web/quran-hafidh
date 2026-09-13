@@ -34,18 +34,19 @@ public final class PreviewConfigTest {
         assertEquals(0, PreviewConfig.itqanMaskForNextRep(-1));
     }
 
-    @Test public void lightReconstructionPlanIsExactly25WithoutQuarterMask() {
-        assertEquals(25, PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.LIGHT));
+    @Test public void lightReconstructionPlanIsExactly30WithoutQuarterMask() {
+        assertEquals(30, PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.LIGHT));
         int total = PreviewConfig.ITQAN_LIGHT_VISIBLE_REPS
             + PreviewConfig.ITQAN_LIGHT_25_REPS
             + PreviewConfig.ITQAN_LIGHT_50_REPS
             + PreviewConfig.ITQAN_LIGHT_75_REPS
             + PreviewConfig.ITQAN_LIGHT_100_REPS;
         assertEquals(PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.LIGHT), total);
+        assertEquals(10, PreviewConfig.ITQAN_LIGHT_VISIBLE_REPS);
         assertEquals(0, PreviewConfig.ITQAN_LIGHT_25_REPS);
         for (int completed = 0; completed < total; completed++) {
             int next = completed + 1;
-            int expected = next <= 5 ? 0 : next <= 10 ? 50 : next <= 15 ? 75 : 100;
+            int expected = next <= 10 ? 0 : next <= 15 ? 50 : next <= 20 ? 75 : 100;
             assertEquals("Reconstruction repetition " + next, expected,
                 PreviewConfig.itqanMaskForNextRep(completed, AnchoringQueue.Protocol.LIGHT));
         }
@@ -69,9 +70,9 @@ public final class PreviewConfigTest {
     }
 
     @Test public void onlyLastTwoHundredPercentPassagesCountForValidation() {
-        assertFalse(PreviewConfig.isItqanValidationRep(22, AnchoringQueue.Protocol.LIGHT));
-        assertTrue(PreviewConfig.isItqanValidationRep(23, AnchoringQueue.Protocol.LIGHT));
-        assertTrue(PreviewConfig.isItqanValidationRep(24, AnchoringQueue.Protocol.LIGHT));
+        assertFalse(PreviewConfig.isItqanValidationRep(27, AnchoringQueue.Protocol.LIGHT));
+        assertTrue(PreviewConfig.isItqanValidationRep(28, AnchoringQueue.Protocol.LIGHT));
+        assertTrue(PreviewConfig.isItqanValidationRep(29, AnchoringQueue.Protocol.LIGHT));
         assertTrue(PreviewConfig.itqanValidationPassed(1));
         assertFalse(PreviewConfig.itqanValidationPassed(2));
     }
