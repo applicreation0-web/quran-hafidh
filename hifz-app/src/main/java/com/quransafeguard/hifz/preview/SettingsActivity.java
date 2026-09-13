@@ -20,25 +20,29 @@ import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 
 /** BOOX-oriented configuration. Rotation anchor is editable; live cursors are read-only. */
 public final class SettingsActivity extends android.app.Activity {
     private static final int REQUEST_AUDIO_ZIP = 4103;
     private HifzPrefs prefs;
+    private HifzSpeedStore speedStore;
+    private J10ReviewPlanner j10Planner;
     private GeometryRepository geometry;
     private LinearLayout rangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
-    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus;
+    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, j10Status, audioStatus;
 
     private interface VerseChosen { void accept(VerseRef verse); }
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = new HifzPrefs(this);
+        speedStore = new HifzSpeedStore(this);
         geometry = GeometryRepository.get(this);
+        j10Planner = new J10ReviewPlanner(this);
 
         ScrollView scroll = new ScrollView(this);scroll.setFillViewport(true);
         LinearLayout root = Ui.column(this);scroll.addView(root);
@@ -79,6 +83,17 @@ public final class SettingsActivity extends android.app.Activity {
         section(root,"Entretien");
         murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(murajaahStatus);
 
+        section(root,"Vitesses");
+        root.addView(Ui.settingRow(this,"Entretien",speedStore.maintenanceSummary(),null));
+        root.addView(Ui.divider(this));
+        root.addView(Ui.settingRow(this,"Consolidation",speedStore.consolidationSummary(),null));
+
+        section(root,"J10");
+        j10Status=Ui.text(this,"",11.5f,false);
+        j10Status.setTextColor(Ui.MUTED);
+        j10Status.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
+        root.addView(j10Status);
+
         section(root,"Audio");
         audioSetting=Ui.settingRow(this,"Al-Husary Muʿallim","Choisir le pack",v->selectAudioZip());
         audioStatus=Ui.settingValue(audioSetting);root.addView(audioSetting);
@@ -95,11 +110,13 @@ public final class SettingsActivity extends android.app.Activity {
         section(root,"Repères");
         addRepere(root,"Leçon neuve","Cinq lignes jamais vues, mémorisées le matin avec dévoilement progressif du texte.");
         addRepere(root,"Reprise du soir","Les mêmes cinq lignes, répétées le soir pendant trente minutes.");
-        addRepere(root,"Consolidation","Les leçons récentes, revues à tour de rôle pendant quatre-vingt-dix jours avant d’être classées.");
+        addRepere(root,"Consolidation","Les leçons récentes, revues à tour de rôle avant leur passage vers l’Ancrage.");
         addRepere(root,"Ancrage","Une page entière travaillée en profondeur, jusqu’à pouvoir la réciter sans le texte.");
+        addRepere(root,"Ancrage fractionné","Une page difficile répartie en sous-blocs successifs. Chaque sous-bloc est travaillé à ×35 ; la page n’est acquise qu’après le dernier bloc.");
         addRepere(root,"Entretien","Le parcours régulier de tout ce qui est acquis, texte caché, révélé seulement en cas de blocage.");
+        addRepere(root,"J10","Garantie de fraîcheur : toute matière acquise doit être récitée à nouveau au plus tard tous les dix jours. J10 utilise les créneaux existants, il n’ajoute pas une séance parallèle.");
         addRepere(root,"En attente","Une page promue mais pas encore ancrée. Elle ne fait pas encore partie de l’entretien.");
-        addRepere(root,"Acquis","Une page ancrée, qui circule dans l’entretien.");
+        addRepere(root,"Acquis","Une page ancrée, qui circule dans l’entretien et entre dans la garantie J10.");
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
@@ -115,7 +132,7 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(Ui.divider(this));
     }
 
-    private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
+    private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshJ10();refreshAudio();}
 
     private void refreshSabqi(){
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
@@ -259,8 +276,29 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Mar/Jeu/Sam/Dim · 45 min   ·   cadence "+String.format(Locale.ROOT,"%.2f",prefs.murajaahSecondsPerLine())+" s/ligne   ·   position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Mar/Jeu/Sam/Dim · 45 min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
+    }
+
+    private void refreshJ10(){
+        if(j10Status==null)return;
+        try{
+            J10ReviewPlanner.PriorityGroup group=j10Planner.priorityGroup(LocalDate.now());
+            J10ReviewPolicy.Forecast forecast=group.forecast;
+            String state;
+            if(forecast.sustainability==J10ReviewPolicy.Sustainability.NON_TENABLE){
+                state="Plan non tenable · déficit "+forecast.deficitMinutes+" min / 10 jours";
+            }else if(forecast.sustainability==J10ReviewPolicy.Sustainability.TENSION){
+                state="Plan sous tension";
+            }else{
+                state="Plan tenable";
+            }
+            String priority=group.isEmpty()?"Aucune priorité immédiate"
+                :"Priorité actuelle · J"+group.maxAgeDays+" · "+group.lineIds.size()+" ligne(s)";
+            j10Status.setText("Intervalle maximal · 10 jours\n"+state+"\n"+priority);
+        }catch(RuntimeException error){
+            j10Status.setText("J10 · état à vérifier");
+        }
     }
 
     private void refreshAudio(){
@@ -319,7 +357,8 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Ancrage : "+prefs.itqanCursor()
             +"\nPosition Entretien : "+prefs.murajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
-            +"\nCadence d’entretien : "+String.format(Locale.ROOT,"%.2f",prefs.murajaahSecondsPerLine())+" s/ligne";
+            +"\nVitesse Entretien : "+speedStore.maintenanceSummary()
+            +"\nVitesse Consolidation : "+speedStore.consolidationSummary();
         new AlertDialog.Builder(this).setTitle("Diagnostic Hifz").setMessage(state).setPositiveButton("Fermer",null).show();
     }
 
