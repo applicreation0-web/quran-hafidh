@@ -82,7 +82,6 @@ public final class MainActivity extends android.app.Activity {
         recentSabqiAdvisory.setVisibility(View.GONE);
         root.addView(recentSabqiAdvisory);
 
-        // The Today row is the session launcher. Keep only the three global destinations here.
         LinearLayout primary = Ui.row(this);
         primary.setGravity(Gravity.CENTER);
         primary.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 3));
@@ -106,9 +105,9 @@ public final class MainActivity extends android.app.Activity {
         root.addView(directTitle);
         LinearLayout direct = Ui.row(this);
         direct.setGravity(Gravity.CENTER);
-        LinearLayout sabqi = Ui.modeCard(this, "", "Sabqi", v -> openMode(HifzSessionActivity.SABQI));
-        LinearLayout itqan = Ui.modeCard(this, "", "Itqān", v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout murajaah = Ui.modeCard(this, "", "Murājaʿah", v -> openMode(HifzSessionActivity.MURAJAAH));
+        LinearLayout sabqi = Ui.modeCard(this, "", "Leçon neuve", v -> openMode(HifzSessionActivity.SABQI));
+        LinearLayout itqan = Ui.modeCard(this, "", "Ancrage", v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout murajaah = Ui.modeCard(this, "", "Entretien", v -> openMode(HifzSessionActivity.MURAJAAH));
         addWeighted(direct, sabqi, 1f);
         addWeighted(direct, itqan, 1f);
         addWeighted(direct, murajaah, 1f);
@@ -210,26 +209,32 @@ public final class MainActivity extends android.app.Activity {
                     int cursor = prefs.sabqiLineCursor();
                     if (cursor < 0) cursor = g.firstLineIndex(prefs.sabqiStart());
                     GeometryRepository.FiveLineBlock b = g.fiveLineBlock(cursor);
-                    detail = "Matin · Sabqi · " + shortRange(b.startVerse,b.endVerse) + " · 5 lignes";
+                    detail = "Matin · Leçon neuve · " + shortRange(b.startVerse,b.endVerse) + " · 5 lignes";
                     break;
                 }
                 case SABQI_TODAY_REVIEW:
-                    detail = "Soir · Sabqi du jour · 30 min";
+                    detail = "Soir · Reprise du soir · 30 min";
                     break;
                 case ITQAN: {
                     VerseRef start=prefs.itqanUnitStart(), end=prefs.itqanUnitEnd();
+                    AnchoringQueue.Entry entry = prefs.currentAnchoringEntry(g);
                     if(start==null||end==null){
-                        GeometryRepository.VerseUnit u=g.eligiblePageUnit(prefs.itqanCursor(),prefs.itqanWorkCorpus());
-                        start=u.start;end=u.end;
+                        if (entry == null) {
+                            detail = "Matin · Ancrage · aucune page en attente";
+                            break;
+                        }
+                        start = GeometryRepository.parseVerse(entry.start);
+                        end = GeometryRepository.parseVerse(entry.end);
                     }
-                    detail="Matin · Itqān · "+shortRange(start,end)+" · ×"+PreviewConfig.ITQAN_TOTAL_REPS;
+                    int reps = entry == null ? PreviewConfig.ITQAN_TOTAL_REPS : PreviewConfig.itqanTotalReps(entry.protocol);
+                    detail="Matin · Ancrage · "+shortRange(start,end)+" · ×"+reps;
                     break;
                 }
                 case RECENT_SABQI_REVIEW:
-                    detail="Matin · Sabqi récent · 30 min";
+                    detail="Matin · Consolidation · 30 min";
                     break;
                 case OLD_ITQAN_MURAJAAH:
-                    detail="Soir · Murājaʿah · "+plan.getEvening().getTargetMinutes()+" min";
+                    detail="Soir · Entretien · "+plan.getEvening().getTargetMinutes()+" min";
                     break;
                 default:
                     detail="Parcours à vérifier";
@@ -250,8 +255,8 @@ public final class MainActivity extends android.app.Activity {
             recentSabqiAdvisory.setText("");
             return;
         }
-        int[] range = HifzCadence.advisoryFiveLineRange(prefs.murajaahSecondsPerLine());
-        recentSabqiAdvisory.setText("Sabqi récent · rappel libre 5–10 min · " + range[0] + "–" + range[1] + " lignes");
+        int[] range = HifzCadence.advisoryFiveLineRange(prefs.recentSecondsPerLine());
+        recentSabqiAdvisory.setText("Consolidation · rappel libre 5–10 min · " + range[0] + "–" + range[1] + " lignes");
         recentSabqiAdvisory.setVisibility(View.VISIBLE);
     }
 
