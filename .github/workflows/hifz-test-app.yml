@@ -105,7 +105,7 @@ jobs:
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "emulator" "system-images;android-35;default;x86_64"
 
       - name: Set up Gradle 9.5
         uses: gradle/actions/setup-gradle@v4
@@ -128,6 +128,32 @@ jobs:
 
       - name: Run complete Hifz regression and product-boundary suite
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:compileDebugAndroidTestSources :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
+
+      - name: Run instrumented Hifz migration and geometry tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo no | avdmanager create avd --force --name hifz-ci --package "system-images;android-35;default;x86_64"
+          sudo chmod 666 /dev/kvm || true
+          "$ANDROID_HOME/emulator/emulator" -avd hifz-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+          adb wait-for-device
+          booted=0
+          for i in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$booted" != "1" ]; then
+            echo 'Android emulator failed to boot' >&2
+            cat emulator.log >&2
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace
 
       - name: Assemble unsigned official release candidate
         run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
@@ -206,6 +232,9 @@ jobs:
             hifz-core/build/reports/tests/
             hifz-app/build/test-results/
             hifz-app/build/reports/tests/
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            emulator.log
             hifz-app-manifest.xml
             hifz-app-apk-list.txt
             hifz-app-sha256.txt
