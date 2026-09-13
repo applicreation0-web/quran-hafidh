@@ -781,7 +781,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
     private int scheduledTargetMinutes(SessionKind kind) {
         DailyPlan plan = HifzSchedule.INSTANCE.planFor(
-            LocalDate.now().getDayOfWeek(), prefs.recentSabqi().size());
+            LocalDate.now().getDayOfWeek(), prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
         if (plan.getMorning().getKind() == kind) return plan.getMorning().getTargetMinutes();
         if (plan.getEvening().getKind() == kind) return plan.getEvening().getTargetMinutes();
         throw new IllegalStateException("Mode " + kind + " absent du planning " + LocalDate.now().getDayOfWeek());
