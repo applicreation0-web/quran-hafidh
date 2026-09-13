@@ -39,6 +39,17 @@ public final class AstraFixSourceContractTest {
         assertTrue(session.contains("syncPersistedElapsed"));
     }
 
+    @Test public void j10PreemptionMustNotFakeNormalProtocolCompletion() throws Exception {
+        String review = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewActivity.java");
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue(read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10HostBudgetStore.java").contains("markSlotConsumed"));
+        assertTrue(review.contains("J10HostBudgetStore"));
+        assertTrue(session.contains("markSlotConsumed"));
+        assertTrue(session.contains("isSlotConsumed"));
+        assertTrue(main.contains("isSlotConsumed"));
+    }
+
     @Test public void weeklyProjectionMustTrackFractionatedSubBlocks() throws Exception {
         String src = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(src.contains("projectedItqanBlockIndex"));
