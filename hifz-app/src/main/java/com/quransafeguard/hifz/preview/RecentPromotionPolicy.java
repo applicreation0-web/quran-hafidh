@@ -36,9 +36,8 @@ public final class RecentPromotionPolicy {
     }
 
     /**
-     * Evaluate one recent block. Age is measured from addedOn. Attendance starts only when
-     * Sunday Consolidation is genuinely available, but it keeps a full 90-day reference window
-     * so late activation can never reduce the expected ~77% attendance to one or two sessions.
+     * Evaluate one recent block. The first 90 days define the attendance target, but valid later
+     * Sunday Consolidations can repay an attendance debt instead of leaving the block stuck forever.
      */
     public static Decision evaluate(LocalDate addedOn, LocalDate through,
                                     LocalDate consolidationStart,
@@ -55,8 +54,7 @@ public final class RecentPromotionPolicy {
         LocalDate attendanceWindowEnd = cadenceStart.plusDays(MIN_AGE_DAYS);
         int planned = plannedSundays(cadenceStart, attendanceWindowEnd);
         int required = requiredSessions(planned);
-        LocalDate completedThrough = through.isBefore(attendanceWindowEnd) ? through : attendanceWindowEnd;
-        int completed = completedSundays(cadenceStart, completedThrough, completedConsolidations);
+        int completed = completedSundays(cadenceStart, through, completedConsolidations);
         boolean normal = ageDays >= MIN_AGE_DAYS && completed >= required;
         return new Decision(forced || normal, forced, planned, required, completed, ageDays);
     }
