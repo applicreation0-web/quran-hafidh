@@ -94,4 +94,22 @@ public final class FinalUiPolishSourceContractTest {
             assertFalse(file, xml.contains("#888888"));
         }
     }
+
+    @Test public void maintenanceAndConsolidationUseSeparatedSpeedCalibration() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String store = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
+        assertTrue(session.contains("calibrateMaintenance"));
+        assertTrue(session.contains("calibrateConsolidation"));
+        assertTrue(session.contains("instrumentationLabel"));
+        assertFalse(session.contains("calibrateOldSpeed"));
+        assertTrue(store.contains("murajaahSecPerLine"));
+        assertTrue(store.contains("recentSecPerLine"));
+    }
+
+    @Test public void runtimeExceptionsAreLoggedButNotShownRawToLearner() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("android.util.Log.e"));
+        assertTrue(session.contains("La séance ne peut pas être affichée"));
+        assertFalse(session.contains("progress.setText(detail)"));
+    }
 }
