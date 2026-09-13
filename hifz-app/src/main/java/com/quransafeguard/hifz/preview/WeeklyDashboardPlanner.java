@@ -86,6 +86,7 @@ final class WeeklyDashboardPlanner {
                 }
                 case ITQAN: {
                     if(morningActual!=null) morning="✓ "+compact(morningActual.label);
+                    else if(date.equals(today)&&prefs.anchoringDeferredToday()) morning="Ancrage · page reportée";
                     else if(projectedAnchoringIndex>=projectedAnchoring.size()) morning="Ancrage · aucune page en attente";
                     else {
                         AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex++);
