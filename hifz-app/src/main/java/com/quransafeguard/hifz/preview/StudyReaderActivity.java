@@ -4,7 +4,6 @@ import android.app.Dialog;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -21,6 +20,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Lecture/Etude. Tafsir stays outside all memorisation modes. */
+/** Lecture/Etude. Tafsir stays outside all memorisation modes; audio belongs to Hifz modes only. */
 public final class StudyReaderActivity extends android.app.Activity implements MushafView.Listener {
     private static final float TAFSIR_MIN_SP = 16f;
     private static final float TAFSIR_MAX_SP = 26f;
@@ -48,11 +48,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private int page = 1;
     private VerseRef selected;
     private TextView pageLabel;
-    private Button tafsirButton, audioButton;
-    private LinearLayout topControls, readerActions, pageRail, audioHost, rootRow, sideTafsir;
+    private Button tafsirButton;
+    private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
     private SeekBar pageSeek;
-    private HifzAudioDialog audioPlayer;
     private boolean controlsVisible = true;
     private boolean largeScreen;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -101,12 +100,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerStack.addView(topControls, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        audioHost = Ui.column(this);
-        audioHost.setPadding(0, 0, 0, 0);
-        audioHost.setVisibility(View.GONE);
-        readerStack.addView(audioHost, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
         mushaf = new MushafView(this);
         mushaf.setListener(this);
         readerStack.addView(mushaf, new LinearLayout.LayoutParams(
@@ -115,12 +108,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions = Ui.row(this);
         readerActions.setGravity(Gravity.CENTER);
         readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
-        tafsirButton = Ui.smallButton(this, "Tafsir", v -> openTafsir());
+        LinearLayout tafsirAction = Ui.roundAction(this, "", "Tafsir", v -> openTafsir());
+        tafsirButton = (Button) tafsirAction.getChildAt(0);
         tafsirButton.setEnabled(false);
-        audioButton = Ui.smallButton(this, "♪ Audio", v -> openAudio());
-        audioButton.setEnabled(false);
-        readerActions.addView(tafsirButton);
-        readerActions.addView(audioButton);
+        readerActions.addView(tafsirAction);
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -146,14 +137,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
-        closeAudio();
         closeSideTafsir();
         mushaf.clearReveal();
         page = next;
         selected = null;
         tafsirButton.setEnabled(false);
         tafsirButton.setContentDescription("Tafsir");
-        audioButton.setEnabled(false);
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         pageLabel.setText("Lecture · " + page + " / 604");
         pageSeek.setProgress(page - 1);
@@ -164,12 +153,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void go(int delta) { setPage(page + delta); }
 
     @Override public void onVerseTap(VerseRef verse) {
-        closeAudio();
         selected = verse;
         tafsirButton.setEnabled(true);
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
-        audioButton.setEnabled(true);
-        audioButton.setContentDescription("Audio " + verse.getSurah() + ":" + verse.getAyah());
         mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
         showControls();
     }
@@ -201,24 +187,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         mushaf.postDelayed(autoHide, 3600L);
     }
 
-    private void openAudio() {
-        List<VerseRef> verses = selected == null ? Collections.emptyList() : Collections.singletonList(selected);
-        closeAudio();
-        audioPlayer = new HifzAudioDialog(this, mushaf, verses);
-        audioPlayer.attachInline(audioHost);
-        showControls();
-    }
-
-    private void closeAudio() {
-        HifzAudioDialog current = audioPlayer;
-        audioPlayer = null;
-        if (current != null) current.detachInline();
-    }
-
     private void openTafsir() {
         final VerseRef verse = selected;
         if (verse == null) return;
-        closeAudio();
         if (largeScreen) { openSideTafsir(verse); return; }
         hideControls();
         mushaf.revealSelectionAboveBottomPanel();
@@ -328,7 +299,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 runOnUiThread(() -> {
                     textColumn.removeAllViews();
                     editionRow.removeAllViews();
-                    editionRow.setVisibility(View.VISIBLE);
                     MultiTafsirRepository.Edition resolved = currentEdition[0];
                     if (!available.isEmpty() && !available.containsKey(resolved)) {
                         resolved = available.containsKey(MultiTafsirRepository.Edition.JALALAYN)
@@ -337,43 +307,35 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                     }
                     currentEdition[0] = resolved;
 
-                    for (MultiTafsirRepository.Edition edition : MultiTafsirRepository.Edition.values()) {
-                        final boolean covered = available.containsKey(edition);
-                        Button editionButton = tafsirEditionButton(
-                            covered ? edition.displayName : edition.displayName + " · —", v -> {
-                                if (!available.containsKey(edition)) return;
-                                ViewGroup row = (ViewGroup) v.getParent();
-                                for (int i = 0; i < row.getChildCount(); i++) {
-                                    View child = row.getChildAt(i);
-                                    if (child instanceof Button) styleTafsirEditionButton((Button) child, child == v);
-                                }
-                                currentEdition[0] = edition;
-                                readingPrefs.edit().putString(TAFSIR_EDITION_KEY, edition.storageValue).apply();
-                                TafsirRepository.Entry entry = available.get(edition);
-                                loaded[0] = entry;
-                                applyTafsirIdentity(title, source, verse, entry, available);
-                                renderTafsir(textColumn, entry, fontSize[0]);
-                            });
-                        editionButton.setEnabled(covered);
-                        styleTafsirEditionButton(editionButton, covered && edition == currentEdition[0]);
-                        LinearLayout.LayoutParams tabLp = new LinearLayout.LayoutParams(0, Ui.dp(this, 36), 1f);
-                        tabLp.setMargins(Ui.dp(this, 2), 0, Ui.dp(this, 2), 0);
-                        editionRow.addView(editionButton, tabLp);
-                    }
-
                     if (available.isEmpty()) {
+                        editionRow.setVisibility(View.GONE);
                         title.setText("Tafsir · " + verse.getSurah() + ":" + verse.getAyah());
+                        source.setText("");
                         textColumn.addView(tafsirText("Indisponible pour ce verset.", fontSize[0], false));
                         return;
                     }
+
                     TafsirRepository.Entry entry = available.get(currentEdition[0]);
                     loaded[0] = entry;
                     readingPrefs.edit().putString(TAFSIR_EDITION_KEY, currentEdition[0].storageValue).apply();
-                    applyTafsirIdentity(title, source, verse, entry, available);
+                    applyTafsirIdentity(title, source, verse, entry);
                     renderTafsir(textColumn, entry, fontSize[0]);
+
+                    if (available.size() <= 1) {
+                        editionRow.setVisibility(View.GONE);
+                    } else {
+                        editionRow.setVisibility(View.VISIBLE);
+                        Button selector = tafsirEditionSelector(currentEdition[0].displayName + " ▾");
+                        selector.setOnClickListener(v -> showTafsirEditionMenu(
+                            selector, available, currentEdition, readingPrefs, verse,
+                            loaded, title, source, textColumn, fontSize));
+                        editionRow.addView(selector, new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 40)));
+                    }
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
+                    editionRow.setVisibility(View.GONE);
                     textColumn.removeAllViews();
                     textColumn.addView(tafsirText("Tafsir indisponible.", fontSize[0], false));
                 });
@@ -401,32 +363,51 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return button;
     }
 
-    private Button tafsirEditionButton(String label, View.OnClickListener listener) {
+    private Button tafsirEditionSelector(String label) {
         Button button = new Button(this);
         button.setAllCaps(false);
         button.setText(label);
-        button.setTextSize(11.5f);
+        button.setTextSize(12f);
         button.setTextColor(Ui.INK);
-        button.setGravity(Gravity.CENTER);
-        button.setOnClickListener(listener);
+        button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+        button.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         button.setStateListAnimator(null);
         button.setElevation(0f);
+        button.setBackgroundColor(Color.TRANSPARENT);
         button.setMinimumWidth(0);
         button.setMinimumHeight(0);
-        button.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
+        button.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 8), 0);
         button.setSingleLine(true);
         button.setEllipsize(TextUtils.TruncateAt.END);
         return button;
     }
 
-    private void styleTafsirEditionButton(Button button, boolean selectedState) {
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(selectedState ? Ui.LINE : Ui.PAPER);
-        background.setStroke(Ui.dp(this, 1), selectedState ? Ui.MUTED : Ui.LINE);
-        background.setCornerRadius(Ui.dp(this, 6));
-        button.setBackground(background);
-        button.setTextColor(Ui.INK);
-        button.setTypeface(Typeface.DEFAULT, selectedState ? Typeface.BOLD : Typeface.NORMAL);
+    private void showTafsirEditionMenu(
+            Button anchor,
+            Map<MultiTafsirRepository.Edition, TafsirRepository.Entry> available,
+            MultiTafsirRepository.Edition[] currentEdition,
+            SharedPreferences readingPrefs,
+            VerseRef verse,
+            TafsirRepository.Entry[] loaded,
+            TextView title,
+            TextView source,
+            LinearLayout textColumn,
+            float[] fontSize) {
+        PopupMenu menu = new PopupMenu(this, anchor);
+        for (MultiTafsirRepository.Edition edition : MultiTafsirRepository.Edition.values()) {
+            if (!available.containsKey(edition)) continue;
+            menu.getMenu().add(edition.displayName).setOnMenuItemClickListener(item -> {
+                currentEdition[0] = edition;
+                readingPrefs.edit().putString(TAFSIR_EDITION_KEY, edition.storageValue).apply();
+                anchor.setText(edition.displayName + " ▾");
+                TafsirRepository.Entry entry = available.get(edition);
+                loaded[0] = entry;
+                applyTafsirIdentity(title, source, verse, entry);
+                renderTafsir(textColumn, entry, fontSize[0]);
+                return true;
+            });
+        }
+        menu.show();
     }
 
     private LinearLayout activeTafsirTarget;
@@ -435,18 +416,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private void applyTafsirIdentity(TextView title, TextView source, VerseRef verse,
-                                     TafsirRepository.Entry entry,
-                                     Map<MultiTafsirRepository.Edition, TafsirRepository.Entry> available) {
+                                     TafsirRepository.Entry entry) {
         title.setText(entry.editionName + " · " + verse.getSurah() + ":" + verse.getAyah());
         String metadata = entry.metadataLine();
-        String base = metadata.isEmpty() ? entry.editionName : metadata;
-        ArrayList<String> missing = new ArrayList<>();
-        for (MultiTafsirRepository.Edition edition : MultiTafsirRepository.Edition.values()) {
-            if (!available.containsKey(edition)) missing.add(edition.displayName);
-        }
-        source.setText(missing.isEmpty()
-            ? base
-            : base + "\nHors couverture : " + android.text.TextUtils.join(", ", missing));
+        source.setText(metadata.isEmpty() ? entry.editionName : metadata);
     }
 
     private void renderTafsir(LinearLayout target, TafsirRepository.Entry entry, float fontSp) {
@@ -544,7 +517,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return super.onKeyDown(keyCode, event);
     }
     @Override protected void onDestroy() {
-        closeAudio();
         io.shutdownNow();
         if (mushaf != null) {
             mushaf.removeCallbacks(autoHide);
