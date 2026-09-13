@@ -67,7 +67,10 @@ public final class QuranHifzApp extends Application
                 J10ReviewPlanner.PriorityGroup priority = p.priorityGroup(LocalDate.now());
                 if (!priority.isEmpty() && !openingPriority) {
                     openingPriority = true;
-                    activity.startActivity(new Intent(activity, J10ReviewActivity.class));
+                    String hostMode = activity.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
+                    Intent intent = new Intent(activity, J10ReviewActivity.class)
+                        .putExtra(J10ReviewActivity.EXTRA_HOST_MODE, hostMode);
+                    activity.startActivity(intent);
                     activity.getWindow().getDecorView().postDelayed(() -> openingPriority = false, 500L);
                 }
             } catch (RuntimeException error) {
