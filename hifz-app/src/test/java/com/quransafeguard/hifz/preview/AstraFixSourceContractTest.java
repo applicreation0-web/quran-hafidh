@@ -41,12 +41,15 @@ public final class AstraFixSourceContractTest {
 
     @Test public void j10PreemptionMustNotFakeNormalProtocolCompletion() throws Exception {
         String review = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewActivity.java");
-        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String app = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranHifzApp.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10HostBudgetStore.java").contains("markSlotConsumed"));
-        assertTrue(review.contains("J10HostBudgetStore"));
-        assertTrue(session.contains("markSlotConsumed"));
-        assertTrue(session.contains("isSlotConsumed"));
+        String budget = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10HostBudgetStore.java");
+        assertTrue(budget.contains("markSlotConsumed"));
+        assertTrue(budget.contains("isSlotConsumed"));
+        assertTrue(review.contains("markSlotConsumed"));
+        assertTrue("full J10 slot must clear the normal-session elapsed trigger", review.contains("prefs.setElapsedFor(hostMode, 0L)"));
+        assertTrue("app lifecycle must close a fully J10-consumed host before normal protocol continues", app.contains("isSlotConsumed(hostMode, LocalDate.now())"));
+        assertTrue(app.contains("activity.finish()"));
         assertTrue(main.contains("isSlotConsumed"));
     }
 
