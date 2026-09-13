@@ -44,7 +44,7 @@ jobs:
               else kind = SessionKind.OLD_ITQAN_MURAJAAH;
               return HifzSchedule.INSTANCE.targetMinutesFor(kind);
           }
-'''
+          '''
           session = session[:start] + new_block + session[end:]
           if 'scheduledTargetMinutes(' in session or 'absent du planning' in session:
               raise SystemExit('P0 stale schedule-dependent duration path remains')
@@ -99,7 +99,7 @@ jobs:
                   .commit();
           }
 
-'''
+          '''
           prefs = prefs[:pos] + helpers + prefs[pos:]
           prefs_path.write_text(prefs)
 
@@ -158,7 +158,7 @@ jobs:
               recentReviewIndex = prefs.recentSabqiReviewIndex();
           }
 
-'''
+          '''
           session = session[:rebalance_start] + new_rebalance + session[rebalance_end:]
           if 'recent.get(0).startLine' in session[rebalance_start:rebalance_start + len(new_rebalance) + 200]:
               raise SystemExit('P1 stale display-order promotion dependency remains')
