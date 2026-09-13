@@ -44,6 +44,16 @@ final class SessionClock {
         return accumulatedMs;
     }
 
+    /** Pull externally consumed time into this clock without ever moving elapsed time backwards. */
+    void syncPersistedElapsed(long persistedMs) {
+        long target = Math.max(0L, persistedMs);
+        long current = elapsedMs();
+        if (target <= current) return;
+        accumulatedMs = target;
+        if (startedAt >= 0L) startedAt = SystemClock.elapsedRealtime();
+        listener.onTick(accumulatedMs);
+    }
+
     void reset() {
         accumulatedMs = 0L;
         if (startedAt >= 0L) startedAt = SystemClock.elapsedRealtime();
