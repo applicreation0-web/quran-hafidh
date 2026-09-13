@@ -110,4 +110,33 @@ public final class PreviewConfig {
     public static boolean itqanValidationPassed(int finalStageReveals) {
         return finalStageReveals < 2;
     }
+    /** Balanced physical-line split for user-declared difficult Ancrage units. */
+    public static int[] fractionatedBlockSizes(int lineCount) {
+        if (lineCount <= 0) return new int[]{0};
+        int blockCount = (lineCount + SABQI_LINES - 1) / SABQI_LINES;
+        int base = lineCount / blockCount;
+        int longer = lineCount % blockCount;
+        int[] sizes = new int[blockCount];
+        for (int i = 0; i < blockCount; i++) sizes[i] = base + (i < longer ? 1 : 0);
+        return sizes;
+    }
+
+    public static int fractionatedBlockCount(int lineCount) {
+        return fractionatedBlockSizes(lineCount).length;
+    }
+
+    public static int fractionatedBlockStart(int lineCount, int blockIndex) {
+        int[] sizes = fractionatedBlockSizes(lineCount);
+        int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
+        int start = 0;
+        for (int i = 0; i < at; i++) start += sizes[i];
+        return start;
+    }
+
+    public static int fractionatedBlockLength(int lineCount, int blockIndex) {
+        int[] sizes = fractionatedBlockSizes(lineCount);
+        int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
+        return sizes[at];
+    }
+
 }

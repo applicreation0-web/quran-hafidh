@@ -298,6 +298,23 @@ public final class GeometryRepository {
         return result;
     }
 
+    /** Ordered verses touching the supplied physical lines, restricted to the current Ancrage unit. */
+    public List<VerseRef> versesOnLines(List<String> lineIds, List<VerseRef> allowedVerses) {
+        if (lineIds == null || lineIds.isEmpty() || allowedVerses == null || allowedVerses.isEmpty()) {
+            return Collections.emptyList();
+        }
+        LinkedHashSet<String> wantedLines = new LinkedHashSet<>(lineIds);
+        LinkedHashSet<VerseRef> allowed = new LinkedHashSet<>(allowedVerses);
+        LinkedHashSet<VerseRef> selected = new LinkedHashSet<>();
+        for (LineMeta line : lines) {
+            if (!wantedLines.contains(line.id)) continue;
+            for (VerseRef verse : line.verses) if (allowed.contains(verse)) selected.add(verse);
+        }
+        ArrayList<VerseRef> result = new ArrayList<>(selected);
+        result.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return result;
+    }
+
     public static VerseRef parseVerse(String value) {
         String[] parts = value.split(":");
         if (parts.length != 2) throw new IllegalArgumentException("Invalid verse reference " + value);

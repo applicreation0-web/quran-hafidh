@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -78,6 +79,8 @@ public final class HifzPrefs {
                 .putBoolean("anchoringQueueInitialized", false)
                 .putInt("anchoringQueueIndex", 0)
                 .putString("anchoringRetryAfterDate", "")
+                .putString("hardAnchoringSurahs", "[]")
+                .putInt("itqanBlockIndex", 0)
                 .putString("itqanRotationStart", "49:1")
                 .putString("itqanCursor", "49:1")
                 .putString("murajaahCursor", "2:1")
@@ -140,12 +143,16 @@ public final class HifzPrefs {
         boolean repairV4 = p.contains("stableRecentLines")
             || !p.contains("consolidationAttendanceDates")
             || !p.contains("forcedPromotedRanges")
-            || !p.contains("anchoringRetryAfterDate");
+            || !p.contains("anchoringRetryAfterDate")
+            || !p.contains("hardAnchoringSurahs")
+            || !p.contains("itqanBlockIndex");
         if (repairV4) {
             SharedPreferences.Editor repair = p.edit().remove("stableRecentLines");
             if (!p.contains("consolidationAttendanceDates")) repair.putString("consolidationAttendanceDates", "[]");
             if (!p.contains("forcedPromotedRanges")) repair.putString("forcedPromotedRanges", "[]");
             if (!p.contains("anchoringRetryAfterDate")) repair.putString("anchoringRetryAfterDate", "");
+            if (!p.contains("hardAnchoringSurahs")) repair.putString("hardAnchoringSurahs", "[]");
+            if (!p.contains("itqanBlockIndex")) repair.putInt("itqanBlockIndex", 0);
             if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v4 optional state");
         }
     }
@@ -238,6 +245,8 @@ public final class HifzPrefs {
             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
             .putInt("anchoringQueueIndex", Math.max(0, p.getInt("anchoringQueueIndex", 0)))
             .putString("anchoringRetryAfterDate", "")
+            .putString("hardAnchoringSurahs", "[]")
+            .putInt("itqanBlockIndex", 0)
             .putInt("itqanFinalReveals", Math.max(0, p.getInt("itqanFinalReveals", 0)))
             .putBoolean("murajaahSpeedCalibrated", p.getBoolean("murajaahSpeedCalibrated", false))
             .putInt("murajaahSpeedSamples", Math.max(0, p.getInt("murajaahSpeedSamples", 0)))
@@ -419,8 +428,62 @@ public final class HifzPrefs {
     public int itqanRep() { return p.getInt("itqanRep", 0); }
     public int itqanAssisted() { return p.getInt("itqanAssisted", 0); }
     public int itqanFinalReveals() { return p.getInt("itqanFinalReveals", 0); }
+    public int itqanBlockIndex() { return Math.max(0, p.getInt("itqanBlockIndex", 0)); }
     public VerseRef itqanUnitStart() { return optionalRef("itqanUnitStart"); }
     public VerseRef itqanUnitEnd() { return optionalRef("itqanUnitEnd"); }
+
+    public List<Integer> hardAnchoringSurahs() {
+        LinkedHashSet<Integer> unique = new LinkedHashSet<>();
+        try {
+            JSONArray array = new JSONArray(p.getString("hardAnchoringSurahs", "[]"));
+            for (int i = 0; i < array.length(); i++) {
+                int surah = array.optInt(i, -1);
+                if (surah >= 1 && surah <= 114) unique.add(surah);
+            }
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
+        ArrayList<Integer> out = new ArrayList<>(unique);
+        Collections.sort(out);
+        return out;
+    }
+
+    public boolean setHardAnchoringSurahs(List<Integer> surahs) {
+        LinkedHashSet<Integer> unique = new LinkedHashSet<>();
+        if (surahs != null) {
+            for (Integer value : surahs) if (value != null && value >= 1 && value <= 114) unique.add(value);
+        }
+        ArrayList<Integer> ordered = new ArrayList<>(unique);
+        Collections.sort(ordered);
+        JSONArray array = new JSONArray();
+        for (int value : ordered) array.put(value);
+        return p.edit().putString("hardAnchoringSurahs", array.toString()).commit();
+    }
+
+    static boolean containsHardAnchoringSurah(List<Integer> hardSurahs, List<VerseRef> unitVerses) {
+        if (hardSurahs == null || hardSurahs.isEmpty() || unitVerses == null || unitVerses.isEmpty()) return false;
+        for (VerseRef verse : unitVerses) if (verse != null && hardSurahs.contains(verse.getSurah())) return true;
+        return false;
+    }
+
+    public boolean isFractionatedUnit(List<VerseRef> unitVerses) {
+        return containsHardAnchoringSurah(hardAnchoringSurahs(), unitVerses);
+    }
+
+    /** Atomically closes one fractionated sub-block and advances the persisted block cursor. */
+    public boolean advanceItqanBlock(int nextBlockIndex, String date, String label) {
+        return p.edit()
+            .putInt("itqanBlockIndex", Math.max(0, nextBlockIndex))
+            .putInt("itqanRep", 0)
+            .putInt("itqanAssisted", 0)
+            .putInt("itqanFinalReveals", 0)
+            .putString("itqanUnitStart", "")
+            .putString("itqanUnitEnd", "")
+            .putLong("itqanElapsedMs", 0L)
+            .putString("lastItqanDate", date)
+            .putString("lastItqanLabel", label)
+            .commit();
+    }
 
     public boolean setItqanProgress(int rep, int assisted, VerseRef unitStart, VerseRef unitEnd) {
         return setItqanProgress(rep, assisted, itqanFinalReveals(), unitStart, unitEnd);
@@ -441,6 +504,7 @@ public final class HifzPrefs {
         return p.edit()
             .putString("itqanCursor", nextCursor.toString())
             .putInt("itqanRep", 0)
+            .putInt("itqanBlockIndex", 0)
             .putInt("itqanAssisted", 0)
             .putInt("itqanFinalReveals", 0)
             .putString("itqanUnitStart", "")
@@ -474,6 +538,7 @@ public final class HifzPrefs {
             .putString("anchoringRetryAfterDate", "")
             .putString("itqanCursor", storedNext.toString())
             .putInt("itqanRep", 0)
+            .putInt("itqanBlockIndex", 0)
             .putInt("itqanAssisted", 0)
             .putInt("itqanFinalReveals", 0)
             .putString("itqanUnitStart", "")
@@ -600,6 +665,7 @@ public final class HifzPrefs {
             .putString("anchoringRetryAfterDate", retryAfter)
             .putString("itqanCursor", next.toString())
             .putInt("itqanRep", 0)
+            .putInt("itqanBlockIndex", 0)
             .putInt("itqanAssisted", 0)
             .putInt("itqanFinalReveals", 0)
             .putString("itqanUnitStart", "")

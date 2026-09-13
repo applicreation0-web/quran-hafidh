@@ -121,6 +121,20 @@ val verifyHifzConvergenceRules by tasks.registering {
             "Reconstruction Ancrage must stay on 35 repetitions: 20 visible + 5/5/5 masked."
         }
         check(config.contains("EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6")) { "Audio needs its own anti-ghosting cleanup cadence." }
+        check(config.contains("fractionatedBlockSizes")
+                && config.contains("fractionatedBlockStart")
+                && config.contains("fractionatedBlockLength")) {
+            "Le découpage de l'Ancrage fractionné doit rester une fonction pure et testable."
+        }
+        check(session.contains("Ancrage fractionné")) {
+            "Le libellé visible de l'Ancrage fractionné est requis."
+        }
+        check(!session.contains("Consolidation fractionnée")) {
+            "Consolidation désigne RECENT_SABQI_REVIEW et ne doit pas nommer l'Ancrage."
+        }
+        check(settings.contains("Sourates difficiles à ancrer")) {
+            "Le drapeau durable d'Ancrage fractionné doit rester accessible dans les Paramètres."
+        }
 
         check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
         check(!session.contains("Stable sans aide")) { "A fault-free Consolidation must not directly promote a block." }

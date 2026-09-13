@@ -21,6 +21,7 @@ import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,7 +30,7 @@ public final class SettingsActivity extends android.app.Activity {
     private static final int REQUEST_AUDIO_ZIP = 4103;
     private HifzPrefs prefs;
     private GeometryRepository geometry;
-    private LinearLayout rangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, audioSetting;
+    private LinearLayout rangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus;
 
     private interface VerseChosen { void accept(VerseRef verse); }
@@ -65,6 +66,9 @@ public final class SettingsActivity extends android.app.Activity {
         rotationSetting=Ui.settingRow(this,"Début de rotation d’ancrage",prefs.itqanRotationStart().toString(),
             v->chooseVerse("Début de rotation d’ancrage",prefs.itqanRotationStart(),this::setRotationStart));
         root.addView(rotationSetting);
+        root.addView(Ui.divider(this));
+        hardAnchoringSetting=Ui.settingRow(this,"Sourates difficiles à ancrer","0 sourate",v->showHardAnchoringSelector());
+        root.addView(hardAnchoringSetting);
 
         section(root,"Ancrage · corpus");
         effectiveCorpusStatus=Ui.text(this,"",11f,false);
@@ -111,7 +115,7 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(Ui.divider(this));
     }
 
-    private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
+    private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
 
     private void refreshSabqi(){
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
@@ -183,6 +187,47 @@ public final class SettingsActivity extends android.app.Activity {
         itqanStatus.setText((invalid?"⚠ ":"")+"Position Ancrage · "+prefs.itqanCursor()+"   ·   Entretien · "+prefs.murajaahCursor());
         itqanStatus.setTextColor(Ui.MUTED);
         itqanStatus.setVisibility(View.VISIBLE);
+    }
+
+    private void refreshHardAnchoring(){
+        int count=prefs.hardAnchoringSurahs().size();
+        TextView value=Ui.settingValue(hardAnchoringSetting);
+        if(value!=null)value.setText(count+" "+(count==1?"sourate":"sourates"));
+    }
+
+    private List<Integer> availableHardAnchoringSurahs(){
+        LinkedHashSet<Integer> result=new LinkedHashSet<>();
+        for(VerseRange range:prefs.effectiveItqanRanges()){
+            for(int surah=range.getStart().getSurah();surah<=range.getEndInclusive().getSurah();surah++)result.add(surah);
+        }
+        return new ArrayList<>(result);
+    }
+
+    private void showHardAnchoringSelector(){
+        if(prefs.itqanRep()>0 || prefs.itqanBlockIndex()>0){
+            Toast.makeText(this,"Terminez la page d’Ancrage en cours avant de modifier ce réglage.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        List<Integer> candidates=availableHardAnchoringSurahs();
+        if(candidates.isEmpty()){Toast.makeText(this,"Aucune sourate dans le corpus d’Ancrage.",Toast.LENGTH_LONG).show();return;}
+        List<Integer> selected=prefs.hardAnchoringSurahs();
+        String[] labels=new String[candidates.size()];
+        boolean[] checked=new boolean[candidates.size()];
+        for(int i=0;i<candidates.size();i++){
+            int surah=candidates.get(i);
+            labels[i]="Sourate "+surah;
+            checked[i]=selected.contains(surah);
+        }
+        new AlertDialog.Builder(this)
+            .setTitle("Sourates difficiles à ancrer")
+            .setMultiChoiceItems(labels,checked,(dialog,which,isChecked)->checked[which]=isChecked)
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Enregistrer",(dialog,which)->{
+                ArrayList<Integer> chosen=new ArrayList<>();
+                for(int i=0;i<candidates.size();i++)if(checked[i])chosen.add(candidates.get(i));
+                if(!prefs.setHardAnchoringSurahs(chosen)){Toast.makeText(this,"Impossible d’enregistrer ce réglage.",Toast.LENGTH_LONG).show();return;}
+                refreshHardAnchoring();
+            }).show();
     }
 
     private void refreshEffectiveItqanCorpus(){

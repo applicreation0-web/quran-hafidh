@@ -52,6 +52,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private GeometryRepository.VerseUnit itqanUnit;
     private AnchoringQueue.Entry anchoringEntry;
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
+    private AnchoringQueue.Protocol itqanSessionProtocol = AnchoringQueue.Protocol.FULL;
+    private boolean fractionatedItqan;
+    private int itqanBlockIndex;
+    private int itqanBlockCount = 1;
     private GeometryRepository.EligibleLinePlan murajaahPlan;
     private VerseRef murajaahActualEnd;
     private boolean timedSessionLimitReached;
@@ -522,8 +526,13 @@ private void rebalanceRecentWindow() {
         String today=LocalDate.now().toString();
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
-            program.setText("Ancrage · unité validée");
-            progress.setText(prefs.lastItqanLabel().isEmpty()?"Ancrage terminé":prefs.lastItqanLabel());
+            if (prefs.itqanBlockIndex() > 0) {
+                program.setText("Ancrage fractionné · séance terminée");
+                progress.setText(prefs.lastItqanLabel().isEmpty()?"Sous-bloc terminé":prefs.lastItqanLabel());
+            } else {
+                program.setText("Ancrage · unité validée");
+                progress.setText(prefs.lastItqanLabel().isEmpty()?"Ancrage terminé":prefs.lastItqanLabel());
+            }
             return;
         }
         anchoringEntry = prefs.currentAnchoringEntry(geometry);
@@ -539,7 +548,6 @@ private void rebalanceRecentWindow() {
             }
             return;
         }
-        itqanTargetReps = PreviewConfig.itqanTotalReps(anchoringEntry.protocol);
         int rep=prefs.itqanRep();
         VerseRef savedStart=prefs.itqanUnitStart();
         VerseRef savedEnd=prefs.itqanUnitEnd();
@@ -558,18 +566,33 @@ private void rebalanceRecentWindow() {
                 geometry.lineIdsForVerseRange(entryStart, entryEnd));
             currentPage=itqanUnit.page;unitFirstPage=unitLastPage=currentPage;
         }
-        currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
+
+        fractionatedItqan = prefs.isFractionatedUnit(itqanUnit.verses);
+        itqanSessionProtocol = fractionatedItqan ? AnchoringQueue.Protocol.LIGHT : anchoringEntry.protocol;
+        itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
+        if (fractionatedItqan) {
+            int n = itqanUnit.lineIds.size();
+            itqanBlockCount = PreviewConfig.fractionatedBlockCount(n);
+            itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
+            int from = PreviewConfig.fractionatedBlockStart(n, itqanBlockIndex);
+            int len = PreviewConfig.fractionatedBlockLength(n, itqanBlockIndex);
+            currentLineIds = new ArrayList<>(itqanUnit.lineIds.subList(from, from + len));
+            currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
+        } else {
+            itqanBlockCount = 1;
+            itqanBlockIndex = 0;
+            currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
+        }
+
         if(rep>=itqanTargetReps){
             awaitingValidation=true;sessionCompleted=true;clock.pause();currentMask=0;
-            program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
-                +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":""));
+            program.setText(itqanProgramLabel());
             progress.setText(itqanTargetReps+"/"+itqanTargetReps+" · prêt à valider · révélations finales "+prefs.itqanFinalReveals());
             showCurrent();addRoundAction("✓","Valider",v->validateItqan());return;
         }
         sessionCompleted=false;
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep, anchoringEntry.protocol);
-        program.setText("Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
-            +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":""));
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);
+        program.setText(itqanProgramLabel());
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
         LinearLayout revealAction = Ui.roundAction(this,"","Révéler",null);
@@ -577,6 +600,16 @@ private void rebalanceRecentWindow() {
         configureRevealButton(revealButton);
         actions.addView(revealAction);
         updateRevealButton();
+    }
+
+    private String itqanProgramLabel() {
+        if (fractionatedItqan) {
+            VerseRef start = currentSelection.isEmpty() ? itqanUnit.start : currentSelection.get(0);
+            VerseRef end = currentSelection.isEmpty() ? itqanUnit.end : currentSelection.get(currentSelection.size() - 1);
+            return "Ancrage fractionné · "+start+" → "+end+" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · ×"+itqanTargetReps;
+        }
+        return "Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+            +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
     }
 
     private void updateItqanProgress(int rep,int reveals){
@@ -590,21 +623,22 @@ private void rebalanceRecentWindow() {
         int rep=prefs.itqanRep();if(rep>=itqanTargetReps)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
-            + (revealed && PreviewConfig.isItqanValidationRep(rep - 1, anchoringEntry.protocol) ? 1 : 0);
+            + (revealed && PreviewConfig.isItqanValidationRep(rep - 1, itqanSessionProtocol) ? 1 : 0);
         if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition d’Ancrage.");return;}
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep, anchoringEntry.protocol);if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();if(currentPage!=unitFirstPage){currentPage=unitFirstPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
 
     private String anchoringInstrumentation() {
         if (itqanUnit == null) return "0L/0s/0r";
-        int lines = geometry.lineCountForVerseRange(itqanUnit.start, itqanUnit.end);
+        int lines = fractionatedItqan ? currentLineIds.size()
+            : geometry.lineCountForVerseRange(itqanUnit.start, itqanUnit.end);
         long elapsed = Math.max(clock.elapsedMs(), prefs.elapsedFor(mode));
         return Math.max(0, lines) + "L/" + Math.max(0L, elapsed / 1000L) + "s/" + prefs.itqanRep() + "r";
     }
@@ -612,7 +646,24 @@ private void rebalanceRecentWindow() {
     private void validateItqan(){
         if(itqanUnit==null||anchoringEntry==null||prefs.itqanRep()<itqanTargetReps)return;
         String metrics = anchoringInstrumentation();
-        if (!PreviewConfig.itqanValidationPassed(prefs.itqanFinalReveals())) {
+        if (fractionatedItqan) {
+            int nextBlock = itqanBlockIndex + 1;
+            if (nextBlock < itqanBlockCount) {
+                String label="Ancrage fractionné · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
+                    +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
+                metricsStore.recordAnchoring("bloc fractionné réussi · "+itqanUnit.start+" → "+itqanUnit.end
+                    +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
+                if (!prefs.advanceItqanBlock(nextBlock, LocalDate.now().toString(), label)) {
+                    onError("Impossible d’enregistrer le sous-bloc d’Ancrage fractionné.");
+                    return;
+                }
+                awaitingValidation=false;
+                closeClockForCompletedSession();
+                mushaf.cycleCompleted();
+                renderMode();
+                return;
+            }
+        } else if (!PreviewConfig.itqanValidationPassed(prefs.itqanFinalReveals())) {
             metricsStore.recordAnchoring("échec · "+itqanUnit.start+" → "+itqanUnit.end+" · "+metrics);
             if (!prefs.failAndDeferAnchoring(itqanUnit.start, itqanUnit.end)) {
                 onError("Impossible d’enregistrer le report de cette page d’Ancrage.");
@@ -627,9 +678,9 @@ private void rebalanceRecentWindow() {
         }
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
         VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.itqanRotationStart());
-        String label="Ancrage · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+        String label=(fractionatedItqan ? "Ancrage fractionné" : "Ancrage")+" · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
             +" · révélations finales "+prefs.itqanFinalReveals()+" · "+metrics;
-        metricsStore.recordAnchoring("réussite · "+itqanUnit.start+" → "+itqanUnit.end+" · "+metrics);
+        metricsStore.recordAnchoring((fractionatedItqan ? "réussite fractionnée" : "réussite")+" · "+itqanUnit.start+" → "+itqanUnit.end+" · "+metrics);
         boolean ok=prefs.completeItqanUnitAndConsolidate(itqanUnit.start,itqanUnit.end,next,LocalDate.now().toString(),label);
         if(!ok){onError("Impossible d’enregistrer la validation de l’Ancrage.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
