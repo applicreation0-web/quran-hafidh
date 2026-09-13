@@ -198,4 +198,32 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertEquals(1, prefs.recentSabqi().size());
         assertEquals(LocalDate.now(), prefs.recentSabqi().get(0).addedOn);
     }
+    @Test public void corruptAnchoringEntryIsIgnoredPersistedAndRebuiltFromPendingCorpus() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        GeometryRepository geometry = GeometryRepository.get(context);
+        AnchoringQueue.Entry initial = prefs.currentAnchoringEntry(geometry);
+        assertTrue(initial != null);
+
+        String mixed = "[{\"start\":\"49:1\",\"end\":\"49:5\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0},"
+            + "{\"start\":\"bad\",\"end\":\"bad\",\"origin\":\"FUTURE_ENUM\",\"protocol\":\"LIGHT\"}]";
+        raw.edit().putString("anchoringQueue", mixed).putBoolean("anchoringQueueInitialized", true).commit();
+
+        java.util.List<AnchoringQueue.Entry> recovered = prefs.anchoringQueue();
+        assertEquals(1, recovered.size());
+        assertFalse(raw.getBoolean("anchoringQueueInitialized", true));
+
+        AnchoringQueue.Entry rebuilt = prefs.currentAnchoringEntry(geometry);
+        assertTrue(rebuilt != null);
+        assertTrue(raw.getBoolean("anchoringQueueInitialized", false));
+    }
+
+    @Test public void malformedAnchoringQueueFailsOpenAndReconcilesInsteadOfCrashing() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        raw.edit().putString("anchoringQueue", "not-json").putBoolean("anchoringQueueInitialized", true).commit();
+
+        assertTrue(prefs.anchoringQueue().isEmpty());
+        assertFalse(raw.getBoolean("anchoringQueueInitialized", true));
+        assertTrue(prefs.currentAnchoringEntry(GeometryRepository.get(context)) != null);
+    }
+
 }

@@ -472,9 +472,9 @@ private void rebalanceRecentWindow() {
 
     private boolean completeConsolidation(String today, long elapsedMs) {
         int lines = metricsStore.consolidationLines();
-        SpeedCalibrationPolicy.Result calibration = speedStore.calibrateConsolidation(lines, elapsedMs);
+        SpeedCalibration.Result calibration = speedStore.calibrateConsolidation(lines, elapsedMs);
         String raw = HifzSpeedStore.instrumentationLabel(lines, elapsedMs, calibration);
-        if (calibration.status == SpeedCalibrationPolicy.Status.ATYPICAL) raw += "·atyp";
+        if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
         String label = "Consolidation · " + targetMinutes() + " min · " + raw;
         if (!prefs.completeRecentSabqiReview(today, recentReviewIndex, label)) {
             onError("Impossible d’enregistrer la Consolidation.");
@@ -557,8 +557,7 @@ private void rebalanceRecentWindow() {
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
             List<String> lineIds=geometry.lineIdsForVerseRange(savedStart,savedEnd);
             itqanUnit=new GeometryRepository.VerseUnit(currentPage,savedStart,savedEnd,verses,lineIds);
-            AnchoringQueue.Entry inProgress = AnchoringQueue.findByRange(
-                prefs.anchoringQueue(), savedStart.toString(), savedEnd.toString());
+            AnchoringQueue.Entry inProgress = prefs.anchoringEntryFor(savedStart, savedEnd);
             if (inProgress != null) anchoringEntry = inProgress;
         } else {
             VerseRef entryStart = GeometryRepository.parseVerse(anchoringEntry.start);
@@ -744,9 +743,9 @@ private void rebalanceRecentWindow() {
         VerseRef next = corpus.next(murajaahActualEnd);
         long elapsed = clock.elapsedMs();
         int lines = countMurajaahLinesThrough(murajaahActualEnd);
-        SpeedCalibrationPolicy.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
+        SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
         String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
-        if (calibration.status == SpeedCalibrationPolicy.Status.ATYPICAL) raw += "·atyp";
+        if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
         String label = "Entretien · réel : " + murajaahPlan.start + " → " + murajaahActualEnd
             + " · prochain curseur " + next + " · " + raw;
         boolean ok = prefs.completeMurajaah(next, LocalDate.now().toString(), label);

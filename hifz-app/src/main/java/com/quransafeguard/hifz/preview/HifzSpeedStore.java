@@ -27,10 +27,10 @@ final class HifzSpeedStore {
     boolean consolidationCalibrated() { return p.getBoolean("recentSpeedCalibrated", false); }
     int consolidationSamples() { return Math.max(0, p.getInt("recentSpeedSamples", 0)); }
 
-    SpeedCalibrationPolicy.Result calibrateMaintenance(int lines, long elapsedMs) {
-        SpeedCalibrationPolicy.Result result = SpeedCalibrationPolicy.evaluate(
+    SpeedCalibration.Result calibrateMaintenance(int lines, long elapsedMs) {
+        SpeedCalibration.Result result = SpeedCalibration.evaluate(
             maintenanceSecondsPerLine(), maintenanceCalibrated(), maintenanceSamples(), lines, elapsedMs);
-        if (result.status != SpeedCalibrationPolicy.Status.REJECTED) {
+        if (result.status != SpeedCalibration.Status.REJECTED) {
             p.edit()
                 .putFloat("murajaahSecPerLine", (float) result.secondsPerLine)
                 .putBoolean("murajaahSpeedCalibrated", result.calibrated)
@@ -40,10 +40,10 @@ final class HifzSpeedStore {
         return result;
     }
 
-    SpeedCalibrationPolicy.Result calibrateConsolidation(int lines, long elapsedMs) {
-        SpeedCalibrationPolicy.Result result = SpeedCalibrationPolicy.evaluate(
+    SpeedCalibration.Result calibrateConsolidation(int lines, long elapsedMs) {
+        SpeedCalibration.Result result = SpeedCalibration.evaluate(
             consolidationSecondsPerLine(), consolidationCalibrated(), consolidationSamples(), lines, elapsedMs);
-        if (result.status != SpeedCalibrationPolicy.Status.REJECTED) {
+        if (result.status != SpeedCalibration.Status.REJECTED) {
             p.edit()
                 .putFloat("recentSecPerLine", (float) result.secondsPerLine)
                 .putBoolean("recentSpeedCalibrated", result.calibrated)
@@ -68,10 +68,10 @@ final class HifzSpeedStore {
         return String.format(Locale.ROOT, "%.1f s/ligne · %s", Math.max(0.0, secondsPerLine), state);
     }
 
-    static String instrumentationLabel(int lines, long elapsedMs, SpeedCalibrationPolicy.Result result) {
+    static String instrumentationLabel(int lines, long elapsedMs, SpeedCalibration.Result result) {
         int safeLines = Math.max(0, lines);
         if (result == null) return safeLines + " lignes";
-        if (result.status == SpeedCalibrationPolicy.Status.REJECTED) {
+        if (result.status == SpeedCalibration.Status.REJECTED) {
             return safeLines + " lignes · mesure non retenue";
         }
         return safeLines + " lignes · "

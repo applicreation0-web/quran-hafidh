@@ -103,4 +103,40 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         assertTrue(prefs.murajaahCorpus().contains(start));
         assertEquals(maintenanceBefore, prefs.murajaahCursor());
     }
+    @Test public void threeBlockFractionatedProgressionResetsEachBlockAndLeavesQueueOnlyAtTheEnd() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        VerseRef start = new VerseRef(53, 1);
+        VerseRef end = new VerseRef(53, 26);
+        String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
+        String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]";
+        raw.edit()
+            .putString("promotedRanges", range)
+            .putString("unconsolidatedPromotedRanges", range)
+            .putString("anchoringQueue", queue)
+            .putBoolean("anchoringQueueInitialized", true)
+            .putInt("anchoringQueueIndex", 0)
+            .putString("itqanCursor", "53:1")
+            .commit();
+
+        assertTrue(prefs.setItqanProgress(35, 3, 1, start, end));
+        assertTrue(prefs.advanceItqanBlock(1, "2026-09-13", "bloc 1/3"));
+        assertEquals(1, prefs.itqanBlockIndex());
+        assertEquals(0, prefs.itqanRep());
+        assertEquals(1, prefs.anchoringQueue().size());
+
+        assertTrue(prefs.setItqanProgress(35, 2, 0, start, end));
+        assertTrue(prefs.advanceItqanBlock(2, "2026-09-14", "bloc 2/3"));
+        assertEquals(2, prefs.itqanBlockIndex());
+        assertEquals(0, prefs.itqanRep());
+        assertEquals(1, prefs.anchoringQueue().size());
+
+        assertTrue(prefs.setItqanProgress(35, 1, 0, start, end));
+        assertTrue(prefs.completeItqanUnitAndConsolidate(start, end, new VerseRef(2, 1),
+            "2026-09-15", "bloc 3/3"));
+        assertEquals(0, prefs.itqanBlockIndex());
+        assertEquals(0, prefs.itqanRep());
+        assertTrue(prefs.anchoringQueue().isEmpty());
+        assertTrue(prefs.murajaahCorpus().contains(start));
+    }
+
 }

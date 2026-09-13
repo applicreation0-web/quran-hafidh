@@ -256,6 +256,8 @@ public final class MainActivity extends android.app.Activity {
                         start = GeometryRepository.parseVerse(entry.start);
                         end = GeometryRepository.parseVerse(entry.end);
                     }
+                    AnchoringQueue.Entry inProgress = prefs.anchoringEntryFor(start, end);
+                    if (inProgress != null) entry = inProgress;
                     boolean fractionated = prefs.isFractionatedUnit(g.versesForRange(start, end));
                     if (fractionated) {
                         int lineCount = g.lineIdsForVerseRange(start, end).size();
@@ -312,7 +314,17 @@ public final class MainActivity extends android.app.Activity {
         dashboard.addView(header);
         dashboard.addView(Ui.divider(this));
 
-        List<WeeklyDashboardPlanner.Row> rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, hostBudgetStore).week(LocalDate.now());
+        List<WeeklyDashboardPlanner.Row> rows;
+        try {
+            rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, hostBudgetStore).week(LocalDate.now());
+        } catch (RuntimeException error) {
+            dashboard.removeAllViews();
+            TextView unavailable = Ui.text(this, "Semaine indisponible", 10.8f, false);
+            unavailable.setTextColor(Ui.MUTED);
+            unavailable.setPadding(Ui.dp(this, 4), Ui.dp(this, 3), Ui.dp(this, 4), Ui.dp(this, 3));
+            dashboard.addView(unavailable);
+            return;
+        }
         for (int i = 0; i < rows.size(); i++) {
             WeeklyDashboardPlanner.Row item = rows.get(i);
             LinearLayout row = Ui.row(this);

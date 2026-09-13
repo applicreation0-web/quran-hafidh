@@ -10,6 +10,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -22,6 +25,7 @@ public final class QuranHifzApp extends Application
     private volatile J10ReviewObserver observer;
     private volatile boolean openingPriority;
     private volatile boolean pendingReconcile;
+    private final Set<Activity> suppressPriorityOnce = Collections.newSetFromMap(new WeakHashMap<>());
     private LocalDate lastAlertDate;
     private int lastAlertDeficit = -1;
 
@@ -59,7 +63,10 @@ public final class QuranHifzApp extends Application
     }
 
     @Override public void onActivityResumed(Activity activity) {
-        if (activity instanceof J10ReviewActivity) return;
+        if (activity instanceof J10ReviewActivity) {
+            openingPriority = false;
+            return;
+        }
 
         if (activity instanceof HifzSessionActivity) {
             try {
@@ -68,21 +75,24 @@ public final class QuranHifzApp extends Application
 
                 // A host slot fully substituted by J10 is closed, not credited as its normal protocol.
                 if (new J10HostBudgetStore(this).isSlotConsumed(hostMode, LocalDate.now())) {
+                    suppressPriorityOnce.remove(activity);
                     activity.finish();
                     return;
                 }
+                if (suppressPriorityOnce.remove(activity)) return;
 
                 J10ReviewPlanner p = ensurePlanner();
                 J10ReviewPlanner.PriorityGroup priority = p.priorityGroup(LocalDate.now());
                 if (!priority.isEmpty() && !openingPriority) {
                     openingPriority = true;
+                    suppressPriorityOnce.add(activity);
                     Intent intent = new Intent(activity, J10ReviewActivity.class)
                         .putExtra(J10ReviewActivity.EXTRA_HOST_MODE, hostMode);
                     activity.startActivity(intent);
-                    activity.getWindow().getDecorView().postDelayed(() -> openingPriority = false, 500L);
                 }
             } catch (RuntimeException error) {
                 openingPriority = false;
+                suppressPriorityOnce.remove(activity);
                 Log.e("QuranHifz", "Unable to evaluate J10 priority", error);
             }
             return;
@@ -100,8 +110,9 @@ public final class QuranHifzApp extends Application
         }
     }
 
-    private static boolean isReusableJ10Host(String mode) {
+    static boolean isReusableJ10Host(String mode) {
         return HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
+            || HifzSessionActivity.ITQAN.equals(mode)
             || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
             || HifzSessionActivity.MURAJAAH.equals(mode);
     }
@@ -122,5 +133,5 @@ public final class QuranHifzApp extends Application
     @Override public void onActivityPaused(Activity activity) {}
     @Override public void onActivityStopped(Activity activity) {}
     @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) {}
-    @Override public void onActivityDestroyed(Activity activity) {}
+    @Override public void onActivityDestroyed(Activity activity) { suppressPriorityOnce.remove(activity); }
 }
