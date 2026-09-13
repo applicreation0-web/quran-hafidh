@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -33,6 +34,18 @@ public final class RecentPromotionPolicyTest {
         RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
             ADDED, ADDED.plusDays(91), ADDED, completedSundays(9), 40, true);
         assertFalse(decision.promote);
+    }
+
+    @Test public void plannedAttendanceStartsOnlyWhenSundayConsolidationIsActivated() {
+        LocalDate activation = ADDED.plusDays(84); // Monday 25 March 2024.
+        LocalDate firstPlannedSunday = LocalDate.of(2024, 3, 31);
+        RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
+            ADDED, ADDED.plusDays(91), activation,
+            Collections.singletonList(firstPlannedSunday), 40, true);
+        assertEquals(1, decision.plannedSessions);
+        assertEquals(1, decision.requiredSessions);
+        assertEquals(1, decision.completedSessions);
+        assertTrue(decision.promote);
     }
 
     @Test public void sixtyFirstBlockForcesOnlyTheOldest() {
