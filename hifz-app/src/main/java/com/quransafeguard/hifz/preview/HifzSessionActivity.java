@@ -63,6 +63,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private int unitLastPage = 1;
     private boolean revealedThisRep;
     private Button revealButton;
+    private Button murajaahFinishButton;
     private int recentReviewIndex;
 
     @Override protected void onCreate(Bundle state) {
@@ -147,6 +148,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         closeAudio();
         actions.removeAllViews();
         revealButton = null;
+        murajaahFinishButton = null;
         awaitingValidation = false;
         unitFirstPage = 1;
         unitLastPage = 1;
@@ -499,7 +501,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             closeClockForCompletedSession();
             renderMode();
         } else if (MURAJAAH.equals(mode)) {
-            renderMode();
+            progress.setText(murajaahActualEnd == null
+                ? "Durée atteinte · touchez le dernier verset."
+                : "Fin réelle · " + murajaahActualEnd);
+            eink.local(progress);
+            if (murajaahFinishButton != null) murajaahFinishButton.setEnabled(murajaahActualEnd != null);
         }
     }
 
@@ -595,7 +601,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 onError("Impossible d’enregistrer le report de cette page d’Ancrage.");
                 return;
             }
-            awaitingValidation=false;sessionCompleted=false;mushaf.cycleCompleted();renderMode();
+            awaitingValidation=false;
+            sessionCompleted=false;
+            restartAnchoringClockAfterDeferral();
+            mushaf.cycleCompleted();
+            renderMode();
             return;
         }
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
@@ -642,8 +652,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 geometry.lineIdsForVerseRange(murajaahActualEnd, murajaahActualEnd));
         }
         LinearLayout validateAction = Ui.roundAction(this, "", "Valider", v -> finishMurajaah());
-        Button finish = (Button) validateAction.getChildAt(0);
-        finish.setEnabled(timedSessionLimitReached && murajaahActualEnd != null);
+        murajaahFinishButton = (Button) validateAction.getChildAt(0);
+        murajaahFinishButton.setEnabled(timedSessionLimitReached && murajaahActualEnd != null);
         actions.addView(validateAction);
     }
 
@@ -686,9 +696,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&prefs.murajaahCorpus().contains(verse)){
             murajaahActualEnd=verse;
             progress.setText("Fin réelle · "+verse);
-            eink.local(progress);mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
+            eink.local(progress);
+            mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
             checkpointMurajaah(clock.elapsedMs());
-            renderMode();
+            if (murajaahFinishButton != null) murajaahFinishButton.setEnabled(timedSessionLimitReached);
         }
     }
 
@@ -738,6 +749,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         HifzAudioDialog current=audioPlayer;
         audioPlayer=null;
         if(current!=null)current.detachInline();
+    }
+
+    private void restartAnchoringClockAfterDeferral(){
+        lastCheckpointBucket=-1L;
+        clock.reset();
+        prefs.setElapsedFor(mode,0L);
+        clock.resume();
     }
 
     private void closeClockForCompletedSession(){
