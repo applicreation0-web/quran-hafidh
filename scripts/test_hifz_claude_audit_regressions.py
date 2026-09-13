@@ -9,11 +9,29 @@ def read(path: str) -> str:
 
 def test_runtime_uses_domain_schedule_as_single_source_of_truth():
     session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
+    main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java")
+    core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt")
     config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java")
 
-    assert "HifzSchedule" in session and "planFor" in session, (
-        "HifzSessionActivity must consume the same HifzSchedule.planFor() contract as Today/dashboard"
+    # Calendar/session selection stays schedule-driven, while a mode opened directly must obtain
+    # its duration from the same domain constants without depending on whether that mode happens
+    # to be scheduled today. This prevents quick-access and midnight rollover crashes.
+    assert "HifzSchedule.INSTANCE.planFor" in main, (
+        "Today/dashboard must keep consuming HifzSchedule.planFor()"
     )
+    assert "fun targetMinutesFor(kind: SessionKind)" in core, (
+        "HifzSchedule must expose the canonical per-mode target duration"
+    )
+    assert "HifzSchedule.INSTANCE.targetMinutesFor" in session, (
+        "HifzSessionActivity must use schedule-owned per-mode duration constants"
+    )
+    assert "scheduledTargetMinutes(" not in session, (
+        "direct session duration must not depend on today's DailyPlan"
+    )
+    assert "absent du planning" not in session, (
+        "off-schedule quick access must not throw from duration resolution"
+    )
+
     assert "WEEKDAY_MURAJAAH_MINUTES" not in session
     assert "WEEKEND_MURAJAAH_MINUTES" not in session
     assert "WEEKEND_RECENT_REVIEW_MINUTES" not in session
