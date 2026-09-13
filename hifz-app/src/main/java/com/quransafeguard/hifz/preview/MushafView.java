@@ -100,11 +100,6 @@ public final class MushafView extends WebView {
         maskEntropy = value;
     }
 
-    public void setMaskEntropy(String value) {
-        if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException("mask entropy required");
-        maskEntropy = value;
-    }
-
     public void setListener(Listener value) {
         listener = value;
         if (value != null && !listenerNotified) {
