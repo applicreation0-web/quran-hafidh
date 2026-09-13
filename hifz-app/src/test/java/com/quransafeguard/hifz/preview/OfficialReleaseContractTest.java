@@ -95,7 +95,8 @@ public final class OfficialReleaseContractTest {
 
         assertTrue("Tafsir identity must stay on one line", study.contains("title.setSingleLine(true)"));
         assertTrue("A-/A+ must use compact controls", study.contains("tafsirTextControl") || study.contains("tafsirCompactButton"));
-        assertTrue("edition tabs must use compact controls", study.contains("tafsirEditionButton") || study.contains("tafsirCompactTab"));
+        assertTrue("multiple available Tafsir sources must use one compact dropdown", study.contains("PopupMenu") && study.contains("showTafsirEditionMenu") && study.contains("available.size() <= 1"));
+        assertFalse("legacy permanent Tafsir edition tabs must stay removed", study.contains("tafsirEditionButton") || study.contains("tafsirCompactTab"));
         assertFalse("Quran Hifz must not copy divergent reader109/audio.json", gradle.contains("reader109/audio.json"));
         assertFalse("Tafsir loader must not retain Base64 decoding", multi.contains("android.util.Base64") || multi.contains("Base64.decode"));
         assertFalse("Tafsir asset paths must not use .gz.b64.part", multi.contains(".gz.b64.part"));
