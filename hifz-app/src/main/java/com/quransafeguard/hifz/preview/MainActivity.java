@@ -24,6 +24,7 @@ import java.util.concurrent.Executors;
 /** Quran Hifz personal home. No Safeguard/blocking API is linked here. */
 public final class MainActivity extends android.app.Activity {
     private HifzPrefs prefs;
+    private HifzSpeedStore speedStore;
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
     private TextView today;
@@ -35,6 +36,7 @@ public final class MainActivity extends android.app.Activity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = new HifzPrefs(this);
+        speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);
 
         ScrollView scroll = new ScrollView(this);
@@ -137,6 +139,7 @@ public final class MainActivity extends android.app.Activity {
     @Override protected void onResume() {
         super.onResume();
         prefs = new HifzPrefs(this);
+        speedStore = new HifzSpeedStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
         if (today != null && geometry != null) refreshAll();
@@ -255,7 +258,7 @@ public final class MainActivity extends android.app.Activity {
             recentSabqiAdvisory.setText("");
             return;
         }
-        int[] range = HifzCadence.advisoryFiveLineRange(prefs.recentSecondsPerLine());
+        int[] range = HifzCadence.advisoryFiveLineRange(speedStore.consolidationSecondsPerLine());
         recentSabqiAdvisory.setText("Consolidation · rappel libre 5–10 min · " + range[0] + "–" + range[1] + " lignes");
         recentSabqiAdvisory.setVisibility(View.VISIBLE);
     }
