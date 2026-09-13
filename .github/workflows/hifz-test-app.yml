@@ -7,6 +7,7 @@ on:
       - release/hifz-0.7.2-mask-hotfix
       - release/hifz-0.7.3-final
       - fix/hifz-0.7.3-claude-audit
+      - feat/hifz-0.7.3-lot2-cadence
   workflow_dispatch:
 
 permissions:
