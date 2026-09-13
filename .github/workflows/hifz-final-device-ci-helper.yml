@@ -17,7 +17,7 @@ jobs:
       - name: Checkout exact application candidate
         uses: actions/checkout@v4
         with:
-          ref: eeb64d305bf2232b2994f9184ffa6725f0c35c09
+          ref: 31fcfe6ec6c1728f8f6cfdea1f281e274ea41de5
 
       - name: Restore validated Mushaf and Tafsir baseline
         uses: actions/download-artifact@v4
@@ -96,7 +96,7 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           script: timeout 12m gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace
 
-      - name: Assemble exact unsigned BOOX test APK
+      - name: Assemble exact unsigned BOOX audit APK
         run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
 
       - name: Inspect exact APK
@@ -115,12 +115,12 @@ jobs:
           test "$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 604
           if grep -Eq 'assets/audio/husary-muallim/[0-9]{6}\.mp3' hifz-app-apk-list.txt; then exit 1; fi
           sha256sum "$apk" | tee hifz-app-sha256.txt
-          printf 'HEAD=eeb64d305bf2232b2994f9184ffa6725f0c35c09\nPACKAGE=com.quransafeguard.hifz\nVERSION_CODE=10\nVERSION_NAME=0.7.3-boox\n' > hifz-app-build-info.txt
+          printf 'HEAD=31fcfe6ec6c1728f8f6cfdea1f281e274ea41de5\nPACKAGE=com.quransafeguard.hifz\nVERSION_CODE=10\nVERSION_NAME=0.7.3-boox\n' > hifz-app-build-info.txt
 
       - name: Upload exact candidate evidence
         uses: actions/upload-artifact@v4
         with:
-          name: quran-hifz-0.7.3-boox-test-eeb64d305bf2232b2994f9184ffa6725f0c35c09
+          name: quran-hifz-0.7.3-fractionated-audit-31fcfe6ec6c1728f8f6cfdea1f281e274ea41de5
           path: |
             hifz-app/build/outputs/apk/release/*.apk
             hifz-app/build/outputs/androidTest-results/
