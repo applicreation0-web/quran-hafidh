@@ -271,8 +271,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
         if (recent.isEmpty()) return;
         int recentWindowMinutes = HifzSchedule.INSTANCE.planFor(DayOfWeek.SATURDAY).getMorning().getTargetMinutes();
-        int capacity = Math.max(PreviewConfig.SABQI_LINES,
-            (int)Math.floor(recentWindowMinutes * 60.0 / prefs.recentSecondsPerLine()));
+        int capacity = HifzCadence.targetFiveLineCapacity(recentWindowMinutes, prefs.murajaahSecondsPerLine());
         int total = 0;
         for (HifzPrefs.RecentSabqi item : recent) total += Math.max(0, item.endLine - item.startLine + 1);
         if (total <= capacity) return;
@@ -524,7 +523,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         EligibleCorpus corpus = prefs.murajaahCorpus();
-        int lines = Math.max(1, (int)Math.floor(targetMinutes() * 60.0 / prefs.murajaahSecondsPerLine()));
+        int lines = HifzCadence.targetLines(targetMinutes(), prefs.murajaahSecondsPerLine());
         murajaahPlan = geometry.planEligibleLines(prefs.murajaahCursor(), lines, corpus);
         murajaahActualEnd = prefs.murajaahActualEnd();
         currentPage = geometry.pageForVerse(murajaahPlan.start);
@@ -575,15 +574,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void calibrateOldSpeed(VerseRef start,VerseRef end,long elapsedMs){
         if(GeometryRepository.ordinal(end)<GeometryRepository.ordinal(start))return;
         int lines=geometry.lineCountForVerseRange(start,end);
-        if(lines<PreviewConfig.SPEED_MIN_LINES || elapsedMs<PreviewConfig.SPEED_MIN_SECONDS*1000L)return;
-        double measured=(elapsedMs/1000.0)/lines,old=prefs.murajaahSecondsPerLine();
-        prefs.setMurajaahSecondsPerLine(smoothedClamped(old,measured));
-    }
-
-    private double smoothedClamped(double old,double measured){
-        double blended=0.7*old+0.3*measured;
-        double low=old*(1.0-PreviewConfig.SPEED_MAX_CHANGE_RATIO),high=old*(1.0+PreviewConfig.SPEED_MAX_CHANGE_RATIO);
-        return Math.max(low,Math.min(high,blended));
+        double old=prefs.murajaahSecondsPerLine();
+        prefs.setMurajaahSecondsPerLine(HifzCadence.recalibrate(old,lines,elapsedMs));
     }
 
     private void checkpointMurajaah(long elapsed){
