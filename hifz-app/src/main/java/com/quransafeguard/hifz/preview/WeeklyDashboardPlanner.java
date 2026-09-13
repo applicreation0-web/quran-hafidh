@@ -55,7 +55,7 @@ final class WeeklyDashboardPlanner {
                 out.add(new Row(date,day(date),"—","—","Parcours non démarré"));
                 continue;
             }
-            DailyPlan plan=HifzSchedule.INSTANCE.planFor(date.getDayOfWeek());
+            DailyPlan plan=HifzSchedule.INSTANCE.planFor(date.getDayOfWeek(),projectedRecent.size());
             String morningMode=modeFor(plan.getMorning().getKind());
             String eveningMode=modeFor(plan.getEvening().getKind());
             DashboardLedger.Record morningActual=ledger.find(date,morningMode);

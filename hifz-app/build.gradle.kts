@@ -103,10 +103,10 @@ val verifyHifzConvergenceRules by tasks.registering {
         val eink = file("src/main/java/com/quransafeguard/hifz/preview/EinkController.java").readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
 
-        check(core.contains("PlannedSession(SessionKind.SABQI_TODAY_REVIEW, 30)")
-                && core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 60)")
-                && core.contains("PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 30)")
-                && core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 30)")) {
+        check(core.contains("EVENING_REVIEW_MINUTES = 30")
+                && core.contains("CONSOLIDATION_MINUTES = 30")
+                && core.contains("ANCHORING_ENVELOPE_MINUTES = 60")
+                && core.contains("MAINTENANCE_MINUTES = 45")) {
             "Fixed timed sessions must be defined by HifzSchedule, not duplicate PreviewConfig constants."
         }
         check(config.contains("ITQAN_VISIBLE_REPS_WORKING = 15"))

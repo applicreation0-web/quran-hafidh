@@ -142,31 +142,39 @@ data class DailyPlan(val morning: PlannedSession, val evening: PlannedSession)
 data class ScheduledSession(val date: LocalDate, val type: SessionType, val overdue: Boolean = false)
 
 object HifzSchedule {
+    const val RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION = 36
+    const val EVENING_REVIEW_MINUTES = 30
+    const val CONSOLIDATION_MINUTES = 30
+    const val ANCHORING_ENVELOPE_MINUTES = 60
+    const val MAINTENANCE_MINUTES = 45
+
     fun typeFor(day: DayOfWeek): SessionType = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> SessionType.SABQI
         DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> SessionType.ITQAN
         DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> SessionType.MURAJAAH
     }
 
-    /** Definitive two-session weekly plan. A zero target means repetition-driven, not timed. */
-    fun planFor(day: DayOfWeek): DailyPlan = when (day) {
+    /** A zero target means repetition-driven with no time envelope. */
+    fun planFor(day: DayOfWeek, recentBlockCount: Int): DailyPlan = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
             PlannedSession(SessionKind.SABQI_NEW, 0),
-            PlannedSession(SessionKind.SABQI_TODAY_REVIEW, 30)
+            PlannedSession(SessionKind.SABQI_TODAY_REVIEW, EVENING_REVIEW_MINUTES)
         )
         DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> DailyPlan(
-            PlannedSession(SessionKind.ITQAN, 0),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 60)
+            PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
         )
-        DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> DailyPlan(
-            PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 30),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 30)
+        DayOfWeek.SATURDAY -> DailyPlan(
+            PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
+        )
+        DayOfWeek.SUNDAY -> DailyPlan(
+            if (recentBlockCount >= RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
+                PlannedSession(SessionKind.RECENT_SABQI_REVIEW, CONSOLIDATION_MINUTES)
+            else PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
         )
     }
-
-    /** Legacy compatibility helper. Runtime migration replaces this with planFor(). */
-    fun hasEveningMurajaah(day: DayOfWeek): Boolean =
-        day == DayOfWeek.TUESDAY || day == DayOfWeek.THURSDAY
 
     fun scheduled(date: LocalDate, programStartDate: LocalDate, today: LocalDate): ScheduledSession? {
         if (date < programStartDate) return null

@@ -37,10 +37,10 @@ public final class Lot2SourceContractTest {
         assertTrue(main.contains("DayOfWeek.WEDNESDAY") && main.contains("DayOfWeek.FRIDAY"));
         assertTrue(main.contains("HifzCadence.advisoryFiveLineRange"));
         assertTrue(main.contains("prefs.recentSabqi().isEmpty()"));
-        assertTrue(core.contains("PlannedSession(SessionKind.SABQI_TODAY_REVIEW, 30)"));
-        assertTrue(core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 60)"));
-        assertTrue(core.contains("PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 30)"));
-        assertTrue(core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 30)"));
+        assertTrue(core.contains("EVENING_REVIEW_MINUTES = 30"));
+        assertTrue(core.contains("ANCHORING_ENVELOPE_MINUTES = 60"));
+        assertTrue(core.contains("CONSOLIDATION_MINUTES = 30"));
+        assertTrue(core.contains("MAINTENANCE_MINUTES = 45"));
         assertFalse(core.contains("MICRO_REVIEW"));
     }
 

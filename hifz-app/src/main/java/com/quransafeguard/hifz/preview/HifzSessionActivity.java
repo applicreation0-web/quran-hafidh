@@ -272,7 +272,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void rebalanceRecentWindow() {
         List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
         if (recent.isEmpty()) return;
-        int recentWindowMinutes = HifzSchedule.INSTANCE.planFor(DayOfWeek.SATURDAY).getMorning().getTargetMinutes();
+        int recentWindowMinutes = HifzSchedule.INSTANCE.planFor(
+            DayOfWeek.SUNDAY, HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
+            .getMorning().getTargetMinutes();
         int capacity = HifzCadence.targetFiveLineCapacity(recentWindowMinutes, prefs.murajaahSecondsPerLine());
         int total = 0;
         for (HifzPrefs.RecentSabqi item : recent) total += Math.max(0, item.endLine - item.startLine + 1);
@@ -666,15 +668,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         return SABQI_TODAY_REVIEW.equals(mode) || RECENT_SABQI_REVIEW.equals(mode) || MURAJAAH.equals(mode);
     }
     private int scheduledTargetMinutes(SessionKind kind) {
-        DailyPlan plan = HifzSchedule.INSTANCE.planFor(LocalDate.now().getDayOfWeek());
+        DailyPlan plan = HifzSchedule.INSTANCE.planFor(
+            LocalDate.now().getDayOfWeek(), prefs.recentSabqi().size());
         if (plan.getMorning().getKind() == kind) return plan.getMorning().getTargetMinutes();
         if (plan.getEvening().getKind() == kind) return plan.getEvening().getTargetMinutes();
         throw new IllegalStateException("Mode " + kind + " absent du planning " + LocalDate.now().getDayOfWeek());
     }
     private int targetMinutes(){
-        if (SABQI.equals(mode)) return PreviewConfig.SABQI_MINUTES_WORKING;
+        if (SABQI.equals(mode)) return scheduledTargetMinutes(SessionKind.SABQI_NEW);
         if (SABQI_TODAY_REVIEW.equals(mode)) return scheduledTargetMinutes(SessionKind.SABQI_TODAY_REVIEW);
-        if (ITQAN.equals(mode)) return PreviewConfig.ITQAN_MINUTES_WORKING;
+        if (ITQAN.equals(mode)) return scheduledTargetMinutes(SessionKind.ITQAN);
         if (RECENT_SABQI_REVIEW.equals(mode)) return scheduledTargetMinutes(SessionKind.RECENT_SABQI_REVIEW);
         return scheduledTargetMinutes(SessionKind.OLD_ITQAN_MURAJAAH);
     }

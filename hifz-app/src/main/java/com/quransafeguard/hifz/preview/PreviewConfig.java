@@ -6,8 +6,6 @@ public final class PreviewConfig {
 
     public static final int SCHEMA_VERSION = 4;
     public static final int SABQI_LINES = 5; // frozen
-    public static final int SABQI_MINUTES_WORKING = 90;
-    public static final int ITQAN_MINUTES_WORKING = 60;
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
     public static final int SABQI_VISIBLE_REPS = 15;
