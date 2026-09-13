@@ -78,6 +78,14 @@ class HifzCoreTest {
         assertPlan(DayOfWeek.SUNDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
     }
 
+    @Test fun directSessionTargetsDoNotDependOnTodaysSchedule() {
+        assertEquals(0, HifzSchedule.targetMinutesFor(SessionKind.SABQI_NEW))
+        assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.SABQI_TODAY_REVIEW))
+        assertEquals(60, HifzSchedule.targetMinutesFor(SessionKind.ITQAN))
+        assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.RECENT_SABQI_REVIEW))
+        assertEquals(45, HifzSchedule.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
+    }
+
     @Test fun sundaySwitchesToConsolidationAtTheCentralizedThreshold() {
         assertEquals(36, HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
         assertEquals(SessionKind.ITQAN,
