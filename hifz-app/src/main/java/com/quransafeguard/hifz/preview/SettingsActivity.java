@@ -280,7 +280,7 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void confirmReset(){
         new AlertDialog.Builder(this).setTitle("Réinitialiser la progression Hifz ?")
-            .setMessage("Efface la progression locale (leçons, ancrage, entretien, positions et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
+            .setMessage("Efface la progression Hifz locale (leçons, ancrage, entretien, positions et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
             .setNegativeButton("Annuler",null).setPositiveButton("Réinitialiser",(d,w)->{prefs.resetPreviewState();getSharedPreferences("hifz_preview_session_gates",MODE_PRIVATE).edit().clear().apply();refreshAll();}).show();
     }
 }
