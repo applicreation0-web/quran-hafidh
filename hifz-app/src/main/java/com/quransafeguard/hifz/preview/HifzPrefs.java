@@ -13,6 +13,7 @@ import org.json.JSONObject;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -218,6 +219,13 @@ public final class HifzPrefs {
     public List<VerseRange> unconsolidatedPromotedRanges() { return parseRangesAllowEmpty("unconsolidatedPromotedRanges"); }
     public List<VerseRange> legacyMurajaahPromotedRanges() { return parseRangesAllowEmpty("legacyMurajaahPromotedRanges"); }
 
+    /** Effective Itqan work corpus: configured base ranges plus every snowball promotion. Read-only to UI callers. */
+    public List<VerseRange> effectiveItqanRanges() {
+        ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
+        all.addAll(promotedRanges());
+        return Collections.unmodifiableList(normalizeRanges(all));
+    }
+
     public boolean setItqanRanges(List<VerseRange> ranges) {
         if (ranges == null || ranges.isEmpty()) return false;
         List<VerseRange> normalized = normalizeRanges(ranges);
@@ -233,9 +241,7 @@ public final class HifzPrefs {
 
     /** All base Itqan plus every snowball promotion, irrespective of consolidation status. */
     public EligibleCorpus itqanWorkCorpus() {
-        ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
-        all.addAll(promotedRanges());
-        return EligibleCorpus.Companion.of(all);
+        return EligibleCorpus.Companion.of(effectiveItqanRanges());
     }
 
     /** Compatibility alias while the runtime migration is staged. */
@@ -393,10 +399,6 @@ public final class HifzPrefs {
     public double murajaahSecondsPerLine() { return p.getFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING); }
     public void setMurajaahSecondsPerLine(double value) {
         if (value > 0.0 && Double.isFinite(value)) p.edit().putFloat("murajaahSecPerLine", (float) value).apply();
-    }
-    public double recentSecondsPerLine() { return p.getFloat("recentSecPerLine", (float) PreviewConfig.INITIAL_RECENT_SECONDS_PER_LINE_WORKING); }
-    public void setRecentSecondsPerLine(double value) {
-        if (value > 0.0 && Double.isFinite(value)) p.edit().putFloat("recentSecPerLine", (float) value).apply();
     }
 
     public boolean forceEink() { return p.getBoolean("forceEink", false); }
