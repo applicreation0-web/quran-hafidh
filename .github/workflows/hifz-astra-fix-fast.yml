@@ -1,0 +1,66 @@
+name: Quran Hifz Astra fix fast TDD
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.3-astra-fix-all
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  fast-tdd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Inject canonical Mushaf and audited Tafsir sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          tafsir_dst="app/src/plus/assets/tafsir"
+          rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
+          cp baseline109/extracted/assets/tafsir/* "$tafsir_dst/"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate Hifz geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Astra regression unit tests and compile instrumented tests
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest :hifz-app:compileDebugAndroidTestSources --stacktrace
