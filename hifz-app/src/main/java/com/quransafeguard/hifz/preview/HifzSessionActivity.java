@@ -397,17 +397,28 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             + " · " + status.ageDays + " j · " + attendance);
         showCurrent();
         if (!timedSessionLimitReached) {
-            addRoundAction("✓", "Revu", v -> advanceRecentReview());
-            addRoundAction("!", "À renforcer", v -> advanceRecentReview());
+            addRoundAction("✓", "Revu", v -> markRecentReviewed());
+            addRoundAction("!", "À renforcer", v -> deferRecentReview());
         }
     }
 
-    private void advanceRecentReview() {
+    private void markRecentReviewed() {
         if (!takeRepLock()) return;
-        List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
-        if (recent.isEmpty()) { renderMode(); return; }
-        recentReviewIndex = PreviewConfig.nextRecentReviewIndex(recentReviewIndex, recent.size());
-        prefs.setRecentSabqiReviewIndex(recentReviewIndex);
+        if (!prefs.markRecentReviewed(recentReviewIndex)) {
+            onError("Impossible d’enregistrer ce bloc comme revu.");
+            return;
+        }
+        recentReviewIndex = prefs.recentSabqiReviewIndex();
+        renderMode();
+    }
+
+    private void deferRecentReview() {
+        if (!takeRepLock()) return;
+        if (!prefs.deferRecentBlock(recentReviewIndex)) {
+            onError("Impossible de reporter ce bloc à renforcer.");
+            return;
+        }
+        recentReviewIndex = prefs.recentSabqiReviewIndex();
         renderMode();
     }
 
