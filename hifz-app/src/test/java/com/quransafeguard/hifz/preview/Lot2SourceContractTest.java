@@ -69,4 +69,13 @@ public final class Lot2SourceContractTest {
         assertTrue(config.contains("ITQAN_LIGHT_75_REPS = 5"));
         assertTrue(config.contains("ITQAN_LIGHT_100_REPS = 5"));
     }
+
+    @Test public void failedAnchoringStartsTheDeferredPageWithAFreshRunningClock() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(prefs.contains(".putLong(\"itqanElapsedMs\", 0L)"));
+        assertTrue(session.contains("restartAnchoringClockAfterDeferral()"));
+        assertTrue(session.contains("clock.reset()"));
+        assertTrue(session.contains("clock.resume()"));
+    }
 }
