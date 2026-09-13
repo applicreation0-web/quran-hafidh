@@ -62,24 +62,26 @@ final class DashboardLedger {
         if(dateText==null||dateText.isEmpty())return;
         LocalDate date;
         try{date=LocalDate.parse(dateText);}catch(RuntimeException e){return;}
-        List<Record> items=records();
-        boolean same=false;
-        ArrayList<Record> next=new ArrayList<>();
-        for(Record r:items){
-            if(r.date.equals(date)&&r.type.equals(type)){
-                if(r.label.equals(label))same=true;
-                next.add(new Record(date,type,label));
-            }else if(!r.date.isBefore(LocalDate.now().minusDays(120)))next.add(r);
-        }
-        if(same)return;
-        boolean exists=false;
-        for(Record r:next)if(r.date.equals(date)&&r.type.equals(type)){exists=true;break;}
-        if(!exists)next.add(new Record(date,type,label));
+        List<Record> next=mergeRecords(records(),date,type,label,LocalDate.now());
         JSONArray array=new JSONArray();
         try{
             for(Record r:next){JSONObject o=new JSONObject();o.put("date",r.date.toString());o.put("type",r.type);o.put("label",r.label);array.put(o);}
             p.edit().putString(KEY,array.toString()).apply();
         }catch(Exception ignored){}
+    }
+
+    static List<Record> mergeRecords(List<Record> items,LocalDate date,String type,String label,LocalDate today){
+        ArrayList<Record> next=new ArrayList<>();
+        LocalDate cutoff=today.minusDays(120);
+        if(items!=null){
+            for(Record r:items){
+                if(r==null||r.date==null||r.date.isBefore(cutoff))continue;
+                if(r.date.equals(date)&&r.type.equals(type))continue;
+                next.add(r);
+            }
+        }
+        if(date!=null&&!date.isBefore(cutoff))next.add(new Record(date,type,label==null?"":label));
+        return next;
     }
 
     private List<Record> records(){
