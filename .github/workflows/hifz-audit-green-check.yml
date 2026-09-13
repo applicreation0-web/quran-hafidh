@@ -1,0 +1,43 @@
+name: Hifz audit GREEN check
+
+on:
+  push:
+    branches:
+      - helper/hifz-0.7.3-audit-green-check
+    paths:
+      - .github/workflows/hifz-audit-green-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  green-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Claude P0 and P1 fixes and frozen Ancrage rules
+        shell: python
+        run: |
+          from pathlib import Path
+          session = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java').read_text()
+          prefs = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java').read_text()
+          core = Path('hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt').read_text()
+          config = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java').read_text()
+          workflow = Path('.github/workflows/hifz-test-app.yml').read_text()
+          assert 'HifzSchedule.INSTANCE.targetMinutesFor' in session
+          assert 'scheduledTargetMinutes(' not in session
+          assert 'absent du planning' not in session
+          assert 'fun targetMinutesFor(kind: SessionKind)' in core
+          assert 'canonicalRecentOrder(recent)' in session
+          assert 'removeRecentBlocks(promotedBlocks)' in session
+          assert 'recent.get(0).startLine' not in session
+          assert 'canonicalRecentOrder(' in prefs and 'withoutRecentBlocks(' in prefs
+          assert ':hifz-app:connectedDebugAndroidTest' in workflow
+          frozen = [
+              'ITQAN_LIGHT_VISIBLE_REPS = 20', 'ITQAN_LIGHT_25_REPS = 0',
+              'ITQAN_LIGHT_50_REPS = 5', 'ITQAN_LIGHT_75_REPS = 5',
+              'ITQAN_LIGHT_100_REPS = 5', 'ITQAN_LIGHT_TOTAL_REPS = 35',
+              'ITQAN_TOTAL_REPS = 40', 'finalStageReveals < 2'
+          ]
+          for value in frozen: assert value in config, value
+          print('CLAUDE_P0_P1_GREEN_AND_ANCRAGE_FROZEN')
