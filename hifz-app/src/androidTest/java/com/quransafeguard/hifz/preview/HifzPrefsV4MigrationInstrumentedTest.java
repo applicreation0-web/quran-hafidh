@@ -12,9 +12,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.time.LocalDate;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public final class HifzPrefsV4MigrationInstrumentedTest {
@@ -42,20 +44,26 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 74)));
         assertEquals(new VerseRef(49, 1), prefs.itqanCursor());
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
+        assertTrue(prefs.consolidationAttendanceDates().isEmpty());
+        assertTrue(prefs.forcedPromotedRanges().isEmpty());
         AnchoringQueue.Entry first = prefs.currentAnchoringEntry(GeometryRepository.get(context));
         assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, first.origin);
         assertEquals(AnchoringQueue.Protocol.LIGHT, first.protocol);
     }
 
-    @Test public void alreadyV4InstallPurgesObsoleteStableRecentLines() {
+    @Test public void alreadyV4InstallPurgesObsoleteStableRecentLinesAndRepairsNewOptionalKeys() {
         raw.edit()
             .putInt("schema", 4)
             .putString("stableRecentLines", "[{\"start\":10,\"end\":14}]")
             .commit();
 
-        new HifzPrefs(context);
+        HifzPrefs prefs = new HifzPrefs(context);
 
         assertFalse(raw.contains("stableRecentLines"));
+        assertTrue(raw.contains("consolidationAttendanceDates"));
+        assertTrue(raw.contains("forcedPromotedRanges"));
+        assertTrue(prefs.consolidationAttendanceDates().isEmpty());
+        assertTrue(prefs.forcedPromotedRanges().isEmpty());
     }
 
     @Test public void validatedAnchoringPageJoinsMaintenanceWithoutTeleportingItsCursor() {
@@ -72,6 +80,78 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
 
         assertTrue(prefs.murajaahCorpus().contains(start));
         assertEquals(naturalMaintenanceCursor, prefs.murajaahCursor());
+    }
+
+    @Test public void consolidationAttendanceIsPersistedAtCompletionWithoutDashboardNavigation() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        assertTrue(prefs.completeRecentSabqiReview("2026-01-04", 0, "Consolidation"));
+        assertTrue(prefs.completeRecentSabqiReview("2026-01-04", 0, "Consolidation reprise"));
+        assertTrue(prefs.completeRecentSabqiReview("2026-01-11", 0, "Consolidation"));
+
+        assertEquals(2, prefs.consolidationAttendanceDates().size());
+        assertEquals(LocalDate.of(2026, 1, 4), prefs.consolidationAttendanceDates().get(0));
+        assertEquals(LocalDate.of(2026, 1, 11), prefs.consolidationAttendanceDates().get(1));
+    }
+
+    @Test public void forcedPromotionSurvivesQueueReconciliationAsDistinctOrigin() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        GeometryRepository geometry = GeometryRepository.get(context);
+        VerseRef verse = new VerseRef(2, 75);
+
+        assertTrue(prefs.addPromotedVerses(Collections.singletonList(verse), true));
+        assertTrue(prefs.reconcileAnchoringQueue(geometry));
+
+        boolean found = false;
+        for (AnchoringQueue.Entry entry : prefs.anchoringQueue()) {
+            VerseRef start = GeometryRepository.parseVerse(entry.start);
+            VerseRef end = GeometryRepository.parseVerse(entry.end);
+            if (GeometryRepository.ordinal(verse) >= GeometryRepository.ordinal(start)
+                    && GeometryRepository.ordinal(verse) <= GeometryRepository.ordinal(end)) {
+                assertEquals(AnchoringQueue.Origin.FORCED_PROMOTION, entry.origin);
+                found = true;
+            }
+        }
+        assertTrue(found);
+    }
+
+    @Test public void promotionInvalidatesAnchoringCacheAndNextReadReconcilesItOnce() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        GeometryRepository geometry = GeometryRepository.get(context);
+        assertFalse(raw.getBoolean("anchoringQueueInitialized", false));
+        assertTrue(prefs.currentAnchoringEntry(geometry) != null);
+        assertTrue(raw.getBoolean("anchoringQueueInitialized", false));
+
+        assertTrue(prefs.addPromotedVerses(Collections.singletonList(new VerseRef(2, 75)), false));
+        assertFalse(raw.getBoolean("anchoringQueueInitialized", true));
+        assertTrue(prefs.currentAnchoringEntry(geometry) != null);
+        assertTrue(raw.getBoolean("anchoringQueueInitialized", false));
+    }
+
+    @Test public void failedAnchoringAtomicallyClearsElapsedAndSinglePageDoesNotImmediateLoop() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        String one = "[{\"start\":\"49:1\",\"end\":\"49:5\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]";
+        raw.edit()
+            .putString("anchoringQueue", one)
+            .putBoolean("anchoringQueueInitialized", true)
+            .putInt("anchoringQueueIndex", 0)
+            .putLong("itqanElapsedMs", 55_000L)
+            .commit();
+
+        assertTrue(prefs.failAndDeferAnchoring(new VerseRef(49, 1), new VerseRef(49, 5)));
+        assertEquals(0L, prefs.elapsedFor("ITQAN"));
+        assertNull(prefs.currentAnchoringEntry(GeometryRepository.get(context)));
+    }
+
+    @Test public void completedAnchoringEntryMissingFromQueueFailsClosed() {
+        HifzPrefs prefs = new HifzPrefs(context);
+        GeometryRepository geometry = GeometryRepository.get(context);
+        prefs.currentAnchoringEntry(geometry);
+        int before = prefs.anchoringQueue().size();
+
+        assertFalse(prefs.completeItqanUnitAndConsolidate(
+            new VerseRef(2, 1), new VerseRef(2, 1), new VerseRef(2, 2),
+            "2026-09-13", "must fail"));
+        assertEquals(before, prefs.anchoringQueue().size());
     }
 
     @Test public void schemaThreeMigrationIsAtomicAndPreservesUnrelatedProgress() {
@@ -96,6 +176,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
         assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
+        assertTrue(prefs.consolidationAttendanceDates().isEmpty());
     }
 
     @Test public void legacyRecentEntryWithoutAddedOnUsesTheMigrationFallback() {
