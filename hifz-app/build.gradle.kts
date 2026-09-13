@@ -57,8 +57,11 @@ val verifyHifzCosmeticContract by tasks.registering {
         check(audio.contains("attachInline") && audio.contains("detachInline")) {
             "Audio controller must expose explicit inline attach/detach lifecycle."
         }
-        check(session.contains("audioHost") && study.contains("audioHost")) {
-            "Structured sessions and Study reader must reserve a non-overlay inline audio host below the header."
+        check(session.contains("audioHost")
+                && !study.contains("audioHost")
+                && !study.contains("HifzAudioDialog")
+                && !study.contains("openAudio()")) {
+            "Structured Hifz sessions must keep inline audio, while Lecture/Study must remain audio-free."
         }
         check(ui.contains("iconButton") && ui.contains("settingRow")) {
             "Compact icon hit-targets and settings rows are required by the BOOX cosmetic contract."
@@ -72,8 +75,13 @@ val verifyHifzCosmeticContract by tasks.registering {
         check(study.contains("readerActions") && study.contains("pageRail")) {
             "Reader actions and page slider must be separate compact surfaces."
         }
-        check(study.contains("title.setSingleLine(true)") && study.contains("tafsirTextControl") && study.contains("tafsirEditionButton")) {
-            "Tafsir header and edition controls must remain compact liseuse surfaces."
+        check(study.contains("title.setSingleLine(true)")
+                && study.contains("tafsirTextControl")
+                && study.contains("PopupMenu")
+                && study.contains("showTafsirEditionMenu")
+                && study.contains("available.size() <= 1")
+                && !study.contains("tafsirEditionButton")) {
+            "Tafsir source selection must stay compact, hide unavailable authors, and use one dropdown only when needed."
         }
     }
 }
