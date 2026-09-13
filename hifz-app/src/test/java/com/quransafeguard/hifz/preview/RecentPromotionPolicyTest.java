@@ -4,7 +4,6 @@ import org.junit.Test;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -36,16 +35,21 @@ public final class RecentPromotionPolicyTest {
         assertFalse(decision.promote);
     }
 
-    @Test public void plannedAttendanceStartsOnlyWhenSundayConsolidationIsActivated() {
-        LocalDate activation = ADDED.plusDays(84); // Monday 25 March 2024.
-        LocalDate firstPlannedSunday = LocalDate.of(2024, 3, 31);
-        RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
-            ADDED, ADDED.plusDays(91), activation,
-            Collections.singletonList(firstPlannedSunday), 40, true);
-        assertEquals(1, decision.plannedSessions);
-        assertEquals(1, decision.requiredSessions);
-        assertEquals(1, decision.completedSessions);
-        assertTrue(decision.promote);
+    @Test public void lateConsolidationActivationDoesNotLowerTheAttendanceBar() {
+        LocalDate activation = ADDED.plusDays(84);
+        List<LocalDate> firstTwo = completedSundaysFrom(activation, 2);
+        RecentPromotionPolicy.Decision early = RecentPromotionPolicy.evaluate(
+            ADDED, ADDED.plusDays(91), activation, firstTwo, 40, true);
+        assertEquals(13, early.plannedSessions);
+        assertEquals(10, early.requiredSessions);
+        assertEquals(2, early.completedSessions);
+        assertFalse(early.promote);
+
+        LocalDate later = activation.plusDays(70);
+        RecentPromotionPolicy.Decision ready = RecentPromotionPolicy.evaluate(
+            ADDED, later, activation, completedSundaysFrom(activation, 10), 40, true);
+        assertEquals(10, ready.completedSessions);
+        assertTrue(ready.promote);
     }
 
     @Test public void sixtyFirstBlockForcesOnlyTheOldest() {
@@ -59,8 +63,13 @@ public final class RecentPromotionPolicyTest {
     }
 
     private static List<LocalDate> completedSundays(int count) {
+        return completedSundaysFrom(LocalDate.of(2024, 1, 1), count);
+    }
+
+    private static List<LocalDate> completedSundaysFrom(LocalDate start, int count) {
         ArrayList<LocalDate> dates = new ArrayList<>();
-        LocalDate date = LocalDate.of(2024, 1, 7);
+        LocalDate date = start;
+        while (date.getDayOfWeek() != java.time.DayOfWeek.SUNDAY) date = date.plusDays(1);
         for (int i = 0; i < count; i++) dates.add(date.plusWeeks(i));
         return dates;
     }
