@@ -43,6 +43,14 @@ public final class FinalUiPolishSourceContractTest {
         assertFalse(study.contains("new GradientDrawable()"));
     }
 
+    @Test public void studyTafsirHasLargeInvisibleHitTargetSeparatedFromPageSlider() throws Exception {
+        String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        assertTrue("whole Tafsir action must be tappable, not only the 44dp icon", study.contains("tafsirAction.setOnClickListener"));
+        assertTrue("Tafsir action needs a BOOX-friendly invisible hit height", study.contains("tafsirAction.setMinimumHeight(Ui.dp(this, 60))"));
+        assertTrue("Tafsir action needs a BOOX-friendly invisible hit width", study.contains("tafsirAction.setMinimumWidth(Ui.dp(this, 88))"));
+        assertTrue("page slider must have explicit vertical separation from Tafsir action", study.contains("railParams.topMargin = Ui.dp(this, 8)"));
+    }
+
     @Test public void audioRemainsAvailableInHifzAndFreeMemOnly() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
