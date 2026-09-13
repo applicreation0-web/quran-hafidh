@@ -1,6 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.ViewGroup;
@@ -14,18 +15,26 @@ import java.time.LocalDate;
 
 /** Small J10 prelude fed by the single acquired-line list; it is not a new weekly session type. */
 public final class J10ReviewActivity extends android.app.Activity implements MushafView.Listener {
+    public static final String EXTRA_HOST_MODE = "j10HostMode";
+
     private J10ReviewPlanner planner;
     private J10ReviewPlanner.PriorityGroup group;
+    private J10ReviewProgress reviewProgress;
+    private HifzPrefs prefs;
     private MushafView mushaf;
     private TextView title;
     private TextView status;
     private LinearLayout actions;
     private int currentPage = 1;
     private boolean shown;
+    private String hostMode;
+    private long activeStartedAt = -1L;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         planner = new J10ReviewPlanner(this);
+        prefs = new HifzPrefs(this);
+        hostMode = safeHostMode(getIntent().getStringExtra(EXTRA_HOST_MODE));
         buildUi();
         renderPriority();
     }
@@ -36,7 +45,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
         LinearLayout top = Ui.row(this);
         top.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 6), 0);
-        top.addView(Ui.iconButton(this, "", "Quitter", v -> moveTaskToBack(true)));
+        top.addView(Ui.iconButton(this, "←", "Quitter", v -> moveTaskToBack(true)));
         title = Ui.text(this, "Priorité J10", 12.5f, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER_VERTICAL);
@@ -70,6 +79,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
             finish();
             return;
         }
+        reviewProgress = new J10ReviewProgress(group.firstPage, group.lastPage);
         currentPage = group.firstPage;
         title.setText("Priorité J10 · J" + group.maxAgeDays + " · " + group.lineIds.size() + " ligne(s)");
         if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.NON_TENABLE) {
@@ -85,6 +95,10 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
     private void validateReviewed() {
         if (group == null || group.isEmpty()) return;
+        if (reviewProgress == null || !reviewProgress.canValidate()) {
+            Toast.makeText(this, "Affichez tout le passage avant de valider.", Toast.LENGTH_LONG).show();
+            return;
+        }
         if (!planner.markReviewed(group.lineIds, LocalDate.now())) {
             Toast.makeText(this, "Impossible d’enregistrer la révision J10.", Toast.LENGTH_LONG).show();
             return;
@@ -109,9 +123,26 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
     @Override public void onReady() { if (!shown) showCurrent(); }
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
-    @Override public void onPageShown(int page) { currentPage = page; }
+    @Override public void onPageShown(int page) {
+        currentPage = page;
+        if (reviewProgress != null) reviewProgress.markShown(page);
+    }
     @Override public void onPageSwipe(int delta) { goPage(delta); }
     @Override public void onVerseTap(VerseRef verse) {}
+
+    @Override protected void onResume() {
+        super.onResume();
+        activeStartedAt = SystemClock.elapsedRealtime();
+    }
+
+    @Override protected void onPause() {
+        if (activeStartedAt >= 0L && hostMode != null) {
+            long consumed = Math.max(0L, SystemClock.elapsedRealtime() - activeStartedAt);
+            prefs.setElapsedFor(hostMode, J10SessionBudget.addConsumed(prefs.elapsedFor(hostMode), consumed));
+        }
+        activeStartedAt = -1L;
+        super.onPause();
+    }
 
     @Override public void onBackPressed() { moveTaskToBack(true); }
 
@@ -124,5 +155,14 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     @Override protected void onDestroy() {
         if (mushaf != null) mushaf.destroySafely();
         super.onDestroy();
+    }
+
+    private static String safeHostMode(String mode) {
+        if (HifzSessionActivity.SABQI.equals(mode)
+                || HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
+                || HifzSessionActivity.ITQAN.equals(mode)
+                || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+                || HifzSessionActivity.MURAJAAH.equals(mode)) return mode;
+        return null;
     }
 }
