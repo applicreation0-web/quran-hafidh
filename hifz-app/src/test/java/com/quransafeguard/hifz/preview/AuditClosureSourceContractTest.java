@@ -45,6 +45,8 @@ public final class AuditClosureSourceContractTest {
         assertTrue(main.contains("prefs.currentAnchoringEntry(loaded)"));
         assertTrue(dashboard.contains("AnchoringQueue.visitOrder"));
         assertTrue(dashboard.contains("prefs.anchoringQueueIndex()"));
+        assertTrue(dashboard.contains("date.equals(today)&&prefs.anchoringDeferredToday()"));
+        assertTrue(dashboard.contains("Ancrage · page reportée"));
     }
 
     @Test public void localeTimerAndMurajaahCursorFixesRemainClosed() throws Exception {
@@ -52,6 +54,7 @@ public final class AuditClosureSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(prefs.contains("toLowerCase(Locale.ROOT) + \"ElapsedMs\""));
         assertTrue(session.contains("SessionTimerPolicy.label(mode, elapsed, targetMinutes())"));
+        assertTrue(session.contains("MurajaahTraversalPolicy.endpointAmbiguous"));
         assertFalse(session.contains("VerseRef itqanBefore = prefs.itqanCursor()"));
         assertFalse(session.contains("prefs.setItqanCursor(itqanBefore)"));
     }
