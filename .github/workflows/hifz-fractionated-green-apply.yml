@@ -1,0 +1,59 @@
+name: Apply Hifz fractionated anchoring GREEN
+
+on:
+  push:
+    branches: [helper/hifz-fractionated-green-apply]
+
+permissions:
+  contents: write
+
+jobs:
+  apply-green:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout helper patch branch
+        uses: actions/checkout@v4
+        with:
+          ref: helper/hifz-fractionated-green-apply
+          path: helper
+          fetch-depth: 1
+
+      - name: Checkout exact RED application branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.3-spec-update
+          path: target
+          fetch-depth: 1
+
+      - name: Apply exact GREEN patch atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target
+          test "$(git rev-parse HEAD)" = "0cba1cb934957c07be0af2241f3ed8b3b7bc07a1"
+          for patch in ../helper/tools/fractionated-green/*.patch; do
+            git apply --check "$patch"
+            git apply "$patch"
+          done
+
+          cat > /tmp/expected-files <<'EOF'
+          .github/workflows/hifz-test-app.yml
+          hifz-app/build.gradle.kts
+          hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzFractionatedAnchoringInstrumentedTest.java
+          hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java
+          hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+          hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java
+          hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java
+          hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java
+          hifz-app/src/test/java/com/quransafeguard/hifz/preview/HifzFractionatedAnchoringTest.java
+          EOF
+          git add --all
+          git diff --cached --name-only | sort > /tmp/actual-files
+          sort /tmp/expected-files -o /tmp/expected-files
+          diff -u /tmp/expected-files /tmp/actual-files
+
+          git config user.name "quran-hifz-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "feat(hifz): add fractionated anchoring"
+          git push origin HEAD:work/hifz-0.7.3-spec-update
