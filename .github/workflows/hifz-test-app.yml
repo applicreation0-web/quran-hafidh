@@ -127,7 +127,7 @@ jobs:
           ! grep -R -E 'mushaf-layout|Quran-coordinate|line\.words|maskedWordIds' hifz-app/src/main
 
       - name: Run complete Hifz regression and product-boundary suite
-        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:compileDebugAndroidTestSources :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
 
       - name: Assemble unsigned official release candidate
         run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace

@@ -59,12 +59,14 @@ public final class HifzPrefs {
                 .putString("sabqiStart", "2:75")
                 .putString("sabqiEnd", "2:286")
                 .putString("itqanRanges", defaultItqanRangesJson())
-                .putString("promotedRanges", "[]")
-                .putString("unconsolidatedPromotedRanges", "[]")
+                .putString("promotedRanges", bootstrapReconstructionJson())
+                .putString("unconsolidatedPromotedRanges", bootstrapReconstructionJson())
                 .putString("legacyMurajaahPromotedRanges", "[]")
+                .putString("anchoringQueue", "[]")
+                .putBoolean("anchoringQueueInitialized", false)
                 .putString("itqanRotationStart", "49:1")
                 .putString("itqanCursor", "49:1")
-                .putString("murajaahCursor", "49:1")
+                .putString("murajaahCursor", "2:1")
                 .putInt("sabqiLineCursor", -1)
                 .putInt("sabqiRep", 0)
                 .putInt("sabqiAssisted", 0)
@@ -90,6 +92,10 @@ public final class HifzPrefs {
                 .putString("murajaahActualEnd", "")
                 .putFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING)
                 .putFloat("recentSecPerLine", (float) PreviewConfig.INITIAL_RECENT_SECONDS_PER_LINE_WORKING)
+                .putBoolean("murajaahSpeedCalibrated", false)
+                .putInt("murajaahSpeedSamples", 0)
+                .putBoolean("recentSpeedCalibrated", false)
+                .putInt("recentSpeedSamples", 0)
                 .putBoolean("forceEink", false)
                 .putString("lastSabqiDate", "")
                 .putString("lastSabqiLabel", "")
@@ -106,6 +112,10 @@ public final class HifzPrefs {
         }
         if (schema == 2) {
             migrateV2ToV3();
+            schema = 3;
+        }
+        if (schema == 3) {
+            migrateV3ToV4();
             return;
         }
         if (schema != PreviewConfig.SCHEMA_VERSION) {
@@ -160,6 +170,41 @@ public final class HifzPrefs {
             .remove("murajaahBlockBElapsedMs")
             .putInt("schema", 3);
         if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v2 to v3");
+    }
+
+    /**
+     * Schema v4 turns the historical upper tail into pending reconstruction work. The single
+     * editor commit makes the corpus split, cursor repair and new persistent state atomic.
+     */
+    private void migrateV3ToV4() {
+        VerseRef tailStart = new VerseRef(49, 1);
+        VerseRef tailEnd = new VerseRef(114, 6);
+        List<VerseRange> base = subtractCoverage(parseRanges("itqanRanges"), tailStart, tailEnd);
+        if (base.isEmpty()) base = defaultItqanRanges();
+
+        ArrayList<VerseRange> promoted = new ArrayList<>(promotedRanges());
+        promoted.add(new VerseRange(tailStart, tailEnd));
+        ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
+        pending.add(new VerseRange(tailStart, tailEnd));
+        List<VerseRange> legacy = subtractCoverage(legacyMurajaahPromotedRanges(), tailStart, tailEnd);
+
+        VerseRef murajaah = safeRef(p.getString("murajaahCursor", "2:1"), new VerseRef(2, 1));
+        if (ordinalBetween(murajaah, tailStart, tailEnd)) murajaah = new VerseRef(2, 1);
+
+        SharedPreferences.Editor e = p.edit()
+            .putString("itqanRanges", rangesJson(normalizeRanges(base)))
+            .putString("promotedRanges", rangesJson(normalizeRanges(promoted)))
+            .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
+            .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))
+            .putString("murajaahCursor", murajaah.toString())
+            .putString("anchoringQueue", p.getString("anchoringQueue", "[]"))
+            .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
+            .putBoolean("murajaahSpeedCalibrated", p.getBoolean("murajaahSpeedCalibrated", false))
+            .putInt("murajaahSpeedSamples", Math.max(0, p.getInt("murajaahSpeedSamples", 0)))
+            .putBoolean("recentSpeedCalibrated", p.getBoolean("recentSpeedCalibrated", false))
+            .putInt("recentSpeedSamples", Math.max(0, p.getInt("recentSpeedSamples", 0)))
+            .putInt("schema", 4);
+        if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v3 to v4");
     }
 
     private void migrateLegacyGates(Context context) {
@@ -590,10 +635,23 @@ public final class HifzPrefs {
     }
 
     private static String defaultItqanRangesJson() {
+        return rangesJson(defaultItqanRanges());
+    }
+
+    private static List<VerseRange> defaultItqanRanges() {
         ArrayList<VerseRange> ranges = new ArrayList<>();
         ranges.add(new VerseRange(new VerseRef(2,1), new VerseRef(2,74)));
-        ranges.add(new VerseRange(new VerseRef(49,1), new VerseRef(114,6)));
-        return rangesJson(ranges);
+        return ranges;
+    }
+
+    private static String bootstrapReconstructionJson() {
+        return rangesJson(Collections.singletonList(
+            new VerseRange(new VerseRef(49,1), new VerseRef(114,6))));
+    }
+
+    private static boolean ordinalBetween(VerseRef value, VerseRef start, VerseRef endInclusive) {
+        int ordinal = GeometryRepository.ordinal(value);
+        return ordinal >= GeometryRepository.ordinal(start) && ordinal <= GeometryRepository.ordinal(endInclusive);
     }
 
     private static String rangesJson(List<VerseRange> ranges) {

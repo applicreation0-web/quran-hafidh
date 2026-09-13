@@ -46,12 +46,13 @@ public final class OfficialReleaseContractTest {
         assertFalse("mask entropy must not be regenerated per WebView instance", mushaf.contains("UUID.randomUUID"));
     }
 
-    @Test public void schemaV3SeparatesItqanWorkFromConsolidatedMurajaah() throws Exception {
+    @Test public void schemaV4SeparatesAnchoringWorkFromAcquiredMaintenance() throws Exception {
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
 
-        assertTrue("snowball engine requires schema v3", config.contains("SCHEMA_VERSION = 3"));
+        assertTrue("persistent anchoring state requires schema v4", config.contains("SCHEMA_VERSION = 4"));
         assertTrue("v2 state needs an explicit non-destructive migration", prefs.contains("migrateV2ToV3"));
+        assertTrue("v3 state needs an explicit atomic migration", prefs.contains("migrateV3ToV4"));
         assertTrue("unconsolidated promoted material must be durable", prefs.contains("unconsolidatedPromotedRanges"));
         assertTrue("historical promoted material must retain migration-time Murajaah visibility", prefs.contains("legacyMurajaahPromotedRanges"));
         assertTrue("Itqan work corpus must include all promoted material", prefs.contains("itqanWorkCorpus()"));

@@ -4,7 +4,7 @@ package com.quransafeguard.hifz.preview;
 public final class PreviewConfig {
     private PreviewConfig() {}
 
-    public static final int SCHEMA_VERSION = 3;
+    public static final int SCHEMA_VERSION = 4;
     public static final int SABQI_LINES = 5; // frozen
     public static final int SABQI_MINUTES_WORKING = 90;
     public static final int ITQAN_MINUTES_WORKING = 60;
