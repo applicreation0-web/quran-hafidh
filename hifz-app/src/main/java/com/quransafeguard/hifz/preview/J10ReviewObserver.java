@@ -25,9 +25,18 @@ final class J10ReviewObserver {
         seedRecentStreaks();
     }
 
+    /** Idempotent startup recovery closes any process-death gap between the Hifz and J10 writes. */
     void reconcileAll(LocalDate today) {
         planner.syncAcquired(today);
         reconcileRecent(today);
+        LocalDate sabqi = parsedDate(prefs.lastSabqiDate());
+        if (sabqi != null) creditCurrentSabqi(sabqi);
+        LocalDate reprise = parsedDate(prefs.lastSabqiTodayReviewDate());
+        if (reprise != null) creditCurrentSabqi(reprise);
+        LocalDate itqan = parsedDate(prefs.lastItqanDate());
+        if (itqan != null) creditItqan(itqan);
+        LocalDate murajaah = parsedDate(prefs.lastMurajaahDate());
+        if (murajaah != null) creditMurajaah(murajaah);
     }
 
     void onPreferenceChanged(String key, LocalDate today) {
@@ -38,20 +47,22 @@ final class J10ReviewObserver {
                 reconcileRecent(today);
                 break;
             case "lastSabqiDate":
+                planner.syncAcquired(today);
+                creditCurrentSabqi(dateOrToday(prefs.lastSabqiDate(), today));
+                break;
             case "lastSabqiTodayReviewDate":
                 planner.syncAcquired(today);
-                creditCurrentSabqi(today);
+                creditCurrentSabqi(dateOrToday(prefs.lastSabqiTodayReviewDate(), today));
                 break;
             case "lastItqanDate":
                 planner.syncAcquired(today);
-                creditItqan(today);
+                creditItqan(dateOrToday(prefs.lastItqanDate(), today));
                 break;
             case "lastMurajaahDate":
                 planner.syncAcquired(today);
-                creditMurajaah(today);
+                creditMurajaah(dateOrToday(prefs.lastMurajaahDate(), today));
                 break;
             default:
-                // Repetition counters, masks, timers and cursors must not trigger an O(Mushaf) J10 scan.
                 break;
         }
     }
@@ -78,13 +89,13 @@ final class J10ReviewObserver {
         recentStreaks.putAll(next);
     }
 
-    private void creditCurrentSabqi(LocalDate today) {
+    private void creditCurrentSabqi(LocalDate date) {
         int start = prefs.sabqiTodayReviewStartLine();
         int end = prefs.sabqiTodayReviewEndLine();
-        if (start >= 0 && end >= start) planner.reviewIndexes(start, end, today);
+        if (start >= 0 && end >= start) planner.reviewIndexes(start, end, date);
     }
 
-    private void creditItqan(LocalDate today) {
+    private void creditItqan(LocalDate date) {
         String label = prefs.lastItqanLabel();
         if (label == null || label.isEmpty()) return;
 
@@ -100,7 +111,7 @@ final class J10ReviewObserver {
             if (completed >= count) return;
             int from = PreviewConfig.fractionatedBlockStart(unit.size(), completed);
             int len = PreviewConfig.fractionatedBlockLength(unit.size(), completed);
-            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), today);
+            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
             return;
         }
 
@@ -112,17 +123,17 @@ final class J10ReviewObserver {
             int last = Math.max(0, count - 1);
             int from = PreviewConfig.fractionatedBlockStart(unit.size(), last);
             int len = PreviewConfig.fractionatedBlockLength(unit.size(), last);
-            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), today);
+            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
         } else {
-            planner.acquireAndReview(unit, today);
+            planner.acquireAndReview(unit, date);
         }
     }
 
-    private void creditMurajaah(LocalDate today) {
+    private void creditMurajaah(LocalDate date) {
         VerseRef[] range = parseRange(prefs.lastMurajaahLabel());
         if (range == null) return;
         List<String> ids = planner.traversalLineIds(range[0], range[1]);
-        if (!ids.isEmpty()) planner.acquireAndReview(ids, today);
+        if (!ids.isEmpty()) planner.acquireAndReview(ids, date);
     }
 
     static VerseRef[] parseRange(String label) {
@@ -137,6 +148,17 @@ final class J10ReviewObserver {
         } catch (RuntimeException invalid) {
             return null;
         }
+    }
+
+    private static LocalDate parsedDate(String text) {
+        if (text == null || text.trim().isEmpty()) return null;
+        try { return LocalDate.parse(text); }
+        catch (RuntimeException invalid) { return null; }
+    }
+
+    private static LocalDate dateOrToday(String text, LocalDate today) {
+        LocalDate parsed = parsedDate(text);
+        return parsed == null ? today : parsed;
     }
 
     private static String recentKey(HifzPrefs.RecentSabqi item) {
