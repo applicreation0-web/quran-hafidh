@@ -860,7 +860,11 @@ private void rebalanceRecentWindow() {
     @Override public void onReady(){if(!hasShown)showCurrent();}
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int page){currentPage=page;}
-    @Override protected void onResume(){super.onResume();if(!sessionCompleted&&!awaitingValidation&&!timedSessionLimitReached)clock.resume();}
+    @Override protected void onResume(){
+        super.onResume();
+        if(clock!=null)clock.syncPersistedElapsed(prefs.elapsedFor(mode));
+        if(!sessionCompleted&&!awaitingValidation&&!timedSessionLimitReached)clock.resume();
+    }
     @Override protected void onPause(){
         long elapsed=clock.pause();
         if(sessionCompleted&&!awaitingValidation)prefs.setElapsedFor(mode,0L);

@@ -625,6 +625,10 @@ public final class HifzPrefs {
         }
         next.addAll(expected.values());
         int index = anchoringQueueIndex(next.size());
+        boolean keepCurrent = p.getInt("itqanBlockIndex", 0) > 0;
+        next = new ArrayList<>(AnchoringQueue.mergeWithPromotionPriority(
+            next, index, keepCurrent, Collections.emptyList()));
+        index = 0;
         return p.edit()
             .putString("anchoringQueue", anchoringQueueJson(next))
             .putBoolean("anchoringQueueInitialized", true)

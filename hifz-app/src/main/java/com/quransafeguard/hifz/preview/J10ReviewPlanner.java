@@ -204,7 +204,7 @@ final class J10ReviewPlanner {
     }
 
     private int consumedMinutes(SessionKind kind, int targetMinutes) {
-        if (targetMinutes <= 0) return 0;
+        if (targetMinutes <= 0 || !isReusableJ10Kind(kind)) return 0;
         String mode = modeFor(kind);
         if (mode == null) return 0;
         long elapsed = prefs.elapsedFor(mode);
@@ -230,10 +230,22 @@ final class J10ReviewPlanner {
         for (int offset = 0; offset < days; offset++) {
             DailyPlan plan = HifzSchedule.INSTANCE.planFor(
                 start.plusDays(offset).getDayOfWeek(), Math.max(0, recentBlockCount), consolidationActivated);
-            out[offset] = Math.max(0, plan.getMorning().getTargetMinutes())
-                + Math.max(0, plan.getEvening().getTargetMinutes());
+            out[offset] = reusableCapacityMinutes(
+                    plan.getMorning().getKind(), plan.getMorning().getTargetMinutes())
+                + reusableCapacityMinutes(
+                    plan.getEvening().getKind(), plan.getEvening().getTargetMinutes());
         }
         return out;
+    }
+
+    private static int reusableCapacityMinutes(SessionKind kind, int targetMinutes) {
+        return isReusableJ10Kind(kind) ? Math.max(0, targetMinutes) : 0;
+    }
+
+    static boolean isReusableJ10Kind(SessionKind kind) {
+        return kind == SessionKind.SABQI_TODAY_REVIEW
+            || kind == SessionKind.RECENT_SABQI_REVIEW
+            || kind == SessionKind.OLD_ITQAN_MURAJAAH;
     }
 
     static int scheduledCapacityMinutes(LocalDate start, int days,
