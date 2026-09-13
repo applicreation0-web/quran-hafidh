@@ -41,6 +41,26 @@ public final class RecentQueueTest {
         assertEquals(0, HifzPrefs.indexAfterDeferral(2, 3));
     }
 
+    @Test public void promotionOrderRemainsCanonicalAfterStrengthenReordersDisplayQueue() {
+        List<HifzPrefs.RecentSabqi> display = HifzPrefs.deferRecent(queue(), 0);
+        assertEquals(20, display.get(0).startLine);
+        assertEquals(10, display.get(2).startLine);
+
+        List<HifzPrefs.RecentSabqi> canonical = HifzPrefs.canonicalRecentOrder(display);
+        assertEquals(10, canonical.get(0).startLine);
+        assertEquals(20, canonical.get(1).startLine);
+        assertEquals(30, canonical.get(2).startLine);
+    }
+
+    @Test public void removingPromotedCanonicalBlocksRemovesExactBlocksFromDisplayOrder() {
+        List<HifzPrefs.RecentSabqi> display = HifzPrefs.deferRecent(queue(), 0); // 20,30,10
+        List<HifzPrefs.RecentSabqi> canonical = HifzPrefs.canonicalRecentOrder(display); // 10,20,30
+        List<HifzPrefs.RecentSabqi> remaining = HifzPrefs.withoutRecentBlocks(display, canonical.subList(0, 2));
+
+        assertEquals(1, remaining.size());
+        assertEquals(30, remaining.get(0).startLine);
+    }
+
     private static List<HifzPrefs.RecentSabqi> queue() {
         ArrayList<HifzPrefs.RecentSabqi> out = new ArrayList<>();
         out.add(new HifzPrefs.RecentSabqi(10, 14, DAY, 0));
