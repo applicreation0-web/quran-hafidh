@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.quransafeguard.hifz.core.EligibleCorpus;
+import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -87,6 +88,7 @@ public final class HifzPrefs {
                 .putString("itqanUnitStart", "")
                 .putString("itqanUnitEnd", "")
                 .putString("recentSabqi", "[]")
+                .putString("recentConsolidationActivatedOn", "")
                 .putString("stableRecentLines", "[]")
                 .putLong("sabqiElapsedMs", 0L)
                 .putLong("itqanElapsedMs", 0L)
@@ -202,7 +204,13 @@ public final class HifzPrefs {
 
         VerseRef murajaah = safeRef(p.getString("murajaahCursor", "2:1"), new VerseRef(2, 1));
         if (ordinalBetween(murajaah, tailStart, tailEnd)) murajaah = new VerseRef(2, 1);
-        String recent = normalizeRecentJson(p.getString("recentSabqi", "[]"), LocalDate.now());
+        LocalDate migrationDay = LocalDate.now();
+        String recent = normalizeRecentJson(p.getString("recentSabqi", "[]"), migrationDay);
+        String activation = p.getString("recentConsolidationActivatedOn", "");
+        if ((activation == null || activation.isEmpty())
+                && recentCount(recent) >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
+            activation = migrationDay.toString();
+        }
 
         SharedPreferences.Editor e = p.edit()
             .putString("itqanRanges", rangesJson(normalizeRanges(base)))
@@ -210,6 +218,7 @@ public final class HifzPrefs {
             .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
             .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))
             .putString("recentSabqi", recent)
+            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
             .putString("murajaahCursor", murajaah.toString())
             .putString("anchoringQueue", p.getString("anchoringQueue", "[]"))
             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
@@ -245,6 +254,10 @@ public final class HifzPrefs {
     public int schema() { return p.getInt("schema", 0); }
     public LocalDate programStartDate() { return LocalDate.parse(required("programStartDate")); }
     public void setProgramStartDate(LocalDate value) { p.edit().putString("programStartDate", value.toString()).apply(); }
+    public LocalDate recentConsolidationActivatedOn() {
+        String value = p.getString("recentConsolidationActivatedOn", "");
+        return value == null || value.isEmpty() ? null : safeDate(value, null);
+    }
 
     private static String maskEntropyKey(String mode) {
         if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("mask entropy mode required");
@@ -335,12 +348,19 @@ public final class HifzPrefs {
         return p.edit().putInt("sabqiRep", rep).putInt("sabqiAssisted", assisted).commit();
     }
 
-    /** Sabqi completion queues the five-line block; promotion is deliberately deferred to recent-window pressure. */
+    /** Sabqi completion queues the five-line block; promotion is deliberately deferred to calendar/attendance policy. */
     public boolean completeSabqiBlock(int startLine, int endLine, int nextLineCursor, String date, String label) {
         List<RecentSabqi> queue = recentSabqi();
-        queue.add(new RecentSabqi(startLine, endLine, safeDate(date, LocalDate.now())));
+        LocalDate blockDate = safeDate(date, LocalDate.now());
+        queue.add(new RecentSabqi(startLine, endLine, blockDate));
+        String activation = p.getString("recentConsolidationActivatedOn", "");
+        if ((activation == null || activation.isEmpty())
+                && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
+            activation = blockDate.toString();
+        }
         return p.edit()
             .putString("recentSabqi", recentJson(queue))
+            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
             .putInt("sabqiLineCursor", nextLineCursor)
             .putInt("sabqiRep", 0)
             .putInt("sabqiAssisted", 0)
@@ -354,7 +374,7 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /** Compatibility overload: promotion is handled by the sliding-window rebalance. */
+    /** Compatibility overload: promotion is handled by the calendar/attendance rebalance. */
     public boolean completeSabqiBlock(int startLine, int endLine, VerseRef ignoredPromotion,
                                       int nextLineCursor, String date, String label) {
         return completeSabqiBlock(startLine, endLine, nextLineCursor, date, label);
@@ -592,8 +612,17 @@ public final class HifzPrefs {
 
     public void addRecentSabqi(int start, int end) {
         List<RecentSabqi> queue = recentSabqi();
-        queue.add(new RecentSabqi(start, end, LocalDate.now()));
-        saveRecent(queue);
+        LocalDate now = LocalDate.now();
+        queue.add(new RecentSabqi(start, end, now));
+        String activation = p.getString("recentConsolidationActivatedOn", "");
+        if ((activation == null || activation.isEmpty())
+                && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
+            activation = now.toString();
+        }
+        p.edit()
+            .putString("recentSabqi", recentJson(queue))
+            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
+            .apply();
     }
 
     public void removeFirstRecentSabqi() {
@@ -713,6 +742,11 @@ public final class HifzPrefs {
             throw new IllegalStateException("Corrupt recent Sabqi queue", error);
         }
         return out.toString();
+    }
+
+    private static int recentCount(String raw) {
+        try { return new JSONArray(raw == null ? "[]" : raw).length(); }
+        catch (Exception error) { throw new IllegalStateException("Corrupt recent Sabqi queue", error); }
     }
 
     private List<VerseRange> parseRanges(String key) {
