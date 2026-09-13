@@ -109,6 +109,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setGravity(Gravity.CENTER);
         readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
         LinearLayout tafsirAction = Ui.roundAction(this, "", "Tafsir", v -> openTafsir());
+        tafsirAction.setOnClickListener(v -> openTafsir());
+        tafsirAction.setMinimumWidth(Ui.dp(this, 88));
+        tafsirAction.setMinimumHeight(Ui.dp(this, 60));
+        tafsirAction.setClickable(true);
+        tafsirAction.setFocusable(true);
         tafsirButton = (Button) tafsirAction.getChildAt(0);
         tafsirButton.setEnabled(false);
         readerActions.addView(tafsirAction);
@@ -129,8 +134,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             @Override public void onStopTrackingTouch(SeekBar seekBar) { setPage(seekBar.getProgress() + 1); }
         });
         pageRail.addView(pageSeek, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        readerStack.addView(pageRail, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams railParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        railParams.topMargin = Ui.dp(this, 8);
+        readerStack.addView(pageRail, railParams);
         scheduleAutoHide();
     }
 
