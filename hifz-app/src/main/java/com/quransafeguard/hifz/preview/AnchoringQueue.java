@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 /** Persistent-domain model for one page in the anchoring queue. */
@@ -55,6 +56,43 @@ public final class AnchoringQueue {
             out.add(source.get((start + step) % source.size()));
         }
         return Collections.unmodifiableList(out);
+    }
+
+    /**
+     * Reconcile visit order so acquired promotions are handled before pending reconstruction.
+     * An already-started fractionated unit stays first and is never interrupted mid-page.
+     */
+    public static List<Entry> mergeWithPromotionPriority(List<Entry> existing, int currentIndex,
+                                                         boolean keepCurrent, List<Entry> additions) {
+        ArrayList<Entry> visit = new ArrayList<>();
+        if (existing != null && !existing.isEmpty()) visit.addAll(visitOrder(existing, currentIndex));
+        if (additions != null) visit.addAll(additions);
+
+        LinkedHashMap<String, Entry> unique = new LinkedHashMap<>();
+        for (Entry entry : visit) {
+            if (entry != null) unique.put(entry.start + "→" + entry.end, entry);
+        }
+        ArrayList<Entry> ordered = new ArrayList<>(unique.values());
+        Entry pinned = keepCurrent && !visit.isEmpty() ? visit.get(0) : null;
+
+        ArrayList<Entry> out = new ArrayList<>(ordered.size());
+        if (pinned != null) {
+            Entry canonicalPinned = unique.get(pinned.start + "→" + pinned.end);
+            if (canonicalPinned != null) out.add(canonicalPinned);
+        }
+        for (Entry entry : ordered) {
+            if (pinned != null && sameRange(entry, pinned)) continue;
+            if (entry.origin != Origin.RECONSTRUCTION) out.add(entry);
+        }
+        for (Entry entry : ordered) {
+            if (pinned != null && sameRange(entry, pinned)) continue;
+            if (entry.origin == Origin.RECONSTRUCTION) out.add(entry);
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    private static boolean sameRange(Entry a, Entry b) {
+        return a != null && b != null && a.start.equals(b.start) && a.end.equals(b.end);
     }
 
     /**
