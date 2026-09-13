@@ -44,6 +44,10 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
                 if (persistActiveHostTime(false)) {
                     if (!hostBudgetStore.markSlotConsumed(hostMode, today)) {
                         Log.e("QuranHifz", "Unable to persist J10-preempted host slot for " + hostMode);
+                    } else {
+                        // A fully substituted slot is not a completed Reprise/Consolidation/Entretien.
+                        // Clear the normal-session elapsed trigger before returning to the host activity.
+                        prefs.setElapsedFor(hostMode, 0L);
                     }
                     finish();
                     return;
@@ -69,7 +73,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
         LinearLayout top = Ui.row(this);
         top.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 6), 0);
-        top.addView(Ui.iconButton(this, "←", "Quitter", v -> moveTaskToBack(true)));
+        top.addView(Ui.iconButton(this, "", "Retour J10", v -> moveTaskToBack(true)));
         title = Ui.text(this, "Priorité J10", 12.5f, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER_VERTICAL);
