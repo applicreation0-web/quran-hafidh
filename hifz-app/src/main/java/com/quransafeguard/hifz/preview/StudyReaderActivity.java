@@ -108,15 +108,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions = Ui.row(this);
         readerActions.setGravity(Gravity.CENTER);
         readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
-        LinearLayout tafsirAction = Ui.roundAction(this, "", "Tafsir", v -> openTafsir());
-        tafsirAction.setOnClickListener(v -> openTafsir());
-        tafsirAction.setMinimumWidth(Ui.dp(this, 88));
-        tafsirAction.setMinimumHeight(Ui.dp(this, 60));
-        tafsirAction.setClickable(true);
-        tafsirAction.setFocusable(true);
-        tafsirButton = (Button) tafsirAction.getChildAt(0);
+        tafsirButton = tafsirReaderAction();
         tafsirButton.setEnabled(false);
-        readerActions.addView(tafsirAction);
+        readerActions.addView(tafsirButton);
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -136,9 +130,27 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         pageRail.addView(pageSeek, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         LinearLayout.LayoutParams railParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        railParams.topMargin = Ui.dp(this, 8);
+        railParams.topMargin = Ui.dp(this, 12);
         readerStack.addView(pageRail, railParams);
         scheduleAutoHide();
+    }
+
+    private Button tafsirReaderAction() {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText("Tafsir");
+        button.setTextSize(12.5f);
+        button.setTextColor(Ui.INK);
+        button.setGravity(Gravity.CENTER);
+        button.setContentDescription("Tafsir");
+        button.setOnClickListener(v -> openTafsir());
+        button.setStateListAnimator(null);
+        button.setElevation(0f);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setMinimumHeight(Ui.dp(this, 48));
+        button.setMinimumWidth(Ui.dp(this, 96));
+        button.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+        return button;
     }
 
     private void setPage(int requested) {
