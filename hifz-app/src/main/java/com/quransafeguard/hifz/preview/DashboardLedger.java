@@ -47,6 +47,17 @@ final class DashboardLedger {
         return null;
     }
 
+    List<LocalDate> completedDates(String type, LocalDate fromInclusive, LocalDate throughInclusive){
+        ArrayList<LocalDate> out=new ArrayList<>();
+        if(type==null||fromInclusive==null||throughInclusive==null||throughInclusive.isBefore(fromInclusive))return out;
+        for(Record r:records()){
+            if(!type.equals(r.type))continue;
+            if(r.date.isBefore(fromInclusive)||r.date.isAfter(throughInclusive))continue;
+            if(!out.contains(r.date))out.add(r.date);
+        }
+        return out;
+    }
+
     private void upsert(String dateText,String type,String label){
         if(dateText==null||dateText.isEmpty())return;
         LocalDate date;
