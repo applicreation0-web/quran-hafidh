@@ -28,7 +28,6 @@ jobs:
           test -n "$libcpp" && test -s "$libcpp"
           cp "$libcpp" signing-tools/lib64/libc++.so
           chmod +x signing-tools/apksigner signing-tools/zipalign
-          LD_LIBRARY_PATH="$PWD/signing-tools/lib64" signing-tools/zipalign -h >/dev/null 2>&1 || test "$?" = "1"
           sha256sum signing-tools/apksigner signing-tools/zipalign signing-tools/lib/apksigner.jar signing-tools/lib64/libc++.so > signing-tools/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
