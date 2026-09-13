@@ -19,7 +19,12 @@ public final class HifzCadenceTest {
         assertEquals(200, HifzCadence.targetFiveLineCapacity(30, 9.0));
         assertEquals(65, HifzCadence.targetFiveLineCapacity(10, 9.0));
         assertEquals(30, HifzCadence.targetFiveLineCapacity(5, 9.0));
-        assertEquals(5, HifzCadence.targetFiveLineCapacity(5, 500.0));
+    }
+
+    @Test public void sessionTooShortForFiveLinesReturnsZero() {
+        assertEquals(0, HifzCadence.targetFiveLineCapacity(5, 500.0));
+        assertEquals(0, HifzCadence.targetFiveLineCapacity(1, 20.0));
+        assertEquals(0, HifzCadence.targetFiveLineCapacity(0, 9.0));
     }
 
     @Test public void insufficientMurajaahSamplesNeverRecalibrate() {
