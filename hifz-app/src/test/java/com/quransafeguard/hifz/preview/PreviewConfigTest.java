@@ -42,11 +42,14 @@ public final class PreviewConfigTest {
             + PreviewConfig.ITQAN_LIGHT_75_REPS
             + PreviewConfig.ITQAN_LIGHT_100_REPS;
         assertEquals(PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.LIGHT), total);
-        assertEquals(10, PreviewConfig.ITQAN_LIGHT_VISIBLE_REPS);
+        assertEquals(15, PreviewConfig.ITQAN_LIGHT_VISIBLE_REPS);
         assertEquals(0, PreviewConfig.ITQAN_LIGHT_25_REPS);
+        assertEquals(5, PreviewConfig.ITQAN_LIGHT_50_REPS);
+        assertEquals(5, PreviewConfig.ITQAN_LIGHT_75_REPS);
+        assertEquals(5, PreviewConfig.ITQAN_LIGHT_100_REPS);
         for (int completed = 0; completed < total; completed++) {
             int next = completed + 1;
-            int expected = next <= 10 ? 0 : next <= 15 ? 50 : next <= 20 ? 75 : 100;
+            int expected = next <= 15 ? 0 : next <= 20 ? 50 : next <= 25 ? 75 : 100;
             assertEquals("Reconstruction repetition " + next, expected,
                 PreviewConfig.itqanMaskForNextRep(completed, AnchoringQueue.Protocol.LIGHT));
         }
