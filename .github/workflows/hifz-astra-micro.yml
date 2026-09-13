@@ -1,0 +1,18 @@
+name: Quran Hifz Astra micro gate
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.3-astra-fix-all
+    paths:
+      - scripts/test_j10_host_slot_override.py
+
+permissions:
+  contents: read
+
+jobs:
+  micro:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/test_j10_host_slot_override.py
