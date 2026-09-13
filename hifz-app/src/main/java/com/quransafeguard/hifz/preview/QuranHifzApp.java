@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** App-level J10 guard: observes validated Hifz commits and preempts structured sessions only when needed. */
+/** App-level J10 guard: observes validated Hifz commits and preempts reusable review sessions only. */
 public final class QuranHifzApp extends Application
         implements Application.ActivityLifecycleCallbacks, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String HIFZ_PREFS = "quran_hifz_preview_v1";
@@ -63,11 +63,12 @@ public final class QuranHifzApp extends Application
 
         if (activity instanceof HifzSessionActivity) {
             try {
+                String hostMode = activity.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
+                if (!isReusableJ10Host(hostMode)) return;
                 J10ReviewPlanner p = ensurePlanner();
                 J10ReviewPlanner.PriorityGroup priority = p.priorityGroup(LocalDate.now());
                 if (!priority.isEmpty() && !openingPriority) {
                     openingPriority = true;
-                    String hostMode = activity.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
                     Intent intent = new Intent(activity, J10ReviewActivity.class)
                         .putExtra(J10ReviewActivity.EXTRA_HOST_MODE, hostMode);
                     activity.startActivity(intent);
@@ -90,6 +91,12 @@ public final class QuranHifzApp extends Application
                 }
             });
         }
+    }
+
+    private static boolean isReusableJ10Host(String mode) {
+        return HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
+            || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+            || HifzSessionActivity.MURAJAAH.equals(mode);
     }
 
     private synchronized void showSustainabilityAlert(Activity activity, J10ReviewPolicy.Forecast forecast) {
