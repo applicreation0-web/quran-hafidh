@@ -18,7 +18,7 @@ public final class PreviewConfigTest {
         assertEquals(0, PreviewConfig.sabqiMaskForNextRep(-1));
     }
 
-    @Test public void itqanPlanIsExactly40WithTenFinalUnaidedRepetitions() {
+    @Test public void fullAnchoringPlanIsExactly40WithTenFinalUnaidedRepetitions() {
         assertEquals(15, PreviewConfig.ITQAN_VISIBLE_REPS_WORKING);
         assertEquals(5, PreviewConfig.ITQAN_25_REPS_WORKING);
         assertEquals(5, PreviewConfig.ITQAN_50_REPS_WORKING);
@@ -32,6 +32,48 @@ public final class PreviewConfigTest {
         }
         assertEquals(0, PreviewConfig.itqanMaskForNextRep(40));
         assertEquals(0, PreviewConfig.itqanMaskForNextRep(-1));
+    }
+
+    @Test public void lightReconstructionPlanIsExactly25WithoutQuarterMask() {
+        assertEquals(25, PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.LIGHT));
+        int total = PreviewConfig.ITQAN_LIGHT_VISIBLE_REPS
+            + PreviewConfig.ITQAN_LIGHT_25_REPS
+            + PreviewConfig.ITQAN_LIGHT_50_REPS
+            + PreviewConfig.ITQAN_LIGHT_75_REPS
+            + PreviewConfig.ITQAN_LIGHT_100_REPS;
+        assertEquals(PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.LIGHT), total);
+        assertEquals(0, PreviewConfig.ITQAN_LIGHT_25_REPS);
+        for (int completed = 0; completed < total; completed++) {
+            int next = completed + 1;
+            int expected = next <= 5 ? 0 : next <= 10 ? 50 : next <= 15 ? 75 : 100;
+            assertEquals("Reconstruction repetition " + next, expected,
+                PreviewConfig.itqanMaskForNextRep(completed, AnchoringQueue.Protocol.LIGHT));
+        }
+        assertEquals(0, PreviewConfig.itqanMaskForNextRep(total, AnchoringQueue.Protocol.LIGHT));
+        assertEquals(0, PreviewConfig.itqanMaskForNextRep(-1, AnchoringQueue.Protocol.LIGHT));
+    }
+
+    @Test public void fullPlanAlsoSatisfiesTheSharedStageInvariant() {
+        int total = PreviewConfig.ITQAN_VISIBLE_REPS_WORKING
+            + PreviewConfig.ITQAN_25_REPS_WORKING
+            + PreviewConfig.ITQAN_50_REPS_WORKING
+            + PreviewConfig.ITQAN_75_REPS_WORKING
+            + PreviewConfig.ITQAN_100_REPS_WORKING;
+        assertEquals(PreviewConfig.itqanTotalReps(AnchoringQueue.Protocol.FULL), total);
+        for (int completed = 0; completed < total; completed++) {
+            int next = completed + 1;
+            int expected = next <= 15 ? 0 : next <= 20 ? 25 : next <= 25 ? 50 : next <= 30 ? 75 : 100;
+            assertEquals("Full anchoring repetition " + next, expected,
+                PreviewConfig.itqanMaskForNextRep(completed, AnchoringQueue.Protocol.FULL));
+        }
+    }
+
+    @Test public void onlyLastTwoHundredPercentPassagesCountForValidation() {
+        assertFalse(PreviewConfig.isItqanValidationRep(22, AnchoringQueue.Protocol.LIGHT));
+        assertTrue(PreviewConfig.isItqanValidationRep(23, AnchoringQueue.Protocol.LIGHT));
+        assertTrue(PreviewConfig.isItqanValidationRep(24, AnchoringQueue.Protocol.LIGHT));
+        assertTrue(PreviewConfig.itqanValidationPassed(1));
+        assertFalse(PreviewConfig.itqanValidationPassed(2));
     }
 
     @Test public void recentSabqiIndexLoopsEvenWithOneBlockUntilTimerEnds() {

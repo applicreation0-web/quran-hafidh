@@ -33,6 +33,20 @@ public final class AnchoringQueueTest {
         assertEquals(2, result.nextIndex);
     }
 
+    @Test public void thirdFailureSwitchesThatPageToFullAndDefersItThreePlaces() {
+        List<AnchoringQueue.Entry> input = entries("A", "B", "C", "D", "E", "F");
+        input.set(2, new AnchoringQueue.Entry("C", "C",
+            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 2));
+
+        AnchoringQueue.Deferral result = AnchoringQueue.failAndDefer(input, 2, 3);
+
+        assertEquals(Arrays.asList("A", "B", "D", "E", "F", "C"), starts(result.entries));
+        AnchoringQueue.Entry failed = result.entries.get(5);
+        assertEquals(3, failed.failures);
+        assertEquals(AnchoringQueue.Protocol.FULL, failed.protocol);
+        assertEquals(2, result.nextIndex);
+    }
+
     private static List<AnchoringQueue.Entry> entries(String... starts) {
         ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
         for (String start : starts) {
