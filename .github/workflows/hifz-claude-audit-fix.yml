@@ -1,0 +1,21 @@
+name: Quran Hifz Claude audit fix contracts
+
+on:
+  push:
+    branches:
+      - fix/hifz-0.7.3-claude-audit
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  claude-audit-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run Claude audit regression contracts
+        run: python3 scripts/test_hifz_claude_audit_regressions.py
