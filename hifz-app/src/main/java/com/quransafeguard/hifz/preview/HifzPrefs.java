@@ -26,7 +26,15 @@ public final class HifzPrefs {
     public static final class RecentSabqi {
         public final int startLine;
         public final int endLine;
-        RecentSabqi(int startLine, int endLine) { this.startLine = startLine; this.endLine = endLine; }
+        public final LocalDate addedOn;
+        RecentSabqi(int startLine, int endLine) {
+            this(startLine, endLine, LocalDate.now());
+        }
+        RecentSabqi(int startLine, int endLine, LocalDate addedOn) {
+            this.startLine = startLine;
+            this.endLine = endLine;
+            this.addedOn = addedOn == null ? LocalDate.now() : addedOn;
+        }
         @Override public String toString() { return startLine + "–" + endLine; }
     }
 
@@ -194,12 +202,14 @@ public final class HifzPrefs {
 
         VerseRef murajaah = safeRef(p.getString("murajaahCursor", "2:1"), new VerseRef(2, 1));
         if (ordinalBetween(murajaah, tailStart, tailEnd)) murajaah = new VerseRef(2, 1);
+        String recent = normalizeRecentJson(p.getString("recentSabqi", "[]"), LocalDate.now());
 
         SharedPreferences.Editor e = p.edit()
             .putString("itqanRanges", rangesJson(normalizeRanges(base)))
             .putString("promotedRanges", rangesJson(normalizeRanges(promoted)))
             .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
             .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))
+            .putString("recentSabqi", recent)
             .putString("murajaahCursor", murajaah.toString())
             .putString("anchoringQueue", p.getString("anchoringQueue", "[]"))
             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
@@ -328,7 +338,7 @@ public final class HifzPrefs {
     /** Sabqi completion queues the five-line block; promotion is deliberately deferred to recent-window pressure. */
     public boolean completeSabqiBlock(int startLine, int endLine, int nextLineCursor, String date, String label) {
         List<RecentSabqi> queue = recentSabqi();
-        queue.add(new RecentSabqi(startLine, endLine));
+        queue.add(new RecentSabqi(startLine, endLine, safeDate(date, LocalDate.now())));
         return p.edit()
             .putString("recentSabqi", recentJson(queue))
             .putInt("sabqiLineCursor", nextLineCursor)
@@ -562,21 +572,27 @@ public final class HifzPrefs {
 
     public List<RecentSabqi> recentSabqi() {
         ArrayList<RecentSabqi> out = new ArrayList<>();
+        boolean needsRewrite = false;
+        LocalDate fallback = LocalDate.now();
         try {
             JSONArray array = new JSONArray(p.getString("recentSabqi", "[]"));
             for (int i = 0; i < array.length(); i++) {
                 JSONObject o = array.getJSONObject(i);
-                out.add(new RecentSabqi(o.getInt("start"), o.getInt("end")));
+                String addedText = o.optString("addedOn", "");
+                LocalDate addedOn = safeDate(addedText, fallback);
+                if (addedText == null || addedText.isEmpty()) needsRewrite = true;
+                out.add(new RecentSabqi(o.getInt("start"), o.getInt("end"), addedOn));
             }
         } catch (Exception error) {
             throw new IllegalStateException("Corrupt recent Sabqi queue", error);
         }
+        if (needsRewrite) p.edit().putString("recentSabqi", recentJson(out)).apply();
         return out;
     }
 
     public void addRecentSabqi(int start, int end) {
         List<RecentSabqi> queue = recentSabqi();
-        queue.add(new RecentSabqi(start, end));
+        queue.add(new RecentSabqi(start, end, LocalDate.now()));
         saveRecent(queue);
     }
 
@@ -672,12 +688,31 @@ public final class HifzPrefs {
                 JSONObject o = new JSONObject();
                 o.put("start", item.startLine);
                 o.put("end", item.endLine);
+                o.put("addedOn", item.addedOn.toString());
                 array.put(o);
             }
         } catch (Exception error) {
             throw new IllegalStateException(error);
         }
         return array.toString();
+    }
+
+    private static String normalizeRecentJson(String raw, LocalDate fallback) {
+        JSONArray out = new JSONArray();
+        try {
+            JSONArray source = new JSONArray(raw == null ? "[]" : raw);
+            for (int i = 0; i < source.length(); i++) {
+                JSONObject item = source.getJSONObject(i);
+                JSONObject normalized = new JSONObject();
+                normalized.put("start", item.getInt("start"));
+                normalized.put("end", item.getInt("end"));
+                normalized.put("addedOn", safeDate(item.optString("addedOn", ""), fallback).toString());
+                out.put(normalized);
+            }
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt recent Sabqi queue", error);
+        }
+        return out.toString();
     }
 
     private List<VerseRange> parseRanges(String key) {
@@ -859,6 +894,10 @@ public final class HifzPrefs {
     }
     private static VerseRef safeRef(String value, VerseRef fallback) {
         try { return value == null || value.isEmpty() ? fallback : GeometryRepository.parseVerse(value); }
+        catch (RuntimeException error) { return fallback; }
+    }
+    private static LocalDate safeDate(String value, LocalDate fallback) {
+        try { return value == null || value.isEmpty() ? fallback : LocalDate.parse(value); }
         catch (RuntimeException error) { return fallback; }
     }
 }
