@@ -47,6 +47,17 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertEquals(AnchoringQueue.Protocol.LIGHT, first.protocol);
     }
 
+    @Test public void alreadyV4InstallPurgesObsoleteStableRecentLines() {
+        raw.edit()
+            .putInt("schema", 4)
+            .putString("stableRecentLines", "[{\"start\":10,\"end\":14}]")
+            .commit();
+
+        new HifzPrefs(context);
+
+        assertFalse(raw.contains("stableRecentLines"));
+    }
+
     @Test public void validatedAnchoringPageJoinsMaintenanceWithoutTeleportingItsCursor() {
         HifzPrefs prefs = new HifzPrefs(context);
         GeometryRepository geometry = GeometryRepository.get(context);
