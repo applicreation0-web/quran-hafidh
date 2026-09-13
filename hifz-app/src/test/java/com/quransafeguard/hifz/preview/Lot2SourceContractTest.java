@@ -46,6 +46,13 @@ public final class Lot2SourceContractTest {
         assertFalse(core.contains("MICRO_REVIEW"));
     }
 
+    @Test public void quickAccessDurationsDoNotDependOnTodaysPlan() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("HifzSchedule.INSTANCE.targetMinutesFor"));
+        assertFalse(session.contains("scheduledTargetMinutes("));
+        assertFalse(session.contains("Mode \" + kind + \" absent du planning"));
+    }
+
     @Test public void effectiveAnchoringCorpusIsVisibleButNotDirectlyEditable() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
