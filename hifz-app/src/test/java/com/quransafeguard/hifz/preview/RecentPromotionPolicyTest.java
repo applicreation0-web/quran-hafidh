@@ -42,7 +42,8 @@ public final class RecentPromotionPolicyTest {
             ADDED, ADDED.plusDays(91), activation, firstTwo, 40, true);
         assertEquals(13, early.plannedSessions);
         assertEquals(10, early.requiredSessions);
-        assertEquals(2, early.completedSessions);
+        // At J+91 only the first Sunday after activation has elapsed; the second one is still future.
+        assertEquals(1, early.completedSessions);
         assertFalse(early.promote);
 
         LocalDate later = activation.plusDays(70);
