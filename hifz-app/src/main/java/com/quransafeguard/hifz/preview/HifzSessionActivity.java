@@ -20,6 +20,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
@@ -647,9 +648,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ? (murajaahActualEnd == null ? "Durée atteinte · touchez le dernier verset." : "Fin réelle · " + murajaahActualEnd)
             : "Corpus acquis · " + targetMinutes() + " min");
         showCurrent();
-        if (murajaahActualEnd != null) {
+        if (murajaahActualEnd != null && murajaahPlan.traversalVerses.contains(murajaahActualEnd)) {
             mushaf.setSelection(Collections.singletonList(murajaahActualEnd),
                 geometry.lineIdsForVerseRange(murajaahActualEnd, murajaahActualEnd));
+        } else if (murajaahActualEnd != null) {
+            murajaahActualEnd = null;
+            prefs.setMurajaahActualEnd(null);
         }
         LinearLayout validateAction = Ui.roundAction(this, "", "Valider", v -> finishMurajaah());
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
@@ -670,7 +674,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         EligibleCorpus corpus = prefs.murajaahCorpus();
         VerseRef next = corpus.next(murajaahActualEnd);
         long elapsed = clock.elapsedMs();
-        int lines = geometry.lineCountForVerseRange(murajaahPlan.start, murajaahActualEnd);
+        int lines = countMurajaahLinesThrough(murajaahActualEnd);
         SpeedCalibrationPolicy.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
         String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
         if (calibration.status == SpeedCalibrationPolicy.Status.ATYPICAL) raw += "·atyp";
@@ -687,13 +691,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
+    private int countMurajaahLinesThrough(VerseRef through){
+        if (murajaahPlan == null || through == null) return 0;
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        for (VerseRef verse : murajaahPlan.traversalVerses) {
+            ids.addAll(geometry.lineIdsForVerseRange(verse, verse));
+            if (verse.equals(through)) return ids.size();
+        }
+        throw new IllegalArgumentException("Fin d’Entretien hors du parcours planifié : " + through);
+    }
+
     private void checkpointMurajaah(long elapsed){
         if (!MURAJAAH.equals(mode) || sessionCompleted) return;
         prefs.setMurajaahActualEnd(murajaahActualEnd);
     }
 
     @Override public void onVerseTap(VerseRef verse){
-        if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&prefs.murajaahCorpus().contains(verse)){
+        if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse)){
             murajaahActualEnd=verse;
             progress.setText("Fin réelle · "+verse);
             eink.local(progress);
