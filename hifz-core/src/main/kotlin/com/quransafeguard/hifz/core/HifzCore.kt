@@ -148,6 +148,14 @@ object HifzSchedule {
     const val ANCHORING_ENVELOPE_MINUTES = 60
     const val MAINTENANCE_MINUTES = 45
 
+    fun targetMinutesFor(kind: SessionKind): Int = when (kind) {
+        SessionKind.SABQI_NEW -> 0
+        SessionKind.SABQI_TODAY_REVIEW -> EVENING_REVIEW_MINUTES
+        SessionKind.ITQAN -> ANCHORING_ENVELOPE_MINUTES
+        SessionKind.RECENT_SABQI_REVIEW -> CONSOLIDATION_MINUTES
+        SessionKind.OLD_ITQAN_MURAJAAH -> MAINTENANCE_MINUTES
+    }
+
     fun typeFor(day: DayOfWeek): SessionType = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> SessionType.SABQI
         DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> SessionType.ITQAN
@@ -164,22 +172,22 @@ object HifzSchedule {
      */
     fun planFor(day: DayOfWeek, recentBlockCount: Int, consolidationActivated: Boolean): DailyPlan = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
-            PlannedSession(SessionKind.SABQI_NEW, 0),
-            PlannedSession(SessionKind.SABQI_TODAY_REVIEW, EVENING_REVIEW_MINUTES)
+            PlannedSession(SessionKind.SABQI_NEW, targetMinutesFor(SessionKind.SABQI_NEW)),
+            PlannedSession(SessionKind.SABQI_TODAY_REVIEW, targetMinutesFor(SessionKind.SABQI_TODAY_REVIEW))
         )
         DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> DailyPlan(
-            PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
+            PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         )
         DayOfWeek.SATURDAY -> DailyPlan(
-            PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
+            PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         )
         DayOfWeek.SUNDAY -> DailyPlan(
             if (consolidationActivated || recentBlockCount >= RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
-                PlannedSession(SessionKind.RECENT_SABQI_REVIEW, CONSOLIDATION_MINUTES)
-            else PlannedSession(SessionKind.ITQAN, ANCHORING_ENVELOPE_MINUTES),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, MAINTENANCE_MINUTES)
+                PlannedSession(SessionKind.RECENT_SABQI_REVIEW, targetMinutesFor(SessionKind.RECENT_SABQI_REVIEW))
+            else PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         )
     }
 
