@@ -62,8 +62,8 @@ public final class Lot2SourceContractTest {
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
         assertTrue(config.contains("SABQI_TOTAL_REPS = 37"));
         assertTrue(config.contains("ITQAN_TOTAL_REPS = 40"));
-        assertTrue(config.contains("ITQAN_LIGHT_TOTAL_REPS = 30"));
-        assertTrue(config.contains("ITQAN_LIGHT_VISIBLE_REPS = 15"));
+        assertTrue(config.contains("ITQAN_LIGHT_TOTAL_REPS = 35"));
+        assertTrue(config.contains("ITQAN_LIGHT_VISIBLE_REPS = 20"));
         assertTrue(config.contains("ITQAN_LIGHT_25_REPS = 0"));
         assertTrue(config.contains("ITQAN_LIGHT_50_REPS = 5"));
         assertTrue(config.contains("ITQAN_LIGHT_75_REPS = 5"));
