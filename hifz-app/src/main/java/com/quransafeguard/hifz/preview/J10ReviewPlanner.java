@@ -6,6 +6,7 @@ import com.quransafeguard.hifz.core.DailyPlan;
 import com.quransafeguard.hifz.core.EligibleCorpus;
 import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.QuranCanon;
+import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
@@ -58,26 +59,30 @@ final class J10ReviewPlanner {
     }
 
     /**
-     * Reconcile only material already acquired: stable Entretien corpus, recent learned blocks,
-     * and completed sub-blocks of an in-progress fractionated Ancrage. Pending reconstruction is
-     * deliberately excluded until it is actually completed.
+     * Reconcile only material already acquired. Historical material with no J10 record is seeded
+     * as due now, never as freshly reviewed. Recent Sabqi keeps its real acquisition date.
      */
     boolean syncAcquired(LocalDate today) {
         if (today == null) throw new IllegalArgumentException("today required");
-        LinkedHashSet<String> acquired = new LinkedHashSet<>();
+        LocalDate historicalSeed = J10ReviewPolicy.unknownHistoricalSeed(today);
+        boolean ok = true;
 
+        LinkedHashSet<String> stableIds = new LinkedHashSet<>();
         EligibleCorpus stable = prefs.murajaahCorpus();
         for (int i = 0; i < geometry.lineCount(); i++) {
             GeometryRepository.LineMeta line = geometry.line(i);
             for (VerseRef verse : line.verses) {
-                if (stable.contains(verse)) { acquired.add(line.id); break; }
+                if (stable.contains(verse)) { stableIds.add(line.id); break; }
             }
         }
+        ok &= store.acquireLines(stableIds, historicalSeed);
 
         for (HifzPrefs.RecentSabqi recent : prefs.recentSabqi()) {
+            LinkedHashSet<String> recentIds = new LinkedHashSet<>();
             for (int i = Math.max(0, recent.startLine); i <= recent.endLine && i < geometry.lineCount(); i++) {
-                acquired.add(geometry.line(i).id);
+                recentIds.add(geometry.line(i).id);
             }
+            ok &= store.acquireLines(recentIds, recent.addedOn == null ? historicalSeed : recent.addedOn);
         }
 
         int completedBlocks = prefs.itqanBlockIndex();
@@ -90,32 +95,30 @@ final class J10ReviewPlanner {
             if (prefs.isFractionatedUnit(verses)) {
                 List<String> unitLines = geometry.lineIdsForVerseRange(start, end);
                 int count = PreviewConfig.fractionatedBlockCount(unitLines.size());
+                LinkedHashSet<String> completedIds = new LinkedHashSet<>();
                 for (int block = 0; block < Math.min(completedBlocks, count); block++) {
                     int from = PreviewConfig.fractionatedBlockStart(unitLines.size(), block);
                     int len = PreviewConfig.fractionatedBlockLength(unitLines.size(), block);
-                    acquired.addAll(unitLines.subList(from, from + len));
+                    completedIds.addAll(unitLines.subList(from, from + len));
                 }
+                ok &= store.acquireLines(completedIds, historicalSeed);
             }
         }
-        return store.acquireLines(acquired, today);
+        return ok;
     }
 
     J10ReviewPolicy.Forecast forecast(LocalDate today) {
         syncAcquired(today);
         Map<String, LocalDate> snapshot = store.snapshot();
-        int available = scheduledCapacityMinutes(today, J10ReviewPolicy.FORECAST_DAYS,
-            prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
-        return J10ReviewPolicy.forecast(snapshot.values(), today,
-            speedStore.maintenanceSecondsPerLine(), available);
+        return J10ReviewPolicy.forecastByDay(snapshot.values(), today,
+            speedStore.maintenanceSecondsPerLine(), remainingCapacityByDayMinutes(today));
     }
 
     PriorityGroup priorityGroup(LocalDate today) {
         syncAcquired(today);
         Map<String, LocalDate> snapshot = store.snapshot();
-        J10ReviewPolicy.Forecast forecast = J10ReviewPolicy.forecast(snapshot.values(), today,
-            speedStore.maintenanceSecondsPerLine(),
-            scheduledCapacityMinutes(today, J10ReviewPolicy.FORECAST_DAYS,
-                prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null));
+        J10ReviewPolicy.Forecast forecast = J10ReviewPolicy.forecastByDay(snapshot.values(), today,
+            speedStore.maintenanceSecondsPerLine(), remainingCapacityByDayMinutes(today));
 
         LinkedHashMap<Integer, LocalDate> indexed = new LinkedHashMap<>();
         for (int i = 0; i < geometry.lineCount(); i++) {
@@ -188,16 +191,56 @@ final class J10ReviewPlanner {
     GeometryRepository geometry() { return geometry; }
     Map<String, LocalDate> snapshot() { return store.snapshot(); }
 
-    static int scheduledCapacityMinutes(LocalDate start, int days,
-                                        int recentBlockCount, boolean consolidationActivated) {
-        if (start == null || days <= 0) return 0;
-        int total = 0;
+    private int[] remainingCapacityByDayMinutes(LocalDate start) {
+        int[] out = scheduledCapacityByDayMinutes(start, J10ReviewPolicy.FORECAST_DAYS,
+            prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
+        if (out.length == 0) return out;
+        DailyPlan todayPlan = HifzSchedule.INSTANCE.planFor(start.getDayOfWeek(),
+            prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
+        int consumed = consumedMinutes(todayPlan.getMorning().getKind(), todayPlan.getMorning().getTargetMinutes())
+            + consumedMinutes(todayPlan.getEvening().getKind(), todayPlan.getEvening().getTargetMinutes());
+        out[0] = Math.max(0, out[0] - consumed);
+        return out;
+    }
+
+    private int consumedMinutes(SessionKind kind, int targetMinutes) {
+        if (targetMinutes <= 0) return 0;
+        String mode = modeFor(kind);
+        if (mode == null) return 0;
+        long elapsed = prefs.elapsedFor(mode);
+        return Math.min(targetMinutes, (int) Math.ceil(Math.max(0L, elapsed) / 60_000.0));
+    }
+
+    private static String modeFor(SessionKind kind) {
+        if (kind == null) return null;
+        switch (kind) {
+            case SABQI_NEW: return HifzSessionActivity.SABQI;
+            case SABQI_TODAY_REVIEW: return HifzSessionActivity.SABQI_TODAY_REVIEW;
+            case ITQAN: return HifzSessionActivity.ITQAN;
+            case RECENT_SABQI_REVIEW: return HifzSessionActivity.RECENT_SABQI_REVIEW;
+            case OLD_ITQAN_MURAJAAH: return HifzSessionActivity.MURAJAAH;
+            default: return null;
+        }
+    }
+
+    static int[] scheduledCapacityByDayMinutes(LocalDate start, int days,
+                                               int recentBlockCount, boolean consolidationActivated) {
+        if (start == null || days <= 0) return new int[0];
+        int[] out = new int[days];
         for (int offset = 0; offset < days; offset++) {
             DailyPlan plan = HifzSchedule.INSTANCE.planFor(
-                start.plusDays(offset).getDayOfWeek(),
-                Math.max(0, recentBlockCount), consolidationActivated);
-            total += Math.max(0, plan.getMorning().getTargetMinutes());
-            total += Math.max(0, plan.getEvening().getTargetMinutes());
+                start.plusDays(offset).getDayOfWeek(), Math.max(0, recentBlockCount), consolidationActivated);
+            out[offset] = Math.max(0, plan.getMorning().getTargetMinutes())
+                + Math.max(0, plan.getEvening().getTargetMinutes());
+        }
+        return out;
+    }
+
+    static int scheduledCapacityMinutes(LocalDate start, int days,
+                                        int recentBlockCount, boolean consolidationActivated) {
+        int total = 0;
+        for (int value : scheduledCapacityByDayMinutes(start, days, recentBlockCount, consolidationActivated)) {
+            total += value;
         }
         return total;
     }
