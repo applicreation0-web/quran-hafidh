@@ -11,6 +11,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.LocalDate;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -83,5 +85,25 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
         assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
+    }
+
+    @Test public void legacyRecentEntryWithoutAddedOnUsesTheMigrationFallback() {
+        raw.edit()
+            .putInt("schema", 3)
+            .putString("programStartDate", "2025-01-01")
+            .putString("itqanRanges", "[{\"start\":\"2:1\",\"end\":\"2:74\"},{\"start\":\"49:1\",\"end\":\"114:6\"}]")
+            .putString("promotedRanges", "[]")
+            .putString("unconsolidatedPromotedRanges", "[]")
+            .putString("legacyMurajaahPromotedRanges", "[]")
+            .putString("itqanRotationStart", "49:1")
+            .putString("itqanCursor", "49:1")
+            .putString("murajaahCursor", "49:1")
+            .putString("recentSabqi", "[{\"start\":10,\"end\":14}]")
+            .commit();
+
+        HifzPrefs prefs = new HifzPrefs(context);
+
+        assertEquals(1, prefs.recentSabqi().size());
+        assertEquals(LocalDate.now(), prefs.recentSabqi().get(0).addedOn);
     }
 }
