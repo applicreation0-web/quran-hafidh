@@ -78,4 +78,15 @@ public final class Lot2SourceContractTest {
         assertTrue(session.contains("clock.reset()"));
         assertTrue(session.contains("clock.resume()"));
     }
+
+    @Test public void maintenanceEndpointStaysInsideThePlannedTraversalAndDoesNotJumpPages() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("murajaahPlan.traversalVerses.contains(verse)"));
+        assertTrue(session.contains("countMurajaahLinesThrough(murajaahActualEnd)"));
+        assertFalse(session.contains("geometry.lineCountForVerseRange(murajaahPlan.start, murajaahActualEnd)"));
+        int tapStart = session.indexOf("@Override public void onVerseTap");
+        int tapEnd = session.indexOf("@Override public void onPageSwipe", tapStart);
+        assertTrue(tapStart >= 0 && tapEnd > tapStart);
+        assertFalse(session.substring(tapStart, tapEnd).contains("renderMode()"));
+    }
 }
