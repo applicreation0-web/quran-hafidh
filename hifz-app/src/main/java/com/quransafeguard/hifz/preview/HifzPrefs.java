@@ -47,14 +47,6 @@ public final class HifzPrefs {
         @Override public String toString() { return startLine + "–" + endLine; }
     }
 
-    public static final class LineInterval {
-        public final int startLine;
-        public final int endLine;
-        LineInterval(int startLine, int endLine) {
-            this.startLine = Math.min(startLine, endLine);
-            this.endLine = Math.max(startLine, endLine);
-        }
-    }
 
     private static final String NAME = "quran_hifz_preview_v1";
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
@@ -97,7 +89,6 @@ public final class HifzPrefs {
                 .putString("itqanUnitEnd", "")
                 .putString("recentSabqi", "[]")
                 .putString("recentConsolidationActivatedOn", "")
-                .putString("stableRecentLines", "[]")
                 .putLong("sabqiElapsedMs", 0L)
                 .putLong("itqanElapsedMs", 0L)
                 .putLong("sabqi_today_reviewElapsedMs", 0L)
@@ -143,6 +134,10 @@ public final class HifzPrefs {
         if (schema != PreviewConfig.SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
         }
+        if (p.contains("stableRecentLines")
+                && !p.edit().remove("stableRecentLines").commit()) {
+            throw new IllegalStateException("Unable to clean obsolete Hifz stable-line state");
+        }
     }
 
     private void migrateV1ToV2() {
@@ -157,7 +152,6 @@ public final class HifzPrefs {
             .putString("itqanRanges", defaultItqanRangesJson())
             .putString("promotedRanges", rangesJson(promoted))
             .putString("itqanRotationStart", p.getString("itqanRotationStart", "49:1"))
-            .putString("stableRecentLines", p.getString("stableRecentLines", "[]"))
             .putFloat("recentSecPerLine", p.getFloat("recentSecPerLine", (float) PreviewConfig.INITIAL_RECENT_SECONDS_PER_LINE_WORKING))
             .putString("murajaahPhase", p.getString("murajaahPhase", "A"))
             .putString("murajaahActualEnd", p.getString("murajaahActualEnd", ""))
@@ -236,6 +230,7 @@ public final class HifzPrefs {
             .putInt("murajaahSpeedSamples", Math.max(0, p.getInt("murajaahSpeedSamples", 0)))
             .putBoolean("recentSpeedCalibrated", p.getBoolean("recentSpeedCalibrated", false))
             .putInt("recentSpeedSamples", Math.max(0, p.getInt("recentSpeedSamples", 0)))
+            .remove("stableRecentLines")
             .putInt("schema", 4);
         if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v3 to v4");
     }
@@ -688,43 +683,6 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /** Legacy quality machinery retained until the index-aware replacement is fully verified. */
-    public boolean markFirstRecentStable() {
-        List<RecentSabqi> queue = recentSabqi();
-        if (queue.isEmpty()) return false;
-        RecentSabqi item = queue.remove(0);
-        List<LineInterval> stable = stableRecentLines();
-        stable.add(new LineInterval(item.startLine, item.endLine));
-        stable = mergeIntervals(stable);
-        return p.edit()
-            .putString("recentSabqi", recentJson(queue))
-            .putString("stableRecentLines", intervalsJson(stable))
-            .commit();
-    }
-
-    /** Legacy head-only deferral retained until the index-aware replacement is fully verified. */
-    public boolean deferFirstRecentSabqi() {
-        List<RecentSabqi> queue = recentSabqi();
-        if (queue.isEmpty()) return false;
-        RecentSabqi item = queue.remove(0);
-        queue.add(item);
-        return p.edit().putString("recentSabqi", recentJson(queue)).commit();
-    }
-
-    public List<LineInterval> stableRecentLines() {
-        ArrayList<LineInterval> out = new ArrayList<>();
-        try {
-            JSONArray array = new JSONArray(p.getString("stableRecentLines", "[]"));
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject o = array.getJSONObject(i);
-                out.add(new LineInterval(o.getInt("start"), o.getInt("end")));
-            }
-        } catch (Exception error) {
-            throw new IllegalStateException("Corrupt stable recent-line coverage", error);
-        }
-        return mergeIntervals(out);
-    }
-
     /**
      * Idempotently grows the Itqan snowball. Only verses not already promoted are added to the
      * unconsolidated set, so a restart/recalculation can never re-open a completed ×40 passage.
@@ -930,37 +888,6 @@ public final class HifzPrefs {
                 o.put("origin", entry.origin.name());
                 o.put("protocol", entry.protocol.name());
                 o.put("failures", entry.failures);
-                array.put(o);
-            }
-        } catch (Exception error) {
-            throw new IllegalStateException(error);
-        }
-        return array.toString();
-    }
-
-    private static List<LineInterval> mergeIntervals(List<LineInterval> source) {
-        ArrayList<LineInterval> sorted = new ArrayList<>(source);
-        sorted.sort(Comparator.comparingInt(a -> a.startLine));
-        ArrayList<LineInterval> out = new ArrayList<>();
-        for (LineInterval current : sorted) {
-            if (out.isEmpty()) out.add(current);
-            else {
-                LineInterval previous = out.get(out.size() - 1);
-                if (current.startLine <= previous.endLine + 1) {
-                    out.set(out.size() - 1, new LineInterval(previous.startLine, Math.max(previous.endLine, current.endLine)));
-                } else out.add(current);
-            }
-        }
-        return out;
-    }
-
-    private static String intervalsJson(List<LineInterval> intervals) {
-        JSONArray array = new JSONArray();
-        try {
-            for (LineInterval item : intervals) {
-                JSONObject o = new JSONObject();
-                o.put("start", item.startLine);
-                o.put("end", item.endLine);
                 array.put(o);
             }
         } catch (Exception error) {

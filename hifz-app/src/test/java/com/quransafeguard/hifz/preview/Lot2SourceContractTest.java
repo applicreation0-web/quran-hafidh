@@ -89,4 +89,15 @@ public final class Lot2SourceContractTest {
         assertTrue(tapStart >= 0 && tapEnd > tapStart);
         assertFalse(session.substring(tapStart, tapEnd).contains("renderMode()"));
     }
+    @Test public void obsoleteRecentQualityMachineryIsRemoved() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertFalse(prefs.contains("markFirstRecentStable"));
+        assertFalse(prefs.contains("deferFirstRecentSabqi"));
+        assertFalse(prefs.contains("stableRecentLines()"));
+        assertFalse(prefs.contains("LineInterval"));
+        assertFalse(prefs.contains(".putString(\"stableRecentLines\""));
+        assertFalse(prefs.contains("p.getString(\"stableRecentLines\""));
+        assertTrue(prefs.contains(".remove(\"stableRecentLines\")"));
+    }
+
 }
