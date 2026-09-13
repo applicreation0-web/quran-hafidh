@@ -54,12 +54,36 @@ def test_mask_entropy_is_session_persistent_not_view_instance_random():
     assert "prefs.clearMaskEntropy(mode)" in session
 
 
+def test_rosettes_are_redrawn_even_when_mask_has_no_ayah_selection():
+    reader = read("hifz-app/src/main/assets/hifzreader/reader.js")
+    assert "if(polys.length)layer.appendChild(markerLayer" not in reader
+    assert "markerLayer(svg,polys,lines)" in reader
+
+
+def test_dead_cursor_setter_and_test_only_reset_copy_are_removed():
+    prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java")
+    settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java")
+
+    assert "void setMurajaahCursor" not in prefs
+    assert '"État de test"' not in settings
+    assert "Efface la progression Hifz locale" in settings
+
+
 if __name__ == "__main__":
     tests = [
         test_runtime_uses_domain_schedule_as_single_source_of_truth,
         test_reader_fit_cannot_be_overridden_by_user_zoom,
         test_mask_entropy_is_session_persistent_not_view_instance_random,
+        test_rosettes_are_redrawn_even_when_mask_has_no_ayah_selection,
+        test_dead_cursor_setter_and_test_only_reset_copy_are_removed,
     ]
+    failures = []
     for test in tests:
-        test()
-        print(f"PASS {test.__name__}")
+        try:
+            test()
+            print(f"PASS {test.__name__}")
+        except AssertionError as error:
+            failures.append((test.__name__, str(error)))
+            print(f"FAIL {test.__name__}: {error}")
+    if failures:
+        raise SystemExit(f"{len(failures)} regression contract(s) failing")
