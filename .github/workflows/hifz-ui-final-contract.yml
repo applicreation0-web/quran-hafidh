@@ -1,0 +1,32 @@
+name: Quran Hifz 0.7.3 BOOX UI contract
+
+on:
+  push:
+    branches:
+      - fix/hifz-0.7.3-boox-ui-final
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Run BOOX UI contract tests
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest --stacktrace
