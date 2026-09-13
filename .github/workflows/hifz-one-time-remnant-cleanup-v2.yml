@@ -1,0 +1,116 @@
+name: Hifz one-time remnant cleanup v2
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.3-spec-update
+    paths:
+      - .github/workflows/hifz-one-time-remnant-cleanup-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.3-spec-update
+          fetch-depth: 0
+
+      - name: Remove obsolete consolidation state and refresh plan
+        shell: python
+        run: |
+          from pathlib import Path
+
+          prefs_path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java')
+          prefs = prefs_path.read_text()
+
+          def once(old, new, label):
+              global prefs
+              count = prefs.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, got {count}')
+              prefs = prefs.replace(old, new, 1)
+
+          once('''\n    public static final class LineInterval {\n        public final int startLine;\n        public final int endLine;\n        LineInterval(int startLine, int endLine) {\n            this.startLine = Math.min(startLine, endLine);\n            this.endLine = Math.max(startLine, endLine);\n        }\n    }\n''', '\n', 'LineInterval class')
+          once('                .putString("stableRecentLines", "[]")\n', '', 'fresh obsolete key')
+          once('            .putString("stableRecentLines", p.getString("stableRecentLines", "[]"))\n', '', 'v1-v2 obsolete key')
+          once('''        if (schema != PreviewConfig.SCHEMA_VERSION) {\n            throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);\n        }\n''', '''        if (schema != PreviewConfig.SCHEMA_VERSION) {\n            throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);\n        }\n        if (p.contains("stableRecentLines")\n                && !p.edit().remove("stableRecentLines").commit()) {\n            throw new IllegalStateException("Unable to clean obsolete Hifz stable-line state");\n        }\n''', 'existing schema-v4 cleanup')
+          once('''            .putBoolean("recentSpeedCalibrated", p.getBoolean("recentSpeedCalibrated", false))\n            .putInt("recentSpeedSamples", Math.max(0, p.getInt("recentSpeedSamples", 0)))\n            .putInt("schema", 4);\n''', '''            .putBoolean("recentSpeedCalibrated", p.getBoolean("recentSpeedCalibrated", false))\n            .putInt("recentSpeedSamples", Math.max(0, p.getInt("recentSpeedSamples", 0)))\n            .remove("stableRecentLines")\n            .putInt("schema", 4);\n''', 'v3-v4 atomic cleanup')
+
+          start = prefs.find('    /** Legacy quality machinery retained until the index-aware replacement is fully verified. */')
+          end = prefs.find('    /**\n     * Idempotently grows the Itqan snowball.', start)
+          if start < 0 or end < 0:
+              raise SystemExit('legacy quality-method block boundaries not found')
+          legacy = prefs[start:end]
+          for required in ('markFirstRecentStable', 'deferFirstRecentSabqi', 'stableRecentLines()', 'LineInterval'):
+              if required not in legacy:
+                  raise SystemExit(f'legacy block missing expected symbol: {required}')
+          prefs = prefs[:start] + prefs[end:]
+
+          start = prefs.find('    private static List<LineInterval> mergeIntervals(')
+          end = prefs.find('    public void resetPreviewState() {', start)
+          if start < 0 or end < 0:
+              raise SystemExit('legacy interval-helper block boundaries not found')
+          helper = prefs[start:end]
+          if 'intervalsJson' not in helper:
+              raise SystemExit('intervalsJson helper missing from cleanup block')
+          prefs = prefs[:start] + prefs[end:]
+
+          for forbidden in ('markFirstRecentStable', 'deferFirstRecentSabqi', 'stableRecentLines()', 'LineInterval'):
+              if forbidden in prefs:
+                  raise SystemExit(f'obsolete API still present: {forbidden}')
+          if '.putString("stableRecentLines"' in prefs or 'p.getString("stableRecentLines"' in prefs:
+              raise SystemExit('obsolete stableRecentLines read/write still present')
+          if prefs.count('.remove("stableRecentLines")') != 2:
+              raise SystemExit('expected exactly two obsolete-key removals')
+          prefs_path.write_text(prefs)
+
+          plan_path = Path('docs/superpowers/plans/2026-09-13-hifz-0.7.3-spec-update.md')
+          plan = plan_path.read_text()
+          anchor = '**Spec:** `quran-hifz-specification-mise-a-jour (1).txt` supplied for this mission, plus the approved audit adjustments dated 2026-09-13.\n'
+          if anchor not in plan:
+              raise SystemExit('plan spec anchor not found')
+          if 'final protocol override' not in plan:
+              plan = plan.replace(anchor, anchor + '\n> **2026-09-13 final protocol override:** Reconstruction Ancrage is **35 repetitions = 20 visible + 5 at 50% + 5 at 75% + 5 at 100%**, with **no 25% stage**. This supersedes the earlier 25- and 30-pass reconstruction variants in source notes and prior iterations.\n', 1)
+          old = '25-pass reconstruction protocol and 40-pass new-page protocol'
+          if old in plan:
+              plan = plan.replace(old, '35-pass reconstruction protocol (20 visible + 5 at 50% + 5 at 75% + 5 at 100%, no 25% stage) and 40-pass new-page protocol', 1)
+          old_cleanup = 'Remove replaced dead machinery only after migration and behavior tests pass.'
+          if old_cleanup in plan:
+              plan = plan.replace(old_cleanup, 'Remove replaced dead machinery (`markFirstRecentStable`, `deferFirstRecentSabqi`, `stableRecentLines`, interval serialization) and purge the obsolete `stableRecentLines` preference during schema-v4 migration/load after behavior tests pass.', 1)
+          if '25-pass reconstruction protocol' in plan:
+              raise SystemExit('stale 25-pass reconstruction wording remains')
+          plan_path.write_text(plan)
+
+          test_path = Path('hifz-app/src/test/java/com/quransafeguard/hifz/preview/Lot2SourceContractTest.java')
+          test = test_path.read_text()
+          if 'obsoleteRecentQualityMachineryIsRemoved' not in test:
+              insertion = '''\n    @Test public void obsoleteRecentQualityMachineryIsRemoved() throws Exception {\n        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");\n        assertFalse(prefs.contains("markFirstRecentStable"));\n        assertFalse(prefs.contains("deferFirstRecentSabqi"));\n        assertFalse(prefs.contains("stableRecentLines()"));\n        assertFalse(prefs.contains("LineInterval"));\n        assertFalse(prefs.contains(".putString(\\\"stableRecentLines\\\""));\n        assertFalse(prefs.contains("p.getString(\\\"stableRecentLines\\\""));\n        assertTrue(prefs.contains(".remove(\\\"stableRecentLines\\\")"));\n    }\n'''
+              pos = test.rfind('\n}')
+              if pos < 0:
+                  raise SystemExit('Lot2SourceContractTest closing brace not found')
+              test = test[:pos] + insertion + test[pos:]
+          test_path.write_text(test)
+
+          config = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java').read_text()
+          for required in ('ITQAN_LIGHT_VISIBLE_REPS = 20','ITQAN_LIGHT_25_REPS = 0','ITQAN_LIGHT_50_REPS = 5','ITQAN_LIGHT_75_REPS = 5','ITQAN_LIGHT_100_REPS = 5','ITQAN_LIGHT_TOTAL_REPS = 35'):
+              if required not in config:
+                  raise SystemExit(f'35-rep protocol changed unexpectedly: {required}')
+
+      - name: Commit guarded cleanup and remove temporary workflows
+        shell: bash
+        run: |
+          rm -f .github/workflows/hifz-one-time-remnant-cleanup.yml .github/workflows/hifz-one-time-remnant-cleanup-v2.yml
+          git config user.name "applicreation0-web"
+          git config user.email "applicreation0@gmail.com"
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java \
+                  hifz-app/src/test/java/com/quransafeguard/hifz/preview/Lot2SourceContractTest.java \
+                  docs/superpowers/plans/2026-09-13-hifz-0.7.3-spec-update.md \
+                  .github/workflows/hifz-one-time-remnant-cleanup.yml \
+                  .github/workflows/hifz-one-time-remnant-cleanup-v2.yml
+          git diff --cached --check
+          git commit -m "chore(hifz): remove obsolete consolidation remnants"
+          git push origin HEAD:work/hifz-0.7.3-spec-update
