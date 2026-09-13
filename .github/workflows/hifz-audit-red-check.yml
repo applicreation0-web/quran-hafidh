@@ -1,0 +1,31 @@
+name: Hifz audit RED check
+
+on:
+  push:
+    branches:
+      - helper/hifz-0.7.3-audit-red-check
+    paths:
+      - .github/workflows/hifz-audit-red-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  red-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove Claude P0 and P1 regressions are still present before fixes
+        shell: python
+        run: |
+          from pathlib import Path
+          session = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java').read_text()
+          prefs = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java').read_text()
+          failures = []
+          if 'HifzSchedule.INSTANCE.targetMinutesFor' not in session or 'scheduledTargetMinutes(' in session:
+              failures.append('P0 quick-access duration still depends on today schedule')
+          if 'canonicalRecentOrder' not in prefs or 'withoutRecentBlocks' not in prefs:
+              failures.append('P1 promotion still lacks canonical-order protection after strengthen reorder')
+          if not failures:
+              raise SystemExit('Expected RED but both fixes already exist')
+          raise SystemExit('EXPECTED RED: ' + ' | '.join(failures))
