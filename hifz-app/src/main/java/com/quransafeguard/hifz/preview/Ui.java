@@ -56,12 +56,12 @@ final class Ui {
         }
         button.setContentDescription(shown);
         button.setOnClickListener(listener);
-        button.setMinWidth(dp(context, 44));
-        button.setMinHeight(dp(context, 40));
+        button.setMinWidth(dp(context, 48));
+        button.setMinHeight(dp(context, 48));
         return button;
     }
 
-    /** 44dp hit target with a quiet 24dp pictogram and no permanent visible circle. */
+    /** 48dp hit target with a quiet 24dp pictogram and no permanent visible circle. */
     static Button iconButton(Context context, String symbol, String description, View.OnClickListener listener) {
         Button button = new Button(context);
         button.setAllCaps(false);
@@ -73,8 +73,8 @@ final class Ui {
         button.setBackgroundColor(Color.TRANSPARENT);
         button.setMinWidth(0);
         button.setMinHeight(0);
-        button.setPadding(dp(context, 10), dp(context, 10), dp(context, 10), dp(context, 10));
-        int size = dp(context, 44);
+        button.setPadding(dp(context, 12), dp(context, 12), dp(context, 12), dp(context, 12));
+        int size = dp(context, 48);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
         params.setMargins(dp(context, 1), 0, dp(context, 1), 0);
         button.setLayoutParams(params);
@@ -160,7 +160,11 @@ final class Ui {
             title.setTypeface(Typeface.SERIF, Typeface.BOLD);
         }
         String lower = label.toLowerCase(Locale.ROOT);
-        String cue = lower.contains("sabqi") ? "5 lignes" : lower.contains("itq") ? "×40" : lower.contains("mur") ? "Révision" : "";
+        String cue = lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
+            : lower.contains("reprise") ? "30 min"
+            : lower.contains("consolidation") ? "30 min"
+            : lower.contains("ancrage") || lower.contains("itq") ? "Répétitions"
+            : lower.contains("entretien") || lower.contains("mur") ? "45 min" : "";
         if (!cue.isEmpty()) {
             TextView subtitle = text(context, cue, 9f, false);
             subtitle.setTextColor(MUTED);
@@ -329,6 +333,14 @@ final class Ui {
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
         if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
+        if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
+        if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
+        if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
+        if (s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;
+        if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;
+        if (s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;
+        if (s.contains("ancrage")) return R.drawable.ic_hifz_anchor;
+        if (s.contains("entretien")) return R.drawable.ic_hifz_maintenance;
         if (s.contains("valider") || s.equals("revu") || s.contains("termin")) return R.drawable.ic_ui_validate;
         if (s.startsWith("début")) return R.drawable.ic_ui_start;
         if (s.startsWith("fin")) return R.drawable.ic_ui_end;
@@ -336,9 +348,9 @@ final class Ui {
         if (s.contains("modifier")) return R.drawable.ic_ui_edit;
         if (s.contains("supprimer")) return R.drawable.ic_ui_delete;
         if (s.contains("choisir le pack") || s.contains("import")) return R.drawable.ic_ui_import;
-        if (s.contains("sabqi")) return R.drawable.ic_ui_sabqi;
-        if (s.contains("itq")) return R.drawable.ic_ui_itqan;
-        if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_ui_murajaah;
+        if (s.contains("sabqi")) return R.drawable.ic_hifz_new_lesson;
+        if (s.contains("itq")) return R.drawable.ic_hifz_anchor;
+        if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_hifz_maintenance;
         return 0;
     }
 
