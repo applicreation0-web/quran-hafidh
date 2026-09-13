@@ -33,9 +33,11 @@ final class WeeklyDashboardPlanner {
     private final HifzPrefs prefs;
     private final GeometryRepository geometry;
     private final DashboardLedger ledger;
+    private final J10HostBudgetStore hostBudgetStore;
 
-    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger){
-        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;
+    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger,
+                           J10HostBudgetStore hostBudgetStore){
+        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;this.hostBudgetStore=hostBudgetStore;
     }
 
     static List<LocalDate> window(LocalDate today){
@@ -69,10 +71,14 @@ final class WeeklyDashboardPlanner {
             String eveningMode=modeFor(plan.getEvening().getKind());
             DashboardLedger.Record morningActual=ledger.find(date,morningMode);
             DashboardLedger.Record eveningActual=ledger.find(date,eveningMode);
+            boolean morningJ10=morningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(morningMode,date);
+            boolean eveningJ10=eveningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(eveningMode,date);
 
             String morning;
             String projectedMorningRange="";
-            switch(plan.getMorning().getKind()){
+            if(morningJ10){
+                morning="J10 · créneau utilisé";
+            }else switch(plan.getMorning().getKind()){
                 case SABQI_NEW: {
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
                     if(morningActual!=null) morning="✓ "+compact(morningActual.label);
@@ -95,21 +101,23 @@ final class WeeklyDashboardPlanner {
                         VerseRef end=GeometryRepository.parseVerse(entry.end);
                         List<VerseRef> verses=geometry.versesForRange(start,end);
                         boolean fractionated=prefs.isFractionatedUnit(verses);
-                        String fractionLabel="";
                         if(fractionated){
                             int lineCount=geometry.lineIdsForVerseRange(start,end).size();
                             int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(lineCount));
                             int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
-                            fractionLabel=" · bloc "+(block+1)+"/"+blocks;
+                            morning="Ancrage fractionné · "+range(start,end)
+                                +" · bloc "+(block+1)+"/"+blocks
+                                +" · ×"+PreviewConfig.ITQAN_LIGHT_TOTAL_REPS;
                             block++;
                             if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
                             else projectedItqanBlockIndex=block;
                         }else{
+                            morning="Ancrage · "+range(start,end)
+                                +" · ×"+PreviewConfig.itqanTotalReps(entry.protocol)
+                                +(entry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
                             projectedItqanBlockIndex=0;
                             projectedAnchoringIndex++;
                         }
-                        morning="Ancrage · "+range(start,end)+fractionLabel
-                            +(entry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
                     }
                     break;
                 }
@@ -122,7 +130,9 @@ final class WeeklyDashboardPlanner {
             }
 
             String evening;
-            switch(plan.getEvening().getKind()){
+            if(eveningJ10){
+                evening="J10 · créneau utilisé";
+            }else switch(plan.getEvening().getKind()){
                 case SABQI_TODAY_REVIEW:
                     if(eveningActual!=null) evening="✓ "+compact(eveningActual.label);
                     else {
@@ -144,9 +154,12 @@ final class WeeklyDashboardPlanner {
                     evening="—";
             }
 
-            boolean morningDone=morningActual!=null;
-            boolean eveningDone=eveningActual!=null;
-            String state=morningDone&&eveningDone?"Validées":morningDone?"Soir à faire":"À faire";
+            boolean morningDone=morningActual!=null||morningJ10;
+            boolean eveningDone=eveningActual!=null||eveningJ10;
+            String state;
+            if(morningDone&&eveningDone) state=(morningJ10||eveningJ10)?"Terminé · J10":"Validées";
+            else if(morningDone) state=morningJ10?"Matin J10 · soir à faire":"Soir à faire";
+            else state="À faire";
             out.add(new Row(date,day(date,today),morning,evening,state));
         }
         return out;
