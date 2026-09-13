@@ -11,9 +11,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.quransafeguard.hifz.core.DailyPlan;
 import com.quransafeguard.hifz.core.EligibleCorpus;
+import com.quransafeguard.hifz.core.HifzSchedule;
+import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -116,7 +120,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         root.addView(audioHost, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        mushaf = new MushafView(this); mushaf.setListener(this);
+        mushaf = new MushafView(this);
+        mushaf.setMaskEntropy(prefs.maskEntropyFor(mode));
+        mushaf.setListener(this);
         root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
         LinearLayout controlBar = Ui.row(this);
@@ -264,8 +270,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void rebalanceRecentWindow() {
         List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
         if (recent.isEmpty()) return;
+        int recentWindowMinutes = HifzSchedule.INSTANCE.planFor(DayOfWeek.SATURDAY).getMorning().getTargetMinutes();
         int capacity = Math.max(PreviewConfig.SABQI_LINES,
-            (int)Math.floor(PreviewConfig.MURAJAAH_RECENT_SABQI_MINUTES_WORKING * 60.0 / prefs.recentSecondsPerLine()));
+            (int)Math.floor(recentWindowMinutes * 60.0 / prefs.recentSecondsPerLine()));
         int total = 0;
         for (HifzPrefs.RecentSabqi item : recent) total += Math.max(0, item.endLine - item.startLine + 1);
         if (total <= capacity) return;
@@ -642,18 +649,24 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(current!=null)current.detachInline();
     }
 
-    private void closeClockForCompletedSession(){sessionCompleted=true;awaitingValidation=false;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);}
+    private void closeClockForCompletedSession(){
+        sessionCompleted=true;awaitingValidation=false;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);prefs.clearMaskEntropy(mode);
+    }
     private boolean isTimedMode() {
         return SABQI_TODAY_REVIEW.equals(mode) || RECENT_SABQI_REVIEW.equals(mode) || MURAJAAH.equals(mode);
     }
+    private int scheduledTargetMinutes(SessionKind kind) {
+        DailyPlan plan = HifzSchedule.INSTANCE.planFor(LocalDate.now().getDayOfWeek());
+        if (plan.getMorning().getKind() == kind) return plan.getMorning().getTargetMinutes();
+        if (plan.getEvening().getKind() == kind) return plan.getEvening().getTargetMinutes();
+        throw new IllegalStateException("Mode " + kind + " absent du planning " + LocalDate.now().getDayOfWeek());
+    }
     private int targetMinutes(){
         if (SABQI.equals(mode)) return PreviewConfig.SABQI_MINUTES_WORKING;
-        if (SABQI_TODAY_REVIEW.equals(mode)) return PreviewConfig.SABQI_TODAY_REVIEW_MINUTES;
+        if (SABQI_TODAY_REVIEW.equals(mode)) return scheduledTargetMinutes(SessionKind.SABQI_TODAY_REVIEW);
         if (ITQAN.equals(mode)) return PreviewConfig.ITQAN_MINUTES_WORKING;
-        if (RECENT_SABQI_REVIEW.equals(mode)) return PreviewConfig.WEEKEND_RECENT_REVIEW_MINUTES;
-        java.time.DayOfWeek day = LocalDate.now().getDayOfWeek();
-        return day == java.time.DayOfWeek.TUESDAY || day == java.time.DayOfWeek.THURSDAY
-            ? PreviewConfig.WEEKDAY_MURAJAAH_MINUTES : PreviewConfig.WEEKEND_MURAJAAH_MINUTES;
+        if (RECENT_SABQI_REVIEW.equals(mode)) return scheduledTargetMinutes(SessionKind.RECENT_SABQI_REVIEW);
+        return scheduledTargetMinutes(SessionKind.OLD_ITQAN_MURAJAAH);
     }
     private String displayModeName(){
         if (SABQI.equals(mode)) return "Sabqi";

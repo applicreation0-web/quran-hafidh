@@ -112,7 +112,7 @@ function randomSegmentsForCells(cells,percent,order){
   return segments;
 }
 
-function markerLayer(svg,polys){
+function markerLayer(svg,polys,lines){
   const g=document.createElementNS(NS,'g');
   const markers=svg.querySelectorAll('#ayah_markers > g');
   if(!markers.length)return g;
@@ -123,7 +123,10 @@ function markerLayer(svg,polys){
     const full=inv.multiply(ctm),b=m.getBBox();
     const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
     const c=pt.matrixTransform(full);
-    if(!insideSelection(polys,c.x,c.y))return;
+    const visible=polys.length
+      ? insideSelection(polys,c.x,c.y)
+      : (lines||[]).some(line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    if(!visible)return;
     const wrap=document.createElementNS(NS,'g');
     wrap.setAttribute('transform',`matrix(${full.a} ${full.b} ${full.c} ${full.d} ${full.e} ${full.f})`);
     [...m.childNodes].forEach(n=>wrap.appendChild(n.cloneNode(true)));
@@ -164,7 +167,7 @@ function render(){
   });
   layer.appendChild(group);
   // Verse-number rosettes are deliberately redrawn above the random masks.
-  if(polys.length)layer.appendChild(markerLayer(svg,polys));
+  layer.appendChild(markerLayer(svg,polys,lines));
   svg.appendChild(layer);
 }
 

@@ -34,13 +34,6 @@ public final class PreviewConfigTest {
         assertEquals(0, PreviewConfig.itqanMaskForNextRep(-1));
     }
 
-    @Test public void fixedSessionsNeverRedistributeMinutes() {
-        assertEquals(30, PreviewConfig.SABQI_TODAY_REVIEW_MINUTES);
-        assertEquals(60, PreviewConfig.WEEKDAY_MURAJAAH_MINUTES);
-        assertEquals(30, PreviewConfig.WEEKEND_RECENT_REVIEW_MINUTES);
-        assertEquals(30, PreviewConfig.WEEKEND_MURAJAAH_MINUTES);
-    }
-
     @Test public void recentSabqiIndexLoopsEvenWithOneBlockUntilTimerEnds() {
         assertEquals(0, PreviewConfig.nextRecentReviewIndex(0, 1));
         assertEquals(1, PreviewConfig.nextRecentReviewIndex(0, 3));

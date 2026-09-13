@@ -8,14 +8,7 @@ public final class PreviewConfig {
     public static final int SABQI_LINES = 5; // frozen
     public static final int SABQI_MINUTES_WORKING = 90;
     public static final int ITQAN_MINUTES_WORKING = 60;
-    public static final int MURAJAAH_MINUTES_WORKING = 60;
     public static final int FREE_MEM_MINUTES_WORKING = 45;
-
-    // Fixed, independent sessions. Minutes are never redistributed between session types.
-    public static final int SABQI_TODAY_REVIEW_MINUTES = 30;
-    public static final int WEEKDAY_MURAJAAH_MINUTES = 60;
-    public static final int WEEKEND_RECENT_REVIEW_MINUTES = 30;
-    public static final int WEEKEND_MURAJAAH_MINUTES = 30;
 
     public static final int SABQI_VISIBLE_REPS = 15;
     public static final int SABQI_25_REPS = 5;
@@ -34,8 +27,6 @@ public final class PreviewConfig {
 
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
     public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
-    public static final int MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 30;
-    public static final int MURAJAAH_ITQAN_MINUTES_WORKING = 30;
     public static final int SPEED_MIN_LINES = 20;
     public static final int SPEED_MIN_SECONDS = 300;
     public static final double SPEED_MAX_CHANGE_RATIO = 0.10;
@@ -47,13 +38,6 @@ public final class PreviewConfig {
     public static final int EINK_MASK_CHANGES_BEFORE_FULL_CLEAN_WORKING = 4;
     // Audio moves verse-by-verse and can run for long periods: clean more often than generic local UI.
     public static final int EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6;
-
-    /** Legacy v2 helper retained until the runtime session migration is completed in the next task. */
-    public static boolean recentMurajaahComplete(int reviewedLines, int totalRecentLines, long elapsedMs) {
-        if (totalRecentLines <= 0) return true;
-        if (reviewedLines >= totalRecentLines) return true;
-        return elapsedMs >= MURAJAAH_RECENT_SABQI_MINUTES_WORKING * 60_000L;
-    }
 
     /** Stable cyclic traversal of recent Sabqi, including the one-block case. */
     public static int nextRecentReviewIndex(int currentIndex, int blockCount) {

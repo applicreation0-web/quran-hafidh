@@ -81,6 +81,7 @@ val verifyHifzCosmeticContract by tasks.registering {
 val verifyHifzConvergenceRules by tasks.registering {
     doLast {
         val config = file("src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java").readText()
+        val core = rootProject.file("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt").readText()
         val session = file("src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java").readText()
         val settings = file("src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java").readText()
         val main = file("src/main/java/com/quransafeguard/hifz/preview/MainActivity.java").readText()
@@ -94,9 +95,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         val eink = file("src/main/java/com/quransafeguard/hifz/preview/EinkController.java").readText()
         val manifest = file("src/main/AndroidManifest.xml").readText()
 
-        check(config.contains("MURAJAAH_RECENT_SABQI_MINUTES_WORKING = 30"))
-        check(config.contains("MURAJAAH_ITQAN_MINUTES_WORKING = 30"))
-        check(config.contains("MURAJAAH_MINUTES_WORKING = 60"))
+        check(core.contains("PlannedSession(SessionKind.SABQI_TODAY_REVIEW, 30)")
+                && core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 60)")
+                && core.contains("PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 30)")
+                && core.contains("PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, 30)")) {
+            "Fixed timed sessions must be defined by HifzSchedule, not duplicate PreviewConfig constants."
+        }
         check(config.contains("ITQAN_VISIBLE_REPS_WORKING = 15"))
         check(config.contains("ITQAN_100_REPS_WORKING = 10"))
         check(config.contains("ITQAN_TOTAL_REPS = 40")) { "Itqan must stay on the agreed ×40 protocol." }

@@ -15,6 +15,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 /** Versioned local persistence. Structured Hifz and free memorization are intentionally isolated. */
 public final class HifzPrefs {
@@ -182,6 +184,24 @@ public final class HifzPrefs {
     public LocalDate programStartDate() { return LocalDate.parse(required("programStartDate")); }
     public void setProgramStartDate(LocalDate value) { p.edit().putString("programStartDate", value.toString()).apply(); }
 
+    private static String maskEntropyKey(String mode) {
+        if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("mask entropy mode required");
+        return "maskEntropy_" + mode.toLowerCase(Locale.ROOT);
+    }
+
+    public String maskEntropyFor(String mode) {
+        String key = maskEntropyKey(mode);
+        String current = p.getString(key, "");
+        if (current != null && !current.isEmpty()) return current;
+        String created = UUID.randomUUID().toString();
+        if (!p.edit().putString(key, created).commit()) throw new IllegalStateException("Unable to persist Hifz mask entropy");
+        return created;
+    }
+
+    public void clearMaskEntropy(String mode) {
+        if (!p.edit().remove(maskEntropyKey(mode)).commit()) throw new IllegalStateException("Unable to clear Hifz mask entropy");
+    }
+
     // Legacy diagnostics retained for migration visibility; schema v3 corpus APIs below are authoritative.
     public VerseRef lowerBound() { return safeRef(p.getString("lowerBound", "2:1"), new VerseRef(2,1)); }
     public VerseRef promotedFrontier() { return safeRef(p.getString("promotedFrontier", "2:74"), new VerseRef(2,74)); }
@@ -210,7 +230,6 @@ public final class HifzPrefs {
     public VerseRef itqanCursor() { return ref("itqanCursor"); }
     public VerseRef murajaahCursor() { return ref("murajaahCursor"); }
     public void setItqanCursor(VerseRef value) { putRef("itqanCursor", value); }
-    public void setMurajaahCursor(VerseRef value) { putRef("murajaahCursor", value); }
 
     /** All base Itqan plus every snowball promotion, irrespective of consolidation status. */
     public EligibleCorpus itqanWorkCorpus() {

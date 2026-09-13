@@ -46,7 +46,7 @@ public final class MushafView extends WebView {
     private Runnable pending;
     private final HifzPrefs prefs;
     private final EinkController eink = new EinkController();
-    private final String maskEntropy = java.util.UUID.randomUUID().toString();
+    private String maskEntropy;
 
     private int requestedPage = 0;
     private boolean pageShown;
@@ -72,6 +72,7 @@ public final class MushafView extends WebView {
     public MushafView(Context context) {
         super(context);
         prefs = new HifzPrefs(context);
+        maskEntropy = prefs.maskEntropyFor("reader_default");
         setBackgroundColor(android.graphics.Color.rgb(250, 248, 242));
         WebSettings s = getSettings();
         s.setJavaScriptEnabled(true);
@@ -79,7 +80,7 @@ public final class MushafView extends WebView {
         s.setAllowContentAccess(false);
         s.setDomStorageEnabled(false);
         s.setBlockNetworkLoads(true);
-        s.setBuiltInZoomControls(true);
+        s.setBuiltInZoomControls(false);
         s.setDisplayZoomControls(false);
         addJavascriptInterface(new Bridge(), "HifzNative");
         setWebViewClient(new WebViewClient() {
@@ -92,6 +93,11 @@ public final class MushafView extends WebView {
                 return true;
             }
         });
+    }
+
+    public void setMaskEntropy(String value) {
+        if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException("mask entropy required");
+        maskEntropy = value;
     }
 
     public void setListener(Listener value) {

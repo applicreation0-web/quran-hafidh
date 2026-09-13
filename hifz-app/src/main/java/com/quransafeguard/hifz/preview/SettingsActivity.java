@@ -80,7 +80,7 @@ public final class SettingsActivity extends android.app.Activity {
 
         section(root,"Avancé");
         root.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Réinitialiser","État de test",v->confirmReset()));
+        root.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
@@ -240,8 +240,8 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void confirmReset(){
-        new AlertDialog.Builder(this).setTitle("Réinitialiser l’état de test ?")
-            .setMessage("Remet le scénario de référence. Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
+        new AlertDialog.Builder(this).setTitle("Réinitialiser la progression Hifz ?")
+            .setMessage("Efface la progression Hifz locale (Sabqi, Itqān, Murājaʿah, curseurs et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
             .setNegativeButton("Annuler",null).setPositiveButton("Réinitialiser",(d,w)->{prefs.resetPreviewState();getSharedPreferences("hifz_preview_session_gates",MODE_PRIVATE).edit().clear().apply();refreshAll();}).show();
     }
 }
