@@ -1,6 +1,6 @@
 package com.quransafeguard.hifz.preview;
 
-/** Pure cadence math shared by Murajaah sizing, recent-Sabqi capacity and advisory ranges. */
+/** Pure cadence math shared by Entretien sizing, Consolidation capacity and advisory ranges. */
 final class HifzCadence {
     private HifzCadence() {}
 
@@ -17,9 +17,9 @@ final class HifzCadence {
 
     static int targetFiveLineCapacity(int minutes, double secondsPerLine) {
         int raw = targetLines(minutes, secondsPerLine);
-        if (raw <= 0) return 0;
         int block = PreviewConfig.SABQI_LINES;
-        return Math.max(block, (raw / block) * block);
+        if (raw < block) return 0;
+        return (raw / block) * block;
     }
 
     static double recalibrate(double previousSecondsPerLine, int reviewedLines, long activeElapsedMs) {
