@@ -1,0 +1,134 @@
+name: Hifz exact candidate device verification
+
+on:
+  push:
+    branches: [helper/hifz-0.7.3-final-device-ci]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify-exact-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact application candidate
+        uses: actions/checkout@v4
+        with:
+          ref: eeb64d305bf2232b2994f9184ffa6725f0c35c09
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Inject canonical 604-page Mushaf and audited Tafsir
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          tafsir_dst="app/src/plus/assets/tafsir"
+          rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
+          cp baseline109/extracted/assets/tafsir/* "$tafsir_dst/"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate exact Hifz geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          test -s app/src/main/assets/reader109/geometry.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK build components
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Unit and contract regression
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:compileDebugAndroidTestSources :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm || true
+
+      - name: Run real Android instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: timeout 12m gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace
+
+      - name: Assemble exact unsigned BOOX test APK
+        run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
+
+      - name: Inspect exact APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          test "$(apkanalyzer manifest application-id "$apk")" = "com.quransafeguard.hifz"
+          test "$(apkanalyzer manifest version-code "$apk")" = "10"
+          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.3-boox"
+          apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
+          if grep -q 'android:debuggable="true"' hifz-app-manifest.xml; then exit 1; fi
+          if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
+          unzip -l "$apk" > hifz-app-apk-list.txt
+          test "$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 604
+          if grep -Eq 'assets/audio/husary-muallim/[0-9]{6}\.mp3' hifz-app-apk-list.txt; then exit 1; fi
+          sha256sum "$apk" | tee hifz-app-sha256.txt
+          printf 'HEAD=eeb64d305bf2232b2994f9184ffa6725f0c35c09\nPACKAGE=com.quransafeguard.hifz\nVERSION_CODE=10\nVERSION_NAME=0.7.3-boox\n' > hifz-app-build-info.txt
+
+      - name: Upload exact candidate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-0.7.3-boox-test-eeb64d305bf2232b2994f9184ffa6725f0c35c09
+          path: |
+            hifz-app/build/outputs/apk/release/*.apk
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            hifz-app-manifest.xml
+            hifz-app-apk-list.txt
+            hifz-app-sha256.txt
+            hifz-app-build-info.txt
+            geometry-report.json
+          if-no-files-found: error
+          retention-days: 14
