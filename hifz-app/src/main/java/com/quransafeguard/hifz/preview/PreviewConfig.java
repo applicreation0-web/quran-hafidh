@@ -23,13 +23,13 @@ public final class PreviewConfig {
     public static final int ITQAN_100_REPS_WORKING = 10;
     public static final int ITQAN_TOTAL_REPS = 40;
 
-    // Reconstruction: substantial visible re-exposure, no 25% stage, then progressive recall.
-    public static final int ITQAN_LIGHT_VISIBLE_REPS = 15;
+    // Reconstruction: stronger visible re-exposure, no 25% stage, then progressive recall.
+    public static final int ITQAN_LIGHT_VISIBLE_REPS = 20;
     public static final int ITQAN_LIGHT_25_REPS = 0;
     public static final int ITQAN_LIGHT_50_REPS = 5;
     public static final int ITQAN_LIGHT_75_REPS = 5;
     public static final int ITQAN_LIGHT_100_REPS = 5;
-    public static final int ITQAN_LIGHT_TOTAL_REPS = 30;
+    public static final int ITQAN_LIGHT_TOTAL_REPS = 35;
 
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
     public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
