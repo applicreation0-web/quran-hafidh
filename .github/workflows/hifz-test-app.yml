@@ -9,6 +9,7 @@ on:
       - fix/hifz-0.7.3-claude-audit
       - feat/hifz-0.7.3-lot2-cadence
       - fix/hifz-0.7.3-final-ui-polish
+      - work/hifz-0.7.3-spec-update
   workflow_dispatch:
 
 permissions:
