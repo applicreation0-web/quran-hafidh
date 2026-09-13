@@ -112,13 +112,13 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(config.contains("ITQAN_VISIBLE_REPS_WORKING = 15"))
         check(config.contains("ITQAN_100_REPS_WORKING = 10"))
         check(config.contains("ITQAN_TOTAL_REPS = 40")) { "Full promoted-page Ancrage must keep the ×40 protocol." }
-        check(config.contains("ITQAN_LIGHT_VISIBLE_REPS = 15")
+        check(config.contains("ITQAN_LIGHT_VISIBLE_REPS = 20")
                 && config.contains("ITQAN_LIGHT_25_REPS = 0")
                 && config.contains("ITQAN_LIGHT_50_REPS = 5")
                 && config.contains("ITQAN_LIGHT_75_REPS = 5")
                 && config.contains("ITQAN_LIGHT_100_REPS = 5")
-                && config.contains("ITQAN_LIGHT_TOTAL_REPS = 30")) {
-            "Reconstruction Ancrage must stay on 30 repetitions: 15 visible + 5/5/5 masked."
+                && config.contains("ITQAN_LIGHT_TOTAL_REPS = 35")) {
+            "Reconstruction Ancrage must stay on 35 repetitions: 20 visible + 5/5/5 masked."
         }
         check(config.contains("EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING = 6")) { "Audio needs its own anti-ghosting cleanup cadence." }
 
