@@ -17,6 +17,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.Locale;
+import java.util.UUID;
 
 /** Versioned local persistence. Structured Hifz and free memorization are intentionally isolated. */
 public final class HifzPrefs {
@@ -183,6 +185,24 @@ public final class HifzPrefs {
     public int schema() { return p.getInt("schema", 0); }
     public LocalDate programStartDate() { return LocalDate.parse(required("programStartDate")); }
     public void setProgramStartDate(LocalDate value) { p.edit().putString("programStartDate", value.toString()).apply(); }
+
+    private static String maskEntropyKey(String mode) {
+        if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("mask entropy mode required");
+        return "maskEntropy_" + mode.toLowerCase(Locale.ROOT);
+    }
+
+    public String maskEntropyFor(String mode) {
+        String key = maskEntropyKey(mode);
+        String current = p.getString(key, "");
+        if (current != null && !current.isEmpty()) return current;
+        String created = UUID.randomUUID().toString();
+        if (!p.edit().putString(key, created).commit()) throw new IllegalStateException("Unable to persist Hifz mask entropy");
+        return created;
+    }
+
+    public void clearMaskEntropy(String mode) {
+        if (!p.edit().remove(maskEntropyKey(mode)).commit()) throw new IllegalStateException("Unable to clear Hifz mask entropy");
+    }
 
     private static String maskEntropyKey(String mode) {
         if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("mask entropy mode required");

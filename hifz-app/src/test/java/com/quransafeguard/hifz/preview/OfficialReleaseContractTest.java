@@ -44,6 +44,10 @@ public final class OfficialReleaseContractTest {
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
         assertTrue("WebView built-in zoom must stay disabled", mushaf.contains("setBuiltInZoomControls(false)"));
         assertFalse("mask entropy must not be regenerated per WebView instance", mushaf.contains("UUID.randomUUID"));
+        assertTrue("user zoom must not override canonical BOOX fit", index.contains("maximum-scale=1") && index.contains("user-scalable=no"));
+        String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
+        assertTrue("WebView built-in zoom must stay disabled", mushaf.contains("setBuiltInZoomControls(false)"));
+        assertFalse("mask entropy must not be regenerated per WebView instance", mushaf.contains("UUID.randomUUID"));
     }
 
     @Test public void schemaV3SeparatesItqanWorkFromConsolidatedMurajaah() throws Exception {
@@ -70,6 +74,8 @@ public final class OfficialReleaseContractTest {
         assertFalse("mixed A/B Murajaah phase must be removed", session.contains("murajaahBlockB") || session.contains("transitionToBlockB"));
         assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
         assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
+        assertTrue("runtime timed durations must consume HifzSchedule", session.contains("HifzSchedule") && session.contains("planFor"));
+        assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
         assertTrue("runtime timed durations must consume HifzSchedule", session.contains("HifzSchedule") && session.contains("planFor"));
         assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
     }
