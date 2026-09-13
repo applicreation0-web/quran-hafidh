@@ -1,0 +1,65 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def read(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
+
+
+def test_runtime_uses_domain_schedule_as_single_source_of_truth():
+    session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
+    config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java")
+
+    assert "HifzSchedule" in session and "planFor" in session, (
+        "HifzSessionActivity must consume the same HifzSchedule.planFor() contract as Today/dashboard"
+    )
+    assert "WEEKDAY_MURAJAAH_MINUTES" not in session
+    assert "WEEKEND_MURAJAAH_MINUTES" not in session
+    assert "WEEKEND_RECENT_REVIEW_MINUTES" not in session
+    assert "SABQI_TODAY_REVIEW_MINUTES" not in session
+
+    for duplicate in (
+        "MURAJAAH_MINUTES_WORKING",
+        "MURAJAAH_RECENT_SABQI_MINUTES_WORKING",
+        "MURAJAAH_ITQAN_MINUTES_WORKING",
+        "WEEKDAY_MURAJAAH_MINUTES",
+        "WEEKEND_MURAJAAH_MINUTES",
+        "WEEKEND_RECENT_REVIEW_MINUTES",
+        "SABQI_TODAY_REVIEW_MINUTES",
+    ):
+        assert duplicate not in config, f"duplicate duration constant remains: {duplicate}"
+
+
+def test_reader_fit_cannot_be_overridden_by_user_zoom():
+    mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java")
+    index = read("hifz-app/src/main/assets/hifzreader/index.html")
+
+    assert "setBuiltInZoomControls(false)" in mushaf
+    assert "setBuiltInZoomControls(true)" not in mushaf
+    assert "maximum-scale=1" in index
+    assert "user-scalable=no" in index
+
+
+def test_mask_entropy_is_session_persistent_not_view_instance_random():
+    mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java")
+    prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java")
+    session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
+
+    assert "UUID.randomUUID" not in mushaf
+    assert "setMaskEntropy" in mushaf
+    assert "maskEntropyFor" in prefs
+    assert "clearMaskEntropy" in prefs
+    assert "prefs.maskEntropyFor(mode)" in session
+    assert "prefs.clearMaskEntropy(mode)" in session
+
+
+if __name__ == "__main__":
+    tests = [
+        test_runtime_uses_domain_schedule_as_single_source_of_truth,
+        test_reader_fit_cannot_be_overridden_by_user_zoom,
+        test_mask_entropy_is_session_persistent_not_view_instance_random,
+    ]
+    for test in tests:
+        test()
+        print(f"PASS {test.__name__}")
