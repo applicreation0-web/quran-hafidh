@@ -95,6 +95,51 @@ jobs:
           python3 scripts/verify_hifz_geometry_edges.py
           test -s app/src/main/assets/reader109/geometry.json
 
+      - name: Package self-contained audited source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle_name="quran-hifz-source-${GITHUB_SHA}"
+          stage="$RUNNER_TEMP/hifz-repro/$bundle_name"
+          rm -rf "$RUNNER_TEMP/hifz-repro"
+          mkdir -p "$stage"
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='baseline109/' \
+            --exclude='.gradle/' \
+            --exclude='*/build/' \
+            --exclude='quran-hifz-reproducible-source-*' \
+            ./ "$stage/"
+
+          test "$(find "$stage/app/src/main/assets/mushaf/hafs/kfqc/svg-br" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          test -s "$stage/app/src/main/assets/reader109/geometry.json"
+          test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'qurtubi_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'qushayri_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 2
+
+          cat > "$stage/SELF_CONTAINED_BUILD.txt" <<EOF
+          QURAN HIFZ 0.7.3 SELF-CONTAINED AUDIT SOURCE
+          HEAD=${GITHUB_SHA}
+          PACKAGE=com.quransafeguard.hifz
+          VERSION_CODE=10
+          VERSION_NAME=0.7.3-boox
+          MUSHAF_PAGES=604
+          AUDIO_DELIVERY=separate-local-pack
+
+          This bundle was captured after the validated Mushaf/Tafsir injection and exact geometry generation.
+          It therefore contains the build inputs that the historical baseline artifact supplied to CI.
+          No JKS, signing password, or local audio pack is included.
+          Build application code with Gradle 9.5 / JDK 17, e.g. :hifz-app:assembleRelease.
+          EOF
+
+          (
+            cd "$stage"
+            find . -type f ! -name SOURCE_FILES_SHA256.txt -print0 | sort -z | xargs -0 sha256sum > SOURCE_FILES_SHA256.txt
+          )
+          archive="quran-hifz-reproducible-source-${GITHUB_SHA}.tar.gz"
+          tar -C "$RUNNER_TEMP/hifz-repro" -czf "$archive" "$bundle_name"
+          sha256sum "$archive" | tee "${archive}.sha256"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -240,6 +285,8 @@ jobs:
             hifz-app-sha256.txt
             hifz-app-build-info.txt
             geometry-report.json
+            quran-hifz-reproducible-source-*.tar.gz
+            quran-hifz-reproducible-source-*.tar.gz.sha256
           if-no-files-found: warn
           retention-days: 14
 
