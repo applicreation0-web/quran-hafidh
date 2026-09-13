@@ -108,6 +108,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions = Ui.row(this);
         readerActions.setGravity(Gravity.CENTER);
         readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
+        readerActions.setMinimumHeight(Ui.dp(this, 56));
         tafsirButton = tafsirReaderAction();
         tafsirButton.setEnabled(false);
         readerActions.addView(tafsirButton);
@@ -130,7 +131,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         pageRail.addView(pageSeek, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         LinearLayout.LayoutParams railParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        railParams.topMargin = Ui.dp(this, 12);
+        railParams.topMargin = Ui.dp(this, 20);
         readerStack.addView(pageRail, railParams);
         scheduleAutoHide();
     }
@@ -147,8 +148,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         button.setStateListAnimator(null);
         button.setElevation(0f);
         button.setBackgroundColor(Color.TRANSPARENT);
-        button.setMinimumHeight(Ui.dp(this, 48));
-        button.setMinimumWidth(Ui.dp(this, 96));
+        button.setMinimumHeight(Ui.dp(this, 56));
+        button.setMinimumWidth(Ui.dp(this, 160));
         button.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
         return button;
     }
