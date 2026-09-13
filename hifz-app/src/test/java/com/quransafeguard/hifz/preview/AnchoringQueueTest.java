@@ -29,8 +29,17 @@ public final class AnchoringQueueTest {
 
         AnchoringQueue.Deferral result = AnchoringQueue.defer(input, 2, 3);
 
-        assertEquals(Arrays.asList("A", "B", "D", "E", "F", "C"), starts(result.entries));
-        assertEquals(2, result.nextIndex);
+        assertEquals(Arrays.asList("D", "E", "F", "C", "A", "B"), starts(result.entries));
+        assertEquals(0, result.nextIndex);
+    }
+
+    @Test public void deferralWrapsAtQueueEndInsteadOfRepeatingFailedPageImmediately() {
+        List<AnchoringQueue.Entry> input = entries("A", "B", "C", "D", "E", "F");
+
+        AnchoringQueue.Deferral result = AnchoringQueue.defer(input, 5, 3);
+
+        assertEquals(Arrays.asList("A", "B", "C", "F", "D", "E"), starts(result.entries));
+        assertEquals(0, result.nextIndex);
     }
 
     @Test public void thirdFailureSwitchesThatPageToFullAndDefersItThreePlaces() {
@@ -40,11 +49,11 @@ public final class AnchoringQueueTest {
 
         AnchoringQueue.Deferral result = AnchoringQueue.failAndDefer(input, 2, 3);
 
-        assertEquals(Arrays.asList("A", "B", "D", "E", "F", "C"), starts(result.entries));
-        AnchoringQueue.Entry failed = result.entries.get(5);
+        assertEquals(Arrays.asList("D", "E", "F", "C", "A", "B"), starts(result.entries));
+        AnchoringQueue.Entry failed = result.entries.get(3);
         assertEquals(3, failed.failures);
         assertEquals(AnchoringQueue.Protocol.FULL, failed.protocol);
-        assertEquals(2, result.nextIndex);
+        assertEquals(0, result.nextIndex);
     }
 
     private static List<AnchoringQueue.Entry> entries(String... starts) {
