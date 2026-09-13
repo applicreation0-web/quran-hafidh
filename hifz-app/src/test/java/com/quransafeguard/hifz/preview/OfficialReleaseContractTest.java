@@ -73,7 +73,8 @@ public final class OfficialReleaseContractTest {
         assertFalse("mixed A/B Murajaah phase must be removed", session.contains("murajaahBlockB") || session.contains("transitionToBlockB"));
         assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
         assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
-        assertTrue("runtime timed durations must consume HifzSchedule", session.contains("HifzSchedule") && session.contains("planFor"));
+        assertTrue("runtime timed durations must consume HifzSchedule fixed-mode targets", session.contains("HifzSchedule") && session.contains("targetMinutesFor"));
+        assertFalse("directly opened sessions must not depend on today's plan", session.contains("scheduledTargetMinutes") || session.contains("absent du planning"));
         assertFalse("session durations must not be duplicated in PreviewConfig", config.contains("SABQI_MINUTES_WORKING") || config.contains("ITQAN_MINUTES_WORKING"));
         assertFalse("contradictory evening helper must be removed", core.contains("hasEveningMurajaah"));
         assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
