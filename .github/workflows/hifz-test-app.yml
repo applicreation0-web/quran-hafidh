@@ -215,6 +215,43 @@ jobs:
           adb shell settings put global animator_duration_scale 0
           gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace
 
+          # Work-audit blocker: prove persistence across real process death, not Activity.recreate().
+          runner="com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner"
+          gate="com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest"
+          adb shell am instrument -w -e class "${gate}#a_prepareFixtureForExternalForceStop" "$runner" | tee process-death-prepare.log
+          grep -q 'OK (1 test)' process-death-prepare.log
+
+          adb shell monkey -p com.quransafeguard.hifz -c android.intent.category.LAUNCHER 1 > /dev/null
+          before_pid=""
+          for i in $(seq 1 30); do
+            before_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+            [ -n "$before_pid" ] && break
+            sleep 1
+          done
+          test -n "$before_pid"
+
+          adb shell am force-stop com.quransafeguard.hifz
+          for i in $(seq 1 15); do
+            current_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+            [ -z "$current_pid" ] && break
+            sleep 1
+          done
+          test -z "$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+
+          adb shell monkey -p com.quransafeguard.hifz -c android.intent.category.LAUNCHER 1 > /dev/null
+          after_pid=""
+          for i in $(seq 1 30); do
+            after_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+            [ -n "$after_pid" ] && break
+            sleep 1
+          done
+          test -n "$after_pid"
+          test "$after_pid" != "$before_pid"
+
+          adb shell am instrument -w -e class "${gate}#b_verifyFixtureAfterExternalForceStop" "$runner" | tee process-death-verify.log
+          grep -q 'OK (1 test)' process-death-verify.log
+          echo "PROCESS_DEATH_FORCE_STOP_RELAUNCH_OK before=$before_pid after=$after_pid" | tee process-death-proof.txt
+
       - name: Assemble unsigned official release candidate
         run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
 
@@ -295,6 +332,9 @@ jobs:
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
             emulator.log
+            process-death-prepare.log
+            process-death-verify.log
+            process-death-proof.txt
             hifz-app-manifest.xml
             hifz-app-apk-list.txt
             hifz-app-sha256.txt
