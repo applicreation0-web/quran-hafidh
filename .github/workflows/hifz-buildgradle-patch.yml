@@ -1,0 +1,65 @@
+name: Hifz build harness patch
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.3-claude-all-fixes
+    paths:
+      - .github/workflows/hifz-buildgradle-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.3-claude-all-fixes
+          fetch-depth: 0
+
+      - name: Patch Gradle test harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! grep -q 'CI process-death harness: connectedDebugAndroidTest normally uninstalls both packages' hifz-app/build.gradle.kts; then
+            cat >> hifz-app/build.gradle.kts <<'EOF'
+
+          // CI process-death harness: connectedDebugAndroidTest normally uninstalls both packages.
+          // Reinstall only on GitHub Actions so a second instrumentation process can cross
+          // a real `adb shell am force-stop` boundary after the bulk Android suite.
+          tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach {
+              doLast {
+                  if (System.getenv("GITHUB_ACTIONS") == "true") {
+                      val appApk = fileTree(layout.buildDirectory.dir("outputs/apk/debug")) {
+                          include("**/*.apk")
+                      }.files.firstOrNull { !it.name.contains("androidTest", ignoreCase = true) }
+                          ?: error("Debug APK missing after connectedDebugAndroidTest")
+                      val testApk = fileTree(layout.buildDirectory.dir("outputs/apk/androidTest/debug")) {
+                          include("**/*.apk")
+                      }.files.firstOrNull()
+                          ?: error("AndroidTest APK missing after connectedDebugAndroidTest")
+
+                      fun adbInstall(apk: java.io.File) {
+                          val process = ProcessBuilder("adb", "install", "-r", apk.absolutePath)
+                              .inheritIO()
+                              .start()
+                          check(process.waitFor() == 0) { "adb install failed for " + apk.name }
+                      }
+                      adbInstall(appApk)
+                      adbInstall(testApk)
+                  }
+              }
+          }
+          EOF
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hifz-app/build.gradle.kts
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix(ci): retain instrumentation for process-death gate'
+            git push origin HEAD:work/hifz-0.7.3-claude-all-fixes
+          fi
