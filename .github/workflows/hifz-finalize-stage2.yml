@@ -1,0 +1,131 @@
+name: Quran Hifz autonomous final stage 2
+
+on:
+  push:
+    branches: [work/hifz-0.7.3-claude-all-fixes]
+    paths: [.github/workflows/hifz-finalize-stage2.yml]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  patch-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.3-claude-all-fixes
+          fetch-depth: 0
+      - name: Apply remaining reviewed gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          j10 = Path('hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/J10ReviewPlannerInstrumentedTest.java')
+          text = j10.read_text()
+          if 'LocalDate.of(2026, 9, 13)' in text:
+              text = text.replace('LocalDate.of(2026, 9, 13)', 'LocalDate.now()')
+              j10.write_text(text)
+
+          workflow = Path('.github/workflows/hifz-test-app.yml')
+          text = workflow.read_text()
+          if 'process-death-proof.txt' not in text:
+              needle = '          gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace\n'
+              if text.count(needle) != 1:
+                  raise SystemExit('connectedDebugAndroidTest insertion point not unique')
+              gate = needle + '''\n          # Real process-death proof around an actual adb force-stop/relaunch boundary.\n          probe='com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest#processDeathProbePhase'\n          runner='com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner'\n          adb shell am instrument -w -r -e class "$probe" -e hifz_process_phase prepare "$runner" | tee process-death-prepare.txt\n          grep -q 'OK (1 test)' process-death-prepare.txt\n          adb shell am start -W -n com.quransafeguard.hifz/com.quransafeguard.hifz.preview.MainActivity > process-death-before-start.txt\n          before_pid="$(adb shell pidof com.quransafeguard.hifz | tr -d '\\r')"\n          test -n "$before_pid"\n          adb shell am force-stop com.quransafeguard.hifz\n          sleep 1\n          stopped_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\\r' || true)"\n          test -z "$stopped_pid"\n          adb shell am start -W -n com.quransafeguard.hifz/com.quransafeguard.hifz.preview.MainActivity > process-death-relaunch.txt\n          after_pid=''\n          for i in $(seq 1 20); do\n            after_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\\r' || true)"\n            [ -n "$after_pid" ] && break\n            sleep 1\n          done\n          test -n "$after_pid"\n          test "$after_pid" != "$before_pid"\n          adb shell am instrument -w -r -e class "$probe" -e hifz_process_phase verify "$runner" | tee process-death-verify.txt\n          grep -q 'OK (1 test)' process-death-verify.txt\n          printf 'FORCE_STOP_OK\\nBEFORE_PID=%s\\nAFTER_PID=%s\\nRELAUNCH_OK\\nSTATE_RESTORE_OK\\n' "$before_pid" "$after_pid" | tee process-death-proof.txt\n'''
+              text = text.replace(needle, gate, 1)
+              upload = '            emulator.log\n'
+              if text.count(upload) != 1:
+                  raise SystemExit('artifact insertion point not unique')
+              text = text.replace(upload, upload + '            process-death-prepare.txt\n            process-death-before-start.txt\n            process-death-relaunch.txt\n            process-death-verify.txt\n            process-death-proof.txt\n', 1)
+              workflow.write_text(text)
+          PY
+
+          if [ ! -f hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ProcessDeathPersistenceInstrumentedTest.java ]; then
+          cat > hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ProcessDeathPersistenceInstrumentedTest.java <<'EOF'
+          package com.quransafeguard.hifz.preview;
+
+          import android.content.Context;
+          import android.os.Bundle;
+          import androidx.test.core.app.ApplicationProvider;
+          import androidx.test.platform.app.InstrumentationRegistry;
+          import com.quransafeguard.hifz.core.VerseRef;
+          import org.junit.Assume;
+          import org.junit.Test;
+          import java.time.LocalDate;
+          import java.util.List;
+          import static org.junit.Assert.*;
+
+          public final class ProcessDeathPersistenceInstrumentedTest {
+              private static final String EXPECTED = "hifz_process_death_expected";
+
+              @Test public void processDeathProbePhase() {
+                  Bundle args = InstrumentationRegistry.getArguments();
+                  String phase = args.getString("hifz_process_phase", "");
+                  Assume.assumeTrue("Explicit process-death phase required", !phase.isEmpty());
+                  if ("prepare".equals(phase)) prepare();
+                  else if ("verify".equals(phase)) verify();
+                  else fail("Unknown process-death phase: " + phase);
+              }
+
+              private void prepare() {
+                  Context context = ApplicationProvider.getApplicationContext();
+                  assertTrue(context.getSharedPreferences("quran_hifz_preview_v1", Context.MODE_PRIVATE).edit().clear().commit());
+                  assertTrue(context.getSharedPreferences(EXPECTED, Context.MODE_PRIVATE).edit().clear().commit());
+                  HifzPrefs prefs = new HifzPrefs(context);
+                  GeometryRepository geometry = GeometryRepository.get(context);
+                  prefs.reconcileAnchoringQueue(geometry);
+                  List<AnchoringQueue.Entry> queue = prefs.anchoringQueue();
+                  assertFalse("Anchoring queue must exist", queue.isEmpty());
+                  int index = prefs.anchoringQueueIndex(queue.size());
+                  AnchoringQueue.Entry entry = queue.get(index);
+                  VerseRef start = GeometryRepository.parseVerse(entry.start);
+                  VerseRef end = GeometryRepository.parseVerse(entry.end);
+                  assertTrue(prefs.advanceItqanBlock(1, start, end, LocalDate.now().toString(), "process-death-probe"));
+                  assertTrue(prefs.setItqanProgress(17, 2, 1, start, end));
+                  assertTrue(context.getSharedPreferences(EXPECTED, Context.MODE_PRIVATE).edit()
+                      .putInt("queueIndex", index).putString("start", entry.start).putString("end", entry.end)
+                      .putString("protocol", entry.protocol.name()).putInt("rep", 17).putInt("block", 1)
+                      .putInt("assisted", 2).putInt("finalReveals", 1).commit());
+              }
+
+              private void verify() {
+                  Context context = ApplicationProvider.getApplicationContext();
+                  android.content.SharedPreferences expected = context.getSharedPreferences(EXPECTED, Context.MODE_PRIVATE);
+                  String start = expected.getString("start", "");
+                  String end = expected.getString("end", "");
+                  assertFalse("Prepare phase evidence missing", start.isEmpty());
+                  HifzPrefs prefs = new HifzPrefs(context);
+                  List<AnchoringQueue.Entry> queue = prefs.anchoringQueue();
+                  assertFalse("Anchoring queue lost", queue.isEmpty());
+                  assertEquals(expected.getInt("queueIndex", -1), prefs.anchoringQueueIndex(queue.size()));
+                  AnchoringQueue.Entry current = prefs.inProgressAnchoringEntry();
+                  assertNotNull("In-progress anchoring identity lost", current);
+                  assertEquals(start, current.start);
+                  assertEquals(end, current.end);
+                  assertEquals(expected.getString("protocol", ""), current.protocol.name());
+                  assertEquals(expected.getInt("rep", -1), prefs.itqanRep());
+                  assertEquals(expected.getInt("block", -1), prefs.itqanBlockIndex());
+                  assertEquals(expected.getInt("assisted", -1), prefs.itqanAssisted());
+                  assertEquals(expected.getInt("finalReveals", -1), prefs.itqanFinalReveals());
+                  assertEquals(GeometryRepository.parseVerse(start), prefs.itqanUnitStart());
+                  assertEquals(GeometryRepository.parseVerse(end), prefs.itqanUnitEnd());
+              }
+          }
+          EOF
+          fi
+
+          git rm -f .github/workflows/hifz-finalize-stage2.yml .github/workflows/hifz-finalize-autopatch.yml .github/workflows/hifz-final-autofix.yml 2>/dev/null || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'test(hifz): add real process-death release gate'
+          git push origin HEAD:work/hifz-0.7.3-claude-all-fixes
+      - name: Dispatch official final candidate CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run hifz-test-app.yml --ref work/hifz-0.7.3-claude-all-fixes
