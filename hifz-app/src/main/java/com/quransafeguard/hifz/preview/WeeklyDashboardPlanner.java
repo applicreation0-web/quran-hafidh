@@ -105,9 +105,11 @@ final class WeeklyDashboardPlanner {
                             int lineCount=geometry.lineIdsForVerseRange(start,end).size();
                             int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(lineCount));
                             int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                            int reps=entry==null?PreviewConfig.ITQAN_LIGHT_TOTAL_REPS
+                                :PreviewConfig.itqanTotalReps(entry.protocol);
                             morning="Ancrage fractionné · "+range(start,end)
                                 +" · bloc "+(block+1)+"/"+blocks
-                                +" · ×"+PreviewConfig.ITQAN_LIGHT_TOTAL_REPS;
+                                +" · ×"+reps;
                             block++;
                             if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
                             else projectedItqanBlockIndex=block;

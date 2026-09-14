@@ -45,7 +45,8 @@ public final class J10ReviewPlannerInstrumentedTest {
         Map<String, LocalDate> snapshot = new J10ReviewStore(context).snapshot();
         String acquired = geometry.line(geometry.firstLineIndex(new VerseRef(2, 1))).id;
         String pending = geometry.line(geometry.firstLineIndex(new VerseRef(49, 1))).id;
-        assertEquals(today, snapshot.get(acquired));
+        assertEquals(J10ReviewPolicy.unknownHistoricalSeed(today), snapshot.get(acquired));
+        assertEquals(today.minusDays(10), snapshot.get(acquired));
         assertFalse(snapshot.containsKey(pending));
     }
 
@@ -75,17 +76,40 @@ public final class J10ReviewPlannerInstrumentedTest {
         assertTrue(blockCount > 1);
         int firstLength = PreviewConfig.fractionatedBlockLength(lineIds.size(), 0);
 
-        assertTrue(prefs.advanceItqanBlock(1, today.toString(), "fraction 1"));
+        String label = "Ancrage fractionné · bloc 1/" + blockCount + " validé · révélations 0";
+        assertTrue(prefs.advanceItqanBlock(1, start, end, today.toString(), label));
         int queueIndexBefore = prefs.anchoringQueueIndex();
         VerseRef murajaahBefore = prefs.murajaahCursor();
 
         J10ReviewPlanner planner = new J10ReviewPlanner(context);
-        assertTrue(planner.syncAcquired(today));
+        new J10ReviewObserver(planner).onPreferenceChanged("lastItqanDate", today);
 
         assertEquals(queueIndexBefore, prefs.anchoringQueueIndex());
         assertEquals(murajaahBefore, prefs.murajaahCursor());
         Map<String, LocalDate> snapshot = new J10ReviewStore(context).snapshot();
         for (int i = 0; i < firstLength; i++) assertEquals(today, snapshot.get(lineIds.get(i)));
+        assertFalse(snapshot.containsKey(lineIds.get(firstLength)));
+    }
+
+    @Test public void syncAloneSeedsCompletedSubBlockAsDueNowInsteadOfFreshlyReviewed() {
+        LocalDate today = LocalDate.of(2026, 9, 13);
+        assertTrue(prefs.setHardAnchoringSurahs(Collections.singletonList(49)));
+        assertTrue(prefs.reconcileAnchoringQueue(geometry));
+        AnchoringQueue.Entry current = prefs.currentAnchoringEntry(geometry);
+        VerseRef start = GeometryRepository.parseVerse(current.start);
+        VerseRef end = GeometryRepository.parseVerse(current.end);
+        List<String> lineIds = geometry.lineIdsForVerseRange(start, end);
+        int firstLength = PreviewConfig.fractionatedBlockLength(lineIds.size(), 0);
+
+        assertTrue(prefs.advanceItqanBlock(1, start, end, today.toString(),
+            "Ancrage fractionné · bloc 1 validé"));
+        J10ReviewPlanner planner = new J10ReviewPlanner(context);
+        assertTrue(planner.syncAcquired(today));
+
+        Map<String, LocalDate> snapshot = new J10ReviewStore(context).snapshot();
+        for (int i = 0; i < firstLength; i++) {
+            assertEquals(today.minusDays(10), snapshot.get(lineIds.get(i)));
+        }
         assertFalse(snapshot.containsKey(lineIds.get(firstLength)));
     }
 }

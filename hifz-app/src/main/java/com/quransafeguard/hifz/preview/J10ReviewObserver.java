@@ -102,7 +102,8 @@ final class J10ReviewObserver {
         if (label.startsWith("Ancrage fractionné") && label.contains("bloc ") && prefs.itqanBlockIndex() > 0) {
             List<AnchoringQueue.Entry> queue = prefs.anchoringQueue();
             if (queue.isEmpty()) return;
-            AnchoringQueue.Entry entry = queue.get(prefs.anchoringQueueIndex(queue.size()));
+            AnchoringQueue.Entry entry = prefs.inProgressAnchoringEntry();
+            if (entry == null) entry = queue.get(prefs.anchoringQueueIndex(queue.size()));
             VerseRef start = GeometryRepository.parseVerse(entry.start);
             VerseRef end = GeometryRepository.parseVerse(entry.end);
             List<String> unit = planner.lineIdsForVerseRange(start, end);

@@ -246,30 +246,7 @@ public final class MainActivity extends android.app.Activity {
                     detail = "Soir · Reprise du soir · 30 min";
                     break;
                 case ITQAN: {
-                    VerseRef start=prefs.itqanUnitStart(), end=prefs.itqanUnitEnd();
-                    AnchoringQueue.Entry entry = prefs.currentAnchoringEntry(g);
-                    if(start==null||end==null){
-                        if (entry == null) {
-                            detail = "Matin · Ancrage · aucune page en attente";
-                            break;
-                        }
-                        start = GeometryRepository.parseVerse(entry.start);
-                        end = GeometryRepository.parseVerse(entry.end);
-                    }
-                    AnchoringQueue.Entry inProgress = prefs.anchoringEntryFor(start, end);
-                    if (inProgress != null) entry = inProgress;
-                    boolean fractionated = prefs.isFractionatedUnit(g.versesForRange(start, end));
-                    if (fractionated) {
-                        int lineCount = g.lineIdsForVerseRange(start, end).size();
-                        int blocks = Math.max(1, PreviewConfig.fractionatedBlockCount(lineCount));
-                        int block = Math.max(0, Math.min(prefs.itqanBlockIndex(), blocks - 1));
-                        detail = "Matin · Ancrage fractionné · " + shortRange(start,end)
-                            + " · bloc " + (block + 1) + "/" + blocks
-                            + " · ×" + PreviewConfig.ITQAN_LIGHT_TOTAL_REPS;
-                    } else {
-                        int reps = entry == null ? PreviewConfig.ITQAN_TOTAL_REPS : PreviewConfig.itqanTotalReps(entry.protocol);
-                        detail="Matin · Ancrage · "+shortRange(start,end)+" · ×"+reps;
-                    }
+                    detail = anchoringTodayDetail(prefs, g);
                     break;
                 }
                 case RECENT_SABQI_REVIEW:
@@ -286,6 +263,24 @@ public final class MainActivity extends android.app.Activity {
         }
         today.setText(detail);
         todayAction.setEnabled(true);
+    }
+
+    static String anchoringTodayDetail(HifzPrefs prefs, GeometryRepository geometry) {
+        AnchoringQueue.Entry entry = prefs.inProgressAnchoringEntry();
+        if (entry == null) entry = prefs.currentAnchoringEntry(geometry);
+        if (entry == null) return "Matin · Ancrage · aucune page en attente";
+        VerseRef start = GeometryRepository.parseVerse(entry.start);
+        VerseRef end = GeometryRepository.parseVerse(entry.end);
+        boolean fractionated = prefs.isFractionatedUnit(geometry.versesForRange(start, end));
+        int reps = entry == null
+            ? PreviewConfig.ITQAN_LIGHT_TOTAL_REPS
+            : PreviewConfig.itqanTotalReps(entry.protocol);
+        if (!fractionated) return "Matin · Ancrage · " + shortRange(start, end) + " · ×" + reps;
+        int lineCount = geometry.lineIdsForVerseRange(start, end).size();
+        int blocks = Math.max(1, PreviewConfig.fractionatedBlockCount(lineCount));
+        int block = Math.max(0, Math.min(prefs.itqanBlockIndex(), blocks - 1));
+        return "Matin · Ancrage fractionné · " + shortRange(start, end)
+            + " · bloc " + (block + 1) + "/" + blocks + " · ×" + reps;
     }
 
     private void refreshRecentSabqiAdvisory() {

@@ -179,6 +179,73 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.consolidationAttendanceDates().isEmpty());
     }
 
+    @Test public void schemaOneMigratesThroughV2V3ToV4WithoutLosingProgress() {
+        raw.edit()
+            .putInt("schema", 1)
+            .putString("programStartDate", "2026-09-01")
+            .putString("promotedFrontier", "2:150")
+            .putString("sabqiStart", "2:75")
+            .putString("sabqiEnd", "2:286")
+            .putString("itqanRotationStart", "49:1")
+            .putString("lastSabqiLabel", "progression à conserver")
+            .putString("murajaahPhase", "A")
+            .putInt("murajaahRecentLinesDone", 10)
+            .putLong("murajaahBlockAElapsedMs", 120_000L)
+            .putLong("murajaahBlockBElapsedMs", 240_000L)
+            .putString("recentSabqi", "[{\"start\":10,\"end\":14}]")
+            .commit();
+
+        HifzPrefs prefs = new HifzPrefs(context);
+
+        assertEquals(4, prefs.schema());
+        assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(2, 100)));
+        assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 100)));
+        assertTrue(prefs.itqanWorkCorpus().contains(new VerseRef(49, 1)));
+        assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
+        assertEquals(1, prefs.itqanRanges().size());
+        assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
+        assertEquals("progression à conserver", prefs.lastSabqiLabel());
+        assertFalse(raw.contains("murajaahPhase"));
+        assertFalse(raw.contains("murajaahRecentLinesDone"));
+        assertFalse(raw.contains("murajaahBlockAElapsedMs"));
+        assertFalse(raw.contains("murajaahBlockBElapsedMs"));
+        assertEquals(120_000L, raw.getLong("recent_sabqi_reviewElapsedMs", -1L));
+        assertEquals(240_000L, raw.getLong("murajaahElapsedMs", -1L));
+        assertEquals(2, raw.getInt("recentSabqiReviewIndex", -1));
+        assertTrue(raw.contains("consolidationAttendanceDates"));
+        assertTrue(raw.contains("forcedPromotedRanges"));
+        assertTrue(raw.contains("hardAnchoringSurahs"));
+        assertTrue(raw.contains("anchoringRetryAfterDate"));
+        assertEquals(0, prefs.itqanBlockIndex());
+        assertFalse(raw.contains("stableRecentLines"));
+        assertEquals(LocalDate.now(), prefs.recentSabqi().get(0).addedOn);
+    }
+
+    @Test public void migratedV1StateReopensAfterProcessDeathWithoutSecondMigration() {
+        raw.edit()
+            .putInt("schema", 1)
+            .putString("programStartDate", "2026-09-01")
+            .putString("promotedFrontier", "2:150")
+            .putString("sabqiStart", "2:75")
+            .putString("sabqiEnd", "2:286")
+            .putString("itqanRotationStart", "49:1")
+            .putString("lastSabqiLabel", "progression à conserver")
+            .putString("recentSabqi", "[{\"start\":10,\"end\":14}]")
+            .commit();
+
+        HifzPrefs first = new HifzPrefs(context);
+        int promotedCount = first.promotedRanges().size();
+        int pendingCount = first.unconsolidatedPromotedRanges().size();
+
+        HifzPrefs reopened = new HifzPrefs(context);
+        assertEquals(4, reopened.schema());
+        assertEquals(promotedCount, reopened.promotedRanges().size());
+        assertEquals(pendingCount, reopened.unconsolidatedPromotedRanges().size());
+        assertEquals("progression à conserver", reopened.lastSabqiLabel());
+        assertTrue(reopened.isUnconsolidatedPromoted(new VerseRef(2, 100)));
+        assertTrue(reopened.itqanWorkCorpus().contains(new VerseRef(49, 1)));
+    }
+
     @Test public void legacyRecentEntryWithoutAddedOnUsesTheMigrationFallback() {
         raw.edit()
             .putInt("schema", 3)

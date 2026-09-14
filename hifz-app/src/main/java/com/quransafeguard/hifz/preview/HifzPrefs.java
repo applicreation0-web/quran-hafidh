@@ -477,8 +477,23 @@ public final class HifzPrefs {
             .putInt("itqanRep", 0)
             .putInt("itqanAssisted", 0)
             .putInt("itqanFinalReveals", 0)
-            .putString("itqanUnitStart", "")
-            .putString("itqanUnitEnd", "")
+            .putLong("itqanElapsedMs", 0L)
+            .putString("lastItqanDate", date)
+            .putString("lastItqanLabel", label)
+            .commit();
+    }
+
+    /** Atomically closes a fractionated sub-block while pinning the exact open unit. */
+    public boolean advanceItqanBlock(int nextBlockIndex, VerseRef unitStart, VerseRef unitEnd,
+                                     String date, String label) {
+        if (unitStart == null || unitEnd == null) return false;
+        return p.edit()
+            .putInt("itqanBlockIndex", Math.max(0, nextBlockIndex))
+            .putInt("itqanRep", 0)
+            .putInt("itqanAssisted", 0)
+            .putInt("itqanFinalReveals", 0)
+            .putString("itqanUnitStart", unitStart.toString())
+            .putString("itqanUnitEnd", unitEnd.toString())
             .putLong("itqanElapsedMs", 0L)
             .putString("lastItqanDate", date)
             .putString("lastItqanLabel", label)
@@ -598,6 +613,15 @@ public final class HifzPrefs {
         return AnchoringQueue.findByRange(anchoringQueue(), start.toString(), endInclusive.toString());
     }
 
+    /** Persisted identity of the anchoring unit actually started, or null when none is open. */
+    public AnchoringQueue.Entry inProgressAnchoringEntry() {
+        if (p.getInt("itqanRep", 0) <= 0 && p.getInt("itqanBlockIndex", 0) <= 0) return null;
+        VerseRef start = itqanUnitStart();
+        VerseRef end = itqanUnitEnd();
+        if (start == null || end == null) return null;
+        return AnchoringQueue.findByRange(anchoringQueue(), start.toString(), end.toString());
+    }
+
     public boolean anchoringDeferredToday() {
         String value = p.getString("anchoringRetryAfterDate", "");
         LocalDate retry = safeDate(value, null);
@@ -650,6 +674,14 @@ public final class HifzPrefs {
         next.addAll(expected.values());
         int index = anchoringQueueIndex(next.size());
         boolean keepCurrent = p.getInt("itqanBlockIndex", 0) > 0 || p.getInt("itqanRep", 0) > 0;
+        if (keepCurrent) {
+            VerseRef savedStart = itqanUnitStart();
+            VerseRef savedEnd = itqanUnitEnd();
+            if (savedStart != null && savedEnd != null) {
+                int savedIndex = findAnchoringEntry(next, savedStart, savedEnd);
+                if (savedIndex >= 0) index = savedIndex;
+            }
+        }
         next = new ArrayList<>(AnchoringQueue.mergeWithPromotionPriority(
             next, index, keepCurrent, Collections.emptyList()));
         index = 0;
@@ -680,15 +712,8 @@ public final class HifzPrefs {
             }
             queue = anchoringQueue();
         }
-        if (!queue.isEmpty() && p.getInt("itqanRep", 0) > 0) {
-            VerseRef savedStart = itqanUnitStart();
-            VerseRef savedEnd = itqanUnitEnd();
-            if (savedStart != null && savedEnd != null) {
-                AnchoringQueue.Entry inProgress = AnchoringQueue.findByRange(
-                    queue, savedStart.toString(), savedEnd.toString());
-                if (inProgress != null) return inProgress;
-            }
-        }
+        AnchoringQueue.Entry inProgress = inProgressAnchoringEntry();
+        if (inProgress != null) return inProgress;
         return queue.isEmpty() ? null : queue.get(anchoringQueueIndex(queue.size()));
     }
 

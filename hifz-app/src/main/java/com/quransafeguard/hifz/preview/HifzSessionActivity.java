@@ -551,7 +551,7 @@ private void rebalanceRecentWindow() {
         int rep=prefs.itqanRep();
         VerseRef savedStart=prefs.itqanUnitStart();
         VerseRef savedEnd=prefs.itqanUnitEnd();
-        if(rep>0 && savedStart!=null && savedEnd!=null){
+        if((rep>0 || prefs.itqanBlockIndex()>0) && savedStart!=null && savedEnd!=null){
             currentPage=geometry.pageForVerse(savedStart);
             unitFirstPage = unitLastPage = currentPage;
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
@@ -570,7 +570,7 @@ private void rebalanceRecentWindow() {
         }
 
         fractionatedItqan = prefs.isFractionatedUnit(itqanUnit.verses);
-        itqanSessionProtocol = fractionatedItqan ? AnchoringQueue.Protocol.LIGHT : anchoringEntry.protocol;
+        itqanSessionProtocol = anchoringEntry.protocol;
         itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
         if (fractionatedItqan) {
             int n = itqanUnit.lineIds.size();
@@ -655,7 +655,8 @@ private void rebalanceRecentWindow() {
                     +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
                 metricsStore.recordAnchoring("bloc fractionné réussi · "+itqanUnit.start+" → "+itqanUnit.end
                     +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
-                if (!prefs.advanceItqanBlock(nextBlock, LocalDate.now().toString(), label)) {
+                if (!prefs.advanceItqanBlock(nextBlock, itqanUnit.start, itqanUnit.end,
+                        LocalDate.now().toString(), label)) {
                     onError("Impossible d’enregistrer le sous-bloc d’Ancrage fractionné.");
                     return;
                 }
