@@ -22,11 +22,11 @@ import java.util.Locale;
 
 /** BOOX-first UI: quiet, flat, high-contrast, animation-free and semantically uniform. */
 final class Ui {
-    static final int INK = Color.rgb(18, 18, 17);
-    static final int PAPER = Color.rgb(250, 248, 240);
-    static final int SURFACE = Color.rgb(253, 251, 246);
-    static final int MUTED = Color.rgb(82, 79, 73);
-    static final int LINE = Color.rgb(206, 201, 190);
+    static final int INK = 0xff121211;
+    static final int PAPER = 0xfffaf8f0;
+    static final int SURFACE = 0xfffdfbf6;
+    static final int MUTED = 0xff524f49;
+    static final int LINE = 0xffcec9be;
 
     private Ui() {}
 
@@ -70,7 +70,14 @@ final class Ui {
         button.setOnClickListener(listener);
         button.setStateListAnimator(null);
         button.setElevation(0f);
-        button.setBackgroundColor(Color.TRANSPARENT);
+        StateListDrawable pressBackground = new StateListDrawable();
+        pressBackground.addState(new int[] {android.R.attr.state_pressed},
+            shape(INK, INK, dp(context, 8), 0));
+        pressBackground.addState(new int[] {android.R.attr.state_selected},
+            shape(INK, INK, dp(context, 8), 0));
+        pressBackground.addState(new int[] {},
+            shape(Color.TRANSPARENT, Color.TRANSPARENT, dp(context, 8), 0));
+        button.setBackground(pressBackground);
         button.setMinWidth(0);
         button.setMinHeight(0);
         button.setPadding(dp(context, 12), dp(context, 12), dp(context, 12), dp(context, 12));
@@ -110,7 +117,7 @@ final class Ui {
         box.setPadding(dp(context,2),0,dp(context,2),0);
         Button b = iconButton(context, symbol, label, listener);
         box.addView(b);
-        TextView caption = text(context, label, 9.5f, false);
+        TextView caption = text(context, label, 11f, false);
         caption.setTextColor(MUTED);
         caption.setGravity(Gravity.CENTER);
         caption.setSingleLine(true);
@@ -166,7 +173,7 @@ final class Ui {
             : lower.contains("ancrage") || lower.contains("itq") ? "Répétitions"
             : lower.contains("entretien") || lower.contains("mur") ? "45 min" : "";
         if (!cue.isEmpty()) {
-            TextView subtitle = text(context, cue, 9f, false);
+            TextView subtitle = text(context, cue, 11f, false);
             subtitle.setTextColor(MUTED);
             subtitle.setGravity(Gravity.CENTER);
             subtitle.setSingleLine(true);
@@ -265,6 +272,24 @@ final class Ui {
 
     static int dp(Context context, int value) { return Math.round(value * context.getResources().getDisplayMetrics().density); }
 
+    static void showFatal(Activity activity, String message) {
+        LinearLayout root = column(activity);
+        int pad = dp(activity, 24);
+        root.setGravity(Gravity.CENTER);
+        root.setPadding(pad, pad, pad, pad);
+        TextView title = bookText(activity, "Parcours indisponible", 18f, true);
+        title.setGravity(Gravity.CENTER);
+        root.addView(title);
+        TextView body = text(activity, message == null ? "La géométrie du Mushaf ne peut pas être chargée." : message, 13f, false);
+        body.setTextColor(MUTED);
+        body.setGravity(Gravity.CENTER);
+        body.setPadding(0, dp(activity, 10), 0, dp(activity, 12));
+        root.addView(body);
+        root.addView(button(activity, "Retour", v -> activity.finish()));
+        activity.setContentView(root);
+        respectSystemBars(activity, root, pad, pad, pad, pad);
+    }
+
     static void respectSystemBars(Activity activity, View root, int left, int top, int right, int bottom) {
         Window window = activity.getWindow();
         window.setStatusBarColor(PAPER);
@@ -307,19 +332,19 @@ final class Ui {
     private static ColorStateList iconTint() {
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
-            new int[]{LINE,PAPER,PAPER,INK});
+            new int[]{MUTED,PAPER,PAPER,INK});
     }
 
     private static ColorStateList iconTintFlat() {
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
-            new int[]{LINE,MUTED,INK,INK});
+            new int[]{MUTED,PAPER,PAPER,INK});
     }
 
-    private static int iconFor(String semantic, String fallbackSymbol) {
+    static int iconFor(String semantic, String fallbackSymbol) {
         String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
         if (s.contains("retour")) return R.drawable.ic_ui_back;
-        if (s.contains("fermer")) return R.drawable.ic_ui_close;
+        if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
         if (s.contains("suivant")) return R.drawable.ic_ui_next;
         if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
@@ -331,6 +356,8 @@ final class Ui {
         if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_audio;
         if (s.contains("réinitial") || s.contains("remettre à zéro")) return R.drawable.ic_ui_reset;
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
+        if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
+        if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
         if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;

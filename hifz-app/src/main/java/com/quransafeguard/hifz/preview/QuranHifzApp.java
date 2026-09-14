@@ -23,9 +23,11 @@ public final class QuranHifzApp extends Application
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
     private volatile J10ReviewPlanner planner;
     private volatile J10ReviewObserver observer;
-    private volatile boolean openingPriority;
-    private volatile boolean pendingReconcile;
+    private volatile boolean pendingReconcile = true;
+    private LocalDate lastFullReconcileDate;
     private final Set<Activity> suppressPriorityOnce = Collections.newSetFromMap(new WeakHashMap<>());
+    private final Set<Activity> resumedActivities = Collections.newSetFromMap(new WeakHashMap<>());
+    private final Set<Activity> priorityEvaluationPending = Collections.newSetFromMap(new WeakHashMap<>());
     private LocalDate lastAlertDate;
     private int lastAlertDeficit = -1;
 
@@ -34,80 +36,126 @@ public final class QuranHifzApp extends Application
         registerActivityLifecycleCallbacks(this);
         getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(this);
+        // Geometry/J10 startup reconciliation is intentionally off the main thread.
+        loader.execute(() -> {
+            try { ensurePlannerSynced(HifzClock.today()); }
+            catch (RuntimeException error) { Log.e("QuranHifz", "Initial J10 reconciliation failed", error); }
+        });
     }
 
-    private synchronized J10ReviewPlanner ensurePlanner() {
+    private synchronized J10ReviewPlanner ensurePlannerObjects() {
         if (planner == null) {
             planner = new J10ReviewPlanner(this);
             observer = new J10ReviewObserver(planner);
-            observer.reconcileAll(LocalDate.now());
-            pendingReconcile = false;
-        } else if (pendingReconcile && observer != null) {
-            observer.reconcileAll(LocalDate.now());
-            pendingReconcile = false;
+            pendingReconcile = true;
         }
         return planner;
     }
 
-    @Override public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        J10ReviewObserver current = observer;
-        if (current == null) {
-            pendingReconcile = true;
-            return;
+    /** Must run on loader. Performs at most one full reconciliation per date unless state changed. */
+    private J10ReviewPlanner ensurePlannerSynced(LocalDate today) {
+        if (today == null) throw new IllegalArgumentException("today required");
+        J10ReviewPlanner current = ensurePlannerObjects();
+        J10ReviewObserver currentObserver;
+        boolean reconcile;
+        synchronized (this) {
+            currentObserver = observer;
+            reconcile = pendingReconcile || !today.equals(lastFullReconcileDate);
         }
-        try {
-            current.onPreferenceChanged(key, LocalDate.now());
-        } catch (RuntimeException error) {
-            Log.e("QuranHifz", "J10 reconciliation failed for " + key, error);
+        if (reconcile && currentObserver != null) {
+            currentObserver.reconcileAll(today);
+            synchronized (this) {
+                lastFullReconcileDate = today;
+                pendingReconcile = false;
+            }
+        }
+        return current;
+    }
+
+    void reconcilePreferenceChange(String key, LocalDate today) {
+        if (key == null || today == null) return;
+        if (J10ReviewObserver.requiresFullReconcileKey(key)) {
+            synchronized (this) { pendingReconcile = true; }
+        }
+        ensurePlannerSynced(today);
+        J10ReviewObserver current = observer;
+        if (J10ReviewObserver.handlesPreferenceKey(key) && current != null) {
+            current.onPreferenceChanged(key, today);
         }
     }
 
+    @Override public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key == null) return;
+        // SharedPreferences callbacks often originate on the UI thread. Never reconcile here.
+        loader.execute(() -> {
+            try {
+                reconcilePreferenceChange(key, HifzClock.today());
+            } catch (RuntimeException error) {
+                synchronized (this) { pendingReconcile = true; }
+                Log.e("QuranHifz", "J10 reconciliation failed for " + key, error);
+            }
+        });
+    }
+
     @Override public void onActivityResumed(Activity activity) {
-        if (activity instanceof J10ReviewActivity) {
-            openingPriority = false;
-            return;
-        }
+        resumedActivities.add(activity);
+        if (activity instanceof J10ReviewActivity) return;
 
         if (activity instanceof HifzSessionActivity) {
-            try {
-                String hostMode = activity.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
-                if (!isReusableJ10Host(hostMode)) return;
-
-                // A host slot fully substituted by J10 is closed, not credited as its normal protocol.
-                if (new J10HostBudgetStore(this).isSlotConsumed(hostMode, LocalDate.now())) {
-                    suppressPriorityOnce.remove(activity);
-                    activity.finish();
-                    return;
-                }
-                if (suppressPriorityOnce.remove(activity)) return;
-
-                J10ReviewPlanner p = ensurePlanner();
-                J10ReviewPlanner.PriorityGroup priority = p.priorityGroup(LocalDate.now());
-                if (!priority.isEmpty() && !openingPriority) {
-                    openingPriority = true;
-                    suppressPriorityOnce.add(activity);
-                    Intent intent = new Intent(activity, J10ReviewActivity.class)
-                        .putExtra(J10ReviewActivity.EXTRA_HOST_MODE, hostMode);
-                    activity.startActivity(intent);
-                }
-            } catch (RuntimeException error) {
-                openingPriority = false;
-                suppressPriorityOnce.remove(activity);
-                Log.e("QuranHifz", "Unable to evaluate J10 priority", error);
-            }
+            evaluatePriorityAsync(activity);
             return;
         }
 
         if (activity instanceof MainActivity) {
+            final LocalDate today = HifzClock.today();
             loader.execute(() -> {
                 try {
-                    J10ReviewPolicy.Forecast forecast = ensurePlanner().forecast(LocalDate.now());
-                    activity.runOnUiThread(() -> showSustainabilityAlert(activity, forecast));
+                    J10ReviewPolicy.Forecast forecast = ensurePlannerSynced(today).forecast(today);
+                    activity.runOnUiThread(() -> {
+                        if (isHostForeground(activity)) showSustainabilityAlert(activity, forecast, today);
+                    });
                 } catch (RuntimeException error) {
                     Log.e("QuranHifz", "Unable to calculate J10 forecast", error);
                 }
             });
         }
+    }
+
+    private void evaluatePriorityAsync(Activity activity) {
+        String hostMode = activity.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
+        if (!isReusableJ10Host(hostMode)) return;
+        LocalDate today = HifzClock.today();
+
+        // A host slot fully substituted by J10 is closed, not credited as its normal protocol.
+        if (new J10HostBudgetStore(this).isSlotConsumed(hostMode, today)) {
+            suppressPriorityOnce.remove(activity);
+            activity.finish();
+            return;
+        }
+        if (suppressPriorityOnce.remove(activity)) return;
+        if (!priorityEvaluationPending.add(activity)) return;
+
+        loader.execute(() -> {
+            try {
+                J10ReviewPlanner.PriorityGroup priority = ensurePlannerSynced(today).priorityGroup(today);
+                activity.runOnUiThread(() -> {
+                    priorityEvaluationPending.remove(activity);
+                    if (!isHostForeground(activity) || priority == null || priority.isEmpty()) return;
+                    suppressPriorityOnce.add(activity);
+                    Intent intent = new Intent(activity, J10ReviewActivity.class)
+                        .putExtra(J10ReviewActivity.EXTRA_HOST_MODE, hostMode);
+                    activity.startActivity(intent);
+                });
+            } catch (RuntimeException error) {
+                activity.runOnUiThread(() -> priorityEvaluationPending.remove(activity));
+                Log.e("QuranHifz", "Unable to evaluate J10 priority", error);
+            }
+        });
+    }
+
+    private boolean isHostForeground(Activity activity) {
+        return activity != null && resumedActivities.contains(activity)
+            && !activity.isFinishing() && !activity.isDestroyed();
     }
 
     static boolean isReusableJ10Host(String mode) {
@@ -117,9 +165,9 @@ public final class QuranHifzApp extends Application
             || HifzSessionActivity.MURAJAAH.equals(mode);
     }
 
-    private synchronized void showSustainabilityAlert(Activity activity, J10ReviewPolicy.Forecast forecast) {
+    private synchronized void showSustainabilityAlert(Activity activity, J10ReviewPolicy.Forecast forecast,
+                                                       LocalDate today) {
         if (forecast == null || forecast.sustainability != J10ReviewPolicy.Sustainability.NON_TENABLE) return;
-        LocalDate today = LocalDate.now();
         if (today.equals(lastAlertDate) && forecast.deficitMinutes == lastAlertDeficit) return;
         lastAlertDate = today;
         lastAlertDeficit = forecast.deficitMinutes;
@@ -130,8 +178,14 @@ public final class QuranHifzApp extends Application
 
     @Override public void onActivityCreated(Activity activity, Bundle state) {}
     @Override public void onActivityStarted(Activity activity) {}
-    @Override public void onActivityPaused(Activity activity) {}
+    @Override public void onActivityPaused(Activity activity) {
+        resumedActivities.remove(activity);
+    }
     @Override public void onActivityStopped(Activity activity) {}
     @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) {}
-    @Override public void onActivityDestroyed(Activity activity) { suppressPriorityOnce.remove(activity); }
+    @Override public void onActivityDestroyed(Activity activity) {
+        resumedActivities.remove(activity);
+        suppressPriorityOnce.remove(activity);
+        priorityEvaluationPending.remove(activity);
+    }
 }

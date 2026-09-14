@@ -188,7 +188,7 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(audio.indexOf("player.start()") < audio.indexOf("mushaf.setAudioVerse(verse)")) {
             "Audio highlight must switch only after playback starts."
         }
-        check(mushaf.contains("eink.audio(this)")) { "Audio highlight must use the dedicated BOOX refresh path." }
+        check(mushaf.contains("eink.audio(this, prefs)")) { "Audio highlight must use the dedicated BOOX refresh path." }
         check(eink.contains("REGAL") && eink.contains("GU") && eink.contains("GC")) { "BOOX partial/full refresh preference missing." }
 
         check(settings.contains("HifzAudioPack.PACK_FILE_NAME") && settings.contains("Choisir le pack")
@@ -213,8 +213,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.7.3-boox"
+        versionCode = 11
+        versionName = "0.7.4-boox"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -258,6 +258,30 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("junit:junit:4.13.2")
+}
+
+// C4: keep source-text contracts, but execute/count them separately from behavioral JVM tests.
+tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
+    if (name == "testDebugUnitTest") {
+        exclude("**/*SourceContractTest.class")
+        exclude("**/OfficialReleaseContractTest.class")
+    }
+}
+
+val sourceContractTest = tasks.register<org.gradle.api.tasks.testing.Test>("sourceContractTest") {
+    group = "verification"
+    description = "Runs source-level anti-regression contracts separately from behavioral JVM tests."
+    dependsOn("compileDebugUnitTestJavaWithJavac")
+    include("**/*SourceContractTest.class")
+    include("**/OfficialReleaseContractTest.class")
+}
+
+afterEvaluate {
+    val behavioral = tasks.named<org.gradle.api.tasks.testing.Test>("testDebugUnitTest").get()
+    sourceContractTest.configure {
+        testClassesDirs = behavioral.testClassesDirs
+        classpath = behavioral.classpath
+    }
 }
 
 // CI process-death harness: connectedDebugAndroidTest normally uninstalls both packages.

@@ -31,7 +31,7 @@ public final class HifzPrefs {
         public final int reviewStreak;
 
         RecentSabqi(int startLine, int endLine) {
-            this(startLine, endLine, LocalDate.now(), 0);
+            this(startLine, endLine, HifzClock.today(), 0);
         }
 
         RecentSabqi(int startLine, int endLine, LocalDate addedOn) {
@@ -41,7 +41,7 @@ public final class HifzPrefs {
         RecentSabqi(int startLine, int endLine, LocalDate addedOn, int reviewStreak) {
             this.startLine = startLine;
             this.endLine = endLine;
-            this.addedOn = addedOn == null ? LocalDate.now() : addedOn;
+            this.addedOn = addedOn == null ? HifzClock.today() : addedOn;
             this.reviewStreak = Math.max(0, reviewStreak);
         }
 
@@ -64,7 +64,7 @@ public final class HifzPrefs {
         if (schema == 0) {
             SharedPreferences.Editor e = p.edit()
                 .putInt("schema", PreviewConfig.SCHEMA_VERSION)
-                .putString("programStartDate", LocalDate.now().toString())
+                .putString("programStartDate", HifzClock.today().toString())
                 .putString("lowerBound", "2:1")
                 .putString("promotedFrontier", "2:74")
                 .putString("upperTailStart", "49:1")
@@ -120,8 +120,13 @@ public final class HifzPrefs {
                 .putString("lastSabqiLabel", "")
                 .putString("lastItqanDate", "")
                 .putString("lastItqanLabel", "")
+                .putString("lastItqanCreditStart", "")
+                .putString("lastItqanCreditEnd", "")
+                .putInt("lastItqanCreditBlockIndex", -1)
                 .putString("lastMurajaahDate", "")
-                .putString("lastMurajaahLabel", "");
+                .putString("lastMurajaahLabel", "")
+                .putString("lastMurajaahCreditStart", "")
+                .putString("lastMurajaahCreditEnd", "");
             if (!e.commit()) throw new IllegalStateException("Unable to initialize Hifz schema");
             return;
         }
@@ -135,25 +140,39 @@ public final class HifzPrefs {
         }
         if (schema == 3) {
             migrateV3ToV4();
+            schema = 4;
+        }
+        if (schema == 4) {
+            migrateV4ToV5();
             return;
         }
         if (schema != PreviewConfig.SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
         }
-        boolean repairV4 = p.contains("stableRecentLines")
+        boolean repairV5 = p.contains("stableRecentLines")
             || !p.contains("consolidationAttendanceDates")
             || !p.contains("forcedPromotedRanges")
             || !p.contains("anchoringRetryAfterDate")
             || !p.contains("hardAnchoringSurahs")
-            || !p.contains("itqanBlockIndex");
-        if (repairV4) {
+            || !p.contains("itqanBlockIndex")
+            || !p.contains("lastItqanCreditStart")
+            || !p.contains("lastItqanCreditEnd")
+            || !p.contains("lastItqanCreditBlockIndex")
+            || !p.contains("lastMurajaahCreditStart")
+            || !p.contains("lastMurajaahCreditEnd");
+        if (repairV5) {
             SharedPreferences.Editor repair = p.edit().remove("stableRecentLines");
             if (!p.contains("consolidationAttendanceDates")) repair.putString("consolidationAttendanceDates", "[]");
             if (!p.contains("forcedPromotedRanges")) repair.putString("forcedPromotedRanges", "[]");
             if (!p.contains("anchoringRetryAfterDate")) repair.putString("anchoringRetryAfterDate", "");
             if (!p.contains("hardAnchoringSurahs")) repair.putString("hardAnchoringSurahs", "[]");
             if (!p.contains("itqanBlockIndex")) repair.putInt("itqanBlockIndex", 0);
-            if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v4 optional state");
+            if (!p.contains("lastItqanCreditStart")) repair.putString("lastItqanCreditStart", "");
+            if (!p.contains("lastItqanCreditEnd")) repair.putString("lastItqanCreditEnd", "");
+            if (!p.contains("lastItqanCreditBlockIndex")) repair.putInt("lastItqanCreditBlockIndex", -1);
+            if (!p.contains("lastMurajaahCreditStart")) repair.putString("lastMurajaahCreditStart", "");
+            if (!p.contains("lastMurajaahCreditEnd")) repair.putString("lastMurajaahCreditEnd", "");
+            if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v5 optional state");
         }
     }
 
@@ -223,7 +242,7 @@ public final class HifzPrefs {
 
         VerseRef murajaah = safeRef(p.getString("murajaahCursor", "2:1"), new VerseRef(2, 1));
         if (ordinalBetween(murajaah, tailStart, tailEnd)) murajaah = new VerseRef(2, 1);
-        LocalDate migrationDay = LocalDate.now();
+        LocalDate migrationDay = HifzClock.today();
         String recent = normalizeRecentJson(p.getString("recentSabqi", "[]"), migrationDay);
         String activation = p.getString("recentConsolidationActivatedOn", "");
         if ((activation == null || activation.isEmpty())
@@ -255,6 +274,56 @@ public final class HifzPrefs {
             .remove("stableRecentLines")
             .putInt("schema", 4);
         if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v3 to v4");
+    }
+
+    /**
+     * Schema v5 introduces structured J10 credit. Because v5 has never been published, a
+     * fractionated cross-surah unit started under v4 is restarted at its unit boundary so a
+     * legacy block index can never point at different physical lines after C23 segmentation.
+     * Queue/corpus/unit bounds and all global cursors are deliberately left untouched.
+     */
+    private void migrateV4ToV5() {
+        VerseRef start = optionalRef("itqanUnitStart");
+        VerseRef end = optionalRef("itqanUnitEnd");
+        boolean started = p.getInt("itqanBlockIndex", 0) > 0
+            || p.getInt("itqanRep", 0) > 0
+            || p.getInt("itqanAssisted", 0) > 0
+            || p.getInt("itqanFinalReveals", 0) > 0
+            || p.getLong("itqanElapsedMs", 0L) > 0L;
+        boolean crossSurahFractionated = started && start != null && end != null
+            && start.getSurah() != end.getSurah();
+
+        SharedPreferences.Editor e = p.edit()
+            .remove("stableRecentLines")
+            .putString("lastItqanCreditStart", "")
+            .putString("lastItqanCreditEnd", "")
+            .putInt("lastItqanCreditBlockIndex", -1)
+            .putString("lastMurajaahCreditStart", "")
+            .putString("lastMurajaahCreditEnd", "")
+            .putInt("schema", 5);
+        if (!p.contains("consolidationAttendanceDates")) e.putString("consolidationAttendanceDates", "[]");
+        if (!p.contains("forcedPromotedRanges")) e.putString("forcedPromotedRanges", "[]");
+        if (!p.contains("anchoringRetryAfterDate")) e.putString("anchoringRetryAfterDate", "");
+        if (!p.contains("hardAnchoringSurahs")) e.putString("hardAnchoringSurahs", "[]");
+        if (!p.contains("itqanBlockIndex")) e.putInt("itqanBlockIndex", 0);
+        if (crossSurahFractionated) {
+            e.putInt("itqanBlockIndex", 0)
+                .putInt("itqanRep", 0)
+                .putInt("itqanAssisted", 0)
+                .putInt("itqanFinalReveals", 0)
+                .putLong("itqanElapsedMs", 0L);
+        }
+        if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v4 to v5");
+    }
+
+    private static boolean rangeTouchesHardAnchoringSurah(VerseRef start, VerseRef end, List<Integer> hardSurahs) {
+        if (start == null || end == null || hardSurahs == null || hardSurahs.isEmpty()) return false;
+        int low = Math.min(start.getSurah(), end.getSurah());
+        int high = Math.max(start.getSurah(), end.getSurah());
+        for (Integer surah : hardSurahs) {
+            if (surah != null && surah >= low && surah <= high) return true;
+        }
+        return false;
     }
 
     private void migrateLegacyGates(Context context) {
@@ -396,7 +465,8 @@ public final class HifzPrefs {
     /** Sabqi completion queues the five-line block; promotion is deliberately deferred to calendar/attendance policy. */
     public boolean completeSabqiBlock(int startLine, int endLine, int nextLineCursor, String date, String label) {
         List<RecentSabqi> queue = recentSabqi();
-        LocalDate blockDate = safeDate(date, LocalDate.now());
+        LocalDate blockDate = safeDate(date, null);
+        if (blockDate == null) blockDate = HifzClock.today();
         queue.add(new RecentSabqi(startLine, endLine, blockDate, 0));
         String activation = p.getString("recentConsolidationActivatedOn", "");
         if ((activation == null || activation.isEmpty())
@@ -487,6 +557,7 @@ public final class HifzPrefs {
     public boolean advanceItqanBlock(int nextBlockIndex, VerseRef unitStart, VerseRef unitEnd,
                                      String date, String label) {
         if (unitStart == null || unitEnd == null) return false;
+        int completedBlockIndex = Math.max(0, nextBlockIndex - 1);
         return p.edit()
             .putInt("itqanBlockIndex", Math.max(0, nextBlockIndex))
             .putInt("itqanRep", 0)
@@ -497,6 +568,9 @@ public final class HifzPrefs {
             .putLong("itqanElapsedMs", 0L)
             .putString("lastItqanDate", date)
             .putString("lastItqanLabel", label)
+            .putString("lastItqanCreditStart", unitStart.toString())
+            .putString("lastItqanCreditEnd", unitEnd.toString())
+            .putInt("lastItqanCreditBlockIndex", completedBlockIndex)
             .commit();
     }
 
@@ -516,6 +590,8 @@ public final class HifzPrefs {
     }
 
     public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
+        VerseRef completedStart = itqanUnitStart();
+        VerseRef completedEnd = itqanUnitEnd();
         return p.edit()
             .putString("itqanCursor", nextCursor.toString())
             .putInt("itqanRep", 0)
@@ -527,12 +603,21 @@ public final class HifzPrefs {
             .putLong("itqanElapsedMs", 0L)
             .putString("lastItqanDate", date)
             .putString("lastItqanLabel", label)
+            .putString("lastItqanCreditStart", completedStart == null ? "" : completedStart.toString())
+            .putString("lastItqanCreditEnd", completedEnd == null ? "" : completedEnd.toString())
+            .putInt("lastItqanCreditBlockIndex", -1)
             .commit();
     }
 
     /** Atomically advances the natural Itqan cycle and consolidates the exact completed queue entry. */
     public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
                                                    VerseRef nextCursor, String date, String label) {
+        return completeItqanUnitAndConsolidate(start, endInclusive, nextCursor, date, label, -1);
+    }
+
+    public boolean completeItqanUnitAndConsolidate(VerseRef start, VerseRef endInclusive,
+                                                   VerseRef nextCursor, String date, String label,
+                                                   int creditBlockIndex) {
         List<AnchoringQueue.Entry> queue = anchoringQueue();
         int completedIndex = findAnchoringEntry(queue, start, endInclusive);
         if (completedIndex < 0) return false;
@@ -561,6 +646,9 @@ public final class HifzPrefs {
             .putLong("itqanElapsedMs", 0L)
             .putString("lastItqanDate", date)
             .putString("lastItqanLabel", label)
+            .putString("lastItqanCreditStart", start.toString())
+            .putString("lastItqanCreditEnd", endInclusive.toString())
+            .putInt("lastItqanCreditBlockIndex", creditBlockIndex)
             .commit();
     }
 
@@ -625,7 +713,7 @@ public final class HifzPrefs {
     public boolean anchoringDeferredToday() {
         String value = p.getString("anchoringRetryAfterDate", "");
         LocalDate retry = safeDate(value, null);
-        return retry != null && !LocalDate.now().isAfter(retry);
+        return retry != null && !HifzClock.today().isAfter(retry);
     }
 
     private static boolean overlaps(List<VerseRange> ranges, VerseRef start, VerseRef endInclusive) {
@@ -700,7 +788,7 @@ public final class HifzPrefs {
         String retryText = p.getString("anchoringRetryAfterDate", "");
         LocalDate retry = safeDate(retryText, null);
         if (retry != null) {
-            if (!LocalDate.now().isAfter(retry)) return null;
+            if (!HifzClock.today().isAfter(retry)) return null;
             if (!p.edit().putString("anchoringRetryAfterDate", "").commit()) {
                 throw new IllegalStateException("Unable to clear Ancrage retry deferral");
             }
@@ -725,7 +813,7 @@ public final class HifzPrefs {
         AnchoringQueue.Deferral deferred = AnchoringQueue.failAndDefer(queue, displayedIndex, 3);
         int storedIndex = deferred.nextIndex < 0 ? 0 : deferred.nextIndex;
         VerseRef next = GeometryRepository.parseVerse(deferred.entries.get(storedIndex).start);
-        String retryAfter = deferred.nextIndex < 0 ? LocalDate.now().toString() : "";
+        String retryAfter = deferred.nextIndex < 0 ? HifzClock.today().toString() : "";
         return p.edit()
             .putString("anchoringQueue", anchoringQueueJson(deferred.entries))
             .putBoolean("anchoringQueueInitialized", true)
@@ -762,7 +850,8 @@ public final class HifzPrefs {
     public String lastRecentSabqiReviewDate() { return p.getString("lastRecentSabqiReviewDate", ""); }
     public String lastRecentSabqiReviewLabel() { return p.getString("lastRecentSabqiReviewLabel", ""); }
     public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
-        LocalDate completed = safeDate(date, LocalDate.now());
+        LocalDate completed = safeDate(date, null);
+        if (completed == null) completed = HifzClock.today();
         List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
         return p.edit()
             .putLong("recent_sabqi_reviewElapsedMs", 0L)
@@ -777,14 +866,28 @@ public final class HifzPrefs {
     public void setMurajaahActualEnd(VerseRef value) {
         p.edit().putString("murajaahActualEnd", value == null ? "" : value.toString()).apply();
     }
+    public int murajaahPage() { return p.getInt("murajaahPage", 0); }
+    public void setMurajaahPage(int value) {
+        if (value >= 1 && value <= 604) p.edit().putInt("murajaahPage", value).apply();
+        else p.edit().remove("murajaahPage").apply();
+    }
 
     public boolean completeMurajaah(VerseRef nextCursor, String date, String label) {
+        return completeMurajaah(nextCursor, null, null, date, label);
+    }
+
+    public boolean completeMurajaah(VerseRef nextCursor, VerseRef reviewedStart, VerseRef reviewedEnd,
+                                    String date, String label) {
+        if (nextCursor == null) return false;
         return p.edit()
             .putString("murajaahCursor", nextCursor.toString())
             .putLong("murajaahElapsedMs", 0L)
             .putString("murajaahActualEnd", "")
+            .remove("murajaahPage")
             .putString("lastMurajaahDate", date)
             .putString("lastMurajaahLabel", label)
+            .putString("lastMurajaahCreditStart", reviewedStart == null ? "" : reviewedStart.toString())
+            .putString("lastMurajaahCreditEnd", reviewedEnd == null ? "" : reviewedEnd.toString())
             .commit();
     }
 
@@ -792,8 +895,13 @@ public final class HifzPrefs {
     public String lastSabqiLabel() { return p.getString("lastSabqiLabel", ""); }
     public String lastItqanDate() { return p.getString("lastItqanDate", ""); }
     public String lastItqanLabel() { return p.getString("lastItqanLabel", ""); }
+    public VerseRef lastItqanCreditStart() { return optionalRef("lastItqanCreditStart"); }
+    public VerseRef lastItqanCreditEnd() { return optionalRef("lastItqanCreditEnd"); }
+    public int lastItqanCreditBlockIndex() { return p.getInt("lastItqanCreditBlockIndex", -1); }
     public String lastMurajaahDate() { return p.getString("lastMurajaahDate", ""); }
     public String lastMurajaahLabel() { return p.getString("lastMurajaahLabel", ""); }
+    public VerseRef lastMurajaahCreditStart() { return optionalRef("lastMurajaahCreditStart"); }
+    public VerseRef lastMurajaahCreditEnd() { return optionalRef("lastMurajaahCreditEnd"); }
 
     static String elapsedKey(String mode) {
         if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("elapsed mode required");
@@ -813,7 +921,7 @@ public final class HifzPrefs {
     public List<RecentSabqi> recentSabqi() {
         ArrayList<RecentSabqi> out = new ArrayList<>();
         boolean needsRewrite = false;
-        LocalDate fallback = LocalDate.now();
+        LocalDate fallback = HifzClock.today();
         try {
             JSONArray array = new JSONArray(p.getString("recentSabqi", "[]"));
             for (int i = 0; i < array.length(); i++) {
@@ -833,7 +941,7 @@ public final class HifzPrefs {
 
     public void addRecentSabqi(int start, int end) {
         List<RecentSabqi> queue = recentSabqi();
-        LocalDate now = LocalDate.now();
+        LocalDate now = HifzClock.today();
         queue.add(new RecentSabqi(start, end, now, 0));
         String activation = p.getString("recentConsolidationActivatedOn", "");
         if ((activation == null || activation.isEmpty())

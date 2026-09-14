@@ -125,6 +125,27 @@ public final class PreviewConfigTest {
         assertEquals(4, PreviewConfig.fractionatedBlockLength(13, 99));
     }
 
+    @Test public void fractionatedAnchoringBalancesEachSurahSegmentIndependently() {
+        assertArrayEquals(new int[]{5,4,4}, PreviewConfig.fractionatedBlockSizes(new int[]{13}));
+        assertArrayEquals(new int[]{5,4,4}, PreviewConfig.fractionatedBlockSizes(new int[]{13}));
+        assertArrayEquals(new int[]{4,5,4}, PreviewConfig.fractionatedBlockSizes(new int[]{4,9}));
+        assertArrayEquals(new int[]{3,3,4,3}, PreviewConfig.fractionatedBlockSizes(new int[]{6,7}));
+        assertArrayEquals(new int[]{1,4,4,4}, PreviewConfig.fractionatedBlockSizes(new int[]{1,12}));
+    }
+
+    @Test public void fractionatedAnchoringSegmentAwareOffsetsMatchConcatenatedLayout() {
+        int[] segments = new int[]{6,7};
+        assertEquals(4, PreviewConfig.fractionatedBlockCount(segments));
+        assertEquals(0, PreviewConfig.fractionatedBlockStart(segments, 0));
+        assertEquals(3, PreviewConfig.fractionatedBlockLength(segments, 0));
+        assertEquals(3, PreviewConfig.fractionatedBlockStart(segments, 1));
+        assertEquals(3, PreviewConfig.fractionatedBlockLength(segments, 1));
+        assertEquals(6, PreviewConfig.fractionatedBlockStart(segments, 2));
+        assertEquals(4, PreviewConfig.fractionatedBlockLength(segments, 2));
+        assertEquals(10, PreviewConfig.fractionatedBlockStart(segments, 3));
+        assertEquals(3, PreviewConfig.fractionatedBlockLength(segments, 3));
+    }
+
     @Test public void fractionatedAnchoringAlwaysUsesTheLightThirtyFiveRepProfile() {
         assertEquals(35, PreviewConfig.ITQAN_LIGHT_TOTAL_REPS);
         for (int completed = 0; completed < 35; completed++) {

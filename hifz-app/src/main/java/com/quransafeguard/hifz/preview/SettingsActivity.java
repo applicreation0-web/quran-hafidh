@@ -24,6 +24,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** BOOX-oriented configuration. Rotation anchor is editable; live cursors are read-only. */
 public final class SettingsActivity extends android.app.Activity {
@@ -32,6 +34,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzSpeedStore speedStore;
     private J10ReviewPlanner j10Planner;
     private GeometryRepository geometry;
+    private final ExecutorService j10Loader = Executors.newSingleThreadExecutor();
     private LinearLayout rangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, j10Status, audioStatus;
 
@@ -41,8 +44,13 @@ public final class SettingsActivity extends android.app.Activity {
         super.onCreate(savedInstanceState);
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
-        geometry = GeometryRepository.get(this);
-        j10Planner = new J10ReviewPlanner(this);
+        try {
+            geometry = GeometryRepository.get(this);
+            j10Planner = new J10ReviewPlanner(this);
+        } catch (Throwable error) {
+            Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
+            return;
+        }
 
         ScrollView scroll = new ScrollView(this);scroll.setFillViewport(true);
         LinearLayout root = Ui.column(this);scroll.addView(root);
@@ -282,23 +290,28 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void refreshJ10(){
         if(j10Status==null)return;
-        try{
-            J10ReviewPlanner.PriorityGroup group=j10Planner.priorityGroup(LocalDate.now());
-            J10ReviewPolicy.Forecast forecast=group.forecast;
-            String state;
-            if(forecast.sustainability==J10ReviewPolicy.Sustainability.NON_TENABLE){
-                state="Plan non tenable · déficit "+forecast.deficitMinutes+" min / 10 jours";
-            }else if(forecast.sustainability==J10ReviewPolicy.Sustainability.TENSION){
-                state="Plan sous tension";
-            }else{
-                state="Plan tenable";
+        j10Status.setText("J10 · calcul…");
+        final LocalDate today = HifzClock.today();
+        j10Loader.execute(() -> {
+            try{
+                J10ReviewPlanner.PriorityGroup group=j10Planner.priorityGroup(today);
+                J10ReviewPolicy.Forecast forecast=group.forecast;
+                String state;
+                if(forecast.sustainability==J10ReviewPolicy.Sustainability.NON_TENABLE){
+                    state="Plan non tenable · déficit "+forecast.deficitMinutes+" min / 10 jours";
+                }else if(forecast.sustainability==J10ReviewPolicy.Sustainability.TENSION){
+                    state="Plan sous tension";
+                }else{
+                    state="Plan tenable";
+                }
+                String priority=group.isEmpty()?"Aucune priorité immédiate"
+                    :"Priorité actuelle · J"+group.maxAgeDays+" · "+group.lineIds.size()+" ligne(s)";
+                String text="Intervalle maximal · 10 jours\n"+state+"\n"+priority;
+                runOnUiThread(() -> { if (!isFinishing() && j10Status != null) j10Status.setText(text); });
+            }catch(RuntimeException error){
+                runOnUiThread(() -> { if (!isFinishing() && j10Status != null) j10Status.setText("J10 · état à vérifier"); });
             }
-            String priority=group.isEmpty()?"Aucune priorité immédiate"
-                :"Priorité actuelle · J"+group.maxAgeDays+" · "+group.lineIds.size()+" ligne(s)";
-            j10Status.setText("Intervalle maximal · 10 jours\n"+state+"\n"+priority);
-        }catch(RuntimeException error){
-            j10Status.setText("J10 · état à vérifier");
-        }
+        });
     }
 
     private void refreshAudio(){
@@ -367,4 +380,10 @@ public final class SettingsActivity extends android.app.Activity {
             .setMessage("Efface la progression Hifz locale (leçons, ancrage, entretien, positions et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
             .setNegativeButton("Annuler",null).setPositiveButton("Réinitialiser",(d,w)->{prefs.resetPreviewState();getSharedPreferences("hifz_preview_session_gates",MODE_PRIVATE).edit().clear().apply();refreshAll();}).show();
     }
+
+    @Override protected void onDestroy() {
+        j10Loader.shutdownNow();
+        super.onDestroy();
+    }
+
 }
