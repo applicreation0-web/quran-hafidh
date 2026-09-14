@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.content.Context;
 
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -21,23 +22,26 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public final class J10ReviewPlannerInstrumentedTest {
+    private static final String HIFZ_PREFS = "quran_hifz_preview_v1";
+
     private Context context;
     private GeometryRepository geometry;
     private HifzPrefs prefs;
 
     @Before public void setUp() {
         context = ApplicationProvider.getApplicationContext();
-        resetApplicationObserver();
-        context.getSharedPreferences("quran_hifz_preview_v1", Context.MODE_PRIVATE).edit().clear().commit();
+        detachApplicationObserver();
+        context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
         prefs = new HifzPrefs(context);
         geometry = GeometryRepository.get(context);
     }
 
     @After public void tearDown() {
-        context.getSharedPreferences("quran_hifz_preview_v1", Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
-        resetApplicationObserver();
+        resetApplicationObserverState();
+        restoreApplicationObserver();
     }
 
     @Test public void defaultSyncProtectsAcquiredBaseButNotPendingReconstruction() {
@@ -118,14 +122,28 @@ public final class J10ReviewPlannerInstrumentedTest {
 
     /** Keep deterministic historical-date tests isolated from the process-global observer,
      * which correctly uses the device's real LocalDate in production. */
-    private void resetApplicationObserver() {
-        Object application = context == null ? ApplicationProvider.getApplicationContext() : context;
-        if (!(application instanceof QuranHifzApp)) return;
+    private void detachApplicationObserver() {
+        if (!(context instanceof QuranHifzApp)) return;
+        context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener((QuranHifzApp) context);
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        resetApplicationObserverState();
+    }
+
+    private void restoreApplicationObserver() {
+        if (!(context instanceof QuranHifzApp)) return;
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener((QuranHifzApp) context);
+    }
+
+    private void resetApplicationObserverState() {
+        if (!(context instanceof QuranHifzApp)) return;
         try {
-            setField(application, "observer", null);
-            setField(application, "planner", null);
-            setField(application, "pendingReconcile", false);
-            setField(application, "openingPriority", false);
+            setField(context, "observer", null);
+            setField(context, "planner", null);
+            setField(context, "pendingReconcile", false);
+            setField(context, "openingPriority", false);
         } catch (ReflectiveOperationException error) {
             throw new AssertionError("Unable to isolate QuranHifzApp observer", error);
         }
