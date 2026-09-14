@@ -259,3 +259,30 @@ dependencies {
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("junit:junit:4.13.2")
 }
+
+// CI process-death harness: connectedDebugAndroidTest normally uninstalls both packages.
+// Reinstall only on GitHub Actions so a second instrumentation process can cross
+// a real `adb shell am force-stop` boundary after the bulk Android suite.
+tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach {
+    doLast {
+        if (System.getenv("GITHUB_ACTIONS") == "true") {
+            val appApk = fileTree(layout.buildDirectory.dir("outputs/apk/debug")) {
+                include("**/*.apk")
+            }.files.firstOrNull { !it.name.contains("androidTest", ignoreCase = true) }
+                ?: error("Debug APK missing after connectedDebugAndroidTest")
+            val testApk = fileTree(layout.buildDirectory.dir("outputs/apk/androidTest/debug")) {
+                include("**/*.apk")
+            }.files.firstOrNull()
+                ?: error("AndroidTest APK missing after connectedDebugAndroidTest")
+
+            fun adbInstall(apk: java.io.File) {
+                val process = ProcessBuilder("adb", "install", "-r", apk.absolutePath)
+                    .inheritIO()
+                    .start()
+                check(process.waitFor() == 0) { "adb install failed for " + apk.name }
+            }
+            adbInstall(appApk)
+            adbInstall(testApk)
+        }
+    }
+}
