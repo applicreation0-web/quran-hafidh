@@ -152,7 +152,8 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         VerseRef start = GeometryRepository.parseVerse(entry.start);
         VerseRef end = GeometryRepository.parseVerse(entry.end);
         List<String> lines = geometry.lineIdsForVerseRange(start, end);
-        int firstLength = PreviewConfig.fractionatedBlockLength(lines.size(), 0);
+        int[] segments = geometry.surahSegmentLineCounts(start, end);
+        int firstLength = PreviewConfig.fractionatedBlockLength(segments, 0);
         VerseRef murajaahBefore = prefs.murajaahCursor();
         String label = "Ancrage fractionné · bloc 1/3 validé · révélations 0";
         assertTrue(prefs.advanceItqanBlock(1, start, end, today.toString(), label));
@@ -171,6 +172,21 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         assertFalse(snapshot.containsKey(lines.get(firstLength)));
     }
 
+
+    @Test public void crossSurahBlockSelectionSurvivesActivityRecreation() {
+        HifzPrefs prefs = crossSurahFractionatedFixture(AnchoringQueue.Protocol.FULL);
+        VerseRef start = new VerseRef(55, 70);
+        VerseRef end = new VerseRef(56, 16);
+        assertTrue(prefs.advanceItqanBlock(2, start, end,
+            HifzClock.today().minusDays(1).toString(), "C23 bloc 2 validé"));
+        assertSessionContains("56:1 → 56:9", "3/4");
+
+        HifzPrefs reopened = new HifzPrefs(context);
+        assertEquals(2, reopened.itqanBlockIndex());
+        assertEquals(start, reopened.itqanUnitStart());
+        assertEquals(end, reopened.itqanUnitEnd());
+    }
+
     private HifzPrefs fractionatedFixture(AnchoringQueue.Protocol protocol) {
         new HifzPrefs(context);
         String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
@@ -184,6 +200,25 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
             .putBoolean("anchoringQueueInitialized", true)
             .putInt("anchoringQueueIndex", 0)
             .putString("hardAnchoringSurahs", "[53]")
+            .putString("lastItqanDate", "")
+            .commit();
+        return new HifzPrefs(context);
+    }
+
+
+    private HifzPrefs crossSurahFractionatedFixture(AnchoringQueue.Protocol protocol) {
+        new HifzPrefs(context);
+        String range = "[{\"start\":\"55:70\",\"end\":\"56:16\"}]";
+        String queue = "[{\"start\":\"55:70\",\"end\":\"56:16\","
+            + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"" + protocol.name()
+            + "\",\"failures\":0}]";
+        raw.edit()
+            .putString("promotedRanges", range)
+            .putString("unconsolidatedPromotedRanges", range)
+            .putString("anchoringQueue", queue)
+            .putBoolean("anchoringQueueInitialized", true)
+            .putInt("anchoringQueueIndex", 0)
+            .putString("hardAnchoringSurahs", "[55]")
             .putString("lastItqanDate", "")
             .commit();
         return new HifzPrefs(context);
@@ -228,6 +263,30 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         }
     }
 
+
+    private void assertSessionContains(String first, String second) {
+        J10ReviewPlanner planner = new J10ReviewPlanner(context);
+        LocalDate today = HifzClock.today();
+        assertTrue(planner.syncAcquired(today));
+        assertTrue(planner.markReviewed(planner.snapshot().keySet(), today));
+
+        Intent intent = new Intent(context, HifzSessionActivity.class)
+            .putExtra(HifzSessionActivity.EXTRA_MODE, HifzSessionActivity.ITQAN);
+        try (ActivityScenario<HifzSessionActivity> scenario = ActivityScenario.launch(intent)) {
+            scenario.onActivity(activity -> {
+                View root = activity.findViewById(android.R.id.content);
+                assertTrue("Session must show " + first, containsText(root, first));
+                assertTrue("Session must show " + second, containsText(root, second));
+            });
+            scenario.recreate();
+            scenario.onActivity(activity -> {
+                View root = activity.findViewById(android.R.id.content);
+                assertTrue("Recreated session must show " + first, containsText(root, first));
+                assertTrue("Recreated session must show " + second, containsText(root, second));
+            });
+        }
+    }
+
     /** Prevent this ActivityScenario class from leaking the process-global observer into other tests. */
     private void resetApplicationObserver() {
         Object application = context == null ? ApplicationProvider.getApplicationContext() : context;
@@ -236,7 +295,6 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
             setField(application, "observer", null);
             setField(application, "planner", null);
             setField(application, "pendingReconcile", false);
-            setField(application, "openingPriority", false);
         } catch (ReflectiveOperationException error) {
             throw new AssertionError("Unable to isolate QuranHifzApp observer", error);
         }

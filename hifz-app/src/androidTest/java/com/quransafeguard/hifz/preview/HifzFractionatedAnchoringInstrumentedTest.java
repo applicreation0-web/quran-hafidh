@@ -40,7 +40,7 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         raw.edit().putInt("schema", 4).putString("hardAnchoringSurahs", "not-json").commit();
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(4, prefs.schema());
+        assertEquals(5, prefs.schema());
         assertTrue(raw.contains("itqanBlockIndex"));
         assertTrue(prefs.hardAnchoringSurahs().isEmpty());
 

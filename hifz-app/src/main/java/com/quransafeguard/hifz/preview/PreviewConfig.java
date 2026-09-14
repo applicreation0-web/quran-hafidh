@@ -4,7 +4,7 @@ package com.quransafeguard.hifz.preview;
 public final class PreviewConfig {
     private PreviewConfig() {}
 
-    public static final int SCHEMA_VERSION = 4;
+    public static final int SCHEMA_VERSION = 5;
     public static final int SABQI_LINES = 5; // frozen
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
@@ -119,6 +119,42 @@ public final class PreviewConfig {
         int[] sizes = new int[blockCount];
         for (int i = 0; i < blockCount; i++) sizes[i] = base + (i < longer ? 1 : 0);
         return sizes;
+    }
+
+    /** Balanced physical-line split applied independently to each canonical surah segment. */
+    public static int[] fractionatedBlockSizes(int[] surahSegmentLineCounts) {
+        if (surahSegmentLineCounts == null || surahSegmentLineCounts.length == 0) return new int[]{0};
+        int totalBlocks = 0;
+        for (int lineCount : surahSegmentLineCounts) {
+            if (lineCount <= 0) throw new IllegalArgumentException("surah segment must contain physical lines");
+            totalBlocks += fractionatedBlockSizes(lineCount).length;
+        }
+        int[] sizes = new int[totalBlocks];
+        int at = 0;
+        for (int lineCount : surahSegmentLineCounts) {
+            int[] segment = fractionatedBlockSizes(lineCount);
+            System.arraycopy(segment, 0, sizes, at, segment.length);
+            at += segment.length;
+        }
+        return sizes;
+    }
+
+    public static int fractionatedBlockCount(int[] surahSegmentLineCounts) {
+        return fractionatedBlockSizes(surahSegmentLineCounts).length;
+    }
+
+    public static int fractionatedBlockStart(int[] surahSegmentLineCounts, int blockIndex) {
+        int[] sizes = fractionatedBlockSizes(surahSegmentLineCounts);
+        int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
+        int start = 0;
+        for (int i = 0; i < at; i++) start += sizes[i];
+        return start;
+    }
+
+    public static int fractionatedBlockLength(int[] surahSegmentLineCounts, int blockIndex) {
+        int[] sizes = fractionatedBlockSizes(surahSegmentLineCounts);
+        int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
+        return sizes[at];
     }
 
     public static int fractionatedBlockCount(int lineCount) {

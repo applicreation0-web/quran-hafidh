@@ -54,12 +54,15 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private SeekBar pageSeek;
     private boolean controlsVisible = true;
     private boolean largeScreen;
+    private HifzPrefs hifzPrefs;
+    private final EinkController eink = new EinkController();
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Runnable autoHide = this::hideControls;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         page = getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
+        hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
 
         rootRow = new LinearLayout(this);
@@ -201,6 +204,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void scheduleAutoHide() {
         if (mushaf == null) return;
         mushaf.removeCallbacks(autoHide);
+        if (hifzPrefs != null && eink.isEink(hifzPrefs)) return;
         mushaf.postDelayed(autoHide, 3600L);
     }
 
@@ -296,7 +300,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         titleRow.addView(info);
         titleRow.addView(close);
         shell.addView(titleRow, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 44)));
+            ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 48)));
         shell.addView(source);
 
         LinearLayout editionRow = Ui.row(this);

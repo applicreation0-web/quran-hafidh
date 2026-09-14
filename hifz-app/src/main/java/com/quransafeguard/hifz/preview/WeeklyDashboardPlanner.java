@@ -102,8 +102,8 @@ final class WeeklyDashboardPlanner {
                         List<VerseRef> verses=geometry.versesForRange(start,end);
                         boolean fractionated=prefs.isFractionatedUnit(verses);
                         if(fractionated){
-                            int lineCount=geometry.lineIdsForVerseRange(start,end).size();
-                            int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(lineCount));
+                            int[] segments=geometry.surahSegmentLineCounts(start,end);
+                            int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(segments));
                             int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
                             int reps=entry==null?PreviewConfig.ITQAN_LIGHT_TOTAL_REPS
                                 :PreviewConfig.itqanTotalReps(entry.protocol);

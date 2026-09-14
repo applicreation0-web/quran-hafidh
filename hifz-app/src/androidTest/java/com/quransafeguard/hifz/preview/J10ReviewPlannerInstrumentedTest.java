@@ -143,7 +143,6 @@ public final class J10ReviewPlannerInstrumentedTest {
             setField(context, "observer", null);
             setField(context, "planner", null);
             setField(context, "pendingReconcile", false);
-            setField(context, "openingPriority", false);
         } catch (ReflectiveOperationException error) {
             throw new AssertionError("Unable to isolate QuranHifzApp observer", error);
         }

@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
@@ -38,7 +39,8 @@ public final class MushafView extends WebView {
     private static final String INLINE_NONCE = "hifz-local";
     private static final String SCRIPT_TAG = "<script src=\"reader.js\"></script>";
     private static final String SVG_SLOT = "<!--MUSHAF_SVG-->";
-    private static final long PAGE_TIMEOUT_MS = 4_000L;
+    private static final long MIN_PAGE_TIMEOUT_MS = 8_000L;
+    static final long MAX_PAGE_TIMEOUT_MS = 20_000L;
 
     private Listener listener;
     private boolean listenerNotified;
@@ -55,6 +57,8 @@ public final class MushafView extends WebView {
     private List<String> lastLineIds;
     private int lastMask;
     private float touchDownX, touchDownY;
+    private long loadStartedAtMs;
+    private long observedRenderMs;
 
     private final Runnable watchdog = new Runnable() {
         @Override public void run() {
@@ -95,6 +99,19 @@ public final class MushafView extends WebView {
         });
     }
 
+    static long timeoutAfterObservedRender(long observedMs) {
+        if (observedMs <= 0L) return MIN_PAGE_TIMEOUT_MS;
+        long tripled = observedMs > MAX_PAGE_TIMEOUT_MS / 3L
+            ? MAX_PAGE_TIMEOUT_MS
+            : observedMs * 3L;
+        return Math.min(MAX_PAGE_TIMEOUT_MS, Math.max(MIN_PAGE_TIMEOUT_MS, tripled));
+    }
+
+    static long updateObservedRender(long previousObservedMs, long renderMs) {
+        if (renderMs <= 0L) return Math.max(0L, Math.min(MAX_PAGE_TIMEOUT_MS, previousObservedMs));
+        return Math.min(MAX_PAGE_TIMEOUT_MS, renderMs);
+    }
+
     public void setMaskEntropy(String value) {
         if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException("mask entropy required");
         maskEntropy = value;
@@ -117,6 +134,10 @@ public final class MushafView extends WebView {
             float dy = event.getY() - touchDownY;
             float threshold = 60f * getResources().getDisplayMetrics().density;
             if (Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy) * 1.35f) {
+                MotionEvent cancel = MotionEvent.obtain(event);
+                cancel.setAction(MotionEvent.ACTION_CANCEL);
+                super.onTouchEvent(cancel);
+                cancel.recycle();
                 if (listener != null) listener.onPageSwipe(dx > 0 ? 1 : -1);
                 return true;
             }
@@ -132,6 +153,7 @@ public final class MushafView extends WebView {
     private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
         removeCallbacks(watchdog);
         requestedPage = page;
+        loadStartedAtMs = SystemClock.elapsedRealtime();
         pageShown = false;
         ready = false;
         pending = null;
@@ -161,7 +183,7 @@ public final class MushafView extends WebView {
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
             html = html.replace(SCRIPT_TAG, inline).replace(SVG_SLOT, svg);
             loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
-            postDelayed(watchdog, PAGE_TIMEOUT_MS);
+            postDelayed(watchdog, timeoutAfterObservedRender(observedRenderMs));
         } catch (Throwable error) {
             showFailure("Erreur Mushaf page " + page + " : " + safeMessage(error));
         }
@@ -171,7 +193,7 @@ public final class MushafView extends WebView {
         lastMask = maskPercent;
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setMask(" + Math.max(0, Math.min(100, maskPercent)) + ");",
-            ignored -> post(() -> eink.mask(this))));
+            ignored -> post(() -> eink.mask(this, prefs))));
     }
 
     public void setSelection(List<VerseRef> selection, List<String> lineIds) {
@@ -192,7 +214,7 @@ public final class MushafView extends WebView {
             StringBuilder script = new StringBuilder("window.HifzReader&&(");
             if (geometry != null) script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
             script.append("window.HifzReader.setSelection(").append(verses).append(',').append(lines).append("));");
-            evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this)));
+            evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this, prefs)));
         });
     }
 
@@ -201,30 +223,30 @@ public final class MushafView extends WebView {
         String value = verse == null ? "null" : JSONObject.quote(verse.toString());
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setAudioVerse(" + value + ");",
-            ignored -> post(() -> eink.audio(this))));
+            ignored -> post(() -> eink.audio(this, prefs))));
     }
 
     /** Runtime recovery path: E-Ink may be changed after the initial WebView boot. */
     public void setEink(boolean enabled) {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setEink(" + enabled + ");",
-            ignored -> post(() -> eink.local(this))));
+            ignored -> post(() -> eink.local(this, prefs))));
     }
 
     /** Move only if the selected verse would be obscured by the phone Tafsir panel. */
     public void revealSelectionAboveBottomPanel() {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.revealSelection(0.46);",
-            ignored -> post(() -> eink.local(this))));
+            ignored -> post(() -> eink.local(this, prefs))));
     }
 
     public void clearReveal() {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.clearReveal&&window.HifzReader.clearReveal();",
-            ignored -> post(() -> eink.local(this))));
+            ignored -> post(() -> eink.local(this, prefs))));
     }
 
-    public void localCounterChanged() { eink.local(this); }
+    public void localCounterChanged() { eink.local(this, prefs); }
     public void cycleCompleted() { eink.cycleCompleted(this, prefs); }
 
     public void destroySafely() {
@@ -316,6 +338,8 @@ public final class MushafView extends WebView {
             post(() -> {
                 if (page != requestedPage) return;
                 pageShown = true;
+                long renderMs = Math.max(1L, SystemClock.elapsedRealtime() - loadStartedAtMs);
+                observedRenderMs = updateObservedRender(observedRenderMs, renderMs);
                 removeCallbacks(watchdog);
                 setContentDescription("Mushaf page " + page);
                 eink.page(MushafView.this, prefs);

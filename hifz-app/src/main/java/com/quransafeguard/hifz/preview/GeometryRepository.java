@@ -277,6 +277,49 @@ public final class GeometryRepository {
         return new EligibleLinePlan(cursor, last, requestedLines, traversal);
     }
 
+    /**
+     * Physical-line counts for each consecutive surah segment touched by a non-wrapping verse range.
+     * Geometry has already been audited so one physical line never mixes surahs; fail closed if that
+     * invariant is ever broken by a future asset.
+     */
+    public int[] surahSegmentLineCounts(VerseRef start, VerseRef end) {
+        if (start == null || end == null) throw new IllegalArgumentException("verse range required");
+        int low = ordinal(start);
+        int high = ordinal(end);
+        if (high < low) throw new IllegalArgumentException("Wrapped range not supported for Anchoring layout");
+
+        ArrayList<Integer> counts = new ArrayList<>();
+        int currentSurah = -1;
+        int currentCount = 0;
+        for (LineMeta line : lines) {
+            VerseRef hit = null;
+            Integer lineSurah = null;
+            for (VerseRef ref : line.verses) {
+                int surah = ref.getSurah();
+                if (lineSurah == null) lineSurah = surah;
+                else if (lineSurah != surah) {
+                    throw new IllegalStateException("Physical Mushaf line crosses surah boundary: " + line.id);
+                }
+                int o = ordinal(ref);
+                if (o >= low && o <= high) hit = ref;
+            }
+            if (hit == null) continue;
+            int surah = hit.getSurah();
+            if (surah != currentSurah) {
+                if (currentCount > 0) counts.add(currentCount);
+                currentSurah = surah;
+                currentCount = 1;
+            } else {
+                currentCount++;
+            }
+        }
+        if (currentCount > 0) counts.add(currentCount);
+        if (counts.isEmpty()) throw new IllegalArgumentException("Verse range absent from geometry: " + start + " → " + end);
+        int[] result = new int[counts.size()];
+        for (int i = 0; i < counts.size(); i++) result[i] = counts.get(i);
+        return result;
+    }
+
     public List<String> lineIdsForVerseRange(VerseRef a, VerseRef b) {
         int low = Math.min(ordinal(a), ordinal(b));
         int high = Math.max(ordinal(a), ordinal(b));

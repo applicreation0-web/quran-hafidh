@@ -95,11 +95,12 @@ final class J10ReviewPlanner {
             List<VerseRef> verses = geometry.versesForRange(start, end);
             if (prefs.isFractionatedUnit(verses)) {
                 List<String> unitLines = geometry.lineIdsForVerseRange(start, end);
-                int count = PreviewConfig.fractionatedBlockCount(unitLines.size());
+                int[] segments = geometry.surahSegmentLineCounts(start, end);
+                int count = PreviewConfig.fractionatedBlockCount(segments);
                 LinkedHashSet<String> completedIds = new LinkedHashSet<>();
                 for (int block = 0; block < Math.min(completedBlocks, count); block++) {
-                    int from = PreviewConfig.fractionatedBlockStart(unitLines.size(), block);
-                    int len = PreviewConfig.fractionatedBlockLength(unitLines.size(), block);
+                    int from = PreviewConfig.fractionatedBlockStart(segments, block);
+                    int len = PreviewConfig.fractionatedBlockLength(segments, block);
                     completedIds.addAll(unitLines.subList(from, from + len));
                 }
                 ok &= store.acquireLines(completedIds, historicalSeed);
@@ -109,14 +110,12 @@ final class J10ReviewPlanner {
     }
 
     J10ReviewPolicy.Forecast forecast(LocalDate today) {
-        syncAcquired(today);
         Map<String, LocalDate> snapshot = store.snapshot();
         return J10ReviewPolicy.forecastByDay(snapshot.values(), today,
             speedStore.maintenanceSecondsPerLine(), remainingCapacityByDayMinutes(today));
     }
 
     PriorityGroup priorityGroup(LocalDate today) {
-        syncAcquired(today);
         Map<String, LocalDate> snapshot = store.snapshot();
         J10ReviewPolicy.Forecast forecast = J10ReviewPolicy.forecastByDay(snapshot.values(), today,
             speedStore.maintenanceSecondsPerLine(), remainingCapacityByDayMinutes(today));
@@ -172,6 +171,10 @@ final class J10ReviewPlanner {
 
     List<String> lineIdsForVerseRange(VerseRef start, VerseRef end) {
         return geometry.lineIdsForVerseRange(start, end);
+    }
+
+    int[] surahSegmentLineCounts(VerseRef start, VerseRef end) {
+        return geometry.surahSegmentLineCounts(start, end);
     }
 
     List<String> traversalLineIds(VerseRef start, VerseRef end) {

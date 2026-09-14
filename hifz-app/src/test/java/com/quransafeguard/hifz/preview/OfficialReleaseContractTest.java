@@ -46,13 +46,14 @@ public final class OfficialReleaseContractTest {
         assertFalse("mask entropy must not be regenerated per WebView instance", mushaf.contains("UUID.randomUUID"));
     }
 
-    @Test public void schemaV4SeparatesAnchoringWorkFromAcquiredMaintenance() throws Exception {
+    @Test public void schemaV5SeparatesAnchoringWorkFromAcquiredMaintenance() throws Exception {
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
 
-        assertTrue("persistent anchoring state requires schema v4", config.contains("SCHEMA_VERSION = 4"));
+        assertTrue("persistent anchoring state requires schema v5", config.contains("SCHEMA_VERSION = 5"));
         assertTrue("v2 state needs an explicit non-destructive migration", prefs.contains("migrateV2ToV3"));
         assertTrue("v3 state needs an explicit atomic migration", prefs.contains("migrateV3ToV4"));
+        assertTrue("v4 state needs the C23-safe atomic migration", prefs.contains("migrateV4ToV5"));
         assertTrue("unconsolidated promoted material must be durable", prefs.contains("unconsolidatedPromotedRanges"));
         assertTrue("historical promoted material must retain migration-time Murajaah visibility", prefs.contains("legacyMurajaahPromotedRanges"));
         assertTrue("Itqan work corpus must include all promoted material", prefs.contains("itqanWorkCorpus()"));
@@ -111,7 +112,7 @@ public final class OfficialReleaseContractTest {
 
     @Test public void officialVersionIsIncremented() throws Exception {
         String gradle = read("hifz-app/build.gradle.kts");
-        assertTrue("0.7.3 must increment versionCode beyond installed 0.7.2", gradle.contains("versionCode = 10"));
-        assertTrue("official candidate must identify the 0.7.3 BOOX release", gradle.contains("versionName = \"0.7.3-boox\""));
+        assertTrue("0.7.4 must increment versionCode beyond installed 0.7.3", gradle.contains("versionCode = 11"));
+        assertTrue("official candidate must identify the 0.7.4 BOOX release", gradle.contains("versionName = \"0.7.4-boox\""));
     }
 }
