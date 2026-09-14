@@ -10,6 +10,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +27,7 @@ public final class J10ReviewPlannerInstrumentedTest {
 
     @Before public void setUp() {
         context = ApplicationProvider.getApplicationContext();
+        resetApplicationObserver();
         context.getSharedPreferences("quran_hifz_preview_v1", Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
         prefs = new HifzPrefs(context);
@@ -35,6 +37,7 @@ public final class J10ReviewPlannerInstrumentedTest {
     @After public void tearDown() {
         context.getSharedPreferences("quran_hifz_preview_v1", Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
+        resetApplicationObserver();
     }
 
     @Test public void defaultSyncProtectsAcquiredBaseButNotPendingReconstruction() {
@@ -111,5 +114,27 @@ public final class J10ReviewPlannerInstrumentedTest {
             assertEquals(today.minusDays(10), snapshot.get(lineIds.get(i)));
         }
         assertFalse(snapshot.containsKey(lineIds.get(firstLength)));
+    }
+
+    /** Keep deterministic historical-date tests isolated from the process-global observer,
+     * which correctly uses the device's real LocalDate in production. */
+    private void resetApplicationObserver() {
+        Object application = context == null ? ApplicationProvider.getApplicationContext() : context;
+        if (!(application instanceof QuranHifzApp)) return;
+        try {
+            setField(application, "observer", null);
+            setField(application, "planner", null);
+            setField(application, "pendingReconcile", false);
+            setField(application, "openingPriority", false);
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError("Unable to isolate QuranHifzApp observer", error);
+        }
+    }
+
+    private static void setField(Object target, String name, Object value)
+            throws ReflectiveOperationException {
+        Field field = QuranHifzApp.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }
