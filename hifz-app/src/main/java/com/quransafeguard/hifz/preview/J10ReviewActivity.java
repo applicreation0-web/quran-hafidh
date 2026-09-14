@@ -115,15 +115,27 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
         reviewProgress = new J10ReviewProgress(group.firstPage, group.lastPage);
         currentPage = group.firstPage;
         title.setText("Priorité J10 · J" + group.maxAgeDays + " · " + group.lineIds.size() + " ligne(s)");
-        if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.NON_TENABLE) {
-            status.setText("Prioritaire · déficit prévu " + group.forecast.deficitMinutes + " min / 10 jours");
-        } else if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.TENSION) {
-            status.setText("Prioritaire · charge J10 élevée");
-        } else {
-            status.setText("Récitez ce passage avant de reprendre la séance prévue.");
-        }
+        updateStatus();
         showCurrent();
         actions.addView(Ui.roundAction(this, "✓", "Revu", v -> validateReviewed()));
+    }
+
+    private String priorityStatusText() {
+        if (group == null) return "";
+        if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.NON_TENABLE) {
+            return "Prioritaire · déficit prévu " + group.forecast.deficitMinutes + " min / 10 jours";
+        }
+        if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.TENSION) {
+            return "Prioritaire · charge J10 élevée";
+        }
+        return "Récitez ce passage avant de reprendre la séance prévue.";
+    }
+
+    private void updateStatus() {
+        if (status == null || group == null) return;
+        String text = priorityStatusText();
+        if (currentPage < group.lastPage) text += " · Le passage continue à la page suivante →";
+        status.setText(text);
     }
 
     private void validateReviewed() {
@@ -143,7 +155,8 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private void showCurrent() {
         if (group == null || group.isEmpty()) return;
         shown = true;
-        mushaf.show(currentPage, group.verses, group.lineIds, 0);
+        updateStatus();
+        mushaf.showLineFocus(currentPage, group.verses, group.lineIds);
     }
 
     private void goPage(int delta) {
@@ -158,6 +171,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int page) {
         currentPage = page;
+        updateStatus();
         if (reviewProgress != null) reviewProgress.markShown(page);
     }
     @Override public void onPageSwipe(int delta) { goPage(delta); }
