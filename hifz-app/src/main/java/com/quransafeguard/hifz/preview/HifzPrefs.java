@@ -866,6 +866,11 @@ public final class HifzPrefs {
     public void setMurajaahActualEnd(VerseRef value) {
         p.edit().putString("murajaahActualEnd", value == null ? "" : value.toString()).apply();
     }
+    public int murajaahPage() { return p.getInt("murajaahPage", 0); }
+    public void setMurajaahPage(int value) {
+        if (value >= 1 && value <= 604) p.edit().putInt("murajaahPage", value).apply();
+        else p.edit().remove("murajaahPage").apply();
+    }
 
     public boolean completeMurajaah(VerseRef nextCursor, String date, String label) {
         return completeMurajaah(nextCursor, null, null, date, label);
@@ -878,6 +883,7 @@ public final class HifzPrefs {
             .putString("murajaahCursor", nextCursor.toString())
             .putLong("murajaahElapsedMs", 0L)
             .putString("murajaahActualEnd", "")
+            .remove("murajaahPage")
             .putString("lastMurajaahDate", date)
             .putString("lastMurajaahLabel", label)
             .putString("lastMurajaahCreditStart", reviewedStart == null ? "" : reviewedStart.toString())
