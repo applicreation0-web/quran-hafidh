@@ -86,10 +86,13 @@ public final class Lot2SourceContractTest {
         assertTrue(session.contains("clock.resume()"));
     }
 
-    @Test public void maintenanceEndpointStaysInsideThePlannedTraversalAndDoesNotJumpPages() throws Exception {
+    @Test public void maintenanceEndpointMayExtendBeyondPlanButMustStayInsideAcquiredCorpus() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("murajaahPlan.traversalVerses.contains(verse)"));
+        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus()"));
+        assertTrue(session.contains("if (!corpus.contains(verse))"));
+        assertTrue(session.contains("if (!corpus.contains(through))"));
         assertTrue(session.contains("countMurajaahLinesThrough(murajaahActualEnd)"));
+        assertFalse(session.contains("murajaahPlan.traversalVerses.contains(verse)"));
         assertFalse(session.contains("geometry.lineCountForVerseRange(murajaahPlan.start, murajaahActualEnd)"));
         int tapStart = session.indexOf("@Override public void onVerseTap");
         int tapEnd = session.indexOf("@Override public void onPageSwipe", tapStart);
