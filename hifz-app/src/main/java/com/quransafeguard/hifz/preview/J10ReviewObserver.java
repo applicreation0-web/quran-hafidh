@@ -67,22 +67,30 @@ final class J10ReviewObserver {
                 planner.syncAcquired(today);
                 reconcileRecent(today);
                 break;
-            case "lastSabqiDate":
+            case "lastSabqiDate": {
                 planner.syncAcquired(today);
-                creditCurrentSabqi(dateOrToday(prefs.lastSabqiDate(), today));
+                LocalDate committed = parsedDate(prefs.lastSabqiDate());
+                if (committed != null) creditCurrentSabqi(committed);
                 break;
-            case "lastSabqiTodayReviewDate":
+            }
+            case "lastSabqiTodayReviewDate": {
                 planner.syncAcquired(today);
-                creditCurrentSabqi(dateOrToday(prefs.lastSabqiTodayReviewDate(), today));
+                LocalDate committed = parsedDate(prefs.lastSabqiTodayReviewDate());
+                if (committed != null) creditCurrentSabqi(committed);
                 break;
-            case "lastItqanDate":
+            }
+            case "lastItqanDate": {
                 planner.syncAcquired(today);
-                creditItqan(dateOrToday(prefs.lastItqanDate(), today));
+                LocalDate committed = parsedDate(prefs.lastItqanDate());
+                if (committed != null) creditItqan(committed);
                 break;
-            case "lastMurajaahDate":
+            }
+            case "lastMurajaahDate": {
                 planner.syncAcquired(today);
-                creditMurajaah(dateOrToday(prefs.lastMurajaahDate(), today));
+                LocalDate committed = parsedDate(prefs.lastMurajaahDate());
+                if (committed != null) creditMurajaah(committed);
                 break;
+            }
             default:
                 break;
         }
@@ -222,11 +230,6 @@ final class J10ReviewObserver {
         if (text == null || text.trim().isEmpty()) return null;
         try { return LocalDate.parse(text); }
         catch (RuntimeException invalid) { return null; }
-    }
-
-    private static LocalDate dateOrToday(String text, LocalDate today) {
-        LocalDate parsed = parsedDate(text);
-        return parsed == null ? today : parsed;
     }
 
     private static String recentKey(HifzPrefs.RecentSabqi item) {
