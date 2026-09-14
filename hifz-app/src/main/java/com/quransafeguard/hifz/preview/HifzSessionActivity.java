@@ -107,7 +107,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         Ui.weight(program,1f);
         program.setGravity(Gravity.CENTER_VERTICAL);
         program.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
-        program.setMaxLines(1);
+        program.setMaxLines(2);
         top.addView(program);
         root.addView(top);
 

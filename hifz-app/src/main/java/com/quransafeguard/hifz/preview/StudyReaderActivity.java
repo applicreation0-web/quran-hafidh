@@ -192,9 +192,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void hideControls() {
         if (topControls == null || readerActions == null || pageRail == null) return;
         controlsVisible = false;
-        topControls.setVisibility(View.INVISIBLE);
-        readerActions.setVisibility(View.INVISIBLE);
-        pageRail.setVisibility(View.INVISIBLE);
+        topControls.setVisibility(View.GONE);
+        readerActions.setVisibility(View.GONE);
+        pageRail.setVisibility(View.GONE);
         if (mushaf != null) mushaf.removeCallbacks(autoHide);
     }
 
