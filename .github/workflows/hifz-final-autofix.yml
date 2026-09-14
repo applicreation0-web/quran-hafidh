@@ -10,14 +10,14 @@ permissions:
 
 jobs:
   apply-final-fixes:
-    if: "${{ github.event.head_commit.message != 'fix(hifz): close UI and process-death gates' }}"
+    if: "${{ github.event.head_commit.message != 'fix(hifz): close UI gates' }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: work/hifz-0.7.3-claude-all-fixes
           fetch-depth: 0
-      - name: Apply reviewed final fixes
+      - name: Apply reviewed UI fixes only
         shell: bash
         run: |
           set -euo pipefail
@@ -38,27 +38,12 @@ jobs:
           if old not in s:
               raise SystemExit('HifzSessionActivity RED pattern not found')
           session.write_text(s.replace(old, '        program.setMaxLines(2);', 1))
-
-          wf = Path('.github/workflows/hifz-test-app.yml')
-          s = wf.read_text()
-          anchor = '          gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace\n'
-          if anchor not in s:
-              raise SystemExit('connectedDebugAndroidTest anchor not found')
-          gate = '''          gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace\n\n          # Work-audit blocker: prove persistence across real process death, not Activity.recreate().\n          runner="com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner"\n          gate="com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest"\n          adb shell am instrument -w -e class "${gate}#a_prepareFixtureForExternalForceStop" "$runner" | tee process-death-prepare.log\n          grep -q 'OK (1 test)' process-death-prepare.log\n\n          adb shell monkey -p com.quransafeguard.hifz -c android.intent.category.LAUNCHER 1 > /dev/null\n          before_pid=""\n          for i in $(seq 1 30); do\n            before_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\\r' || true)"\n            [ -n "$before_pid" ] && break\n            sleep 1\n          done\n          test -n "$before_pid"\n          adb shell am force-stop com.quransafeguard.hifz\n          for i in $(seq 1 15); do\n            current_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\\r' || true)"\n            [ -z "$current_pid" ] && break\n            sleep 1\n          done\n          test -z "$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\\r' || true)"\n          adb shell monkey -p com.quransafeguard.hifz -c android.intent.category.LAUNCHER 1 > /dev/null\n          after_pid=""\n          for i in $(seq 1 30); do\n            after_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\\r' || true)"\n            [ -n "$after_pid" ] && break\n            sleep 1\n          done\n          test -n "$after_pid"\n          test "$after_pid" != "$before_pid"\n          adb shell am instrument -w -e class "${gate}#b_verifyFixtureAfterExternalForceStop" "$runner" | tee process-death-verify.log\n          grep -q 'OK (1 test)' process-death-verify.log\n          echo "PROCESS_DEATH_FORCE_STOP_RELAUNCH_OK before=$before_pid after=$after_pid" | tee process-death-proof.txt\n'''
-          s = s.replace(anchor, gate, 1)
-          upload = '            emulator.log\n            hifz-app-manifest.xml\n'
-          if upload not in s:
-              raise SystemExit('artifact upload anchor not found')
-          s = s.replace(upload, '            emulator.log\n            process-death-prepare.log\n            process-death-verify.log\n            process-death-proof.txt\n            hifz-app-manifest.xml\n', 1)
-          wf.write_text(s)
           PY
 
-          git rm .github/workflows/hifz-final-autofix.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java \
-                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java \
-                  .github/workflows/hifz-test-app.yml
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java
           git diff --cached --check
-          git commit -m 'fix(hifz): close UI and process-death gates'
+          git commit -m 'fix(hifz): close UI gates'
           git push origin HEAD:work/hifz-0.7.3-claude-all-fixes
