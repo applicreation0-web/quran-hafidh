@@ -1,5 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
+import android.content.Intent;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,6 +23,8 @@ import java.time.LocalDate;
 /** Small J10 prelude fed by the single acquired-line list; it is not a new weekly session type. */
 public final class J10ReviewActivity extends android.app.Activity implements MushafView.Listener {
     public static final String EXTRA_HOST_MODE = "j10HostMode";
+    public static final String EXTRA_RESULT_REASON = "j10ResultReason";
+    public static final String RESULT_EMPTY = "empty";
 
     private J10ReviewPlanner planner;
     private J10ReviewPlanner.PriorityGroup group;
@@ -40,7 +44,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
         @Override public void run() {
             if (hostMode == null || activeStartedAt < 0L || isFinishing()) return;
             if (PreviewConfig.timedSessionComplete(hostElapsedIncludingActive(), hostTargetMinutes())) {
-                LocalDate today = LocalDate.now();
+                LocalDate today = HifzClock.today();
                 if (persistActiveHostTime(false)) {
                     if (!hostBudgetStore.markSlotConsumed(hostMode, today)) {
                         Log.e("QuranHifz", "Unable to persist J10-preempted host slot for " + hostMode);
@@ -73,7 +77,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
         LinearLayout top = Ui.row(this);
         top.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 6), 0);
-        top.addView(Ui.iconButton(this, "", "Retour J10", v -> moveTaskToBack(true)));
+        top.addView(Ui.iconButton(this, "", "Plus tard", v -> moveTaskToBack(true)));
         title = Ui.text(this, "Priorité J10", 12.5f, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER_VERTICAL);
@@ -102,23 +106,36 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private void renderPriority() {
         actions.removeAllViews();
         shown = false;
-        group = planner.priorityGroup(LocalDate.now());
+        group = planner.priorityGroup(HifzClock.today());
         if (group == null || group.isEmpty()) {
+            setResult(RESULT_CANCELED, new Intent().putExtra(EXTRA_RESULT_REASON, RESULT_EMPTY));
             finish();
             return;
         }
         reviewProgress = new J10ReviewProgress(group.firstPage, group.lastPage);
         currentPage = group.firstPage;
         title.setText("Priorité J10 · J" + group.maxAgeDays + " · " + group.lineIds.size() + " ligne(s)");
-        if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.NON_TENABLE) {
-            status.setText("Prioritaire · déficit prévu " + group.forecast.deficitMinutes + " min / 10 jours");
-        } else if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.TENSION) {
-            status.setText("Prioritaire · charge J10 élevée");
-        } else {
-            status.setText("Récitez ce passage avant de reprendre la séance prévue.");
-        }
+        updateStatus();
         showCurrent();
         actions.addView(Ui.roundAction(this, "✓", "Revu", v -> validateReviewed()));
+    }
+
+    private String priorityStatusText() {
+        if (group == null) return "";
+        if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.NON_TENABLE) {
+            return "Prioritaire · déficit prévu " + group.forecast.deficitMinutes + " min / 10 jours";
+        }
+        if (group.forecast.sustainability == J10ReviewPolicy.Sustainability.TENSION) {
+            return "Prioritaire · charge J10 élevée";
+        }
+        return "Récitez ce passage avant de reprendre la séance prévue.";
+    }
+
+    private void updateStatus() {
+        if (status == null || group == null) return;
+        String text = priorityStatusText();
+        if (currentPage < group.lastPage) text += " · Le passage continue à la page suivante →";
+        status.setText(text);
     }
 
     private void validateReviewed() {
@@ -127,7 +144,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
             Toast.makeText(this, "Affichez tout le passage avant de valider.", Toast.LENGTH_LONG).show();
             return;
         }
-        if (!planner.markReviewed(group.lineIds, LocalDate.now())) {
+        if (!planner.markReviewed(group.lineIds, HifzClock.today())) {
             Toast.makeText(this, "Impossible d’enregistrer la révision J10.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -138,7 +155,8 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private void showCurrent() {
         if (group == null || group.isEmpty()) return;
         shown = true;
-        mushaf.show(currentPage, group.verses, group.lineIds, 0);
+        updateStatus();
+        mushaf.showLineFocus(currentPage, group.verses, group.lineIds);
     }
 
     private void goPage(int delta) {
@@ -153,6 +171,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int page) {
         currentPage = page;
+        updateStatus();
         if (reviewProgress != null) reviewProgress.markShown(page);
     }
     @Override public void onPageSwipe(int delta) { goPage(delta); }
@@ -185,7 +204,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
             activeStartedAt = keepActive ? now : -1L;
             return true;
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = HifzClock.today();
         if (!hostBudgetStore.addConsumed(hostMode, today, consumed)) {
             Log.e("QuranHifz", "Unable to persist J10 host-slot consumption for " + hostMode);
             return false;

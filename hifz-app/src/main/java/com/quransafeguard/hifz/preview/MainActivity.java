@@ -17,6 +17,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,6 +33,7 @@ public final class MainActivity extends android.app.Activity {
     private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
     private LinearLayout dashboard;
+    private final List<View> geometryActions = new ArrayList<>();
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
@@ -92,6 +94,9 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
+        geometryActions.add(study);
+        geometryActions.add(free);
+        geometryActions.add(settings);
         addWeighted(primary, study, 1f);
         addWeighted(primary, free, 1f);
         addWeighted(primary, settings, 1f);
@@ -112,6 +117,10 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout sabqi = Ui.modeCard(this, "", "Leçon neuve", v -> openMode(HifzSessionActivity.SABQI));
         LinearLayout itqan = Ui.modeCard(this, "", "Ancrage", v -> openMode(HifzSessionActivity.ITQAN));
         LinearLayout murajaah = Ui.modeCard(this, "", "Entretien", v -> openMode(HifzSessionActivity.MURAJAAH));
+        geometryActions.add(sabqi);
+        geometryActions.add(itqan);
+        geometryActions.add(murajaah);
+        setGeometryActionsEnabled(false);
         addWeighted(direct, sabqi, 1f);
         addWeighted(direct, itqan, 1f);
         addWeighted(direct, murajaah, 1f);
@@ -127,6 +136,7 @@ public final class MainActivity extends android.app.Activity {
                 geometry = loaded;
                 runOnUiThread(() -> {
                     todayAction.setEnabled(true);
+                    setGeometryActionsEnabled(true);
                     ledger.capture(prefs);
                     refreshAll();
                 });
@@ -134,9 +144,14 @@ public final class MainActivity extends android.app.Activity {
                 runOnUiThread(() -> {
                     today.setText("Parcours indisponible");
                     todayAction.setEnabled(false);
+                    setGeometryActionsEnabled(false);
                 });
             }
         });
+    }
+
+    private void setGeometryActionsEnabled(boolean enabled) {
+        for (View action : geometryActions) if (action != null) action.setEnabled(enabled);
     }
 
     @Override protected void onResume() {
@@ -161,7 +176,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void openToday() {
-        String mode = firstIncompleteMode(LocalDate.now());
+        String mode = firstIncompleteMode(HifzClock.today());
         if (mode != null) openMode(mode);
     }
 
@@ -215,7 +230,7 @@ public final class MainActivity extends android.app.Activity {
     private void refreshToday() {
         GeometryRepository g = geometry;
         if (g == null) { today.setText("…"); return; }
-        LocalDate date = LocalDate.now();
+        LocalDate date = HifzClock.today();
         if (date.isBefore(prefs.programStartDate())) {
             today.setText("Parcours non démarré");
             todayAction.setEnabled(false);
@@ -276,8 +291,8 @@ public final class MainActivity extends android.app.Activity {
             ? PreviewConfig.ITQAN_LIGHT_TOTAL_REPS
             : PreviewConfig.itqanTotalReps(entry.protocol);
         if (!fractionated) return "Matin · Ancrage · " + shortRange(start, end) + " · ×" + reps;
-        int lineCount = geometry.lineIdsForVerseRange(start, end).size();
-        int blocks = Math.max(1, PreviewConfig.fractionatedBlockCount(lineCount));
+        int[] segments = geometry.surahSegmentLineCounts(start, end);
+        int blocks = Math.max(1, PreviewConfig.fractionatedBlockCount(segments));
         int block = Math.max(0, Math.min(prefs.itqanBlockIndex(), blocks - 1));
         return "Matin · Ancrage fractionné · " + shortRange(start, end)
             + " · bloc " + (block + 1) + "/" + blocks + " · ×" + reps;
@@ -285,7 +300,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshRecentSabqiAdvisory() {
         if (recentSabqiAdvisory == null) return;
-        DayOfWeek day = LocalDate.now().getDayOfWeek();
+        DayOfWeek day = HifzClock.today().getDayOfWeek();
         boolean advisoryDay = day == DayOfWeek.WEDNESDAY || day == DayOfWeek.FRIDAY;
         if (!advisoryDay || prefs.recentSabqi().isEmpty()) {
             recentSabqiAdvisory.setVisibility(View.GONE);
@@ -311,7 +326,7 @@ public final class MainActivity extends android.app.Activity {
 
         List<WeeklyDashboardPlanner.Row> rows;
         try {
-            rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, hostBudgetStore).week(LocalDate.now());
+            rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, hostBudgetStore).week(HifzClock.today());
         } catch (RuntimeException error) {
             dashboard.removeAllViews();
             TextView unavailable = Ui.text(this, "Semaine indisponible", 10.8f, false);

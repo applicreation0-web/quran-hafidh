@@ -39,6 +39,9 @@ def main() -> None:
                 verse_lines[verse].add(line_id)
                 verse_pages[verse].add(page_number)
 
+    multi_page_verses = {verse: sorted(ps) for verse, ps in verse_pages.items() if len(ps) > 1}
+    assert not multi_page_verses, f"verses span multiple Mushaf pages: {multi_page_verses}"
+
     # Explicit 10.10 boundary case: Al-Hujurat starts in the middle of a Mushaf page.
     start = "49:1"
     assert start in verse_pages and verse_pages[start]
@@ -92,6 +95,7 @@ def main() -> None:
         "schema": 1,
         "page_count": len(pages),
         "unique_line_count": len(all_line_ids),
+        "multi_page_verse_count": len(multi_page_verses),
         "hujurat_start_page": start_page,
         "hujurat_preceding_visible_verses": sorted(off_target_visible, key=verse_key),
         "hujurat_active_line_count": len(active_lines),

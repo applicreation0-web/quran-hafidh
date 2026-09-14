@@ -1,5 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
+import android.util.Log;
+
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.LocalDate;
@@ -39,6 +41,25 @@ final class J10ReviewObserver {
         if (murajaah != null) creditMurajaah(murajaah);
     }
 
+    static boolean handlesPreferenceKey(String key) {
+        return "recentSabqi".equals(key)
+            || "lastSabqiDate".equals(key)
+            || "lastSabqiTodayReviewDate".equals(key)
+            || "lastItqanDate".equals(key)
+            || "lastMurajaahDate".equals(key);
+    }
+
+    static boolean requiresFullReconcileKey(String key) {
+        return "itqanRanges".equals(key)
+            || "promotedRanges".equals(key)
+            || "unconsolidatedPromotedRanges".equals(key)
+            || "legacyMurajaahPromotedRanges".equals(key)
+            || "hardAnchoringSurahs".equals(key)
+            || "anchoringQueue".equals(key)
+            || "anchoringQueueIndex".equals(key)
+            || "itqanBlockIndex".equals(key);
+    }
+
     void onPreferenceChanged(String key, LocalDate today) {
         if (key == null || today == null) return;
         switch (key) {
@@ -46,22 +67,30 @@ final class J10ReviewObserver {
                 planner.syncAcquired(today);
                 reconcileRecent(today);
                 break;
-            case "lastSabqiDate":
+            case "lastSabqiDate": {
                 planner.syncAcquired(today);
-                creditCurrentSabqi(dateOrToday(prefs.lastSabqiDate(), today));
+                LocalDate committed = parsedDate(prefs.lastSabqiDate());
+                if (committed != null) creditCurrentSabqi(committed);
                 break;
-            case "lastSabqiTodayReviewDate":
+            }
+            case "lastSabqiTodayReviewDate": {
                 planner.syncAcquired(today);
-                creditCurrentSabqi(dateOrToday(prefs.lastSabqiTodayReviewDate(), today));
+                LocalDate committed = parsedDate(prefs.lastSabqiTodayReviewDate());
+                if (committed != null) creditCurrentSabqi(committed);
                 break;
-            case "lastItqanDate":
+            }
+            case "lastItqanDate": {
                 planner.syncAcquired(today);
-                creditItqan(dateOrToday(prefs.lastItqanDate(), today));
+                LocalDate committed = parsedDate(prefs.lastItqanDate());
+                if (committed != null) creditItqan(committed);
                 break;
-            case "lastMurajaahDate":
+            }
+            case "lastMurajaahDate": {
                 planner.syncAcquired(today);
-                creditMurajaah(dateOrToday(prefs.lastMurajaahDate(), today));
+                LocalDate committed = parsedDate(prefs.lastMurajaahDate());
+                if (committed != null) creditMurajaah(committed);
                 break;
+            }
             default:
                 break;
         }
@@ -96,8 +125,37 @@ final class J10ReviewObserver {
     }
 
     private void creditItqan(LocalDate date) {
+        VerseRef structuredStart = prefs.lastItqanCreditStart();
+        VerseRef structuredEnd = prefs.lastItqanCreditEnd();
+        if (structuredStart != null && structuredEnd != null) {
+            List<String> unit = planner.lineIdsForVerseRange(structuredStart, structuredEnd);
+            int blockIndex = prefs.lastItqanCreditBlockIndex();
+            if (blockIndex < 0) {
+                if (!unit.isEmpty()) planner.acquireAndReview(unit, date);
+                return;
+            }
+            int[] segments = planner.surahSegmentLineCounts(structuredStart, structuredEnd);
+            int count = PreviewConfig.fractionatedBlockCount(segments);
+            if (blockIndex >= count) {
+                Log.e("QuranHifz", "Ignoring invalid structured J10 Itqan block index " + blockIndex
+                    + " for " + structuredStart + " → " + structuredEnd);
+                return;
+            }
+            int from = PreviewConfig.fractionatedBlockStart(segments, blockIndex);
+            int len = PreviewConfig.fractionatedBlockLength(segments, blockIndex);
+            if (from < 0 || len <= 0 || from + len > unit.size()) {
+                Log.e("QuranHifz", "Ignoring inconsistent structured J10 Itqan geometry for "
+                    + structuredStart + " → " + structuredEnd);
+                return;
+            }
+            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
+            return;
+        }
+
+        // Historical v4 fallback only. New v5 commits never depend on a visible label.
         String label = prefs.lastItqanLabel();
         if (label == null || label.isEmpty()) return;
+        Log.w("QuranHifz", "Using historical visible-label J10 Itqan fallback");
 
         if (label.startsWith("Ancrage fractionné") && label.contains("bloc ") && prefs.itqanBlockIndex() > 0) {
             List<AnchoringQueue.Entry> queue = prefs.anchoringQueue();
@@ -108,11 +166,14 @@ final class J10ReviewObserver {
             VerseRef end = GeometryRepository.parseVerse(entry.end);
             List<String> unit = planner.lineIdsForVerseRange(start, end);
             int completed = Math.max(0, prefs.itqanBlockIndex() - 1);
-            int count = PreviewConfig.fractionatedBlockCount(unit.size());
+            int[] segments = planner.surahSegmentLineCounts(start, end);
+            int count = PreviewConfig.fractionatedBlockCount(segments);
             if (completed >= count) return;
-            int from = PreviewConfig.fractionatedBlockStart(unit.size(), completed);
-            int len = PreviewConfig.fractionatedBlockLength(unit.size(), completed);
-            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
+            int from = PreviewConfig.fractionatedBlockStart(segments, completed);
+            int len = PreviewConfig.fractionatedBlockLength(segments, completed);
+            if (from + len <= unit.size()) {
+                planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
+            }
             return;
         }
 
@@ -120,19 +181,33 @@ final class J10ReviewObserver {
         if (range == null) return;
         List<String> unit = planner.lineIdsForVerseRange(range[0], range[1]);
         if (label.startsWith("Ancrage fractionné")) {
-            int count = PreviewConfig.fractionatedBlockCount(unit.size());
+            int[] segments = planner.surahSegmentLineCounts(range[0], range[1]);
+            int count = PreviewConfig.fractionatedBlockCount(segments);
             int last = Math.max(0, count - 1);
-            int from = PreviewConfig.fractionatedBlockStart(unit.size(), last);
-            int len = PreviewConfig.fractionatedBlockLength(unit.size(), last);
-            planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
+            int from = PreviewConfig.fractionatedBlockStart(segments, last);
+            int len = PreviewConfig.fractionatedBlockLength(segments, last);
+            if (from + len <= unit.size()) {
+                planner.acquireAndReview(new ArrayList<>(unit.subList(from, from + len)), date);
+            }
         } else {
             planner.acquireAndReview(unit, date);
         }
     }
 
     private void creditMurajaah(LocalDate date) {
-        VerseRef[] range = parseRange(prefs.lastMurajaahLabel());
+        VerseRef structuredStart = prefs.lastMurajaahCreditStart();
+        VerseRef structuredEnd = prefs.lastMurajaahCreditEnd();
+        if (structuredStart != null && structuredEnd != null) {
+            List<String> ids = planner.traversalLineIds(structuredStart, structuredEnd);
+            if (!ids.isEmpty()) planner.acquireAndReview(ids, date);
+            return;
+        }
+
+        // Historical v4 fallback only. New v5 commits never depend on a visible label.
+        String label = prefs.lastMurajaahLabel();
+        VerseRef[] range = parseRange(label);
         if (range == null) return;
+        Log.w("QuranHifz", "Using historical visible-label J10 Murajaah fallback");
         List<String> ids = planner.traversalLineIds(range[0], range[1]);
         if (!ids.isEmpty()) planner.acquireAndReview(ids, date);
     }
@@ -155,11 +230,6 @@ final class J10ReviewObserver {
         if (text == null || text.trim().isEmpty()) return null;
         try { return LocalDate.parse(text); }
         catch (RuntimeException invalid) { return null; }
-    }
-
-    private static LocalDate dateOrToday(String text, LocalDate today) {
-        LocalDate parsed = parsedDate(text);
-        return parsed == null ? today : parsed;
     }
 
     private static String recentKey(HifzPrefs.RecentSabqi item) {

@@ -24,6 +24,7 @@ final class HifzAudioDialog {
     private final Activity activity;
     private final MushafView mushaf;
     private final HifzAudioPack pack;
+    private final HifzPrefs prefs;
     private final ArrayList<VerseRef> queue;
     private final EinkController eink = new EinkController();
     private LinearLayout host;
@@ -50,6 +51,7 @@ final class HifzAudioDialog {
         this.activity = activity;
         this.mushaf = mushaf;
         this.pack = new HifzAudioPack(activity);
+        this.prefs = new HifzPrefs(activity);
         this.queue = new ArrayList<>(verses == null ? java.util.Collections.emptyList() : verses);
     }
 
@@ -98,7 +100,7 @@ final class HifzAudioDialog {
         registerLifecycle();
         updateIdentity();
         setPlayIcon(false);
-        eink.local(host);
+        eink.local(host, prefs);
     }
 
     void detachInline() {
@@ -112,7 +114,7 @@ final class HifzAudioDialog {
         if (currentHost != null) {
             currentHost.removeAllViews();
             currentHost.setVisibility(View.GONE);
-            eink.local(currentHost);
+            eink.local(currentHost, prefs);
         }
         unregisterLifecycle();
     }
@@ -212,14 +214,14 @@ final class HifzAudioDialog {
         if (title == null || queue.isEmpty()) return;
         VerseRef verse = queue.get(index);
         title.setText("Al-Husary Muʿallim · " + verse + " · " + (index + 1) + "/" + queue.size());
-        if (host != null) eink.local(host);
+        if (host != null) eink.local(host, prefs);
     }
 
     private void setPlayIcon(boolean playing) {
         if (playPause == null) return;
         Ui.setButtonIcon(playPause, playing ? R.drawable.ic_ui_pause : R.drawable.ic_ui_play);
         playPause.setContentDescription(playing ? "Pause" : "Lire");
-        if (host != null) eink.local(host);
+        if (host != null) eink.local(host, prefs);
     }
 
     private void releasePlayerOnly() {

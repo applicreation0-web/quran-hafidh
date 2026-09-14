@@ -29,17 +29,19 @@ final class DashboardLedger {
 
     DashboardLedger(Context context){
         p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
-        if(!p.contains(START))p.edit().putString(START,LocalDate.now().toString()).apply();
+        if(!p.contains(START))p.edit().putString(START,HifzClock.today().toString()).apply();
     }
 
-    LocalDate started(){return LocalDate.parse(p.getString(START,LocalDate.now().toString()));}
+    LocalDate started(){return LocalDate.parse(p.getString(START,HifzClock.today().toString()));}
 
-    void capture(HifzPrefs prefs){
-        upsert(prefs.lastSabqiDate(),HifzSessionActivity.SABQI,prefs.lastSabqiLabel());
-        upsert(prefs.lastSabqiTodayReviewDate(),HifzSessionActivity.SABQI_TODAY_REVIEW,prefs.lastSabqiTodayReviewLabel());
-        upsert(prefs.lastItqanDate(),HifzSessionActivity.ITQAN,prefs.lastItqanLabel());
-        upsert(prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,prefs.lastRecentSabqiReviewLabel());
-        upsert(prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel());
+    void capture(HifzPrefs prefs){ capture(prefs, HifzClock.today()); }
+
+    void capture(HifzPrefs prefs, LocalDate today){
+        upsert(prefs.lastSabqiDate(),HifzSessionActivity.SABQI,prefs.lastSabqiLabel(),today);
+        upsert(prefs.lastSabqiTodayReviewDate(),HifzSessionActivity.SABQI_TODAY_REVIEW,prefs.lastSabqiTodayReviewLabel(),today);
+        upsert(prefs.lastItqanDate(),HifzSessionActivity.ITQAN,prefs.lastItqanLabel(),today);
+        upsert(prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,prefs.lastRecentSabqiReviewLabel(),today);
+        upsert(prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel(),today);
     }
 
     Record find(LocalDate date,String type){
@@ -58,11 +60,11 @@ final class DashboardLedger {
         return out;
     }
 
-    private void upsert(String dateText,String type,String label){
+    private void upsert(String dateText,String type,String label,LocalDate today){
         if(dateText==null||dateText.isEmpty())return;
         LocalDate date;
         try{date=LocalDate.parse(dateText);}catch(RuntimeException e){return;}
-        List<Record> next=mergeRecords(records(),date,type,label,LocalDate.now());
+        List<Record> next=mergeRecords(records(),date,type,label,today);
         JSONArray array=new JSONArray();
         try{
             for(Record r:next){JSONObject o=new JSONObject();o.put("date",r.date.toString());o.put("type",r.type);o.put("label",r.label);array.put(o);}

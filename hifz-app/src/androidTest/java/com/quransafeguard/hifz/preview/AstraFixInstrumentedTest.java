@@ -10,8 +10,14 @@ import com.quransafeguard.hifz.core.VerseRef;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +30,10 @@ public final class AstraFixInstrumentedTest {
     private static final String HIFZ = "quran_hifz_preview_v1";
     private Context context;
     private SharedPreferences raw;
+
+    @Rule public final TestWatcher resetHifzClock = new TestWatcher() {
+        @Override protected void finished(Description description) { HifzClock.resetClockForTests(); }
+    };
 
     @Before public void setUp() {
         context = ApplicationProvider.getApplicationContext();
@@ -38,7 +48,9 @@ public final class AstraFixInstrumentedTest {
     }
 
     @Test public void historicalAcquiredCorpusDoesNotBootstrapAtJ0() {
-        LocalDate today = LocalDate.of(2026, 9, 13);
+        HifzClock.setClockForTests(Clock.fixed(
+            Instant.parse("2026-09-14T12:00:00Z"), ZoneId.of("UTC")));
+        LocalDate today = HifzClock.today();
         J10ReviewPlanner planner = new J10ReviewPlanner(context);
         GeometryRepository geometry = GeometryRepository.get(context);
         String baseLine = geometry.lineIdsForVerseRange(new VerseRef(2, 1), new VerseRef(2, 1)).get(0);
@@ -96,7 +108,7 @@ public final class AstraFixInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(4, prefs.schema());
+        assertEquals(5, prefs.schema());
         assertEquals(LocalDate.of(2026, 1, 1), prefs.programStartDate());
         assertEquals("progression schema2", prefs.lastSabqiLabel());
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 1)));

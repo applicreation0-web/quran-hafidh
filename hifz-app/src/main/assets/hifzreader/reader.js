@@ -9,6 +9,7 @@ let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
 const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
+let strictLineFocus=!!boot.strictLineFocus;
 let audioVerse=null;
 let maskOrderSignature='';
 let maskOrder=[];
@@ -18,6 +19,7 @@ const mushaf=document.getElementById('mushaf');
 function currentSvg(){return mushaf.querySelector('svg')}
 function verseOf(p){return p.getAttribute('surah')+':'+p.getAttribute('ayah')}
 function selectedPolygons(svg){return [...svg.querySelectorAll('.ayahPolygon')].filter(p=>selected.includes(String(p.dataset.verse)))}
+function shadeVerseSelection(){if(strictLineFocus)return false;return true}
 
 function prepare(){
   const svg=currentSvg();
@@ -49,6 +51,30 @@ function maskCandidates(lines,polys){
     });
   });
   return out;
+}
+
+function lineFocusLayer(lines){
+  const layer=document.createElementNS(NS,'g');
+  layer.setAttribute('class','linefocuslayer');
+  (lines||[]).forEach(line=>{
+    const cells=line.cells||[];if(!cells.length)return;
+    let x0=Infinity,x1=-Infinity;
+    cells.forEach(cell=>{
+      x0=Math.min(x0,Number(cell[0]));
+      x1=Math.max(x1,Number(cell[1]));
+    });
+    const top=Number(line.top),bottom=Number(line.bottom);
+    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
+    const rect=document.createElementNS(NS,'rect');
+    rect.setAttribute('class','linefocuscell');
+    rect.setAttribute('x',x0);
+    rect.setAttribute('y',top+0.25);
+    rect.setAttribute('width',x1-x0);
+    rect.setAttribute('height',Math.max(0,bottom-top-0.5));
+    rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
+    layer.appendChild(rect);
+  });
+  return layer;
 }
 
 function hashSeed(value){
@@ -139,14 +165,22 @@ function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
-    p.classList.toggle('selected',selected.includes(String(p.dataset.verse)));
+    p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer').forEach(n=>n.remove());
-  const clamped=Math.max(0,Math.min(100,Number(mask)||0));
-  if(!clamped||!pageGeo||!lineIds.length)return;
+  svg.querySelectorAll('.masklayer,.linefocuslayer').forEach(n=>n.remove());
+
   const wanted=new Set(lineIds.map(String));
-  const lines=(pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)));if(!lines.length)return;
+  const lines=pageGeo&&lineIds.length
+    ? (pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)))
+    : [];
+  if(strictLineFocus&&lines.length){
+    const focus=lineFocusLayer(lines);
+    if(focus.childNodes.length)svg.appendChild(focus);
+  }
+
+  const clamped=Math.max(0,Math.min(100,Number(mask)||0));
+  if(!clamped||!pageGeo||!lineIds.length||!lines.length)return;
   const polys=selectedPolygons(svg),cells=maskCandidates(lines,polys);if(!cells.length)return;
   const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
 
@@ -213,6 +247,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer};
 prepare();
 N?.ready();

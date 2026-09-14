@@ -1,22 +1,18 @@
-name: Quran Hifz 0.7.3 final candidate
+name: Quran Hifz 0.7.4 pre-BOOX final candidate
 
 on:
   push:
     branches:
-      - release/hifz-0.7.1-official
-      - release/hifz-0.7.2-mask-hotfix
-      - release/hifz-0.7.3-final
-      - fix/hifz-0.7.3-claude-audit
-      - feat/hifz-0.7.3-lot2-cadence
-      - fix/hifz-0.7.3-final-ui-polish
-      - work/hifz-0.7.3-spec-update
-      - work/hifz-0.7.3-finalize-all
-      - work/hifz-0.7.3-claude-all-fixes
+      - work/hifz-0.7.4-preboox
   workflow_dispatch:
 
 permissions:
   contents: read
   actions: read
+
+concurrency:
+  group: quran-hifz-0.7.4-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-hifz-official:
@@ -96,6 +92,15 @@ jobs:
           python3 scripts/build_reader109_geometry.py
           python3 scripts/verify_hifz_geometry_edges.py
           test -s app/src/main/assets/reader109/geometry.json
+          test -s geometry-report.json
+          python3 - <<'PY'
+          import json
+          report=json.load(open('geometry-report.json'))
+          assert report.get('page_count') == 604, report
+          assert report.get('unique_line_count') == 8820, report
+          assert report.get('multi_page_verse_count') == 0, report
+          print('GEOMETRY_COUNTS_OK 604 8820 MULTI_PAGE_VERSES=0')
+          PY
 
       - name: Package self-contained audited source
         shell: bash
@@ -120,11 +125,11 @@ jobs:
           test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'qushayri_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 2
 
           cat > "$stage/SELF_CONTAINED_BUILD.txt" <<EOF
-          QURAN HIFZ 0.7.3 SELF-CONTAINED AUDIT SOURCE
+          QURAN HIFZ 0.7.4 SELF-CONTAINED AUDIT SOURCE
           HEAD=${GITHUB_SHA}
           PACKAGE=com.quransafeguard.hifz
-          VERSION_CODE=10
-          VERSION_NAME=0.7.3-boox
+          VERSION_CODE=11
+          VERSION_NAME=0.7.4-boox
           MUSHAF_PAGES=604
           AUDIO_DELIVERY=separate-local-pack
 
@@ -148,6 +153,8 @@ jobs:
           java-version: '17'
 
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: Install Android SDK
         run: |
@@ -172,9 +179,34 @@ jobs:
           test ! -e scripts/test_hifz_word_mask.js
           test ! -e hifz-app/src/main/assets/licenses/quran-word-coordinates-MIT.txt
           ! grep -R -E 'mushaf-layout|Quran-coordinate|line\.words|maskedWordIds' hifz-app/src/main
+          test ! -e .github/workflows/hifz-personal-embedded-audio.yml
 
-      - name: Run complete Hifz regression and product-boundary suite
+      - name: Run behavioral JVM regression and product-boundary suite
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:compileDebugAndroidTestSources :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
+
+      - name: Run source contracts separately
+        run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+
+      - name: Record honest JVM test counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee hifz-test-counts.txt
+          import glob, xml.etree.ElementTree as ET
+          def count(pattern):
+              tests=failures=errors=skipped=0
+              for f in glob.glob(pattern, recursive=True):
+                  r=ET.parse(f).getroot()
+                  tests += int(r.attrib.get('tests',0)); failures += int(r.attrib.get('failures',0))
+                  errors += int(r.attrib.get('errors',0)); skipped += int(r.attrib.get('skipped',0))
+              return tests,failures,errors,skipped
+          behavior=count('hifz-app/build/test-results/testDebugUnitTest/**/*.xml')
+          contracts=count('hifz-app/build/test-results/sourceContractTest/**/*.xml')
+          print('BEHAVIOR_JVM tests=%d failures=%d errors=%d skipped=%d' % behavior)
+          print('SOURCE_CONTRACT tests=%d failures=%d errors=%d skipped=%d' % contracts)
+          assert behavior[0] > 0 and behavior[1] == behavior[2] == 0
+          assert contracts[0] > 0 and contracts[1] == contracts[2] == 0
+          PY
 
       - name: Run instrumented Hifz migration and geometry tests
         shell: bash
@@ -263,12 +295,17 @@ jobs:
           test -n "$apk" && test -s "$apk"
           apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
           test "$(apkanalyzer manifest application-id "$apk")" = "com.quransafeguard.hifz"
-          test "$(apkanalyzer manifest version-code "$apk")" = "10"
-          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.3-boox"
+          test "$(apkanalyzer manifest version-code "$apk")" = "11"
+          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.4-boox"
           grep -q 'Quran Hifz' hifz-app-manifest.xml
           if grep -q 'android:debuggable="true"' hifz-app-manifest.xml; then exit 1; fi
           grep -q 'configChanges=' hifz-app-manifest.xml
           if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo 'ERROR: official CI artifact must be unsigned before local signing.' >&2
+            exit 1
+          fi
+          echo 'APK_UNSIGNED_CONFIRMED' | tee hifz-app-unsigned-proof.txt
 
           unzip -l "$apk" > hifz-app-apk-list.txt
           grep -q 'assets/reader109/geometry.json' hifz-app-apk-list.txt
@@ -314,15 +351,52 @@ jobs:
           echo "APK=$apk" | tee hifz-app-build-info.txt
           echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
           echo "PACKAGE=com.quransafeguard.hifz" | tee -a hifz-app-build-info.txt
-          echo "VERSION_CODE=10" | tee -a hifz-app-build-info.txt
-          echo "VERSION_NAME=0.7.3-boox" | tee -a hifz-app-build-info.txt
+          echo "VERSION_CODE=11" | tee -a hifz-app-build-info.txt
+          echo "VERSION_NAME=0.7.4-boox" | tee -a hifz-app-build-info.txt
           echo "AUDIO_DELIVERY=separate-local-pack" | tee -a hifz-app-build-info.txt
 
-      - name: Upload official unsigned release evidence
-        if: always()
+      - name: Verify complete final evidence before upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s geometry-report.json
+          test -s hifz-test-counts.txt
+          test -s process-death-proof.txt
+          test -s hifz-app-manifest.xml
+          test -s hifz-app-apk-list.txt
+          test -s hifz-app-sha256.txt
+          test -s hifz-app-build-info.txt
+          test -s hifz-app-unsigned-proof.txt
+          test -s quran-hifz-reproducible-source-${GITHUB_SHA}.tar.gz
+          test -s quran-hifz-reproducible-source-${GITHUB_SHA}.tar.gz.sha256
+          test -s "$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          echo FINAL_EVIDENCE_COMPLETE
+
+      - name: Upload diagnostics on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: quran-hifz-0.7.3-final-unsigned-${{ github.sha }}
+          name: quran-hifz-0.7.4-preboox-diagnostics-${{ github.sha }}
+          path: |
+            hifz-core/build/test-results/
+            hifz-core/build/reports/tests/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            emulator.log
+            process-death-prepare.log
+            process-death-verify.log
+            process-death-proof.txt
+            hifz-test-counts.txt
+            geometry-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload official unsigned release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-0.7.4-preboox-unsigned-${{ github.sha }}
           path: |
             hifz-app/build/outputs/apk/release/*.apk
             hifz-core/build/test-results/
@@ -339,11 +413,13 @@ jobs:
             hifz-app-apk-list.txt
             hifz-app-sha256.txt
             hifz-app-build-info.txt
+            hifz-app-unsigned-proof.txt
+            hifz-test-counts.txt
             geometry-report.json
             quran-hifz-reproducible-source-*.tar.gz
             quran-hifz-reproducible-source-*.tar.gz.sha256
-          if-no-files-found: warn
-          retention-days: 14
+          if-no-files-found: error
+          retention-days: 90
 
 # Durable signing is deliberately local with the existing Quran Hifz JKS.
 # No key material or signing password is stored in GitHub Actions.
