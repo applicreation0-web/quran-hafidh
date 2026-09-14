@@ -1,0 +1,47 @@
+name: Quran Hifz process-death harness fix
+on:
+  push:
+    branches: [work/hifz-0.7.3-claude-all-fixes]
+    paths: [.github/workflows/hifz-fix-process-gate.yml]
+permissions:
+  contents: write
+  actions: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.3-claude-all-fixes
+          fetch-depth: 0
+      - name: Reinstall instrumentation packages before external process-death probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/workflows/hifz-test-app.yml')
+          text = p.read_text()
+          needle = '''          # Work-audit blocker: prove persistence across real process death, not Activity.recreate().\n          runner="com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner"\n'''
+          replacement = '''          # Work-audit blocker: prove persistence across real process death, not Activity.recreate().\n          # connectedDebugAndroidTest uninstalls its app/test packages on completion; reinstall both APKs\n          # before driving the two external instrumentation phases across force-stop/relaunch.\n          debug_apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"\n          test_apk="$(find hifz-app/build/outputs/apk/androidTest/debug -type f -name '*.apk' -print -quit)"\n          test -n "$debug_apk" && test -s "$debug_apk"\n          test -n "$test_apk" && test -s "$test_apk"\n          adb install -r "$debug_apk"\n          adb install -r "$test_apk"\n          adb shell pm list instrumentation | tee process-death-instrumentation.txt\n          grep -q 'com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner' process-death-instrumentation.txt\n\n          runner="com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner"\n'''
+          if text.count(needle) != 1:
+              raise SystemExit(f'expected unique process gate insertion point, got {text.count(needle)}')
+          text = text.replace(needle, replacement, 1)
+          upload = '            process-death-prepare.log\n'
+          if '            process-death-instrumentation.txt\n' not in text:
+              if text.count(upload) != 1:
+                  raise SystemExit('artifact process-death insertion point missing')
+              text = text.replace(upload, '            process-death-instrumentation.txt\n' + upload, 1)
+          p.write_text(text)
+          PY
+          git rm .github/workflows/hifz-fix-process-gate.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/hifz-test-app.yml
+          git diff --cached --check
+          git commit -m 'fix(ci): reinstall instrumentation for process-death gate'
+          git push origin HEAD:work/hifz-0.7.3-claude-all-fixes
+      - name: Dispatch corrected official CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run hifz-test-app.yml --ref work/hifz-0.7.3-claude-all-fixes
