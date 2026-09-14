@@ -41,6 +41,7 @@ public final class UiIconMappingTest {
             {"Ancrage", R.drawable.ic_hifz_anchor},
             {"Entretien", R.drawable.ic_hifz_maintenance},
             {"Valider", R.drawable.ic_ui_validate},
+            {"Valider jusqu’ici", R.drawable.ic_ui_validate},
             {"Revu", R.drawable.ic_ui_validate},
             {"Modifier la plage", R.drawable.ic_ui_edit},
             {"Supprimer la plage", R.drawable.ic_ui_delete}
