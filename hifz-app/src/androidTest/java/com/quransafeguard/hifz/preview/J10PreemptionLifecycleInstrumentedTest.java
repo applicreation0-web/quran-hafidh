@@ -65,9 +65,10 @@ public final class J10PreemptionLifecycleInstrumentedTest {
             assertNotNull("first priority review must open", first);
             InstrumentationRegistry.getInstrumentation().runOnMainSync(first::finish);
             awaitNoResumedJ10();
+            assertNotNull("host must consume the one-shot suppression on automatic resume", awaitResumedHost());
 
-            // The automatic host resume consumes only the one-shot suppression. A later resume
-            // must evaluate priority again and open a new J10 review for the still-due line.
+            // Only after the automatic return has consumed the one-shot suppression do we create
+            // a genuinely later resume. That later resume must evaluate priority again.
             host.moveToState(Lifecycle.State.CREATED);
             host.moveToState(Lifecycle.State.RESUMED);
 
@@ -87,6 +88,16 @@ public final class J10PreemptionLifecycleInstrumentedTest {
         return resumedJ10();
     }
 
+    private HifzSessionActivity awaitResumedHost() {
+        long deadline = SystemClock.elapsedRealtime() + 5_000L;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            HifzSessionActivity current = resumedHost();
+            if (current != null) return current;
+            SystemClock.sleep(25L);
+        }
+        return resumedHost();
+    }
+
     private void awaitNoResumedJ10() {
         long deadline = SystemClock.elapsedRealtime() + 3_000L;
         while (SystemClock.elapsedRealtime() < deadline) {
@@ -99,6 +110,21 @@ public final class J10PreemptionLifecycleInstrumentedTest {
     private void closeResumedJ10() {
         J10ReviewActivity current = resumedJ10();
         if (current != null) InstrumentationRegistry.getInstrumentation().runOnMainSync(current::finish);
+    }
+
+    private HifzSessionActivity resumedHost() {
+        AtomicReference<HifzSessionActivity> found = new AtomicReference<>();
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Collection<Activity> resumed = ActivityLifecycleMonitorRegistry.getInstance()
+                .getActivitiesInStage(Stage.RESUMED);
+            for (Activity activity : resumed) {
+                if (activity instanceof HifzSessionActivity) {
+                    found.set((HifzSessionActivity) activity);
+                    return;
+                }
+            }
+        });
+        return found.get();
     }
 
     private J10ReviewActivity resumedJ10() {
