@@ -16,6 +16,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
 
     @Before public void setUp() {
         context = ApplicationProvider.getApplicationContext();
+        resetApplicationObserver();
         raw = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         raw.edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
@@ -40,8 +42,10 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     @After public void tearDown() {
+        resetApplicationObserver();
         raw.edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
+        resetApplicationObserver();
     }
 
     @Test public void fullFractionatedUnitKeepsFullAcrossQueueReorder() {
@@ -204,6 +208,13 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     private void assertSessionShowsProtocol(int repetitions) {
+        // ITQAN is intentionally a reusable J10 host. Make the acquired corpus current so the
+        // application-level J10 guard does not preempt the activity under test during recreate().
+        J10ReviewPlanner planner = new J10ReviewPlanner(context);
+        LocalDate today = LocalDate.now();
+        assertTrue(planner.syncAcquired(today));
+        assertTrue(planner.markReviewed(planner.snapshot().keySet(), today));
+
         Intent intent = new Intent(context, HifzSessionActivity.class)
             .putExtra(HifzSessionActivity.EXTRA_MODE, HifzSessionActivity.ITQAN);
         try (ActivityScenario<HifzSessionActivity> scenario = ActivityScenario.launch(intent)) {
@@ -215,6 +226,27 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
                 assertTrue("Recreated session must show ×" + repetitions,
                     containsText(activity.findViewById(android.R.id.content), "×" + repetitions)));
         }
+    }
+
+    /** Prevent this ActivityScenario class from leaking the process-global observer into other tests. */
+    private void resetApplicationObserver() {
+        Object application = context == null ? ApplicationProvider.getApplicationContext() : context;
+        if (!(application instanceof QuranHifzApp)) return;
+        try {
+            setField(application, "observer", null);
+            setField(application, "planner", null);
+            setField(application, "pendingReconcile", false);
+            setField(application, "openingPriority", false);
+        } catch (ReflectiveOperationException error) {
+            throw new AssertionError("Unable to isolate QuranHifzApp observer", error);
+        }
+    }
+
+    private static void setField(Object target, String name, Object value)
+            throws ReflectiveOperationException {
+        Field field = QuranHifzApp.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 
     private static boolean containsText(View view, String expected) {
