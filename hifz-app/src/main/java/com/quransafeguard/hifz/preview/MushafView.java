@@ -56,6 +56,7 @@ public final class MushafView extends WebView {
     private List<VerseRef> lastSelection;
     private List<String> lastLineIds;
     private int lastMask;
+    private boolean lastStrictLineFocus;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -146,8 +147,16 @@ public final class MushafView extends WebView {
     }
 
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
+        lastStrictLineFocus = false;
         retried = false;
         load(page, selection, lineIds, maskPercent);
+    }
+
+    /** J10-only view: shade exactly the requested physical lines, never whole verse polygons. */
+    public void showLineFocus(int page, List<VerseRef> selection, List<String> lineIds) {
+        lastStrictLineFocus = true;
+        retried = false;
+        load(page, selection, lineIds, 0);
     }
 
     private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
@@ -160,6 +169,7 @@ public final class MushafView extends WebView {
         lastSelection = selection;
         lastLineIds = lineIds;
         lastMask = maskPercent;
+        boolean strictLineFocus = lastStrictLineFocus;
         try {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
@@ -178,6 +188,7 @@ public final class MushafView extends WebView {
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
                 .put("maskEntropy", maskEntropy)
                 .put("eink", eink.isEink(prefs))
+                .put("strictLineFocus", strictLineFocus)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
