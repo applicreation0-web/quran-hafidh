@@ -18,7 +18,8 @@ html,body{margin:0;width:100%;height:100%;background:var(--paper);color:#000;-we
 .ayahPolygon.selected{fill-opacity:var(--sel-op)}
 .ayahPolygon.audio{fill-opacity:0;stroke:var(--audio)!important;stroke-width:1.15;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .ayahPolygon.selected.audio{fill-opacity:var(--sel-op);stroke:var(--audio)!important}
-.masklayer{pointer-events:none}
+.masklayer,.linefocuslayer{pointer-events:none}
+.linefocuscell{fill:var(--sel);fill-opacity:var(--sel-op)}
 .maskcell{fill:var(--mask)}
 body.eink{--paper:#fff;--sheet:#fff;--sel-op:.075;--mask:#e2e2e2}
 body.eink .ayahPolygon.audio{stroke-width:1.35}
