@@ -1,84 +1,60 @@
-# Quran Hifz 0.7.3 — Work / Audit Handoff
+# Quran Hifz 0.7.3 — Final Work / Audit Handoff
 
-Date: 2026-09-12  
+Date: 2026-09-14  
 Repository: `applicreation0-web/quran-unlock-android`  
-Branch: `release/hifz-0.7.3-final`  
-Baseline: `0d1e94779b0a85eda0cfe189272788efddfde9e1`  
-Resume point: `a453fb99bfab90545d8ab0e243ad43c124cfedc7`  
-Verified application candidate: `2f736a3256bd4da7ab1778bd383449f2e08c6813`
+Branch: `work/hifz-0.7.3-claude-all-fixes`
 
-## Outcome
+## Status
 
-The Hifz cycle + snowball engine is implemented with independent, fixed-duration sessions and without time transfer:
+This document supersedes the former 2026-09-12 handoff and its obsolete release branch, candidate SHA, CI run, job, artifact ID, APK hash and verdict.
 
-- Monday / Wednesday / Friday evening: same five Sabqi lines, looped for 30 minutes.
-- Tuesday / Thursday evening: old consolidated Murajaah for 60 minutes.
-- Saturday / Sunday morning: recent Sabqi loop for 30 minutes, including the one-block and empty-queue cases.
-- Saturday / Sunday evening: old consolidated Murajaah for 30 minutes.
-- Morning Itqan work follows the anchored cycle and atomically consolidates completed units.
-- Priority is cycle + snowball only; no `pendingPromotedItqan` priority.
-- Itqan and Murajaah cursors are independent and read-only in Settings.
-- Timed-session progress, expiry, restart recovery, and date-scoped state are persisted independently.
-- Legacy v2 A/B state is migrated to schema v3 without retaining runtime A/B allocation or time-transfer behavior.
-- Today, dashboard, session routing, and settings consume the same schedule contract.
+The release candidate is the exact repository HEAD checked out by the next official `Quran Hifz 0.7.3 final candidate` workflow run after this handoff update. The immutable candidate SHA and produced artifact facts MUST be taken from that run's `hifz-app-build-info.txt`, `hifz-app-sha256.txt`, `process-death-proof.txt`, workflow metadata and artifact metadata. No older run or artifact is release evidence.
 
-## TDD trail
+## Final corrective delta already applied
 
-- `5bff4d2dc9235d54bf9cd16c983566d03e81f389` — fixed session duration contracts.
-- `774531276c3776ab7c54c33e288f6a10b63efad0` — separated fixed review sessions and persistence.
-- `2a24a00ac05f168508cec89f914b9eefa733be92` — aligned Today/dashboard and read-only cursors.
-- `795b802835a785f5d68c32cd29bbec9de91e02b5` — RED restart/empty-recent regression contracts.
-- `2f736a3256bd4da7ab1778bd383449f2e08c6813` — GREEN restart/empty-recent implementation.
+- `acaf537f095e1f720d527e0e3a5dea28275a0d7b` — UI GREEN: Study reader hidden chrome uses `GONE` so the Mushaf recovers layout height; structured Hifz session title allows two lines.
+- `3d4ad14c599bcb5fc861a7111756c99a8bad1f10` — official CI now proves real process death with an external `adb shell am force-stop`, relaunch, PID change and post-relaunch persistence verification.
+- `9cc9bfd507f62b87e36583423e918f3d5884a3b4` — process-death persistence fixture covering in-progress anchoring range, FULL/LIGHT protocol state, block index, repetition counter and reveal/assistance state.
+- `f3acb445aef6cb92a7ae97d8e32eaab8d31b3c7c` — deterministic J10 instrumented tests isolated from live wall-clock date.
 
-The temporary fast TDD workflow used during the red/green loop is intentionally removed after this handoff is committed. The official full workflow remains the release gate.
+Temporary correction workflows have been removed. The official full workflow is the sole CI release gate.
 
-## Verification evidence
+## Mandatory final CI evidence
 
-Official workflow run `34722638689` completed successfully for application candidate `2f736a3256bd4da7ab1778bd383449f2e08c6813`, job `103631181206`.
+The final official run on the exact post-handoff HEAD must complete all of the following successfully:
 
-Verified steps include:
+- canonical 604-page Mushaf restore/injection and geometry checks;
+- Tafsir source and packaged-source integrity checks;
+- core and application JVM suites;
+- product-boundary, cosmetic and convergence gates;
+- all Android instrumentation, including the UI regressions and J10 regressions;
+- real process-death proof: fixture prepare → application PID captured → `adb shell am force-stop com.quransafeguard.hifz` → process absent → relaunch → different PID → fixture verification;
+- unsigned release APK assembly;
+- manifest/package/version/debuggable/security-boundary inspection;
+- official evidence artifact upload.
 
-- canonical 604-page Mushaf restore/injection;
-- Tafsir source and packaged-source verification;
-- geometry generation;
-- mask slab/source-ink and vertical-fit/no-crop checks;
-- complete core, application, product-boundary, cosmetic, and convergence tests;
-- release APK assembly;
-- manifest/package/version/debuggable inspection;
-- unsigned artifact upload.
-
-Observed release facts:
+Expected release identity remains:
 
 - package: `com.quransafeguard.hifz`
 - versionCode: `10`
 - versionName: `0.7.3-boox`
-- APK: `hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk`
-- unsigned APK SHA-256: `de719ff6638780aa1d5e33e6f8186a78d1d9214b652148865e64a1cfc4a3c04c`
-- artifact ID: `10306214260`
-- artifact name: `quran-hifz-0.7.3-final-unsigned-2f736a3256bd4da7ab1778bd383449f2e08c6813`
-- artifact ZIP digest: `sha256:0c12f99756d16a838d84fcfe754cd7d49ad309e96ca49caea7c72e432e0a4d26`
+- label: `Quran Hifz`
+- audio delivery: separate local pack; no Husary MP3 embedded in the APK.
 
-## Contradictory audit
+## M3 provenance rule
 
-The implementation was challenged against the failure cases most likely to invalidate the schedule contract:
+M3 is closed only by provenance tied to the exact final candidate. After the official run, the independent audit must record and verify:
 
-- process death after the wall-clock deadline;
-- an empty recent-Sabqi queue;
-- exactly one recent block;
-- cross-day persisted state;
-- accidental fallthrough from recent Sabqi into old Itqan;
-- reintroduction of A/B runtime allocation or unused-time transfer;
-- divergence between Today and weekly dashboard planning;
-- UI controls capable of moving live cursors;
-- accidental edits to canonical Mushaf, Tafsir, or audio assets.
+- final candidate SHA from workflow checkout / `hifz-app-build-info.txt`;
+- workflow run ID and job ID;
+- artifact ID, exact artifact name, artifact ZIP digest and size;
+- exact unsigned APK filename and independently recalculated SHA-256 matching `hifz-app-sha256.txt`;
+- successful `process-death-proof.txt` with distinct before/after PIDs.
 
-Regression contracts cover these cases, and the official workflow is green. The base-to-candidate diff contains no canonical Mushaf, Tafsir, or audio asset changes.
+Those values are intentionally not hard-coded here before the run exists: committing post-run IDs back into this file would create a different, unaudited HEAD and break SHA provenance.
 
-This audit is implementation-linked, not an independent external review.
+## Independent audit / release gates
 
-## Release verdict
+Previous audit verdicts do not transfer to the new SHA. The exact final SHA must receive a fresh independent Work audit. B1/B2/B3, M1–M6, the real kill/restart blocker, M3 provenance and the two UI corrections must all be explicitly CLOSED before signing.
 
-- Software / CI candidate: **GO**.
-- Publication: **NO-GO until the mandatory physical BOOX check is completed and recorded**.
-- Optional independent audit: still recommended if a separate auditor is required.
-- No merge, signing, publication, or deployment was performed.
+Signing remains local with the durable Quran Hifz JKS and is forbidden before independent GO. Publication remains NO-GO until the signed APK passes the mandatory physical BOOX test. No merge, signing or publication is performed by this handoff update.
