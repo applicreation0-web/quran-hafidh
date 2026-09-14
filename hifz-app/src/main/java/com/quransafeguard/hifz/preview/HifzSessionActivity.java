@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -69,6 +70,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private Button revealButton;
     private Button murajaahFinishButton;
     private int recentReviewIndex;
+    private LocalDate sessionDate;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -76,9 +78,24 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!SABQI.equals(mode) && !SABQI_TODAY_REVIEW.equals(mode) && !ITQAN.equals(mode)
                 && !RECENT_SABQI_REVIEW.equals(mode) && !MURAJAAH.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
+        String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
+            ? prefs.sabqiTodayReviewDate()
+            : "";
+        LocalDate capturedToday = HifzClock.today();
+        try {
+            sessionDate = recordedSessionDate == null || recordedSessionDate.isEmpty()
+                ? capturedToday : LocalDate.parse(recordedSessionDate);
+        } catch (RuntimeException invalidRecordedDate) {
+            sessionDate = capturedToday;
+        }
         speedStore = new HifzSpeedStore(this);
         metricsStore = new HifzSessionMetricsStore(this);
-        geometry = GeometryRepository.get(this);
+        try {
+            geometry = GeometryRepository.get(this);
+        } catch (Throwable error) {
+            Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
+            return;
+        }
         recentReviewIndex = prefs.recentSabqiReviewIndex();
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
@@ -115,7 +132,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         meta.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),Ui.dp(this,2));
         progress = Ui.text(this,"",10.8f,false);
         progress.setTextColor(Ui.MUTED);
-        progress.setMaxLines(1);
+        progress.setMaxLines(2);
+        progress.setEllipsize(TextUtils.TruncateAt.END);
         Ui.weight(progress,1f);
         meta.addView(progress);
         timerText = Ui.text(this,"",10.5f,false);
@@ -173,7 +191,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void renderSabqi() {
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (today.equals(prefs.lastSabqiDate())) {
             sessionCompleted = true;
             program.setText("Leçon neuve · séance validée");
@@ -229,7 +247,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void updateSabqiProgress(int rep, int reveals) {
         progress.setText(Math.min(rep+1,PreviewConfig.SABQI_TOTAL_REPS) + "/37 · masque " + currentMask + "% · révélations " + reveals);
-        eink.local(progress);
+        eink.local(progress, prefs);
     }
 
     private boolean takeRepLock() {
@@ -266,11 +284,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sabqiBlock.startLineIndex,
             sabqiBlock.endLineIndex,
             sabqiBlock.endLineIndex+1,
-            LocalDate.now().toString(),
+            sessionDate.toString(),
             label
         );
         if (!ok) { onError("Impossible d’enregistrer la Leçon neuve."); return; }
-        rebalanceRecentWindow();
+        rebalanceRecentWindow(sessionDate);
         awaitingValidation=false;
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
@@ -278,11 +296,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /** Calendar/attendance promotion; display order never determines mastery order. */
-private void rebalanceRecentWindow() {
+private void rebalanceRecentWindow(LocalDate today) {
     List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
     if (recent.isEmpty()) return;
     List<HifzPrefs.RecentSabqi> canonical = HifzPrefs.canonicalRecentOrder(recent);
-    LocalDate today = LocalDate.now();
     LocalDate activation = prefs.recentConsolidationActivatedOn();
     if (activation == null && recent.size() <= RecentPromotionPolicy.MAX_RECENT_BLOCKS) return;
     LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
@@ -324,8 +341,7 @@ private void rebalanceRecentWindow() {
     recentReviewIndex = prefs.recentSabqiReviewIndex();
 }
 
-    private RecentPromotionPolicy.Decision promotionStatus(HifzPrefs.RecentSabqi item, int blockCount, boolean oldest) {
-        LocalDate today = LocalDate.now();
+    private RecentPromotionPolicy.Decision promotionStatus(HifzPrefs.RecentSabqi item, int blockCount, boolean oldest, LocalDate today) {
         LocalDate activation = prefs.recentConsolidationActivatedOn();
         LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
         List<LocalDate> completed = activation == null
@@ -336,12 +352,12 @@ private void rebalanceRecentWindow() {
 
     private void captureConsolidationAndRebalance() {
         DashboardLedger ledger = new DashboardLedger(this);
-        ledger.capture(prefs);
-        rebalanceRecentWindow();
+        ledger.capture(prefs, sessionDate);
+        rebalanceRecentWindow(sessionDate);
     }
 
     private void renderSabqiTodayReview() {
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (today.equals(prefs.lastSabqiTodayReviewDate())) {
             sessionCompleted = true;
             program.setText("Reprise du soir · séance validée");
@@ -373,7 +389,7 @@ private void rebalanceRecentWindow() {
     }
 
     private void renderRecentSabqiReview() {
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
             sessionCompleted = true;
             program.setText("Consolidation · séance validée");
@@ -404,7 +420,7 @@ private void rebalanceRecentWindow() {
         boolean canonicalOldest = !canonicalRecent.isEmpty()
             && canonicalRecent.get(0).startLine == item.startLine
             && canonicalRecent.get(0).endLine == item.endLine;
-        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), canonicalOldest);
+        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), canonicalOldest, sessionDate);
         String attendance = status.requiredSessions <= 0
             ? "Consolidation à venir"
             : status.completedSessions + "/" + status.requiredSessions + " séances";
@@ -451,7 +467,7 @@ private void rebalanceRecentWindow() {
     /** Commit a timed session whose foreground clock reached its limit before process death. */
     private boolean completeExpiredTimedSession() {
         if (!isTimedMode() || !PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes())) return false;
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (SABQI_TODAY_REVIEW.equals(mode)
                 && !today.equals(prefs.lastSabqiTodayReviewDate())
                 && today.equals(prefs.sabqiTodayReviewDate())) {
@@ -487,7 +503,7 @@ private void rebalanceRecentWindow() {
 
     /** Empty recent work is completed explicitly and never falls through to old Ancrage. */
     private boolean completeEmptyRecentSabqiSession() {
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) return false;
         metricsStore.clearConsolidation();
         boolean ok = prefs.completeRecentSabqiReview(today, 0, "Consolidation · aucun bloc récent");
@@ -504,7 +520,7 @@ private void rebalanceRecentWindow() {
         long saved = clock.pause();
         long effectiveElapsed = Math.max(elapsed, saved);
         prefs.setElapsedFor(mode, effectiveElapsed);
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (SABQI_TODAY_REVIEW.equals(mode)) {
             prefs.completeSabqiTodayReview(today, "Reprise du soir · 30 min");
             closeClockForCompletedSession();
@@ -517,13 +533,13 @@ private void rebalanceRecentWindow() {
             progress.setText(murajaahActualEnd == null
                 ? "Durée atteinte · touchez le dernier verset."
                 : "Fin réelle · " + murajaahActualEnd);
-            eink.local(progress);
+            eink.local(progress, prefs);
             if (murajaahFinishButton != null) murajaahFinishButton.setEnabled(murajaahActualEnd != null);
         }
     }
 
     private void renderItqan() {
-        String today=LocalDate.now().toString();
+        String today=sessionDate.toString();
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
             if (prefs.itqanBlockIndex() > 0) {
@@ -573,11 +589,11 @@ private void rebalanceRecentWindow() {
         itqanSessionProtocol = anchoringEntry.protocol;
         itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
         if (fractionatedItqan) {
-            int n = itqanUnit.lineIds.size();
-            itqanBlockCount = PreviewConfig.fractionatedBlockCount(n);
+            int[] segments = geometry.surahSegmentLineCounts(itqanUnit.start, itqanUnit.end);
+            itqanBlockCount = PreviewConfig.fractionatedBlockCount(segments);
             itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
-            int from = PreviewConfig.fractionatedBlockStart(n, itqanBlockIndex);
-            int len = PreviewConfig.fractionatedBlockLength(n, itqanBlockIndex);
+            int from = PreviewConfig.fractionatedBlockStart(segments, itqanBlockIndex);
+            int len = PreviewConfig.fractionatedBlockLength(segments, itqanBlockIndex);
             currentLineIds = new ArrayList<>(itqanUnit.lineIds.subList(from, from + len));
             currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
         } else {
@@ -616,7 +632,7 @@ private void rebalanceRecentWindow() {
 
     private void updateItqanProgress(int rep,int reveals){
         progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · masque "+currentMask+"% · révélations "+reveals);
-        eink.local(progress);
+        eink.local(progress, prefs);
     }
 
     private void completeItqanRep(){
@@ -656,7 +672,7 @@ private void rebalanceRecentWindow() {
                 metricsStore.recordAnchoring("bloc fractionné réussi · "+itqanUnit.start+" → "+itqanUnit.end
                     +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
                 if (!prefs.advanceItqanBlock(nextBlock, itqanUnit.start, itqanUnit.end,
-                        LocalDate.now().toString(), label)) {
+                        sessionDate.toString(), label)) {
                     onError("Impossible d’enregistrer le sous-bloc d’Ancrage fractionné.");
                     return;
                 }
@@ -684,13 +700,14 @@ private void rebalanceRecentWindow() {
         String label=(fractionatedItqan ? "Ancrage fractionné" : "Ancrage")+" · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
             +" · révélations finales "+prefs.itqanFinalReveals()+" · "+metrics;
         metricsStore.recordAnchoring((fractionatedItqan ? "réussite fractionnée" : "réussite")+" · "+itqanUnit.start+" → "+itqanUnit.end+" · "+metrics);
-        boolean ok=prefs.completeItqanUnitAndConsolidate(itqanUnit.start,itqanUnit.end,next,LocalDate.now().toString(),label);
+        int creditBlockIndex = fractionatedItqan ? itqanBlockIndex : -1;
+        boolean ok=prefs.completeItqanUnitAndConsolidate(itqanUnit.start,itqanUnit.end,next,sessionDate.toString(),label,creditBlockIndex);
         if(!ok){onError("Impossible d’enregistrer la validation de l’Ancrage.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
 
     private void renderMurajaah(){
-        String today = LocalDate.now().toString();
+        String today = sessionDate.toString();
         if (today.equals(prefs.lastMurajaahDate())) {
             sessionCompleted = true;
             program.setText("Entretien · séance validée");
@@ -749,7 +766,7 @@ private void rebalanceRecentWindow() {
         if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
         String label = "Entretien · réel : " + murajaahPlan.start + " → " + murajaahActualEnd
             + " · prochain curseur " + next + " · " + raw;
-        boolean ok = prefs.completeMurajaah(next, LocalDate.now().toString(), label);
+        boolean ok = prefs.completeMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label);
         if (!ok) { onError("Impossible d’enregistrer la validation de l’Entretien."); return; }
         closeClockForCompletedSession();
         renderMode();
@@ -775,7 +792,7 @@ private void rebalanceRecentWindow() {
         if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&murajaahPlan.traversalVerses.contains(verse)){
             murajaahActualEnd=verse;
             progress.setText("Fin réelle · "+verse);
-            eink.local(progress);
+            eink.local(progress, prefs);
             mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
             checkpointMurajaah(clock.elapsedMs());
             if (murajaahFinishButton != null) murajaahFinishButton.setEnabled(timedSessionLimitReached);
@@ -865,15 +882,17 @@ private void rebalanceRecentWindow() {
     @Override public void onPageShown(int page){currentPage=page;}
     @Override protected void onResume(){
         super.onResume();
-        if(clock!=null)clock.syncPersistedElapsed(prefs.elapsedFor(mode));
+        if(clock==null)return;
+        clock.syncPersistedElapsed(prefs.elapsedFor(mode));
         if(!sessionCompleted&&!awaitingValidation&&!timedSessionLimitReached)clock.resume();
     }
     @Override protected void onPause(){
+        if(clock==null){super.onPause();return;}
         long elapsed=clock.pause();
         if(sessionCompleted&&!awaitingValidation)prefs.setElapsedFor(mode,0L);
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
     @Override protected void onDestroy(){closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
-    @Override public boolean onKeyDown(int code,KeyEvent e){if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
+    @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

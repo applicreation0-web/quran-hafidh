@@ -48,7 +48,8 @@ public final class AstraFixSourceContractTest {
         assertTrue(budget.contains("isSlotConsumed"));
         assertTrue(review.contains("markSlotConsumed"));
         assertTrue("full J10 slot must clear the normal-session elapsed trigger", review.contains("prefs.setElapsedFor(hostMode, 0L)"));
-        assertTrue("app lifecycle must close a fully J10-consumed host before normal protocol continues", app.contains("isSlotConsumed(hostMode, LocalDate.now())"));
+        assertTrue("app lifecycle must resolve the business date once", app.contains("LocalDate today = HifzClock.today()"));
+        assertTrue("app lifecycle must close a fully J10-consumed host before normal protocol continues", app.contains("isSlotConsumed(hostMode, today)"));
         assertTrue(app.contains("activity.finish()"));
         assertTrue(main.contains("isSlotConsumed"));
     }

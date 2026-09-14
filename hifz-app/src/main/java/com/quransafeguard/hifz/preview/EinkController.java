@@ -23,8 +23,9 @@ public final class EinkController {
      * Small changes (counter, selection marker) prefer a BOOX partial mode.
      * A periodic GC cleanup prevents long sessions from accumulating ghosting.
      */
-    public void local(View view) {
+    public void local(View view, HifzPrefs prefs) {
         if (view == null) return;
+        if (!isEink(prefs)) { view.invalidate(); return; }
         localChangesSinceFull++;
         if (localChangesSinceFull >= PreviewConfig.EINK_LOCAL_CHANGES_BEFORE_FULL_CLEAN_WORKING) {
             fullAndReset(view);
@@ -34,8 +35,9 @@ public final class EinkController {
     }
 
     /** Audio highlighting changes verse-by-verse for long periods, so use a stricter cleanup cadence. */
-    public void audio(View view) {
+    public void audio(View view, HifzPrefs prefs) {
         if (view == null) return;
+        if (!isEink(prefs)) { view.invalidate(); return; }
         audioChangesSinceFull++;
         if (audioChangesSinceFull >= PreviewConfig.EINK_AUDIO_CHANGES_BEFORE_FULL_CLEAN_WORKING) {
             fullAndReset(view);
@@ -45,8 +47,9 @@ public final class EinkController {
     }
 
     /** Mask changes touch a larger area than a simple counter/audio outline. */
-    public void mask(View view) {
+    public void mask(View view, HifzPrefs prefs) {
         if (view == null) return;
+        if (!isEink(prefs)) { view.invalidate(); return; }
         maskChangesSinceFull++;
         if (maskChangesSinceFull >= PreviewConfig.EINK_MASK_CHANGES_BEFORE_FULL_CLEAN_WORKING) {
             fullAndReset(view);

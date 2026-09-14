@@ -1,5 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
+import android.content.Intent;
+
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -21,6 +23,8 @@ import java.time.LocalDate;
 /** Small J10 prelude fed by the single acquired-line list; it is not a new weekly session type. */
 public final class J10ReviewActivity extends android.app.Activity implements MushafView.Listener {
     public static final String EXTRA_HOST_MODE = "j10HostMode";
+    public static final String EXTRA_RESULT_REASON = "j10ResultReason";
+    public static final String RESULT_EMPTY = "empty";
 
     private J10ReviewPlanner planner;
     private J10ReviewPlanner.PriorityGroup group;
@@ -40,7 +44,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
         @Override public void run() {
             if (hostMode == null || activeStartedAt < 0L || isFinishing()) return;
             if (PreviewConfig.timedSessionComplete(hostElapsedIncludingActive(), hostTargetMinutes())) {
-                LocalDate today = LocalDate.now();
+                LocalDate today = HifzClock.today();
                 if (persistActiveHostTime(false)) {
                     if (!hostBudgetStore.markSlotConsumed(hostMode, today)) {
                         Log.e("QuranHifz", "Unable to persist J10-preempted host slot for " + hostMode);
@@ -73,7 +77,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
 
         LinearLayout top = Ui.row(this);
         top.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 6), 0);
-        top.addView(Ui.iconButton(this, "", "Retour J10", v -> moveTaskToBack(true)));
+        top.addView(Ui.iconButton(this, "", "Plus tard", v -> moveTaskToBack(true)));
         title = Ui.text(this, "Priorité J10", 12.5f, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER_VERTICAL);
@@ -102,8 +106,9 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private void renderPriority() {
         actions.removeAllViews();
         shown = false;
-        group = planner.priorityGroup(LocalDate.now());
+        group = planner.priorityGroup(HifzClock.today());
         if (group == null || group.isEmpty()) {
+            setResult(RESULT_CANCELED, new Intent().putExtra(EXTRA_RESULT_REASON, RESULT_EMPTY));
             finish();
             return;
         }
@@ -127,7 +132,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
             Toast.makeText(this, "Affichez tout le passage avant de valider.", Toast.LENGTH_LONG).show();
             return;
         }
-        if (!planner.markReviewed(group.lineIds, LocalDate.now())) {
+        if (!planner.markReviewed(group.lineIds, HifzClock.today())) {
             Toast.makeText(this, "Impossible d’enregistrer la révision J10.", Toast.LENGTH_LONG).show();
             return;
         }
@@ -185,7 +190,7 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
             activeStartedAt = keepActive ? now : -1L;
             return true;
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = HifzClock.today();
         if (!hostBudgetStore.addConsumed(hostMode, today, consumed)) {
             Log.e("QuranHifz", "Unable to persist J10 host-slot consumption for " + hostMode);
             return false;

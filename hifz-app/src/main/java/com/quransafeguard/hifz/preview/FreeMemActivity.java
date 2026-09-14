@@ -32,7 +32,12 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
     @Override protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
-        geometry = GeometryRepository.get(this);
+        try {
+            geometry = GeometryRepository.get(this);
+        } catch (Throwable error) {
+            Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
+            return;
+        }
         state = getSharedPreferences("free_mem_preview", MODE_PRIVATE);
         page = state.getInt("page", 1); count = state.getInt("count", 0); mask = state.getInt("mask", 0);
         start = parseOptional(state.getString("start", ""));
@@ -53,7 +58,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         counter = Ui.text(this,"Répétitions · "+count,12,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
         LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
-        Button decrement=Ui.iconButton(this,"−","Retirer une répétition",v->{if(count>0)count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
+        Button decrement=Ui.iconButton(this,"−","Retirer une répétition",v->{if(count==0)return;count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
         Ui.setButtonIcon(decrement,R.drawable.ic_ui_remove);reps.addView(decrement);
         Button increment=Ui.iconButton(this,"+","Ajouter une répétition",v->{count++;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
         Ui.setButtonIcon(increment,R.drawable.ic_ui_add);reps.addView(increment);
@@ -67,8 +72,8 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         }
         root.addView(masks);
 
-        // Arabic-book direction: next page (+1) on the left, previous (-1) on the right.
-        LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);
+        // Explicit RTL navigation grammar, matching the main reader.
+        LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         nav.addView(Ui.iconButton(this,"›","Page suivante",v->go(1)));
         if (new HifzAudioGate(this).available()) nav.addView(Ui.iconButton(this,"♪","Audio",v->openAudio()));
         nav.addView(Ui.iconButton(this,"‹","Page précédente",v->go(-1)));root.addView(nav);
@@ -140,6 +145,6 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     }
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int shown){page=shown;title.setText("Mémorisation libre · "+shown+" / 604");}
-    @Override public boolean onKeyDown(int code,KeyEvent e){if(code==KeyEvent.KEYCODE_PAGE_UP){go(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){go(1);return true;}return super.onKeyDown(code,e);}
+    @Override public boolean onKeyDown(int code,KeyEvent e){if(mushaf==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){go(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){go(1);return true;}return super.onKeyDown(code,e);}
     @Override protected void onDestroy(){closeAudio();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
 }
