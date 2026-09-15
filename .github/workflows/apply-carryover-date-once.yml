@@ -1,0 +1,49 @@
+name: Apply carryover scheduled date once
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'chore: stage scheduled date patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.5-retention-j10
+          fetch-depth: 0
+
+      - name: Apply minimal scheduled-date product change
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java')
+          text = path.read_text()
+
+          old_constant = '    public static final String EXTRA_MODE = "mode";\n'
+          new_constant = old_constant + '    public static final String EXTRA_SCHEDULED_DATE = "scheduled_date";\n'
+          assert text.count(old_constant) == 1, 'EXTRA_MODE anchor changed'
+          text = text.replace(old_constant, new_constant, 1)
+
+          old_block = '''        prefs = new HifzPrefs(this);\n        String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L\n            ? prefs.sabqiTodayReviewDate()\n            : "";\n        LocalDate capturedToday = HifzClock.today();\n        try {\n            sessionDate = recordedSessionDate == null || recordedSessionDate.isEmpty()\n                ? capturedToday : LocalDate.parse(recordedSessionDate);\n        } catch (RuntimeException invalidRecordedDate) {\n            sessionDate = capturedToday;\n        }\n'''
+          new_block = '''        prefs = new HifzPrefs(this);\n        String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L\n            ? prefs.sabqiTodayReviewDate()\n            : "";\n        String scheduledSessionDate = getIntent().getStringExtra(EXTRA_SCHEDULED_DATE);\n        String requestedSessionDate = recordedSessionDate != null && !recordedSessionDate.isEmpty()\n            ? recordedSessionDate\n            : scheduledSessionDate;\n        LocalDate capturedToday = HifzClock.today();\n        try {\n            sessionDate = requestedSessionDate == null || requestedSessionDate.isEmpty()\n                ? capturedToday : LocalDate.parse(requestedSessionDate);\n        } catch (RuntimeException invalidRecordedDate) {\n            sessionDate = capturedToday;\n        }\n'''
+          assert text.count(old_block) == 1, 'session-date anchor changed'
+          text = text.replace(old_block, new_block, 1)
+          path.write_text(text)
+
+      - name: Commit product change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "quran-hifz-tdd-bot"
+          git config user.email "quran-hifz-tdd-bot@users.noreply.github.com"
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java
+          git diff --cached --check
+          git commit -m "feat: honor carryover scheduled date"
+          git push origin HEAD:work/hifz-0.7.5-retention-j10
