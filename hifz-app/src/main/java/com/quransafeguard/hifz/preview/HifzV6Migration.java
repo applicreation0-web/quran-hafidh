@@ -10,6 +10,11 @@ import java.util.Set;
 public final class HifzV6Migration {
     private HifzV6Migration() {}
 
+    public enum QuarantineResolution {
+        KEEP_AS_ACQUIRED,
+        RETURN_TO_STABILIZATION
+    }
+
     public static final class Input {
         final Set<String> pendingLineIds;
         final Set<String> structurallyCompletedPendingLineIds;
@@ -103,6 +108,67 @@ public final class HifzV6Migration {
             } else {
                 unknownDue.add(lineId);
             }
+        }
+
+        return new HifzCorpusState(
+            toAnchor,
+            overlay,
+            quarantine,
+            quarantineDates,
+            activeDates,
+            unknownDue,
+            imported,
+            orphanDates,
+            acquired
+        );
+    }
+
+    public static HifzCorpusState resolveQuarantine(
+            HifzCorpusState state,
+            String lineId,
+            QuarantineResolution resolution) {
+        if (state == null) throw new IllegalArgumentException("state required");
+        if (lineId == null || lineId.isEmpty()) throw new IllegalArgumentException("lineId required");
+        if (resolution == null) throw new IllegalArgumentException("resolution required");
+        if (!state.quarantineLineIds().contains(lineId)) {
+            throw new IllegalStateException("Only quarantined lines can be resolved: " + lineId);
+        }
+
+        LinkedHashSet<String> toAnchor = new LinkedHashSet<>(state.toAnchorLineIds());
+        LinkedHashSet<String> overlay = new LinkedHashSet<>(state.legacyPartialAcquiredLineIds());
+        LinkedHashSet<String> quarantine = new LinkedHashSet<>(state.quarantineLineIds());
+        LinkedHashMap<String, Long> quarantineDates = new LinkedHashMap<>(state.quarantineLegacyLastReviewed());
+        LinkedHashMap<String, Long> activeDates = new LinkedHashMap<>(state.activeLastReviewedEpochDays());
+        LinkedHashSet<String> unknownDue = new LinkedHashSet<>(state.unknownDueLineIds());
+        LinkedHashSet<String> imported = new LinkedHashSet<>(state.legacyImportedLineIds());
+        LinkedHashMap<String, Long> orphanDates = new LinkedHashMap<>(state.legacyOrphanDates());
+        LinkedHashSet<String> acquired = new LinkedHashSet<>(state.acquiredCreditLineIds());
+
+        Long historicalDate = quarantineDates.get(lineId);
+
+        quarantine.remove(lineId);
+        quarantineDates.remove(lineId);
+        toAnchor.remove(lineId);
+        overlay.remove(lineId);
+        activeDates.remove(lineId);
+        unknownDue.remove(lineId);
+        imported.remove(lineId);
+        orphanDates.remove(lineId);
+        acquired.remove(lineId);
+
+        if (resolution == QuarantineResolution.KEEP_AS_ACQUIRED) {
+            acquired.add(lineId);
+            if (historicalDate != null) {
+                activeDates.put(lineId, historicalDate);
+                imported.add(lineId);
+            } else {
+                unknownDue.add(lineId);
+            }
+        } else if (resolution == QuarantineResolution.RETURN_TO_STABILIZATION) {
+            toAnchor.add(lineId);
+            if (historicalDate != null) orphanDates.put(lineId, historicalDate);
+        } else {
+            throw new IllegalStateException("Unsupported quarantine resolution: " + resolution);
         }
 
         return new HifzCorpusState(
