@@ -46,11 +46,11 @@ public final class OfficialReleaseContractTest {
         assertFalse("mask entropy must not be regenerated per WebView instance", mushaf.contains("UUID.randomUUID"));
     }
 
-    @Test public void schemaV5SeparatesAnchoringWorkFromAcquiredMaintenance() throws Exception {
+    @Test public void schemaV6KeepsAnchoringWorkSeparatedFromAcquiredMaintenance() throws Exception {
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
 
-        assertTrue("persistent anchoring state requires schema v5", config.contains("SCHEMA_VERSION = 5"));
+        assertTrue("0.7.5 persistent state requires schema v6", config.contains("SCHEMA_VERSION = 6"));
         assertTrue("v2 state needs an explicit non-destructive migration", prefs.contains("migrateV2ToV3"));
         assertTrue("v3 state needs an explicit atomic migration", prefs.contains("migrateV3ToV4"));
         assertTrue("v4 state needs the C23-safe atomic migration", prefs.contains("migrateV4ToV5"));
