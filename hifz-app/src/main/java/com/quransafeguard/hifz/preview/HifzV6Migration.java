@@ -31,6 +31,16 @@ public final class HifzV6Migration {
         }
     }
 
+    public static double migratedMaintenanceSecondsPerLine(
+            double existingSecondsPerLine,
+            boolean calibrated) {
+        if (!calibrated) return PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING;
+        if (!Double.isFinite(existingSecondsPerLine) || existingSecondsPerLine <= 0.0) {
+            throw new IllegalArgumentException("valid calibrated maintenance speed required");
+        }
+        return existingSecondsPerLine;
+    }
+
     public static HifzCorpusState classify(Input input) {
         if (input == null) throw new IllegalArgumentException("input required");
         if (!input.pendingLineIds.containsAll(input.structurallyCompletedPendingLineIds)) {
