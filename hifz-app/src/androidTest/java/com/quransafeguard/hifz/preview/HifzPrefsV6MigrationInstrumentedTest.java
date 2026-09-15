@@ -103,6 +103,31 @@ public final class HifzPrefsV6MigrationInstrumentedTest {
         assertEquals(afterFirstJ10, snapshot(legacyJ10));
     }
 
+    @Test public void freshProfileInitializesCompleteSchemaSixState() {
+        HifzPrefs prefs = new HifzPrefs(context);
+
+        assertEquals(6, prefs.schema());
+        for (String key : new String[]{
+                "v6LearnedLineIds",
+                "v6StabilizedLineIds",
+                "v6AcquiredCreditLineIds",
+                "v6LegacyPartialAcquiredLineIds",
+                "v6QuarantineLineIds",
+                "v6UnknownDueLineIds",
+                "v6LegacyImportedLineIds"}) {
+            assertTrue("fresh schema6 missing state key " + key, main.contains(key));
+            assertEquals("fresh schema6 set must start empty for " + key, "[]", main.getString(key, null));
+        }
+        for (String key : new String[]{
+                "v6QuarantineLegacyLastReviewed",
+                "v6ActiveJ10LastReviewed",
+                "v6LegacyOrphanJ10Dates"}) {
+            assertTrue("fresh schema6 missing map key " + key, main.contains(key));
+            assertEquals("fresh schema6 map must start empty for " + key, "{}", main.getString(key, null));
+        }
+        assertTrue("fresh schema6 must not create legacy J10 state", legacyJ10.getAll().isEmpty());
+    }
+
     private void seedRepresentativeSchemaFive(boolean calibrated, float secondsPerLine) {
         boolean ok = main.edit()
             .putInt("schema", 5)
