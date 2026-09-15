@@ -1,0 +1,34 @@
+name: Apply Hifz 0.7.5 J10 migration lock
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply exact migration lock patch
+        run: |
+          set -euo pipefail
+          python3 -c 'from pathlib import Path; p=Path("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"); s=p.read_text(); old="        if (schema == 5) {\n            migrateV5ToV6(context);\n            schema = 6;\n        }"; new="        if (schema == 5) {\n            synchronized (J10ReviewStore.LEGACY_STORE_LOCK) {\n                migrateV5ToV6(context);\n                schema = 6;\n            }\n        }"; assert s.count(old) == 1, f"migration target count={s.count(old)}"; p.write_text(s.replace(old, new, 1))'
+          grep -A6 -B1 'if (schema == 5)' hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+      - name: Commit production patch and remove one-shot workflow
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/apply-hifz-075-j10-migration-lock.yml
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'No staged patch'; exit 1; } || true
+          git commit -m 'fix: serialize legacy J10 snapshot with schema6 commit'
+          git push origin HEAD:work/hifz-0.7.5-retention-j10
