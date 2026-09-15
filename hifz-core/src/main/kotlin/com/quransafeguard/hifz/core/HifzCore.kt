@@ -136,10 +136,17 @@ enum class SessionKind {
     OLD_ITQAN_MURAJAAH
 }
 
+enum class CadenceAction { LEARNING, STABILIZATION, REVISION }
+
 data class PlannedSession(val kind: SessionKind, val targetMinutes: Int)
 data class DailyPlan(val morning: PlannedSession, val evening: PlannedSession)
 
 data class ScheduledSession(val date: LocalDate, val type: SessionType, val overdue: Boolean = false)
+data class ScheduledCadence(
+    val scheduledDate: LocalDate,
+    val action: CadenceAction,
+    val overdue: Boolean = false
+)
 
 object HifzSchedule {
     const val RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION = 36
@@ -154,6 +161,38 @@ object HifzSchedule {
         SessionKind.ITQAN -> ANCHORING_ENVELOPE_MINUTES
         SessionKind.RECENT_SABQI_REVIEW -> CONSOLIDATION_MINUTES
         SessionKind.OLD_ITQAN_MURAJAAH -> MAINTENANCE_MINUTES
+    }
+
+    fun actionFor(day: DayOfWeek): CadenceAction = when (day) {
+        DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> CadenceAction.LEARNING
+        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> CadenceAction.STABILIZATION
+        DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> CadenceAction.REVISION
+    }
+
+    /**
+     * Returns exactly one automatic task: the oldest incomplete scheduled day from the programme
+     * start through today. This is the soft carry-over contract: missed work stays due, but a
+     * later day never creates a doubled automatic quota. Cursor/progression state remains owned by
+     * the Android session engine and is therefore not modified here.
+     */
+    fun nextDue(
+        programStartDate: LocalDate,
+        today: LocalDate,
+        completedDates: Set<LocalDate>
+    ): ScheduledCadence? {
+        if (today < programStartDate) return null
+        var date = programStartDate
+        while (!date.isAfter(today)) {
+            if (!completedDates.contains(date)) {
+                return ScheduledCadence(
+                    scheduledDate = date,
+                    action = actionFor(date.dayOfWeek),
+                    overdue = date < today
+                )
+            }
+            date = date.plusDays(1)
+        }
+        return null
     }
 
     fun typeFor(day: DayOfWeek): SessionType = when (day) {
