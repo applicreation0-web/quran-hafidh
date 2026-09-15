@@ -51,6 +51,7 @@ public final class HifzPrefs {
 
     private static final String NAME = "quran_hifz_preview_v1";
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
+    private static final Object V6_STATE_LOCK = new Object();
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
 
@@ -142,7 +143,17 @@ public final class HifzPrefs {
                 .putString("lastMurajaahDate", "")
                 .putString("lastMurajaahLabel", "")
                 .putString("lastMurajaahCreditStart", "")
-                .putString("lastMurajaahCreditEnd", "");
+                .putString("lastMurajaahCreditEnd", "")
+                .putString("v6LearnedLineIds", "[]")
+                .putString("v6StabilizedLineIds", "[]")
+                .putString("v6AcquiredCreditLineIds", "[]")
+                .putString("v6LegacyPartialAcquiredLineIds", "[]")
+                .putString("v6QuarantineLineIds", "[]")
+                .putString("v6QuarantineLegacyLastReviewed", "{}")
+                .putString("v6ActiveJ10LastReviewed", "{}")
+                .putString("v6UnknownDueLineIds", "[]")
+                .putString("v6LegacyImportedLineIds", "[]")
+                .putString("v6LegacyOrphanJ10Dates", "{}");
             if (!e.commit()) throw new IllegalStateException("Unable to initialize Hifz schema");
             return;
         }
@@ -298,6 +309,88 @@ public final class HifzPrefs {
                 || !p.contains("v6AcquiredCreditLineIds")
                 || !p.contains("v6ActiveJ10LastReviewed")) {
             throw new IllegalStateException("Incomplete Hifz schema v6 migration commit");
+        }
+    }
+
+    void resolveV6Quarantine(
+            String lineId,
+            HifzV6Migration.QuarantineResolution resolution) {
+        if (lineId == null || lineId.isEmpty()) throw new IllegalArgumentException("lineId required");
+        if (resolution == null) throw new IllegalArgumentException("resolution required");
+
+        synchronized (V6_STATE_LOCK) {
+            if (p.getInt("schema", -1) != 6) {
+                throw new IllegalStateException("Schema 6 required for persisted conflict resolution");
+            }
+
+            HifzCorpusState current = schema6CorpusState();
+            HifzCorpusState resolved = HifzV6Migration.resolveQuarantine(current, lineId, resolution);
+            String stabilized = requiredV6String("v6StabilizedLineIds");
+
+            SharedPreferences.Editor e = p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(resolved.toAnchorLineIds()))
+                .putString("v6StabilizedLineIds", stabilized)
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(resolved.acquiredCreditLineIds()))
+                .putString("v6LegacyPartialAcquiredLineIds", lineIdsJson(resolved.legacyPartialAcquiredLineIds()))
+                .putString("v6QuarantineLineIds", lineIdsJson(resolved.quarantineLineIds()))
+                .putString("v6QuarantineLegacyLastReviewed", epochDayMapJson(resolved.quarantineLegacyLastReviewed()))
+                .putString("v6ActiveJ10LastReviewed", epochDayMapJson(resolved.activeLastReviewedEpochDays()))
+                .putString("v6UnknownDueLineIds", lineIdsJson(resolved.unknownDueLineIds()))
+                .putString("v6LegacyImportedLineIds", lineIdsJson(resolved.legacyImportedLineIds()))
+                .putString("v6LegacyOrphanJ10Dates", epochDayMapJson(resolved.legacyOrphanDates()));
+            if (!e.commit()) {
+                throw new IllegalStateException("Unable to persist schema v6 conflict resolution");
+            }
+            if (p.getInt("schema", -1) != 6) {
+                throw new IllegalStateException("Schema changed during persisted conflict resolution");
+            }
+        }
+    }
+
+    private HifzCorpusState schema6CorpusState() {
+        return new HifzCorpusState(
+            v6LineIdSet("v6LearnedLineIds"),
+            v6LineIdSet("v6LegacyPartialAcquiredLineIds"),
+            v6LineIdSet("v6QuarantineLineIds"),
+            v6EpochDayMap("v6QuarantineLegacyLastReviewed"),
+            v6EpochDayMap("v6ActiveJ10LastReviewed"),
+            v6LineIdSet("v6UnknownDueLineIds"),
+            v6LineIdSet("v6LegacyImportedLineIds"),
+            v6EpochDayMap("v6LegacyOrphanJ10Dates"),
+            v6LineIdSet("v6AcquiredCreditLineIds")
+        );
+    }
+
+    private String requiredV6String(String key) {
+        if (!p.contains(key)) throw new IllegalStateException("Missing schema v6 state: " + key);
+        String raw = p.getString(key, null);
+        if (raw == null) throw new IllegalStateException("Missing schema v6 state: " + key);
+        return raw;
+    }
+
+    private LinkedHashSet<String> v6LineIdSet(String key) {
+        try {
+            JSONArray array = new JSONArray(requiredV6String(key));
+            LinkedHashSet<String> result = new LinkedHashSet<>();
+            for (int i = 0; i < array.length(); i++) result.add(array.getString(i));
+            return result;
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt schema v6 line state: " + key, error);
+        }
+    }
+
+    private LinkedHashMap<String, Long> v6EpochDayMap(String key) {
+        try {
+            JSONObject object = new JSONObject(requiredV6String(key));
+            LinkedHashMap<String, Long> result = new LinkedHashMap<>();
+            java.util.Iterator<String> keys = object.keys();
+            while (keys.hasNext()) {
+                String lineId = keys.next();
+                result.put(lineId, object.getLong(lineId));
+            }
+            return result;
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt schema v6 date state: " + key, error);
         }
     }
 
