@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 public final class QuranHifzApp extends Application
         implements Application.ActivityLifecycleCallbacks, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String HIFZ_PREFS = "quran_hifz_preview_v1";
+    private static final int LEGACY_J10_LAST_SCHEMA = 5;
     private final ExecutorService loader = Executors.newSingleThreadExecutor();
     private volatile J10ReviewPlanner planner;
     private volatile J10ReviewObserver observer;
@@ -43,6 +44,11 @@ public final class QuranHifzApp extends Application
         });
     }
 
+    private boolean legacyJ10RuntimeAllowed() {
+        int schema = getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).getInt("schema", 0);
+        return schema <= LEGACY_J10_LAST_SCHEMA;
+    }
+
     private synchronized J10ReviewPlanner ensurePlannerObjects() {
         if (planner == null) {
             planner = new J10ReviewPlanner(this);
@@ -55,7 +61,11 @@ public final class QuranHifzApp extends Application
     /** Must run on loader. Performs at most one full reconciliation per date unless state changed. */
     private J10ReviewPlanner ensurePlannerSynced(LocalDate today) {
         if (today == null) throw new IllegalArgumentException("today required");
+        if (!legacyJ10RuntimeAllowed()) return null;
         J10ReviewPlanner current = ensurePlannerObjects();
+        // Constructing HifzPrefs inside the legacy planner may migrate schema 5 to schema 6.
+        // Once schema 6 is authoritative the retained quran_hifz_j10_v1 store is immutable backup only.
+        if (!legacyJ10RuntimeAllowed()) return null;
         J10ReviewObserver currentObserver;
         boolean reconcile;
         synchronized (this) {
@@ -77,10 +87,11 @@ public final class QuranHifzApp extends Application
         if (J10ReviewObserver.requiresFullReconcileKey(key)) {
             synchronized (this) { pendingReconcile = true; }
         }
-        ensurePlannerSynced(today);
-        J10ReviewObserver current = observer;
-        if (J10ReviewObserver.handlesPreferenceKey(key) && current != null) {
-            current.onPreferenceChanged(key, today);
+        J10ReviewPlanner current = ensurePlannerSynced(today);
+        if (current == null) return;
+        J10ReviewObserver currentObserver = observer;
+        if (J10ReviewObserver.handlesPreferenceKey(key) && currentObserver != null) {
+            currentObserver.onPreferenceChanged(key, today);
         }
     }
 
@@ -110,7 +121,9 @@ public final class QuranHifzApp extends Application
             final LocalDate today = HifzClock.today();
             loader.execute(() -> {
                 try {
-                    J10ReviewPolicy.Forecast forecast = ensurePlannerSynced(today).forecast(today);
+                    J10ReviewPlanner current = ensurePlannerSynced(today);
+                    if (current == null) return;
+                    J10ReviewPolicy.Forecast forecast = current.forecast(today);
                     activity.runOnUiThread(() -> {
                         if (isHostForeground(activity)) showSustainabilityAlert(activity, forecast, today);
                     });
@@ -137,7 +150,12 @@ public final class QuranHifzApp extends Application
 
         loader.execute(() -> {
             try {
-                J10ReviewPlanner.PriorityGroup priority = ensurePlannerSynced(today).priorityGroup(today);
+                J10ReviewPlanner current = ensurePlannerSynced(today);
+                if (current == null) {
+                    activity.runOnUiThread(() -> priorityEvaluationPending.remove(activity));
+                    return;
+                }
+                J10ReviewPlanner.PriorityGroup priority = current.priorityGroup(today);
                 activity.runOnUiThread(() -> {
                     priorityEvaluationPending.remove(activity);
                     if (!isHostForeground(activity) || priority == null || priority.isEmpty()) return;
