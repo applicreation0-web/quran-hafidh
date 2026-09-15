@@ -15,14 +15,14 @@ BRANCHE DE CONCEPTION À AUDITER
 work/hifz-retention-j10-redesign-spec
 
 HEAD DOCUMENTAIRE ATTENDU AU MOMENT DE LA RÉDACTION DU PROMPT
-6c894e885534df1c5fbbd3cea0ac0d498ed8c1f6
+ccf9735bbaeab9163c3ef87b03b06a870420a5e9
 
 DOCUMENT DE SPÉCIFICATION À LIRE EN PREMIER
 docs/superpowers/specs/2026-09-15-hifz-retention-j10-redesign-design.md
 
 IMPORTANT
 Résous d'abord le HEAD exact actuel de work/hifz-retention-j10-redesign-spec et affiche son SHA.
-Si le HEAD n'est plus 6c894e885534df1c5fbbd3cea0ac0d498ed8c1f6, signale-le clairement et audite le HEAD réel, en indiquant le delta documentaire pertinent.
+Si le HEAD n'est plus ccf9735bbaeab9163c3ef87b03b06a870420a5e9, signale-le clairement et audite le HEAD réel, en indiquant le delta documentaire pertinent.
 
 OBJECTIF
 Auditer la cohérence de la nouvelle méthodologie par rapport au code réel de Quran Hifz 0.7.4, identifier tous les impacts techniques, les dépendances cachées, les risques de migration et de régression, puis proposer les corrections de conception ou de code nécessaires AVANT toute implémentation.
@@ -140,19 +140,47 @@ Vérifie les impacts sur:
 - reprise d'unité en cours;
 - test du Mushaf 604 pages.
 
-D. CORPUS ACQUIS VS À ANCRER
-Le nouveau modèle doit séparer clairement:
-- corpus acquis => Entretien + J10;
-- à ancrer => non visible dans Entretien avant validation complète.
+D. PLAGES À ANCRER VS PLAGES DU CORPUS ACQUIS
+Le nouveau modèle doit gérer **deux listes multiples distinctes**:
+
+1. À ancrer · plages
+- plusieurs plages sourate/verset;
+- alimentent uniquement Ancrage;
+- sont découpées automatiquement en demi-pages;
+- sont exclues d'Entretien et J10 jusqu'à validation.
+
+2. Corpus acquis · plages
+- plusieurs plages sourate/verset;
+- alimentent directement Entretien + J10;
+- peuvent provenir d'une saisie manuelle, d'un lot Sabqi validé ou d'un lot Ancrage validé.
 
 Audite la sémantique actuelle de itqanRanges, promotedRanges, unconsolidatedPromotedRanges, legacyMurajaahPromotedRanges, anchoringQueue et murajaahCorpus().
 
-Propose:
+Tu dois vérifier et proposer concrètement:
 - les nouvelles clés/structures de persistance;
-- la source de vérité unique;
-- les règles d'interdiction de chevauchement;
-- la stratégie de réconciliation J10 lors d'ajout/édition/suppression de plages;
-- la gestion des curseurs quand une plage est supprimée ou raccourcie.
+- la source de vérité unique pour chacune des deux listes;
+- l'ordre canonique stable des plages;
+- la détection des chevauchements sur la **couverture réelle des lignes**, pas seulement sur des libellés;
+- l'interdiction absolue qu'une même ligne soit à la fois Acquise et À ancrer;
+- le refus explicite des chevauchements lors d'ajout/modification;
+- aucune fusion/suppression/déplacement silencieux;
+- le transfert atomique À ancrer -> Acquis après validation A1+A2+A3;
+- l'entrée directe Sabqi -> Acquis après validation du vendredi;
+- la conservation du `lastReviewed` réel par ligne;
+- la stratégie de réconciliation J10 lors d'ajout/édition/suppression d'une plage acquise;
+- la suppression des entrées J10 devenues hors corpus sans réinitialiser les autres dates;
+- la gestion du curseur Entretien lorsqu'une plage acquise est supprimée/raccourcie;
+- la gestion du curseur Ancrage lorsqu'une plage À ancrer est modifiée;
+- la protection d'une unité d'Ancrage déjà commencée;
+- l'ajout d'une nouvelle plage sans repositionnement silencieux du curseur au début;
+- les tests multi-plages, plages adjacentes, plages discontinues, chevauchements partiels et chevauchements après conversion en lignes physiques.
+
+Vérifie aussi l'impact UI dans SettingsActivity:
+- deux sections réellement séparées;
+- Ajouter / Modifier / Supprimer pour les deux listes;
+- compte de plages et lignes couvertes;
+- demi-pages restantes et position courante pour À ancrer;
+- confirmation explicite pour toute suppression de contenu acquis.
 
 E. SUPPRESSION DU SAS 36 / 90 JOURS
 Le nouveau runtime ne doit plus dépendre de:
@@ -238,9 +266,11 @@ Vérifie également le calcul de soutenabilité quand le corpus croît.
 La migration est le risque principal.
 
 Règles cibles à contrôler:
-- itqanRanges historiques déjà actifs dans Entretien => acquis;
-- unconsolidatedPromotedRanges => à ancrer;
-- promotions déjà consolidées => acquis;
+- itqanRanges historiques déjà actifs dans Entretien => Corpus acquis;
+- unconsolidatedPromotedRanges => À ancrer;
+- promotions déjà consolidées => Corpus acquis;
+- préserver plusieurs anciennes plages distinctes sans les écraser en une seule;
+- détecter toute incohérence de chevauchement historique et la traiter explicitement, sans inventer de statut;
 - unité d'Ancrage déjà commencée => conserver son format historique, compteur, masque, protocole et progression jusqu'à fin/abandon;
 - unités non commencées => conversion en demi-pages;
 - compteurs individuels Sabqi/Ancrage conservés;
@@ -254,6 +284,7 @@ Règles cibles à contrôler:
 Cherche activement:
 - états impossibles après migration;
 - duplication acquired/pending;
+- perte de plusieurs plages historiques;
 - curseurs hors corpus;
 - J10 lines fantômes;
 - perte de données SharedPreferences;
@@ -376,11 +407,21 @@ ANCRAGE
 - unité historique déjà commencée pendant migration;
 - process death.
 
-ACQUIS / À ANCRER
-- non-chevauchement;
-- édition/suppression;
-- curseurs;
-- J10 exact-set;
+PLAGES ACQUISES / À ANCRER
+- plusieurs plages de chaque côté;
+- plages adjacentes;
+- plages discontinues;
+- chevauchement total;
+- chevauchement partiel;
+- chevauchement détecté après conversion vers lignes physiques;
+- refus explicite sans mutation partielle;
+- transfert atomique À ancrer -> Acquis;
+- Sabqi -> Acquis direct;
+- édition d'une plage À ancrer avec unité active;
+- suppression d'une plage acquise;
+- réconciliation curseur Entretien;
+- réconciliation curseur Ancrage;
+- J10 exact-set sans dates réinitialisées;
 - migration de plusieurs anciennes plages.
 
 ENTRETIEN
@@ -484,6 +525,6 @@ Rends le rapport dans cet ordre:
 - Cherche les faux positifs et tests qui ne prouvent pas réellement l'invariant.
 - Préserve les noms UI fonctionnels: Leçon neuve, Reprise du soir, Ancrage, Entretien.
 - Distingue clairement « compteur individuel principal » et « compteur de renforcement boule de neige ».
-- Considère la préservation des données 0.7.4 comme un critère bloquant.
+- Considère la préservation des données 0.7.4 et des plages multiples comme un critère bloquant.
 
 FIN DE MISSION
