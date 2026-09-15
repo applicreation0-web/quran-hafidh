@@ -136,6 +136,30 @@ final class ConsolidationCycleEngine {
             normalized[0], normalized[1], normalized[2]);
     }
 
+    Session restoreOpenSession(Cycle cycle, String sessionId, int sessionGroupSize,
+                               int stage, int nextUnitIndex, int donePerStage) {
+        requireCycle(cycle);
+        if (cycle.hasOpenSession()) throw new IllegalStateException("cycle already has an OPEN session");
+        if (sessionId == null || sessionId.trim().isEmpty()) throw new IllegalArgumentException("session id required");
+        if (sessionGroupSize != cycle.units().size()) {
+            throw new IllegalStateException("restored group size must match frozen cycle snapshot");
+        }
+
+        ArrayList<String> ids = new ArrayList<>();
+        ArrayList<Protocol> protocols = new ArrayList<>();
+        for (Unit unit : cycle.units()) {
+            ids.add(unit.id());
+            protocols.add(unit.protocol());
+        }
+        int[] normalized = normalizeProgress(protocols, sessionGroupSize, stage, nextUnitIndex, donePerStage);
+        if (normalized[0] != stage || normalized[1] != nextUnitIndex || normalized[2] != donePerStage) {
+            throw new IllegalStateException("restored progress must match frozen session snapshot exactly");
+        }
+        Cycle opened = new Cycle(cycle.cycleId(), cycle.family(), cycle.units(), true);
+        return new Session(sessionId, opened, ids, protocols, sessionGroupSize, true,
+            stage, nextUnitIndex, donePerStage);
+    }
+
     Session recordRepetition(Session session) {
         if (session == null) throw new IllegalArgumentException("session required");
         if (!session.open()) throw new IllegalStateException("session is closed");
