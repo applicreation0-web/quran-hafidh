@@ -101,9 +101,10 @@ public final class RevisionSessionEngineTest {
         RevisionSessionEngine e = engine();
         RevisionSessionState s = e.start("s6", "L1");
         s = e.visit(s, "L1", 100L);
-        expectIllegalState(() -> e.visit(s, "L3", 100L));
+        final RevisionSessionState open = s;
+        expectIllegalState(() -> e.visit(open, "L3", 100L));
 
-        RevisionSessionState committed = e.commit(s, Collections.emptySet()).state;
+        RevisionSessionState committed = e.commit(open, Collections.emptySet()).state;
         assertTrue(committed.committed());
         expectIllegalState(() -> e.visit(committed, "L2", 100L));
     }
