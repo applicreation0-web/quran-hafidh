@@ -27,6 +27,7 @@ import java.util.Locale;
 /** Structured Leçon neuve / Ancrage / Entretien session using the independent domain engine. */
 public final class HifzSessionActivity extends android.app.Activity implements MushafView.Listener {
     public static final String EXTRA_MODE = "mode";
+    public static final String EXTRA_SCHEDULED_DATE = "scheduled_date";
     public static final String SABQI = "SABQI";
     public static final String SABQI_TODAY_REVIEW = "SABQI_TODAY_REVIEW";
     public static final String ITQAN = "ITQAN";
@@ -81,10 +82,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
             ? prefs.sabqiTodayReviewDate()
             : "";
+        String scheduledSessionDate = getIntent().getStringExtra(EXTRA_SCHEDULED_DATE);
+        String requestedSessionDate = recordedSessionDate != null && !recordedSessionDate.isEmpty()
+            ? recordedSessionDate
+            : scheduledSessionDate;
         LocalDate capturedToday = HifzClock.today();
         try {
-            sessionDate = recordedSessionDate == null || recordedSessionDate.isEmpty()
-                ? capturedToday : LocalDate.parse(recordedSessionDate);
+            sessionDate = requestedSessionDate == null || requestedSessionDate.isEmpty()
+                ? capturedToday : LocalDate.parse(requestedSessionDate);
         } catch (RuntimeException invalidRecordedDate) {
             sessionDate = capturedToday;
         }
