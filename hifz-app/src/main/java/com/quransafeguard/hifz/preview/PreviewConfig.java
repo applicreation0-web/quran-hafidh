@@ -4,7 +4,7 @@ package com.quransafeguard.hifz.preview;
 public final class PreviewConfig {
     private PreviewConfig() {}
 
-    public static final int SCHEMA_VERSION = 5;
+    public static final int SCHEMA_VERSION = 6;
     public static final int SABQI_LINES = 5; // frozen
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
@@ -31,7 +31,7 @@ public final class PreviewConfig {
     public static final int ITQAN_LIGHT_100_REPS = 5;
     public static final int ITQAN_LIGHT_TOTAL_REPS = 35;
 
-    public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 9.0;
+    public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 8.0;
     public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
     public static final int SPEED_MIN_LINES = 20;
     public static final int SPEED_MIN_SECONDS = 300;
@@ -110,6 +110,7 @@ public final class PreviewConfig {
     public static boolean itqanValidationPassed(int finalStageReveals) {
         return finalStageReveals < 2;
     }
+
     /** Balanced physical-line split for user-declared difficult Ancrage units. */
     public static int[] fractionatedBlockSizes(int lineCount) {
         if (lineCount <= 0) return new int[]{0};
@@ -174,5 +175,4 @@ public final class PreviewConfig {
         int at = Math.max(0, Math.min(blockIndex, sizes.length - 1));
         return sizes[at];
     }
-
 }
