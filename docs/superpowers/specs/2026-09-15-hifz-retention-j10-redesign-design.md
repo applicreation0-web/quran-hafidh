@@ -1,343 +1,404 @@
-# Quran Hifz — Redesign rétention, Ancrage, acquis et J10
+# Quran Hifz — Mise à jour Rétention / Ancrage / Entretien / J10 — v2
 
-Date: 2026-09-15
-Baseline: `75d35aaf3f46877b4f6b65fe1c276cc7b3fba1a6` (Quran Hifz 0.7.4 BOOX publiée)
-Branche de conception: `work/hifz-retention-j10-redesign-spec`
-Statut: conception approuvée en conversation, à relire avant plan d’implémentation
+Date: 2026-09-15  
+Baseline applicative vérifiée: `75d35aaf3f46877b4f6b65fe1c276cc7b3fba1a6` (Quran Hifz 0.7.4 BOOX publiée)  
+Branche de conception: `work/hifz-retention-j10-redesign-spec`  
+Statut: **spécification de mise à jour — aucun code applicatif implémenté à ce stade**
 
-## 1. Objectif
+## 1. But de la mise à jour
 
-Remplacer la logique actuelle de maturation longue et difficile à comprendre par un parcours simple et continu:
+Simplifier le parcours tout en renforçant la conservation réelle. La modification ne doit **pas** affaiblir les protocoles individuels de Leçon neuve ni d’Ancrage.
 
-`Travail intensif hebdomadaire -> validation cumulative -> acquis -> rotation permanente avec garantie J10`.
+Le principe cible devient:
 
-Le nouveau modèle doit:
+`unité individuelle complète -> renforcement groupé en boule de neige -> acquisition -> Entretien permanent avec garantie J10`.
 
-- mieux conserver les nouvelles Leçons neuves et les nouveaux Ancrages;
-- supprimer le sas de 90 jours et la Consolidation conditionnée par 36 blocs;
-- séparer réellement les plages acquises des plages à ancrer;
-- rendre l’Ancrage uniforme en demi-page;
-- utiliser une vitesse de base Entretien de 7 s/ligne;
-- fixer Entretien à 1 h de base sans blocage horaire;
-- garantir qu’aucune ligne acquise ne reste plus de 10 jours sans revue;
-- adapter automatiquement la priorité de rotation quand le corpus acquis grandit;
-- préserver la progression existante lors de la migration.
+La principale correction par rapport à la première version de la spécification est la suivante:
 
-## 2. Principes fonctionnels
+- les compteurs, répétitions, masquages et critères de validation **individuels** restent inchangés;
+- la boule de neige utilise des **compteurs de renforcement séparés**, avec un quota de répétitions réduit proportionnellement lorsque 2 ou 3 unités sont groupées;
+- l’Entretien reste une rotation de matière acquise, et non une nouvelle phase de mémorisation.
 
-### 2.1 Leçon neuve
+## 2. Méthode actuelle 0.7.4 — ce qu’elle fait aujourd’hui
 
-La Leçon neuve reste un bloc de 5 lignes, les lundi, mercredi et vendredi.
+### Leçon neuve
+- unité individuelle: 5 lignes;
+- compteur principal: ×37;
+- progression de masque actuelle: 15 visibles, 5 à 25 %, 5 à 50 %, 5 à 75 %, 7 à 100 %;
+- la Reprise du soir porte aujourd’hui essentiellement sur le bloc du jour;
+- les blocs passent ensuite dans une file récente et restent soumis à la logique de maturation actuelle.
 
-La reprise du soir devient cumulative sur la semaine:
+### Ancrage
+Deux protocoles individuels existent et doivent être conservés:
 
-- lundi soir: S1 en boucle;
-- mercredi soir: S1 + S2 en boucle;
-- vendredi soir: S1 + S2 + S3 en boucle.
+- **FULL ×40**: 15 visibles, 5 à 25 %, 5 à 50 %, 5 à 75 %, 10 à 100 %;
+- **LIGHT ×35**: 20 visibles, 0 à 25 %, 5 à 50 %, 5 à 75 %, 5 à 100 %;
+- après 3 échecs, un protocole LIGHT bascule en FULL;
+- l’unité de travail est actuellement principalement organisée à la page, avec logique spéciale de fractionnement/reconstruction.
 
-La reprise du soir garde une enveloppe de 30 minutes. Le nombre de passages n’est pas fixe: le lot complet est parcouru dans l’ordre, puis recommence jusqu’à la fin du temps prévu.
+### Maturation / Consolidation
+Le parcours actuel utilise notamment:
+- seuil de 36 blocs avant activation de la Consolidation dominicale;
+- âge minimum de 90 jours pour la promotion normale;
+- seuil d’assiduité dominicale;
+- mécanisme de promotion forcée au-delà de 60 blocs récents.
 
-Après validation de la reprise cumulative du vendredi soir, S1+S2+S3 deviennent acquis. Leur date `lastReviewed` initiale est le vendredi, car c’est le dernier passage réel du lot. Ils peuvent donc entrer dans la rotation générale sans être artificiellement prioritaires le samedi.
+### Entretien / J10
+- Entretien de référence actuel: 45 min;
+- vitesse initiale actuelle: 9 s/ligne;
+- J10: délai maximal 10 jours;
+- anticipation déjà présente: J9 systématique, J8 en tension, J7 si non-tenable;
+- le planificateur actuel compte plusieurs types de séances comme capacité potentiellement réutilisable J10, notamment Reprise du soir et Ancrage.
 
-### 2.2 Ancrage
+## 3. Méthode cible
 
-L’Ancrage est uniformisé en demi-pages Mushaf.
+### 3.1 Leçon neuve individuelle — **aucun changement pédagogique**
 
-Règles de découpage:
+Chaque nouvelle unité Sabqi reste:
+- 5 lignes;
+- ×37;
+- mêmes paliers de masquage;
+- mêmes compteurs principaux;
+- mêmes règles de validation individuelle;
+- même suivi d’aides/révélations et de performance existant.
 
-- une unité cible environ 7 à 8 lignes physiques;
-- une unité ne traverse jamais une limite de sourate;
-- une unité ne coupe pas artificiellement un verset;
-- si une sourate se termine avant la moitié de page, l’unité s’arrête à la fin de la sourate et la sourate suivante commence une nouvelle unité;
-- une unité reste contenue dans sa page physique.
+Le compteur individuel du matin ne doit jamais être remplacé ou augmenté artificiellement par le compteur du renforcement du soir.
 
-Le réglage « Sourates difficiles à ancrer » est supprimé. La logique spéciale de fractionnement liée à ce réglage est supprimée.
+### 3.2 Ancrage individuel — **compteurs et répétitions inchangés**
 
-La semaine d’Ancrage suit le même principe cumulatif:
+La taille de l’unité change vers une **demi-page Mushaf**, mais le protocole pédagogique individuel reste:
+- LIGHT ×35 ou FULL ×40 selon l’état/protocole de l’unité;
+- mêmes paliers de masquage que 0.7.4;
+- mêmes aides/révélations;
+- mêmes critères de validation;
+- même escalade LIGHT -> FULL après les échecs prévus;
+- même suivi du temps et de la performance.
 
-- mardi: A1;
-- jeudi: A1 + A2;
-- samedi: A1 + A2 + A3.
+Le changement concerne donc la **géométrie de l’unité**, pas l’intensité pédagogique individuelle.
 
-La séance d’Ancrage reste dans l’enveloppe existante de 60 minutes, mais n’impose plus un compteur ×35/×40 comme contrat fonctionnel. Le lot courant est parcouru en boucle dans l’ordre pendant le temps disponible. La réussite/validation de la séance clôt le lot correspondant.
+### 3.3 Découpage demi-page
 
-Après validation de la séance cumulative du samedi, A1+A2+A3 deviennent acquis avec `lastReviewed = samedi`.
+Une unité A doit:
+- viser environ 7 à 8 lignes physiques;
+- rester dans une seule page Mushaf;
+- ne jamais traverser une limite de sourate;
+- ne jamais couper artificiellement un verset;
+- accepter une unité plus courte lorsqu’une fin de sourate impose l’arrêt.
 
-### 2.3 Corpus acquis et « À ancrer »
+Le réglage « Sourates difficiles à ancrer » et la branche spéciale associée deviennent inutiles pour les nouvelles unités. Les états historiques doivent toutefois être migrés sans perte.
 
-Le modèle doit avoir deux notions distinctes et explicites:
+### 3.4 Renforcement « boule de neige » — compteur séparé
 
-- **Corpus acquis**: une liste de plusieurs plages déjà maîtrisées et immédiatement éligibles à Entretien/J10;
-- **À ancrer**: une liste de plusieurs plages destinées au travail d’Ancrage, pas encore éligibles à Entretien.
+Le renforcement groupé ne modifie **jamais** le compteur principal de l’unité individuelle. Il possède son propre état persistant:
+- répétitions réalisées;
+- quota prévu;
+- temps réel;
+- masque/étape de renforcement;
+- aides/révélations;
+- succès/échecs;
+- reprise exacte après interruption/process death.
 
-L’écran Paramètres doit permettre de gérer plusieurs plages acquises et plusieurs plages à ancrer.
+Le renforcement parcourt les unités en alternance, par exemple:
+- 2 unités: A1 -> A2 -> A1 -> A2...;
+- 3 unités: A1 -> A2 -> A3 -> A1 -> A2 -> A3...;
 
-Une même couverture ne doit jamais être simultanément « acquise » et « à ancrer ». Toute tentative de chevauchement doit être refusée explicitement; aucune suppression silencieuse n’est permise.
+Il ne faut pas faire toutes les répétitions de A1 avant de passer à A2.
 
-Le mécanisme actuel où `itqanRanges` sert à la fois de plage configurée d’Ancrage et de corpus immédiatement visible par Entretien doit être remplacé par des données sémantiquement distinctes.
+### 3.5 Quotas de répétitions groupées
 
-### 2.4 Suppression de la gare des 90 jours
+Le volume global du renforcement reste proche d’**une unité de base**, puis est réparti sur les unités du groupe.
 
-Le nouveau modèle supprime du parcours fonctionnel:
+| Groupe | Sabqi base ×37 | Ancrage LIGHT ×35 | Ancrage FULL ×40 |
+|---|---:|---:|---:|
+| 1 unité | 37 | 35 | 40 |
+| 2 unités | 19 + 18 | 18 + 17 | 20 + 20 |
+| 3 unités | 13 + 12 + 12 | 12 + 12 + 11 | 14 + 13 + 13 |
 
-- l’attente minimale de 90 jours;
-- le seuil de 36 blocs avant Consolidation;
-- l’assiduité dominicale 20/26 comme condition de promotion;
-- la promotion forcée par dépassement de 60 blocs;
-- la Consolidation dominicale historique comme sas avant Ancrage.
+Règle conservatrice pour un groupe d’Ancrage mélangeant LIGHT et FULL: **si au moins une unité est FULL, le budget groupé est calculé sur la base FULL**. Claude devra auditer ce choix et signaler s’il crée une charge ou une incohérence excessive.
 
-Ces mécanismes deviennent inutiles parce que la conservation rapprochée est assurée par la boule de neige hebdomadaire, puis la conservation longue par J10.
+Le masque de renforcement doit suivre les **mêmes proportions pédagogiques** que le protocole individuel, mais comprimées sur le quota réduit. Cette progression est séparée et ne modifie pas les paliers du compteur individuel.
 
-La migration ne doit pas perdre les blocs déjà récents, promus ou en cours. Ils doivent être reclassés selon leur état réel sans les marquer comme « revus » s’ils ne l’ont pas été.
+### 3.6 Planning cible
 
-## 3. Entretien
+| Jour | Matin — unité individuelle | Soir — renforcement / Entretien |
+|---|---|---|
+| Lundi | Leçon neuve S1 ×37 | Renforcement S1, compteur séparé |
+| Mardi | Ancrage A1 demi-page ×35/×40 | Renforcement A1, puis Entretien base 60 min |
+| Mercredi | Leçon neuve S2 ×37 | Renforcement S1+S2, quota 19+18 |
+| Jeudi | Ancrage A2 demi-page ×35/×40 | Renforcement A1+A2, puis Entretien base 60 min |
+| Vendredi | Leçon neuve S3 ×37 | Renforcement S1+S2+S3, quota 13+12+12; lot Sabqi acquis si critères atteints |
+| Samedi | Ancrage A3 demi-page ×35/×40 | Renforcement A1+A2+A3, puis Entretien base 60 min; lot Ancrage acquis si critères atteints |
+| Dimanche | Réserve J10 uniquement si nécessaire | Entretien base 60 min |
 
-### 3.1 Durée et vitesse
+**Impact important:** mardi/jeudi/samedi soir comportent deux blocs distincts: renforcement Ancrage puis Entretien. Ils ne doivent pas partager leurs compteurs. Cette charge du soir doit être affichée clairement et ne doit pas être cachée dans le calcul J10.
 
-La vitesse de base passe de 9 s/ligne à **7 s/ligne**.
+### 3.7 Acquisition
 
-Une séance d’Entretien a une durée de référence de **60 minutes**.
+**Sabqi:** S1+S2+S3 deviennent acquis après le renforcement groupé du vendredi soir, uniquement si:
+- chaque unité individuelle a été validée;
+- le quota groupé du vendredi a réellement été effectué;
+- aucune ligne non parcourue n’est créditée.
 
-À 7 s/ligne, la capacité théorique d’une séance est:
+`lastReviewed` initial est la date réelle du dernier renforcement validé, normalement vendredi.
 
-`floor(3600 / 7) = 514 lignes`.
+**Ancrage:** A1+A2+A3 deviennent acquis après le renforcement groupé du samedi, uniquement si:
+- chaque demi-page a validé son protocole individuel LIGHT/FULL;
+- le quota groupé du samedi est terminé;
+- aucune aide/étape non satisfaite ne permet une acquisition fictive.
 
-La durée de 60 minutes n’est **pas bloquante**:
+`lastReviewed` initial est la date réelle de cette dernière revue, normalement samedi.
 
-- l’utilisateur peut arrêter avant;
-- seules les lignes réellement parcourues sont créditées;
-- à 60 minutes l’application affiche que l’objectif de base est atteint;
-- l’utilisateur peut continuer au-delà;
-- aucun contenu non parcouru n’est marqué comme revu;
-- le curseur et le crédit exact doivent survivre à une sortie/reprise de l’application.
+Si la séance groupée est interrompue, son compteur séparé reprend exactement au même point. Le lot reste non acquis tant que les critères ne sont pas satisfaits.
 
-Pour une installation existante, une ancienne estimation non calibrée doit migrer vers 7 s/ligne. Une vitesse réellement calibrée à partir de mesures acceptées doit être préservée.
+## 4. Suppression de l’ancien sas long
 
-### 3.2 Rotation hybride
+Le runtime cible retire du nouveau parcours:
+- attente de 90 jours;
+- seuil de 36 blocs pour Consolidation;
+- assiduité 20/26 comme condition de promotion;
+- promotion forcée au-delà de 60 blocs;
+- Consolidation dominicale utilisée comme gare avant Ancrage.
 
-L’Entretien utilise une rotation hybride:
+Les classes/états historiques ne doivent être supprimés qu’après migration sûre. Ils peuvent rester temporairement comme compatibilité de migration, mais ne doivent plus décider du parcours nouveau.
 
-1. priorité aux lignes qui approchent leur échéance J10;
-2. tout le temps restant continue la rotation normale depuis le curseur persistant.
+### Avantage
+Le contenu validé entre rapidement dans la rotation permanente, ce qui évite un long sas opaque.
 
-Une préemption J10 ne déplace pas définitivement le curseur de rotation normale.
+### Risque
+Le corpus acquis grossit plus vite. La qualité dépend donc davantage de la fiabilité du J10. Une erreur de crédit J10 devient plus grave qu’avant.
 
-Ordre de priorité J10:
+## 5. Corpus acquis / À ancrer
 
-- J9/J10: prioritaire de manière systématique;
-- J8: prioritaire si la capacité est en tension;
-- J7: prioritaire uniquement si la prévision indique que le système deviendrait non tenable sans anticipation.
+Le stockage doit distinguer explicitement:
+- **Corpus acquis**: éligible Entretien + J10;
+- **À ancrer**: non éligible Entretien tant que protocole individuel + renforcement ne sont pas validés.
 
-Ce comportement reprend le principe déjà présent dans `J10ReviewPolicy`.
+L’interface doit autoriser plusieurs plages dans les deux listes.
 
-### 3.3 Comptage réel du parcours
+Invariants:
+- aucune ligne ne peut être dans les deux états simultanément;
+- tout chevauchement est refusé explicitement;
+- aucune correction silencieuse;
+- suppression/édition d’une plage acquise doit réconcilier J10 de façon explicite et testée;
+- les données 0.7.4 déjà considérées acquises ne doivent pas redevenir « à ancrer » par erreur.
 
-Le suivi d’Entretien ne peut plus se limiter à un couple `début -> fin`.
+## 6. Entretien
 
-Le moteur doit comptabiliser explicitement:
+### 6.1 Durée
 
-- les IDs de lignes réellement parcourues;
-- le nombre total de lignes créditées;
-- les passages de boucle lorsque le corpus est plus petit que l’objectif de séance;
-- le curseur de reprise exact;
-- la date de dernière revue par ligne.
+**60 minutes = durée de référence, pas blocage horaire.**
 
-Cela évite qu’un parcours de « 1 tour + 150 lignes » soit confondu avec un simple parcours jusqu’au même verset.
+L’utilisateur peut:
+- arrêter avant 60 min;
+- continuer après 60 min;
+- sortir/reprendre sans perdre le curseur.
 
-## 4. Garantie J10 et capacité
+Seules les lignes réellement récitées sont créditées.
 
-Le corpus acquis entier doit rester soumis à la règle:
+### 6.2 Vitesse
 
-`date_limite(ligne) = lastReviewed(ligne) + 10 jours`.
+- nouvelle estimation initiale: **7 s/ligne**;
+- une vitesse réellement calibrée sur l’appareil est préservée;
+- une ancienne valeur 9 s/ligne non calibrée migre vers 7 s/ligne;
+- 7 s/ligne s’applique à la planification Entretien/J10, **pas** à la mémorisation Sabqi/Ancrage.
 
-La planification doit être deadline-aware: une capacité située après l’échéance ne peut pas masquer une insuffisance avant l’échéance.
+Capacité théorique à 7 s/ligne:
+`floor(3600 / 7) = 514 lignes par heure`.
 
-Les séances normales comptées comme capacité J10 sont uniquement:
+### 6.3 Rotation hybride
 
-- mardi soir: Entretien 60 min;
-- jeudi soir: Entretien 60 min;
-- samedi soir: Entretien 60 min;
-- dimanche soir: Entretien 60 min.
+Pendant Entretien:
+1. servir d’abord les lignes menacées par J10;
+2. reprendre ensuite la rotation normale depuis son curseur persistant;
+3. une préemption J10 ne doit pas déplacer définitivement le curseur normal.
 
-La Reprise du soir et l’Ancrage ne doivent plus être comptés comme capacité J10 réutilisable normale, car ils sont déjà occupés par leur travail propre.
+Le principe existant de priorité doit être conservé:
+- J9/J10: priorité systématique;
+- J8: priorité si tension/non-normal;
+- J7: priorité si non-tenable.
 
-Le dimanche matin devient une **réserve J10**:
+### 6.4 Multi-tour
 
-- aucun travail obligatoire si la prévision est normale;
-- activable si le moteur détecte tension ou non-tenabilité;
-- cette réserve ajoute 60 minutes de capacité lorsqu’elle est utilisée.
+Le couple `début -> fin` n’est plus suffisant pour créditer une séance.
 
-### 4.1 Capacité structurelle
+Le stockage de séance doit permettre de prouver:
+- IDs de lignes réellement parcourues;
+- nombre total d’occurrences/lignes parcourues;
+- tours complets éventuels;
+- curseur final;
+- date de revue effective.
 
-Avec 4 séances d’Entretien de 60 min et une vitesse de 7 s/ligne:
+Un petit corpus parcouru deux fois ne doit jamais être confondu avec un seul parcours.
 
-- capacité par séance: 514 lignes;
-- capacité hebdomadaire brute: 2 056 passages de lignes;
-- dans la pire fenêtre glissante de 10 jours, on dispose de 5 séances normales;
-- capacité garantie dans cette pire fenêtre: environ **2 570 lignes acquises**.
+## 7. J10 et croissance du corpus
 
-Avec la réserve du dimanche matin, la pire fenêtre peut disposer de 6 séances, soit environ **3 084 lignes**.
+La règle reste stricte:
+`deadline(line) = lastReviewed(line) + 10 jours`.
 
-Le système doit donc afficher une prévision de soutenabilité, par exemple:
+Capacité J10 normale à compter:
+- mardi soir Entretien: 60 min;
+- jeudi soir: 60 min;
+- samedi soir: 60 min;
+- dimanche soir: 60 min.
 
-- NORMAL: charge largement sous la capacité;
-- TENSION: charge >= 80 % de la capacité pertinente;
-- NON TENABLE: certaines échéances ne rentrent pas dans la capacité disponible.
+**Ne pas compter** comme capacité J10 disponible:
+- les renforts Sabqi;
+- les renforts Ancrage;
+- les unités individuelles Sabqi/Ancrage.
 
-La durée de 60 min reste une base, pas un plafond. Si 60 min ne suffisent plus, l’application doit le dire explicitement au lieu de prétendre que J10 est respecté.
+Le dimanche matin reste une réserve J10 de 60 min uniquement lorsque le forecast le justifie.
 
-## 5. Croissance du corpus acquis
+À 7 s/ligne:
+- 1 séance: 514 lignes théoriques;
+- 4 séances/semaine: 2 056 passages théoriques;
+- pire fenêtre de 10 jours: 5 séances normales ≈ 2 570 lignes;
+- avec réserve: 6 séances ≈ 3 084 lignes.
 
-À cadence normale:
+Le seuil de tension à 80 % donne environ 2 056 lignes dans cette fenêtre. Ce n’est pas un blocage; c’est un signal de soutenabilité.
 
-- Leçon neuve: 3 × 5 lignes = 15 nouvelles lignes/semaine;
-- Ancrage: 3 demi-pages ≈ 21 à 24 lignes/semaine;
-- croissance typique: environ 36 à 39 lignes acquises/semaine.
+Croissance typique si 3 Sabqi + 3 demi-pages Ancrage sont acquis chaque semaine:
+- Sabqi: 15 lignes/semaine;
+- Ancrage: environ 21 à 24 lignes/semaine;
+- total: environ 36 à 39 nouvelles lignes/semaine.
 
-À 7 s/ligne et avec une obligation de revue sous 10 jours, cette croissance ajoute environ 3 minutes de charge Entretien hebdomadaire récurrente par semaine de progression.
+Le système doit afficher NORMAL / TENSION / NON TENABLE sans masquer un déficit d’échéance précoce par une capacité disponible après la deadline.
 
-Conséquence: les 4 h hebdomadaires d’Entretien sont suffisantes au départ mais pas indéfiniment. Le moteur doit surveiller la croissance du corpus et prévenir avant saturation.
+## 8. Où le code doit changer
 
-Ordres de grandeur pour respecter J10 avec cinq séances disponibles dans la pire fenêtre de 10 jours:
+| Fichier / zone | Changement prévu | Risque |
+|---|---|---|
+| `hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt` | Planning hebdomadaire, types/créneaux, suppression du rôle runtime de l’ancienne Consolidation | Élevé |
+| `hifz-app/.../PreviewConfig.java` | `SCHEMA_VERSION` -> 6; vitesse par défaut 7; garder ×37/×35/×40; ajouter règles de quotas groupés | Élevé |
+| `hifz-app/.../HifzPrefs.java` | Nouveaux états persistants: groupes hebdo, compteurs de renforcement, acquis vs à ancrer, migration | Très élevé |
+| `hifz-app/.../HifzSessionActivity.java` | UI/runtime des deux compteurs, alternance 2/3 unités, acquisition hebdo, Entretien non bloquant | Très élevé |
+| `hifz-app/.../GeometryRepository.java` | Générateur demi-page respectant page/sourate/verset | Élevé |
+| `hifz-app/.../AnchoringQueue.java` | Queue de demi-pages, conservation LIGHT/FULL, migration des unités historiques | Élevé |
+| `hifz-app/.../J10ReviewPlanner.java` | Capacité J10 fondée sur Entretien uniquement + réserve; rotation hybride; croissance | Très élevé |
+| `hifz-app/.../J10ReviewObserver.java` | Crédit seulement après événements réels; plus de crédit prématuré de matière non acquise | Très élevé |
+| `hifz-app/.../J10ReviewStore.java` | Réconciliation exact-set lors édition du corpus; aucune ligne fantôme | Élevé |
+| `hifz-app/.../HifzSpeedStore.java` + `SpeedCalibration.java` | Migration 9 -> 7 seulement si non calibré; préserver mesures réelles | Moyen |
+| `hifz-app/.../SettingsActivity.java` | Deux éditeurs: Corpus acquis / À ancrer; retirer Sourates difficiles | Élevé |
+| `hifz-app/.../WeeklyDashboardPlanner.java` + accueil | Planning, charge du soir, forecast J10, réserve dimanche | Moyen/élevé |
+| `RecentPromotionPolicy.java`, `ConsolidationAttendance.java` | Sortie du runtime; garder uniquement compatibilité/migration si nécessaire | Moyen |
+| tests + `migration-fixture` | Couvrir tous les états 0.7.4 et nouveaux invariants | Très élevé |
 
-- 1 500 lignes: ~35 min par séance;
-- 2 000 lignes: ~47 min;
-- 2 500 lignes: ~58 min;
-- 2 570 lignes: ~60 min;
-- 3 000 lignes: ~70 min;
-- 4 000 lignes: ~93 min;
-- 5 000 lignes: ~117 min.
+Chemins `hifz-app/...` ci-dessus désignent `hifz-app/src/main/java/com/quransafeguard/hifz/preview/`.
 
-Ces valeurs servent au diagnostic et à la planification, pas à imposer un blocage horaire.
+## 9. Migration 0.7.4 -> schéma 6
 
-## 6. Planning hebdomadaire cible
-
-| Jour | Matin | Soir |
-| --- | --- | --- |
-| Lundi | Leçon neuve S1 · 5 lignes | Reprise 30 min · S1 en boucle |
-| Mardi | Ancrage A1 · demi-page | Entretien · base 60 min |
-| Mercredi | Leçon neuve S2 · 5 lignes | Reprise 30 min · S1+S2 en boucle |
-| Jeudi | Ancrage cumulatif A1+A2 | Entretien · base 60 min |
-| Vendredi | Leçon neuve S3 · 5 lignes | Reprise 30 min · S1+S2+S3 en boucle, puis lot acquis |
-| Samedi | Ancrage cumulatif A1+A2+A3, puis lot acquis | Entretien · base 60 min |
-| Dimanche | Réserve J10 seulement si nécessaire | Entretien · base 60 min |
-
-## 7. Paramètres et libellés
-
-Les sections doivent devenir explicites:
-
-- **Corpus acquis · plages**
-- **À ancrer · plages**
-- **Entretien**
-- **J10**
-
-Les libellés « Ancrage · plages » et « Corpus d’ancrage » ne doivent plus désigner des plages déjà visibles par Entretien.
-
-Le réglage « Sourates difficiles à ancrer » est retiré de l’interface et du comportement futur.
-
-L’écran doit pouvoir afficher:
-
-- nombre de lignes acquises;
-- vitesse active Entretien, avec distinction estimation/mesure;
-- charge J10 requise;
-- capacité disponible;
-- état NORMAL / TENSION / NON TENABLE;
-- prochain bloc menacé par J10;
-- curseur de rotation Entretien;
-- plages en attente d’Ancrage.
-
-## 8. Migration 0.7.4 -> nouveau schéma
-
-La migration doit être atomique, idempotente et testée sur des états réels 0.7.4.
+La migration doit être atomique et idempotente.
 
 Règles:
+- `itqanRanges` historiques déjà visibles par Entretien -> **acquis**;
+- `unconsolidatedPromotedRanges` -> **à ancrer**;
+- promotions historiques déjà consolidées -> acquis;
+- Ancrage individuel en cours: conserver compteur, protocole, masque, échecs et progression;
+- unité commencée: ne pas la couper au milieu; finir avec son format historique puis passer aux demi-pages;
+- unités non commencées: convertir en demi-pages;
+- préserver dates J10 réelles;
+- aucune date ne doit être « rafraîchie » par la migration seule;
+- vitesse non calibrée 9 -> 7;
+- vitesse calibrée -> intacte;
+- compteurs individuels Sabqi/Ancrage -> intacts;
+- renforcement groupé nouveau -> initialisé vide, sans inventer de répétitions historiques.
 
-- préserver tout le `Corpus acquis` existant;
-- préserver toutes les plages réellement en attente d’Ancrage;
-- préserver l’Ancrage en cours sans perdre répétitions/progression déjà effectuées;
-- reclasser les anciens `itqanRanges` selon leur comportement actuel: puisqu’ils sont déjà visibles dans `murajaahCorpus()`, ils migrent comme acquis, pas comme « à ancrer »;
-- migrer les anciens `unconsolidatedPromotedRanges` comme « à ancrer »;
-- convertir les unités d’Ancrage non commencées en demi-pages selon la nouvelle géométrie;
-- conserver une unité déjà commencée jusqu’à sa validation ou son abandon explicite, puis basculer sur les demi-pages;
-- préserver les dates J10 existantes lorsqu’elles existent;
-- ne jamais marquer comme revue une ligne dont aucune revue réelle n’est prouvée;
-- migrer une vitesse Entretien non calibrée vers 7 s/ligne;
-- préserver une vitesse calibrée réelle.
+## 10. Risques principaux et protections
 
-## 9. Invariants de sécurité fonctionnelle
+### R1 — Fausse acquisition
+Risque: un groupe devient acquis alors qu’un compteur individuel ou groupé n’est pas fini.  
+Protection: transaction unique de validation + tests négatifs + aucune acquisition sur simple ouverture/temps écoulé.
 
-Après migration et pendant l’usage normal:
+### R2 — Mélange des compteurs
+Risque: le renforcement du soir augmente le ×37/×35/×40 individuel.  
+Protection: clés persistantes/types différents; assertions et tests de non-interférence.
 
-- une ligne acquise possède une date de dernière revue;
-- une ligne « à ancrer » n’apparaît pas dans Entretien;
-- aucune ligne n’est simultanément « acquise » et « à ancrer »;
-- une validation de Leçon neuve ou d’Ancrage ne crédite que les lignes réellement couvertes;
-- une sortie de séance ne crédite rien de non lu;
-- le curseur Entretien reste valide après ajout/suppression de plages;
-- une modification du Corpus acquis réconcilie le J10 sans créer de lignes fantômes;
-- une suppression de plage acquise retire sa couverture active du planificateur J10 après confirmation explicite;
-- la rotation J10 ne peut pas déclarer NORMAL si une échéance précoce dépasse la capacité disponible avant cette échéance.
+### R3 — Masquage incorrect
+Risque: le quota réduit saute la phase 100 % ou modifie le masque individuel.  
+Protection: fonction pure de progression de renforcement, tests exhaustifs pour 1/2/3 unités et LIGHT/FULL.
 
-## 10. Tests indispensables
+### R4 — Double charge du mardi/jeudi/samedi soir
+Risque: renforcement Ancrage + Entretien 60 min devient lourd.  
+Protection: affichage séparé des deux blocs, quota groupé plafonné, Entretien non bloquant, forecast J10 honnête.
 
-### Migration
+### R5 — Crédit J10 fantôme
+Risque: une ligne affichée/non récitée est marquée revue.  
+Protection: crédit uniquement sur validation d’un parcours réel; IDs exacts; process-death tests.
 
-- 0.7.4 avec uniquement corpus par défaut;
-- plusieurs anciennes `itqanRanges`;
-- `unconsolidatedPromotedRanges` non vides;
-- Ancrage en cours;
-- vitesse 9 s/ligne non calibrée;
-- vitesse calibrée personnalisée;
-- J10 avec historique partiel et sans historique.
+### R6 — Corpus qui grossit plus vite
+Risque: 1 h ×4 devient insuffisant.  
+Protection: forecast quotidien, tension 80 %, réserve dimanche, NON TENABLE explicite.
 
-### Boule de neige Leçon neuve
+### R7 — Migration destructive
+Risque: perte de progression 0.7.4 ou réinitialisation de dates.  
+Protection: fixtures de migration, tests idempotence, snapshot avant/après, aucun overwrite silencieux.
 
-- lundi S1;
-- mercredi S1+S2;
-- vendredi S1+S2+S3;
-- absence un soir sans double crédit;
-- reprise après process death;
-- acquisition du lot uniquement après validation finale.
+### R8 — Multi-tour incorrect
+Risque: un petit corpus fait plusieurs tours mais le système n’en crédite qu’un, ou inversement.  
+Protection: journal de traversal/IDs et compteur d’occurrences séparé du set unique J10.
 
-### Ancrage demi-page
+### R9 — Régression BOOX/E-Ink
+Risque: compteurs/masques de groupes provoquent davantage de clignotements.  
+Protection: réutiliser les politiques E-Ink actuelles; stress test transitions de masque et compteur sans full refresh inutile.
 
-- page standard;
-- fin de sourate dans la première moitié;
-- début de sourate en milieu de page;
-- verset occupant plusieurs lignes;
-- aucune unité à cheval sur deux sourates;
-- migration d’une unité ancienne déjà commencée.
+## 11. Comparaison synthétique ancienne / nouvelle méthode
 
-### Entretien/J10
+### Ancienne méthode — points forts
+- prudente avant de déclarer la matière acquise;
+- Ancrage individuel exigeant;
+- sas long qui évite une acquisition trop rapide;
+- J10 existe déjà et possède une logique d’anticipation utile.
 
-- 7 s/ligne => 514 lignes théoriques pour 60 min;
-- arrêt à 20, 45 ou 59 min crédite uniquement le réel;
-- poursuite au-delà de 60 min;
-- corpus plus petit que 514 lignes avec plusieurs tours;
-- corpus plus grand que 514 lignes avec reprise exacte;
-- préemption J9;
-- anticipation J8/J7 selon tension;
-- 2 570 lignes tenables avec le planning normal;
-- dépassement correctement signalé;
-- réserve dimanche matin intégrée uniquement lorsqu’elle est utilisée;
-- Reprise du soir et Ancrage non comptés comme capacité J10 normale.
+### Ancienne méthode — limites
+- parcours long et difficile à comprendre;
+- 36 blocs + Consolidation + 90 jours + assiduité + promotion + Ancrage = beaucoup d’états;
+- Sabqi récent peut rester longtemps hors Entretien;
+- `itqanRanges` a une sémantique UI ambiguë;
+- capacité J10 peut compter du temps déjà utilisé par d’autres séances;
+- crédit début/fin insuffisant pour les multi-tours.
 
-## 11. Hors périmètre
+### Nouvelle méthode — points forts
+- aucune baisse d’exigence sur les unités individuelles;
+- renforcement espacé dans la même semaine;
+- acquisition plus rapide mais prouvée;
+- séparation claire acquis / à ancrer;
+- J10 devient le mécanisme central de conservation longue;
+- charge future mesurable et visible.
 
-Ce redesign ne modifie pas:
+### Nouvelle méthode — limites / coût
+- plus de données persistantes;
+- migration plus complexe;
+- soirées mardi/jeudi/samedi plus chargées;
+- corpus acquis augmente plus vite;
+- une erreur J10 a un impact plus critique;
+- besoin de tests process death et multi-tour plus poussés.
 
-- l’intégrité du Mushaf 604 pages;
-- les contenus Tafsir;
-- le mode Mémorisation libre;
-- les fonctions audio;
-- la signature/release existante 0.7.4;
-- les paramètres BOOX/E-Ink hors adaptation nécessaire aux nouveaux écrans;
-- les règles éditoriales de l’application.
+## 12. Critères de GO avant implémentation finale
 
-## 12. Critère de réussite
+La mise à jour ne peut être déclarée prête que si:
+- Sabqi individuel est toujours exactement ×37 avec le même masque;
+- Ancrage individuel conserve LIGHT ×35 et FULL ×40 + bascule prévue;
+- aucun renforcement groupé ne modifie ces compteurs individuels;
+- quotas 1/2/3 unités sont déterministes et testés;
+- demi-page ne traverse ni page ni sourate et ne coupe pas de verset;
+- acquisition ne se produit qu’après validations individuelles + quota groupé;
+- corpus acquis / à ancrer ne se chevauchent jamais;
+- migration 0.7.4 est idempotente et sans perte;
+- vitesse calibrée est préservée;
+- 7 s/ligne n’est qu’une base Entretien/J10;
+- Entretien 60 min n’est pas bloquant;
+- aucune ligne non récitée n’est créditée J10;
+- J10 n’utilise pas les minutes de Sabqi/Ancrage comme capacité libre;
+- multi-tour et process death sont testés;
+- les tests existants ne sont pas seulement verts: les nouveaux tests doivent démontrer les invariants.
 
-Le redesign est acceptable uniquement si un utilisateur peut expliquer le parcours sans connaître les structures internes:
+## 13. Hors scope
 
-> « J’apprends mes nouvelles lignes pendant la semaine. Je les reprends cumulativement. En fin de semaine elles deviennent acquises. Je travaille mes demi-pages d’Ancrage de la même manière. Une fois acquises, toutes ces lignes entrent dans l’Entretien. L’application me fait tourner dans l’acquis et garantit qu’aucune ligne ne dépasse 10 jours sans revue. L’heure d’Entretien est un objectif, pas un blocage. Si mon corpus devient trop grand, l’application me le dit avant que J10 devienne impossible. »
+Cette mise à jour ne doit pas modifier:
+- Mushaf 604 pages / géométrie canonique autrement que pour sélectionner des demi-pages;
+- audio / packs Al-Husary;
+- Tafsir;
+- mécanismes de signature/publication;
+- package applicatif;
+- cosmétique globale hors écrans nécessaires au nouveau parcours.
 
-Aucune implémentation ne doit commencer avant validation de cette spécification.
+Aucun merge, aucune release et aucune publication ne sont inclus dans cette phase de conception.
