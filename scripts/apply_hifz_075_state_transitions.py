@@ -178,13 +178,3 @@ block = '''    public enum ProgressState {
 '''
 
 prefs_path.write_text(prefs.replace(marker, block + marker, 1))
-
-workflow_path = Path(".github/workflows/hifz-075-tdd.yml")
-workflow = workflow_path.read_text()
-old = "com.quransafeguard.hifz.preview.StabilizationHalfPageInstrumentedTest\n            --stacktrace"
-new = "com.quransafeguard.hifz.preview.StabilizationHalfPageInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest\n            --stacktrace"
-if new in workflow:
-    raise SystemExit("Transition instrumented test already wired")
-if old not in workflow:
-    raise SystemExit("TDD workflow class-list marker missing")
-workflow_path.write_text(workflow.replace(old, new, 1))
