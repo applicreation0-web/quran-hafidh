@@ -1,0 +1,489 @@
+MISSION CLAUDE — AUDIT CONTRADICTOIRE DE LA MISE À JOUR HIFZ RÉTENTION / ANCRAGE / ENTRETIEN / J10
+
+RÔLE
+Tu agis uniquement comme auditeur indépendant et comme reviewer technique.
+Tu ne dois modifier aucun code, créer aucun commit, pousser aucune branche, ouvrir aucune PR, merger, publier ou signer quoi que ce soit pendant cet audit.
+Tu peux proposer des corrections de code très concrètes, y compris signatures de fonctions, structures de données, pseudo-diffs et tests à écrire, mais tu ne les appliques pas.
+
+DÉPÔT
+applicreation0-web/quran-unlock-android
+
+BASELINE APPLICATIVE PUBLIÉE À PRENDRE COMME RÉFÉRENCE
+75d35aaf3f46877b4f6b65fe1c276cc7b3fba1a6
+
+BRANCHE DE CONCEPTION À AUDITER
+work/hifz-retention-j10-redesign-spec
+
+HEAD DOCUMENTAIRE ATTENDU AU MOMENT DE LA RÉDACTION DU PROMPT
+6c894e885534df1c5fbbd3cea0ac0d498ed8c1f6
+
+DOCUMENT DE SPÉCIFICATION À LIRE EN PREMIER
+docs/superpowers/specs/2026-09-15-hifz-retention-j10-redesign-design.md
+
+IMPORTANT
+Résous d'abord le HEAD exact actuel de work/hifz-retention-j10-redesign-spec et affiche son SHA.
+Si le HEAD n'est plus 6c894e885534df1c5fbbd3cea0ac0d498ed8c1f6, signale-le clairement et audite le HEAD réel, en indiquant le delta documentaire pertinent.
+
+OBJECTIF
+Auditer la cohérence de la nouvelle méthodologie par rapport au code réel de Quran Hifz 0.7.4, identifier tous les impacts techniques, les dépendances cachées, les risques de migration et de régression, puis proposer les corrections de conception ou de code nécessaires AVANT toute implémentation.
+
+Ne valide rien simplement parce que la spécification paraît logique. Vérifie chaque hypothèse contre le code existant.
+
+============================================================
+1. ÉTABLIR LE COMPORTEMENT ACTUEL EXACT
+============================================================
+
+Vérifie dans le code source du baseline 75d35aaf... les comportements réels suivants.
+
+A. LEÇON NEUVE INDIVIDUELLE
+- unité de 5 lignes;
+- compteur total ×37;
+- paliers de masquage actuels;
+- conditions de validation;
+- persistance du compteur, aide/révélations, temps et reprise après process death;
+- lien actuel entre Leçon neuve, Reprise du soir, recentSabqi et J10.
+
+B. ANCRAGE INDIVIDUEL
+- protocole FULL ×40;
+- protocole LIGHT ×35;
+- paliers de masquage exacts de chaque protocole;
+- condition de validation finale;
+- comportement après échecs, notamment passage LIGHT -> FULL après 3 échecs;
+- unité actuelle par page/fractionnement;
+- persistance de l'unité en cours, compteur, bloc, révélations et protocole.
+
+C. ANCIENNE MATURATION
+Vérifie précisément:
+- seuil 36 blocs;
+- Consolidation du dimanche;
+- minimum 90 jours;
+- condition d'assiduité;
+- limite 60 blocs / promotion forcée;
+- chemin exact jusqu'à l'Ancrage puis Entretien.
+
+D. ENTRETIEN ET J10
+Vérifie:
+- durée actuelle Entretien;
+- vitesse initiale actuelle;
+- calibration et persistance vitesse;
+- définition exacte de la deadline J10;
+- préemption J9/J8/J7;
+- quelles sessions sont actuellement comptées dans la capacité disponible J10;
+- fonctionnement du curseur Entretien;
+- limitation actuelle d'un crédit représenté par début/fin;
+- comportement lorsque le corpus est plus petit que la cible de lignes et qu'un wrap/multi-tour survient.
+
+Pour chaque point, indique: CONFIRMÉ PAR LE CODE / PARTIEL / FAUX / AMBIGU.
+Ne remplace pas un constat source par une interprétation.
+
+============================================================
+2. AUDITER LES DÉCISIONS CIBLES DE LA SPÉCIFICATION
+============================================================
+
+Les décisions fonctionnelles actuellement proposées sont les suivantes.
+
+A. UNITÉS INDIVIDUELLES — DOIVENT RESTER INCHANGÉES PÉDAGOGIQUEMENT
+- Sabqi individuel: 5 lignes, ×37, mêmes masquages, mêmes critères.
+- Ancrage individuel: LIGHT ×35 ou FULL ×40, mêmes masquages, mêmes aides/révélations, même validation, même escalade prévue.
+- La nouvelle demi-page change uniquement la géométrie de l'unité d'Ancrage, pas le protocole individuel.
+
+Cherche activement tout endroit où le redesign risquerait malgré tout de modifier ces compteurs ou leur persistance.
+
+B. BOULE DE NEIGE — COMPTEUR SÉPARÉ
+Le renforcement groupé ne doit JAMAIS incrémenter le compteur principal ×37 / ×35 / ×40.
+Il doit avoir son propre état persistant.
+
+Quotas proposés:
+- Sabqi 2 unités: 19 + 18 = 37;
+- Sabqi 3 unités: 13 + 12 + 12 = 37;
+- Ancrage LIGHT 2 unités: 18 + 17 = 35;
+- Ancrage LIGHT 3 unités: 12 + 12 + 11 = 35;
+- Ancrage FULL 2 unités: 20 + 20 = 40;
+- Ancrage FULL 3 unités: 14 + 13 + 13 = 40.
+
+Les unités doivent alterner:
+A1 -> A2 -> A1 -> A2...
+ou A1 -> A2 -> A3 -> A1...
+
+Le masque de renforcement doit être distinct du masque individuel.
+
+AUDIT DEMANDÉ:
+- ces quotas sont-ils cohérents avec les structures de compteur existantes ?
+- comment mapper proprement les paliers de masque sur un quota réduit sans sauter abusivement la phase 100 % ?
+- le choix « groupe mixte LIGHT/FULL => budget FULL » est-il sûr et logique ?
+- faut-il un modèle de données par groupe, par unité, ou par événement ?
+- comment garantir reprise exacte après interruption/process death ?
+- comment éviter un double crédit ou une reprise du mauvais groupe après changement de semaine ?
+
+Si une décision est discutable, ne la remplace pas silencieusement. Classe-la:
+1. BLOCKER — incohérence technique/pédagogique réelle;
+2. CORRECTION REQUISE — détail nécessaire avant implémentation;
+3. ALTERNATIVE OPTIONNELLE — amélioration non bloquante.
+
+C. DEMI-PAGE ANCRAGE
+La cible est environ 7-8 lignes physiques.
+Contraintes:
+- jamais traverser une page;
+- jamais traverser une sourate;
+- ne pas couper artificiellement un verset;
+- accepter une unité plus courte à la fin d'une sourate.
+
+Audite GeometryRepository et toutes les structures dépendantes.
+Propose l'algorithme exact de sélection de demi-page qui minimise les cas limites.
+Vérifie les impacts sur:
+- lineIds;
+- verse ranges;
+- AnchoringQueue.Entry;
+- labels/UI;
+- J10 credit;
+- calibration;
+- reprise d'unité en cours;
+- test du Mushaf 604 pages.
+
+D. CORPUS ACQUIS VS À ANCRER
+Le nouveau modèle doit séparer clairement:
+- corpus acquis => Entretien + J10;
+- à ancrer => non visible dans Entretien avant validation complète.
+
+Audite la sémantique actuelle de itqanRanges, promotedRanges, unconsolidatedPromotedRanges, legacyMurajaahPromotedRanges, anchoringQueue et murajaahCorpus().
+
+Propose:
+- les nouvelles clés/structures de persistance;
+- la source de vérité unique;
+- les règles d'interdiction de chevauchement;
+- la stratégie de réconciliation J10 lors d'ajout/édition/suppression de plages;
+- la gestion des curseurs quand une plage est supprimée ou raccourcie.
+
+E. SUPPRESSION DU SAS 36 / 90 JOURS
+Le nouveau runtime ne doit plus dépendre de:
+- 36 blocs;
+- ancienne Consolidation dominicale;
+- 90 jours;
+- assiduité 20/26;
+- promotion forcée >60.
+
+Audite toutes les références à ces mécanismes dans:
+- HifzCore / HifzSchedule;
+- RecentPromotionPolicy;
+- ConsolidationAttendance;
+- HifzPrefs;
+- HifzSessionActivity;
+- dashboards;
+- tests;
+- migration.
+
+Indique ce qui peut être supprimé, ce qui doit rester temporairement pour migration, et ce qui ne doit surtout pas être supprimé avant conversion des données existantes.
+
+F. ENTRETIEN
+Décisions cibles:
+- base 60 min;
+- pas de blocage horaire;
+- arrêt avant ou après 60 min autorisé;
+- seulement les lignes réellement parcourues sont créditées;
+- nouvelle estimation initiale 7 s/ligne;
+- vitesse calibrée existante préservée;
+- 7 s/ligne ne concerne que Entretien/J10, pas Sabqi/Ancrage.
+
+Audite:
+- HifzCadence;
+- HifzSpeedStore;
+- SpeedCalibration;
+- PreviewConfig;
+- HifzSessionActivity;
+- persistence elapsed;
+- validation / curseur.
+
+Vérifie particulièrement si l'architecture actuelle permet réellement une séance non bloquante sans fausser les statistiques.
+
+G. MULTI-TOUR ENTRETIEN
+La nouvelle implémentation doit distinguer:
+- set unique de lignes revues pour J10;
+- nombre réel d'occurrences parcourues pour charge/temps/vitesse;
+- nombre de tours;
+- curseur final.
+
+Propose un modèle de commit de séance robuste.
+Teste conceptuellement:
+- corpus de 100 lignes, cible 514;
+- 5 tours + reste;
+- sortie au milieu d'un tour;
+- wrap An-Nas -> début corpus;
+- corpus discontinu en plusieurs plages;
+- préemption J10 au milieu de la rotation normale.
+
+H. CAPACITÉ J10
+Le forecast normal ne doit compter comme capacité libre que:
+- mardi soir Entretien 60 min;
+- jeudi soir Entretien 60 min;
+- samedi soir Entretien 60 min;
+- dimanche soir Entretien 60 min.
+
+Les renforcements Sabqi/Ancrage et les unités individuelles ne sont pas de la capacité libre J10.
+Le dimanche matin est une réserve de 60 min seulement si le forecast la nécessite.
+
+Audite les méthodes:
+- scheduledCapacityByDayMinutes;
+- remainingCapacityByDayMinutes;
+- reusableCapacityMinutes;
+- isReusableJ10Kind;
+- forecastByDay;
+- priorityGroup.
+
+Vérifie également le calcul de soutenabilité quand le corpus croît.
+
+============================================================
+3. AUDIT DE MIGRATION 0.7.4 -> NOUVEAU SCHÉMA
+============================================================
+
+La migration est le risque principal.
+
+Règles cibles à contrôler:
+- itqanRanges historiques déjà actifs dans Entretien => acquis;
+- unconsolidatedPromotedRanges => à ancrer;
+- promotions déjà consolidées => acquis;
+- unité d'Ancrage déjà commencée => conserver son format historique, compteur, masque, protocole et progression jusqu'à fin/abandon;
+- unités non commencées => conversion en demi-pages;
+- compteurs individuels Sabqi/Ancrage conservés;
+- nouveaux compteurs boule de neige initialisés vides;
+- aucune répétition historique inventée;
+- aucune ligne ne reçoit un nouveau lastReviewed uniquement parce qu'une migration a eu lieu;
+- vitesse 9 s/ligne non calibrée => 7;
+- vitesse calibrée réelle => préservée;
+- migration atomique, idempotente et process-death safe.
+
+Cherche activement:
+- états impossibles après migration;
+- duplication acquired/pending;
+- curseurs hors corpus;
+- J10 lines fantômes;
+- perte de données SharedPreferences;
+- changement de SCHEMA_VERSION insuffisant;
+- écritures partielles si le process meurt pendant migration.
+
+Propose une stratégie de migration par étapes avec rollback/fail-closed si nécessaire.
+
+============================================================
+4. AUDIT DU PLANNING ET DE LA CHARGE RÉELLE
+============================================================
+
+Planning cible actuel:
+
+Lundi matin: Leçon neuve S1 ×37
+Lundi soir: renforcement S1
+
+Mardi matin: Ancrage A1 ×35/×40
+Mardi soir: renforcement A1 + Entretien base 60 min
+
+Mercredi matin: Leçon neuve S2 ×37
+Mercredi soir: renforcement S1+S2
+
+Jeudi matin: Ancrage A2 ×35/×40
+Jeudi soir: renforcement A1+A2 + Entretien base 60 min
+
+Vendredi matin: Leçon neuve S3 ×37
+Vendredi soir: renforcement S1+S2+S3; lot Sabqi acquis si critères atteints
+
+Samedi matin: Ancrage A3 ×35/×40
+Samedi soir: renforcement A1+A2+A3; lot Ancrage acquis si critères atteints + Entretien base 60 min
+
+Dimanche matin: réserve J10 seulement si nécessaire
+Dimanche soir: Entretien base 60 min
+
+Analyse:
+- charge cumulée réelle par jour;
+- risque que mardi/jeudi/samedi soir deviennent trop longs;
+- interaction du renforcement avec Entretien non bloquant;
+- gestion d'une séance de renforcement non terminée;
+- gestion d'un jour manqué;
+- report sans double quota;
+- comportement en changement de semaine;
+- acquisition si un seul sous-bloc est incomplet.
+
+Ne change pas ce planning sans signaler clairement pourquoi.
+
+============================================================
+5. CARTE D'IMPACT CODE OBLIGATOIRE
+============================================================
+
+Produis un tableau de ce type pour TOUT fichier réellement impacté:
+
+| Fichier | Classe/méthode | Comportement actuel | Changement requis | Risque | Tests requis |
+
+Au minimum inspecter:
+- hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt
+- hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java
+- HifzPrefs.java
+- HifzSessionActivity.java
+- GeometryRepository.java
+- AnchoringQueue.java
+- J10ReviewPlanner.java
+- J10ReviewObserver.java
+- J10ReviewStore.java
+- HifzSpeedStore.java
+- SpeedCalibration.java
+- SettingsActivity.java
+- WeeklyDashboardPlanner.java
+- MainActivity.java si planning/dashboard dépendant
+- RecentPromotionPolicy.java
+- ConsolidationAttendance.java
+- migrations / fixtures / tests associés.
+
+Cherche aussi les fichiers non listés mais couplés à ces comportements.
+
+============================================================
+6. PROPOSITIONS DE CORRECTIONS DE CODE
+============================================================
+
+Pour chaque BLOCKER ou CORRECTION REQUISE, fournis une proposition concrète:
+- fichier;
+- méthode/classe;
+- modification précise;
+- nouvelle structure de données si nécessaire;
+- invariants;
+- pseudo-code ou petit pseudo-diff si utile;
+- tests RED à écrire avant l'implémentation;
+- critères GREEN.
+
+Ne fournis pas seulement « il faut refactorer ».
+Je veux des corrections exploitables par un développeur.
+
+Mais NE MODIFIE PAS LE DÉPÔT.
+
+============================================================
+7. TESTS CONTRADICTOIRES À EXIGER
+============================================================
+
+Prépare une matrice minimale couvrant:
+
+SABQI
+- ×37 inchangé;
+- compteur renforcement séparé;
+- 2 unités = 19+18;
+- 3 unités = 13+12+12;
+- masque individuel intact;
+- process death pendant renforcement;
+- changement de semaine.
+
+ANCRAGE
+- LIGHT ×35 inchangé;
+- FULL ×40 inchangé;
+- 3 échecs LIGHT -> FULL;
+- 2 unités quotas LIGHT et FULL;
+- 3 unités quotas LIGHT et FULL;
+- groupe mixte LIGHT/FULL;
+- demi-page fin de sourate;
+- verset long près de la moitié de page;
+- unité historique déjà commencée pendant migration;
+- process death.
+
+ACQUIS / À ANCRER
+- non-chevauchement;
+- édition/suppression;
+- curseurs;
+- J10 exact-set;
+- migration de plusieurs anciennes plages.
+
+ENTRETIEN
+- arrêt avant 60 min;
+- poursuite après 60 min;
+- multi-tour;
+- corpus discontinu;
+- préemption J10 puis retour au curseur normal;
+- aucune ligne non parcourue créditée.
+
+J10
+- J9 toujours prioritaire;
+- J8 en tension;
+- J7 non-tenable;
+- deadline précoce non masquée par capacité ultérieure;
+- capacité Sabqi/Ancrage exclue;
+- réserve dimanche activée seulement si nécessaire;
+- croissance du corpus vers NORMAL/TENSION/NON TENABLE.
+
+MIGRATION
+- fixture 0.7.4 par défaut;
+- plusieurs itqanRanges;
+- promoted/unconsolidated mélangés;
+- Ancrage en cours;
+- vitesse non calibrée;
+- vitesse calibrée;
+- J10 partiel;
+- migration lancée deux fois;
+- interruption au milieu de migration.
+
+BOOX / E-INK
+- compteur et masque de renforcement sans rafraîchissement plein inutile;
+- pas de ghosting excessif;
+- pas de régression de navigation.
+
+============================================================
+8. SORTIE ATTENDUE
+============================================================
+
+Rends le rapport dans cet ordre:
+
+1. `HEAD AUDITÉ`
+   - SHA exact de la branche de conception.
+   - baseline applicative exacte.
+
+2. `VERDICT GLOBAL`
+   - GO / GO AVEC CORRECTIONS / NO-GO.
+   - une phrase expliquant la cause principale.
+
+3. `ÉCARTS ENTRE LA SPEC ET LE CODE ACTUEL`
+   - uniquement des faits vérifiés.
+
+4. `BLOCKERS`
+   - numérotés B1, B2, ...
+   - impact utilisateur / données / J10.
+
+5. `CORRECTIONS REQUISES`
+   - C1, C2, ...
+   - solution technique précise.
+
+6. `ALTERNATIVES OPTIONNELLES`
+   - séparées des corrections obligatoires.
+
+7. `CARTE D'IMPACT FICHIERS / MÉTHODES`
+   - tableau complet.
+
+8. `MIGRATION`
+   - stratégie recommandée;
+   - risques;
+   - invariants.
+
+9. `J10 ET ROTATION`
+   - preuve que la capacité est calculée sans minutes fantômes;
+   - analyse du multi-tour et de la croissance.
+
+10. `TESTS À ÉCRIRE AVANT CODE`
+   - priorité P0 / P1 / P2.
+
+11. `ORDRE D'IMPLÉMENTATION RECOMMANDÉ`
+   - séquence minimale sûre.
+
+12. `QUESTIONS ENCORE À TRANCHER`
+   - seulement les vraies ambiguïtés qui empêchent une implémentation déterministe.
+
+13. `CONCLUSION`
+   - confirmer explicitement si la spécification peut passer en phase d'implémentation ou non.
+
+============================================================
+9. RÈGLES STRICTES
+============================================================
+
+- Ne modifie aucun fichier.
+- Ne crée aucun commit.
+- Ne merge rien.
+- Ne publie rien.
+- Ne crée aucune release.
+- Ne touche pas aux artefacts audio.
+- Ne modifie pas les 604 pages Mushaf.
+- Ne valide aucune hypothèse non vérifiée dans le code.
+- Ne considère pas les tests existants comme suffisants sans auditer leur force.
+- Cherche les faux positifs et tests qui ne prouvent pas réellement l'invariant.
+- Préserve les noms UI fonctionnels: Leçon neuve, Reprise du soir, Ancrage, Entretien.
+- Distingue clairement « compteur individuel principal » et « compteur de renforcement boule de neige ».
+- Considère la préservation des données 0.7.4 comme un critère bloquant.
+
+FIN DE MISSION
