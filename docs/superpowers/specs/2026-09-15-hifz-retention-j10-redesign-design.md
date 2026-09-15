@@ -1,4 +1,4 @@
-# Quran Hifz — Mise à jour Rétention / Ancrage / Entretien / J10 — v2
+# Quran Hifz — Mise à jour Rétention / Ancrage / Entretien / J10 — v3
 
 Date: 2026-09-15  
 Baseline applicative vérifiée: `75d35aaf3f46877b4f6b65fe1c276cc7b3fba1a6` (Quran Hifz 0.7.4 BOOX publiée)  
@@ -13,10 +13,11 @@ Le principe cible devient:
 
 `unité individuelle complète -> renforcement groupé en boule de neige -> acquisition -> Entretien permanent avec garantie J10`.
 
-La principale correction par rapport à la première version de la spécification est la suivante:
+La spécification impose désormais explicitement:
 
 - les compteurs, répétitions, masquages et critères de validation **individuels** restent inchangés;
 - la boule de neige utilise des **compteurs de renforcement séparés**, avec un quota de répétitions réduit proportionnellement lorsque 2 ou 3 unités sont groupées;
+- les **plages À ancrer** et les **plages du Corpus acquis** sont deux listes multiples, séparées, éditables et non chevauchantes;
 - l’Entretien reste une rotation de matière acquise, et non une nouvelle phase de mémorisation.
 
 ## 2. Méthode actuelle 0.7.4 — ce qu’elle fait aujourd’hui
@@ -167,20 +168,114 @@ Le contenu validé entre rapidement dans la rotation permanente, ce qui évite u
 ### Risque
 Le corpus acquis grossit plus vite. La qualité dépend donc davantage de la fiabilité du J10. Une erreur de crédit J10 devient plus grave qu’avant.
 
-## 5. Corpus acquis / À ancrer
+## 5. Plages À ancrer et plages du Corpus acquis
 
-Le stockage doit distinguer explicitement:
-- **Corpus acquis**: éligible Entretien + J10;
-- **À ancrer**: non éligible Entretien tant que protocole individuel + renforcement ne sont pas validés.
+Cette séparation est une exigence fonctionnelle centrale, pas un simple changement de libellé.
 
-L’interface doit autoriser plusieurs plages dans les deux listes.
+### 5.1 Deux listes distinctes et multiples
 
-Invariants:
-- aucune ligne ne peut être dans les deux états simultanément;
-- tout chevauchement est refusé explicitement;
-- aucune correction silencieuse;
-- suppression/édition d’une plage acquise doit réconcilier J10 de façon explicite et testée;
-- les données 0.7.4 déjà considérées acquises ne doivent pas redevenir « à ancrer » par erreur.
+L’application doit stocker et afficher deux collections indépendantes:
+
+1. **À ancrer · plages**
+   - plusieurs plages sourate/verset peuvent être définies;
+   - elles représentent de la matière qui doit encore passer par l’Ancrage;
+   - elles alimentent uniquement la queue d’Ancrage;
+   - elles sont découpées automatiquement en demi-pages A1, A2, A3...;
+   - elles sont **exclues de l’Entretien et du J10** tant que leur acquisition n’est pas validée.
+
+2. **Corpus acquis · plages**
+   - plusieurs plages sourate/verset peuvent être définies;
+   - elles représentent de la matière déjà maîtrisée;
+   - elles alimentent immédiatement l’Entretien et le moteur J10;
+   - elles peuvent venir d’une saisie manuelle de matière déjà acquise, d’un lot Sabqi validé ou d’un lot d’Ancrage validé.
+
+### 5.2 Interface de gestion
+
+Les Paramètres doivent présenter deux sections visuellement séparées:
+
+- **Corpus acquis · plages**
+  - Ajouter une plage;
+  - Modifier une plage;
+  - Supprimer une plage avec confirmation;
+  - afficher le nombre de plages et le nombre de lignes physiques couvertes.
+
+- **À ancrer · plages**
+  - Ajouter une plage;
+  - Modifier une plage;
+  - Supprimer une plage avec confirmation;
+  - afficher le nombre de plages, les demi-pages restantes et la position courante d’Ancrage.
+
+Aucune section ne doit être nommée « Ancrage · plages » si son contenu est déjà directement éligible à Entretien.
+
+### 5.3 Invariants de chevauchement
+
+Une même ligne physique du Mushaf ne peut jamais être simultanément:
+- dans une plage acquise;
+- et dans une plage À ancrer.
+
+Avant tout ajout ou modification, le moteur doit calculer la couverture réelle et refuser explicitement tout chevauchement.
+
+Il est interdit de:
+- supprimer silencieusement la partie qui chevauche;
+- fusionner silencieusement deux statuts différents;
+- déplacer silencieusement une plage de « À ancrer » vers « Acquis » ou inversement.
+
+### 5.4 Passage À ancrer -> Acquis
+
+Lorsqu’un lot A1+A2+A3 valide son protocole individuel et son renforcement groupé:
+
+1. seules les lignes réellement validées sont retirées de la couverture **À ancrer**;
+2. ces mêmes lignes sont ajoutées à la couverture **Corpus acquis**;
+3. leur `lastReviewed` est initialisé à la date réelle de la dernière validation;
+4. J10 les prend en compte à partir de cette date;
+5. la queue d’Ancrage avance vers les demi-pages suivantes.
+
+Le transfert doit être **atomique**: aucune fenêtre où les lignes sont dans les deux listes, ni aucune fenêtre où elles disparaissent des deux listes.
+
+### 5.5 Sabqi -> Acquis
+
+Après validation du lot S1+S2+S3 du vendredi:
+- le lot rejoint directement le **Corpus acquis**;
+- il ne passe pas par « À ancrer »;
+- il devient éligible Entretien/J10 avec sa vraie date de dernière revue;
+- l’ajout doit fusionner proprement avec les plages acquises voisines uniquement si cela ne perd aucune information de date J10 par ligne.
+
+### 5.6 Édition ou suppression d’une plage acquise
+
+Modifier ou supprimer une plage acquise est une action sensible parce qu’elle affecte directement J10.
+
+Règles:
+- confirmation explicite obligatoire;
+- le curseur Entretien doit être réconcilié si sa position sort du nouveau corpus;
+- les entrées J10 correspondant aux lignes qui ne sont plus acquises doivent être retirées de la couverture active;
+- aucune autre ligne ne doit voir sa date de revue réinitialisée;
+- l’application doit refuser une modification qui créerait un chevauchement avec « À ancrer ».
+
+### 5.7 Édition d’une plage À ancrer
+
+Règles:
+- si aucune demi-page de la plage n’a encore commencé, la plage peut être redécoupée selon la nouvelle géométrie;
+- si une unité est déjà en cours, sa progression, son protocole, son masque et ses compteurs doivent être protégés;
+- une édition ne doit jamais faire disparaître silencieusement une unité en cours;
+- si la modification touche l’unité active, l’application doit demander une confirmation et appliquer une politique explicite de conservation/abandon, jamais une réinitialisation silencieuse.
+
+### 5.8 Ordre de parcours
+
+Les deux listes doivent conserver un ordre canonique stable par position Mushaf pour éviter une rotation imprévisible.
+
+- **À ancrer**: la queue parcourt les demi-pages dans l’ordre canonique des plages configurées, avec persistance du curseur d’Ancrage;
+- **Acquis**: Entretien parcourt le corpus canonique résultant de toutes les plages acquises, avec persistance du curseur Entretien;
+- ajouter une nouvelle plage ne doit pas replacer automatiquement le curseur au début du corpus.
+
+### 5.9 Migration 0.7.4 des plages
+
+Au passage vers le schéma 6:
+- anciennes `itqanRanges` déjà visibles dans Entretien -> **Corpus acquis**;
+- anciennes `unconsolidatedPromotedRanges` -> **À ancrer**;
+- promotions historiques déjà consolidées -> **Corpus acquis**;
+- une unité d’Ancrage historique déjà commencée est conservée jusqu’à sa fin avant bascule vers les demi-pages;
+- les unités non commencées sont redécoupées en demi-pages;
+- aucun statut ne doit être déduit uniquement d’un libellé visible si une donnée structurée plus fiable existe.
 
 ## 6. Entretien
 
@@ -269,18 +364,18 @@ Le système doit afficher NORMAL / TENSION / NON TENABLE sans masquer un défici
 |---|---|---|
 | `hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt` | Planning hebdomadaire, types/créneaux, suppression du rôle runtime de l’ancienne Consolidation | Élevé |
 | `hifz-app/.../PreviewConfig.java` | `SCHEMA_VERSION` -> 6; vitesse par défaut 7; garder ×37/×35/×40; ajouter règles de quotas groupés | Élevé |
-| `hifz-app/.../HifzPrefs.java` | Nouveaux états persistants: groupes hebdo, compteurs de renforcement, acquis vs à ancrer, migration | Très élevé |
+| `hifz-app/.../HifzPrefs.java` | Nouveaux états persistants: groupes hebdo, compteurs de renforcement, listes multiples acquis/à ancrer, migration | Très élevé |
 | `hifz-app/.../HifzSessionActivity.java` | UI/runtime des deux compteurs, alternance 2/3 unités, acquisition hebdo, Entretien non bloquant | Très élevé |
-| `hifz-app/.../GeometryRepository.java` | Générateur demi-page respectant page/sourate/verset | Élevé |
-| `hifz-app/.../AnchoringQueue.java` | Queue de demi-pages, conservation LIGHT/FULL, migration des unités historiques | Élevé |
+| `hifz-app/.../GeometryRepository.java` | Générateur demi-page respectant page/sourate/verset; couverture réelle pour détection de chevauchement | Élevé |
+| `hifz-app/.../AnchoringQueue.java` | Queue de demi-pages issue des plages À ancrer, conservation LIGHT/FULL, migration des unités historiques | Élevé |
 | `hifz-app/.../J10ReviewPlanner.java` | Capacité J10 fondée sur Entretien uniquement + réserve; rotation hybride; croissance | Très élevé |
 | `hifz-app/.../J10ReviewObserver.java` | Crédit seulement après événements réels; plus de crédit prématuré de matière non acquise | Très élevé |
-| `hifz-app/.../J10ReviewStore.java` | Réconciliation exact-set lors édition du corpus; aucune ligne fantôme | Élevé |
+| `hifz-app/.../J10ReviewStore.java` | Réconciliation exact-set lors édition/suppression des plages acquises; aucune ligne fantôme | Élevé |
 | `hifz-app/.../HifzSpeedStore.java` + `SpeedCalibration.java` | Migration 9 -> 7 seulement si non calibré; préserver mesures réelles | Moyen |
-| `hifz-app/.../SettingsActivity.java` | Deux éditeurs: Corpus acquis / À ancrer; retirer Sourates difficiles | Élevé |
+| `hifz-app/.../SettingsActivity.java` | Deux éditeurs complets: Corpus acquis / À ancrer; validation chevauchements; retirer Sourates difficiles | Élevé |
 | `hifz-app/.../WeeklyDashboardPlanner.java` + accueil | Planning, charge du soir, forecast J10, réserve dimanche | Moyen/élevé |
 | `RecentPromotionPolicy.java`, `ConsolidationAttendance.java` | Sortie du runtime; garder uniquement compatibilité/migration si nécessaire | Moyen |
-| tests + `migration-fixture` | Couvrir tous les états 0.7.4 et nouveaux invariants | Très élevé |
+| tests + `migration-fixture` | Couvrir tous les états 0.7.4, multi-plages, chevauchements, transferts et nouveaux invariants | Très élevé |
 
 Chemins `hifz-app/...` ci-dessus désignent `hifz-app/src/main/java/com/quransafeguard/hifz/preview/`.
 
@@ -289,9 +384,11 @@ Chemins `hifz-app/...` ci-dessus désignent `hifz-app/src/main/java/com/quransaf
 La migration doit être atomique et idempotente.
 
 Règles:
-- `itqanRanges` historiques déjà visibles par Entretien -> **acquis**;
-- `unconsolidatedPromotedRanges` -> **à ancrer**;
+- `itqanRanges` historiques déjà visibles par Entretien -> **Corpus acquis**;
+- `unconsolidatedPromotedRanges` -> **À ancrer**;
 - promotions historiques déjà consolidées -> acquis;
+- préserver plusieurs plages historiques distinctes, sans les écraser en une seule plage;
+- détecter et résoudre explicitement toute incohérence historique de chevauchement sans inventer de statut;
 - Ancrage individuel en cours: conserver compteur, protocole, masque, échecs et progression;
 - unité commencée: ne pas la couper au milieu; finir avec son format historique puis passer aux demi-pages;
 - unités non commencées: convertir en demi-pages;
@@ -340,6 +437,10 @@ Protection: journal de traversal/IDs et compteur d’occurrences séparé du set
 Risque: compteurs/masques de groupes provoquent davantage de clignotements.  
 Protection: réutiliser les politiques E-Ink actuelles; stress test transitions de masque et compteur sans full refresh inutile.
 
+### R10 — Confusion ou corruption des plages
+Risque: une ligne apparaît à la fois dans Acquis et À ancrer, une édition déplace le curseur, ou une suppression laisse des lignes J10 fantômes.  
+Protection: validation de couverture avant commit, transfert atomique, confirmations explicites, réconciliation curseurs/J10 et tests multi-plages.
+
 ## 11. Comparaison synthétique ancienne / nouvelle méthode
 
 ### Ancienne méthode — points forts
@@ -360,7 +461,7 @@ Protection: réutiliser les politiques E-Ink actuelles; stress test transitions 
 - aucune baisse d’exigence sur les unités individuelles;
 - renforcement espacé dans la même semaine;
 - acquisition plus rapide mais prouvée;
-- séparation claire acquis / à ancrer;
+- séparation claire et multiple des plages Acquis / À ancrer;
 - J10 devient le mécanisme central de conservation longue;
 - charge future mesurable et visible.
 
@@ -370,7 +471,8 @@ Protection: réutiliser les politiques E-Ink actuelles; stress test transitions 
 - soirées mardi/jeudi/samedi plus chargées;
 - corpus acquis augmente plus vite;
 - une erreur J10 a un impact plus critique;
-- besoin de tests process death et multi-tour plus poussés.
+- édition des plages devient une opération sensible;
+- besoin de tests process death, multi-tour et multi-plages plus poussés.
 
 ## 12. Critères de GO avant implémentation finale
 
@@ -381,7 +483,11 @@ La mise à jour ne peut être déclarée prête que si:
 - quotas 1/2/3 unités sont déterministes et testés;
 - demi-page ne traverse ni page ni sourate et ne coupe pas de verset;
 - acquisition ne se produit qu’après validations individuelles + quota groupé;
-- corpus acquis / à ancrer ne se chevauchent jamais;
+- plusieurs plages Acquis sont gérées sans perte;
+- plusieurs plages À ancrer sont gérées sans perte;
+- Acquis / À ancrer ne se chevauchent jamais;
+- transfert À ancrer -> Acquis est atomique;
+- ajout/modification/suppression d’une plage réconcilie correctement les curseurs et J10;
 - migration 0.7.4 est idempotente et sans perte;
 - vitesse calibrée est préservée;
 - 7 s/ligne n’est qu’une base Entretien/J10;
