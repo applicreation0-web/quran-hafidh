@@ -51,15 +51,22 @@ final class ConsolidationCycleEngine {
         private final List<Protocol> protocols;
         private final int sessionGroupSize;
         private final boolean open;
+        private final int stage;
+        private final int nextUnitIndex;
+        private final int donePerStage;
 
         private Session(String sessionId, Cycle cycle, List<String> unitIds,
-                        List<Protocol> protocols, int sessionGroupSize, boolean open) {
+                        List<Protocol> protocols, int sessionGroupSize, boolean open,
+                        int stage, int nextUnitIndex, int donePerStage) {
             this.sessionId = sessionId;
             this.cycle = cycle;
             this.unitIds = Collections.unmodifiableList(new ArrayList<>(unitIds));
             this.protocols = Collections.unmodifiableList(new ArrayList<>(protocols));
             this.sessionGroupSize = sessionGroupSize;
             this.open = open;
+            this.stage = stage;
+            this.nextUnitIndex = nextUnitIndex;
+            this.donePerStage = donePerStage;
         }
 
         String sessionId() { return sessionId; }
@@ -67,6 +74,10 @@ final class ConsolidationCycleEngine {
         List<String> unitIds() { return unitIds; }
         int sessionGroupSize() { return sessionGroupSize; }
         boolean open() { return open; }
+        int stage() { return stage; }
+        int nextUnitIndex() { return nextUnitIndex; }
+        int donePerStage() { return donePerStage; }
+        boolean readyToClose() { return stage >= 5; }
 
         int quotaAt(int position) {
             return ConsolidationCycleEngine.quota(protocolAt(position), sessionGroupSize, position);
@@ -120,7 +131,37 @@ final class ConsolidationCycleEngine {
             protocols.add(unit.protocol());
         }
         Cycle opened = new Cycle(cycle.cycleId(), cycle.family(), cycle.units(), true);
-        return new Session(sessionId, opened, ids, protocols, groupSize, true);
+        int[] normalized = normalizeProgress(protocols, groupSize, 0, 0, 0);
+        return new Session(sessionId, opened, ids, protocols, groupSize, true,
+            normalized[0], normalized[1], normalized[2]);
+    }
+
+    Session recordRepetition(Session session) {
+        if (session == null) throw new IllegalArgumentException("session required");
+        if (!session.open()) throw new IllegalStateException("session is closed");
+        if (session.readyToClose()) throw new IllegalStateException("session quotas already complete");
+
+        int[] current = normalizeProgress(session.protocols, session.sessionGroupSize,
+            session.stage, session.nextUnitIndex, session.donePerStage);
+        int stage = current[0];
+        int unitIndex = current[1];
+        int done = current[2];
+        if (stage >= 5) throw new IllegalStateException("session quotas already complete");
+
+        int target = stageVector(session.protocols.get(unitIndex), session.sessionGroupSize, unitIndex)[stage];
+        if (target <= 0) throw new IllegalStateException("normalized progress points to zero quota");
+        done++;
+        if (done >= target) {
+            done = 0;
+            unitIndex++;
+            if (unitIndex >= session.sessionGroupSize) {
+                unitIndex = 0;
+                stage++;
+            }
+        }
+        int[] next = normalizeProgress(session.protocols, session.sessionGroupSize, stage, unitIndex, done);
+        return new Session(session.sessionId, session.cycle, session.unitIds, session.protocols,
+            session.sessionGroupSize, true, next[0], next[1], next[2]);
     }
 
     Session closeSession(Session session) {
@@ -129,7 +170,7 @@ final class ConsolidationCycleEngine {
         Cycle current = session.cycle();
         Cycle closed = new Cycle(current.cycleId(), current.family(), current.units(), false);
         return new Session(session.sessionId(), closed, session.unitIds, session.protocols,
-            session.sessionGroupSize(), false);
+            session.sessionGroupSize(), false, session.stage, session.nextUnitIndex, session.donePerStage);
     }
 
     static int quota(Protocol protocol, int groupSize, int position) {
@@ -169,6 +210,33 @@ final class ConsolidationCycleEngine {
             default:
                 throw new IllegalArgumentException("unsupported protocol");
         }
+    }
+
+    private static int[] normalizeProgress(List<Protocol> protocols, int groupSize,
+                                           int stage, int unitIndex, int done) {
+        if (protocols == null || protocols.size() != groupSize || groupSize < 1 || groupSize > 3) {
+            throw new IllegalStateException("invalid frozen consolidation snapshot");
+        }
+        if (stage < 0 || stage > 5 || unitIndex < 0 || unitIndex >= groupSize || done < 0) {
+            throw new IllegalStateException("invalid consolidation progress");
+        }
+        int normalizedStage = stage;
+        int normalizedUnit = unitIndex;
+        int normalizedDone = done;
+        while (normalizedStage < 5) {
+            int target = stageVector(protocols.get(normalizedUnit), groupSize, normalizedUnit)[normalizedStage];
+            if (target > 0) {
+                if (normalizedDone >= target) throw new IllegalStateException("progress exceeds stage quota");
+                return new int[]{normalizedStage, normalizedUnit, normalizedDone};
+            }
+            if (normalizedDone != 0) throw new IllegalStateException("zero-quota stage cannot have progress");
+            normalizedUnit++;
+            if (normalizedUnit >= groupSize) {
+                normalizedUnit = 0;
+                normalizedStage++;
+            }
+        }
+        return new int[]{5, 0, 0};
     }
 
     private static void validateUnitForFamily(Family family, Unit unit) {
