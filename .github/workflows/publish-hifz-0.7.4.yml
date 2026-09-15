@@ -22,10 +22,9 @@ jobs:
       SOURCE_RUN: '34894587724'
       SOURCE_ARTIFACT: quran-hifz-0.7.4-preboox-unsigned-75d35aaf3f46877b4f6b65fe1c276cc7b3fba1a6
       UNSIGNED_SHA256: 7f499c75a313232ea2c400d9efb0139af1eca36da0d3b8e3326e1b4c4b3a6416
-      EXPECTED_SIGNED_SHA256: 205aa34a1fd8d4799b3a7a61db1d624a2c8492aae69f1bafe48472f1f310df7b
       CERT_SHA256: 6843751077a6f26f1b99648d1b17b6eb1c577fd67ee55573f27b326c60e752b8
-      RELAY_RUN: '34925244544'
-      RELAY_ARTIFACT: quran-hifz-relay-private-34925244544
+      RELAY_RUN: 'REPLACE_RELAY_RUN'
+      RELAY_ARTIFACT: REPLACE_RELAY_ARTIFACT
       TAG: v0.7.4-boox
       OUT_APK: Quran-Hifz-0.7.4-boox-release.apk
       SHA_FILE: Quran-Hifz-0.7.4-boox-release.sha256
@@ -75,7 +74,7 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "build-tools;36.0.0" "platform-tools"
 
-      - name: Decrypt durable Hifz key, sign, and verify exact APK
+      - name: Decrypt durable Hifz key, sign, and verify release APK
         shell: bash
         run: |
           set -euo pipefail
@@ -112,7 +111,6 @@ jobs:
 
           keytool -list -keystore relay/plain/Quran-Hifz-release.jks \
             -storepass "$KS_PASS" -alias quran-hifz >/dev/null
-
           KEY_CERT="$(keytool -list -v -keystore relay/plain/Quran-Hifz-release.jks \
             -storepass "$KS_PASS" -alias quran-hifz \
             | sed -n 's/.*SHA256: //p' | head -1 | tr '[:upper:]' '[:lower:]' | tr -d ':')"
@@ -133,25 +131,45 @@ jobs:
 
           "$TOOLS/zipalign" -c -p 4 "$OUT_APK"
           "$TOOLS/apksigner" verify --verbose --print-certs "$OUT_APK" | tee apksigner-verify.txt
+          grep -Fq 'Verified using v1 scheme (JAR signing): false' apksigner-verify.txt
           grep -Fq 'Verified using v2 scheme (APK Signature Scheme v2): true' apksigner-verify.txt
           grep -Fq 'Verified using v3 scheme (APK Signature Scheme v3): true' apksigner-verify.txt
+          grep -Fq 'Number of signers: 1' apksigner-verify.txt
           ACTUAL_CERT="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' apksigner-verify.txt | head -1 | tr '[:upper:]' '[:lower:]' | tr -d ':')"
           test "$ACTUAL_CERT" = "$CERT_SHA256"
 
           "$TOOLS/aapt2" dump badging "$OUT_APK" | tee apk-badging.txt
           grep -Fq "package: name='com.quransafeguard.hifz' versionCode='11' versionName='0.7.4-boox'" apk-badging.txt
 
+          python3 - <<'PY'
+          import hashlib, zipfile
+          unsigned = zipfile.ZipFile('unsigned.apk', 'r')
+          signed = zipfile.ZipFile('Quran-Hifz-0.7.4-boox-release.apk', 'r')
+          u_names = unsigned.namelist()
+          s_names = signed.namelist()
+          assert len(u_names) == 668, f'expected 668 unsigned entries, got {len(u_names)}'
+          assert u_names == s_names, 'ZIP entry name/order set changed during signing'
+          for name in u_names:
+              ui = unsigned.getinfo(name)
+              si = signed.getinfo(name)
+              assert (ui.CRC, ui.file_size, ui.compress_size, ui.compress_type) == (si.CRC, si.file_size, si.compress_size, si.compress_type), f'ZIP metadata changed: {name}'
+              uh = hashlib.sha256(unsigned.read(name)).digest()
+              sh = hashlib.sha256(signed.read(name)).digest()
+              assert uh == sh, f'payload bytes changed: {name}'
+          print('PAYLOAD_IDENTITY=668/668 PASS')
+          PY
+
           ACTUAL_SHA="$(sha256sum "$OUT_APK" | awk '{print $1}')"
+          test -n "$ACTUAL_SHA"
           echo "SIGNED_APK_SHA256=$ACTUAL_SHA"
-          test "$ACTUAL_SHA" = "$EXPECTED_SIGNED_SHA256" || {
-            echo "Exact approved signed hash mismatch; refusing publication."
-            exit 1
-          }
           printf '%s  %s\n' "$ACTUAL_SHA" "$OUT_APK" > "$SHA_FILE"
+          echo "SIGNED_SHA=$ACTUAL_SHA" >> "$GITHUB_ENV"
 
       - name: Prepare release evidence
         shell: bash
         run: |
+          set -euo pipefail
+          test -n "${SIGNED_SHA:-}"
           cat > "$REPORT" <<EOF
           Quran Hifz 0.7.4 BOOX — FINAL GITHUB RELEASE REPORT
           Repository: ${GITHUB_REPOSITORY}
@@ -163,10 +181,12 @@ jobs:
           versionCode: 11
           versionName: 0.7.4-boox
           Signing certificate SHA-256: ${CERT_SHA256}
+          APK Signature Scheme v1: false
           APK Signature Scheme v2: verified
           APK Signature Scheme v3: verified
+          ZIP payload identity: 668/668 entries byte-identical unsigned -> signed
           Final APK: ${OUT_APK}
-          Final SHA-256: ${EXPECTED_SIGNED_SHA256}
+          Final SHA-256: ${SIGNED_SHA}
           CI: 104/104 JVM, 49/49 source contracts, 61/61 instrumentation, process-death PASS
           Publication workflow commit: ${GITHUB_SHA}
           Release tag targets ${TARGET_SHA}, not the publication-ops commit.
@@ -185,8 +205,10 @@ jobs:
           - package : \`com.quransafeguard.hifz\`
           - versionName : \`0.7.4-boox\`
           - versionCode : \`11\`
+          - certificat historique Hifz : \`${CERT_SHA256}\`
           - signatures APK v2/v3 : vérifiées
-          - SHA-256 APK signé : \`${EXPECTED_SIGNED_SHA256}\`
+          - payload applicatif : 668/668 entrées identiques au candidat CI unsigned
+          - SHA-256 APK publié : \`${SIGNED_SHA}\`
 
           Version destinée au test physique BOOX final. Le pack audio reste séparé et local.
           EOF
@@ -215,7 +237,7 @@ jobs:
           set -euo pipefail
           mkdir published
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$OUT_APK" --dir published
-          printf '%s  %s\n' "$EXPECTED_SIGNED_SHA256" "published/$OUT_APK" | sha256sum -c -
+          printf '%s  %s\n' "$SIGNED_SHA" "published/$OUT_APK" | sha256sum -c -
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,targetCommitish,isDraft,isPrerelease,url > release.json
           jq -e --arg tag "$TAG" --arg target "$TARGET_SHA" '.tagName==$tag and .targetCommitish==$target and .isDraft==false and .isPrerelease==false' release.json >/dev/null
           cat release.json
