@@ -27,52 +27,14 @@ jobs:
           path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java')
           text = path.read_text(encoding='utf-8')
 
-          old = '''        if (schema == 4) {
-              migrateV4ToV5();
-              return;
-          }
-          if (schema != PreviewConfig.SCHEMA_VERSION) {
-              throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
-          }
-          '''
-          new = '''        if (schema == 4) {
-              migrateV4ToV5();
-              schema = 5;
-          }
-          if (schema == 5) {
-              migrateV5ToV6();
-              schema = 6;
-          }
-          if (schema != PreviewConfig.SCHEMA_VERSION) {
-              throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
-          }
-          '''
+          old = "        if (schema == 4) {\n            migrateV4ToV5();\n            return;\n        }\n        if (schema != PreviewConfig.SCHEMA_VERSION) {\n            throw new IllegalStateException(\"Unsupported Hifz preview schema: \" + schema);\n        }\n"
+          new = "        if (schema == 4) {\n            migrateV4ToV5();\n            schema = 5;\n        }\n        if (schema == 5) {\n            migrateV5ToV6();\n            schema = 6;\n        }\n        if (schema != PreviewConfig.SCHEMA_VERSION) {\n            throw new IllegalStateException(\"Unsupported Hifz preview schema: \" + schema);\n        }\n"
           if text.count(old) != 1:
               raise SystemExit(f'ensureSchema target count={text.count(old)}')
           text = text.replace(old, new, 1)
 
-          marker = '''    private void migrateV1ToV2() {
-          '''
-          method = '''    private void migrateV5ToV6() {
-              boolean calibrated = p.getBoolean("murajaahSpeedCalibrated", false);
-              double existing = p.getFloat(
-                  "murajaahSecPerLine",
-                  9.0f
-              );
-              double migrated = HifzV6Migration.migratedMaintenanceSecondsPerLine(
-                  existing,
-                  calibrated
-              );
-              SharedPreferences.Editor e = p.edit()
-                  .putInt("schema", 6)
-                  .putFloat("murajaahSecPerLine", (float) migrated);
-              if (!e.commit()) {
-                  throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
-              }
-          }
-
-          private void migrateV1ToV2() {
-          '''
+          marker = "    private void migrateV1ToV2() {\n"
+          method = "    private void migrateV5ToV6() {\n        boolean calibrated = p.getBoolean(\"murajaahSpeedCalibrated\", false);\n        double existing = p.getFloat(\n            \"murajaahSecPerLine\",\n            9.0f\n        );\n        double migrated = HifzV6Migration.migratedMaintenanceSecondsPerLine(\n            existing,\n            calibrated\n        );\n        SharedPreferences.Editor e = p.edit()\n            .putInt(\"schema\", 6)\n            .putFloat(\"murajaahSecPerLine\", (float) migrated);\n        if (!e.commit()) {\n            throw new IllegalStateException(\"Unable to migrate Hifz schema v5 to v6\");\n        }\n    }\n\n    private void migrateV1ToV2() {\n"
           if text.count(marker) != 1:
               raise SystemExit(f'method insertion target count={text.count(marker)}')
           text = text.replace(marker, method, 1)
@@ -81,7 +43,7 @@ jobs:
           PY
 
           git diff --check
-          git diff -- hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+          grep -n -A28 -B8 'migrateV5ToV6' hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
 
       - name: Commit production patch and remove one-shot workflow
         shell: bash
