@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   apply:
-    if: github.event.head_commit.message == 'chore: stage scheduled date patch'
+    if: github.event.head_commit.message == 'chore: retry scheduled date patch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,8 +19,10 @@ jobs:
           fetch-depth: 0
 
       - name: Apply minimal scheduled-date product change
-        shell: python
+        shell: bash
         run: |
+          set -euo pipefail
+          python3 - <<'PY'
           from pathlib import Path
 
           path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java')
@@ -36,6 +38,7 @@ jobs:
           assert text.count(old_block) == 1, 'session-date anchor changed'
           text = text.replace(old_block, new_block, 1)
           path.write_text(text)
+          PY
 
       - name: Commit product change
         shell: bash
