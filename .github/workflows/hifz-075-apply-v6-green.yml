@@ -4,195 +4,37 @@ on:
   push:
     branches:
       - work/hifz-0.7.5-retention-j10
+    paths:
+      - .github/workflows/hifz-075-apply-v6-green.yml
 
 permissions:
   contents: write
 
 jobs:
   apply-green:
-    if: github.event.head_commit.message == 'stage schema6 migration green patch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: work/hifz-0.7.5-retention-j10
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Apply deterministic schema 6 migration persistence patch
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java')
-          text = path.read_text(encoding='utf-8')
-
-          replacements = [
-              ('        ensureSchema();\n        migrateLegacyGates(context);',
-               '        ensureSchema(context);\n        migrateLegacyGates(context);'),
-              ('    private void ensureSchema() {', '    private void ensureSchema(Context context) {'),
-              ('            migrateV5ToV6();\n            schema = 6;',
-               '            migrateV5ToV6(context);\n            schema = 6;'),
-              ('        ensureSchema();\n    }', '        ensureSchema(null);\n    }'),
-          ]
-          for old, new in replacements:
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'replacement target count={count}: {old!r}')
-              text = text.replace(old, new, 1)
-
-          old_method = '''    private void migrateV5ToV6() {
-        boolean calibrated = p.getBoolean("murajaahSpeedCalibrated", false);
-        double existing = p.getFloat(
-            "murajaahSecPerLine",
-            9.0f
-        );
-        double migrated = HifzV6Migration.migratedMaintenanceSecondsPerLine(
-            existing,
-            calibrated
-        );
-        SharedPreferences.Editor e = p.edit()
-            .putInt("schema", 6)
-            .putFloat("murajaahSecPerLine", (float) migrated);
-        if (!e.commit()) {
-            throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
-        }
-    }
-'''
-
-          new_method = '''    private void migrateV5ToV6(Context context) {
-        if (context == null) throw new IllegalStateException("Context required for schema v5 to v6 migration");
-
-        boolean calibrated = p.getBoolean("murajaahSpeedCalibrated", false);
-        double existing = p.getFloat("murajaahSecPerLine", 9.0f);
-        double migrated = HifzV6Migration.migratedMaintenanceSecondsPerLine(existing, calibrated);
-
-        GeometryRepository geometry = GeometryRepository.get(context);
-        ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
-        for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
-
-        LinkedHashSet<String> pendingLineIds = new LinkedHashSet<>(
-            CorpusLinePolicy.ownedLineIds(unconsolidatedPromotedRanges(), allLines));
-
-        LinkedHashSet<String> legacyStableLineIds = new LinkedHashSet<>();
-        EligibleCorpus legacyStableCorpus = murajaahCorpus();
-        for (GeometryRepository.LineMeta line : allLines) {
-            if (legacyStableCorpus.contains(CorpusLinePolicy.ownerVerse(line))) {
-                legacyStableLineIds.add(line.id);
-            }
-        }
-
-        LinkedHashMap<String, Long> recentSabqiAddedOnEpochDays = new LinkedHashMap<>();
-        try {
-            JSONArray recent = new JSONArray(p.getString("recentSabqi", "[]"));
-            for (int itemIndex = 0; itemIndex < recent.length(); itemIndex++) {
-                JSONObject item = recent.getJSONObject(itemIndex);
-                int startLine = Math.max(0, item.getInt("start"));
-                int endLine = Math.min(geometry.lineCount() - 1, item.getInt("end"));
-                LocalDate addedOn = safeDate(item.optString("addedOn", ""), null);
-                for (int lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-                    String lineId = geometry.line(lineIndex).id;
-                    legacyStableLineIds.add(lineId);
-                    if (addedOn != null) recentSabqiAddedOnEpochDays.put(lineId, addedOn.toEpochDay());
-                }
-            }
-        } catch (Exception error) {
-            throw new IllegalStateException("Corrupt recent Sabqi queue during schema v6 migration", error);
-        }
-
-        LinkedHashMap<String, Long> legacyJ10EpochDays = new LinkedHashMap<>();
-        for (java.util.Map.Entry<String, LocalDate> entry : new J10ReviewStore(context).snapshot().entrySet()) {
-            legacyJ10EpochDays.put(entry.getKey(), entry.getValue().toEpochDay());
-        }
-
-        LinkedHashSet<String> structurallyCompletedPendingLineIds = new LinkedHashSet<>();
-        int completedBlocks = Math.max(0, p.getInt("itqanBlockIndex", 0));
-        VerseRef unitStart = optionalRef("itqanUnitStart");
-        VerseRef unitEnd = optionalRef("itqanUnitEnd");
-        if (completedBlocks > 0 && unitStart != null && unitEnd != null) {
-            List<VerseRef> unitVerses = geometry.versesForRange(unitStart, unitEnd);
-            if (containsHardAnchoringSurah(hardAnchoringSurahs(), unitVerses)) {
-                List<String> unitLines = geometry.lineIdsForVerseRange(unitStart, unitEnd);
-                int[] segments = geometry.surahSegmentLineCounts(unitStart, unitEnd);
-                int blockCount = PreviewConfig.fractionatedBlockCount(segments);
-                for (int block = 0; block < Math.min(completedBlocks, blockCount); block++) {
-                    int from = PreviewConfig.fractionatedBlockStart(segments, block);
-                    int length = PreviewConfig.fractionatedBlockLength(segments, block);
-                    int through = Math.min(unitLines.size(), from + length);
-                    for (int lineIndex = Math.max(0, from); lineIndex < through; lineIndex++) {
-                        String lineId = unitLines.get(lineIndex);
-                        if (pendingLineIds.contains(lineId)) structurallyCompletedPendingLineIds.add(lineId);
-                    }
-                }
-            }
-        }
-
-        HifzCorpusState state = HifzV6Migration.classify(new HifzV6Migration.Input(
-            pendingLineIds,
-            structurallyCompletedPendingLineIds,
-            legacyStableLineIds,
-            legacyJ10EpochDays,
-            recentSabqiAddedOnEpochDays));
-
-        SharedPreferences.Editor e = p.edit()
-            .putString("v6LearnedLineIds", lineIdsJson(state.toAnchorLineIds()))
-            .putString("v6StabilizedLineIds", "[]")
-            .putString("v6AcquiredCreditLineIds", lineIdsJson(state.acquiredCreditLineIds()))
-            .putString("v6LegacyPartialAcquiredLineIds", lineIdsJson(state.legacyPartialAcquiredLineIds()))
-            .putString("v6QuarantineLineIds", lineIdsJson(state.quarantineLineIds()))
-            .putString("v6QuarantineLegacyLastReviewed", epochDayMapJson(state.quarantineLegacyLastReviewed()))
-            .putString("v6ActiveJ10LastReviewed", epochDayMapJson(state.activeLastReviewedEpochDays()))
-            .putString("v6UnknownDueLineIds", lineIdsJson(state.unknownDueLineIds()))
-            .putString("v6LegacyImportedLineIds", lineIdsJson(state.legacyImportedLineIds()))
-            .putString("v6LegacyOrphanJ10Dates", epochDayMapJson(state.legacyOrphanDates()))
-            .putFloat("murajaahSecPerLine", (float) migrated)
-            .putInt("schema", 6);
-        if (!e.commit()) {
-            throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
-        }
-
-        if (p.getInt("schema", -1) != 6
-                || !p.contains("v6LearnedLineIds")
-                || !p.contains("v6AcquiredCreditLineIds")
-                || !p.contains("v6ActiveJ10LastReviewed")) {
-            throw new IllegalStateException("Incomplete Hifz schema v6 migration commit");
-        }
-    }
-
-    private static String lineIdsJson(Iterable<String> lineIds) {
-        JSONArray array = new JSONArray();
-        if (lineIds != null) for (String lineId : lineIds) array.put(lineId);
-        return array.toString();
-    }
-
-    private static String epochDayMapJson(java.util.Map<String, Long> values) {
-        JSONObject object = new JSONObject();
-        try {
-            if (values != null) {
-                for (java.util.Map.Entry<String, Long> entry : values.entrySet()) {
-                    object.put(entry.getKey(), entry.getValue());
-                }
-            }
-        } catch (Exception error) {
-            throw new IllegalStateException("Unable to serialize schema v6 J10 state", error);
-        }
-        return object.toString();
-    }
-'''
-
-          count = text.count(old_method)
-          if count != 1:
-              raise SystemExit(f'migrateV5ToV6 target count={count}')
-          text = text.replace(old_method, new_method, 1)
-          path.write_text(text, encoding='utf-8')
-          PY
-
-          rm .github/workflows/hifz-075-apply-v6-green.yml
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpwYXRoID0gUGF0aCgnaGlmei1hcHAvc3JjL21haW4vamF2YS9jb20vcXVyYW5zYWZlZ3VhcmQvaGlmei9wcmV2aWV3L0hpZnpQcmVmcy5qYXZhJykKdGV4dCA9IHBhdGgucmVhZF90ZXh0KGVuY29kaW5nPSd1dGYtOCcpCgpyZXBsYWNlbWVudHMgPSBbCiAgICAoJyAgICAgICAgZW5zdXJlU2NoZW1hKCk7XG4gICAgICAgIG1pZ3JhdGVMZWdhY3lHYXRlcyhjb250ZXh0KTsnLAogICAgICcgICAgICAgIGVuc3VyZVNjaGVtYShjb250ZXh0KTtcbiAgICAgICAgbWlncmF0ZUxlZ2FjeUdhdGVzKGNvbnRleHQpOycpLAogICAgKCcgICAgcHJpdmF0ZSB2b2lkIGVuc3VyZVNjaGVtYSgpIHsnLCAnICAgIHByaXZhdGUgdm9pZCBlbnN1cmVTY2hlbWEoQ29udGV4dCBjb250ZXh0KSB7JyksCiAgICAoJyAgICAgICAgICAgIG1pZ3JhdGVWNVRvVjYoKTtcbiAgICAgICAgICAgIHNjaGVtYSA9IDY7JywKICAgICAnICAgICAgICAgICAgbWlncmF0ZVY1VG9WNyhjb250ZXh0KTtcbiAgICAgICAgICAgIHNjaGVtYSA9IDY7JyksCiAgICAoJyAgICAgICAgZW5zdXJlU2NoZW1hKCk7XG4gICAgfScsICcgICAgICAgIGVuc3VyZVNjaGVtYShudWxsKTtcbiAgICB9JyksCl0KZm9yIG9sZCwgbmV3IGluIHJlcGxhY2VtZW50czoKICAgIGNvdW50ID0gdGV4dC5jb3VudChvbGQpCiAgICBpZiBjb3VudCAhPSAxOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoZidyZXBsYWNlbWVudCB0YXJnZXQgY291bnQ9e2NvdW50fToge29sZCFyfScpCiAgICB0ZXh0ID0gdGV4dC5yZXBsYWNlKG9sZCwgbmV3LCAxKQoKb2xkX21ldGhvZCA9ICcnJyAgICBwcml2YXRlIHZvaWQgbWlncmF0ZVY1VG9WNjgpIHsKICAgICAgICBib29sZWFuIGNhbGlicmF0ZWQgPSBwLmdldEJvb2xlYW4oIm11cmFqYWFoU3BlZWRDYWxpYnJhdGVkIiwgZmFsc2UpOwogICAgICAgIGRvdWJsZSBleGlzdGluZyA9IHAuZ2V0RmxvYXQoCiAgICAgICAgICAgICJtdXJhamFhaFNlY1BlckxpbmUiLAogICAgICAgICAgICA5LjBmCiAgICAgICAgKTsKICAgICAgICBkb3VibGUgbWlncmF0ZWQgPSBIaWZ6VjZNaWdyYXRpb24ubWlncmF0ZWRNYWludGVuYW5jZVNlY29uZHNQZXJMaW5lKAogICAgICAgICAgICBleGlzdGluZywKICAgICAgICAgICAgY2FsaWJyYXRlZAogICAgICAgICk7CiAgICAgICAgU2hhcmVkUHJlZmVyZW5jZXMuRWRpdG9yIGUgPSBwLmVkaXQoKQogICAgICAgICAgICAucHV0SW50KCJzY2hlbWEiLCA2KQogICAgICAgICAgICAucHV0RmxvYXQoIm11cmFqYWFoU2VjUGVyTGluZSIsIChmbG9hdCkgbWlncmF0ZWQpOwogICAgICAgIGlmICghZS5jb21taXQoKSkgewogICAgICAgICAgICB0aHJvdyBuZXcgSWxsZWdhbFN0YXRlRXhjZXB0aW9uKCJVbmFibGUgdG8gbWlncmF0ZSBIaWZ6IHNjaGVtYSB2NSB0byB2NiIpOwogICAgICAgIH0KICAgIH0KJycnCgpuZXdfbWV0aG9kID0gJycnICAgIHByaXZhdGUgdm9pZCBtaWdyYXRlVjVUb1Y2KENvbnRleHQgY29udGV4dCkgewogICAgICAgIGlmIChjb250ZXh0ID09IG51bGwpIHRocm93IG5ldyBJbGxlZ2FsU3RhdGVFeGNlcHRpb24oIkNvbnRleHQgcmVxdWlyZWQgZm9yIHNjaGVtYSB2NSB0byB2NiBtaWdyYXRpb24iKTsKCiAgICAgICAgYm9vbGVhbiBjYWxpYnJhdGVkID0gcC5nZXRCb29sZWFuKCJtdXJhamFhaFNwZWVkQ2FsaWJyYXRlZCIsIGZhbHNlKTsKICAgICAgICBkb3VibGUgZXhpc3RpbmcgPSBwLmdldEZsb2F0KCJtdXJhamFhaFNlY1BlckxpbmUiLCA5LjBmKTsKICAgICAgICBkb3VibGUgbWlncmF0ZWQgPSBIaWZ6VjZNaWdyYXRpb24ubWlncmF0ZWRNYWludGVuYW5jZVNlY29uZHNQZXJMaW5lKGV4aXN0aW5nLCBjYWxpYnJhdGVkKTsKCiAgICAgICAgR2VvbWV0cnlSZXBvc2l0b3J5IGdlb21ldHJ5ID0gR2VvbWV0cnlSZXBvc2l0b3J5LmdldChjb250ZXh0KTsKICAgICAgICBBcnJheUxpc3Q8R2VvbWV0cnlSZXBvc2l0b3J5LkxpbmVNZXRhPiBhbGxMaW5lcyA9IG5ldyBBcnJheUxpc3Q8PigpOwogICAgICAgIGZvciAoaW50IGkgPSAwOyBpIDwgZ2VvbWV0cnkubGluZUNvdW50KCk7IGkrKykgYWxsTGluZXMuYWRkKGdlb21ldHJ5LmxpbmUoaSkpOwoKICAgICAgICBMaW5rZWRIYXNoU2V0PFN0cmluZz4gcGVuZGluZ0xpbmVJZHMgPSBuZXcgTGlua2VkSGFzaFNldDw+KAogICAgICAgICAgICBDb3JwdXNMaW5lUG9saWN5Lm93bmVkTGluZUlkcyh1bmNvbnNvbGlkYXRlZFByb21vdGVkUmFuZ2VzKCksIGFsbExpbmVzKSk7CgogICAgICAgIExpbmtlZEhhc2hTZXQ8U3RyaW5nPiBsZWdhY3lTdGFibGVMaW5lSWRzID0gbmV3IExpbmtlZEhhc2hTZXQ8PigpOwogICAgICAgIEVsaWdpYmxlQ29ycHVzIGxlZ2FjeVN0YWJsZUNvcnB1cyA9IG11cmFqYWFoQ29ycHVzKCk7CiAgICAgICAgZm9yIChHZW9tZXRyeVJlcG9zaXRvcnkuTGluZU1ldGEgbGluZSA6IGFsbExpbmVzKSB7CiAgICAgICAgICAgIGlmIChsZWdhY3lTdGFibGVDb3JwdXMuY29udGFpbnMoQ29ycHVzTGluZVBvbGljeS5vd25lclZlcnNlKGxpbmUpKSkgewogICAgICAgICAgICAgICAgbGVnYWN5U3RhYmxlTGluZUlkcy5hZGQobGluZS5pZCk7CiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIExpbmtlZEhhc2hNYXA8U3RyaW5nLCBMb25nPiByZWNlbnRTYWJxaUFkZGVkT25FcG9jaERheXMgPSBuZXcgTGlua2VkSGFzaE1hcDw+KCk7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgSlNPTkFycmF5IHJlY2VudCA9IG5ldyBKU09OQXJyYXkocC5nZXRTdHJpbmcoInJlY2VudFNhYnFpIiwgIltdIikpOwogICAgICAgICAgICBmb3IgKGludCBpdGVtSW5kZXggPSAwOyBpdGVtSW5kZXggPCByZWNlbnQubGVuZ3RoKCk7IGl0ZW1JbmRleCsrKSB7CiAgICAgICAgICAgICAgICBKU09OT2JqZWN0IGl0ZW0gPSByZWNlbnQuZ2V0SlNPTk9iamVjdChpdGVtSW5kZXgpOwogICAgICAgICAgICAgICAgaW50IHN0YXJ0TGluZSA9IE1hdGgubWF4KDAsIGl0ZW0uZ2V0SW50KCJzdGFydCIpKTsKICAgICAgICAgICAgICAgIGludCBlbmRMaW5lID0gTWF0aC5taW4oZ2VvbWV0cnkubGluZUNvdW50KCkgLSAxLCBpdGVtLmdldEludCgiZW5kIikpOwogICAgICAgICAgICAgICAgTG9jYWxEYXRlIGFkZGVkT24gPSBzYWZlRGF0ZShpdGVtLm9wdFN0cmluZygiYWRkZWRPbiIsICIiKSwgbnVsbCk7CiAgICAgICAgICAgICAgICBmb3IgKGludCBsaW5lSW5kZXggPSBzdGFydExpbmU7IGxpbmVJbmRleCA8PSBlbmRMaW5lOyBsaW5lSW5kZXgrKykgewogICAgICAgICAgICAgICAgICAgIFN0cmluZyBsaW5lSWQgPSBnZW9tZXRyeS5saW5lKGxpbmVJbmRleCkuaWQ7CiAgICAgICAgICAgICAgICAgICAgbGVnYWN5U3RhYmxlTGluZUlkcy5hZGQobGluZUlkKTsKICAgICAgICAgICAgICAgICAgICBpZiAoYWRkZWRPbiAhPSBudWxsKSByZWNlbnRTYWJxaUFkZGVkT25FcG9jaERheXMucHV0KGxpbmVJZCwgYWRkZWRPbi50b0Vwb2NoRGF5KCkpOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGVycm9yKSB7CiAgICAgICAgICAgIHRocm93IG5ldyBJbGxlZ2FsU3RhdGVFeGNlcHRpb24oIkNvcnJ1cHQgcmVjZW50IFNhYnFpIHF1ZXVlIGR1cmluZyBzY2hlbWEgdjYgbWlncmF0aW9uIiwgZXJyb3IpOwogICAgICAgIH0KCiAgICAgICAgTGlua2VkSGFzaE1hcDxTdHJpbmcsIExvbmc+IGxlZ2FjeUoxMEVwb2NoRGF5cyA9IG5ldyBMaW5rZWRIYXNoTWFwPD4oKTsKICAgICAgICBmb3IgKGphdmEudXRpbC5NYXAuRW50cnk8U3RyaW5nLCBMb2NhbERhdGU+IGVudHJ5IDogbmV3IEoxMFJldmlld1N0b3JlKGNvbnRleHQpLnNuYXBzaG90KCkuZW50cnlTZXQoKSkgewogICAgICAgICAgICBsZWdhY3lKMTBFcG9jaERheXMucHV0KGVudHJ5LmdldEtleSgpLCBlbnRyeS5nZXRWYWx1ZSgpLnRvRXBvY2hEYXkoKSk7CiAgICAgICAgfQoKICAgICAgICBMaW5rZWRIYXNoU2V0PFN0cmluZz4gc3RydWN0dXJhbGx5Q29tcGxldGVkUGVuZGluZ0xpbmVJZHMgPSBuZXcgTGlua2VkSGFzaFNldDw+KCk7CiAgICAgICAgaW50IGNvbXBsZXRlZEJsb2NrcyA9IE1hdGgubWF4KDAsIHAuZ2V0SW50KCJpdHFhbkJsb2NrSW5kZXgiLCAwKSk7CiAgICAgICAgVmVyc2VSZWYgdW5pdFN0YXJ0ID0gb3B0aW9uYWxSZWYoIml0cWFuVW5pdFN0YXJ0Iik7CiAgICAgICAgVmVyc2VSZWYgdW5pdEVuZCA9IG9wdGlvbmFsUmVmKCJpdHFhblVuaXRFbmQiKTsKICAgICAgICBpZiAoY29tcGxldGVkQmxvY2tzID4gMCAmJiB1bml0U3RhcnQgIT0gbnVsbCAmJiB1bml0RW5kICE9IG51bGwpIHsKICAgICAgICAgICAgTGlzdDxWZXJzZVJlZj4gdW5pdFZlcnNlcyA9IGdlb21ldHJ5LnZlcnNlc0ZvclJhbmdlKHVuaXRTdGFydCwgdW5pdEVuZCk7CiAgICAgICAgICAgIGlmIChjb250YWluc0hhcmRBbmNob3JpbmdTdXJhaChoYXJkQW5jaG9yaW5nU3VyYWhzKCksIHVuaXRWZXJzZXMpKSB7CiAgICAgICAgICAgICAgICBMaXN0PFN0cmluZz4gdW5pdExpbmVzID0gZ2VvbWV0cnkubGluZUlkc0ZvclZlcnNlUmFuZ2UodW5pdFN0YXJ0LCB1bml0RW5kKTsKICAgICAgICAgICAgICAgIGludFtdIHNlZ21lbnRzID0gZ2VvbWV0cnkuc3VyYWhTZWdtZW50TGluZUNvdW50cyh1bml0U3RhcnQsIHVuaXRFbmQpOwogICAgICAgICAgICAgICAgaW50IGJsb2NrQ291bnQgPSBQcmV2aWV3Q29uZmlnLmZyYWN0aW9uYXRlZEJsb2NrQ291bnQoc2VnbWVudHMpOwogICAgICAgICAgICAgICAgZm9yIChpbnQgYmxvY2sgPSAwOyBibG9jayA8IE1hdGgubWluKGNvbXBsZXRlZEJsb2NrcywgYmxvY2tDb3VudCk7IGJsb2NrKyspIHsKICAgICAgICAgICAgICAgICAgICBpbnQgZnJvbSA9IFByZXZpZXdDb25maWcuZnJhY3Rpb25hdGVkQmxvY2tTdGFydChzZWdtZW50cywgYmxvY2spOwogICAgICAgICAgICAgICAgICAgIGludCBsZW5ndGggPSBQcmV2aWV3Q29uZmlnLmZyYWN0aW9uYXRlZEJsb2NrTGVuZ3RoKHNlZ21lbnRzLCBibG9jayk7CiAgICAgICAgICAgICAgICAgICAgaW50IHRocm91Z2ggPSBNYXRoLm1pbih1bml0TGluZXMuc2l6ZSgpLCBmcm9tICsgbGVuZ3RoKTsKICAgICAgICAgICAgICAgICAgICBmb3IgKGludCBsaW5lSW5kZXggPSBNYXRoLm1heCgwLCBmcm9tKTsgbGluZUluZGV4IDwgdGhyb3VnaDsgbGluZUluZGV4KyspIHsKICAgICAgICAgICAgICAgICAgICAgICAgU3RyaW5nIGxpbmVJZCA9IHVuaXRMaW5lcy5nZXQobGluZUluZGV4KTsKICAgICAgICAgICAgICAgICAgICAgICAgaWYgKHBlbmRpbmdMaW5lSWRzLmNvbnRhaW5zKGxpbmVJZCkpIHN0cnVjdHVyYWxseUNvbXBsZXRlZFBlbmRpbmdMaW5lSWRzLmFkZChsaW5lSWQpOwogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgSGlmekNvcnB1c1N0YXRlIHN0YXRlID0gSGlmelY2TWlncmF0aW9uLmNsYXNzaWZ5KG5ldyBIaWZ6VjZNaWdyYXRpb24uSW5wdXQoCiAgICAgICAgICAgIHBlbmRpbmdMaW5lSWRzLAogICAgICAgICAgICBzdHJ1Y3R1cmFsbHlDb21wbGV0ZWRQZW5kaW5nTGluZUlkcywKICAgICAgICAgICAgbGVnYWN5U3RhYmxlTGluZUlkcywKICAgICAgICAgICAgbGVnYWN5SjEwRXBvY2hEYXlzLAogICAgICAgICAgICByZWNlbnRTYWJxaUFkZGVkT25FcG9jaERheXMpKTsKCiAgICAgICAgU2hhcmVkUHJlZmVyZW5jZXMuRWRpdG9yIGUgPSBwLmVkaXQoKQogICAgICAgICAgICAucHV0U3RyaW5nKCJ2NkxlYXJuZWRMaW5lSWRzIiwgbGluZUlkc0pzb24oc3RhdGUudG9BbmNob3JMaW5lSWRzKCkpKQogICAgICAgICAgICAucHV0U3RyaW5nKCJ2NlN0YWJpbGl6ZWRMaW5lSWRzIiwgIltdIikKICAgICAgICAgICAgLnB1dFN0cmluZygidjZBY3F1aXJlZENyZWRpdExpbmVJZHMiLCBsaW5lSWRzSnNvbihzdGF0ZS5hY3F1aXJlZENyZWRpdExpbmVJZHMoKSkpCiAgICAgICAgICAgIC5wdXRTdHJpbmcoInY2TGVnYWN5UGFydGlhbEFjcXVpcmVkTGluZUlkcyIsIGxpbmVJZHNKc29uKHN0YXRlLmxlZ2FjeVBhcnRpYWxBY3F1aXJlZExpbmVJZHMoKSkpCiAgICAgICAgICAgIC5wdXRTdHJpbmcoInY2UXVhcmFudGluZUxpbmVJZHMiLCBsaW5lSWRzSnNvbihzdGF0ZS5xdWFyYW50aW5lTGluZUlkcygpKSkKICAgICAgICAgICAgLnB1dFN0cmluZygidjZRdWFyYW50aW5lTGVnYWN5TGFzdFJldmlld2VkIiwgZXBvY2hEYXlNYXBKc29uKHN0YXRlLnF1YXJhbnRpbmVMZWdhY3lMYXN0UmV2aWV3ZWQoKSkpCiAgICAgICAgICAgIC5wdXRTdHJpbmcoInY2QWN0aXZlSjEwTGFzdFJldmlld2VkIiwgZXBvY2hEYXlNYXBKc29uKHN0YXRlLmFjdGl2ZUxhc3RSZXZpZXdlZEVwb2NoRGF5cygpKSkKICAgICAgICAgICAgLnB1dFN0cmluZygidjZVbmtub3duRHVlTGluZUlkcyIsIGxpbmVJZHNKc29uKHN0YXRlLnVua25vd25EdWVMaW5lSWRzKCkpKQogICAgICAgICAgICAucHV0U3RyaW5nKCJ2NkxlZ2FjeUltcG9ydGVkTGluZUlkcyIsIGxpbmVJZHNKc29uKHN0YXRlLmxlZ2FjeUltcG9ydGVkTGluZUlkcygpKSkKICAgICAgICAgICAgLnB1dFN0cmluZygidjZMZWdhY3lPcnBoYW5KMTBEYXRlcyIsIGVwb2NoRGF5TWFwSnNvbihzdGF0ZS5sZWdhY3lPcnBoYW5EYXRlcygpKSkKICAgICAgICAgICAgLnB1dEZsb2F0KCJtdXJhamFhaFNlY1BlckxpbmUiLCAoZmxvYXQpIG1pZ3JhdGVkKQogICAgICAgICAgICAucHV0SW50KCJzY2hlbWEiLCA2KTsKICAgICAgICBpZiAoIWUuY29tbWl0KCkpIHsKICAgICAgICAgICAgdGhyb3cgbmV3IElsbGVnYWxTdGF0ZUV4Y2VwdGlvbigiVW5hYmxlIHRvIG1pZ3JhdGUgSGlmeiBzY2hlbWEgdjUgdG8gdjYiKTsKICAgICAgICB9CgogICAgICAgIGlmIChwLmdldEludCgic2NoZW1hIiwgLTEpICE9IDYKICAgICAgICAgICAgICAgIHx8ICFwLmNvbnRhaW5zKCJ2NkxlYXJuZWRMaW5lSWRzIikKICAgICAgICAgICAgICAgIHx8ICFwLmNvbnRhaW5zKCJ2NkFjcXVpcmVkQ3JlZGl0TGluZUlkcyIpCiAgICAgICAgICAgICAgICB8fCAhcC5jb250YWlucygidjZBY3RpdmVKMTBMYXN0UmV2aWV3ZWQiKSkgewogICAgICAgICAgICB0aHJvdyBuZXcgSWxsZWdhbFN0YXRlRXhjZXB0aW9uKCJJbmNvbXBsZXRlIEhpZnogc2NoZW1hIHY2IG1pZ3JhdGlvbiBjb21taXQiKTsKICAgICAgICB9CiAgICB9CgogICAgcHJpdmF0ZSBzdGF0aWMgU3RyaW5nIGxpbmVJZHNKc29uKEl0ZXJhYmxlPFN0cmluZz4gbGluZUlkcykgewogICAgICAgIEpTT05BcnJheSBhcnJheSA9IG5ldyBKU09OQXJyYXkoKTsKICAgICAgICBpZiAobGluZUlkcyAhPSBudWxsKSBmb3IgKFN0cmluZyBsaW5lSWQgOiBsaW5lSWRzKSBhcnJheS5wdXQobGluZUlkKTsKICAgICAgICByZXR1cm4gYXJyYXkudG9TdHJpbmcoKTsKICAgIH0KCiAgICBwcml2YXRlIHN0YXRpYyBTdHJpbmcgZXBvY2hEYXlNYXBKc29uKGphdmEudXRpbC5NYXA8U3RyaW5nLCBMb25nPiB2YWx1ZXMpIHsKICAgICAgICBKU09OT2JqZWN0IG9iamVjdCA9IG5ldyBKU09OT2JqZWN0KCk7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgaWYgKHZhbHVlcyAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBmb3IgKGphdmEudXRpbC5NYXAuRW50cnk8U3RyaW5nLCBMb25nPiBlbnRyeSA6IHZhbHVlcy5lbnRyeVNldCgpKSB7CiAgICAgICAgICAgICAgICAgICAgb2JqZWN0LnB1dChlbnRyeS5nZXRLZXkoKSwgZW50cnkuZ2V0VmFsdWUoKSk7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZXJyb3IpIHsKICAgICAgICAgICAgdGhyb3cgbmV3IElsbGVnYWxTdGF0ZUV4Y2VwdGlvbigiVW5hYmxlIHRvIHNlcmlhbGl6ZSBzY2hlbWEgdjYgSjEwIHN0YXRlIiwgZXJyb3IpOwogICAgICAgIH0KICAgICAgICByZXR1cm4gb2JqZWN0LnRvU3RyaW5nKCk7CiAgICB9CicnJwoKY291bnQgPSB0ZXh0LmNvdW50KG9sZF9tZXRob2QpCmlmIGNvdW50ICE9IDE6CiAgICByYWlzZSBTeXN0ZW1FeGl0KGYnbWlncmF0ZVY1VG9WNiB0YXJnZXQgY291bnQ9e2NvdW50fScpCnRleHQgPSB0ZXh0LnJlcGxhY2Uob2xkX21ldGhvZCwgbmV3X21ldGhvZCwgMSkKcGF0aC53cml0ZV90ZXh0KHRleHQsIGVuY29kaW5nPSd1dGYtOCcpCg==' | base64 -d > /tmp/apply_hifz_v6.py
+          python3 /tmp/apply_hifz_v6.py
           git diff --check
-          git diff -- hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java .github/workflows/hifz-075-apply-v6-green.yml
-          git commit -m "feat: persist schema 6 migration state"
+          grep -n -A140 -B12 'migrateV5ToV6' hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+
+      - name: Commit production patch and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'applicreation0-web'
+          git config user.email 'applicreation0@gmail.com'
+          git rm .github/workflows/hifz-075-apply-v6-green.yml
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+          git commit -m 'feat: persist schema 6 migration state'
           git push origin HEAD:work/hifz-0.7.5-retention-j10
