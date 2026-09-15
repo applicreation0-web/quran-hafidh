@@ -180,5 +180,5 @@ jobs:
           disable-animations: true
           script: >-
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest
-            -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6LegacyJ10MigrationInstrumentedTest
             --stacktrace
