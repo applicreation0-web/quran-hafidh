@@ -1,3 +1,4 @@
-GO
+GO RELAY 2
 Target: 75d35aaf3f46877b4f6b65fe1c276cc7b3fba1a6
 Release: v0.7.4-boox
+Relay bootstrap: 34925244544
