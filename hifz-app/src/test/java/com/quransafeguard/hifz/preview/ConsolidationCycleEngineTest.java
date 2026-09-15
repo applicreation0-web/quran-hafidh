@@ -108,6 +108,35 @@ public final class ConsolidationCycleEngineTest {
         }
     }
 
+    @Test public void openSessionProgressIsExactSkipsZeroStagesAndResumesDeterministically() {
+        ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle = engine.startCycle(
+            "c4", ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("l", ConsolidationCycleEngine.Protocol.LIGHT));
+        cycle = engine.addUnit(cycle,
+            new ConsolidationCycleEngine.Unit("f", ConsolidationCycleEngine.Protocol.FULL));
+        ConsolidationCycleEngine.Session session = engine.openSession(cycle, "s4");
+
+        assertEquals(0, session.stage());
+        assertEquals(0, session.nextUnitIndex());
+        assertEquals(0, session.donePerStage());
+
+        for (int i = 0; i < 10; i++) session = engine.recordRepetition(session);
+        assertEquals(0, session.stage());
+        assertEquals(1, session.nextUnitIndex());
+        assertEquals(0, session.donePerStage());
+
+        for (int i = 0; i < 7; i++) session = engine.recordRepetition(session);
+        assertEquals("LIGHT zero stage is skipped when stage 0 closes", 1, session.stage());
+        assertEquals("FULL unit is the only unit needing stage 1 work", 1, session.nextUnitIndex());
+        assertEquals(0, session.donePerStage());
+
+        session = engine.recordRepetition(session);
+        assertEquals(1, session.stage());
+        assertEquals(1, session.nextUnitIndex());
+        assertEquals(1, session.donePerStage());
+    }
+
     private static void assertPlan(ConsolidationCycleEngine.Protocol protocol, int size, int[][] expectedVectors) {
         assertEquals(size, expectedVectors.length);
         for (int position = 0; position < size; position++) {
