@@ -2,6 +2,9 @@ package com.quransafeguard.hifz.preview;
 
 import android.content.Context;
 import android.content.Intent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
@@ -20,11 +23,13 @@ import java.time.ZoneId;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-/** Behavioral C12 proof: an evening review keeps its recorded session date across midnight/restart. */
+/** Behavioral C12 proof: a structured session keeps its recorded scheduled date across restart/carryover. */
 public final class HifzSessionDateInstrumentedTest {
     private static final String HIFZ_PREFS = "quran_hifz_preview_v1";
+    private static final String SCHEDULED_DATE_EXTRA = "scheduled_date";
     private Context context;
 
     @Rule public final TestWatcher resetHifzClock = new TestWatcher() {
@@ -65,5 +70,41 @@ public final class HifzSessionDateInstrumentedTest {
         String lineId = GeometryRepository.get(context).line(0).id;
         Map<String, LocalDate> snapshot = new J10ReviewStore(context).snapshot();
         assertEquals("J10 credit must keep the recorded session date", sessionDay, snapshot.get(lineId));
+    }
+
+    @Test public void carriedLearningSessionCommitsOriginalScheduledDateInsteadOfToday() {
+        LocalDate scheduledDay = LocalDate.of(2026, 9, 14);
+        assertEquals(LocalDate.of(2026, 9, 15), HifzClock.today());
+
+        HifzPrefs prefs = new HifzPrefs(context);
+        assertTrue(prefs.setSabqiProgress(PreviewConfig.SABQI_TOTAL_REPS, 0));
+
+        Intent intent = new Intent(context, HifzSessionActivity.class)
+            .putExtra(HifzSessionActivity.EXTRA_MODE, HifzSessionActivity.SABQI)
+            .putExtra(SCHEDULED_DATE_EXTRA, scheduledDay.toString());
+        try (ActivityScenario<HifzSessionActivity> scenario = ActivityScenario.launch(intent)) {
+            scenario.onActivity(activity -> {
+                Button validate = findButton(activity.findViewById(android.R.id.content), "Valider");
+                assertNotNull("carryover learning must expose its normal validation action", validate);
+                assertTrue(validate.performClick());
+            });
+        }
+
+        HifzPrefs reopened = new HifzPrefs(context);
+        assertEquals(
+            "carryover completion must be attributed to the original scheduled day",
+            scheduledDay.toString(),
+            reopened.lastSabqiDate());
+    }
+
+    private static Button findButton(View root, String label) {
+        if (root instanceof Button && label.contentEquals(((Button) root).getText())) return (Button) root;
+        if (!(root instanceof ViewGroup)) return null;
+        ViewGroup group = (ViewGroup) root;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            Button found = findButton(group.getChildAt(i), label);
+            if (found != null) return found;
+        }
+        return null;
     }
 }
