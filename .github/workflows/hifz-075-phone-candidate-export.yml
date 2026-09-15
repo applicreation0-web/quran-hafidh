@@ -1,0 +1,181 @@
+name: Quran Hifz 0.7.5 PHONE candidate export
+
+on:
+  push:
+    branches:
+      - build/hifz-0.7.5-phone-candidate-6815f6f
+    paths:
+      - .github/workflows/hifz-075-phone-candidate-export.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build-export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      SOURCE_SHA: 6815f6f85156732c927aa38ede624f9e3b64e8df
+      VALIDATED_RUN: '35024204365'
+      VERSION_CODE: '12'
+      VERSION_NAME: 0.7.5-boox
+      PACKAGE_ID: com.quransafeguard.hifz
+    steps:
+      - name: Checkout exact validated candidate source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 1
+
+      - name: Prove exact source provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$SOURCE_SHA"
+          printf 'SOURCE_SHA=%s\nVALIDATED_RUN=%s\n' "$actual" "$VALIDATED_RUN" | tee candidate-provenance.txt
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          repository: applicreation0-web/quran-unlock-android
+          path: baseline109
+
+      - name: Verify and inject validated baseline assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+          mkdir -p app/src/main/assets/mushaf/hafs/kfqc/svg-br app/src/plus/assets/tafsir
+          rm -f app/src/main/assets/mushaf/hafs/kfqc/svg-br/*.svg.br app/src/plus/assets/tafsir/*
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br app/src/main/assets/mushaf/hafs/kfqc/svg-br/
+          cp baseline109/extracted/assets/tafsir/* app/src/plus/assets/tafsir/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate and verify exact Hifz geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 - <<'PY'
+          import json
+          report=json.load(open('geometry-report.json'))
+          assert report.get('page_count') == 604, report
+          assert report.get('unique_line_count') == 8820, report
+          assert report.get('multi_page_verse_count') == 0, report
+          print('GEOMETRY_COUNTS_OK 604 8820 MULTI_PAGE_VERSES=0')
+          PY
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+
+      - name: Install deterministic Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platform-tools' 'platforms;android-37.0' 'build-tools;36.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+          cache-read-only: true
+
+      - name: Assemble unsigned 0.7.5 candidate
+        run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
+
+      - name: Inspect unsigned candidate and packaged corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          apkanalyzer manifest print "$apk" > candidate-manifest.xml
+          test "$(apkanalyzer manifest application-id "$apk")" = "$PACKAGE_ID"
+          test "$(apkanalyzer manifest version-code "$apk")" = "$VERSION_CODE"
+          test "$(apkanalyzer manifest version-name "$apk")" = "$VERSION_NAME"
+          grep -q 'Quran Hifz' candidate-manifest.xml
+          if grep -q 'android:debuggable="true"' candidate-manifest.xml; then exit 1; fi
+          if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' candidate-manifest.xml; then exit 1; fi
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo 'ERROR: candidate must be unsigned before local signing.' >&2
+            exit 1
+          fi
+          echo APK_UNSIGNED_CONFIRMED | tee unsigned-proof.txt
+          unzip -l "$apk" > candidate-apk-list.txt
+          grep -q 'assets/reader109/geometry.json' candidate-apk-list.txt
+          if grep -q 'assets/reader109/audio.json' candidate-apk-list.txt; then exit 1; fi
+          if grep -Eq 'assets/audio/husary-muallim/[0-9]{6}\.mp3' candidate-apk-list.txt; then exit 1; fi
+          if grep -q '\.gz\.b64\.part' candidate-apk-list.txt; then exit 1; fi
+          test "$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' candidate-apk-list.txt | wc -l | tr -d ' ')" = 604
+          test "$(grep -E 'assets/tafsir/al_jalalayn_en\.sqlite\.gz\.part[0-9]{2}' candidate-apk-list.txt | wc -l | tr -d ' ')" = 4
+          test "$(grep -E 'assets/tafsir/qurtubi_en\.sqlite\.gz\.part[0-9]{2}' candidate-apk-list.txt | wc -l | tr -d ' ')" = 4
+          test "$(grep -E 'assets/tafsir/qushayri_en\.sqlite\.gz\.part[0-9]{2}' candidate-apk-list.txt | wc -l | tr -d ' ')" = 2
+          APK_PATH="$apk" python3 - <<'PY'
+          import gzip, os, sqlite3, tempfile, zipfile
+          specs=[
+              ('al_jalalayn_en.sqlite',4,6236,'verse_commentary'),
+              ('qurtubi_en.sqlite',4,432,'tafsir_entry'),
+              ('qushayri_en.sqlite',2,720,'tafsir_entry'),
+          ]
+          with zipfile.ZipFile(os.environ['APK_PATH']) as z:
+              for name,parts,expected,table in specs:
+                  compressed=b''.join(z.read(f'assets/tafsir/{name}.gz.part{i:02d}') for i in range(parts))
+                  raw=gzip.decompress(compressed)
+                  with tempfile.NamedTemporaryFile(suffix='.sqlite') as tmp:
+                      tmp.write(raw); tmp.flush(); db=sqlite3.connect(tmp.name)
+                      assert db.execute('pragma quick_check').fetchone()[0]=='ok'
+                      assert db.execute(f'select count(*) from {table}').fetchone()[0]==expected
+                      meta=dict(db.execute('select key,value from source_metadata'))
+                      assert meta.get('personal_use_only')=='true'
+                      assert meta.get('redistribution_approved')=='false'
+                      assert meta.get('rights_note','').strip()
+                      db.close()
+          print('PACKAGED_TAFSIR_RELEASE_OK')
+          PY
+          sha256sum "$apk" | tee unsigned-sha256.txt
+          printf 'PACKAGE=%s\nVERSION_CODE=%s\nVERSION_NAME=%s\nDEBUGGABLE=false\nSOURCE_SHA=%s\nVALIDATED_RUN=%s\n' \
+            "$PACKAGE_ID" "$VERSION_CODE" "$VERSION_NAME" "$SOURCE_SHA" "$VALIDATED_RUN" | tee candidate-build-info.txt
+
+      - name: Prepare local-signing export bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p export/apk export/build-tools export/platform-tools export/evidence
+          apk="$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          cp "$apk" export/apk/Quran-Hifz-0.7.5-boox-unsigned.apk
+          cp -a "$ANDROID_HOME/build-tools/36.0.0/." export/build-tools/
+          cp -a "$ANDROID_HOME/platform-tools/." export/platform-tools/
+          cp candidate-provenance.txt candidate-manifest.xml candidate-apk-list.txt unsigned-proof.txt unsigned-sha256.txt candidate-build-info.txt geometry-report.json export/evidence/
+          test -x export/build-tools/apksigner
+          test -x export/build-tools/zipalign
+          test -x export/platform-tools/adb
+          test -s export/apk/Quran-Hifz-0.7.5-boox-unsigned.apk
+
+      - name: Upload exact unsigned candidate and local tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-0.7.5-phone-candidate-${{ env.SOURCE_SHA }}
+          path: export/
+          if-no-files-found: error
+          retention-days: 90
