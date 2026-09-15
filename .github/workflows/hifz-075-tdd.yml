@@ -143,6 +143,27 @@ jobs:
           cp baseline109/extracted/assets/tafsir/* app/src/plus/assets/tafsir/
           test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate exact Hifz geometry for runtime migration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          test -s app/src/main/assets/reader109/geometry.json
+          python3 - <<'PY'
+          import json
+          report=json.load(open('geometry-report.json'))
+          assert report.get('page_count') == 604, report
+          assert report.get('unique_line_count') == 8820, report
+          assert report.get('multi_page_verse_count') == 0, report
+          print('GEOMETRY_COUNTS_OK 604 8820 MULTI_PAGE_VERSES=0')
+          PY
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
