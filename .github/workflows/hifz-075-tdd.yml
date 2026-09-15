@@ -1,0 +1,84 @@
+name: Quran Hifz 0.7.5 TDD
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: quran-hifz-0.7.5-tdd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jvm-and-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK compile dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Hifz JVM and Android-test compilation gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon \
+            :hifz-core:test \
+            :hifz-app:testDebugUnitTest \
+            :hifz-app:compileDebugAndroidTestSources \
+            :hifz-app:verifyHifzProductBoundary \
+            :hifz-app:verifyHifzCosmeticContract \
+            :hifz-app:verifyHifzConvergenceRules \
+            --stacktrace
+
+      - name: Run source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+
+      - name: Record honest test counts
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for label, pattern in [
+              ('BEHAVIOR_JVM','hifz-app/build/test-results/testDebugUnitTest/**/*.xml'),
+              ('SOURCE_CONTRACT','hifz-app/build/test-results/sourceContractTest/**/*.xml'),
+              ('CORE_JVM','hifz-core/build/test-results/test/**/*.xml'),
+          ]:
+              t=f=e=s=0
+              for file in glob.glob(pattern, recursive=True):
+                  root=ET.parse(file).getroot()
+                  t+=int(root.attrib.get('tests',0)); f+=int(root.attrib.get('failures',0)); e+=int(root.attrib.get('errors',0)); s+=int(root.attrib.get('skipped',0))
+              print(f'{label} tests={t} failures={f} errors={e} skipped={s}')
+          PY
