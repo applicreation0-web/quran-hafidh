@@ -1,0 +1,36 @@
+name: Publish Quran Hifz 0.7.4 BOOX final
+
+on:
+  push:
+    branches: [ops/publish-hifz-0.7.4]
+    paths: [release-trigger/hifz-0.7.4-final.txt]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: publish-quran-hifz-0.7.4-final
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Install Android signing tools
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "build-tools;36.0.0" "platform-tools"
+      - name: Sign, verify and publish exact Quran Hifz candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash release-relay/publish-hifz-0.7.4.sh
