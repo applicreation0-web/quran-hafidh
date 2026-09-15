@@ -144,7 +144,11 @@ public final class HifzPrefs {
         }
         if (schema == 4) {
             migrateV4ToV5();
-            return;
+            schema = 5;
+        }
+        if (schema == 5) {
+            migrateV5ToV6();
+            schema = 6;
         }
         if (schema != PreviewConfig.SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
@@ -173,6 +177,24 @@ public final class HifzPrefs {
             if (!p.contains("lastMurajaahCreditStart")) repair.putString("lastMurajaahCreditStart", "");
             if (!p.contains("lastMurajaahCreditEnd")) repair.putString("lastMurajaahCreditEnd", "");
             if (!repair.commit()) throw new IllegalStateException("Unable to repair Hifz schema v5 optional state");
+        }
+    }
+
+    private void migrateV5ToV6() {
+        boolean calibrated = p.getBoolean("murajaahSpeedCalibrated", false);
+        double existing = p.getFloat(
+            "murajaahSecPerLine",
+            9.0f
+        );
+        double migrated = HifzV6Migration.migratedMaintenanceSecondsPerLine(
+            existing,
+            calibrated
+        );
+        SharedPreferences.Editor e = p.edit()
+            .putInt("schema", 6)
+            .putFloat("murajaahSecPerLine", (float) migrated);
+        if (!e.commit()) {
+            throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
         }
     }
 
