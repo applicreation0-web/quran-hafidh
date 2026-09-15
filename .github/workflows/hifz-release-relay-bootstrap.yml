@@ -31,17 +31,21 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      - name: Publish relay public key on ops branch
+      - name: Publish or replace relay public key on ops branch
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           content="$(base64 -w0 relay-public.pem)"
-          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/release-relay/relay-public.pem" \
-            -f message="chore(release): publish ephemeral Hifz relay public key" \
+          path='release-relay/relay-public.pem'
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/contents/${path}?ref=ops/publish-hifz-0.7.4" --jq .sha 2>/dev/null || true)"
+          args=(--method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
+            -f message='chore(release): rotate ephemeral Hifz relay public key' \
             -f content="$content" \
-            -f branch="ops/publish-hifz-0.7.4" >/dev/null
+            -f branch='ops/publish-hifz-0.7.4')
+          if [ -n "$existing" ]; then args+=(-f sha="$existing"); fi
+          gh api "${args[@]}" >/dev/null
 
       - name: Destroy runner copy
         if: always()
