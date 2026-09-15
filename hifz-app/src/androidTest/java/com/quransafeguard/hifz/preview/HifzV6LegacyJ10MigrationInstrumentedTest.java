@@ -162,6 +162,51 @@ public final class HifzV6LegacyJ10MigrationInstrumentedTest {
         assertEquals(Long.valueOf(originalDate), longMap(ACTIVE_J10).get(stable));
     }
 
+    @Test public void schemaSixJ10RuntimeUsesOnlyMainStoreAndKeepsUnknownDueExplicit() throws Exception {
+        seedSchemaFive(0, false);
+        Set<String> stableLines = ownedLineIds(new VerseRef(2, 1), new VerseRef(2, 74));
+        assertTrue("fixture requires multiple acquired lines", stableLines.size() > 1);
+        Iterator<String> stableIterator = stableLines.iterator();
+        String dated = stableIterator.next();
+        String unknown = stableIterator.next();
+
+        LocalDate importedDate = LocalDate.of(2026, 9, 1);
+        assertTrue(legacyJ10.edit().putLong("line:" + dated, importedDate.toEpochDay()).commit());
+        new HifzPrefs(context);
+
+        assertEquals(Long.valueOf(importedDate.toEpochDay()), longMap(ACTIVE_J10).get(dated));
+        assertTrue(stringSet(UNKNOWN_DUE).contains(unknown));
+        assertFalse(longMap(ACTIVE_J10).containsKey(unknown));
+
+        assertTrue(legacyJ10.edit()
+            .putLong("line:" + dated, LocalDate.of(2026, 9, 14).toEpochDay())
+            .putLong("line:" + unknown, LocalDate.of(2026, 9, 15).toEpochDay())
+            .putLong("line:legacy-only-after-v6", LocalDate.of(2026, 9, 15).toEpochDay())
+            .commit());
+        Map<String, ?> legacyBeforeRuntime = snapshot(legacyJ10);
+
+        J10ReviewPlanner planner = new J10ReviewPlanner(context);
+        Map<String, LocalDate> runtime = planner.snapshot();
+        assertEquals("runtime must use the exact date imported into schema6",
+            importedDate, runtime.get(dated));
+        assertFalse("post-migration legacy-only lines must never enter runtime",
+            runtime.containsKey("legacy-only-after-v6"));
+
+        LocalDate today = LocalDate.of(2026, 9, 15);
+        assertTrue("schema6 sync must not access the retained legacy J10 archive",
+            planner.syncAcquired(today));
+        assertTrue("UNKNOWN_DUE must stay explicit instead of receiving an invented date",
+            stringSet(UNKNOWN_DUE).contains(unknown));
+        assertFalse(longMap(ACTIVE_J10).containsKey(unknown));
+
+        assertTrue(planner.markReviewed(Collections.singleton(unknown), today));
+        assertEquals(Long.valueOf(today.toEpochDay()), longMap(ACTIVE_J10).get(unknown));
+        assertFalse(stringSet(UNKNOWN_DUE).contains(unknown));
+        assertFalse(stringSet(LEGACY_IMPORTED).contains(unknown));
+        assertEquals("schema6 J10 runtime must leave the retained legacy archive byte/logically untouched",
+            legacyBeforeRuntime, snapshot(legacyJ10));
+    }
+
     private void seedSchemaFive(int completedBlocks, boolean stablePendingOverlap) {
         String reconstruction = "[{\"start\":\"49:1\",\"end\":\"49:18\"}]";
         boolean ok = main.edit()
