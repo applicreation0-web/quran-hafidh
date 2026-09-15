@@ -1,0 +1,48 @@
+name: Prepare Quran Hifz release relay
+
+on:
+  push:
+    branches: [ops/publish-hifz-0.7.4]
+    paths: [relay-trigger/hifz-0.7.4-relay.txt]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  prepare-relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Generate ephemeral relay keypair
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -out relay-private.pem
+          openssl pkey -in relay-private.pem -pubout -out relay-public.pem
+          openssl pkey -pubin -in relay-public.pem -text -noout | head
+
+      - name: Store ephemeral private key for one day
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-relay-private-${{ github.run_id }}
+          path: relay-private.pem
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Publish relay public key on ops branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          content="$(base64 -w0 relay-public.pem)"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/release-relay/relay-public.pem" \
+            -f message="chore(release): publish ephemeral Hifz relay public key" \
+            -f content="$content" \
+            -f branch="ops/publish-hifz-0.7.4" >/dev/null
+
+      - name: Destroy runner copy
+        if: always()
+        run: rm -f relay-private.pem relay-public.pem
