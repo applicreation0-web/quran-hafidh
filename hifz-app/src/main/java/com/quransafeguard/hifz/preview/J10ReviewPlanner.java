@@ -19,7 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
-/** Single acquired-line list feeding J10 review priority across the existing weekly sessions. */
+/** Schema-6 acquired-line J10 priority planner. The 0.7.4 J10 archive is migration-only. */
 final class J10ReviewPlanner {
     static final int MAX_PRIORITY_LINES = 5;
 
@@ -49,64 +49,19 @@ final class J10ReviewPlanner {
     private final HifzPrefs prefs;
     private final HifzSpeedStore speedStore;
     private final GeometryRepository geometry;
-    private final J10ReviewStore store;
+    private final J10V6Store store;
 
     J10ReviewPlanner(Context context) {
         prefs = new HifzPrefs(context);
         speedStore = new HifzSpeedStore(context);
         geometry = GeometryRepository.get(context);
-        store = new J10ReviewStore(context);
+        store = new J10V6Store(context);
     }
 
-    /**
-     * Reconcile only material already acquired. Historical material with no J10 record is seeded
-     * as due now, never as freshly reviewed. Recent Sabqi keeps its real acquisition date.
-     */
+    /** Schema6 state is already authoritative; reconciliation must never invent UNKNOWN_DUE dates. */
     boolean syncAcquired(LocalDate today) {
         if (today == null) throw new IllegalArgumentException("today required");
-        LocalDate historicalSeed = J10ReviewPolicy.unknownHistoricalSeed(today);
-        boolean ok = true;
-
-        LinkedHashSet<String> stableIds = new LinkedHashSet<>();
-        EligibleCorpus stable = prefs.murajaahCorpus();
-        for (int i = 0; i < geometry.lineCount(); i++) {
-            GeometryRepository.LineMeta line = geometry.line(i);
-            for (VerseRef verse : line.verses) {
-                if (stable.contains(verse)) { stableIds.add(line.id); break; }
-            }
-        }
-        ok &= store.acquireLines(stableIds, historicalSeed);
-
-        for (HifzPrefs.RecentSabqi recent : prefs.recentSabqi()) {
-            LinkedHashSet<String> recentIds = new LinkedHashSet<>();
-            for (int i = Math.max(0, recent.startLine); i <= recent.endLine && i < geometry.lineCount(); i++) {
-                recentIds.add(geometry.line(i).id);
-            }
-            ok &= store.acquireLines(recentIds, recent.addedOn == null ? historicalSeed : recent.addedOn);
-        }
-
-        int completedBlocks = prefs.itqanBlockIndex();
-        List<AnchoringQueue.Entry> queue = prefs.anchoringQueue();
-        if (completedBlocks > 0 && !queue.isEmpty()) {
-            AnchoringQueue.Entry entry = prefs.inProgressAnchoringEntry();
-            if (entry == null) entry = queue.get(prefs.anchoringQueueIndex(queue.size()));
-            VerseRef start = GeometryRepository.parseVerse(entry.start);
-            VerseRef end = GeometryRepository.parseVerse(entry.end);
-            List<VerseRef> verses = geometry.versesForRange(start, end);
-            if (prefs.isFractionatedUnit(verses)) {
-                List<String> unitLines = geometry.lineIdsForVerseRange(start, end);
-                int[] segments = geometry.surahSegmentLineCounts(start, end);
-                int count = PreviewConfig.fractionatedBlockCount(segments);
-                LinkedHashSet<String> completedIds = new LinkedHashSet<>();
-                for (int block = 0; block < Math.min(completedBlocks, count); block++) {
-                    int from = PreviewConfig.fractionatedBlockStart(segments, block);
-                    int len = PreviewConfig.fractionatedBlockLength(segments, block);
-                    completedIds.addAll(unitLines.subList(from, from + len));
-                }
-                ok &= store.acquireLines(completedIds, historicalSeed);
-            }
-        }
-        return ok;
+        return store.syncAcquired();
     }
 
     J10ReviewPolicy.Forecast forecast(LocalDate today) {
