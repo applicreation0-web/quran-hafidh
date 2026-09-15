@@ -147,8 +147,10 @@ public final class HifzPrefs {
             schema = 5;
         }
         if (schema == 5) {
-            migrateV5ToV6(context);
-            schema = 6;
+            synchronized (J10ReviewStore.LEGACY_STORE_LOCK) {
+                migrateV5ToV6(context);
+                schema = 6;
+            }
         }
         if (schema != PreviewConfig.SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported Hifz preview schema: " + schema);
