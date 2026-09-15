@@ -137,6 +137,33 @@ public final class ConsolidationCycleEngineTest {
         assertEquals(1, session.donePerStage());
     }
 
+    @Test public void restoredOpenSessionMustMatchFrozenSnapshotExactly() {
+        ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle = engine.startCycle(
+            "c5", ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("l", ConsolidationCycleEngine.Protocol.LIGHT));
+        cycle = engine.addUnit(cycle,
+            new ConsolidationCycleEngine.Unit("f", ConsolidationCycleEngine.Protocol.FULL));
+
+        ConsolidationCycleEngine.Session restored = engine.restoreOpenSession(
+            cycle, "s5", 2, 1, 1, 1);
+        assertTrue(restored.open());
+        assertEquals("s5", restored.sessionId());
+        assertEquals(2, restored.sessionGroupSize());
+        assertEquals(1, restored.stage());
+        assertEquals(1, restored.nextUnitIndex());
+        assertEquals(1, restored.donePerStage());
+        assertArrayEquals(new int[]{10,0,2,3,3}, restored.stageVectorAt(0));
+        assertArrayEquals(new int[]{7,2,3,3,5}, restored.stageVectorAt(1));
+
+        try {
+            engine.restoreOpenSession(cycle, "bad", 3, 1, 1, 1);
+            fail("restored group size must match frozen cycle snapshot");
+        } catch (IllegalStateException expected) {
+            // expected
+        }
+    }
+
     private static void assertPlan(ConsolidationCycleEngine.Protocol protocol, int size, int[][] expectedVectors) {
         assertEquals(size, expectedVectors.length);
         for (int position = 0; position < size; position++) {
