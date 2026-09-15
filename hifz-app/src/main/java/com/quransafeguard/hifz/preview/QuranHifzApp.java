@@ -45,6 +45,10 @@ public final class QuranHifzApp extends Application
     }
 
     private boolean legacyJ10RuntimeAllowed() {
+        // The v5 planner mutates quran_hifz_j10_v1. A schema-6 binary must never instantiate it,
+        // even while installed preferences still report schema 5: HifzPrefs must first import that
+        // untouched legacy store into the authoritative schema-6 main-store commit.
+        if (PreviewConfig.SCHEMA_VERSION > LEGACY_J10_LAST_SCHEMA) return false;
         int schema = getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).getInt("schema", 0);
         return schema <= LEGACY_J10_LAST_SCHEMA;
     }
