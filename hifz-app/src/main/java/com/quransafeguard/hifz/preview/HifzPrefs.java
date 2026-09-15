@@ -51,7 +51,23 @@ public final class HifzPrefs {
 
     private static final String NAME = "quran_hifz_preview_v1";
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
+    private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
+
+    static void setMigrationFaultPointForTest(String point) {
+        if (point != null
+                && !"BEFORE_MAIN_COMMIT".equals(point)
+                && !"AFTER_MAIN_COMMIT".equals(point)) {
+            throw new IllegalArgumentException("Unknown migration fault point: " + point);
+        }
+        migrationFaultPointForTest = point;
+    }
+
+    private static void maybeInterruptMigrationForTest(String point) {
+        if (point != null && point.equals(migrationFaultPointForTest)) {
+            throw new IllegalStateException("Injected Hifz migration interruption at " + point);
+        }
+    }
 
     public HifzPrefs(Context context) {
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
@@ -256,6 +272,8 @@ public final class HifzPrefs {
             legacyJ10EpochDays,
             recentSabqiAddedOnEpochDays));
 
+        maybeInterruptMigrationForTest("BEFORE_MAIN_COMMIT");
+
         SharedPreferences.Editor e = p.edit()
             .putString("v6LearnedLineIds", lineIdsJson(state.toAnchorLineIds()))
             .putString("v6StabilizedLineIds", "[]")
@@ -272,6 +290,8 @@ public final class HifzPrefs {
         if (!e.commit()) {
             throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
         }
+
+        maybeInterruptMigrationForTest("AFTER_MAIN_COMMIT");
 
         if (p.getInt("schema", -1) != 6
                 || !p.contains("v6LearnedLineIds")
