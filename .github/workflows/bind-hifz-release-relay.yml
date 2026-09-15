@@ -1,0 +1,32 @@
+name: Bind Quran Hifz release relay
+
+on:
+  push:
+    branches: [ops/publish-hifz-0.7.4]
+    paths: [relay-trigger/bind-hifz-0.7.4.txt]
+
+permissions:
+  contents: write
+
+jobs:
+  bind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/publish-hifz-0.7.4
+      - name: Bind final relay identifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          f=.github/workflows/publish-hifz-0.7.4.yml
+          sed -i "s/RELAY_RUN: 'REPLACE_RELAY_RUN'/RELAY_RUN: '34925657637'/" "$f"
+          sed -i 's/RELAY_ARTIFACT: REPLACE_RELAY_ARTIFACT/RELAY_ARTIFACT: quran-hifz-relay-private-34925657637/' "$f"
+          grep -F "RELAY_RUN: '34925657637'" "$f"
+          grep -F 'RELAY_ARTIFACT: quran-hifz-relay-private-34925657637' "$f"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$f"
+          git diff --cached --exit-code && exit 0
+          git commit -m 'chore(release): bind final Hifz relay artifact'
+          git push origin HEAD:ops/publish-hifz-0.7.4
