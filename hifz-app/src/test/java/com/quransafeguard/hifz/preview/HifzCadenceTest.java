@@ -7,9 +7,9 @@ import static org.junit.Assert.assertEquals;
 
 public final class HifzCadenceTest {
     @Test public void invalidCadenceFallsBackToInitialReference() {
-        assertEquals(9.0, HifzCadence.sanitizedSecondsPerLine(Double.NaN), 0.0001);
-        assertEquals(9.0, HifzCadence.sanitizedSecondsPerLine(Double.POSITIVE_INFINITY), 0.0001);
-        assertEquals(9.0, HifzCadence.sanitizedSecondsPerLine(0.0), 0.0001);
+        assertEquals(8.0, HifzCadence.sanitizedSecondsPerLine(Double.NaN), 0.0001);
+        assertEquals(8.0, HifzCadence.sanitizedSecondsPerLine(Double.POSITIVE_INFINITY), 0.0001);
+        assertEquals(8.0, HifzCadence.sanitizedSecondsPerLine(0.0), 0.0001);
         assertEquals(12.5, HifzCadence.sanitizedSecondsPerLine(12.5), 0.0001);
     }
 
