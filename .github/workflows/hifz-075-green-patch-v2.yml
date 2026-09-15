@@ -1,0 +1,153 @@
+name: Apply Hifz 0.7.5 schema6 persistent GREEN patch v2
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: contains(github.event.head_commit.message, 'trigger schema6 persistent patch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.5-retention-j10
+          fetch-depth: 0
+
+      - name: Apply minimal production patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java')
+          text = path.read_text()
+
+          fresh_old = '''                .putString("lastMurajaahCreditStart", "")
+                .putString("lastMurajaahCreditEnd", "");'''
+          fresh_new = '''                .putString("lastMurajaahCreditStart", "")
+                .putString("lastMurajaahCreditEnd", "")
+                .putString("v6LearnedLineIds", "[]")
+                .putString("v6StabilizedLineIds", "[]")
+                .putString("v6AcquiredCreditLineIds", "[]")
+                .putString("v6LegacyPartialAcquiredLineIds", "[]")
+                .putString("v6QuarantineLineIds", "[]")
+                .putString("v6QuarantineLegacyLastReviewed", "{}")
+                .putString("v6ActiveJ10LastReviewed", "{}")
+                .putString("v6UnknownDueLineIds", "[]")
+                .putString("v6LegacyImportedLineIds", "[]")
+                .putString("v6LegacyOrphanJ10Dates", "{}");'''
+          count = text.count(fresh_old)
+          assert count == 1, f'fresh-init target count={count}'
+          text = text.replace(fresh_old, fresh_new, 1)
+
+          marker = '''    private void migrateV1ToV2() {'''
+          count = text.count(marker)
+          assert count == 1, f'v6-method insertion marker count={count}'
+          methods = r'''    private LinkedHashSet<String> v6LineIds(String key) {
+        if (!p.contains(key)) throw new IllegalStateException("Missing schema v6 state: " + key);
+        LinkedHashSet<String> out = new LinkedHashSet<>();
+        try {
+            JSONArray array = new JSONArray(p.getString(key, null));
+            for (int i = 0; i < array.length(); i++) {
+                String lineId = array.getString(i);
+                if (lineId == null || lineId.isEmpty() || !out.add(lineId)) {
+                    throw new IllegalStateException("Invalid schema v6 line id in " + key);
+                }
+            }
+            return out;
+        } catch (IllegalStateException error) {
+            throw error;
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt schema v6 line state: " + key, error);
+        }
+    }
+
+    private LinkedHashMap<String, Long> v6EpochDayMap(String key) {
+        if (!p.contains(key)) throw new IllegalStateException("Missing schema v6 state: " + key);
+        LinkedHashMap<String, Long> out = new LinkedHashMap<>();
+        try {
+            JSONObject object = new JSONObject(p.getString(key, null));
+            java.util.Iterator<String> keys = object.keys();
+            while (keys.hasNext()) {
+                String lineId = keys.next();
+                if (lineId == null || lineId.isEmpty()) {
+                    throw new IllegalStateException("Invalid schema v6 line id in " + key);
+                }
+                out.put(lineId, object.getLong(lineId));
+            }
+            return out;
+        } catch (IllegalStateException error) {
+            throw error;
+        } catch (Exception error) {
+            throw new IllegalStateException("Corrupt schema v6 date state: " + key, error);
+        }
+    }
+
+    private HifzCorpusState loadV6CorpusState() {
+        if (p.getInt("schema", 0) != 6) {
+            throw new IllegalStateException("Schema v6 state required for conflict resolution");
+        }
+        return new HifzCorpusState(
+            v6LineIds("v6LearnedLineIds"),
+            v6LineIds("v6LegacyPartialAcquiredLineIds"),
+            v6LineIds("v6QuarantineLineIds"),
+            v6EpochDayMap("v6QuarantineLegacyLastReviewed"),
+            v6EpochDayMap("v6ActiveJ10LastReviewed"),
+            v6LineIds("v6UnknownDueLineIds"),
+            v6LineIds("v6LegacyImportedLineIds"),
+            v6EpochDayMap("v6LegacyOrphanJ10Dates"),
+            v6LineIds("v6AcquiredCreditLineIds")
+        );
+    }
+
+    public boolean resolveV6Quarantine(
+            String lineId,
+            HifzV6Migration.QuarantineResolution resolution) {
+        if (p.getInt("schema", 0) != 6) {
+            throw new IllegalStateException("Schema v6 state required for conflict resolution");
+        }
+
+        HifzCorpusState current = loadV6CorpusState();
+        String stabilizedRaw = p.getString("v6StabilizedLineIds", null);
+        v6LineIds("v6StabilizedLineIds");
+        HifzCorpusState resolved = HifzV6Migration.resolveQuarantine(current, lineId, resolution);
+
+        SharedPreferences.Editor e = p.edit()
+            .putString("v6LearnedLineIds", lineIdsJson(resolved.toAnchorLineIds()))
+            .putString("v6StabilizedLineIds", stabilizedRaw)
+            .putString("v6AcquiredCreditLineIds", lineIdsJson(resolved.acquiredCreditLineIds()))
+            .putString("v6LegacyPartialAcquiredLineIds", lineIdsJson(resolved.legacyPartialAcquiredLineIds()))
+            .putString("v6QuarantineLineIds", lineIdsJson(resolved.quarantineLineIds()))
+            .putString("v6QuarantineLegacyLastReviewed", epochDayMapJson(resolved.quarantineLegacyLastReviewed()))
+            .putString("v6ActiveJ10LastReviewed", epochDayMapJson(resolved.activeLastReviewedEpochDays()))
+            .putString("v6UnknownDueLineIds", lineIdsJson(resolved.unknownDueLineIds()))
+            .putString("v6LegacyImportedLineIds", lineIdsJson(resolved.legacyImportedLineIds()))
+            .putString("v6LegacyOrphanJ10Dates", epochDayMapJson(resolved.legacyOrphanDates()));
+        if (!e.commit()) throw new IllegalStateException("Unable to persist schema v6 conflict resolution");
+        return true;
+    }
+
+'''
+          text = text.replace(marker, methods + marker, 1)
+          path.write_text(text)
+          PY
+
+          git diff --check
+          git diff -- hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+
+      - name: Commit production patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+          git diff --cached --quiet && { echo 'Expected production patch is empty'; exit 1; }
+          git commit -m "feat: persist schema6 conflict resolution atomically"
+          git push origin HEAD:work/hifz-0.7.5-retention-j10
