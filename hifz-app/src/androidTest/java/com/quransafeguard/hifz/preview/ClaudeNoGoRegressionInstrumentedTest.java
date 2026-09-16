@@ -203,7 +203,7 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
     private static View findByContentDescription(View root, String wanted) {
         if (root == null) return null;
         CharSequence description = root.getContentDescription();
-        if (wanted.contentEquals(description)) return root;
+        if (description != null && wanted.contentEquals(description)) return root;
         if (!(root instanceof ViewGroup)) return null;
         ViewGroup group = (ViewGroup) root;
         for (int i = 0; i < group.getChildCount(); i++) {
