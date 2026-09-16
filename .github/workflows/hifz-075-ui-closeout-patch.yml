@@ -1,0 +1,254 @@
+name: Quran Hifz 0.7.5 UI closeout patch
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'chore: stage 0.7.5 UI closeout patch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Guard expected parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "4dc39eb52b6afe3a64748b5817dbb17b6b4f903a"
+      - name: Apply bounded UI and history closeout
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path, old, new, count=1):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              actual = text.count(old)
+              if actual != count:
+                  raise SystemExit(f'{path}: expected {count} occurrence(s), found {actual}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, count), encoding='utf-8')
+
+          settings = 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java'
+          replace_exact(settings, '"Début de la plage à mémoriser"', '"Début de la plage d’Apprentissage"', 2)
+          replace_exact(settings, '"Fin de la plage à mémoriser"', '"Fin de la plage d’Apprentissage"', 2)
+          replace_exact(settings, '"Le début doit précéder la fin de la plage à mémoriser."', '"Le début doit précéder la fin de la plage d’Apprentissage."')
+          replace_exact(settings, '"Position de la leçon hors de la plage"', '"Position de l’Apprentissage hors de la plage"')
+
+          old_schema = '''        section(root,"Repères");
+        addRepere(root,"Apprentissage","Action de mémorisation d’un nouveau passage. Après validation, le passage devient Appris.");
+        addRepere(root,"Appris","État d’un passage mémorisé dont la prochaine action structurée est la Stabilisation.");
+        addRepere(root,"Stabilisation","Action de renforcement de la matière Apprise sur les unités physiques du Mushaf. Après validation, elle devient Stabilisée.");
+        addRepere(root,"Stabilisé","État d’un passage prêt pour la Consolidation.");
+        addRepere(root,"Consolidation","Action de regroupement progressif de une à trois unités. Une Consolidation validée fait passer la matière vers Acquis.");
+        addRepere(root,"Acquis","État d’un passage qui entre dans la Révision et dans la garantie J10.");
+        addRepere(root,"Révision","Rotation régulière de la matière Acquise, avec révélation seulement en cas de besoin.");
+        addRepere(root,"J10","Garantie de fraîcheur : toute matière Acquise doit être revue au plus tard tous les dix jours. J10 utilise les créneaux existants et n’ajoute pas de séance parallèle.");
+        addRepere(root,"Report souple","Une séance manquée reste due au prochain créneau sans échec, sans double quota automatique et sans déplacement silencieux du curseur.");
+'''
+          new_schema = '''        section(root,"Schéma");
+        TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",12.5f,true);
+        schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
+        TextView consolidationSchemaNote=Ui.text(this,"Consolidation · déclenchée par progression",11f,false);
+        consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
+        TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);
+        j10SchemaNote.setTextColor(Ui.MUTED);j10SchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10SchemaNote);
+        TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau",11f,false);
+        carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(carryoverSchemaNote);
+'''
+          replace_exact(settings, old_schema, new_schema)
+          old_helper = '''    private void addRepere(LinearLayout root,String title,String definition){
+        TextView heading=Ui.text(this,title,12.5f,true);heading.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),0);root.addView(heading);
+        TextView body=Ui.text(this,definition,11f,false);body.setTextColor(Ui.MUTED);body.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(body);
+        root.addView(Ui.divider(this));
+    }
+
+'''
+          replace_exact(settings, old_helper, '')
+
+          session = 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java'
+          replace_exact(session, 'Impossible d’enregistrer la répétition de la Apprentissage.', 'Impossible d’enregistrer la répétition de l’Apprentissage.')
+          replace_exact(session, 'Impossible d’enregistrer la Apprentissage.', 'Impossible d’enregistrer l’Apprentissage.')
+          replace_exact(session, 'Impossible de relancer ce bloc de Apprentissage.', 'Impossible de relancer ce bloc d’Apprentissage.')
+          replace_exact(session, 'Impossible d’enregistrer la répétition d’Stabilisation.', 'Impossible d’enregistrer la répétition de la Stabilisation.')
+          replace_exact(session, 'Impossible de relancer ce bloc d’Stabilisation.', 'Impossible de relancer ce bloc de Stabilisation.')
+          replace_exact(session,
+              'progress.setText(prefs.lastSabqiLabel().isEmpty() ? "Bloc terminé" : prefs.lastSabqiLabel());',
+              'progress.setText(prefs.lastSabqiLabel().isEmpty() ? "Bloc terminé" : HifzDisplayVocabulary.canonicalize(prefs.lastSabqiLabel()));')
+          replace_exact(session,
+              'progress.setText(prefs.lastItqanLabel().isEmpty()?"Sous-bloc terminé":prefs.lastItqanLabel());',
+              'progress.setText(prefs.lastItqanLabel().isEmpty()?"Sous-bloc terminé":HifzDisplayVocabulary.canonicalize(prefs.lastItqanLabel()));')
+          replace_exact(session,
+              'progress.setText(prefs.lastItqanLabel().isEmpty()?"Stabilisation terminé":prefs.lastItqanLabel());',
+              'progress.setText(prefs.lastItqanLabel().isEmpty()?"Stabilisation terminée":HifzDisplayVocabulary.canonicalize(prefs.lastItqanLabel()));')
+          replace_exact(session,
+              'progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : prefs.lastRecentSabqiReviewLabel());',
+              'progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));')
+          replace_exact(session,
+              'progress.setText(prefs.lastMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : prefs.lastMurajaahLabel());',
+              'progress.setText(prefs.lastMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastMurajaahLabel()));')
+
+          weekly = 'hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java'
+          replace_exact(weekly,
+              '''    private static String compact(String label){
+        if(label==null||label.isEmpty())return "Séance enregistrée";
+        return label.replace(" · révélations 0","");
+    }
+''',
+              '''    private static String compact(String label){
+        if(label==null||label.isEmpty())return "Séance enregistrée";
+        return HifzDisplayVocabulary.canonicalize(label).replace(" · révélations 0","");
+    }
+''')
+
+          contract = 'hifz-app/src/test/java/com/quransafeguard/hifz/preview/CanonicalProgressUiSourceContractTest.java'
+          replace_exact(contract, '        assertFalse(session.contains("de la Stabilisation"));\n', '')
+
+          vocab = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java')
+          if vocab.exists():
+              raise SystemExit(f'unexpected existing file: {vocab}')
+          vocab.write_text('''package com.quransafeguard.hifz.preview;
+
+/** Display-only compatibility for labels persisted by pre-0.7.5 builds. */
+final class HifzDisplayVocabulary {
+    private HifzDisplayVocabulary() {}
+
+    static String canonicalize(String label) {
+        if (label == null || label.isEmpty()) return label;
+        return label
+            .replace("Reprise du soir", "Apprentissage · reprise")
+            .replace("Leçon neuve", "Apprentissage")
+            .replace("Sabqi review", "Apprentissage · reprise")
+            .replace("Ṣabqī", "Apprentissage")
+            .replace("Sabqi", "Apprentissage")
+            .replace("Itqān installé", "Stabilisation installée")
+            .replace("Itqan installé", "Stabilisation installée")
+            .replace("Itqān", "Stabilisation")
+            .replace("Itqan", "Stabilisation")
+            .replace("Ancrage fractionné", "Stabilisation")
+            .replace("Ancrage", "Stabilisation")
+            .replace("Entretien installé", "Révision installée")
+            .replace("Entretien", "Révision")
+            .replace("Murājaʿah", "Révision")
+            .replace("Murajaah", "Révision");
+    }
+}
+''', encoding='utf-8')
+
+          vocab_test = Path('hifz-app/src/test/java/com/quransafeguard/hifz/preview/HifzDisplayVocabularyTest.java')
+          if vocab_test.exists():
+              raise SystemExit(f'unexpected existing file: {vocab_test}')
+          vocab_test.write_text('''package com.quransafeguard.hifz.preview;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
+public final class HifzDisplayVocabularyTest {
+    @Test public void schemaFiveSabqiLabelDisplaysAsApprentissage() {
+        assertEquals("Apprentissage installé à conserver",
+            HifzDisplayVocabulary.canonicalize("Sabqi installé à conserver"));
+    }
+
+    @Test public void schemaFiveItqanLabelDisplaysAsStabilisationWithFrenchAgreement() {
+        assertEquals("Stabilisation installée à conserver",
+            HifzDisplayVocabulary.canonicalize("Itqān installé à conserver"));
+    }
+
+    @Test public void schemaFiveMaintenanceLabelDisplaysAsRevisionWithFrenchAgreement() {
+        assertEquals("Révision installée à conserver",
+            HifzDisplayVocabulary.canonicalize("Entretien installé à conserver"));
+    }
+
+    @Test public void olderAnchoringNamesDisplayAsStabilisation() {
+        assertEquals("Stabilisation · 49:1–18",
+            HifzDisplayVocabulary.canonicalize("Ancrage fractionné · 49:1–18"));
+    }
+
+    @Test public void canonicalLabelsRemainUnchanged() {
+        assertEquals("Consolidation historique",
+            HifzDisplayVocabulary.canonicalize("Consolidation historique"));
+        assertEquals("Révision · séance validée",
+            HifzDisplayVocabulary.canonicalize("Révision · séance validée"));
+    }
+
+    @Test public void nullAndEmptyRemainStable() {
+        assertNull(HifzDisplayVocabulary.canonicalize(null));
+        assertEquals("", HifzDisplayVocabulary.canonicalize(""));
+    }
+}
+''', encoding='utf-8')
+
+          migration = 'hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzPrefsV6MigrationInstrumentedTest.java'
+          replace_exact(migration,
+              '''    private SharedPreferences main;
+    private SharedPreferences legacyJ10;
+''',
+              '''    private SharedPreferences main;
+    private SharedPreferences legacyJ10;
+    private SharedPreferences dashboardHistory;
+''')
+          replace_exact(migration,
+              '''        main = context.getSharedPreferences(MAIN, Context.MODE_PRIVATE);
+        legacyJ10 = context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE);
+        main.edit().clear().commit();
+        legacyJ10.edit().clear().commit();
+''',
+              '''        main = context.getSharedPreferences(MAIN, Context.MODE_PRIVATE);
+        legacyJ10 = context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE);
+        dashboardHistory = context.getSharedPreferences("quran_hifz_dashboard_ledger_v1", Context.MODE_PRIVATE);
+        main.edit().clear().commit();
+        legacyJ10.edit().clear().commit();
+        dashboardHistory.edit().clear().commit();
+''')
+          replace_exact(migration,
+              '''        main.edit().clear().commit();
+        legacyJ10.edit().clear().commit();
+    }
+
+    @Test public void calibratedInstalledProgressMigratesFromFiveToSixWithoutLoss() {
+''',
+              '''        main.edit().clear().commit();
+        legacyJ10.edit().clear().commit();
+        dashboardHistory.edit().clear().commit();
+    }
+
+    @Test public void calibratedInstalledProgressMigratesFromFiveToSixWithoutLoss() {
+''')
+          marker = '''    @Test public void freshProfileInitializesCompleteSchemaSixState() {
+'''
+          history_test = '''    @Test public void schemaFiveDashboardHistorySurvivesUpgradeByteForByte() {
+        seedRepresentativeSchemaFive(true, 7.25f);
+        assertTrue(dashboardHistory.edit()
+            .putString("started", "2026-08-01")
+            .putString("records", "[{\\\"date\\\":\\\"2026-09-14\\\",\\\"type\\\":\\\"ITQAN\\\",\\\"label\\\":\\\"Itqān installé à conserver\\\"}]")
+            .commit());
+        Map<String, ?> beforeHistory = snapshot(dashboardHistory);
+
+        HifzPrefs prefs = new HifzPrefs(context);
+
+        assertEquals(6, prefs.schema());
+        assertEquals(beforeHistory, snapshot(dashboardHistory));
+        assertEquals("Stabilisation installée à conserver",
+            HifzDisplayVocabulary.canonicalize("Itqān installé à conserver"));
+    }
+
+'''
+          replace_exact(migration, marker, history_test + marker)
+          PY
+
+          git rm .github/workflows/hifz-075-ui-closeout-patch.yml
+          git config user.name "quran-hifz-work"
+          git config user.email "actions@users.noreply.github.com"
+          git add hifz-app/src/main hifz-app/src/test hifz-app/src/androidTest .github/workflows
+          git diff --cached --check
+          git commit -m "fix: close 0.7.5 schema UI and migration history"
+          git push origin HEAD:work/hifz-0.7.5-retention-j10
