@@ -1,0 +1,152 @@
+name: Export autonomous Hifz 0.7.5 final audit kit
+
+on:
+  push:
+    branches:
+      - audit/kit-hifz-0.7.5-f050ceb1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build self-contained audit kit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          FINAL=f050ceb11a8cdcb4c587c66a41eba18a39d586fe
+          BASE=5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          test "$(git rev-parse ${FINAL})" = "${FINAL}"
+          git cat-file -e "${BASE}^{commit}"
+          ROOT="$RUNNER_TEMP/CLAUDE_HIFZ_0.7.5_FINAL_REAUDIT_AUTONOME"
+          mkdir -p "$ROOT/FINAL" "$ROOT/BASELINE_AUDITED" "$ROOT/CONTEXT" "$ROOT/TESTS" "$ROOT/EVIDENCE"
+
+          product=(
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationPhysicalUnitPolicy.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorpusLinePolicy.java
+          )
+          for p in "${product[@]}"; do
+            mkdir -p "$ROOT/FINAL/$(dirname "$p")" "$ROOT/BASELINE_AUDITED/$(dirname "$p")"
+            git show "${FINAL}:${p}" > "$ROOT/FINAL/$p"
+            git show "${BASE}:${p}" > "$ROOT/BASELINE_AUDITED/$p"
+          done
+
+          context=(
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/AnchoringQueue.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzV6Migration.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzCorpusState.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzDisplayVocabulary.java
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java
+          )
+          for p in "${context[@]}"; do
+            mkdir -p "$ROOT/CONTEXT/$(dirname "$p")"
+            git show "${FINAL}:${p}" > "$ROOT/CONTEXT/$p"
+          done
+
+          tests=(
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzPrefsV6MigrationInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/PhysicalConsolidationRuntimeInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ConsolidationPersistenceInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/StabilizationHalfPageInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6StateTransitionsInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6LegacyJ10MigrationInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6MigrationRecoveryInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6PersistentStateInstrumentedTest.java
+            hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzCarryoverDateInstrumentedTest.java
+            hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoPhysicalPolicyTest.java
+            hifz-app/src/sourceContractTest/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java
+            hifz-app/src/test/java/com/quransafeguard/hifz/preview/ConsolidationPhysicalUnitPolicyTest.java
+          )
+          for p in "${tests[@]}"; do
+            mkdir -p "$ROOT/TESTS/$(dirname "$p")"
+            git show "${FINAL}:${p}" > "$ROOT/TESTS/$p"
+          done
+
+          git diff --no-ext-diff --binary "$BASE" "$FINAL" -- "${product[@]}" > "$ROOT/EVIDENCE/CORRECTION_DELTA.diff"
+          git diff --name-status "$BASE" "$FINAL" > "$ROOT/EVIDENCE/FULL_DELTA_FILES.txt"
+
+          curl -fL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/applicreation0-web/quran-unlock-android/releases/assets/564818126 \
+            -o "$RUNNER_TEMP/hifz074.apk"
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  '"$RUNNER_TEMP/hifz074.apk" | sha256sum -c -
+          unzip -p "$RUNNER_TEMP/hifz074.apk" assets/reader109/geometry.json > "$ROOT/EVIDENCE/geometry.json"
+          test -s "$ROOT/EVIDENCE/geometry.json"
+
+          cat > "$ROOT/00_READ_ME_FIRST.txt" <<EOF
+          QURAN HIFZ 0.7.5 — RE-AUDIT FINAL AUTONOME
+          Aucun accès GitHub ou réseau n'est nécessaire.
+          Baseline déjà auditée : $BASE
+          Candidat final figé : $FINAL
+          Branche figée : audit/final-hifz-0.7.5-f050ceb1
+          Full gate GitHub : run 35096842288
+          Le dossier FINAL contient les fichiers corrigés ; BASELINE_AUDITED contient leurs versions avant correction.
+          CORRECTION_DELTA.diff est le diff exact limité aux fichiers produit corrigés.
+          geometry.json est la vraie géométrie embarquée issue de l'APK officiel 0.7.4 vérifié par SHA-256.
+          EOF
+
+          cat > "$ROOT/01_PROMPT_AUDITEUR.txt" <<'EOF'
+          MISSION — RE-AUDIT COURT QURAN HIFZ 0.7.5
+
+          Travaille UNIQUEMENT avec ce ZIP. Aucun GitHub/réseau n'est nécessaire.
+          Ne refais pas un audit général du dépôt. Vérifie uniquement que les défauts précédemment signalés sont fermés sans régression.
+
+          1. B1 : Accueil doit lancer/reprendre Consolidation dès qu'une unité Stabilisée est prête ou qu'une session est ouverte.
+          2. B2 : identité des unités par lignes physiques possédées ; un état partiel ne doit ni lever une exception ni bloquer une unité prête.
+          3. M2 : migration ancien 5/5/5 vers nouveau 7+8 : travail déjà validé => STABILIZED, jamais ACQUIRED ; reprise sur première unité physique incomplète ; aucun crash Validation.
+          4. M1 : Accueil/Semaine utilisent le même StabilizationHalfPagePolicy.planPage que le runtime.
+          5. M3 : plages adjacentes/sourates restent distinctes ; édition manuelle invalide toute session Consolidation figée obsolète.
+          6. Non-régression : 15 lignes/1 ayah => 7+8 ; jamais franchir page/sourate ; U1 ne doit pas acquérir U2 ; process death exact ; J10 seulement ACQUIRED.
+
+          Vérifie en priorité CORRECTION_DELTA.diff, les fichiers FINAL et les tests fournis. Compare BASELINE_AUDITED seulement si nécessaire.
+
+          SORTIE MAXIMALE : 1 page.
+          HEAD : f050ceb11a8cdcb4c587c66a41eba18a39d586fe
+          BLOQUANT : néant ou liste courte
+          MAJEUR : néant ou liste courte
+          Puis 6 lignes OK/NON OK correspondant aux six points ci-dessus.
+          Verdict : AUDIT RELECTURE GREEN ou AUDIT RELECTURE NO-GO.
+          Pas de refactor préventif. Pas de GO_PHONE automatique.
+          EOF
+
+          cat > "$ROOT/EVIDENCE/CI_KNOWN_STATE.txt" <<'EOF'
+          Full closure run: 35096842288
+          Exact candidate: f050ceb11a8cdcb4c587c66a41eba18a39d586fe
+          Full JVM/compile job: SUCCESS
+          BEHAVIOR_JVM: 166 tests, 0 failures, 0 errors, 0 skipped
+          SOURCE_CONTRACT: 69 tests, 0 failures, 0 errors, 0 skipped
+          CORE_JVM: 20 tests, 0 failures, 0 errors, 0 skipped
+          Product-boundary / cosmetic / convergence verifiers: SUCCESS
+          Targeted device predecessor run 35095746090: 5/5 tests GREEN.
+          Full Android matrix result must be read from run 35096842288 if an updated evidence file is later supplied.
+          EOF
+
+          (cd "$ROOT" && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          (cd "$RUNNER_TEMP" && zip -qr CLAUDE_HIFZ_0.7.5_FINAL_REAUDIT_AUTONOME.zip "$(basename "$ROOT")")
+          unzip -t "$RUNNER_TEMP/CLAUDE_HIFZ_0.7.5_FINAL_REAUDIT_AUTONOME.zip"
+          sha256sum "$RUNNER_TEMP/CLAUDE_HIFZ_0.7.5_FINAL_REAUDIT_AUTONOME.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CLAUDE_HIFZ_0.7.5_FINAL_REAUDIT_AUTONOME
+          path: ${{ runner.temp }}/CLAUDE_HIFZ_0.7.5_FINAL_REAUDIT_AUTONOME.zip
+          if-no-files-found: error
+          retention-days: 7
