@@ -167,11 +167,11 @@ final class Ui {
             title.setTypeface(Typeface.SERIF, Typeface.BOLD);
         }
         String lower = label.toLowerCase(Locale.ROOT);
-        String cue = lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
+        String cue = lower.contains("apprentissage") || lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
             : lower.contains("reprise") ? "30 min"
-            : lower.contains("consolidation") ? "30 min"
-            : lower.contains("ancrage") || lower.contains("itq") ? "Répétitions"
-            : lower.contains("entretien") || lower.contains("mur") ? "45 min" : "";
+            : lower.contains("consolidation") ? "Cycle 1–3"
+            : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq") ? "Répétitions"
+            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur") ? "45 min" : "";
         if (!cue.isEmpty()) {
             TextView subtitle = text(context, cue, 11f, false);
             subtitle.setTextColor(MUTED);

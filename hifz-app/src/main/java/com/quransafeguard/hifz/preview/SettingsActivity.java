@@ -271,7 +271,7 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void showHardAnchoringSelector(){
         if(prefs.itqanRep()>0 || prefs.itqanBlockIndex()>0){
-            Toast.makeText(this,"Terminez la unité de Stabilisation en cours avant de modifier ce réglage.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"Terminez l’unité de Stabilisation en cours avant de modifier ce réglage.",Toast.LENGTH_LONG).show();
             return;
         }
         List<Integer> candidates=availableHardAnchoringSurahs();

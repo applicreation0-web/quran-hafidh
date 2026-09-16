@@ -267,16 +267,8 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshRecentSabqiAdvisory() {
         if (recentSabqiAdvisory == null) return;
-        DayOfWeek day = HifzClock.today().getDayOfWeek();
-        boolean advisoryDay = day == DayOfWeek.WEDNESDAY || day == DayOfWeek.FRIDAY;
-        if (!advisoryDay || prefs.recentSabqi().isEmpty()) {
-            recentSabqiAdvisory.setVisibility(View.GONE);
-            recentSabqiAdvisory.setText("");
-            return;
-        }
-        int[] range = HifzCadence.advisoryFiveLineRange(speedStore.consolidationSecondsPerLine());
-        recentSabqiAdvisory.setText("Consolidation · rappel libre 5–10 min · " + range[0] + "–" + range[1] + " lignes");
-        recentSabqiAdvisory.setVisibility(View.VISIBLE);
+        recentSabqiAdvisory.setText("");
+        recentSabqiAdvisory.setVisibility(View.GONE);
     }
 
     private void refreshDashboard() {
