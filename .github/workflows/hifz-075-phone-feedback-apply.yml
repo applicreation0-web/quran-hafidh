@@ -6,6 +6,7 @@ on:
       - work/hifz-0.7.5-retention-j10
     paths:
       - scripts/apply_hifz_075_phone_feedback.py
+      - .github/workflows/hifz-075-phone-feedback-apply.yml
 
 permissions:
   contents: write
