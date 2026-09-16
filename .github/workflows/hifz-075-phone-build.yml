@@ -1,0 +1,111 @@
+name: Build Quran Hifz 0.7.5 PHONE candidate
+
+on:
+  push:
+    branches:
+      - build/phone-hifz-0.7.5-7185a9ca
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prove source parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "BUILD_HEAD=$(git rev-parse HEAD)"
+          echo "SOURCE_CANDIDATE=7185a9ca92dfa46c10f63b0e5c499dce610dd720"
+          git cat-file -e 7185a9ca92dfa46c10f63b0e5c499dce610dd720^{commit}
+          test "$(git diff --name-only 7185a9ca92dfa46c10f63b0e5c499dce610dd720..HEAD | tr '\n' ' ')" = ".github/workflows/hifz-075-phone-build.yml "
+
+      - name: Restore immutable Hifz 0.7.4 release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p baseline074
+          curl -fL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/applicreation0-web/quran-unlock-android/releases/assets/564818126 \
+            -o baseline074/hifz074.apk
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  baseline074/hifz074.apk' | sha256sum -c -
+          rm -rf baseline074/extracted && mkdir -p baseline074/extracted
+          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' 'assets/tafsir/*' -d baseline074/extracted
+          rm -rf app/src/main/assets/mushaf app/src/main/assets/reader109
+          mkdir -p app/src/main/assets app/src/main/assets/reader109
+          cp -a baseline074/extracted/assets/mushaf app/src/main/assets/
+          cp baseline074/extracted/assets/reader109/geometry.json app/src/main/assets/reader109/geometry.json
+          rm -rf hifz-app/build/generated/hifzTafsir
+          mkdir -p hifz-app/build/generated/hifzTafsir
+          cp -a baseline074/extracted/assets/tafsir/. hifz-app/build/generated/hifzTafsir/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          test -s app/src/main/assets/reader109/geometry.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Assemble release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :hifz-app:assembleRelease -x :hifz-app:prepareHifzTafsirRelease --stacktrace
+
+      - name: Inspect exact APK
+        id: inspect
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find hifz-app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -1)
+          test -n "$APK"
+          echo "APK=$APK"
+          cp "$APK" "$RUNNER_TEMP/Quran-Hifz-0.7.5-PHONE-CANDIDATE.apk"
+          AAPT="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$AAPT" dump badging "$APK" | tee "$RUNNER_TEMP/badging.txt"
+          PACKAGE=$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt" | head -1)
+          VERSION_CODE=$(sed -n "s/^package:.*versionCode='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt" | head -1)
+          VERSION_NAME=$(sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p" "$RUNNER_TEMP/badging.txt" | head -1)
+          test -n "$PACKAGE"
+          if grep -q '^application-debuggable' "$RUNNER_TEMP/badging.txt"; then echo 'ERROR: debuggable=true'; exit 1; fi
+          SHA=$(sha256sum "$RUNNER_TEMP/Quran-Hifz-0.7.5-PHONE-CANDIDATE.apk" | awk '{print $1}')
+          if "$APKSIGNER" verify --verbose "$APK" > "$RUNNER_TEMP/apksigner.txt" 2>&1; then SIGNED=yes; else SIGNED=no; fi
+          printf 'SOURCE_CANDIDATE=%s\nPACKAGE=%s\nVERSION_CODE=%s\nVERSION_NAME=%s\nDEBUGGABLE=false\nSIGNED=%s\nSHA256=%s\n' \
+            '7185a9ca92dfa46c10f63b0e5c499dce610dd720' "$PACKAGE" "$VERSION_CODE" "$VERSION_NAME" "$SIGNED" "$SHA" | tee "$RUNNER_TEMP/PHONE_CANDIDATE_INFO.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Quran-Hifz-0.7.5-PHONE-CANDIDATE-7185a9ca
+          path: |
+            ${{ runner.temp }}/Quran-Hifz-0.7.5-PHONE-CANDIDATE.apk
+            ${{ runner.temp }}/PHONE_CANDIDATE_INFO.txt
+            ${{ runner.temp }}/badging.txt
+            ${{ runner.temp }}/apksigner.txt
+          if-no-files-found: error
+          retention-days: 7
