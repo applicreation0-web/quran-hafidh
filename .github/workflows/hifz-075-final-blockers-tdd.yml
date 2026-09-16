@@ -1,3 +1,4 @@
+# Phase 2: B1 fixed; source contracts must expose the remaining final blockers.
 name: Quran Hifz 0.7.5 final blockers TDD
 
 on:
