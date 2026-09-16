@@ -1,0 +1,48 @@
+name: Apply Quran Hifz 0.7.5 Claude round2 product fixes
+
+on:
+  push:
+    branches:
+      - tooling/apply-claude-075-reaudit-7185
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply exact reviewed transformations to clean target
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp scripts/apply_hifz_075_claude_round2_product.py /tmp/apply_hifz_075_claude_round2_product.py
+          git fetch origin work/hifz-0.7.5-claude-reaudit-fixes-7185a9ca
+          git checkout -B work/hifz-0.7.5-claude-reaudit-fixes-7185a9ca origin/work/hifz-0.7.5-claude-reaudit-fixes-7185a9ca
+          test "$(git rev-parse HEAD)" = "7185a9ca92dfa46c10f63b0e5c499dce610dd720"
+          python3 /tmp/apply_hifz_075_claude_round2_product.py
+          git diff --check
+          printf '%s\n' \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java > /tmp/expected
+          git diff --name-only | sort > /tmp/actual
+          sort -o /tmp/expected /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+      - name: Commit and push product correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java
+          git commit -m 'fix: close Claude round2 findings and preserve compatible migration'
+          git push origin HEAD:work/hifz-0.7.5-claude-reaudit-fixes-7185a9ca
