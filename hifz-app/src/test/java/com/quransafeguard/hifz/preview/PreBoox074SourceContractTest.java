@@ -120,7 +120,13 @@ public final class PreBoox074SourceContractTest {
         assertTrue(stabilization.contains("line.page != page"));
         assertTrue(stabilization.contains("Physical Mushaf line crosses surah boundary"));
         assertTrue(session.contains("StabilizationHalfPagePolicy.planPage"));
-        for (String text : new String[]{main, weekly, planner, observer}) {
+        for (String text : new String[]{main, weekly}) {
+            assertTrue(text.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
+            assertTrue(text.contains("StabilizationHalfPagePolicy.planPage"));
+            assertFalse(text.contains("fractionatedBlockLength(unit.size()"));
+            assertFalse(text.contains("fractionatedBlockStart(unit.size()"));
+        }
+        for (String text : new String[]{planner, observer}) {
             assertTrue(text.contains("surahSegmentLineCounts"));
             assertFalse(text.contains("fractionatedBlockLength(unit.size()"));
             assertFalse(text.contains("fractionatedBlockStart(unit.size()"));
