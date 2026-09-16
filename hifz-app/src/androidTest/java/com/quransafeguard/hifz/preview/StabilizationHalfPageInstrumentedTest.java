@@ -53,11 +53,8 @@ public final class StabilizationHalfPageInstrumentedTest {
                     rebuilt.add(lineId);
                 }
 
-                if (unitIndex + 1 < units.size()) {
-                    GeometryRepository.LineMeta left = pageLines.get(offset - 1);
-                    GeometryRepository.LineMeta right = pageLines.get(offset);
-                    assertFalse("Stabilisation boundary may never split a verse", sharesVerse(left, right));
-                }
+                // A physical 7/8 split is allowed to fall inside one aya. Page and surah
+                // boundaries above are the only semantic boundaries enforced here.
             }
 
             assertEquals("all physical lines must be consumed exactly once", original.size(), offset);

@@ -1,34 +1,4 @@
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-
-
-def replace_exact(path: Path, old: str, new: str) -> None:
-    text = path.read_text(encoding="utf-8")
-    count = text.count(old)
-    if count != 1:
-        raise SystemExit(f"guard failed for {path}: expected one match, found {count}")
-    path.write_text(text.replace(old, new), encoding="utf-8")
-
-
-prefs = ROOT / "hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
-replace_exact(
-    prefs,
-    """        List<VerseRange> acquiredNormalized = normalizeRanges(acquiredRanges);\n        List<VerseRange> stabilizationNormalized = normalizeRanges(stabilizationRanges);\n""",
-    """        // Schema-6 manual ranges are ordered but deliberately NOT coalesced. Adjacent\n        // ranges may sit on opposite surah boundaries; merging them would destroy the\n        // physical boundary that Stabilisation/Consolidation must preserve.\n        List<VerseRange> acquiredNormalized = new ArrayList<>(acquiredRanges);\n        List<VerseRange> stabilizationNormalized = new ArrayList<>(stabilizationRanges);\n        acquiredNormalized.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));\n        stabilizationNormalized.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));\n""",
-)
-
-stabilization_test = ROOT / "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/StabilizationHalfPageInstrumentedTest.java"
-replace_exact(
-    stabilization_test,
-    """                if (unitIndex + 1 < units.size()) {\n                    GeometryRepository.LineMeta left = pageLines.get(offset - 1);\n                    GeometryRepository.LineMeta right = pageLines.get(offset);\n                    assertFalse(\"Stabilisation boundary may never split a verse\", sharesVerse(left, right));\n                }\n""",
-    """                // A physical 7/8 split is allowed to fall inside one aya. Page and surah\n                // boundaries above are the only semantic boundaries enforced here.\n""",
-)
-
-runtime_test = ROOT / "hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/PhysicalConsolidationRuntimeInstrumentedTest.java"
-if runtime_test.exists():
-    raise SystemExit(f"guard failed: {runtime_test} already exists")
-runtime_test.write_text(r'''package com.quransafeguard.hifz.preview;
+package com.quransafeguard.hifz.preview;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -233,4 +203,3 @@ public final class PhysicalConsolidationRuntimeInstrumentedTest {
             prefs.itqanAssisted(), prefs.itqanFinalReveals()};
     }
 }
-''', encoding="utf-8")

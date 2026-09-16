@@ -840,8 +840,13 @@ public final class HifzPrefs {
                                       GeometryRepository geometry) {
         if (geometry == null) throw new IllegalArgumentException("Géométrie Mushaf requise.");
         validateV6ManualRanges(acquiredRanges, stabilizationRanges);
-        List<VerseRange> acquiredNormalized = normalizeRanges(acquiredRanges);
-        List<VerseRange> stabilizationNormalized = normalizeRanges(stabilizationRanges);
+        // Schema-6 manual ranges are ordered but deliberately NOT coalesced. Adjacent
+        // ranges may sit on opposite surah boundaries; merging them would destroy the
+        // physical boundary that Stabilisation/Consolidation must preserve.
+        List<VerseRange> acquiredNormalized = new ArrayList<>(acquiredRanges);
+        List<VerseRange> stabilizationNormalized = new ArrayList<>(stabilizationRanges);
+        acquiredNormalized.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
+        stabilizationNormalized.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
 
         ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
         for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
