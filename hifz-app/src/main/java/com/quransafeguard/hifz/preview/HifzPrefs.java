@@ -569,6 +569,13 @@ public final class HifzPrefs {
         }
     }
 
+    List<String> v6QuarantineLineIds() {
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            return Collections.unmodifiableList(new ArrayList<>(v6LineIdSet("v6QuarantineLineIds")));
+        }
+    }
+
     void resolveV6Quarantine(
             String lineId,
             HifzV6Migration.QuarantineResolution resolution) {

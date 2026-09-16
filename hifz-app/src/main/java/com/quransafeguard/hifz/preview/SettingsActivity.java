@@ -397,6 +397,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void showDiagnostic(){
+        List<String> quarantine=prefs.v6QuarantineLineIds();
         String state="Schéma : "+prefs.schema()+"\nDébut programme : "+prefs.programStartDate()
             +"\nApprentissage : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
             +"\nPlages Acquises : "+prefs.itqanRanges().size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
@@ -404,9 +405,28 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanCursor()
             +"\nPosition Révision : "+prefs.murajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
+            +"\nQuarantaine : "+quarantine.size()+" ligne(s)"
             +"\nVitesse Révision : "+speedStore.maintenanceSummary()
             +"\nVitesse Consolidation : "+speedStore.consolidationSummary();
-        new AlertDialog.Builder(this).setTitle("Diagnostic Hifz").setMessage(state).setPositiveButton("Fermer",null).show();
+        AlertDialog.Builder dialog=new AlertDialog.Builder(this)
+            .setTitle("Diagnostic Hifz").setMessage(state).setPositiveButton("Fermer",null);
+        if(!quarantine.isEmpty()){
+            dialog.setNeutralButton("Reprendre en Stabilisation",(d,w)->{
+                int resolved=0;
+                for(String lineId:new ArrayList<>(quarantine)){
+                    try{
+                        prefs.resolveV6Quarantine(lineId,HifzV6Migration.QuarantineResolution.RETURN_TO_STABILIZATION);
+                        resolved++;
+                    }catch(RuntimeException error){
+                        Toast.makeText(this,"Résolution interrompue · réessayez depuis Diagnostic.",Toast.LENGTH_LONG).show();
+                        break;
+                    }
+                }
+                refreshAll();
+                if(resolved>0)Toast.makeText(this,"Quarantaine résolue · "+resolved+" ligne(s) à reprendre en Stabilisation.",Toast.LENGTH_LONG).show();
+            });
+        }
+        dialog.show();
     }
 
     private void confirmReset(){

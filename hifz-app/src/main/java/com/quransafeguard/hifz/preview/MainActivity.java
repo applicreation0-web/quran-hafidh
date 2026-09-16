@@ -32,6 +32,7 @@ public final class MainActivity extends android.app.Activity {
     private J10HostBudgetStore hostBudgetStore;
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
+    private boolean consolidationNeedsAttention;
     private TextView today;
     private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
@@ -204,6 +205,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private boolean progressionConsolidationDue(GeometryRepository g){
+        consolidationNeedsAttention=false;
         if(g==null)return false;
         if(HifzClock.today().toString().equals(prefs.lastRecentSabqiReviewDate()))return false;
         try{
@@ -212,6 +214,7 @@ public final class MainActivity extends android.app.Activity {
                 engine,ConsolidationCycleEngine.Family.STABILIZATION);
             return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
         }catch(RuntimeException error){
+            consolidationNeedsAttention=true;
             android.util.Log.e("QuranHifz","Unable to evaluate progression Consolidation",error);
             return false;
         }
@@ -235,6 +238,10 @@ public final class MainActivity extends android.app.Activity {
         LocalDate current=HifzClock.today();
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
+        if(consolidationNeedsAttention){
+            startActivity(new Intent(this,SettingsActivity.class));
+            return;
+        }
         if(mode==null)return;
         LocalDate scheduled=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
             ? current : due.getScheduledDate();
@@ -250,6 +257,11 @@ public final class MainActivity extends android.app.Activity {
         }
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
+        if(consolidationNeedsAttention){
+            today.setText("Consolidation · état à vérifier");
+            todayAction.setEnabled(true);
+            return;
+        }
         if(mode==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
         boolean consolidation=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode);
         String prefix=!consolidation&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
