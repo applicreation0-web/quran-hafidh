@@ -50,7 +50,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String ready = method(prefs, "List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits", "/** Fail and defer");
-        String complete = method(prefs, "boolean entryIsFullyStabilizedOrAcquired", "public boolean deferAnchoringToday");
+        String complete = method(prefs, "boolean entryIsFullyStabilizedOrAcquired", "public AnchoringQueue.Entry currentAnchoringEntry");
         String render = method(session, "private void renderItqan()", "private String itqanProgramLabel()");
         assertTrue(ready.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
         assertTrue(complete.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
