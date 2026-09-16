@@ -1,0 +1,132 @@
+name: Build exact Quran Hifz 0.7.5 candidate APKs
+
+on:
+  push:
+    branches:
+      - tooling/build-hifz-075-candidate-5d5b527e
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detach exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach 5d5b527ed6be54a5d73ac29545763454cba2d0f9
+          test "$(git rev-parse HEAD)" = "5d5b527ed6be54a5d73ac29545763454cba2d0f9"
+          echo "CANDIDATE_SHA=$(git rev-parse HEAD)"
+          echo "CANDIDATE_TREE=$(git rev-parse HEAD^{tree})"
+
+      - name: Restore immutable 0.7.4 assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p baseline074
+          curl -fL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/applicreation0-web/quran-unlock-android/releases/assets/564818126 \
+            -o baseline074/hifz074.apk
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  baseline074/hifz074.apk' | sha256sum -c -
+          rm -rf baseline074/extracted && mkdir -p baseline074/extracted
+          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' 'assets/tafsir/*' -d baseline074/extracted
+          rm -rf app/src/main/assets/mushaf app/src/main/assets/reader109
+          mkdir -p app/src/main/assets app/src/main/assets/reader109
+          cp -a baseline074/extracted/assets/mushaf app/src/main/assets/
+          cp baseline074/extracted/assets/reader109/geometry.json app/src/main/assets/reader109/geometry.json
+          rm -rf hifz-app/build/generated/hifzTafsir
+          mkdir -p hifz-app/build/generated/hifzTafsir
+          cp -a baseline074/extracted/assets/tafsir/. hifz-app/build/generated/hifzTafsir/
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install SDK tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Build debug control APK and unsigned release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon \
+            :hifz-app:assembleDebug \
+            :hifz-app:assembleRelease \
+            -x :hifz-app:prepareHifzTafsirRelease \
+            --stacktrace
+
+      - name: Verify package, debuggable boundary, signatures and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEBUG_APK="hifz-app/build/outputs/apk/debug/hifz-app-debug.apk"
+          RELEASE_APK="hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk"
+          test -s "$DEBUG_APK"
+          test -s "$RELEASE_APK"
+
+          for apk in "$DEBUG_APK" "$RELEASE_APK"; do
+            echo "=== $apk ==="
+            badging="$(aapt dump badging "$apk")"
+            echo "$badging" | head -n 8
+            echo "$badging" | grep -q "package: name='com.quransafeguard.hifz'"
+            echo "$badging" | grep -q "versionCode='12'"
+            echo "$badging" | grep -q "versionName='0.7.5-boox'"
+            if echo "$badging" | grep -q '^application-debuggable'; then
+              echo "ERROR: APK is debuggable: $apk" >&2
+              exit 1
+            fi
+          done
+
+          apksigner verify --verbose --print-certs "$DEBUG_APK"
+          if apksigner verify "$RELEASE_APK"; then
+            echo "ERROR: release APK unexpectedly signed" >&2
+            exit 1
+          else
+            echo "Release APK confirmed unsigned as expected."
+          fi
+
+          mkdir -p exact_candidate_apks
+          cp "$DEBUG_APK" exact_candidate_apks/Quran-Hifz-0.7.5-5d5b527e-control-debug.apk
+          cp "$RELEASE_APK" exact_candidate_apks/Quran-Hifz-0.7.5-5d5b527e-release-unsigned.apk
+          sha256sum exact_candidate_apks/*.apk | tee exact_candidate_apks/SHA256SUMS
+          cat > exact_candidate_apks/PROVENANCE.txt <<'EOF'
+          Candidate SHA: 5d5b527ed6be54a5d73ac29545763454cba2d0f9
+          Candidate tree: 326d2fb7d985784794be291b4461624783b1dcfd
+          Package: com.quransafeguard.hifz
+          versionCode: 12
+          versionName: 0.7.5-boox
+          Both APK manifests verified non-debuggable.
+          control-debug: Android debug-signed; installable for engineering smoke tests, but signature is not the production key.
+          release-unsigned: exact release build, intentionally unsigned; not installable until signed with the authorized production key.
+          This artifact is NOT a GO_PHONE and is NOT a release/publication.
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-075-exact-candidate-5d5b527e
+          path: exact_candidate_apks/
+          if-no-files-found: error
+          compression-level: 0
