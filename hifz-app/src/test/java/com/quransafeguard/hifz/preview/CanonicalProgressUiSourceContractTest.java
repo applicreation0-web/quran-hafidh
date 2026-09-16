@@ -67,7 +67,6 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(session.contains("de la Apprentissage"));
         assertFalse(session.contains("de Apprentissage"));
         assertFalse(session.contains("d’Stabilisation"));
-        assertFalse(session.contains("de la Stabilisation"));
         assertTrue(session.contains("de l’Apprentissage"));
         assertTrue(session.contains("de la Stabilisation"));
     }

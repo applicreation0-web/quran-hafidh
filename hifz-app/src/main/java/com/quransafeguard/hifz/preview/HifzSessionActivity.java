@@ -202,7 +202,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (today.equals(prefs.lastSabqiDate())) {
             sessionCompleted = true;
             program.setText("Apprentissage · séance validée");
-            progress.setText(prefs.lastSabqiLabel().isEmpty() ? "Bloc terminé" : prefs.lastSabqiLabel());
+            progress.setText(prefs.lastSabqiLabel().isEmpty() ? "Bloc terminé" : HifzDisplayVocabulary.canonicalize(prefs.lastSabqiLabel()));
             return;
         }
         int startLimit = geometry.firstLineIndex(prefs.sabqiStart());
@@ -274,7 +274,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.sabqiRep(); if(rep>=PreviewConfig.SABQI_TOTAL_REPS)return;
         int oldMask=currentMask;
         rep++; int reveals=prefs.sabqiAssisted()+(revealed?1:0);
-        if(!prefs.setSabqiProgress(rep,reveals)){onError("Impossible d’enregistrer la répétition de la Apprentissage.");return;}
+        if(!prefs.setSabqiProgress(rep,reveals)){onError("Impossible d’enregistrer la répétition de l’Apprentissage.");return;}
         if(rep>=PreviewConfig.SABQI_TOTAL_REPS){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
@@ -303,7 +303,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionDate.toString(),
             label
         );
-        if (!ok) { onError("Impossible d’enregistrer la Apprentissage."); return; }
+        if (!ok) { onError("Impossible d’enregistrer l’Apprentissage."); return; }
         rebalanceRecentWindow(sessionDate);
         awaitingValidation=false;
         closeClockForCompletedSession();
@@ -313,7 +313,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void restartSabqiAfterAssistance() {
         if (!prefs.setSabqiProgress(0, 0)) {
-            onError("Impossible de relancer ce bloc de Apprentissage.");
+            onError("Impossible de relancer ce bloc d’Apprentissage.");
             return;
         }
         lastCheckpointBucket = -1L;
@@ -424,7 +424,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
             sessionCompleted = true;
             program.setText("Consolidation · séance validée");
-            progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : prefs.lastRecentSabqiReviewLabel());
+            progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
             return;
         }
         consolidationSession = prefs.restoreConsolidationSession(
@@ -569,10 +569,10 @@ private void rebalanceRecentWindow(LocalDate today) {
             sessionCompleted = true;
             if (prefs.itqanBlockIndex() > 0) {
                 program.setText("Stabilisation · séance terminée");
-                progress.setText(prefs.lastItqanLabel().isEmpty()?"Sous-bloc terminé":prefs.lastItqanLabel());
+                progress.setText(prefs.lastItqanLabel().isEmpty()?"Sous-bloc terminé":HifzDisplayVocabulary.canonicalize(prefs.lastItqanLabel()));
             } else {
                 program.setText("Stabilisation · unité validée");
-                progress.setText(prefs.lastItqanLabel().isEmpty()?"Stabilisation terminé":prefs.lastItqanLabel());
+                progress.setText(prefs.lastItqanLabel().isEmpty()?"Stabilisation terminée":HifzDisplayVocabulary.canonicalize(prefs.lastItqanLabel()));
             }
             return;
         }
@@ -667,7 +667,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
             + (revealed && PreviewConfig.isItqanValidationRep(rep - 1, itqanSessionProtocol) ? 1 : 0);
-        if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition d’Stabilisation.");return;}
+        if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition de la Stabilisation.");return;}
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
@@ -710,7 +710,7 @@ private void rebalanceRecentWindow(LocalDate today) {
 
     private void restartItqanAfterAssistance() {
         if (itqanUnit == null || !prefs.setItqanProgress(0, 0, 0, itqanUnit.start, itqanUnit.end)) {
-            onError("Impossible de relancer ce bloc d’Stabilisation.");
+            onError("Impossible de relancer ce bloc de Stabilisation.");
             return;
         }
         lastCheckpointBucket = -1L;
@@ -728,7 +728,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (today.equals(prefs.lastMurajaahDate())) {
             sessionCompleted = true;
             program.setText("Révision · séance validée");
-            progress.setText(prefs.lastMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : prefs.lastMurajaahLabel());
+            progress.setText(prefs.lastMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastMurajaahLabel()));
             return;
         }
         if (!prefs.isMurajaahCursorValid()) {

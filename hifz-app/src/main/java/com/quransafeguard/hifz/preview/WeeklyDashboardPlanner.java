@@ -161,7 +161,7 @@ final class WeeklyDashboardPlanner {
 
     private static String compact(String label){
         if(label==null||label.isEmpty())return "Séance enregistrée";
-        return label.replace(" · révélations 0","");
+        return HifzDisplayVocabulary.canonicalize(label).replace(" · révélations 0","");
     }
 
     static String day(LocalDate date,LocalDate today){

@@ -64,9 +64,9 @@ public final class SettingsActivity extends android.app.Activity {
         TextView protocol=Ui.text(this,"Lun/Mer/Ven · Apprentissage   ·   Mar/Jeu · Stabilisation   ·   Sam/Dim · Révision",11f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
 
-        sabqiStartRow=Ui.settingRow(this,"Début de la plage à mémoriser",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage à mémoriser",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
+        sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
         root.addView(sabqiStartRow);root.addView(Ui.divider(this));
-        sabqiEndRow=Ui.settingRow(this,"Fin de la plage à mémoriser",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage à mémoriser",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
+        sabqiEndRow=Ui.settingRow(this,"Fin de la plage d’Apprentissage",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage d’Apprentissage",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
         root.addView(sabqiEndRow);
         sabqiStatus=Ui.text(this,"",11f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));root.addView(sabqiStatus);
 
@@ -121,16 +121,15 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));root.addView(Ui.divider(this));
         root.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
-        section(root,"Repères");
-        addRepere(root,"Apprentissage","Action de mémorisation d’un nouveau passage. Après validation, le passage devient Appris.");
-        addRepere(root,"Appris","État d’un passage mémorisé dont la prochaine action structurée est la Stabilisation.");
-        addRepere(root,"Stabilisation","Action de renforcement de la matière Apprise sur les unités physiques du Mushaf. Après validation, elle devient Stabilisée.");
-        addRepere(root,"Stabilisé","État d’un passage prêt pour la Consolidation.");
-        addRepere(root,"Consolidation","Action de regroupement progressif de une à trois unités. Une Consolidation validée fait passer la matière vers Acquis.");
-        addRepere(root,"Acquis","État d’un passage qui entre dans la Révision et dans la garantie J10.");
-        addRepere(root,"Révision","Rotation régulière de la matière Acquise, avec révélation seulement en cas de besoin.");
-        addRepere(root,"J10","Garantie de fraîcheur : toute matière Acquise doit être revue au plus tard tous les dix jours. J10 utilise les créneaux existants et n’ajoute pas de séance parallèle.");
-        addRepere(root,"Report souple","Une séance manquée reste due au prochain créneau sans échec, sans double quota automatique et sans déplacement silencieux du curseur.");
+        section(root,"Schéma");
+        TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",12.5f,true);
+        schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
+        TextView consolidationSchemaNote=Ui.text(this,"Consolidation · déclenchée par progression",11f,false);
+        consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
+        TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);
+        j10SchemaNote.setTextColor(Ui.MUTED);j10SchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10SchemaNote);
+        TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau",11f,false);
+        carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(carryoverSchemaNote);
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
@@ -138,12 +137,6 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void section(LinearLayout root,String title){
         TextView view=Ui.bookText(this,title,15,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
-    }
-
-    private void addRepere(LinearLayout root,String title,String definition){
-        TextView heading=Ui.text(this,title,12.5f,true);heading.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),0);root.addView(heading);
-        TextView body=Ui.text(this,definition,11f,false);body.setTextColor(Ui.MUTED);body.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(body);
-        root.addView(Ui.divider(this));
     }
 
     private void refreshAll(){refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshJ10();refreshAudio();}
@@ -160,11 +153,11 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void setSabqiBound(boolean isStart,VerseRef verse){
         VerseRef newStart=isStart?verse:prefs.sabqiStart(),newEnd=isStart?prefs.sabqiEnd():verse;
-        if(GeometryRepository.ordinal(newStart)>GeometryRepository.ordinal(newEnd)){Toast.makeText(this,"Le début doit précéder la fin de la plage à mémoriser.",Toast.LENGTH_LONG).show();return;}
+        if(GeometryRepository.ordinal(newStart)>GeometryRepository.ordinal(newEnd)){Toast.makeText(this,"Le début doit précéder la fin de la plage d’Apprentissage.",Toast.LENGTH_LONG).show();return;}
         if(isStart)prefs.setSabqiStart(verse);else prefs.setSabqiEnd(verse);
         int low=geometry.firstLineIndex(newStart),high=geometry.lastLineIndex(newEnd),cursor=prefs.sabqiLineCursor();
         if(cursor>=0&&(cursor<low||cursor>high)){
-            new AlertDialog.Builder(this).setTitle("Position de la leçon hors de la plage")
+            new AlertDialog.Builder(this).setTitle("Position de l’Apprentissage hors de la plage")
                 .setMessage("Repositionner l’Apprentissage au début "+newStart+" ?")
                 .setNegativeButton("Garder",(d,w)->refreshSabqi())
                 .setPositiveButton("Repositionner",(d,w)->{prefs.setSabqiLineCursor(low);prefs.setSabqiProgress(0,0);prefs.setElapsedFor(HifzSessionActivity.SABQI,0L);refreshSabqi();}).show();

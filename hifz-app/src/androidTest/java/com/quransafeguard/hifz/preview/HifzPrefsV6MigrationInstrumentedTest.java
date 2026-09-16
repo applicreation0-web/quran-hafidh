@@ -23,18 +23,22 @@ public final class HifzPrefsV6MigrationInstrumentedTest {
     private Context context;
     private SharedPreferences main;
     private SharedPreferences legacyJ10;
+    private SharedPreferences dashboardHistory;
 
     @Before public void setUp() {
         context = ApplicationProvider.getApplicationContext();
         main = context.getSharedPreferences(MAIN, Context.MODE_PRIVATE);
         legacyJ10 = context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE);
+        dashboardHistory = context.getSharedPreferences("quran_hifz_dashboard_ledger_v1", Context.MODE_PRIVATE);
         main.edit().clear().commit();
         legacyJ10.edit().clear().commit();
+        dashboardHistory.edit().clear().commit();
     }
 
     @After public void tearDown() {
         main.edit().clear().commit();
         legacyJ10.edit().clear().commit();
+        dashboardHistory.edit().clear().commit();
     }
 
     @Test public void calibratedInstalledProgressMigratesFromFiveToSixWithoutLoss() {
@@ -101,6 +105,22 @@ public final class HifzPrefsV6MigrationInstrumentedTest {
         assertEquals(6, reopened.schema());
         assertEquals(afterFirstMain, snapshot(main));
         assertEquals(afterFirstJ10, snapshot(legacyJ10));
+    }
+
+    @Test public void schemaFiveDashboardHistorySurvivesUpgradeByteForByte() {
+        seedRepresentativeSchemaFive(true, 7.25f);
+        assertTrue(dashboardHistory.edit()
+  .putString("started", "2026-08-01")
+  .putString("records", "[{\"date\":\"2026-09-14\",\"type\":\"ITQAN\",\"label\":\"Itqān installé à conserver\"}]")
+  .commit());
+        Map<String, ?> beforeHistory = snapshot(dashboardHistory);
+
+        HifzPrefs prefs = new HifzPrefs(context);
+
+        assertEquals(6, prefs.schema());
+        assertEquals(beforeHistory, snapshot(dashboardHistory));
+        assertEquals("Stabilisation installée à conserver",
+  HifzDisplayVocabulary.canonicalize("Itqān installé à conserver"));
     }
 
     @Test public void freshProfileInitializesCompleteSchemaSixState() {
