@@ -84,12 +84,16 @@ jobs:
           set -euo pipefail
           DEBUG_APK="hifz-app/build/outputs/apk/debug/hifz-app-debug.apk"
           RELEASE_APK="hifz-app/build/outputs/apk/release/hifz-app-release-unsigned.apk"
+          AAPT="${ANDROID_HOME}/build-tools/36.0.0/aapt"
+          APKSIGNER="${ANDROID_HOME}/build-tools/36.0.0/apksigner"
           test -s "$DEBUG_APK"
           test -s "$RELEASE_APK"
+          test -x "$AAPT"
+          test -x "$APKSIGNER"
 
           for apk in "$DEBUG_APK" "$RELEASE_APK"; do
             echo "=== $apk ==="
-            badging="$(aapt dump badging "$apk")"
+            badging="$("$AAPT" dump badging "$apk")"
             echo "$badging" | head -n 8
             echo "$badging" | grep -q "package: name='com.quransafeguard.hifz'"
             echo "$badging" | grep -q "versionCode='12'"
@@ -100,8 +104,8 @@ jobs:
             fi
           done
 
-          apksigner verify --verbose --print-certs "$DEBUG_APK"
-          if apksigner verify "$RELEASE_APK"; then
+          "$APKSIGNER" verify --verbose --print-certs "$DEBUG_APK"
+          if "$APKSIGNER" verify "$RELEASE_APK"; then
             echo "ERROR: release APK unexpectedly signed" >&2
             exit 1
           else
