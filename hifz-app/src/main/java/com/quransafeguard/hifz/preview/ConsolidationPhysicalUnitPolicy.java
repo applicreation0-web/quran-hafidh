@@ -40,12 +40,11 @@ final class ConsolidationPhysicalUnitPolicy {
                 allAcquired &= a;
             }
             if (allAcquired) continue;
-            if (anyAcquired) {
-                throw new IllegalStateException("Consolidation physical unit is partially acquired");
-            }
-            if (anyStabilized && !allStabilized) {
-                throw new IllegalStateException("Consolidation physical unit is partially stabilized");
-            }
+            // A physical unit is eligible only when every line is Stabilized and none are
+            // already Acquired. Partial states are normal at migration/manual boundaries;
+            // they must not block earlier ready units or the rest of the queue.
+            if (anyAcquired) continue;
+            if (anyStabilized && !allStabilized) continue;
             if (!allStabilized) continue;
             out.add(unit);
             if (out.size() == maxUnits) break;
