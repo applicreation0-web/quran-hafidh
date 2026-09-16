@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   export:
@@ -26,27 +25,28 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "5696e7e8b91d213deaaa40c7b4893965cf46d4e4"
 
-      - name: Restore only the validated Mushaf baseline needed to regenerate geometry
-        uses: actions/download-artifact@v4
-        with:
-          name: quran-safeguard-0.10.9-astra-re-audit
-          run-id: 34336797351
-          github-token: ${{ github.token }}
-          path: baseline109
+      - name: Restore immutable Mushaf pages from published 0.7.4 APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p baseline074
+          gh release download v0.7.4-boox --repo "$GITHUB_REPOSITORY" --pattern 'Quran-Hifz-0.7.4-boox-release.apk' --dir baseline074
+          apk="baseline074/Quran-Hifz-0.7.4-boox-release.apk"
+          test -s "$apk"
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  '"$apk" | sha256sum -c -
+          rm -rf baseline074/extracted && mkdir -p baseline074/extracted
+          unzip -q "$apk" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' -d baseline074/extracted
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline074/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
 
-      - name: Inject Mushaf pages and regenerate exact geometry
+      - name: Regenerate exact geometry
         shell: bash
         run: |
           set -euo pipefail
-          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
-          test -n "$old_plus" && test -s "$old_plus"
-          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
-          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
-          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' -d baseline109/extracted
-          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
-          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
-          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
-          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
           python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
           python3 scripts/build_reader109_geometry.py
           python3 scripts/verify_hifz_geometry_edges.py
@@ -95,6 +95,7 @@ jobs:
 
           HEAD source exact : 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
           Baseline : f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+          Géométrie régénérée depuis l'APK 0.7.4 publié, SHA-256 c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc.
 
           Commencer par 01_PROMPT_CLAUDE.txt.
           EOF
@@ -102,56 +103,38 @@ jobs:
           cat > "$PKG/01_PROMPT_CLAUDE.txt" <<'EOF'
           MISSION CLAUDE — AUDIT COURT, INDÉPENDANT ET HORS LIGNE — QURAN HIFZ 0.7.5
 
-          IMPORTANT : tu n'as besoin d'aucun accès GitHub/réseau. Tous les fichiers utiles sont dans ce ZIP.
+          Tu n'as besoin d'AUCUN accès GitHub/réseau. Tous les fichiers utiles sont dans ce ZIP.
           HEAD à auditer : 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
-          Ne fais PAS une revue générale du dépôt. Contrôle uniquement les points bloquants suivants.
+          Ne fais PAS une revue générale. Contrôle uniquement ces 6 points.
 
-          1. UNITÉS PHYSIQUES
-          - Stabilisation/Consolidation identifiées par lineIds physiques exacts.
-          - Jamais de franchissement PAGE ou SOURATE ; ordre/continuité conservés ; split intra-ayah autorisé.
-          - <=11=1 unité ; 12=6+6 ; 13=6+7 ; 14=7+7 ; 15=7+8.
-          - Vérifier dans geometry.json le cas 2:282 / page 48 : 15 lignes physiques, puis vérifier que le code le découpe 7+8 en deux unités distinctes.
+          1) UNITÉS PHYSIQUES
+          lineIds physiques exacts ; jamais PAGE/SOURATE ; split intra-ayah autorisé.
+          <=11=1 ; 12=6+6 ; 13=6+7 ; 14=7+7 ; 15=7+8.
+          Vérifie geometry.json pour 2:282/page 48/15 lignes puis le split code 7+8 distinct.
 
-          2. CONSOLIDATION
-          - Consomme exactement les unités de Stabilisation.
-          - Ready seulement si toutes lignes STABILIZED et aucune ACQUIRED ; maxUnits 1..3 ; jamais de merge.
-          - Finir U1 ne doit jamais acquérir U2.
-          - Groupes 1→2→3 et restauration exacte après process death.
+          2) CONSOLIDATION
+          Unités identiques à Stabilisation ; ready=toutes STABILIZED et aucune ACQUIRED ; maxUnits 1..3 ; aucun merge ; U1 fini n'acquiert jamais U2 ; groupes 1→2→3 ; restauration exacte après process death.
 
-          3. PERSISTANCE / MIGRATION SCHEMA 6
-          - lineIds exacts persistés/restaurés/complétés.
-          - Pas de coalescence abusive de ranges adjacents pouvant masquer une frontière de sourate.
-          - Migration 0.7.4→0.7.5 conserve progression, historique, J10, compteurs et ranges.
+          3) PERSISTANCE / MIGRATION SCHEMA 6
+          lineIds exacts persist/restore/complete ; pas de coalescence destructive de ranges adjacents ; migration 0.7.4→0.7.5 conserve progression, historique, J10, compteurs et ranges.
 
-          4. CHAÎNE / J10
+          4) CHAÎNE / J10
           Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision.
-          Lun/Mer/Ven Apprentissage ; Mar/Jeu Stabilisation ; Sam/Dim Révision ; Consolidation déclenchée par progression.
-          J10/Révision : uniquement ACQUIRED.
+          Lun/Mer/Ven Apprentissage ; Mar/Jeu Stabilisation ; Sam/Dim Révision ; Consolidation par progression ; J10/Révision uniquement ACQUIRED.
 
-          5. CLOSEOUT UI
-          - Paramètres/plages cohérents.
-          - « Schéma » remplace l'ancien Repères/Lexique.
-          - Anciens libellés affichés avec le vocabulaire actuel sans mutation destructive des données historiques.
+          5) CLOSEOUT UI
+          Paramètres/plages cohérents ; « Schéma » remplace Repères/Lexique ; anciens libellés réaffichés au vocabulaire actuel sans mutation destructive des données historiques.
 
-          6. LIMITES
-          Ne propose aucun changement audio Al-Husary, ZIP audio, Tafsir, BOOX, release 0.7.4, vecteurs Consolidation ou J10 sans régression démontrée.
-          Le gate Work et le test BOOX restent des étapes séparées après cet audit.
+          6) LIMITES
+          Aucun changement audio Al-Husary, ZIP audio, Tafsir, BOOX, release 0.7.4, vecteurs Consolidation ou J10 sans régression démontrée. Gate Work et test BOOX restent séparés.
 
-          SORTIE COURTE OBLIGATOIRE
+          SORTIE COURTE
           HEAD audité : <sha>
-          BLOQUANT : <néant ou liste>
-          MAJEUR : <néant ou liste>
-          MINEUR : <seulement utile>
-          Pour chaque défaut : fichier + symbole/ligne + preuve + correction minimale.
-          Puis 1 ligne chacun :
-          - 15 lignes / 1 ayah => 7+8
-          - frontière sourate
-          - U1 n'acquiert pas U2
-          - process death Consolidation
-          - migration schema 6
-          Verdict : AUDIT CLAUDE GREEN ou AUDIT CLAUDE NO-GO
-
-          Pas de long rapport narratif. Pas de refactor préventif. Aucun GO_PHONE.
+          BLOQUANT / MAJEUR / MINEUR : <néant ou liste courte>
+          Chaque défaut : fichier + symbole/ligne + preuve + correction minimale.
+          Puis une ligne chacun : 15 lignes/1 ayah=>7+8 ; frontière sourate ; U1≠U2 ; process death ; migration schema 6.
+          Verdict : AUDIT CLAUDE GREEN ou AUDIT CLAUDE NO-GO.
+          Pas de rapport narratif, pas de refactor préventif, aucun GO_PHONE.
           EOF
 
           cat > "$PKG/02_PROVENANCE.txt" <<EOF
@@ -159,13 +142,15 @@ jobs:
           TREE=$(git rev-parse HEAD^{tree})
           BASELINE=f344fc7d0313e4e327a53c0fe6da8f287d12bdac
           REFERENCE_SOL_RUN=35078014986
+          GEOMETRY_SOURCE_RELEASE=v0.7.4-boox
+          GEOMETRY_SOURCE_APK_SHA256=c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc
           GEOMETRY_PAGES=604
           GEOMETRY_LINES=8820
           MULTI_PAGE_VERSES=0
           EOF
 
           git diff --name-status f344fc7d0313e4e327a53c0fe6da8f287d12bdac...5696e7e8b91d213deaaa40c7b4893965cf46d4e4 > "$PKG/audit-data/FULL_DELTA_FILES.txt"
-          find "$PKG" -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > "$PKG/SHA256SUMS.txt"
+          (cd "$PKG" && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
 
           (cd "$ROOT" && zip -qr "$GITHUB_WORKSPACE/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip" "$(basename "$PKG")")
           unzip -t "$GITHUB_WORKSPACE/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip"
