@@ -28,29 +28,29 @@
 
 ### Task 2: Canonical cadence and user-facing terminology
 **Files:** Modify `SettingsActivity.java`, `WeeklyDashboardPlanner.java`, `MainActivity.java`, `HifzSessionActivity.java`; tests above.
-- [ ] Replace obsolete user-facing action labels with canonical names while retaining internal mode constants.
-- [ ] Render M/W/F Apprentissage, Tue/Thu Stabilisation, Sat/Sun Révision.
-- [ ] Remove fixed Sunday Consolidation from user-facing cadence.
-- [ ] Rewrite Repères around four actions, three states, J10 and soft carryover.
-- [ ] Run source contracts; expect terminology/cadence tests GREEN.
+- [x] Implement canonical action labels while retaining internal mode constants.
+- [x] Render M/W/F Apprentissage, Tue/Thu Stabilisation, Sat/Sun Révision.
+- [x] Remove fixed Sunday Consolidation from the weekly projection/runtime launcher.
+- [x] Rewrite Repères around four actions, three states, J10 and soft carryover.
+- [ ] Run source contracts and compilation on product commit `6e623eb9f8affe09806b66e3d10711c490db8c10`.
 
 ### Task 3: Independent À stabiliser / Acquis multi-lists
 **Files:** Modify `HifzPrefs.java`, `SettingsActivity.java`; add focused unit/instrumented tests if needed.
-- [ ] Expose two independent ordered disjoint range collections.
-- [ ] Validate ranges fail-closed: canonical order, no self-overlap, no overlap between collections.
-- [ ] Persist an edit atomically across schema-6 and legacy compatibility keys without moving cursors silently.
-- [ ] Reconcile J10 membership/dates without inventing dates.
-- [ ] Expose add/edit/delete for each list.
-- [ ] Test persistence, overlap rejection, cursor preservation and transfer semantics.
+- [x] Expose two independent ordered range collections.
+- [x] Validate ranges fail-closed: no self-overlap, no overlap between collections.
+- [x] Persist an edit atomically across schema-6 and legacy compatibility keys without moving cursors silently.
+- [x] Reconcile J10 membership/dates without inventing dates.
+- [x] Expose add/edit/delete for each list.
+- [ ] Add/complete focused persistence, overlap and cursor-preservation regression tests.
 
 ### Task 4: Regression gates
 **Files:** Existing migration/J10/consolidation/stabilization tests and workflow.
-- [ ] Run 150 behavior JVM + source contracts + 20 core.
+- [ ] Run behavior JVM + source contracts + core.
 - [ ] Run schema 5→6, legacy J10, migration recovery, persistent state, consolidation persistence, half-page, state transitions and carryover emulator tests.
 - [ ] Confirm local Al-Husary import contract unchanged.
 - [ ] Record exact HEAD/run/counts; do not call GREEN while emulator is pending.
 
 ### Task 5: PHONE-only status-bar diagnosis
 **Files:** Inspect `Ui.java` and `SettingsActivity.java`; no BOOX-specific change without evidence.
-- [ ] Confirm whether inset padding is attached to scroll content and therefore scrolls away on PHONE.
-- [ ] If fixing, use a generic system-bar-safe container change with a regression check; otherwise leave as documented PHONE observation for device comparison.
+- [x] Root cause identified: Settings attaches system-bar padding to the inner scroll content, so top inset can scroll away on PHONE.
+- [ ] Do not change BOOX behavior speculatively; keep this as a PHONE-specific observation until device comparison or a generic regression test justifies a container-level fix.
