@@ -74,12 +74,12 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(session.contains("return \"Stabilisation\""));
         assertTrue(session.contains("return \"Consolidation\""));
         assertTrue(session.contains("return \"Révision\""));
-        assertTrue(settings.contains("section(root,\"Repères\")"));
-        for (String name : new String[]{"Apprentissage","Appris","Stabilisation","Stabilisé","Consolidation","Acquis","Révision","J10"}) {
-            assertTrue(name, settings.contains("addRepere(root,\"" + name + "\""));
-        }
-        assertFalse(settings.contains("addRepere(root,\"Ancrage\""));
-        assertFalse(settings.contains("addRepere(root,\"Entretien\""));
+        assertTrue(settings.contains("section(root,\"Schéma\")"));
+        assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
+        assertTrue(settings.contains("Consolidation · déclenchée par progression"));
+        assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
+        assertFalse(settings.contains("section(root,\"Repères\")"));
+        assertFalse(settings.contains("addRepere(root"));
     }
 
     @Test public void settingsExposeReadableSeparatedSpeedsAndJ10State() throws Exception {

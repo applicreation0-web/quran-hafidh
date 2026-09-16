@@ -582,7 +582,7 @@ private void rebalanceRecentWindow(LocalDate today) {
             clock.pause();
             if (prefs.anchoringDeferredToday()) {
                 program.setText("Stabilisation · page reportée");
-                progress.setText("Cette page reviendra à la prochaine séance d’Stabilisation.");
+                progress.setText("Cette page reviendra à la prochaine séance de Stabilisation.");
             } else {
                 program.setText("Stabilisation · aucune page en attente");
                 progress.setText("Toutes les pages en attente sont acquises.");
