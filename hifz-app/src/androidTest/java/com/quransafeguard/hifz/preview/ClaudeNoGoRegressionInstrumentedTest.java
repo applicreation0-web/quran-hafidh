@@ -1,9 +1,16 @@
 package com.quransafeguard.hifz.preview;
 
+import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.view.View;
+import android.view.ViewGroup;
 
+import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -16,9 +23,11 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /** Device-level regressions for the Claude 0.7.5 independent audit. */
@@ -41,6 +50,62 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
     @After public void tearDown() {
         main.edit().clear().commit();
         legacyJ10.edit().clear().commit();
+    }
+
+    @Test public void homeTodayOpensProgressionTriggeredConsolidation() throws Exception {
+        HifzPrefs prefs = new HifzPrefs(context);
+        prefs.setProgramStartDate(HifzClock.today());
+        List<GeometryRepository.LineMeta> page = pageLines(48);
+        List<StabilizationHalfPagePolicy.Unit> units = StabilizationHalfPagePolicy.planPage(page);
+        assertEquals(2, units.size());
+        List<String> stabilized = units.get(0).lineIds;
+
+        assertTrue(main.edit()
+            .putString("anchoringQueue", "[{\"start\":\"2:282\",\"end\":\"2:282\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]")
+            .putBoolean("anchoringQueueInitialized", true)
+            .putInt("anchoringQueueIndex", 0)
+            .putString("v6StabilizedLineIds", json(stabilized))
+            .putString("v6AcquiredCreditLineIds", "[]")
+            .putString("v6LegacyPartialAcquiredLineIds", "[]")
+            .putString("v6QuarantineLineIds", "[]")
+            .commit());
+
+        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
+            HifzSessionActivity.class.getName(), null, false);
+        Activity opened = null;
+        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+            boolean enabled = false;
+            for (int attempt = 0; attempt < 100 && !enabled; attempt++) {
+                AtomicBoolean ready = new AtomicBoolean(false);
+                scenario.onActivity(activity -> {
+                    View action = findByContentDescription(
+                        activity.getWindow().getDecorView(), "Ouvrir la séance du jour");
+                    ready.set(action != null && action.isEnabled());
+                });
+                enabled = ready.get();
+                if (!enabled) Thread.sleep(50L);
+            }
+            assertTrue("Today action never became enabled", enabled);
+
+            scenario.onActivity(activity -> {
+                View action = findByContentDescription(
+                    activity.getWindow().getDecorView(), "Ouvrir la séance du jour");
+                assertNotNull(action);
+                action.performClick();
+            });
+
+            opened = monitor.waitForActivityWithTimeout(5_000L);
+            assertNotNull("HifzSessionActivity was not opened", opened);
+            Intent intent = opened.getIntent();
+            assertEquals(HifzSessionActivity.RECENT_SABQI_REVIEW,
+                intent.getStringExtra(HifzSessionActivity.EXTRA_MODE));
+            assertEquals(HifzClock.today().toString(),
+                intent.getStringExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE));
+        } finally {
+            if (opened != null) opened.finish();
+            instrumentation.removeMonitor(monitor);
+        }
     }
 
     @Test public void legacyFiveLineProgressMigratesToStabilizedAndContinuesOnNewPhysicalUnit() {
@@ -133,6 +198,19 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
             if (line.page == page) out.add(line);
         }
         return out;
+    }
+
+    private static View findByContentDescription(View root, String wanted) {
+        if (root == null) return null;
+        CharSequence description = root.getContentDescription();
+        if (wanted.contentEquals(description)) return root;
+        if (!(root instanceof ViewGroup)) return null;
+        ViewGroup group = (ViewGroup) root;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View found = findByContentDescription(group.getChildAt(i), wanted);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private void seedLegacyPage529SchemaFive() {
