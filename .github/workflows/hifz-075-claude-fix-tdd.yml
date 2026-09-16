@@ -35,13 +35,17 @@ jobs:
             -o baseline074/hifz074.apk
           echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  baseline074/hifz074.apk' | sha256sum -c -
           rm -rf baseline074/extracted && mkdir -p baseline074/extracted
-          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' -d baseline074/extracted
+          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' 'assets/tafsir/*' -d baseline074/extracted
           rm -rf app/src/main/assets/mushaf app/src/main/assets/reader109
           mkdir -p app/src/main/assets app/src/main/assets/reader109
           cp -a baseline074/extracted/assets/mushaf app/src/main/assets/
           cp baseline074/extracted/assets/reader109/geometry.json app/src/main/assets/reader109/geometry.json
+          rm -rf hifz-app/build/generated/hifzTafsir
+          mkdir -p hifz-app/build/generated/hifzTafsir
+          cp -a baseline074/extracted/assets/tafsir/. hifz-app/build/generated/hifzTafsir/
           test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
           test -s app/src/main/assets/reader109/geometry.json
+          test -n "$(find hifz-app/build/generated/hifzTafsir -maxdepth 1 -type f -print -quit)"
 
       - uses: actions/setup-java@v4
         with:
@@ -71,6 +75,7 @@ jobs:
           gradle --no-daemon \
             :hifz-app:testDebugUnitTest \
             :hifz-app:sourceContractTest \
+            -x :hifz-app:prepareHifzTafsirRelease \
             --stacktrace
 
       - name: Record test counts
@@ -110,11 +115,15 @@ jobs:
             -o baseline074/hifz074.apk
           echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  baseline074/hifz074.apk' | sha256sum -c -
           rm -rf baseline074/extracted && mkdir -p baseline074/extracted
-          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' -d baseline074/extracted
+          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' 'assets/tafsir/*' -d baseline074/extracted
           rm -rf app/src/main/assets/mushaf app/src/main/assets/reader109
           mkdir -p app/src/main/assets app/src/main/assets/reader109
           cp -a baseline074/extracted/assets/mushaf app/src/main/assets/
           cp baseline074/extracted/assets/reader109/geometry.json app/src/main/assets/reader109/geometry.json
+          rm -rf hifz-app/build/generated/hifzTafsir
+          mkdir -p hifz-app/build/generated/hifzTafsir
+          cp -a baseline074/extracted/assets/tafsir/. hifz-app/build/generated/hifzTafsir/
+          test -n "$(find hifz-app/build/generated/hifzTafsir -maxdepth 1 -type f -print -quit)"
 
       - uses: actions/setup-java@v4
         with:
@@ -153,5 +162,6 @@ jobs:
           disable-animations: true
           script: >-
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest
+            -x :hifz-app:prepareHifzTafsirRelease
             -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ClaudeNoGoRegressionInstrumentedTest
             --stacktrace
