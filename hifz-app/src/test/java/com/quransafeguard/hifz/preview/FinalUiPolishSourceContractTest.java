@@ -65,23 +65,21 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(free.contains("Audio"));
     }
 
-    @Test public void userFacingHifzVocabularyUsesPlainFrenchNames() throws Exception {
+    @Test public void userFacingHifzVocabularyUsesCanonicalSchema6Names() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(main.contains("\"Leçon neuve\""));
-        assertTrue(main.contains("\"Ancrage\""));
-        assertTrue(main.contains("\"Entretien\""));
-        assertTrue(main.contains("Ancrage fractionné"));
-        assertTrue(session.contains("return \"Leçon neuve\""));
-        assertTrue(session.contains("return \"Reprise du soir\""));
+        for (String action : new String[]{"Apprentissage", "Stabilisation", "Révision"}) assertTrue(main.contains("\"" + action + "\""));
+        assertTrue(session.contains("return \"Apprentissage\""));
+        assertTrue(session.contains("return \"Stabilisation\""));
         assertTrue(session.contains("return \"Consolidation\""));
-        assertTrue(session.contains("return \"Ancrage\""));
-        assertTrue(session.contains("return \"Entretien\""));
+        assertTrue(session.contains("return \"Révision\""));
         assertTrue(settings.contains("section(root,\"Repères\")"));
-        assertTrue(settings.contains("Une page entière travaillée en profondeur"));
-        assertTrue(settings.contains("addRepere(root,\"Ancrage fractionné\""));
-        assertTrue(settings.contains("addRepere(root,\"J10\""));
+        for (String name : new String[]{"Apprentissage","Appris","Stabilisation","Stabilisé","Consolidation","Acquis","Révision","J10"}) {
+            assertTrue(name, settings.contains("addRepere(root,\"" + name + "\""));
+        }
+        assertFalse(settings.contains("addRepere(root,\"Ancrage\""));
+        assertFalse(settings.contains("addRepere(root,\"Entretien\""));
     }
 
     @Test public void settingsExposeReadableSeparatedSpeedsAndJ10State() throws Exception {
@@ -96,24 +94,22 @@ public final class FinalUiPolishSourceContractTest {
         assertFalse(speed.contains("+ \"L/\""));
     }
 
-    @Test public void fractionatedAnchoringIsExplicitOnHomeAndWeeklyProjection() throws Exception {
-        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        String week = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue(main.contains("Ancrage fractionné"));
-        assertTrue(main.contains("PreviewConfig.ITQAN_LIGHT_TOTAL_REPS"));
-        assertTrue(main.contains("bloc \" + (block + 1) + \"/\" + blocks"));
-        assertTrue(week.contains("Ancrage fractionné"));
-        assertTrue(week.contains("PreviewConfig.ITQAN_LIGHT_TOTAL_REPS"));
-        assertTrue(week.contains("projectedItqanBlockIndex"));
+    @Test public void stabilizationHalfPagePolicyIsTheRuntimeProjectionContract() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
+        assertTrue(policy.contains("planPage"));
+        assertTrue(policy.contains("count <= 11"));
+        assertTrue(session.contains("StabilizationHalfPagePolicy.planPage"));
+        assertFalse(session.contains("Ancrage fractionné"));
     }
 
     @Test public void j10ConsumedSlotsStayDistinctFromNormalValidatedSessions() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String week = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue(main.contains("normalProtocolComplete"));
-        assertTrue(main.contains("Créneau J10 utilisé"));
+        assertTrue(main.contains("ledger.find(date,mode)!=null"));
+        assertTrue(main.contains("hostBudgetStore.isSlotConsumed(mode,date)"));
         assertTrue(week.contains("J10 · créneau utilisé"));
-        assertTrue(week.contains("Terminé · J10"));
+        assertFalse(main.contains("Créneau J10 utilisé") && main.contains("ledger.record"));
     }
 
     @Test public void semanticHifzIconsStayMonochromeOutlineAndTwentyFourDp() throws Exception {
