@@ -1,0 +1,213 @@
+name: Quran Hifz 0.7.5 Round2 closeout export
+
+on:
+  push:
+    branches:
+      - tooling/hifz-0.7.5-round2-closeout-7e44ad13
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  export-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require exact full gate GREEN
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for n in $(seq 1 150); do
+            json="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json' \
+              https://api.github.com/repos/applicreation0-web/quran-unlock-android/actions/runs/35104620315)"
+            status="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<<"$json")"
+            conclusion="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("conclusion"))' <<<"$json")"
+            echo "full_gate_status=$status conclusion=$conclusion"
+            if [ "$status" = completed ]; then
+              test "$conclusion" = success
+              break
+            fi
+            sleep 10
+          done
+          test "$status" = completed
+          test "$conclusion" = success
+
+      - name: Materialize exact final source
+        shell: bash
+        run: |
+          set -euo pipefail
+          FINAL=7e44ad133d46c0cca45bd5f60dffc74e130fdfe7
+          git cat-file -e "$FINAL^{commit}"
+          git worktree add --detach /tmp/hifz-final "$FINAL"
+          test "$(git -C /tmp/hifz-final rev-parse HEAD)" = "$FINAL"
+
+      - name: Restore immutable published 0.7.4 assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/baseline074
+          curl -fL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/applicreation0-web/quran-unlock-android/releases/assets/564818126 \
+            -o /tmp/baseline074/hifz074.apk
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  /tmp/baseline074/hifz074.apk' | sha256sum -c -
+          mkdir -p /tmp/baseline074/extracted
+          unzip -q /tmp/baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' 'assets/tafsir/*' -d /tmp/baseline074/extracted
+          rm -rf /tmp/hifz-final/app/src/main/assets/mushaf /tmp/hifz-final/app/src/main/assets/reader109
+          mkdir -p /tmp/hifz-final/app/src/main/assets /tmp/hifz-final/app/src/main/assets/reader109
+          cp -a /tmp/baseline074/extracted/assets/mushaf /tmp/hifz-final/app/src/main/assets/
+          cp /tmp/baseline074/extracted/assets/reader109/geometry.json /tmp/hifz-final/app/src/main/assets/reader109/geometry.json
+          rm -rf /tmp/hifz-final/hifz-app/build/generated/hifzTafsir
+          mkdir -p /tmp/hifz-final/hifz-app/build/generated/hifzTafsir
+          cp -a /tmp/baseline074/extracted/assets/tafsir/. /tmp/hifz-final/hifz-app/build/generated/hifzTafsir/
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Install Android SDK dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Build exact release APK and inspect manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/hifz-final
+          gradle --no-daemon :hifz-app:assembleRelease -x :hifz-app:prepareHifzTafsirRelease --stacktrace
+          APK="$(find hifz-app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -print -quit)"
+          test -n "$APK" && test -s "$APK"
+          cp "$APK" /tmp/Quran-Hifz-0.7.5-boox-round2-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > /tmp/APK_BADGING.txt
+          grep -F "package: name='com.quransafeguard.hifz' versionCode='12' versionName='0.7.5-boox'" /tmp/APK_BADGING.txt
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK" >/tmp/APKSIGNER.txt 2>&1; then
+            echo SIGNED=true > /tmp/APK_SIGNATURE_STATUS.txt
+          else
+            echo SIGNED=false > /tmp/APK_SIGNATURE_STATUS.txt
+            cat /tmp/APKSIGNER.txt
+          fi
+          sha256sum /tmp/Quran-Hifz-0.7.5-boox-round2-release-unsigned.apk > /tmp/APK_SHA256.txt
+
+      - name: Create self-contained Claude re-audit kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          FINAL=7e44ad133d46c0cca45bd5f60dffc74e130fdfe7
+          BASE7185=7185a9ca92dfa46c10f63b0e5c499dce610dd720
+          BASE5696=5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          ROOT=/tmp/CLAUDE_QURAN_HIFZ_0.7.5_ROUND2_AUTONOMOUS_7e44ad13
+          rm -rf "$ROOT" && mkdir -p "$ROOT/SOURCE_HEAD" "$ROOT/GEOMETRY" "$ROOT/DIFFS" "$ROOT/CI"
+          cp -a /tmp/hifz-final/hifz-app/src "$ROOT/SOURCE_HEAD/hifz-app-src"
+          cp -a /tmp/hifz-final/hifz-core/src "$ROOT/SOURCE_HEAD/hifz-core-src"
+          cp /tmp/hifz-final/app/src/main/assets/reader109/geometry.json "$ROOT/GEOMETRY/geometry.json"
+          git -C /tmp/hifz-final diff "$BASE7185..$FINAL" > "$ROOT/DIFFS/ROUND2_7185_TO_FINAL.patch"
+          git -C /tmp/hifz-final diff --name-status "$BASE7185..$FINAL" > "$ROOT/DIFFS/ROUND2_FILES.txt"
+          git -C /tmp/hifz-final diff "$BASE5696..$FINAL" > "$ROOT/DIFFS/FULL_5696_TO_FINAL.patch"
+          cat > "$ROOT/00_READ_ME_FIRST.txt" <<'EOF'
+QURAN HIFZ 0.7.5 — ROUND2 AUTONOMOUS CLAUDE RE-AUDIT KIT
+
+HEAD exact: 7e44ad133d46c0cca45bd5f60dffc74e130fdfe7
+Parent audit candidate: 7185a9ca92dfa46c10f63b0e5c499dce610dd720
+Original 0.7.5 audited candidate: 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+Baseline release: f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+Full gate run: 35104620315
+
+This kit is self-contained. Claude must not use GitHub/network.
+EOF
+          cat > "$ROOT/01_PROMPT_CLAUDE.txt" <<'EOF'
+MISSION CLAUDE — FINAL ROUND2 RE-AUDIT QURAN HIFZ 0.7.5
+
+Audit only the exact HEAD 7e44ad133d46c0cca45bd5f60dffc74e130fdfe7 contained in this kit.
+No GitHub/network access is required or permitted for evidence.
+
+Re-check the previous Round2 findings:
+1. B1': ownerless verse/page portions must never crash Home, block Stabilisation, or enter Consolidation; manual ownerless Stabilisation input must be rejected clearly.
+2. M4: after today's Consolidation is validated, Home must yield back to due cadence unless an already-open Consolidation session legitimately requires resume.
+3. M5: same-surah adjacent ranges merge; adjacency across surah boundary remains distinct; a stored cross-surah range is not exploded by normalization; range coverage may span multiple configured fragments.
+4. BLOCKING MIGRATION ZERO-LOSS: schema5 -> schema6 must preserve rep/assisted/reveal/elapsed for a compatible open Stabilisation that remains one physical unit and has no completed legacy sub-block. Incompatible remaps such as old 5/5/5 -> physical 7+8 must keep the safe reset/re-index behavior and must never invent ACQUIRED credit.
+
+Also re-check unchanged invariants:
+- physical lineIds; never cross page/surah for a unit;
+- p48 / 2:282 = one ayah, 15 lines, exactly 7+8;
+- U1 completion never acquires U2;
+- Consolidation process-death state exact;
+- J10/revision only ACQUIRED;
+- no out-of-scope audio/Tafsir/BOOX/vector/J10-engine changes in Round2 delta.
+
+CI evidence in CI/VERIFIED_RESULTS.txt is context; independently inspect source/tests/geometry.
+
+Return concise:
+HEAD audité: <sha>
+BLOQUANT: <none or findings>
+MAJEUR: <none or findings>
+MINEUR: <only useful findings>
+Migration zéro-perte: OK/NO
+B1': OK/NO
+M4: OK/NO
+M5: OK/NO
+Page48 7+8: OK/NO
+Process death: OK/NO
+Hors scope: OK/NO
+Verdict: AUDIT CLAUDE GREEN or AUDIT CLAUDE NO-GO
+
+No merge/release/signature. No GO_PHONE.
+EOF
+          cat > "$ROOT/CI/VERIFIED_RESULTS.txt" <<'EOF'
+Exact HEAD: 7e44ad133d46c0cca45bd5f60dffc74e130fdfe7
+Full run: 35104620315
+JVM behavior: 166/166, failures=0 errors=0 skipped=0
+Source contracts: 71/71, failures=0 errors=0 skipped=0
+Core JVM: 20/20, failures=0 errors=0 skipped=0
+Compile debug Android test sources: GREEN
+Product boundary: GREEN
+Cosmetic verifier: GREEN
+Convergence verifier: GREEN
+Android instrumented matrix: FULL RUN CONCLUSION SUCCESS (see gate requirement in export workflow)
+Migration RED evidence before fix: run 35103834954 failed because expected itqanRep=9, actual=0 on compatible 86:1-86:17.
+Claude patch supplied by user SHA-256: 3ec9cbdc970d4ffcf22419c2b0b419f671fa58738c377bb005aaca737eab829b
+EOF
+          cp /tmp/APK_BADGING.txt "$ROOT/CI/APK_BADGING.txt"
+          cp /tmp/APK_SIGNATURE_STATUS.txt "$ROOT/CI/APK_SIGNATURE_STATUS.txt"
+          cp /tmp/APK_SHA256.txt "$ROOT/CI/APK_SHA256.txt"
+          (cd "$ROOT" && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+          cd /tmp
+          zip -qr CLAUDE_QURAN_HIFZ_0.7.5_ROUND2_AUTONOMOUS_7e44ad13.zip "$(basename "$ROOT")"
+          sha256sum CLAUDE_QURAN_HIFZ_0.7.5_ROUND2_AUTONOMOUS_7e44ad13.zip > CLAUDE_ROUND2_ZIP_SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CLAUDE-QURAN-HIFZ-0.7.5-ROUND2-AUTONOMOUS-7e44ad13
+          path: |
+            /tmp/CLAUDE_QURAN_HIFZ_0.7.5_ROUND2_AUTONOMOUS_7e44ad13.zip
+            /tmp/CLAUDE_ROUND2_ZIP_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QURAN-HIFZ-0.7.5-ROUND2-RELEASE-UNSIGNED-7e44ad13
+          path: |
+            /tmp/Quran-Hifz-0.7.5-boox-round2-release-unsigned.apk
+            /tmp/APK_BADGING.txt
+            /tmp/APK_SIGNATURE_STATUS.txt
+            /tmp/APK_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
