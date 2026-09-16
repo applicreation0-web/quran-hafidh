@@ -19,38 +19,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "476b0bd4b0db9fbb2095f1e9a797b6cce87df0f4"
-          python3 - <<'PY'
-          from pathlib import Path
-
-          session = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java')
-          text = session.read_text(encoding='utf-8')
-          old = 'Cette page reviendra à la prochaine séance d’Stabilisation.'
-          new = 'Cette page reviendra à la prochaine séance de Stabilisation.'
-          if text.count(old) != 1:
-              raise SystemExit(f'expected exactly one legacy grammar occurrence, got {text.count(old)}')
-          session.write_text(text.replace(old, new, 1), encoding='utf-8')
-
-          test = Path('hifz-app/src/test/java/com/quransafeguard/hifz/preview/FinalUiPolishSourceContractTest.java')
-          text = test.read_text(encoding='utf-8')
-          old = '''        assertTrue(settings.contains("section(root,\\"Repères\\")"));
-        for (String name : new String[]{"Apprentissage","Appris","Stabilisation","Stabilisé","Consolidation","Acquis","Révision","J10"}) {
-            assertTrue(name, settings.contains("addRepere(root,\\"" + name + "\\""));
-        }
-        assertFalse(settings.contains("addRepere(root,\\"Ancrage\\""));
-        assertFalse(settings.contains("addRepere(root,\\"Entretien\\""));
-'''
-          new = '''        assertTrue(settings.contains("section(root,\\"Schéma\\")"));
-        assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
-        assertTrue(settings.contains("Consolidation · déclenchée par progression"));
-        assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
-        assertFalse(settings.contains("section(root,\\"Repères\\")"));
-        assertFalse(settings.contains("addRepere(root"));
-'''
-          if text.count(old) != 1:
-              raise SystemExit(f'expected exactly one obsolete Repères contract block, got {text.count(old)}')
-          test.write_text(text.replace(old, new, 1), encoding='utf-8')
-          PY
+          test "$(git rev-parse HEAD^)" = "5ece85f62070ccab2da4a586b67a51f786fc3d24"
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpzZXNzaW9uID0gUGF0aCgiaGlmei1hcHAvc3JjL21haW4vamF2YS9jb20vcXVyYW5zYWZlZ3VhcmQvaGlmei9wcmV2aWV3L0hpZnpTZXNzaW9uQWN0aXZpdHkuamF2YSIpCnRleHQgPSBzZXNzaW9uLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQpvbGQgPSAiQ2V0dGUgcGFnZSByZXZpZW5kcmEgw6AgbGEgcHJvY2hhaW5lIHPDqWFuY2UgZOKAmVN0YWJpbGlzYXRpb24uIgpuZXcgPSAiQ2V0dGUgcGFnZSByZXZpZW5kcmEgw6AgbGEgcHJvY2hhaW5lIHPDqWFuY2UgZGUgU3RhYmlsaXNhdGlvbi4iCmlmIHRleHQuY291bnQob2xkKSAhPSAxOgogICAgcmFpc2UgU3lzdGVtRXhpdChmImV4cGVjdGVkIGV4YWN0bHkgb25lIGxlZ2FjeSBncmFtbWFyIG9jY3VycmVuY2UsIGdvdCB7dGV4dC5jb3VudChvbGQpfSIpCnNlc3Npb24ud3JpdGVfdGV4dCh0ZXh0LnJlcGxhY2Uob2xkLCBuZXcsIDEpLCBlbmNvZGluZz0idXRmLTgiKQoKdGVzdCA9IFBhdGgoImhpZnotYXBwL3NyYy90ZXN0L2phdmEvY29tL3F1cmFuc2FmZWd1YXJkL2hpZnovcHJldmlldy9GaW5hbFVpUG9saXNoU291cmNlQ29udHJhY3RUZXN0LmphdmEiKQp0ZXh0ID0gdGVzdC5yZWFkX3RleHQoZW5jb2Rpbmc9InV0Zi04IikKb2xkID0gIiIiICAgICAgICBhc3NlcnRUcnVlKHNldHRpbmdzLmNvbnRhaW5zKCJzZWN0aW9uKHJvb3QsXFwiUmVww6hyZXNcXCIpIikpOwogICAgICAgIGZvciAoU3RyaW5nIG5hbWUgOiBuZXcgU3RyaW5nW117IkFwcHJlbnRpc3NhZ2UiLCJBcHByaXMiLCJTdGFiaWxpc2F0aW9uIiwiU3RhYmlsaXPDqSIsIkNvbnNvbGlkYXRpb24iLCJBY3F1aXMiLCJSw6l2aXNpb24iLCJKMTAifSkgewogICAgICAgICAgICBhc3NlcnRUcnVlKG5hbWUsIHNldHRpbmdzLmNvbnRhaW5zKCJhZGRSZXBlcmUocm9vdCxcXCIiICsgbmFtZSArICJcXCIiKSk7CiAgICAgICAgfQogICAgICAgIGFzc2VydEZhbHNlKHNldHRpbmdzLmNvbnRhaW5zKCJhZGRSZXBlcmUocm9vdCxcXCJBbmNyYWdlXFwiIikpOwogICAgICAgIGFzc2VydEZhbHNlKHNldHRpbmdzLmNvbnRhaW5zKCJhZGRSZXBlcmUocm9vdCxcXCJFbnRyZXRpZW5cXCIiKSk7CiIiIgpuZXcgPSAiIiIgICAgICAgIGFzc2VydFRydWUoc2V0dGluZ3MuY29udGFpbnMoInNlY3Rpb24ocm9vdCxcXCJTY2jDqW1hXFwiKSIpKTsKICAgICAgICBhc3NlcnRUcnVlKHNldHRpbmdzLmNvbnRhaW5zKCJBcHByZW50aXNzYWdlIOKGkiBBcHByaXMg4oaSIFN0YWJpbGlzYXRpb24g4oaSIFN0YWJpbGlzw6kg4oaSIENvbnNvbGlkYXRpb24g4oaSIEFjcXVpcyDihpIgUsOpdmlzaW9uIikpOwogICAgICAgIGFzc2VydFRydWUoc2V0dGluZ3MuY29udGFpbnMoIkNvbnNvbGlkYXRpb24gwrcgZMOpY2xlbmNow6llIHBhciBwcm9ncmVzc2lvbiIpKTsKICAgICAgICBhc3NlcnRUcnVlKHNldHRpbmdzLmNvbnRhaW5zKCJKMTAgwrcgZ2FyYW50aWUgZGUgZnJhw65jaGV1ciBkZXMgcGFzc2FnZXMgQWNxdWlzIikpOwogICAgICAgIGFzc2VydEZhbHNlKHNldHRpbmdzLmNvbnRhaW5zKCJzZWN0aW9uKHJvb3QsXFwiUmVww6hyZXNcXCIpIikpOwogICAgICAgIGFzc2VydEZhbHNlKHNldHRpbmdzLmNvbnRhaW5zKCJhZGRSZXBlcmUocm9vdCIpKTsKIiIiCmlmIHRleHQuY291bnQob2xkKSAhPSAxOgogICAgcmFpc2UgU3lzdGVtRXhpdChmImV4cGVjdGVkIGV4YWN0bHkgb25lIG9ic29sZXRlIFJlcMOocmVzIGNvbnRyYWN0IGJsb2NrLCBnb3Qge3RleHQuY291bnQob2xkKX0iKQp0ZXN0LndyaXRlX3RleHQodGV4dC5yZXBsYWNlKG9sZCwgbmV3LCAxKSwgZW5jb2Rpbmc9InV0Zi04IikK' | base64 -d | python3
           git rm .github/workflows/hifz-075-ui-source-fix.yml
           git config user.name "quran-hifz-work"
           git config user.email "actions@users.noreply.github.com"
