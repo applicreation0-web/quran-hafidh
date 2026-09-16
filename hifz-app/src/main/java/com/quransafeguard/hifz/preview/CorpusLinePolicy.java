@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +36,37 @@ public final class CorpusLinePolicy {
             if (contains(ranges, ownerVerse(line))) result.add(line.id);
         }
         return Collections.unmodifiableSet(result);
+    }
+
+    /**
+     * Exact physical lines owned by one page-local verse range, in Mushaf order.
+     * A shared line belongs to the earliest verse printed on it, so a boundary verse
+     * starting mid-line never steals a line already owned by the preceding range.
+     */
+    public static List<String> ownedLineIdsForRangeOnPage(
+            VerseRef start,
+            VerseRef endInclusive,
+            GeometryRepository geometry) {
+        if (start == null || endInclusive == null || geometry == null) {
+            throw new IllegalArgumentException("Owned physical range requires bounds and geometry");
+        }
+        if (start.compareTo(endInclusive) > 0) {
+            throw new IllegalArgumentException("Owned physical range is reversed");
+        }
+        int page = geometry.pageForVerse(start);
+        if (geometry.pageForVerse(endInclusive) != page) {
+            throw new IllegalArgumentException("Owned physical range must stay on one Mushaf page");
+        }
+        ArrayList<String> result = new ArrayList<>();
+        for (int i = 0; i < geometry.lineCount(); i++) {
+            GeometryRepository.LineMeta line = geometry.line(i);
+            if (line.page != page) continue;
+            VerseRef owner = ownerVerse(line);
+            if (owner.compareTo(start) >= 0 && owner.compareTo(endInclusive) <= 0) {
+                result.add(line.id);
+            }
+        }
+        return Collections.unmodifiableList(result);
     }
 
     public static Set<String> touchedLineIds(
