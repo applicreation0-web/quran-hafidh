@@ -1,0 +1,70 @@
+name: Quran Hifz 0.7.5 final blockers TDD
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-final-blockers
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quran-hifz-075-final-blockers-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  targeted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prove exact HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Restore immutable Hifz 0.7.4 assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p baseline074
+          curl -fL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/applicreation0-web/quran-unlock-android/releases/assets/564818126 -o baseline074/hifz074.apk
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  baseline074/hifz074.apk' | sha256sum -c -
+          rm -rf baseline074/extracted && mkdir -p baseline074/extracted
+          unzip -q baseline074/hifz074.apk 'assets/mushaf/*' 'assets/reader109/geometry.json' 'assets/tafsir/*' -d baseline074/extracted
+          rm -rf app/src/main/assets/mushaf app/src/main/assets/reader109
+          mkdir -p app/src/main/assets app/src/main/assets/reader109
+          cp -a baseline074/extracted/assets/mushaf app/src/main/assets/
+          cp baseline074/extracted/assets/reader109/geometry.json app/src/main/assets/reader109/geometry.json
+          rm -rf hifz-app/build/generated/hifzTafsir && mkdir -p hifz-app/build/generated/hifzTafsir
+          cp -a baseline074/extracted/assets/tafsir/. hifz-app/build/generated/hifzTafsir/
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Install SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Run final blocker RED/GREEN tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon \
+            :hifz-app:testDebugUnitTest --tests com.quransafeguard.hifz.preview.FinalBlockerPolicyTest \
+            :hifz-app:sourceContractTest --tests com.quransafeguard.hifz.preview.FinalBlockerSourceContractTest \
+            -x :hifz-app:prepareHifzTafsirRelease \
+            --stacktrace
