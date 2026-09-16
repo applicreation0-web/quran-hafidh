@@ -143,6 +143,19 @@ public final class GeometryRepository {
     public int lineCount() { return lines.size(); }
     public LineMeta line(int index) { return lines.get(index); }
 
+    /** Ordered physical lines on one page, restricted to the supplied canonical line ids. */
+    List<LineMeta> linesForIdsOnPage(int page, List<String> lineIds) {
+        if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
+        if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("line ids required");
+        LinkedHashSet<String> wanted = new LinkedHashSet<>(lineIds);
+        ArrayList<LineMeta> result = new ArrayList<>();
+        for (LineMeta line : lines) {
+            if (line.page == page && wanted.contains(line.id)) result.add(line);
+        }
+        if (result.isEmpty()) throw new IllegalStateException("No canonical physical lines for page " + page);
+        return Collections.unmodifiableList(result);
+    }
+
     /** Exact per-page geometry already parsed by the singleton; avoids a second full JSON parse in the renderer. */
     public String pageGeometryJson(int page) {
         if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");

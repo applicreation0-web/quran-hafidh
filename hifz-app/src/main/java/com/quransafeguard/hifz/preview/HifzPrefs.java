@@ -1040,6 +1040,45 @@ public final class HifzPrefs {
         return completeSabqiBlock(startLine, endLine, nextLineCursor, date, label);
     }
 
+    /** Atomically closes Apprentissage and advances exactly these physical lines to Appris. */
+    public boolean completeSabqiBlockV6(int startLine, int endLine, int nextLineCursor,
+                                        List<String> lineIds, String date, String label) {
+        if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("Apprentissage line ids required");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+            for (String lineId : new LinkedHashSet<>(lineIds)) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
+                ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
+                if (state == ProgressState.NONE) learned.add(lineId);
+            }
+            List<RecentSabqi> queue = recentSabqi();
+            LocalDate blockDate = safeDate(date, null);
+            if (blockDate == null) blockDate = HifzClock.today();
+            queue.add(new RecentSabqi(startLine, endLine, blockDate, 0));
+            String activation = p.getString("recentConsolidationActivatedOn", "");
+            if ((activation == null || activation.isEmpty())
+                    && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) activation = blockDate.toString();
+            return p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putString("recentSabqi", recentJson(queue))
+                .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
+                .putInt("sabqiLineCursor", nextLineCursor)
+                .putInt("sabqiRep", 0).putInt("sabqiAssisted", 0).putLong("sabqiElapsedMs", 0L)
+                .putString("sabqiTodayReviewDate", date).putInt("sabqiTodayReviewStartLine", startLine)
+                .putInt("sabqiTodayReviewEndLine", endLine).putLong("sabqi_today_reviewElapsedMs", 0L)
+                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label)
+                .commit();
+        }
+    }
+
     public int itqanRep() { return p.getInt("itqanRep", 0); }
     public int itqanAssisted() { return p.getInt("itqanAssisted", 0); }
     public int itqanFinalReveals() { return p.getInt("itqanFinalReveals", 0); }
@@ -1132,6 +1171,43 @@ public final class HifzPrefs {
             .putString("itqanUnitStart", unitStart == null ? "" : unitStart.toString())
             .putString("itqanUnitEnd", unitEnd == null ? "" : unitEnd.toString())
             .commit();
+    }
+
+    /** Atomically advances one frozen Stabilisation half-page and its schema6 line state. */
+    boolean completeStabilizationBlockV6(List<String> lineIds, int nextBlockIndex, boolean finalBlock,
+                                         VerseRef unitStart, VerseRef unitEnd, VerseRef nextCursor,
+                                         String date, String label) {
+        if (lineIds == null || lineIds.isEmpty() || unitStart == null || unitEnd == null)
+            throw new IllegalArgumentException("Stabilisation unit required");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+            for (String lineId : new LinkedHashSet<>(lineIds)) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
+                ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
+                if (state == ProgressState.NONE) throw new IllegalStateException("Cannot Stabilise a line before Apprentissage: " + lineId);
+                if (state == ProgressState.LEARNED) { learned.remove(lineId); stabilized.add(lineId); }
+            }
+            SharedPreferences.Editor e = p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
+                .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
+                .putString("itqanUnitStart", finalBlock ? "" : unitStart.toString())
+                .putString("itqanUnitEnd", finalBlock ? "" : unitEnd.toString())
+                .putLong("itqanElapsedMs", 0L)
+                .putString("lastItqanDate", date).putString("lastItqanLabel", label)
+                .putString("lastItqanCreditStart", unitStart.toString())
+                .putString("lastItqanCreditEnd", unitEnd.toString());
+            if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
+            return e.commit();
+        }
     }
 
     public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
@@ -1325,6 +1401,17 @@ public final class HifzPrefs {
             .commit();
     }
 
+    private boolean entryIsFullyStabilizedOrAcquired(AnchoringQueue.Entry entry, GeometryRepository geometry) {
+        if (entry == null) return false;
+        LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        List<String> ids = geometry.lineIdsForVerseRange(
+            GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end));
+        if (ids.isEmpty()) return false;
+        for (String id : ids) if (!stabilized.contains(id) && !acquired.contains(id)) return false;
+        return true;
+    }
+
     public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
         if (!p.getBoolean("anchoringQueueInitialized", false)
                 && !reconcileAnchoringQueue(geometry)) {
@@ -1334,20 +1421,44 @@ public final class HifzPrefs {
         LocalDate retry = safeDate(retryText, null);
         if (retry != null) {
             if (!HifzClock.today().isAfter(retry)) return null;
-            if (!p.edit().putString("anchoringRetryAfterDate", "").commit()) {
-                throw new IllegalStateException("Unable to clear Ancrage retry deferral");
-            }
+            if (!p.edit().putString("anchoringRetryAfterDate", "").commit())
+                throw new IllegalStateException("Unable to clear Stabilisation retry deferral");
         }
         List<AnchoringQueue.Entry> queue = anchoringQueue();
         if (!p.getBoolean("anchoringQueueInitialized", false)) {
-            if (!reconcileAnchoringQueue(geometry)) {
-                throw new IllegalStateException("Unable to repair anchoring queue");
-            }
+            if (!reconcileAnchoringQueue(geometry)) throw new IllegalStateException("Unable to repair Stabilisation queue");
             queue = anchoringQueue();
         }
         AnchoringQueue.Entry inProgress = inProgressAnchoringEntry();
         if (inProgress != null) return inProgress;
-        return queue.isEmpty() ? null : queue.get(anchoringQueueIndex(queue.size()));
+        if (queue.isEmpty()) return null;
+        int start = anchoringQueueIndex(queue.size());
+        for (int step = 0; step < queue.size(); step++) {
+            int index = (start + step) % queue.size();
+            AnchoringQueue.Entry candidate = queue.get(index);
+            if (!entryIsFullyStabilizedOrAcquired(candidate, geometry)) {
+                if (index != start && !p.edit().putInt("anchoringQueueIndex", index).commit())
+                    throw new IllegalStateException("Unable to advance Stabilisation queue");
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    /** Frozen candidates for one grouped Consolidation session: stabilized, never already acquired. */
+    List<AnchoringQueue.Entry> stabilizedAnchoringEntries(GeometryRepository geometry, int maxUnits) {
+        if (maxUnits < 1 || maxUnits > 3) throw new IllegalArgumentException("Consolidation group size must be 1..3");
+        LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
+        for (AnchoringQueue.Entry entry : AnchoringQueue.visitOrder(anchoringQueue(), anchoringQueueIndex())) {
+            List<String> ids = geometry.lineIdsForVerseRange(GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end));
+            boolean ready = !ids.isEmpty();
+            for (String id : ids) if (!stabilized.contains(id) || acquired.contains(id)) { ready = false; break; }
+            if (ready) out.add(entry);
+            if (out.size() >= maxUnits) break;
+        }
+        return Collections.unmodifiableList(out);
     }
 
     /** Fail and defer the exact page displayed, even when it is not the physical queue head. */
@@ -1538,6 +1649,52 @@ public final class HifzPrefs {
             throw error;
         } catch (Exception error) {
             throw new IllegalStateException("Corrupt persisted Consolidation session", error);
+        }
+    }
+
+    /** Atomically closes a frozen 1..3 unit Consolidation group and makes its lines Acquired. */
+    boolean completeConsolidationSessionV6(ConsolidationCycleEngine.Session session, GeometryRepository geometry,
+                                           String date, String label) {
+        if (session == null || !session.open() || !session.readyToClose())
+            throw new IllegalStateException("Consolidation session must be OPEN and complete");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
+            ArrayList<VerseRange> forced = new ArrayList<>(forcedPromotedRanges());
+            ArrayList<AnchoringQueue.Entry> queue = new ArrayList<>(anchoringQueue());
+            for (String unitId : session.unitIds()) {
+                String[] bounds = unitId.split("\\|", -1);
+                if (bounds.length != 2) throw new IllegalStateException("Invalid frozen Consolidation unit id: " + unitId);
+                VerseRef start = GeometryRepository.parseVerse(bounds[0]);
+                VerseRef end = GeometryRepository.parseVerse(bounds[1]);
+                List<String> ids = geometry.lineIdsForVerseRange(start, end);
+                for (String lineId : ids) {
+                    ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
+                    if (state == ProgressState.STABILIZED) { stabilized.remove(lineId); acquired.add(lineId); }
+                    else if (state != ProgressState.ACQUIRED)
+                        throw new IllegalStateException("Consolidation requires Stabilisé lines: " + lineId);
+                }
+                pending = new ArrayList<>(subtractCoverage(pending, start, end));
+                forced = new ArrayList<>(subtractCoverage(forced, start, end));
+                queue.removeIf(entry -> entry.start.equals(bounds[0]) && entry.end.equals(bounds[1]));
+            }
+            LocalDate completed = safeDate(date, HifzClock.today());
+            List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
+            return p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
+                .putString("forcedPromotedRanges", rangesJson(normalizeRanges(forced)))
+                .putString("anchoringQueue", anchoringQueueJson(queue))
+                .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", 0)
+                .putString("lastRecentSabqiReviewDate", date).putString("lastRecentSabqiReviewLabel", label)
+                .putString("consolidationAttendanceDates", attendanceJson(attendance))
+                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.STABILIZATION))
+                .commit();
         }
     }
 

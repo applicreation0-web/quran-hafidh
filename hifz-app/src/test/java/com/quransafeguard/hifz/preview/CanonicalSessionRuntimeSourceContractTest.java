@@ -24,16 +24,17 @@ public final class CanonicalSessionRuntimeSourceContractTest {
 
     @Test public void learningCompletionCreatesExactlyTheLearnedState() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("ProgressEvent.LEARNING_COMPLETED"));
-        assertTrue(session.contains("transitionV6Lines"));
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue(session.contains("completeSabqiBlockV6"));
         assertTrue(session.contains("sabqiBlock.lineIds"));
+        assertTrue(prefs.contains("v6LearnedLineIds"));
     }
 
     @Test public void stabilizationRuntimeUsesFrozenHalfPagePolicyAndCreatesStabilizedState() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(session.contains("StabilizationHalfPagePolicy.planPage"));
-        assertTrue(session.contains("ProgressEvent.STABILIZATION_COMPLETED"));
-        assertTrue(session.contains("transitionV6Lines"));
+        assertTrue(session.contains("completeStabilizationBlockV6"));
+        assertTrue(session.contains("currentLineIds"));
         assertFalse("whole eligible page may not remain the only Stabilisation planner",
             session.contains("itqanUnit=geometry.eligiblePageUnit") && !session.contains("StabilizationHalfPagePolicy.planPage"));
     }
@@ -44,7 +45,7 @@ public final class CanonicalSessionRuntimeSourceContractTest {
         assertTrue(session.contains("restoreConsolidationSession"));
         assertTrue(session.contains("persistConsolidationSession"));
         assertTrue(session.contains("recordRepetition"));
-        assertTrue(session.contains("ProgressEvent.CONSOLIDATION_COMPLETED"));
+        assertTrue(session.contains("completeConsolidationSessionV6"));
         assertFalse("canonical Consolidation may not be the old timed recent-review implementation",
             session.contains("private void renderRecentSabqiReview()"));
     }

@@ -72,6 +72,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private Button murajaahFinishButton;
     private int recentReviewIndex;
     private LocalDate sessionDate;
+    private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
+    private ConsolidationCycleEngine.Session consolidationSession;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -184,7 +186,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if (SABQI.equals(mode)) renderSabqi();
             else if (SABQI_TODAY_REVIEW.equals(mode)) renderSabqiTodayReview();
             else if (ITQAN.equals(mode)) renderItqan();
-            else if (RECENT_SABQI_REVIEW.equals(mode)) renderRecentSabqiReview();
+            else if (RECENT_SABQI_REVIEW.equals(mode)) renderConsolidationCycle();
             else renderMurajaah();
         } catch (RuntimeException error) {
             sessionCompleted = true;
@@ -293,10 +295,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         String label="Apprentissage · "+sabqiBlock.verseLabel()+" · 37/37 · révélations "+prefs.sabqiAssisted();
-        boolean ok = prefs.completeSabqiBlock(
+        boolean ok = prefs.completeSabqiBlockV6(
             sabqiBlock.startLineIndex,
             sabqiBlock.endLineIndex,
             sabqiBlock.endLineIndex+1,
+            sabqiBlock.lineIds,
             sessionDate.toString(),
             label
         );
@@ -416,79 +419,102 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (!timedSessionLimitReached) addRoundAction("↻", "Répétition", v -> renderMode());
     }
 
-    private void renderRecentSabqiReview() {
+    private static String consolidationUnitId(AnchoringQueue.Entry entry) {
+        return entry.start + "|" + entry.end;
+    }
+
+    private static ConsolidationCycleEngine.Protocol consolidationProtocol(AnchoringQueue.Entry entry) {
+        return entry.protocol == AnchoringQueue.Protocol.LIGHT
+            ? ConsolidationCycleEngine.Protocol.LIGHT : ConsolidationCycleEngine.Protocol.FULL;
+    }
+
+    private AnchoringQueue.Entry consolidationEntry(String unitId) {
+        String[] bounds = unitId.split("\\|", -1);
+        if (bounds.length != 2) throw new IllegalStateException("Unité de Consolidation invalide : " + unitId);
+        AnchoringQueue.Entry entry = prefs.anchoringEntryFor(
+            GeometryRepository.parseVerse(bounds[0]), GeometryRepository.parseVerse(bounds[1]));
+        if (entry == null) throw new IllegalStateException("Unité de Consolidation absente : " + unitId);
+        return entry;
+    }
+
+    private void renderConsolidationCycle() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
             sessionCompleted = true;
             program.setText("Consolidation · séance validée");
-            progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "30 min terminées" : prefs.lastRecentSabqiReviewLabel());
+            progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : prefs.lastRecentSabqiReviewLabel());
             return;
         }
-        List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
-        if (recent.isEmpty()) {
-            if (completeEmptyRecentSabqiSession()) { renderMode(); return; }
+        consolidationSession = prefs.restoreConsolidationSession(
+            consolidationEngine, ConsolidationCycleEngine.Family.STABILIZATION);
+        if (consolidationSession == null) {
+            List<AnchoringQueue.Entry> entries = prefs.stabilizedAnchoringEntries(geometry, 3);
+            if (entries.isEmpty()) {
+                sessionCompleted = true;
+                program.setText("Consolidation · rien à consolider");
+                progress.setText("Aucune unité Stabilisée en attente.");
+                return;
+            }
+            ConsolidationCycleEngine.Cycle cycle = null;
+            for (int i = 0; i < entries.size(); i++) {
+                AnchoringQueue.Entry entry = entries.get(i);
+                ConsolidationCycleEngine.Unit unit = new ConsolidationCycleEngine.Unit(
+                    consolidationUnitId(entry), consolidationProtocol(entry));
+                cycle = i == 0
+                    ? consolidationEngine.startCycle("stabilization-" + today, ConsolidationCycleEngine.Family.STABILIZATION, unit)
+                    : consolidationEngine.addUnit(cycle, unit);
+            }
+            consolidationSession = consolidationEngine.openSession(cycle, "session-" + today);
+            if (!prefs.persistConsolidationSession(consolidationSession))
+                throw new IllegalStateException("Impossible d’enregistrer la Consolidation ouverte");
+        }
+        if (consolidationSession.readyToClose()) {
             sessionCompleted = true;
-            program.setText("Consolidation · aucun passage");
-            progress.setText("Aucun bloc récent à consolider.");
+            program.setText("Consolidation · prête à valider");
+            progress.setText("Toutes les répétitions du groupe sont terminées.");
+            addRoundAction("✓", "Valider", v -> validateConsolidationCycle());
             return;
         }
-        recentReviewIndex = Math.floorMod(recentReviewIndex, recent.size());
-        HifzPrefs.RecentSabqi item = recent.get(recentReviewIndex);
-        GeometryRepository.FiveLineBlock block = geometry.fiveLineBlock(item.startLine);
-        currentPage = geometry.line(item.startLine).page;
-        unitFirstPage = currentPage;
-        unitLastPage = geometry.line(item.endLine).page;
-        currentSelection = block.verses;
-        currentLineIds = block.lineIds;
+        int position = consolidationSession.nextUnitIndex();
+        AnchoringQueue.Entry entry = consolidationEntry(consolidationSession.unitIds().get(position));
+        VerseRef start = GeometryRepository.parseVerse(entry.start);
+        VerseRef end = GeometryRepository.parseVerse(entry.end);
+        currentPage = geometry.pageForVerse(start);
+        unitFirstPage = unitLastPage = currentPage;
+        currentSelection = geometry.versesForRange(start, end);
+        currentLineIds = geometry.lineIdsForVerseRange(start, end);
         currentMask = 0;
         sessionCompleted = false;
-        timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
-        program.setText("Consolidation · " + block.verseLabel());
-        List<HifzPrefs.RecentSabqi> canonicalRecent = HifzPrefs.canonicalRecentOrder(recent);
-        boolean canonicalOldest = !canonicalRecent.isEmpty()
-            && canonicalRecent.get(0).startLine == item.startLine
-            && canonicalRecent.get(0).endLine == item.endLine;
-        RecentPromotionPolicy.Decision status = promotionStatus(item, recent.size(), canonicalOldest, sessionDate);
-        String attendance = status.requiredSessions <= 0
-            ? "Consolidation à venir"
-            : status.completedSessions + "/" + status.requiredSessions + " séances";
-        progress.setText("Bloc " + (recentReviewIndex + 1) + "/" + recent.size()
-            + " · " + status.ageDays + " j · " + attendance
-            + (status.forced ? " · promotion de sécurité" : ""));
+        int[] vector = consolidationSession.stageVectorAt(position);
+        int target = vector[consolidationSession.stage()];
+        program.setText("Consolidation · " + start + " → " + end + " · unité "
+            + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+        progress.setText("Étape " + (consolidationSession.stage() + 1) + "/5 · "
+            + consolidationSession.donePerStage() + "/" + target);
         showCurrent();
-        if (!timedSessionLimitReached) {
-            addRoundAction("✓", "Revu", v -> markRecentReviewed());
-            addRoundAction("!", "À renforcer", v -> deferRecentReview());
-        }
+        addRoundAction("↻", "Répétition", v -> completeConsolidationRep());
     }
 
-    private void markRecentReviewed() {
-        if (!takeRepLock()) return;
-        List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
-        if (recent.isEmpty()) { renderMode(); return; }
-        int index = Math.floorMod(recentReviewIndex, recent.size());
-        HifzPrefs.RecentSabqi item = recent.get(index);
-        if (!prefs.markRecentReviewed(index)) {
-            onError("Impossible d’enregistrer ce bloc comme revu.");
+    private void completeConsolidationRep() {
+        if (!takeRepLock() || consolidationSession == null || consolidationSession.readyToClose()) return;
+        consolidationSession = consolidationEngine.recordRepetition(consolidationSession);
+        if (!prefs.persistConsolidationSession(consolidationSession)) {
+            onError("Impossible d’enregistrer la répétition de Consolidation.");
             return;
         }
-        metricsStore.addConsolidationLines(Math.max(0, item.endLine - item.startLine + 1));
-        recentReviewIndex = prefs.recentSabqiReviewIndex();
         renderMode();
     }
 
-    private void deferRecentReview() {
-        if (!takeRepLock()) return;
-        List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
-        if (recent.isEmpty()) { renderMode(); return; }
-        int index = Math.floorMod(recentReviewIndex, recent.size());
-        HifzPrefs.RecentSabqi item = recent.get(index);
-        if (!prefs.deferRecentBlock(index)) {
-            onError("Impossible de reporter ce bloc à renforcer.");
+    private void validateConsolidationCycle() {
+        if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        String label = "Consolidation · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
+        if (!prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
+            onError("Impossible d’enregistrer la Consolidation.");
             return;
         }
-        metricsStore.addConsolidationLines(Math.max(0, item.endLine - item.startLine + 1));
-        recentReviewIndex = prefs.recentSabqiReviewIndex();
+        consolidationSession = consolidationEngine.closeSession(consolidationSession);
+        closeClockForCompletedSession();
+        mushaf.cycleCompleted();
         renderMode();
     }
 
@@ -501,13 +527,6 @@ private void rebalanceRecentWindow(LocalDate today) {
                 && today.equals(prefs.sabqiTodayReviewDate())) {
             timedSessionLimitReached = true;
             prefs.completeSabqiTodayReview(today, "Apprentissage · 30 min");
-            closeClockForCompletedSession();
-            return true;
-        }
-        if (RECENT_SABQI_REVIEW.equals(mode)
-                && !today.equals(prefs.lastRecentSabqiReviewDate())) {
-            timedSessionLimitReached = true;
-            if (!completeConsolidation(today, clock.elapsedMs())) return false;
             closeClockForCompletedSession();
             return true;
         }
@@ -556,10 +575,6 @@ private void rebalanceRecentWindow(LocalDate today) {
         String today = sessionDate.toString();
         if (SABQI_TODAY_REVIEW.equals(mode)) {
             prefs.completeSabqiTodayReview(today, "Apprentissage · 30 min");
-            closeClockForCompletedSession();
-            renderMode();
-        } else if (RECENT_SABQI_REVIEW.equals(mode)) {
-            if (!completeConsolidation(today, effectiveElapsed)) return;
             closeClockForCompletedSession();
             renderMode();
         }
@@ -612,22 +627,16 @@ private void rebalanceRecentWindow(LocalDate today) {
             currentPage=itqanUnit.page;unitFirstPage=unitLastPage=currentPage;
         }
 
-        fractionatedItqan = prefs.isFractionatedUnit(itqanUnit.verses);
         itqanSessionProtocol = anchoringEntry.protocol;
         itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
-        if (fractionatedItqan) {
-            int[] segments = geometry.surahSegmentLineCounts(itqanUnit.start, itqanUnit.end);
-            itqanBlockCount = PreviewConfig.fractionatedBlockCount(segments);
-            itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
-            int from = PreviewConfig.fractionatedBlockStart(segments, itqanBlockIndex);
-            int len = PreviewConfig.fractionatedBlockLength(segments, itqanBlockIndex);
-            currentLineIds = new ArrayList<>(itqanUnit.lineIds.subList(from, from + len));
-            currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
-        } else {
-            itqanBlockCount = 1;
-            itqanBlockIndex = 0;
-            currentSelection=itqanUnit.verses;currentLineIds=itqanUnit.lineIds;
-        }
+        List<StabilizationHalfPagePolicy.Unit> plannedUnits = StabilizationHalfPagePolicy.planPage(
+            geometry.linesForIdsOnPage(itqanUnit.page, itqanUnit.lineIds));
+        itqanBlockCount = plannedUnits.size();
+        itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
+        StabilizationHalfPagePolicy.Unit workingUnit = plannedUnits.get(itqanBlockIndex);
+        currentLineIds = new ArrayList<>(workingUnit.lineIds);
+        currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
+        fractionatedItqan = itqanBlockCount > 1;
 
         if(rep>=itqanTargetReps){
             boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted());
@@ -701,33 +710,18 @@ private void rebalanceRecentWindow(LocalDate today) {
             return;
         }
         String metrics = anchoringInstrumentation();
-        if (fractionatedItqan) {
-            int nextBlock = itqanBlockIndex + 1;
-            if (nextBlock < itqanBlockCount) {
-                String label="Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
-                    +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
-                metricsStore.recordAnchoring("bloc fractionné réussi · "+itqanUnit.start+" → "+itqanUnit.end
-                    +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
-                if (!prefs.advanceItqanBlock(nextBlock, itqanUnit.start, itqanUnit.end,
-                        sessionDate.toString(), label)) {
-                    onError("Impossible d’enregistrer le sous-bloc d’Stabilisation.");
-                    return;
-                }
-                awaitingValidation=false;
-                closeClockForCompletedSession();
-                mushaf.cycleCompleted();
-                renderMode();
-                return;
-            }
-        }
+        int nextBlock = itqanBlockIndex + 1;
+        boolean finalBlock = nextBlock >= itqanBlockCount;
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
         VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.itqanRotationStart());
-        String label=(fractionatedItqan ? "Stabilisation" : "Stabilisation")+" · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
-            +" · révélations "+prefs.itqanAssisted()+" · "+metrics;
-        metricsStore.recordAnchoring((fractionatedItqan ? "réussite fractionnée" : "réussite")+" · "+itqanUnit.start+" → "+itqanUnit.end+" · "+metrics);
-        int creditBlockIndex = fractionatedItqan ? itqanBlockIndex : -1;
-        boolean ok=prefs.completeItqanUnitAndConsolidate(itqanUnit.start,itqanUnit.end,next,sessionDate.toString(),label,creditBlockIndex);
-        if(!ok){onError("Impossible d’enregistrer la validation de l’Stabilisation.");return;}
+        String label="Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
+            +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
+        metricsStore.recordAnchoring("Stabilisation réussie · "+itqanUnit.start+" → "+itqanUnit.end
+            +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
+        boolean ok = prefs.completeStabilizationBlockV6(
+            currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
+            sessionDate.toString(), label);
+        if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
 
@@ -920,7 +914,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (RECENT_SABQI_REVIEW.equals(mode)) metricsStore.clearConsolidation();
     }
     private boolean isTimedMode() {
-        return SABQI_TODAY_REVIEW.equals(mode) || RECENT_SABQI_REVIEW.equals(mode) || MURAJAAH.equals(mode);
+        return SABQI_TODAY_REVIEW.equals(mode) || MURAJAAH.equals(mode);
     }
     private int targetMinutes(){
     SessionKind kind;
