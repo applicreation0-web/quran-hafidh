@@ -203,7 +203,16 @@ public final class MainActivity extends android.app.Activity {
         return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed);
     }
 
+    private boolean progressionConsolidationDue(GeometryRepository g){
+        if(g==null)return false;
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
+            engine,ConsolidationCycleEngine.Family.STABILIZATION);
+        return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
+    }
+
     private String nextMode(ScheduledCadence due){
+        if(progressionConsolidationDue(geometry))return HifzSessionActivity.RECENT_SABQI_REVIEW;
         if(due==null)return null;
         LocalDate date=due.getScheduledDate();
         switch(due.getAction()){
@@ -217,9 +226,13 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void openToday() {
-        ScheduledCadence due=nextDueCadence(HifzClock.today());
+        LocalDate current=HifzClock.today();
+        ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
-        if(mode!=null)openMode(mode,due.getScheduledDate());
+        if(mode==null)return;
+        LocalDate scheduled=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+            ? current : due.getScheduledDate();
+        openMode(mode,scheduled);
     }
 
     private void refreshToday() {
@@ -230,13 +243,15 @@ public final class MainActivity extends android.app.Activity {
             today.setText("Parcours non démarré");todayAction.setEnabled(false);return;
         }
         ScheduledCadence due=nextDueCadence(current);
-        if(due==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
         String mode=nextMode(due);
         if(mode==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
-        String prefix=due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
+        boolean consolidation=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode);
+        String prefix=!consolidation&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         String detail;
         try{
-            if(HifzSessionActivity.SABQI.equals(mode)){
+            if(consolidation){
+                detail="Consolidation · déclenchée par progression";
+            }else if(HifzSessionActivity.SABQI.equals(mode)){
                 int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
                 GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);
                 detail="Apprentissage · "+shortRange(b.startVerse,b.endVerse)+" · 5 lignes";
@@ -256,11 +271,12 @@ public final class MainActivity extends android.app.Activity {
         if(entry==null)entry=prefs.currentAnchoringEntry(geometry);
         if(entry==null)return "Stabilisation · aucune unité à stabiliser";
         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
-        boolean fractionated=prefs.isFractionatedUnit(geometry.versesForRange(start,end));
         int reps=PreviewConfig.itqanTotalReps(entry.protocol);
-        if(!fractionated)return "Stabilisation · "+shortRange(start,end)+" · ×"+reps;
-        int[] segments=geometry.surahSegmentLineCounts(start,end);
-        int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(segments));
+        List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+        List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
+            geometry.linesForExactIds(owned));
+        int blocks=Math.max(1,planned.size());
+        if(blocks<=1)return "Stabilisation · "+shortRange(start,end)+" · ×"+reps;
         int block=Math.max(0,Math.min(prefs.itqanBlockIndex(),blocks-1));
         return "Stabilisation · "+shortRange(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
     }

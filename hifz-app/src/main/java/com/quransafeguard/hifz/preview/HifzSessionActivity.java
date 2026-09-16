@@ -239,7 +239,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 ? "37/37 · prêt à valider · révélations " + prefs.sabqiAssisted()
                 : "37/37 · à renforcer · révélations " + prefs.sabqiAssisted() + " · maximum 2");
             showCurrent();
-            if (assistancePassed) addRoundAction("✓","Valider",v->validateSabqi());
+            if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateSabqi));
             else addRoundAction("↻","Reprendre",v->restartSabqiAfterAssistance());
             return;
         }
@@ -392,7 +392,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (today.equals(prefs.lastSabqiTodayReviewDate())) {
             sessionCompleted = true;
             program.setText("Apprentissage · séance validée");
-            progress.setText(prefs.lastSabqiTodayReviewLabel().isEmpty() ? "30 min terminées" : prefs.lastSabqiTodayReviewLabel());
+            progress.setText(prefs.lastSabqiTodayReviewLabel().isEmpty() ? "30 min terminées" : HifzDisplayVocabulary.canonicalize(prefs.lastSabqiTodayReviewLabel()));
             return;
         }
         if (!today.equals(prefs.sabqiTodayReviewDate())) {
@@ -452,7 +452,7 @@ private void rebalanceRecentWindow(LocalDate today) {
             sessionCompleted = true;
             program.setText("Consolidation · prête à valider");
             progress.setText("Toutes les répétitions du groupe sont terminées.");
-            addRoundAction("✓", "Valider", v -> validateConsolidationCycle());
+            addRoundAction("✓", "Valider", v -> runValidationSafely(this::validateConsolidationCycle));
             return;
         }
         int position = consolidationSession.nextUnitIndex();
@@ -585,7 +585,7 @@ private void rebalanceRecentWindow(LocalDate today) {
                 progress.setText("Cette page reviendra à la prochaine séance de Stabilisation.");
             } else {
                 program.setText("Stabilisation · aucune page en attente");
-                progress.setText("Toutes les pages en attente sont acquises.");
+                progress.setText("Toutes les unités de Stabilisation sont terminées.");
             }
             return;
         }
@@ -596,7 +596,7 @@ private void rebalanceRecentWindow(LocalDate today) {
             currentPage=geometry.pageForVerse(savedStart);
             unitFirstPage = unitLastPage = currentPage;
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
-            List<String> lineIds=geometry.lineIdsForVerseRange(savedStart,savedEnd);
+            List<String> lineIds=CorpusLinePolicy.ownedLineIdsForRangeOnPage(savedStart,savedEnd,geometry);
             itqanUnit=new GeometryRepository.VerseUnit(currentPage,savedStart,savedEnd,verses,lineIds);
             AnchoringQueue.Entry inProgress = prefs.anchoringEntryFor(savedStart, savedEnd);
             if (inProgress != null) anchoringEntry = inProgress;
@@ -606,7 +606,7 @@ private void rebalanceRecentWindow(LocalDate today) {
             int page = geometry.pageForVerse(entryStart);
             itqanUnit = new GeometryRepository.VerseUnit(page, entryStart, entryEnd,
                 geometry.versesForRange(entryStart, entryEnd),
-                geometry.lineIdsForVerseRange(entryStart, entryEnd));
+                CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart, entryEnd, geometry));
             currentPage=itqanUnit.page;unitFirstPage=unitLastPage=currentPage;
         }
 
@@ -629,7 +629,7 @@ private void rebalanceRecentWindow(LocalDate today) {
                 ? itqanTargetReps+"/"+itqanTargetReps+" · prêt à valider · révélations "+prefs.itqanAssisted()
                 : itqanTargetReps+"/"+itqanTargetReps+" · à renforcer · révélations "+prefs.itqanAssisted()+" · maximum 2");
             showCurrent();
-            if (assistancePassed) addRoundAction("✓","Valider",v->validateItqan());
+            if (assistancePassed) addRoundAction("✓","Valider",v->runValidationSafely(this::validateItqan));
             else addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
             return;
         }
@@ -849,6 +849,16 @@ private void rebalanceRecentWindow(LocalDate today) {
 
     private void addRoundAction(String symbol,String label,View.OnClickListener listener){
         LinearLayout box=Ui.roundAction(this,symbol,label,listener);actions.addView(box);
+    }
+
+    private void runValidationSafely(Runnable validation) {
+        if (validation == null) return;
+        try {
+            validation.run();
+        } catch (RuntimeException error) {
+            android.util.Log.e("QuranHifz", "Validation failed for " + mode, error);
+            onError("État de progression à vérifier. Ouvrez Diagnostic si nécessaire.");
+        }
     }
 
     private void configureRevealButton(Button button) {

@@ -283,21 +283,63 @@ public final class HifzPrefs {
             legacyJ10EpochDays,
             recentSabqiAddedOnEpochDays));
 
+        LinkedHashSet<String> migratedLearned = new LinkedHashSet<>(state.toAnchorLineIds());
+        LinkedHashSet<String> migratedStabilized = new LinkedHashSet<>();
+        LinkedHashSet<String> migratedAcquired = new LinkedHashSet<>(state.acquiredCreditLineIds());
+        LinkedHashSet<String> migratedLegacyPartial = new LinkedHashSet<>(state.legacyPartialAcquiredLineIds());
+        LinkedHashSet<String> migratedQuarantine = new LinkedHashSet<>(state.quarantineLineIds());
+        LinkedHashMap<String, Long> migratedQuarantineDates = new LinkedHashMap<>(state.quarantineLegacyLastReviewed());
+        LinkedHashMap<String, Long> migratedActiveDates = new LinkedHashMap<>(state.activeLastReviewedEpochDays());
+        LinkedHashSet<String> migratedUnknownDue = new LinkedHashSet<>(state.unknownDueLineIds());
+        LinkedHashSet<String> migratedImported = new LinkedHashSet<>(state.legacyImportedLineIds());
+        LinkedHashMap<String, Long> migratedOrphanDates = new LinkedHashMap<>(state.legacyOrphanDates());
+
+        for (String lineId : structurallyCompletedPendingLineIds) {
+            Long historicalDate = migratedActiveDates.remove(lineId);
+            Long quarantineDate = migratedQuarantineDates.remove(lineId);
+            if (historicalDate == null) historicalDate = quarantineDate;
+            if (historicalDate != null) migratedOrphanDates.put(lineId, historicalDate);
+            migratedLearned.remove(lineId);
+            migratedAcquired.remove(lineId);
+            migratedLegacyPartial.remove(lineId);
+            migratedQuarantine.remove(lineId);
+            migratedUnknownDue.remove(lineId);
+            migratedImported.remove(lineId);
+            migratedStabilized.add(lineId);
+        }
+
+        boolean openLegacyStabilization = unitStart != null && unitEnd != null && (
+            completedBlocks > 0
+                || p.getInt("itqanRep", 0) > 0
+                || p.getInt("itqanAssisted", 0) > 0
+                || p.getInt("itqanFinalReveals", 0) > 0
+                || p.getLong("itqanElapsedMs", 0L) > 0L);
+        int migratedBlockIndex = openLegacyStabilization
+            ? migratedPhysicalBlockIndex(geometry, unitStart, unitEnd, migratedStabilized)
+            : Math.max(0, p.getInt("itqanBlockIndex", 0));
+
         maybeInterruptMigrationForTest("BEFORE_MAIN_COMMIT");
 
         SharedPreferences.Editor e = p.edit()
-            .putString("v6LearnedLineIds", lineIdsJson(state.toAnchorLineIds()))
-            .putString("v6StabilizedLineIds", "[]")
-            .putString("v6AcquiredCreditLineIds", lineIdsJson(state.acquiredCreditLineIds()))
-            .putString("v6LegacyPartialAcquiredLineIds", lineIdsJson(state.legacyPartialAcquiredLineIds()))
-            .putString("v6QuarantineLineIds", lineIdsJson(state.quarantineLineIds()))
-            .putString("v6QuarantineLegacyLastReviewed", epochDayMapJson(state.quarantineLegacyLastReviewed()))
-            .putString("v6ActiveJ10LastReviewed", epochDayMapJson(state.activeLastReviewedEpochDays()))
-            .putString("v6UnknownDueLineIds", lineIdsJson(state.unknownDueLineIds()))
-            .putString("v6LegacyImportedLineIds", lineIdsJson(state.legacyImportedLineIds()))
-            .putString("v6LegacyOrphanJ10Dates", epochDayMapJson(state.legacyOrphanDates()))
+            .putString("v6LearnedLineIds", lineIdsJson(migratedLearned))
+            .putString("v6StabilizedLineIds", lineIdsJson(migratedStabilized))
+            .putString("v6AcquiredCreditLineIds", lineIdsJson(migratedAcquired))
+            .putString("v6LegacyPartialAcquiredLineIds", lineIdsJson(migratedLegacyPartial))
+            .putString("v6QuarantineLineIds", lineIdsJson(migratedQuarantine))
+            .putString("v6QuarantineLegacyLastReviewed", epochDayMapJson(migratedQuarantineDates))
+            .putString("v6ActiveJ10LastReviewed", epochDayMapJson(migratedActiveDates))
+            .putString("v6UnknownDueLineIds", lineIdsJson(migratedUnknownDue))
+            .putString("v6LegacyImportedLineIds", lineIdsJson(migratedImported))
+            .putString("v6LegacyOrphanJ10Dates", epochDayMapJson(migratedOrphanDates))
             .putFloat("murajaahSecPerLine", (float) migrated)
             .putInt("schema", 6);
+        if (openLegacyStabilization) {
+            e.putInt("itqanBlockIndex", migratedBlockIndex)
+                .putInt("itqanRep", 0)
+                .putInt("itqanAssisted", 0)
+                .putInt("itqanFinalReveals", 0)
+                .putLong("itqanElapsedMs", 0L);
+        }
         if (!e.commit()) {
             throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
         }
@@ -309,6 +351,25 @@ public final class HifzPrefs {
                 || !p.contains("v6AcquiredCreditLineIds")
                 || !p.contains("v6ActiveJ10LastReviewed")) {
             throw new IllegalStateException("Incomplete Hifz schema v6 migration commit");
+        }
+    }
+
+    private static int migratedPhysicalBlockIndex(
+            GeometryRepository geometry,
+            VerseRef start,
+            VerseRef endInclusive,
+            java.util.Set<String> stabilizedLineIds) {
+        try {
+            if (geometry.pageForVerse(start) != geometry.pageForVerse(endInclusive)) return 0;
+            List<String> owned = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, endInclusive, geometry);
+            List<StabilizationHalfPagePolicy.Unit> planned = StabilizationHalfPagePolicy.planPage(
+                geometry.linesForExactIds(owned));
+            for (int i = 0; i < planned.size(); i++) {
+                if (!stabilizedLineIds.containsAll(planned.get(i).lineIds)) return i;
+            }
+            return 0;
+        } catch (RuntimeException incompatibleLegacyUnit) {
+            return 0;
         }
     }
 
@@ -821,7 +882,7 @@ public final class HifzPrefs {
 
     public boolean setItqanRanges(List<VerseRange> ranges) {
         if (ranges == null || ranges.isEmpty()) return false;
-        List<VerseRange> normalized = normalizeRanges(ranges);
+        List<VerseRange> normalized = sortRangesPreservingBoundaries(ranges);
         return p.edit().putString("itqanRanges", rangesJson(normalized)).commit();
     }
 
@@ -843,10 +904,8 @@ public final class HifzPrefs {
         // Schema-6 manual ranges are ordered but deliberately NOT coalesced. Adjacent
         // ranges may sit on opposite surah boundaries; merging them would destroy the
         // physical boundary that Stabilisation/Consolidation must preserve.
-        List<VerseRange> acquiredNormalized = new ArrayList<>(acquiredRanges);
-        List<VerseRange> stabilizationNormalized = new ArrayList<>(stabilizationRanges);
-        acquiredNormalized.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
-        stabilizationNormalized.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
+        List<VerseRange> acquiredNormalized = sortRangesPreservingBoundaries(acquiredRanges);
+        List<VerseRange> stabilizationNormalized = sortRangesPreservingBoundaries(stabilizationRanges);
 
         ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
         for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
@@ -916,9 +975,10 @@ public final class HifzPrefs {
 
             SharedPreferences.Editor editor = p.edit()
                 .putString("itqanRanges", rangesJson(acquiredNormalized))
-                .putString("promotedRanges", rangesJson(normalizeRanges(promotedNext)))
+                .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(promotedNext)))
                 .putString("unconsolidatedPromotedRanges", rangesJson(stabilizationNormalized))
                 .putBoolean("anchoringQueueInitialized", false)
+                .remove("v6ConsolidationStabilizationState")
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
@@ -1410,8 +1470,8 @@ public final class HifzPrefs {
         if (entry == null) return false;
         LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-        List<String> ids = geometry.lineIdsForVerseRange(
-            GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end));
+        List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(
+            GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end), geometry);
         if (ids.isEmpty()) return false;
         for (String id : ids) if (!stabilized.contains(id) && !acquired.contains(id)) return false;
         return true;
@@ -1460,7 +1520,7 @@ public final class HifzPrefs {
         for (AnchoringQueue.Entry entry : AnchoringQueue.visitOrder(anchoringQueue(), anchoringQueueIndex())) {
             VerseRef start = GeometryRepository.parseVerse(entry.start);
             VerseRef end = GeometryRepository.parseVerse(entry.end);
-            List<String> entryIds = geometry.lineIdsForVerseRange(start, end);
+            List<String> entryIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end, geometry);
             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(entryIds);
             List<StabilizationHalfPagePolicy.Unit> planned = StabilizationHalfPagePolicy.planPage(physicalLines);
             List<StabilizationHalfPagePolicy.Unit> ready = ConsolidationPhysicalUnitPolicy.readyUnits(
@@ -1702,8 +1762,8 @@ public final class HifzPrefs {
             int oldIndex = anchoringQueueIndex(originalQueue.size());
             ArrayList<AnchoringQueue.Entry> keptQueue = new ArrayList<>();
             for (AnchoringQueue.Entry entry : originalQueue) {
-                List<String> parentIds = geometry.lineIdsForVerseRange(
-                    GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end));
+                List<String> parentIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(
+                    GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end), geometry);
                 boolean allAcquired = !parentIds.isEmpty() && acquired.containsAll(parentIds);
                 if (allAcquired) {
                     VerseRef start = GeometryRepository.parseVerse(entry.start);
@@ -1735,8 +1795,8 @@ public final class HifzPrefs {
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
-                .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
-                .putString("forcedPromotedRanges", rangesJson(normalizeRanges(forced)))
+                .putString("unconsolidatedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(pending)))
+                .putString("forcedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(forced)))
                 .putString("anchoringQueue", anchoringQueueJson(keptQueue))
                 .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", nextIndex)
                 .putString("lastRecentSabqiReviewDate", date).putString("lastRecentSabqiReviewLabel", label)
@@ -1926,9 +1986,9 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         ArrayList<VerseRange> forced = new ArrayList<>(forcedPromotedRanges());
         if (forcedPromotion) forced.addAll(additions);
         return p.edit()
-            .putString("promotedRanges", rangesJson(normalizeRanges(all)))
-            .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
-            .putString("forcedPromotedRanges", rangesJson(normalizeRanges(forced)))
+            .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(all)))
+            .putString("unconsolidatedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(pending)))
+            .putString("forcedPromotedRanges", rangesJson(sortRangesPreservingBoundaries(forced)))
             .putBoolean("anchoringQueueInitialized", false)
             .commit();
     }
@@ -2007,7 +2067,7 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
     private List<VerseRange> parseRanges(String key) {
         List<VerseRange> ranges = parseRangesAllowEmpty(key);
         if (ranges.isEmpty()) throw new IllegalStateException("No Itqan range configured");
-        return normalizeRanges(ranges);
+        return ranges;
     }
 
     private List<VerseRange> parseRangesAllowEmpty(String key) {
@@ -2021,12 +2081,59 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         } catch (Exception error) {
             throw new IllegalStateException("Corrupt range list: " + key, error);
         }
-        return out;
+        return sortRangesPreservingBoundaries(out);
     }
 
     private static List<VerseRange> normalizeRanges(List<VerseRange> ranges) {
         if (ranges == null || ranges.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(EligibleCorpus.Companion.of(ranges).getRanges());
+    }
+
+    /** Sorts and merges overlap only; adjacency remains visible and every surah boundary is explicit. */
+    private static List<VerseRange> sortRangesPreservingBoundaries(List<VerseRange> ranges) {
+        ArrayList<VerseRange> split = new ArrayList<>();
+        if (ranges == null) return split;
+        for (VerseRange range : ranges) {
+            if (range == null) continue;
+            int start = GeometryRepository.ordinal(range.getStart());
+            int end = GeometryRepository.ordinal(range.getEndInclusive());
+            if (end < start) throw new IllegalArgumentException("Reversed range");
+            int segmentStart = start;
+            int surah = range.getStart().getSurah();
+            for (int ordinal = start + 1; ordinal <= end; ordinal++) {
+                VerseRef verse = QuranCanon.INSTANCE.fromOrdinal(ordinal);
+                if (verse.getSurah() != surah) {
+                    split.add(new VerseRange(
+                        QuranCanon.INSTANCE.fromOrdinal(segmentStart),
+                        QuranCanon.INSTANCE.fromOrdinal(ordinal - 1)));
+                    segmentStart = ordinal;
+                    surah = verse.getSurah();
+                }
+            }
+            split.add(new VerseRange(
+                QuranCanon.INSTANCE.fromOrdinal(segmentStart),
+                QuranCanon.INSTANCE.fromOrdinal(end)));
+        }
+        split.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
+        ArrayList<VerseRange> out = new ArrayList<>();
+        for (VerseRange range : split) {
+            if (out.isEmpty()) {
+                out.add(range);
+                continue;
+            }
+            VerseRange previous = out.get(out.size() - 1);
+            int previousEnd = GeometryRepository.ordinal(previous.getEndInclusive());
+            int currentStart = GeometryRepository.ordinal(range.getStart());
+            if (previous.getStart().getSurah() == range.getStart().getSurah()
+                    && currentStart <= previousEnd) {
+                VerseRef mergedEnd = GeometryRepository.ordinal(range.getEndInclusive()) > previousEnd
+                    ? range.getEndInclusive() : previous.getEndInclusive();
+                out.set(out.size() - 1, new VerseRange(previous.getStart(), mergedEnd));
+            } else {
+                out.add(range);
+            }
+        }
+        return out;
     }
 
     private static List<VerseRange> rangesFromVerses(List<VerseRef> orderedVerses) {
@@ -2036,7 +2143,8 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         VerseRef previous = start;
         for (int i = 1; i < orderedVerses.size(); i++) {
             VerseRef current = orderedVerses.get(i);
-            if (GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1) {
+            if (current.getSurah() == previous.getSurah()
+                    && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1) {
                 previous = current;
             } else {
                 additions.add(new VerseRange(start, previous));
@@ -2066,7 +2174,7 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
                 out.add(new VerseRange(QuranCanon.INSTANCE.fromOrdinal(cutB + 1), range.getEndInclusive()));
             }
         }
-        return normalizeRanges(out);
+        return sortRangesPreservingBoundaries(out);
     }
 
     private static String defaultItqanRangesJson() {

@@ -58,14 +58,14 @@ public final class HifzPrefsV6MigrationInstrumentedTest {
         assertEquals(1234, prefs.sabqiLineCursor());
         assertEquals(17, prefs.sabqiRep());
         assertEquals(2, prefs.sabqiAssisted());
-        assertEquals(9, prefs.itqanRep());
-        assertEquals(1, prefs.itqanAssisted());
-        assertEquals(2, prefs.itqanFinalReveals());
-        assertEquals(2, prefs.itqanBlockIndex());
+        assertEquals(0, prefs.itqanRep());
+        assertEquals(0, prefs.itqanAssisted());
+        assertEquals(0, prefs.itqanFinalReveals());
+        assertEquals(0, prefs.itqanBlockIndex());
         assertEquals("49:1", prefs.itqanUnitStart().toString());
         assertEquals("49:18", prefs.itqanUnitEnd().toString());
         assertEquals(87_654L, prefs.elapsedFor(HifzSessionActivity.SABQI));
-        assertEquals(54_321L, prefs.elapsedFor(HifzSessionActivity.ITQAN));
+        assertEquals(0L, prefs.elapsedFor(HifzSessionActivity.ITQAN));
         assertEquals("Sabqi installé à conserver", prefs.lastSabqiLabel());
         assertEquals("Itqān installé à conserver", prefs.lastItqanLabel());
         assertEquals(1, prefs.recentSabqi().size());
@@ -74,7 +74,8 @@ public final class HifzPrefsV6MigrationInstrumentedTest {
         assertEquals(LocalDate.of(2026, 9, 12), prefs.recentSabqi().get(0).addedOn);
         assertEquals(2, prefs.recentSabqi().get(0).reviewStreak);
 
-        assertExistingKeysUnchangedExcept(beforeMain, snapshot(main), "schema");
+        assertExistingKeysUnchangedExcept(beforeMain, snapshot(main), "schema",
+            "itqanRep", "itqanAssisted", "itqanFinalReveals", "itqanBlockIndex", "itqanElapsedMs");
         assertEquals(beforeLegacyJ10, snapshot(legacyJ10));
     }
 
@@ -87,7 +88,8 @@ public final class HifzPrefsV6MigrationInstrumentedTest {
         assertEquals(6, prefs.schema());
         assertEquals(8.0, prefs.murajaahSecondsPerLine(), 0.0001);
         assertFalse(main.getBoolean("murajaahSpeedCalibrated", true));
-        assertExistingKeysUnchangedExcept(before, snapshot(main), "schema", "murajaahSecPerLine");
+        assertExistingKeysUnchangedExcept(before, snapshot(main), "schema", "murajaahSecPerLine",
+            "itqanRep", "itqanAssisted", "itqanFinalReveals", "itqanBlockIndex", "itqanElapsedMs");
     }
 
     @Test public void reopeningMigratedStateIsIdempotentAndDoesNotTouchLegacyJ10() {
