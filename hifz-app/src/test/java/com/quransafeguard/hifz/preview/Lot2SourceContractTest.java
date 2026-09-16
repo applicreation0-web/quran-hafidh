@@ -31,19 +31,16 @@ public final class Lot2SourceContractTest {
         assertFalse(session.contains("calibrateOldSpeed"));
     }
 
-    @Test public void advisoryIsWedFriOnlyAndNeverBecomesScheduledSession() throws Exception {
+    @Test public void consolidationIsProgressionDrivenAndNeverAWeekdayCadence() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
-        assertTrue(main.contains("recentSabqiAdvisory"));
-        assertTrue(main.contains("DayOfWeek.WEDNESDAY") && main.contains("DayOfWeek.FRIDAY"));
-        assertTrue(main.contains("HifzCadence.advisoryFiveLineRange"));
-        assertTrue(main.contains("speedStore.consolidationSecondsPerLine()"));
-        assertTrue(main.contains("prefs.recentSabqi().isEmpty()"));
+        assertTrue(core.contains("enum class CadenceAction"));
+        assertTrue(core.contains("LEARNING") && core.contains("STABILIZATION") && core.contains("REVISION"));
+        assertFalse(core.contains("CadenceAction.CONSOLIDATION"));
+        assertTrue(main.contains("nextDueCadence"));
+        assertTrue(main.contains("HifzSchedule.INSTANCE.actionFor"));
         assertTrue(core.contains("EVENING_REVIEW_MINUTES = 30"));
-        assertTrue(core.contains("ANCHORING_ENVELOPE_MINUTES = 60"));
-        assertTrue(core.contains("CONSOLIDATION_MINUTES = 30"));
         assertTrue(core.contains("MAINTENANCE_MINUTES = 45"));
-        assertFalse(core.contains("MICRO_REVIEW"));
     }
 
     @Test public void quickAccessDurationsDoNotDependOnTodaysPlan() throws Exception {
@@ -53,16 +50,19 @@ public final class Lot2SourceContractTest {
         assertFalse(session.contains("Mode \" + kind + \" absent du planning"));
     }
 
-    @Test public void effectiveAnchoringCorpusIsVisibleButNotDirectlyEditable() throws Exception {
+    @Test public void schema6ExposesTwoIndependentEditableRangeLists() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(prefs.contains("effectiveItqanRanges()"));
-        assertTrue(settings.contains("Corpus d’ancrage"));
-        assertTrue(settings.contains("En attente d’ancrage"));
-        assertTrue(settings.contains("prefs.effectiveItqanRanges()"));
-        assertTrue(settings.contains("prefs.unconsolidatedPromotedRanges()"));
-        assertFalse(settings.contains("Modifier le corpus réel"));
-        assertFalse(settings.contains("Supprimer du corpus réel"));
+        assertTrue(settings.contains("section(root,\"Plages à stabiliser\")"));
+        assertTrue(settings.contains("section(root,\"Plages acquises\")"));
+        assertTrue(settings.contains("chooseStabilizationRange"));
+        assertTrue(settings.contains("chooseAcquiredRange"));
+        assertTrue(settings.contains("removeStabilizationRange"));
+        assertTrue(settings.contains("removeAcquiredRange"));
+        assertTrue(prefs.contains("setV6StabilizationRanges"));
+        assertTrue(prefs.contains("setV6AcquiredRanges"));
+        assertTrue(prefs.contains("validateV6ManualRanges"));
+        assertTrue(prefs.contains("Une plage ne peut pas être à la fois Acquise et À stabiliser"));
     }
 
     @Test public void anchoringKeepsFullAndReconstructionProtocolsDistinct() throws Exception {
