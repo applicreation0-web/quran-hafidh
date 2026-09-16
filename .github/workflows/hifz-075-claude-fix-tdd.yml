@@ -76,6 +76,7 @@ jobs:
             :hifz-app:testDebugUnitTest \
             :hifz-app:sourceContractTest \
             -x :hifz-app:prepareHifzTafsirRelease \
+            --continue \
             --stacktrace
 
       - name: Record test counts
