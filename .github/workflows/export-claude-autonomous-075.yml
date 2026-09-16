@@ -1,0 +1,240 @@
+name: Export autonomous Claude audit kit 0.7.5
+
+on:
+  push:
+    branches:
+      - export/claude-autonomous-hifz-0.7.5-7185a9ca
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE=7185a9ca92dfa46c10f63b0e5c499dce610dd720
+          INITIAL_AUDIT=5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          BASELINE=f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+          git cat-file -e "$SOURCE^{commit}"
+          git cat-file -e "$INITIAL_AUDIT^{commit}"
+          git cat-file -e "$BASELINE^{commit}"
+          echo "SOURCE=$SOURCE"
+          echo "TREE=$(git show -s --format=%T $SOURCE)"
+          echo "INITIAL_AUDIT=$INITIAL_AUDIT"
+          echo "BASELINE=$BASELINE"
+          git diff --name-only "$SOURCE"..HEAD | grep -qx '.github/workflows/export-claude-autonomous-075.yml'
+
+      - name: Restore immutable release geometry
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p baseline074
+          curl -fL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            https://api.github.com/repos/applicreation0-web/quran-unlock-android/releases/assets/564818126 \
+            -o baseline074/hifz074.apk
+          echo 'c0007102e2e2f8ef69f303f141d148b416ae5f312a354f3f0a23fc2a70995ccc  baseline074/hifz074.apk' | sha256sum -c -
+          unzip -q baseline074/hifz074.apk 'assets/reader109/geometry.json' -d baseline074/extracted
+          test -s baseline074/extracted/assets/reader109/geometry.json
+
+      - name: Build autonomous kit
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE=7185a9ca92dfa46c10f63b0e5c499dce610dd720
+          INITIAL_AUDIT=5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          BASELINE=f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+          ROOT="$RUNNER_TEMP/CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca"
+          mkdir -p "$ROOT/SOURCE_HEAD" "$ROOT/GEOMETRY" "$ROOT/DIFFS"
+
+          git archive "$SOURCE" hifz-app/src hifz-core/src hifz-app/build.gradle.kts hifz-core/build.gradle.kts settings.gradle.kts gradle.properties | tar -x -C "$ROOT/SOURCE_HEAD"
+          cp baseline074/extracted/assets/reader109/geometry.json "$ROOT/GEOMETRY/geometry.json"
+
+          git diff --no-ext-diff --find-renames "$INITIAL_AUDIT".."$SOURCE" -- hifz-app/src hifz-core/src > "$ROOT/DIFFS/FIX_DELTA_5696_TO_7185.patch"
+          git diff --name-status "$INITIAL_AUDIT".."$SOURCE" > "$ROOT/DIFFS/FIX_DELTA_FILES.txt"
+          git diff --stat "$INITIAL_AUDIT".."$SOURCE" > "$ROOT/DIFFS/FIX_DELTA_STAT.txt"
+          git diff --name-status "$BASELINE".."$SOURCE" > "$ROOT/DIFFS/RELEASE_TO_FINAL_FILES.txt"
+
+          cat > "$ROOT/00_READ_ME_FIRST.txt" <<'EOF'
+QURAN HIFZ 0.7.5 — KIT CLAUDE AUTONOME
+
+Ce ZIP est autonome pour l'audit : aucun accès GitHub ni réseau n'est requis.
+
+HEAD final à auditer :
+7185a9ca92dfa46c10f63b0e5c499dce610dd720
+
+HEAD initial déjà audité par Claude :
+5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+
+Baseline dernière release :
+f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+
+Run full final :
+35098846133
+
+Contenu :
+- SOURCE_HEAD/ : sources Java/Kotlin + tests du candidat final ;
+- GEOMETRY/geometry.json : vraie géométrie Mushaf utilisée pour les 604 pages / 8 820 lignes ;
+- DIFFS/FIX_DELTA_5696_TO_7185.patch : delta exact après le NO-GO Claude ;
+- DIFFS/FIX_DELTA_FILES.txt : liste exacte des fichiers du delta correctif ;
+- DIFFS/RELEASE_TO_FINAL_FILES.txt : liste release 0.7.4 -> candidat final ;
+- 01_PROMPT_CLAUDE.txt : mission courte ;
+- SHA256SUMS.txt : hashes de tous les fichiers du kit.
+
+Ne pas dépendre de GitHub pour conclure. Si un fichier nécessaire au contrôle demandé est absent, le signaler précisément.
+EOF
+
+          cat > "$ROOT/01_PROMPT_CLAUDE.txt" <<'EOF'
+MISSION CLAUDE — RE-AUDIT COURT ET BLOQUANT QURAN HIFZ 0.7.5
+
+Tu disposes d'un KIT AUTONOME. N'utilise pas GitHub ni le réseau.
+
+HEAD final : 7185a9ca92dfa46c10f63b0e5c499dce610dd720
+HEAD initial de ton NO-GO : 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+Baseline release : f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+Run full final : 35098846133
+
+Commence par vérifier SHA256SUMS.txt.
+Puis audite SOURCE_HEAD + GEOMETRY + le delta DIFFS/FIX_DELTA_5696_TO_7185.patch.
+
+Objectif : revalider uniquement les défauts de ton précédent NO-GO et détecter une régression directement causée par leur correction.
+
+1) CONSOLIDATION ACCESSIBLE
+- La Consolidation doit être réellement ouvrable depuis MainActivity quand unités stabilisées prêtes ou session ouverte.
+- Pas seulement du texte UI.
+
+2) UNITÉS PHYSIQUES / B2
+- propriété physique cohérente via ownerVerse ;
+- états partiels ne doivent pas faire planter ou bloquer les unités antérieures prêtes ;
+- jamais PAGE/SOURATE ;
+- 15 lignes => 7+8 ;
+- cas réel obligatoire : page 48, ayah 2:282 seul, U1 7 lignes + U2 8 lignes.
+
+3) MIGRATION 0.7.4 -> SCHEMA 6 / M2
+- ancien sous-bloc réellement validé => STABILISÉ si prouvé, jamais ACQUIS inventé ;
+- ancien index 5/5/5 ne doit pas faire crasher la nouvelle Stabilisation 7+8 ;
+- J10 actif uniquement pour ACQUIRED ;
+- historique ancien conservé sans crédit de révision inventé.
+
+4) PROJECTION / M1
+- Accueil/Semaine cohérents avec StabilizationHalfPagePolicy.planPage ;
+- page 48 doit apparaître en 2 unités, pas une seule séance fictive.
+
+5) PLAGES / M3
+- ne pas coalescer silencieusement des ranges adjacents qui masquent une frontière de sourate ;
+- Paramètres ne doit pas réécrire une vue fusionnée destructivement.
+
+6) SESSION MANUELLE + CRASH UI
+- modification manuelle des ranges invalide une session Consolidation figée incompatible ;
+- validate* ne doit pas transformer un état de migration incohérent en crash non capturé.
+
+7) HORS SCOPE
+À partir de DIFFS/FIX_DELTA_FILES.txt, confirmer que le correctif n'a pas modifié les zones audio/Tafsir/BOOX/vecteurs Consolidation/J10 moteur, sauf tests/harnais explicitement justifiés.
+
+CONTEXTE SOL SUR LE HEAD FINAL
+- Behavior JVM 166/166
+- Source contracts 69/69
+- Core JVM 20/20
+- Android instrumented 38/38
+- 0 failure, 0 skipped
+- compile/product boundary/cosmetic/convergence GREEN
+
+Ne recopie pas ces résultats : vérifie le code et les données indépendamment.
+
+FORMAT DE SORTIE COURT
+HEAD audité : <sha>
+BLOQUANT : <néant ou liste courte>
+MAJEUR : <néant ou liste courte>
+MINEUR : <seulement utile>
+
+Puis 7 lignes explicites :
+- accès UI Consolidation : OK/NON
+- page 48 / 2:282 => 7+8 : OK/NON
+- U1 n'acquiert pas U2 : OK/NON
+- process death Consolidation : OK/NON
+- migration legacy => Stabilisé, pas Acquis inventé : OK/NON
+- frontières sourate/ranges : OK/NON
+- hors scope delta correctif : OK/NON
+
+Verdict final exactement :
+AUDIT CLAUDE GREEN
+ou
+AUDIT CLAUDE NO-GO
+
+Pas de long rapport narratif.
+Pas de refactor préventif.
+Aucun merge/release/signature.
+AUCUN GO_PHONE automatique.
+EOF
+
+          cat > "$ROOT/02_VERIFIED_STATE_SOL.md" <<'EOF'
+# Etat Sol vérifié sur le HEAD exact
+
+HEAD : `7185a9ca92dfa46c10f63b0e5c499dce610dd720`
+Run : `35098846133`
+
+- Behavior JVM : 166/166, 0 failure/error/skipped
+- Source contracts : 69/69, 0 failure/error/skipped
+- Core JVM : 20/20, 0 failure/error/skipped
+- Android instrumented API 35 / x86_64 / Pixel 6 : 38/38, 0 failed, 0 skipped
+- compile Android tests : GREEN
+- product boundary : GREEN
+- cosmetic : GREEN
+- convergence : GREEN
+
+Ce fichier est du contexte. L'auditeur doit contrôler le code indépendamment.
+EOF
+
+          cat > "$ROOT/03_PREVIOUS_CLAUDE_FINDINGS.md" <<'EOF'
+# Résumé du précédent NO-GO Claude à revalider
+
+B1 : Consolidation non accessible depuis l'UI/MainActivity.
+B2 : readyUnits levait sur états partiels ; mélange lignes touchées / lignes possédées pouvait bloquer la file.
+M1 : projection semaine/Accueil utilisait ancien fractionnement, pas planPage.
+M2 : legacy partial sans voie de sortie ; crash possible après migration 5/5/5 -> 7+8.
+M3 : coalescence de ranges adjacents masquant frontière de sourate.
+Mineur : renderSabqiTodayReview sans canonicalize.
+Latent : édition manuelle des ranges n'invalidait pas une session Consolidation figée.
+
+Le re-audit doit vérifier les corrections dans le code final, pas accepter ce résumé comme preuve.
+EOF
+
+          python3 - <<'PY'
+import json, pathlib
+p=pathlib.Path(__import__('os').environ['RUNNER_TEMP'])/'CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca/GEOMETRY/geometry.json'
+data=json.loads(p.read_text())
+# Geometry format varies; count textual occurrence of physical ids and retain exact file for authoritative audit.
+text=p.read_text()
+assert '48:' in text or '"page":48' in text or '"page": 48' in text
+print('geometry_bytes', p.stat().st_size)
+PY
+
+          cd "$ROOT"
+          find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          cd "$RUNNER_TEMP"
+          zip -qr CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca.zip CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca
+          unzip -t CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca.zip
+          sha256sum CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca.zip | tee CLAUDE_AUTONOMOUS_ZIP_SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CLAUDE-QURAN-HIFZ-0.7.5-AUTONOMOUS-7185a9ca
+          path: |
+            ${{ runner.temp }}/CLAUDE_QURAN_HIFZ_0.7.5_AUTONOMOUS_7185a9ca.zip
+            ${{ runner.temp }}/CLAUDE_AUTONOMOUS_ZIP_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
