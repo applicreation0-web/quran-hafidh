@@ -51,9 +51,10 @@ public final class CanonicalSessionRuntimeSourceContractTest {
 
     @Test public void groupedConsolidationCannotMutateIndividualRepetitionCounters() throws Exception {
         String persistenceTest = read("hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ConsolidationPersistenceInstrumentedTest.java");
-        assertTrue(persistenceTest.contains("groupedRepetitionsNeverMutateIndividualCounters"));
-        assertTrue(persistenceTest.contains("assertEquals(9, prefs.sabqiRep())"));
-        assertTrue(persistenceTest.contains("assertEquals(11, prefs.itqanRep())"));
+        assertTrue(persistenceTest.contains("persistingEveryGroupedRepetitionNeverMutatesIndividualCounters"));
+        assertTrue(persistenceTest.contains("assertTrue(prefs.setSabqiProgress(29, 6))"));
+        assertTrue(persistenceTest.contains("assertTrue(prefs.setItqanProgress(31, 7, 5"));
+        assertTrue(persistenceTest.contains("assertArrayEquals(individualBefore, individualCounters(prefs))"));
     }
 
     @Test public void revisionRemainsSeparateAndConsolidationIsNotAWeekdayCadence() throws Exception {
