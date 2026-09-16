@@ -1,0 +1,354 @@
+From 6e9c6db9eedc4c0732dfa9f9d46527b564beb781 Mon Sep 17 00:00:00 2001
+From: Claude audit <claude@audit>
+Date: Wed, 16 Sep 2026 13:31:41 +0000
+Subject: [PATCH] Hifz 0.7.5: fix Claude re-audit B1' (ownerless entries), M4
+ (daily Consolidation gate), M5 (range fragmentation)
+
+---
+ .../ClaudeNoGoRegressionInstrumentedTest.java | 136 ++++++++++++++++++
+ .../hifz/preview/HifzPrefs.java               |  98 ++++++++-----
+ .../hifz/preview/MainActivity.java            |  16 ++-
+ .../hifz/preview/WeeklyDashboardPlanner.java  |   8 +-
+ ...laudeNoGoRegressionSourceContractTest.java |  21 +++
+ 5 files changed, 238 insertions(+), 41 deletions(-)
+
+diff --git a/hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionInstrumentedTest.java b/hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionInstrumentedTest.java
+index 59f46e6..1466ea2 100644
+--- a/hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionInstrumentedTest.java
++++ b/hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionInstrumentedTest.java
+@@ -191,6 +191,142 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
+         assertFalse(units.get(0).lineIds.equals(units.get(1).lineIds));
+     }
+ 
++    /** Re-audit B1': an entry owning no physical line (53:2 sits on line 526:0 owned by 53:1). */
++    @Test public void ownerlessEntryNeverCrashesHomeNorBlocksQueueOrConsolidation() throws Exception {
++        HifzPrefs prefs = new HifzPrefs(context);
++        prefs.setProgramStartDate(HifzClock.today());
++        assertTrue(CorpusLinePolicy.ownedLineIdsForRangeOnPage(
++            new VerseRef(53, 2), new VerseRef(53, 2), geometry).isEmpty());
++        List<StabilizationHalfPagePolicy.Unit> units = StabilizationHalfPagePolicy.planPage(pageLines(48));
++        assertTrue(main.edit()
++            .putString("anchoringQueue", "[{\"start\":\"53:2\",\"end\":\"53:2\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0},"
++                + "{\"start\":\"2:282\",\"end\":\"2:282\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]")
++            .putBoolean("anchoringQueueInitialized", true)
++            .putInt("anchoringQueueIndex", 0)
++            .putString("v6StabilizedLineIds", json(units.get(0).lineIds))
++            .putString("v6AcquiredCreditLineIds", "[]")
++            .commit());
++
++        List<ConsolidationCycleEngine.Unit> ready = prefs.stabilizedConsolidationUnits(geometry, 3);
++        assertEquals(1, ready.size());
++        assertEquals(units.get(0).lineIds, ConsolidationPhysicalUnitPolicy.decodeLineUnit(ready.get(0).id()));
++        AnchoringQueue.Entry current = prefs.currentAnchoringEntry(geometry);
++        assertNotNull(current);
++        assertEquals("2:282", current.start);
++
++        assertEquals(HifzSessionActivity.RECENT_SABQI_REVIEW, clickTodayAndReadMode());
++    }
++
++    @Test public void reconcileNeverQueuesOwnerlessPagePortion() {
++        HifzPrefs prefs = new HifzPrefs(context);
++        assertTrue(main.edit()
++            .putString("unconsolidatedPromotedRanges", "[{\"start\":\"53:2\",\"end\":\"53:2\"}]")
++            .putString("anchoringQueue", "[]")
++            .putBoolean("anchoringQueueInitialized", false)
++            .commit());
++        assertTrue(prefs.reconcileAnchoringQueue(geometry));
++        assertTrue(prefs.anchoringQueue().isEmpty());
++    }
++
++    @Test public void manualStabilizationRangeWithoutOwnedLineIsRejected() {
++        HifzPrefs prefs = new HifzPrefs(context);
++        String before = main.getString("unconsolidatedPromotedRanges", "");
++        try {
++            prefs.setV6StabilizationRanges(Collections.singletonList(
++                new VerseRange(new VerseRef(53, 2), new VerseRef(53, 2))), geometry);
++            throw new AssertionError("ownerless Stabilisation range must be rejected");
++        } catch (IllegalArgumentException expected) {
++            assertTrue(expected.getMessage().contains("526"));
++        }
++        assertEquals(before, main.getString("unconsolidatedPromotedRanges", ""));
++        assertTrue(prefs.setV6StabilizationRanges(Collections.singletonList(
++            new VerseRange(new VerseRef(53, 1), new VerseRef(53, 62))), geometry));
++    }
++
++    /** Re-audit M4: once today's Consolidation is validated, Home returns to the cadence. */
++    @Test public void consolidationValidatedTodayReleasesHomeToCadence() throws Exception {
++        HifzPrefs prefs = new HifzPrefs(context);
++        prefs.setProgramStartDate(HifzClock.today());
++        List<StabilizationHalfPagePolicy.Unit> units = StabilizationHalfPagePolicy.planPage(pageLines(48));
++        assertTrue(main.edit()
++            .putString("anchoringQueue", "[{\"start\":\"2:282\",\"end\":\"2:282\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]")
++            .putBoolean("anchoringQueueInitialized", true)
++            .putInt("anchoringQueueIndex", 0)
++            .putString("v6StabilizedLineIds", json(units.get(1).lineIds))
++            .putString("v6AcquiredCreditLineIds", json(units.get(0).lineIds))
++            .putString("lastRecentSabqiReviewDate", HifzClock.today().toString())
++            .commit());
++        assertEquals(1, prefs.stabilizedConsolidationUnits(geometry, 3).size());
++        String mode = clickTodayAndReadMode();
++        assertFalse("Home must not reopen an already validated Consolidation",
++            HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode));
++    }
++
++    /** Re-audit M5: same-surah adjacency merges, surah boundaries and entered multi-surah ranges stay intact. */
++    @Test public void rangesMergeInsideOneSurahOnlyAndAreNeverSplitPerSurah() {
++        HifzPrefs prefs = new HifzPrefs(context);
++        assertTrue(main.edit()
++            .putString("itqanRanges", "[{\"start\":\"2:81\",\"end\":\"2:90\"},{\"start\":\"2:75\",\"end\":\"2:80\"},"
++                + "{\"start\":\"53:1\",\"end\":\"53:62\"},{\"start\":\"54:1\",\"end\":\"54:55\"}]")
++            .putString("unconsolidatedPromotedRanges", "[{\"start\":\"49:1\",\"end\":\"114:6\"}]")
++            .commit());
++        List<VerseRange> acquired = prefs.itqanRanges();
++        assertEquals(3, acquired.size());
++        assertEquals(new VerseRef(2, 75), acquired.get(0).getStart());
++        assertEquals(new VerseRef(2, 90), acquired.get(0).getEndInclusive());
++        assertEquals(new VerseRef(53, 62), acquired.get(1).getEndInclusive());
++        assertEquals(new VerseRef(54, 1), acquired.get(2).getStart());
++        List<VerseRange> pending = prefs.unconsolidatedPromotedRanges();
++        assertEquals(1, pending.size());
++        assertEquals(new VerseRef(114, 6), pending.get(0).getEndInclusive());
++    }
++
++    /** Re-audit M5: an open unit crossing 80|81 on page 586 is covered by the union of two ranges. */
++    @Test public void openUnitAcrossTwoSurahRangesDoesNotBlockSettingsEdit() {
++        HifzPrefs prefs = new HifzPrefs(context);
++        assertTrue(main.edit()
++            .putString("unconsolidatedPromotedRanges", "[{\"start\":\"80:41\",\"end\":\"80:42\"},{\"start\":\"81:1\",\"end\":\"81:29\"}]")
++            .putInt("itqanRep", 1)
++            .putString("itqanUnitStart", "80:41")
++            .putString("itqanUnitEnd", "81:29")
++            .commit());
++        assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(
++            new VerseRange(new VerseRef(2, 1), new VerseRef(2, 74))), geometry));
++        assertEquals(2, prefs.unconsolidatedPromotedRanges().size());
++    }
++
++    private String clickTodayAndReadMode() throws Exception {
++        // Isolate Home cadence from records left by other suites.
++        context.getSharedPreferences("quran_hifz_dashboard_ledger_v1", Context.MODE_PRIVATE).edit().clear().commit();
++        context.getSharedPreferences("quran_hifz_j10_host_v1", Context.MODE_PRIVATE).edit().clear().commit();
++        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
++        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
++            HifzSessionActivity.class.getName(), null, false);
++        Activity opened = null;
++        try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
++            boolean enabled = false;
++            for (int attempt = 0; attempt < 100 && !enabled; attempt++) {
++                AtomicBoolean ready = new AtomicBoolean(false);
++                scenario.onActivity(activity -> {
++                    View action = findByContentDescription(
++                        activity.getWindow().getDecorView(), "Ouvrir la séance du jour");
++                    ready.set(action != null && action.isEnabled());
++                });
++                enabled = ready.get();
++                if (!enabled) Thread.sleep(50L);
++            }
++            assertTrue("Today action never became enabled", enabled);
++            scenario.onActivity(activity -> findByContentDescription(
++                activity.getWindow().getDecorView(), "Ouvrir la séance du jour").performClick());
++            opened = monitor.waitForActivityWithTimeout(5_000L);
++            assertNotNull("HifzSessionActivity was not opened", opened);
++            return opened.getIntent().getStringExtra(HifzSessionActivity.EXTRA_MODE);
++        } finally {
++            if (opened != null) opened.finish();
++            instrumentation.removeMonitor(monitor);
++        }
++    }
++
+     private List<GeometryRepository.LineMeta> pageLines(int page) {
+         ArrayList<GeometryRepository.LineMeta> out = new ArrayList<>();
+         for (int i = 0; i < geometry.lineCount(); i++) {
+diff --git a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+index 7f76cb7..19b37eb 100644
+--- a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
++++ b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
+@@ -888,9 +888,36 @@ public final class HifzPrefs {
+ 
+     /** Schema-6 manual configuration: replace only the configured pending Stabilisation ranges. */
+     public boolean setV6StabilizationRanges(List<VerseRange> ranges, GeometryRepository geometry) {
++        if (geometry == null) throw new IllegalArgumentException("Géométrie Mushaf requise.");
++        if (ranges != null) {
++            ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
++            for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
++            for (VerseRange range : ranges) requireOwnedLineOnEveryPage(range, allLines);
++        }
+         return setV6ManualRanges(itqanRanges(), ranges, geometry);
+     }
+ 
++    /** Every Mushaf page touched by a Stabilisation range must own at least one physical line. */
++    private static void requireOwnedLineOnEveryPage(VerseRange range, List<GeometryRepository.LineMeta> lines) {
++        if (range == null) return;
++        java.util.TreeMap<Integer, Boolean> pages = new java.util.TreeMap<>();
++        for (GeometryRepository.LineMeta line : lines) {
++            boolean touched = false;
++            for (VerseRef verse : line.verses) {
++                if (range.contains(verse)) { touched = true; break; }
++            }
++            if (!touched) continue;
++            boolean owned = range.contains(CorpusLinePolicy.ownerVerse(line));
++            pages.merge(line.page, owned, Boolean::logicalOr);
++        }
++        for (java.util.Map.Entry<Integer, Boolean> page : pages.entrySet()) {
++            if (!page.getValue()) {
++                throw new IllegalArgumentException("Page " + page.getKey()
++                    + " : cette plage ne contient aucune ligne complète. Commencez au premier verset de la ligne.");
++            }
++        }
++    }
++
+     /** Schema-6 manual configuration: replace only the configured Acquired base ranges. */
+     public boolean setV6AcquiredRanges(List<VerseRange> ranges, GeometryRepository geometry) {
+         return setV6ManualRanges(ranges, unconsolidatedPromotedRanges(), geometry);
+@@ -1023,11 +1050,18 @@ public final class HifzPrefs {
+     }
+ 
+     private static boolean rangeCoveredBy(List<VerseRange> ranges, VerseRef start, VerseRef endInclusive) {
+-        for (VerseRange range : ranges) {
+-            if (GeometryRepository.ordinal(range.getStart()) <= GeometryRepository.ordinal(start)
+-                    && GeometryRepository.ordinal(range.getEndInclusive()) >= GeometryRepository.ordinal(endInclusive)) return true;
++        if (ranges == null || ranges.isEmpty()) return false;
++        int from = GeometryRepository.ordinal(start);
++        int to = GeometryRepository.ordinal(endInclusive);
++        for (int ordinal = from; ordinal <= to; ordinal++) {
++            VerseRef verse = QuranCanon.INSTANCE.fromOrdinal(ordinal);
++            boolean covered = false;
++            for (VerseRange range : ranges) {
++                if (range != null && range.contains(verse)) { covered = true; break; }
++            }
++            if (!covered) return false;
+         }
+-        return false;
++        return true;
+     }
+@@ -1423,12 +1457,16 @@ public final class HifzPrefs {
+                 VerseRef cursor = range.getStart();
+                 while (range.contains(cursor)) {
+                     GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(cursor, pendingCorpus);
+-                    String key = anchoringKey(unit.start.toString(), unit.end.toString());
+-                    boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
+-                    boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
+-                    expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
+-                        AnchoringQueue.originFor(reconstruction, forced),
+-                        reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
++                    // A page portion whose verses all sit on lines owned by an earlier verse has no
++                    // physical Stabilisation unit. Queueing it would block the queue (never complete).
++                    if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unit.end, geometry).isEmpty()) {
++                        String key = anchoringKey(unit.start.toString(), unit.end.toString());
++                        boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
++                        boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
++                        expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
++                            AnchoringQueue.originFor(reconstruction, forced),
++                            reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
++                    }
+                     VerseRef next = pendingCorpus.next(unit.end);
+@@ -1472,7 +1510,7 @@ public final class HifzPrefs {
+         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+         List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(
+             GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end), geometry);
+-        if (ids.isEmpty()) return false;
++        if (ids.isEmpty()) return true; // ownerless entry: nothing physical to stabilise, never block the queue
+@@ -1521,6 +1559,7 @@ public final class HifzPrefs {
+             VerseRef start = GeometryRepository.parseVerse(entry.start);
+             VerseRef end = GeometryRepository.parseVerse(entry.end);
+             List<String> entryIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end, geometry);
++            if (entryIds.isEmpty()) continue;
+             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(entryIds);
+@@ -2091,32 +2130,17 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
+     private static List<VerseRange> sortRangesPreservingBoundaries(List<VerseRange> ranges) {
+-        ArrayList<VerseRange> split = new ArrayList<>();
+-        if (ranges == null) return split;
++        ArrayList<VerseRange> sorted = new ArrayList<>();
++        if (ranges == null) return sorted;
+         for (VerseRange range : ranges) {
+             if (range == null) continue;
+-            int start = GeometryRepository.ordinal(range.getStart());
+-            int end = GeometryRepository.ordinal(range.getEndInclusive());
+-            if (end < start) throw new IllegalArgumentException("Reversed range");
+-            int segmentStart = start;
+-            int surah = range.getStart().getSurah();
+-            for (int ordinal = start + 1; ordinal <= end; ordinal++) {
+-                VerseRef verse = QuranCanon.INSTANCE.fromOrdinal(ordinal);
+-                if (verse.getSurah() != surah) {
+-                    split.add(new VerseRange(QuranCanon.INSTANCE.fromOrdinal(segmentStart), QuranCanon.INSTANCE.fromOrdinal(ordinal - 1)));
+-                    segmentStart = ordinal;
+-                    surah = verse.getSurah();
+-                }
+-            }
+-            split.add(new VerseRange(QuranCanon.INSTANCE.fromOrdinal(segmentStart), QuranCanon.INSTANCE.fromOrdinal(end)));
++            if (GeometryRepository.ordinal(range.getEndInclusive()) < GeometryRepository.ordinal(range.getStart()))
++                throw new IllegalArgumentException("Reversed range");
++            sorted.add(range);
+         }
+-        split.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
++        sorted.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
+         ArrayList<VerseRange> out = new ArrayList<>();
+-        for (VerseRange range : split) {
++        for (VerseRange range : sorted) {
+@@ -2124,8 +2148,12 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
+-            if (previous.getStart().getSurah() == range.getStart().getSurah()
+-                    && currentStart <= previousEnd) {
++            boolean overlaps = currentStart <= previousEnd;
++            boolean sameSurahAdjacent = currentStart == previousEnd + 1
++                && previous.getEndInclusive().getSurah() == range.getStart().getSurah();
++            if (overlaps || sameSurahAdjacent) {
+                 VerseRef mergedEnd = GeometryRepository.ordinal(range.getEndInclusive()) > previousEnd
+                     ? range.getEndInclusive() : previous.getEndInclusive();
+                 out.set(out.size() - 1, new VerseRange(previous.getStart(), mergedEnd));
+diff --git a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
+index 9c71a09..3f9ca62 100644
+--- a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
++++ b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
+@@ -205,10 +205,18 @@ public final class MainActivity extends android.app.Activity {
+     private boolean progressionConsolidationDue(GeometryRepository g){
+         if(g==null)return false;
+-        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+-        ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
+-            engine,ConsolidationCycleEngine.Family.STABILIZATION);
+-        return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
++        if(HifzClock.today().toString().equals(prefs.lastRecentSabqiReviewDate()))return false;
++        try{
++            ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
++            ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
++                engine,ConsolidationCycleEngine.Family.STABILIZATION);
++            return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
++        }catch(RuntimeException error){
++            android.util.Log.e("QuranHifz","Unable to evaluate progression Consolidation",error);
++            return false;
++        }
+     }
+diff --git a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java
+index b6fa92e..051b715 100644
+--- a/hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java
++++ b/hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java
+@@ -53,8 +53,12 @@ final class WeeklyDashboardPlanner {
+-        List<AnchoringQueue.Entry> projectedAnchoring=AnchoringQueue.visitOrder(
+-            prefs.anchoringQueue(),prefs.anchoringQueueIndex());
++        List<AnchoringQueue.Entry> projectedAnchoring=new ArrayList<>();
++        for(AnchoringQueue.Entry entry:AnchoringQueue.visitOrder(prefs.anchoringQueue(),prefs.anchoringQueueIndex())){
++            VerseRef entryStart=GeometryRepository.parseVerse(entry.start),entryEnd=GeometryRepository.parseVerse(entry.end);
++            if(!CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart,entryEnd,geometry).isEmpty())projectedAnchoring.add(entry);
++        }
+diff --git a/hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java b/hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java
+index ccb1651..3164419 100644
+--- a/hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java
++++ b/hifz-app/src/test/java/com/quransafeguard/hifz/preview/ClaudeNoGoRegressionSourceContractTest.java
+@@ -37,6 +37,27 @@ public final class ClaudeNoGoRegressionSourceContractTest {
++    @Test public void homeConsolidationGateIsDailyAndNeverThrows() throws Exception {
++        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
++        String gate = method(main, "private boolean progressionConsolidationDue", "private String nextMode");
++        assertTrue(gate.contains("lastRecentSabqiReviewDate()"));
++        assertTrue(gate.contains("catch(RuntimeException"));
++        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
++        String units = method(prefs, "List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits", "public boolean failAndDeferAnchoring");
++        assertTrue(units.indexOf("entryIds.isEmpty()") >= 0 && units.indexOf("entryIds.isEmpty()") < units.indexOf("linesForExactIds(entryIds)"));
++    }
++
++    @Test public void rangeNormalizationNeverSplitsPerSurah() throws Exception {
++        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
++        String sort = method(prefs, "private static List<VerseRange> sortRangesPreservingBoundaries", "private static List<VerseRange> rangesFromVerses");
++        assertTrue(sort.contains("sameSurahAdjacent"));
++        assertFalse(sort.contains("fromOrdinal(segmentStart)"));
++    }
+-- 
+2.43.0
