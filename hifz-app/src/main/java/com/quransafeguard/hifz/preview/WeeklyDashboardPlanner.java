@@ -96,19 +96,20 @@ final class WeeklyDashboardPlanner {
                     else{
                         AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex);
                         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
-                        List<VerseRef> verses=geometry.versesForRange(start,end);
-                        boolean fractionated=prefs.isFractionatedUnit(verses);
                         int reps=PreviewConfig.itqanTotalReps(entry.protocol);
-                        if(fractionated){
-                            int[] segments=geometry.surahSegmentLineCounts(start,end);
-                            int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(segments));
-                            int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                        List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+                        List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
+                            geometry.linesForExactIds(owned));
+                        int blocks=Math.max(1,planned.size());
+                        int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                        if(blocks>1){
                             morning="Stabilisation · "+range(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
-                            block++;if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}else projectedItqanBlockIndex=block;
                         }else{
                             morning="Stabilisation · "+range(start,end)+" · ×"+reps;
-                            projectedItqanBlockIndex=0;projectedAnchoringIndex++;
                         }
+                        block++;
+                        if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
+                        else projectedItqanBlockIndex=block;
                     }
                     state=(actual!=null||j10)?"Validé":"À faire";
                     break;
