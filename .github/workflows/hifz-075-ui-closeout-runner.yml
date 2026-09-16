@@ -19,16 +19,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "45889b68ff161b4e830eb72a092e1cbbe64cbf72"
+          test "$(git rev-parse HEAD^)" = "4173f1e2fa16f9b8538303ea4d6387ba4d25c2ff"
           python3 - <<'PY'
           from pathlib import Path
-          import textwrap
 
           staged = Path('.github/workflows/hifz-075-ui-closeout-patch.yml').read_text(encoding='utf-8')
           marker = "          python3 - <<'PY'\n"
           start = staged.index(marker) + len(marker)
           end = staged.index("\n          PY\n", start)
-          script = textwrap.dedent(staged[start:end])
+          raw = staged[start:end]
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in raw.splitlines())
           exec(compile(script, 'hifz-075-ui-closeout-inline.py', 'exec'), {'__name__': '__main__'})
           PY
           git rm .github/workflows/hifz-075-ui-closeout-patch.yml .github/workflows/hifz-075-ui-closeout-runner.yml
