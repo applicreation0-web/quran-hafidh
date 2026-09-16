@@ -53,8 +53,11 @@ final class WeeklyDashboardPlanner {
         EligibleCorpus murajaahCorpus=prefs.murajaahCorpus();
 
         prefs.currentAnchoringEntry(geometry);
-        List<AnchoringQueue.Entry> projectedAnchoring=AnchoringQueue.visitOrder(
-            prefs.anchoringQueue(),prefs.anchoringQueueIndex());
+        List<AnchoringQueue.Entry> projectedAnchoring=new ArrayList<>();
+        for(AnchoringQueue.Entry entry:AnchoringQueue.visitOrder(prefs.anchoringQueue(),prefs.anchoringQueueIndex())){
+            VerseRef entryStart=GeometryRepository.parseVerse(entry.start),entryEnd=GeometryRepository.parseVerse(entry.end);
+            if(!CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart,entryEnd,geometry).isEmpty())projectedAnchoring.add(entry);
+        }
         int projectedAnchoringIndex=0;
         int projectedItqanBlockIndex=prefs.itqanBlockIndex();
 

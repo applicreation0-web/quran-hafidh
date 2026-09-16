@@ -205,10 +205,16 @@ public final class MainActivity extends android.app.Activity {
 
     private boolean progressionConsolidationDue(GeometryRepository g){
         if(g==null)return false;
-        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
-        ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
-            engine,ConsolidationCycleEngine.Family.STABILIZATION);
-        return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
+        if(HifzClock.today().toString().equals(prefs.lastRecentSabqiReviewDate()))return false;
+        try{
+            ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+            ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
+                engine,ConsolidationCycleEngine.Family.STABILIZATION);
+            return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
+        }catch(RuntimeException error){
+            android.util.Log.e("QuranHifz","Unable to evaluate progression Consolidation",error);
+            return false;
+        }
     }
 
     private String nextMode(ScheduledCadence due){

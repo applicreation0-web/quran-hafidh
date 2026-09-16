@@ -317,6 +317,8 @@ public final class HifzPrefs {
         int migratedBlockIndex = openLegacyStabilization
             ? migratedPhysicalBlockIndex(geometry, unitStart, unitEnd, migratedStabilized)
             : Math.max(0, p.getInt("itqanBlockIndex", 0));
+        boolean preserveOpenLegacyProgress = openLegacyStabilization
+            && compatibleLegacyOpenStabilization(geometry, unitStart, unitEnd, completedBlocks, hardAnchoringSurahs());
 
         maybeInterruptMigrationForTest("BEFORE_MAIN_COMMIT");
 
@@ -334,11 +336,13 @@ public final class HifzPrefs {
             .putFloat("murajaahSecPerLine", (float) migrated)
             .putInt("schema", 6);
         if (openLegacyStabilization) {
-            e.putInt("itqanBlockIndex", migratedBlockIndex)
-                .putInt("itqanRep", 0)
-                .putInt("itqanAssisted", 0)
-                .putInt("itqanFinalReveals", 0)
-                .putLong("itqanElapsedMs", 0L);
+            e.putInt("itqanBlockIndex", migratedBlockIndex);
+            if (!preserveOpenLegacyProgress) {
+                e.putInt("itqanRep", 0)
+                    .putInt("itqanAssisted", 0)
+                    .putInt("itqanFinalReveals", 0)
+                    .putLong("itqanElapsedMs", 0L);
+            }
         }
         if (!e.commit()) {
             throw new IllegalStateException("Unable to migrate Hifz schema v5 to v6");
@@ -351,6 +355,31 @@ public final class HifzPrefs {
                 || !p.contains("v6AcquiredCreditLineIds")
                 || !p.contains("v6ActiveJ10LastReviewed")) {
             throw new IllegalStateException("Incomplete Hifz schema v6 migration commit");
+        }
+    }
+
+    private static boolean compatibleLegacyOpenStabilization(
+            GeometryRepository geometry,
+            VerseRef start,
+            VerseRef endInclusive,
+            int completedBlocks,
+            List<Integer> hardSurahs) {
+        if (geometry == null || start == null || endInclusive == null || completedBlocks != 0) return false;
+        try {
+            if (geometry.pageForVerse(start) != geometry.pageForVerse(endInclusive)) return false;
+            List<String> owned = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, endInclusive, geometry);
+            if (owned.isEmpty()) return false;
+            List<StabilizationHalfPagePolicy.Unit> newPlan = StabilizationHalfPagePolicy.planPage(
+                geometry.linesForExactIds(owned));
+            if (newPlan.size() != 1) return false;
+            List<VerseRef> legacyVerses = geometry.versesForRange(start, endInclusive);
+            if (containsHardAnchoringSurah(hardSurahs, legacyVerses)) {
+                int[] segments = geometry.surahSegmentLineCounts(start, endInclusive);
+                if (PreviewConfig.fractionatedBlockCount(segments) > 1) return false;
+            }
+            return true;
+        } catch (RuntimeException incompatible) {
+            return false;
         }
     }
 
@@ -888,7 +917,34 @@ public final class HifzPrefs {
 
     /** Schema-6 manual configuration: replace only the configured pending Stabilisation ranges. */
     public boolean setV6StabilizationRanges(List<VerseRange> ranges, GeometryRepository geometry) {
+        if (geometry == null) throw new IllegalArgumentException("Géométrie Mushaf requise.");
+        if (ranges != null) {
+            ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
+            for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
+            for (VerseRange range : ranges) requireOwnedLineOnEveryPage(range, allLines);
+        }
         return setV6ManualRanges(itqanRanges(), ranges, geometry);
+    }
+
+    /** Every Mushaf page touched by a Stabilisation range must own at least one physical line. */
+    private static void requireOwnedLineOnEveryPage(VerseRange range, List<GeometryRepository.LineMeta> lines) {
+        if (range == null) return;
+        java.util.TreeMap<Integer, Boolean> pages = new java.util.TreeMap<>();
+        for (GeometryRepository.LineMeta line : lines) {
+            boolean touched = false;
+            for (VerseRef verse : line.verses) {
+                if (range.contains(verse)) { touched = true; break; }
+            }
+            if (!touched) continue;
+            boolean owned = range.contains(CorpusLinePolicy.ownerVerse(line));
+            pages.merge(line.page, owned, Boolean::logicalOr);
+        }
+        for (java.util.Map.Entry<Integer, Boolean> page : pages.entrySet()) {
+            if (!page.getValue()) {
+                throw new IllegalArgumentException("Page " + page.getKey()
+                    + " : cette plage ne contient aucune ligne complète. Commencez au premier verset de la ligne.");
+            }
+        }
     }
 
     /** Schema-6 manual configuration: replace only the configured Acquired base ranges. */
@@ -1023,11 +1079,18 @@ public final class HifzPrefs {
     }
 
     private static boolean rangeCoveredBy(List<VerseRange> ranges, VerseRef start, VerseRef endInclusive) {
-        for (VerseRange range : ranges) {
-            if (GeometryRepository.ordinal(range.getStart()) <= GeometryRepository.ordinal(start)
-                    && GeometryRepository.ordinal(range.getEndInclusive()) >= GeometryRepository.ordinal(endInclusive)) return true;
+        if (ranges == null || ranges.isEmpty()) return false;
+        int from = GeometryRepository.ordinal(start);
+        int to = GeometryRepository.ordinal(endInclusive);
+        for (int ordinal = from; ordinal <= to; ordinal++) {
+            VerseRef verse = QuranCanon.INSTANCE.fromOrdinal(ordinal);
+            boolean covered = false;
+            for (VerseRange range : ranges) {
+                if (range != null && range.contains(verse)) { covered = true; break; }
+            }
+            if (!covered) return false;
         }
-        return false;
+        return true;
     }
 
     public VerseRef itqanRotationStart() { return ref("itqanRotationStart"); }
@@ -1423,12 +1486,16 @@ public final class HifzPrefs {
                 VerseRef cursor = range.getStart();
                 while (range.contains(cursor)) {
                     GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(cursor, pendingCorpus);
-                    String key = anchoringKey(unit.start.toString(), unit.end.toString());
-                    boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
-                    boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
-                    expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
-                        AnchoringQueue.originFor(reconstruction, forced),
-                        reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
+                    // A page portion whose verses all sit on lines owned by an earlier verse has no
+                    // physical Stabilisation unit. Queueing it would block the queue (never complete).
+                    if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unit.end, geometry).isEmpty()) {
+                        String key = anchoringKey(unit.start.toString(), unit.end.toString());
+                        boolean reconstruction = ordinalBetween(unit.start, new VerseRef(49, 1), new VerseRef(114, 6));
+                        boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
+                        expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
+                            AnchoringQueue.originFor(reconstruction, forced),
+                            reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
+                    }
                     VerseRef next = pendingCorpus.next(unit.end);
                     if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
                     cursor = next;
@@ -1472,7 +1539,7 @@ public final class HifzPrefs {
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
         List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(
             GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end), geometry);
-        if (ids.isEmpty()) return false;
+        if (ids.isEmpty()) return true; // ownerless entry: nothing physical to stabilise, never block the queue
         for (String id : ids) if (!stabilized.contains(id) && !acquired.contains(id)) return false;
         return true;
     }
@@ -1521,6 +1588,7 @@ public final class HifzPrefs {
             VerseRef start = GeometryRepository.parseVerse(entry.start);
             VerseRef end = GeometryRepository.parseVerse(entry.end);
             List<String> entryIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end, geometry);
+            if (entryIds.isEmpty()) continue;
             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(entryIds);
             List<StabilizationHalfPagePolicy.Unit> planned = StabilizationHalfPagePolicy.planPage(physicalLines);
             List<StabilizationHalfPagePolicy.Unit> ready = ConsolidationPhysicalUnitPolicy.readyUnits(
@@ -2089,34 +2157,19 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         return new ArrayList<>(EligibleCorpus.Companion.of(ranges).getRanges());
     }
 
-    /** Sorts and merges overlap only; adjacency remains visible and every surah boundary is explicit. */
+    /** Sorts ranges, merges overlap, and merges adjacency only inside the same surah. */
     private static List<VerseRange> sortRangesPreservingBoundaries(List<VerseRange> ranges) {
-        ArrayList<VerseRange> split = new ArrayList<>();
-        if (ranges == null) return split;
+        ArrayList<VerseRange> sorted = new ArrayList<>();
+        if (ranges == null) return sorted;
         for (VerseRange range : ranges) {
             if (range == null) continue;
-            int start = GeometryRepository.ordinal(range.getStart());
-            int end = GeometryRepository.ordinal(range.getEndInclusive());
-            if (end < start) throw new IllegalArgumentException("Reversed range");
-            int segmentStart = start;
-            int surah = range.getStart().getSurah();
-            for (int ordinal = start + 1; ordinal <= end; ordinal++) {
-                VerseRef verse = QuranCanon.INSTANCE.fromOrdinal(ordinal);
-                if (verse.getSurah() != surah) {
-                    split.add(new VerseRange(
-                        QuranCanon.INSTANCE.fromOrdinal(segmentStart),
-                        QuranCanon.INSTANCE.fromOrdinal(ordinal - 1)));
-                    segmentStart = ordinal;
-                    surah = verse.getSurah();
-                }
-            }
-            split.add(new VerseRange(
-                QuranCanon.INSTANCE.fromOrdinal(segmentStart),
-                QuranCanon.INSTANCE.fromOrdinal(end)));
+            if (GeometryRepository.ordinal(range.getEndInclusive()) < GeometryRepository.ordinal(range.getStart()))
+                throw new IllegalArgumentException("Reversed range");
+            sorted.add(range);
         }
-        split.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
+        sorted.sort(Comparator.comparingInt(range -> GeometryRepository.ordinal(range.getStart())));
         ArrayList<VerseRange> out = new ArrayList<>();
-        for (VerseRange range : split) {
+        for (VerseRange range : sorted) {
             if (out.isEmpty()) {
                 out.add(range);
                 continue;
@@ -2124,8 +2177,10 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
             VerseRange previous = out.get(out.size() - 1);
             int previousEnd = GeometryRepository.ordinal(previous.getEndInclusive());
             int currentStart = GeometryRepository.ordinal(range.getStart());
-            if (previous.getStart().getSurah() == range.getStart().getSurah()
-                    && currentStart <= previousEnd) {
+            boolean overlaps = currentStart <= previousEnd;
+            boolean sameSurahAdjacent = currentStart == previousEnd + 1
+                && previous.getEndInclusive().getSurah() == range.getStart().getSurah();
+            if (overlaps || sameSurahAdjacent) {
                 VerseRef mergedEnd = GeometryRepository.ordinal(range.getEndInclusive()) > previousEnd
                     ? range.getEndInclusive() : previous.getEndInclusive();
                 out.set(out.size() - 1, new VerseRange(previous.getStart(), mergedEnd));
