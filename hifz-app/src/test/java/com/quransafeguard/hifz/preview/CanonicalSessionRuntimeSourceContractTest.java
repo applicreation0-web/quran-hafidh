@@ -50,6 +50,19 @@ public final class CanonicalSessionRuntimeSourceContractTest {
             session.contains("private void renderRecentSabqiReview()"));
     }
 
+    @Test public void consolidationRuntimePreservesExactPhysicalStabilizationUnits() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue(prefs.contains("stabilizedConsolidationUnits"));
+        assertTrue(prefs.contains("ConsolidationPhysicalUnitPolicy.readyUnits"));
+        assertTrue(prefs.contains("ConsolidationPhysicalUnitPolicy.encodeLineUnit"));
+        assertTrue(prefs.contains("ConsolidationPhysicalUnitPolicy.decodeLineUnit"));
+        assertTrue(session.contains("prefs.stabilizedConsolidationUnits"));
+        assertTrue(session.contains("ConsolidationPhysicalUnitPolicy.decodeLineUnit"));
+        assertFalse(session.contains("private AnchoringQueue.Entry consolidationEntry("));
+        assertFalse(session.contains("private static String consolidationUnitId(AnchoringQueue.Entry entry)"));
+    }
+
     @Test public void groupedConsolidationCannotMutateIndividualRepetitionCounters() throws Exception {
         String persistenceTest = read("hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/ConsolidationPersistenceInstrumentedTest.java");
         assertTrue(persistenceTest.contains("persistingEveryGroupedRepetitionNeverMutatesIndividualCounters"));
