@@ -46,7 +46,8 @@ public final class AuditClosureSourceContractTest {
         assertTrue(dashboard.contains("AnchoringQueue.visitOrder"));
         assertTrue(dashboard.contains("prefs.anchoringQueueIndex()"));
         assertTrue(dashboard.contains("date.equals(today)&&prefs.anchoringDeferredToday()"));
-        assertTrue(dashboard.contains("Ancrage · page reportée"));
+        assertTrue(dashboard.contains("Stabilisation · unité reportée"));
+        assertFalse(dashboard.contains("Ancrage · page reportée"));
     }
 
     @Test public void localeTimerAndMurajaahCursorFixesRemainClosed() throws Exception {
