@@ -16,7 +16,9 @@ import org.junit.Test;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -210,6 +212,55 @@ public final class HifzV6PersistentStateInstrumentedTest {
         assertEquals("2:25", main.getString("murajaahCursor", null));
         assertEquals(1234, main.getInt("sabqiLineCursor", -1));
         assertEquals(legacyBefore, snapshot(legacyJ10));
+    }
+
+    @Test public void manualMultiRangesPersistDisjointStatePreserveCursorsAndNeverInventJ10Dates() throws Exception {
+        HifzPrefs prefs = new HifzPrefs(context);
+        String itqanCursorBefore = main.getString("itqanCursor", null);
+        String murajaahCursorBefore = main.getString("murajaahCursor", null);
+        int sabqiCursorBefore = main.getInt("sabqiLineCursor", -1);
+
+        List<com.quransafeguard.hifz.core.VerseRange> stabilization = Arrays.asList(
+            new com.quransafeguard.hifz.core.VerseRange(new VerseRef(49,1), new VerseRef(49,18)),
+            new com.quransafeguard.hifz.core.VerseRange(new VerseRef(50,1), new VerseRef(50,16)));
+        List<com.quransafeguard.hifz.core.VerseRange> acquired = Arrays.asList(
+            new com.quransafeguard.hifz.core.VerseRange(new VerseRef(2,1), new VerseRef(2,20)),
+            new com.quransafeguard.hifz.core.VerseRange(new VerseRef(2,30), new VerseRef(2,40)));
+
+        assertTrue(prefs.setV6StabilizationRanges(stabilization, geometry));
+        assertTrue(prefs.setV6AcquiredRanges(acquired, geometry));
+        assertEquals(2, prefs.unconsolidatedPromotedRanges().size());
+        assertEquals(2, prefs.itqanRanges().size());
+        assertEquals(itqanCursorBefore, main.getString("itqanCursor", null));
+        assertEquals(murajaahCursorBefore, main.getString("murajaahCursor", null));
+        assertEquals(sabqiCursorBefore, main.getInt("sabqiLineCursor", -1));
+
+        String acquiredLine = firstOwned(new VerseRef(2,1), new VerseRef(2,20));
+        String pendingLine = firstOwned(new VerseRef(49,1), new VerseRef(49,18));
+        assertTrue(stringSet(ACQUIRED).contains(acquiredLine));
+        assertTrue(stringSet(UNKNOWN_DUE).contains(acquiredLine));
+        assertFalse(longMap(ACTIVE_J10).containsKey(acquiredLine));
+        assertTrue(stringSet(LEARNED).contains(pendingLine));
+        assertFalse(stringSet(ACQUIRED).contains(pendingLine));
+
+        Map<String, ?> beforeReopen = snapshot(main);
+        HifzPrefs reopened = new HifzPrefs(context);
+        assertEquals(beforeReopen, snapshot(main));
+        assertEquals(2, reopened.unconsolidatedPromotedRanges().size());
+        assertEquals(2, reopened.itqanRanges().size());
+    }
+
+    @Test public void manualMultiRangesRejectCrossListOverlapAtomically() throws Exception {
+        HifzPrefs prefs = new HifzPrefs(context);
+        Map<String, ?> before = snapshot(main);
+        try {
+            prefs.setV6StabilizationRanges(Arrays.asList(
+                new com.quransafeguard.hifz.core.VerseRange(new VerseRef(2,10), new VerseRef(2,30))), geometry);
+            fail("cross-list overlap must fail closed");
+        } catch (IllegalArgumentException expected) {
+            assertTrue(expected.getMessage().contains("à la fois Acquise et À stabiliser"));
+        }
+        assertEquals("rejected edit must be atomic", before, snapshot(main));
     }
 
     private void seedSingleConflictSchemaFive() {

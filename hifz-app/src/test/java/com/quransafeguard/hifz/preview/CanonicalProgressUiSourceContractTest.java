@@ -29,14 +29,19 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(settings.contains("Dim · Ancrage puis Consolidation"));
     }
 
-    @Test public void settingsExposeIndependentMultiRangeViewsForStabilizationAndAcquiredCorpus() throws Exception {
+    @Test public void settingsExposeIndependentEditableMultiRangesForStabilizationAndAcquiredCorpus() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue(settings.contains("section(root,\"Plages à stabiliser\")"));
         assertTrue(settings.contains("section(root,\"Plages acquises\")"));
-        assertTrue(settings.contains("prefs.unconsolidatedPromotedRanges()"));
-        assertTrue(settings.contains("prefs.murajaahCorpus().getRanges()"));
-        assertTrue(settings.contains("renderRangeList(stabilizationRangesBox"));
-        assertTrue(settings.contains("renderRangeList(acquiredRangesBox"));
+        assertTrue(settings.contains("chooseStabilizationRange"));
+        assertTrue(settings.contains("chooseAcquiredRange"));
+        assertTrue(settings.contains("removeStabilizationRange"));
+        assertTrue(settings.contains("removeAcquiredRange"));
+        assertTrue(prefs.contains("setV6StabilizationRanges"));
+        assertTrue(prefs.contains("setV6AcquiredRanges"));
+        assertTrue(prefs.contains("validateV6ManualRanges"));
+        assertTrue(prefs.contains("Une plage ne peut pas être à la fois Acquise et À stabiliser."));
     }
 
     @Test public void repereLexiconMatchesFourActionsAndThreeStates() throws Exception {

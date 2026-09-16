@@ -126,14 +126,14 @@ val verifyHifzConvergenceRules by tasks.registering {
                 && config.contains("fractionatedBlockLength")) {
             "Le découpage de l'Ancrage fractionné doit rester une fonction pure et testable."
         }
-        check(session.contains("Ancrage fractionné")) {
-            "Le libellé visible de l'Ancrage fractionné est requis."
+        check(session.contains("Stabilisation") && !session.contains("Ancrage fractionné")) {
+            "Le libellé visible du mode structuré doit rester Stabilisation."
         }
         check(!session.contains("Consolidation fractionnée")) {
-            "Consolidation désigne RECENT_SABQI_REVIEW et ne doit pas nommer l'Ancrage."
+            "Consolidation désigne RECENT_SABQI_REVIEW et ne doit pas nommer la Stabilisation."
         }
-        check(settings.contains("Sourates difficiles à ancrer")) {
-            "Le drapeau durable d'Ancrage fractionné doit rester accessible dans les Paramètres."
+        check(settings.contains("Sourates difficiles à stabiliser")) {
+            "Le réglage durable du protocole fractionné doit rester accessible dans les Paramètres."
         }
 
         check(!session.contains("Faite avec aide")) { "Old ambiguous assisted button must not return." }
@@ -159,7 +159,7 @@ val verifyHifzConvergenceRules by tasks.registering {
             "Audio control must stay visible and route to Settings until the local pack is installed."
         }
 
-        check(settings.contains("Ajouter") && settings.contains("Début de rotation d’ancrage"))
+        check(settings.contains("Ajouter") && settings.contains("Début de rotation de stabilisation"))
         check(settings.contains("FLAG_GRANT_PERSISTABLE_URI_PERMISSION")) { "Audio picker should retain read permission for a long import." }
         check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges"))
         check(main.contains("todayAction.setOnClickListener") && !main.contains("\"Séance\", v -> openToday")) {
