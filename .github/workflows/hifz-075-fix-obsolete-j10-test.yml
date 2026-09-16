@@ -1,25 +1,18 @@
-name: Patch obsolete 0.7.5 J10 migration test
+name: Patch obsolete J10 migration test
 
 on:
   push:
-    branches:
-      - work/hifz-0.7.5-claude-no-go-fixes
-  workflow_dispatch:
+    branches: [work/hifz-0.7.5-claude-no-go-fixes]
 
 permissions:
   contents: write
-  actions: write
 
 jobs:
   patch:
-    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Patch only obsolete J10 expectations
+      - name: Patch test contract
         shell: bash
         run: |
           set -euo pipefail
@@ -65,15 +58,12 @@ jobs:
         assertTrue("legacy validated sub-blocks must populate Stabilisé", !stringSet(STABILIZED).isEmpty());
 '''
           if old not in s:
-              raise SystemExit('expected obsolete J10 block not found; refusing partial patch')
-          s = s.replace(old, new, 1)
-          p.write_text(s)
+              raise SystemExit('expected obsolete J10 block not found')
+          p.write_text(s.replace(old, new, 1))
           PY
           git diff --check
-          git diff -- hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6LegacyJ10MigrationInstrumentedTest.java
           test "$(git diff --name-only | wc -l | tr -d ' ')" = 1
-
-      - name: Commit test-only correction
+      - name: Commit patch
         shell: bash
         run: |
           set -euo pipefail
@@ -81,16 +71,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6LegacyJ10MigrationInstrumentedTest.java
           git commit -m 'test: align legacy J10 migration with stabilized semantics'
-          NEW_HEAD=$(git rev-parse HEAD)
-          echo "NEW_HEAD=$NEW_HEAD"
           git push origin HEAD:work/hifz-0.7.5-claude-no-go-fixes
-          echo "new_head=$NEW_HEAD" >> "$GITHUB_OUTPUT"
-        id: commit
-
-      - name: Dispatch full closure on exact new HEAD
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh workflow run hifz-075-claude-verify.yml --ref work/hifz-0.7.5-claude-no-go-fixes
