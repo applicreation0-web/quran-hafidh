@@ -1,0 +1,60 @@
+name: Quran Hifz 0.7.5 UI source fix
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Apply exact source-contract fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "476b0bd4b0db9fbb2095f1e9a797b6cce87df0f4"
+          python3 - <<'PY'
+          from pathlib import Path
+
+          session = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java')
+          text = session.read_text(encoding='utf-8')
+          old = 'Cette page reviendra à la prochaine séance d’Stabilisation.'
+          new = 'Cette page reviendra à la prochaine séance de Stabilisation.'
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one legacy grammar occurrence, got {text.count(old)}')
+          session.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          test = Path('hifz-app/src/test/java/com/quransafeguard/hifz/preview/FinalUiPolishSourceContractTest.java')
+          text = test.read_text(encoding='utf-8')
+          old = '''        assertTrue(settings.contains("section(root,\\"Repères\\")"));
+        for (String name : new String[]{"Apprentissage","Appris","Stabilisation","Stabilisé","Consolidation","Acquis","Révision","J10"}) {
+            assertTrue(name, settings.contains("addRepere(root,\\"" + name + "\\""));
+        }
+        assertFalse(settings.contains("addRepere(root,\\"Ancrage\\""));
+        assertFalse(settings.contains("addRepere(root,\\"Entretien\\""));
+'''
+          new = '''        assertTrue(settings.contains("section(root,\\"Schéma\\")"));
+        assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
+        assertTrue(settings.contains("Consolidation · déclenchée par progression"));
+        assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
+        assertFalse(settings.contains("section(root,\\"Repères\\")"));
+        assertFalse(settings.contains("addRepere(root"));
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one obsolete Repères contract block, got {text.count(old)}')
+          test.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          git rm .github/workflows/hifz-075-ui-source-fix.yml
+          git config user.name "quran-hifz-work"
+          git config user.email "actions@users.noreply.github.com"
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java hifz-app/src/test/java/com/quransafeguard/hifz/preview/FinalUiPolishSourceContractTest.java
+          git diff --cached --check
+          git commit -m "fix: align 0.7.5 schema source contracts"
+          git push origin HEAD:work/hifz-0.7.5-retention-j10
