@@ -4,9 +4,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /** Frozen Stabilisation working-unit policy derived from canonical physical Mushaf lines. */
 final class StabilizationHalfPagePolicy {
@@ -69,8 +67,6 @@ final class StabilizationHalfPagePolicy {
         int bestLeft = -1;
         double bestScore = Double.POSITIVE_INFINITY;
         for (int left = 5; left <= count - 5; left++) {
-            int boundary = start + left;
-            if (sharesVerse(lines.get(boundary - 1), lines.get(boundary))) continue;
             int right = count - left;
             double score = Math.max(Math.abs(left - 7.5), Math.abs(right - 7.5));
             if (score < bestScore) {
@@ -109,13 +105,5 @@ final class StabilizationHalfPagePolicy {
             }
         }
         return surah;
-    }
-
-    private static boolean sharesVerse(
-            GeometryRepository.LineMeta left,
-            GeometryRepository.LineMeta right) {
-        Set<VerseRef> leftVerses = new HashSet<>(left.verses);
-        for (VerseRef verse : right.verses) if (leftVerses.contains(verse)) return true;
-        return false;
     }
 }
