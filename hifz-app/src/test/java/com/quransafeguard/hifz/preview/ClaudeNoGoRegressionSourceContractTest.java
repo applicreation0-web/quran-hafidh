@@ -76,4 +76,21 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(session.contains("runValidationSafely(this::validateItqan)"));
         assertTrue(session.contains("runValidationSafely(this::validateConsolidationCycle)"));
     }
+
+    @Test public void homeConsolidationGateIsDailyAndNeverThrows() throws Exception {
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        String gate = method(main, "private boolean progressionConsolidationDue", "private String nextMode");
+        assertTrue(gate.contains("lastRecentSabqiReviewDate()"));
+        assertTrue(gate.contains("catch(RuntimeException"));
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String units = method(prefs, "List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits", "public boolean failAndDeferAnchoring");
+        assertTrue(units.indexOf("entryIds.isEmpty()") >= 0 && units.indexOf("entryIds.isEmpty()") < units.indexOf("linesForExactIds(entryIds)"));
+    }
+
+    @Test public void rangeNormalizationNeverSplitsPerSurah() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String sort = method(prefs, "private static List<VerseRange> sortRangesPreservingBoundaries", "private static List<VerseRange> rangesFromVerses");
+        assertTrue(sort.contains("sameSurahAdjacent"));
+        assertFalse(sort.contains("fromOrdinal(segmentStart)"));
+    }
 }
