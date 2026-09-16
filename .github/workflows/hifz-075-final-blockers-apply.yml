@@ -1,0 +1,37 @@
+name: Quran Hifz 0.7.5 final blocker apply
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-final-blockers
+    paths:
+      - scripts/apply_hifz_075_final_blocker_b1.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply B1 assertively
+        shell: bash
+        run: python3 scripts/apply_hifz_075_final_blocker_b1.py
+      - name: Commit product correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranHifzApp.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10HostBudgetStore.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewActivity.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewPlanner.java
+          git diff --cached --quiet && { echo 'Expected B1 delta missing'; exit 1; }
+          git commit -m 'fix: keep J10 from consuming Consolidation'
+          git push origin HEAD:work/hifz-0.7.5-final-blockers
