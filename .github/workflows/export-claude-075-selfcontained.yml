@@ -1,0 +1,181 @@
+name: Export Claude 0.7.5 self-contained audit kit
+
+on:
+  push:
+    branches:
+      - tooling/claude-075-selfcontained-export
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact audited candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          fetch-depth: 0
+
+      - name: Prove exact source HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "5696e7e8b91d213deaaa40c7b4893965cf46d4e4"
+
+      - name: Restore only the validated Mushaf baseline needed to regenerate geometry
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Inject Mushaf pages and regenerate exact geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' -d baseline109/extracted
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          test -s app/src/main/assets/reader109/geometry.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open('geometry-report.json'))
+          assert r.get('page_count') == 604, r
+          assert r.get('unique_line_count') == 8820, r
+          assert r.get('multi_page_verse_count') == 0, r
+          print('GEOMETRY_OK 604 8820 0')
+          PY
+
+      - name: Build compact offline audit package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/claude-audit"
+          PKG="$ROOT/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED"
+          rm -rf "$ROOT" && mkdir -p "$PKG"
+
+          mkdir -p "$PKG/hifz-app/src/main" "$PKG/hifz-app" "$PKG/hifz-core" "$PKG/audit-data" "$PKG/scripts"
+          rsync -a --exclude='assets/' hifz-app/src/main/ "$PKG/hifz-app/src/main/"
+          for d in hifz-app/src/test hifz-app/src/androidTest hifz-app/src/sourceContractTest; do
+            if [ -d "$d" ]; then mkdir -p "$PKG/$(dirname "$d")"; cp -a "$d" "$PKG/$(dirname "$d")/"; fi
+          done
+          cp -a hifz-core/src "$PKG/hifz-core/"
+
+          for f in hifz-app/build.gradle hifz-app/build.gradle.kts hifz-core/build.gradle hifz-core/build.gradle.kts build.gradle build.gradle.kts settings.gradle settings.gradle.kts gradle.properties; do
+            if [ -f "$f" ]; then mkdir -p "$PKG/$(dirname "$f")"; cp "$f" "$PKG/$f"; fi
+          done
+          if [ -f gradle/libs.versions.toml ]; then mkdir -p "$PKG/gradle"; cp gradle/libs.versions.toml "$PKG/gradle/"; fi
+
+          cp app/src/main/assets/reader109/geometry.json "$PKG/audit-data/geometry.json"
+          cp geometry-report.json "$PKG/audit-data/geometry-report.json"
+          cp scripts/build_reader109_geometry.py "$PKG/scripts/"
+          cp scripts/verify_hifz_geometry_edges.py "$PKG/scripts/"
+          cp .github/workflows/hifz-075-tdd.yml "$PKG/audit-data/reference-ci.yml"
+
+          cat > "$PKG/00_READ_ME_FIRST.txt" <<'EOF'
+          QURAN HIFZ 0.7.5 — AUDIT CLAUDE HORS LIGNE
+
+          Claude n'a AUCUN accès GitHub et AUCUN accès réseau.
+          Tout ce qui doit être audité est inclus dans ce ZIP.
+          Ne pas dépendre d'un lien externe.
+
+          HEAD source exact : 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          Baseline : f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+
+          Commencer par 01_PROMPT_CLAUDE.txt.
+          EOF
+
+          cat > "$PKG/01_PROMPT_CLAUDE.txt" <<'EOF'
+          MISSION CLAUDE — AUDIT COURT, INDÉPENDANT ET HORS LIGNE — QURAN HIFZ 0.7.5
+
+          IMPORTANT : tu n'as besoin d'aucun accès GitHub/réseau. Tous les fichiers utiles sont dans ce ZIP.
+          HEAD à auditer : 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          Ne fais PAS une revue générale du dépôt. Contrôle uniquement les points bloquants suivants.
+
+          1. UNITÉS PHYSIQUES
+          - Stabilisation/Consolidation identifiées par lineIds physiques exacts.
+          - Jamais de franchissement PAGE ou SOURATE ; ordre/continuité conservés ; split intra-ayah autorisé.
+          - <=11=1 unité ; 12=6+6 ; 13=6+7 ; 14=7+7 ; 15=7+8.
+          - Vérifier dans geometry.json le cas 2:282 / page 48 : 15 lignes physiques, puis vérifier que le code le découpe 7+8 en deux unités distinctes.
+
+          2. CONSOLIDATION
+          - Consomme exactement les unités de Stabilisation.
+          - Ready seulement si toutes lignes STABILIZED et aucune ACQUIRED ; maxUnits 1..3 ; jamais de merge.
+          - Finir U1 ne doit jamais acquérir U2.
+          - Groupes 1→2→3 et restauration exacte après process death.
+
+          3. PERSISTANCE / MIGRATION SCHEMA 6
+          - lineIds exacts persistés/restaurés/complétés.
+          - Pas de coalescence abusive de ranges adjacents pouvant masquer une frontière de sourate.
+          - Migration 0.7.4→0.7.5 conserve progression, historique, J10, compteurs et ranges.
+
+          4. CHAÎNE / J10
+          Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision.
+          Lun/Mer/Ven Apprentissage ; Mar/Jeu Stabilisation ; Sam/Dim Révision ; Consolidation déclenchée par progression.
+          J10/Révision : uniquement ACQUIRED.
+
+          5. CLOSEOUT UI
+          - Paramètres/plages cohérents.
+          - « Schéma » remplace l'ancien Repères/Lexique.
+          - Anciens libellés affichés avec le vocabulaire actuel sans mutation destructive des données historiques.
+
+          6. LIMITES
+          Ne propose aucun changement audio Al-Husary, ZIP audio, Tafsir, BOOX, release 0.7.4, vecteurs Consolidation ou J10 sans régression démontrée.
+          Le gate Work et le test BOOX restent des étapes séparées après cet audit.
+
+          SORTIE COURTE OBLIGATOIRE
+          HEAD audité : <sha>
+          BLOQUANT : <néant ou liste>
+          MAJEUR : <néant ou liste>
+          MINEUR : <seulement utile>
+          Pour chaque défaut : fichier + symbole/ligne + preuve + correction minimale.
+          Puis 1 ligne chacun :
+          - 15 lignes / 1 ayah => 7+8
+          - frontière sourate
+          - U1 n'acquiert pas U2
+          - process death Consolidation
+          - migration schema 6
+          Verdict : AUDIT CLAUDE GREEN ou AUDIT CLAUDE NO-GO
+
+          Pas de long rapport narratif. Pas de refactor préventif. Aucun GO_PHONE.
+          EOF
+
+          cat > "$PKG/02_PROVENANCE.txt" <<EOF
+          HEAD=5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+          TREE=$(git rev-parse HEAD^{tree})
+          BASELINE=f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+          REFERENCE_SOL_RUN=35078014986
+          GEOMETRY_PAGES=604
+          GEOMETRY_LINES=8820
+          MULTI_PAGE_VERSES=0
+          EOF
+
+          git diff --name-status f344fc7d0313e4e327a53c0fe6da8f287d12bdac...5696e7e8b91d213deaaa40c7b4893965cf46d4e4 > "$PKG/audit-data/FULL_DELTA_FILES.txt"
+          find "$PKG" -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > "$PKG/SHA256SUMS.txt"
+
+          (cd "$ROOT" && zip -qr "$GITHUB_WORKSPACE/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip" "$(basename "$PKG")")
+          unzip -t "$GITHUB_WORKSPACE/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip"
+          sha256sum "$GITHUB_WORKSPACE/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip" | tee "$GITHUB_WORKSPACE/CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip.sha256"
+
+      - name: Upload self-contained Claude kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-quran-hifz-075-self-contained-5696e7e8
+          path: |
+            CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip
+            CLAUDE_QURAN_HIFZ_0.7.5_SELF_CONTAINED.zip.sha256
+          retention-days: 7
