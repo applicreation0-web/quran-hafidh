@@ -363,11 +363,11 @@ final class Ui {
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
-        if (s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;
+        if (s.contains("apprentissage") || s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;
         if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;
         if (s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;
-        if (s.contains("ancrage")) return R.drawable.ic_hifz_anchor;
-        if (s.contains("entretien")) return R.drawable.ic_hifz_maintenance;
+        if (s.contains("stabilisation") || s.contains("ancrage")) return R.drawable.ic_hifz_anchor;
+        if (s.contains("révision") || s.contains("revision") || s.contains("entretien")) return R.drawable.ic_hifz_maintenance;
         if (s.contains("valider") || s.equals("revu") || s.contains("termin")) return R.drawable.ic_ui_validate;
         if (s.startsWith("début")) return R.drawable.ic_ui_start;
         if (s.startsWith("fin")) return R.drawable.ic_ui_end;
