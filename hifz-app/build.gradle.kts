@@ -141,7 +141,9 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(!session.contains("markFirstRecentStable")) { "Consolidation actions must target the displayed block." }
         check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Ancrage." }
         check(session.contains("rebalanceRecentWindow")) { "Recent work must apply the calendar/attendance promotion rule." }
-        check(session.contains("À renforcer"))
+        check(!session.contains("À renforcer")) {
+            "The canonical schema6 flow must not expose the obsolete reinforcement action."
+        }
         check(session.contains("révélations") && session.contains("Révéler"))
         check(session.contains("prêt à valider") && session.contains("validateSabqi") && session.contains("validateItqan")) {
             "Leçon neuve and Ancrage completion must require explicit persisted validation."
