@@ -29,18 +29,14 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(settings.contains("Dim · Ancrage puis Consolidation"));
     }
 
-    @Test public void settingsExposeTwoIndependentEditableCanonicalRangeLists() throws Exception {
+    @Test public void settingsExposeIndependentMultiRangeViewsForStabilizationAndAcquiredCorpus() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue(settings.contains("section(root,\"Plages à stabiliser\")"));
         assertTrue(settings.contains("section(root,\"Plages acquises\")"));
-        assertTrue(settings.contains("chooseStabilizationRange"));
-        assertTrue(settings.contains("chooseAcquiredRange"));
-        assertTrue(settings.contains("removeStabilizationRange"));
-        assertTrue(settings.contains("removeAcquiredRange"));
-        assertTrue(prefs.contains("setV6StabilizationRanges"));
-        assertTrue(prefs.contains("setV6AcquiredRanges"));
-        assertTrue(prefs.contains("validateV6ManualRanges"));
+        assertTrue(settings.contains("prefs.unconsolidatedPromotedRanges()"));
+        assertTrue(settings.contains("prefs.murajaahCorpus().getRanges()"));
+        assertTrue(settings.contains("renderRangeList(stabilizationRangesBox"));
+        assertTrue(settings.contains("renderRangeList(acquiredRangesBox"));
     }
 
     @Test public void repereLexiconMatchesFourActionsAndThreeStates() throws Exception {
@@ -56,20 +52,23 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(settings.contains("addRepere(root,\"En attente\""));
     }
 
-    @Test public void quickActionsAndSessionNamesUseCanonicalActionNames() throws Exception {
+    @Test public void quickActionsAndTodayResolverUseCanonicalActionsAndCarryoverDate() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(main.contains("\"Apprentissage\""));
         assertTrue(main.contains("\"Stabilisation\""));
         assertTrue(main.contains("\"Révision\""));
+        assertTrue(main.contains("HifzSchedule.INSTANCE.nextDue"));
+        assertTrue(main.contains("HifzSessionActivity.EXTRA_SCHEDULED_DATE"));
         assertTrue(session.contains("if (SABQI.equals(mode)) return \"Apprentissage\""));
         assertTrue(session.contains("if (SABQI_TODAY_REVIEW.equals(mode)) return \"Apprentissage\""));
         assertTrue(session.contains("if (ITQAN.equals(mode)) return \"Stabilisation\""));
         assertTrue(session.contains("return \"Révision\""));
     }
 
-    @Test public void weeklyProjectionUsesCanonicalNames() throws Exception {
+    @Test public void weeklyProjectionUsesCanonicalCadenceAndNames() throws Exception {
         String week = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        assertTrue(week.contains("HifzSchedule.INSTANCE.actionFor"));
         assertTrue(week.contains("Apprentissage"));
         assertTrue(week.contains("Stabilisation"));
         assertTrue(week.contains("Révision"));
