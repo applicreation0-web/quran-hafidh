@@ -35,14 +35,20 @@ public final class StabilizationHalfPagePolicyTest {
         assertSizes(new int[]{7, 8}, StabilizationHalfPagePolicy.planPage(uniqueLines(100, 2, 15)));
     }
 
-    @Test public void fifteenLinesWithOnlyFourElevenVerseBoundaryStayWhole() {
+    @Test public void longVerseDoesNotPreventPhysicalHalfPageSplit() {
+        ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>();
+        VerseRef sameVerse = new VerseRef(2, 282);
+        for (int i = 0; i < 15; i++) lines.add(line(i, 100, "same-verse-" + i, sameVerse));
+        assertSizes(new int[]{7, 8}, StabilizationHalfPagePolicy.planPage(lines));
+    }
+
+    @Test public void verseBoundaryAtFourElevenDoesNotForceBadSplit() {
         ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>();
         VerseRef first = new VerseRef(2, 1);
         VerseRef second = new VerseRef(2, 2);
         for (int i = 0; i < 4; i++) lines.add(line(i, 100, "a-" + i, first));
         for (int i = 4; i < 15; i++) lines.add(line(i, 100, "b-" + i, second));
-
-        assertSizes(new int[]{15}, StabilizationHalfPagePolicy.planPage(lines));
+        assertSizes(new int[]{7, 8}, StabilizationHalfPagePolicy.planPage(lines));
     }
 
     @Test public void surahBoundaryCreatesSeparateContinuousUnits() {
