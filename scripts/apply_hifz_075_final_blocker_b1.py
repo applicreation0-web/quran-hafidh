@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Triggered only on the dedicated final-blockers branch; all replacements are assertive.
 
 def replace_once(path: str, old: str, new: str) -> None:
     p = Path(path)
