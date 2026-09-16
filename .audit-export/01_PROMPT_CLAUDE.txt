@@ -1,0 +1,73 @@
+MISSION CLAUDE — RE-AUDIT COURT ET BLOQUANT QURAN HIFZ 0.7.5
+
+Tu disposes d'un KIT AUTONOME. N'utilise pas GitHub ni le réseau.
+
+HEAD final : 7185a9ca92dfa46c10f63b0e5c499dce610dd720
+HEAD initial de ton NO-GO : 5696e7e8b91d213deaaa40c7b4893965cf46d4e4
+Baseline release : f344fc7d0313e4e327a53c0fe6da8f287d12bdac
+Run full final : 35098846133
+
+Commence par vérifier SHA256SUMS.txt.
+Puis audite SOURCE_HEAD + GEOMETRY + DIFFS/FIX_DELTA_5696_TO_7185.patch.
+
+Objectif : revalider uniquement les défauts de ton précédent NO-GO et détecter une régression directement causée par leur correction.
+
+1) CONSOLIDATION ACCESSIBLE
+- réellement ouvrable depuis MainActivity quand unités stabilisées prêtes ou session ouverte.
+
+2) UNITÉS PHYSIQUES / B2
+- propriété physique cohérente via ownerVerse ;
+- états partiels ne doivent pas faire planter ni bloquer les unités antérieures prêtes ;
+- jamais PAGE/SOURATE ;
+- 15 lignes => 7+8 ;
+- cas réel obligatoire : page 48, ayah 2:282 seul, U1 7 lignes + U2 8 lignes.
+
+3) MIGRATION 0.7.4 -> SCHEMA 6 / M2
+- ancien sous-bloc réellement validé => STABILISÉ si prouvé, jamais ACQUIS inventé ;
+- ancien index 5/5/5 ne doit pas faire crasher la nouvelle Stabilisation 7+8 ;
+- J10 actif uniquement pour ACQUIRED ;
+- historique ancien conservé sans crédit de révision inventé.
+
+4) PROJECTION / M1
+- Accueil/Semaine cohérents avec StabilizationHalfPagePolicy.planPage ;
+- page 48 doit apparaître en 2 unités.
+
+5) PLAGES / M3
+- ne pas coalescer silencieusement des ranges adjacents qui masquent une frontière de sourate ;
+- Paramètres ne doit pas réécrire une vue fusionnée destructivement.
+
+6) SESSION MANUELLE + CRASH UI
+- modification manuelle des ranges invalide une session Consolidation figée incompatible ;
+- validate* ne doit pas transformer un état de migration incohérent en crash non capturé.
+
+7) HORS SCOPE
+À partir de DIFFS/FIX_DELTA_FILES.txt, confirmer que le correctif n'a pas modifié audio/Tafsir/BOOX/vecteurs Consolidation/J10 moteur, sauf tests/harnais explicitement justifiés.
+
+CONTEXTE SOL SUR LE HEAD FINAL
+- Behavior JVM 166/166
+- Source contracts 69/69
+- Core JVM 20/20
+- Android instrumented 38/38
+- 0 failure, 0 skipped
+- compile/product boundary/cosmetic/convergence GREEN
+
+Ne recopie pas ces résultats : vérifie le code et les données indépendamment.
+
+FORMAT DE SORTIE COURT
+HEAD audité : <sha>
+BLOQUANT : <néant ou liste courte>
+MAJEUR : <néant ou liste courte>
+MINEUR : <seulement utile>
+
+Puis 7 lignes :
+- accès UI Consolidation : OK/NON
+- page 48 / 2:282 => 7+8 : OK/NON
+- U1 n'acquiert pas U2 : OK/NON
+- process death Consolidation : OK/NON
+- migration legacy => Stabilisé, pas Acquis inventé : OK/NON
+- frontières sourate/ranges : OK/NON
+- hors scope delta correctif : OK/NON
+
+Verdict final exactement : AUDIT CLAUDE GREEN ou AUDIT CLAUDE NO-GO
+
+Pas de long rapport narratif. Pas de refactor préventif. Aucun merge/release/signature. AUCUN GO_PHONE automatique.
