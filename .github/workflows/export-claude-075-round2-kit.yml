@@ -1,0 +1,40 @@
+name: Export Claude Hifz 0.7.5 re-audit kit
+
+on:
+  push:
+    branches:
+      - tooling/claude-075-round2-export-5d5b527e
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Preserve exporter and detach exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp scripts/export_claude_075_round2_kit.sh /tmp/export_claude_075_round2_kit.sh
+          git checkout --detach 5d5b527ed6be54a5d73ac29545763454cba2d0f9
+          test "$(git rev-parse HEAD)" = "5d5b527ed6be54a5d73ac29545763454cba2d0f9"
+      - name: Build self-contained independent re-audit package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash /tmp/export_claude_075_round2_kit.sh
+      - name: Upload exact re-audit kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-quran-hifz-075-reaudit-5d5b527e
+          path: |
+            CLAUDE_QURAN_HIFZ_0.7.5_REAUDIT_5d5b527e.zip
+            CLAUDE_QURAN_HIFZ_0.7.5_REAUDIT_5d5b527e.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
