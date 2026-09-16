@@ -1,0 +1,59 @@
+name: Quran Hifz 0.7.5 Round2 closeout v2
+
+on:
+  push:
+    branches:
+      - tooling/hifz-0.7.5-round2-closeout-7e44ad13
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Install Android SDK dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Export exact closeout artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/export_hifz_075_round2_closeout.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CLAUDE-QURAN-HIFZ-0.7.5-ROUND2-AUTONOMOUS-7e44ad13
+          path: |
+            /tmp/CLAUDE_QURAN_HIFZ_0.7.5_ROUND2_AUTONOMOUS_7e44ad13.zip
+            /tmp/CLAUDE_ROUND2_ZIP_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QURAN-HIFZ-0.7.5-ROUND2-RELEASE-UNSIGNED-7e44ad13
+          path: |
+            /tmp/Quran-Hifz-0.7.5-boox-round2-release-unsigned.apk
+            /tmp/APK_BADGING.txt
+            /tmp/APK_SIGNATURE_STATUS.txt
+            /tmp/APK_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
