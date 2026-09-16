@@ -35,7 +35,7 @@ public final class SettingsActivity extends android.app.Activity {
     private J10ReviewPlanner j10Planner;
     private GeometryRepository geometry;
     private final ExecutorService j10Loader = Executors.newSingleThreadExecutor();
-    private LinearLayout rangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, j10Status, audioStatus;
 
     private interface VerseChosen { void accept(VerseRef verse); }
@@ -61,7 +61,7 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(top);
 
         section(root,"Parcours");
-        TextView protocol=Ui.text(this,"Lun/Mer/Ven · Leçon neuve + Reprise 30 min   ·   Mar/Jeu/Sam · Ancrage + Entretien 45 min   ·   Dim · Ancrage puis Consolidation + Entretien 45 min",11f,false);
+        TextView protocol=Ui.text(this,"Lun/Mer/Ven · Apprentissage   ·   Mar/Jeu · Stabilisation   ·   Sam/Dim · Révision",11f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
 
         sabqiStartRow=Ui.settingRow(this,"Début de la plage à mémoriser",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage à mémoriser",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
@@ -70,29 +70,35 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(sabqiEndRow);
         sabqiStatus=Ui.text(this,"",11f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));root.addView(sabqiStatus);
 
-        section(root,"Ancrage · plages");
-        rangesBox=Ui.column(this);rangesBox.setPadding(0,0,0,0);root.addView(rangesBox);
+        section(root,"Plages à stabiliser");
+        stabilizationRangesBox=Ui.column(this);stabilizationRangesBox.setPadding(0,0,0,0);root.addView(stabilizationRangesBox);
         root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseRange(null,-1)));
-        itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(itqanStatus);
-        rotationSetting=Ui.settingRow(this,"Début de rotation d’ancrage",prefs.itqanRotationStart().toString(),
-            v->chooseVerse("Début de rotation d’ancrage",prefs.itqanRotationStart(),this::setRotationStart));
+        root.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseStabilizationRange(null,-1)));
+
+        section(root,"Plages acquises");
+        acquiredRangesBox=Ui.column(this);acquiredRangesBox.setPadding(0,0,0,0);root.addView(acquiredRangesBox);
+        root.addView(Ui.divider(this));
+        root.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseAcquiredRange(null,-1)));
+
+        itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));root.addView(itqanStatus);
+        rotationSetting=Ui.settingRow(this,"Début de rotation de stabilisation",prefs.itqanRotationStart().toString(),
+            v->chooseVerse("Début de rotation de stabilisation",prefs.itqanRotationStart(),this::setRotationStart));
         root.addView(rotationSetting);
         root.addView(Ui.divider(this));
-        hardAnchoringSetting=Ui.settingRow(this,"Sourates difficiles à ancrer","0 sourate",v->showHardAnchoringSelector());
+        hardAnchoringSetting=Ui.settingRow(this,"Sourates difficiles à stabiliser","0 sourate",v->showHardAnchoringSelector());
         root.addView(hardAnchoringSetting);
 
-        section(root,"Ancrage · corpus");
+        section(root,"Corpus effectif");
         effectiveCorpusStatus=Ui.text(this,"",11f,false);
         effectiveCorpusStatus.setTextColor(Ui.MUTED);
         effectiveCorpusStatus.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
         root.addView(effectiveCorpusStatus);
 
-        section(root,"Entretien");
+        section(root,"Révision");
         murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(murajaahStatus);
 
         section(root,"Vitesses");
-        root.addView(Ui.settingRow(this,"Entretien",speedStore.maintenanceSummary(),null));
+        root.addView(Ui.settingRow(this,"Révision",speedStore.maintenanceSummary(),null));
         root.addView(Ui.divider(this));
         root.addView(Ui.settingRow(this,"Consolidation",speedStore.consolidationSummary(),null));
 
@@ -116,15 +122,15 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
         section(root,"Repères");
-        addRepere(root,"Leçon neuve","Cinq lignes jamais vues, mémorisées le matin avec dévoilement progressif du texte.");
-        addRepere(root,"Reprise du soir","Les mêmes cinq lignes, répétées le soir pendant trente minutes.");
-        addRepere(root,"Consolidation","Les leçons récentes, revues à tour de rôle avant leur passage vers l’Ancrage.");
-        addRepere(root,"Ancrage","Une page entière travaillée en profondeur, jusqu’à pouvoir la réciter sans le texte.");
-        addRepere(root,"Ancrage fractionné","Une page difficile répartie en sous-blocs successifs. Chaque sous-bloc est travaillé à ×35 ; la page n’est acquise qu’après le dernier bloc.");
-        addRepere(root,"Entretien","Le parcours régulier de tout ce qui est acquis, texte caché, révélé seulement en cas de blocage.");
-        addRepere(root,"J10","Garantie de fraîcheur : toute matière acquise doit être récitée à nouveau au plus tard tous les dix jours. J10 utilise les créneaux existants, il n’ajoute pas une séance parallèle.");
-        addRepere(root,"En attente","Une page promue mais pas encore ancrée. Elle ne fait pas encore partie de l’entretien.");
-        addRepere(root,"Acquis","Une page ancrée, qui circule dans l’entretien et entre dans la garantie J10.");
+        addRepere(root,"Apprentissage","Action de mémorisation d’un nouveau passage. Après validation, le passage devient Appris.");
+        addRepere(root,"Appris","État d’un passage mémorisé dont la prochaine action structurée est la Stabilisation.");
+        addRepere(root,"Stabilisation","Action de renforcement de la matière Apprise sur les unités physiques du Mushaf. Après validation, elle devient Stabilisée.");
+        addRepere(root,"Stabilisé","État d’un passage prêt pour la Consolidation.");
+        addRepere(root,"Consolidation","Action de regroupement progressif de une à trois unités. Une Consolidation validée fait passer la matière vers Acquis.");
+        addRepere(root,"Acquis","État d’un passage qui entre dans la Révision et dans la garantie J10.");
+        addRepere(root,"Révision","Rotation régulière de la matière Acquise, avec révélation seulement en cas de besoin.");
+        addRepere(root,"J10","Garantie de fraîcheur : toute matière Acquise doit être revue au plus tard tous les dix jours. J10 utilise les créneaux existants et n’ajoute pas de séance parallèle.");
+        addRepere(root,"Report souple","Une séance manquée reste due au prochain créneau sans échec, sans double quota automatique et sans déplacement silencieux du curseur.");
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
         refreshAll();
@@ -140,7 +146,7 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(Ui.divider(this));
     }
 
-    private void refreshAll(){refreshSabqi();refreshRanges();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshJ10();refreshAudio();}
+    private void refreshAll(){refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshJ10();refreshAudio();}
 
     private void refreshSabqi(){
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
@@ -159,46 +165,81 @@ public final class SettingsActivity extends android.app.Activity {
         int low=geometry.firstLineIndex(newStart),high=geometry.lastLineIndex(newEnd),cursor=prefs.sabqiLineCursor();
         if(cursor>=0&&(cursor<low||cursor>high)){
             new AlertDialog.Builder(this).setTitle("Position de la leçon hors de la plage")
-                .setMessage("Repositionner la Leçon neuve au début "+newStart+" ?")
+                .setMessage("Repositionner l’Apprentissage au début "+newStart+" ?")
                 .setNegativeButton("Garder",(d,w)->refreshSabqi())
                 .setPositiveButton("Repositionner",(d,w)->{prefs.setSabqiLineCursor(low);prefs.setSabqiProgress(0,0);prefs.setElapsedFor(HifzSessionActivity.SABQI,0L);refreshSabqi();}).show();
         }else refreshSabqi();
     }
 
-    private void refreshRanges(){
-        rangesBox.removeAllViews();List<VerseRange> ranges=prefs.itqanRanges();
+    private void refreshRangeLists(){
+        refreshStabilizationRanges();
+        refreshAcquiredRanges();
+    }
+
+    private void refreshStabilizationRanges(){
+        renderRanges(stabilizationRangesBox,prefs.unconsolidatedPromotedRanges(),true);
+    }
+
+    private void refreshAcquiredRanges(){
+        renderRanges(acquiredRangesBox,prefs.itqanRanges(),false);
+    }
+
+    private void renderRanges(LinearLayout box,List<VerseRange> ranges,boolean stabilization){
+        box.removeAllViews();
+        if(ranges.isEmpty()){
+            TextView empty=Ui.text(this,"Aucune plage",11.5f,false);empty.setTextColor(Ui.MUTED);empty.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));box.addView(empty);return;
+        }
         for(int i=0;i<ranges.size();i++){
             final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinimumHeight(Ui.dp(this,46));
             TextView label=Ui.text(this,"Plage "+(i+1),12.5f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
             TextView value=Ui.text(this,range.getStart()+" → "+range.getEndInclusive(),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
-            row.addView(Ui.iconButton(this,"","Modifier la plage",v->chooseRange(range,index)));
-            row.addView(Ui.iconButton(this,"","Supprimer la plage",v->removeRange(index)));rangesBox.addView(row);
-            if(i+1<ranges.size())rangesBox.addView(Ui.divider(this));
+            row.addView(Ui.iconButton(this,"","Modifier la plage",v->{if(stabilization)chooseStabilizationRange(range,index);else chooseAcquiredRange(range,index);}));
+            row.addView(Ui.iconButton(this,"","Supprimer la plage",v->{if(stabilization)removeStabilizationRange(index);else removeAcquiredRange(index);}));box.addView(row);
+            if(i+1<ranges.size())box.addView(Ui.divider(this));
         }
     }
 
-    private void chooseRange(VerseRange existing,int index){
-        VerseRef initialStart=existing==null?prefs.itqanRotationStart():existing.getStart();
+    private void chooseStabilizationRange(VerseRange existing,int index){chooseRange(existing,index,true);}
+    private void chooseAcquiredRange(VerseRange existing,int index){chooseRange(existing,index,false);}
+
+    private void chooseRange(VerseRange existing,int index,boolean stabilization){
+        List<VerseRange> current=stabilization?prefs.unconsolidatedPromotedRanges():prefs.itqanRanges();
+        VerseRef fallback=stabilization?prefs.itqanRotationStart():prefs.itqanRanges().get(0).getStart();
+        VerseRef initialStart=existing==null?fallback:existing.getStart();
         chooseVerse(existing==null?"Début de la nouvelle plage":"Début de la plage",initialStart,start->
             chooseVerse("Fin de la plage",existing==null?start:existing.getEndInclusive(),end->{
                 if(GeometryRepository.ordinal(start)>GeometryRepository.ordinal(end)){Toast.makeText(this,"Le début de plage doit précéder sa fin.",Toast.LENGTH_LONG).show();return;}
-                ArrayList<VerseRange> ranges=new ArrayList<>(prefs.itqanRanges());VerseRange replacement=new VerseRange(start,end);
+                ArrayList<VerseRange> ranges=new ArrayList<>(current);VerseRange replacement=new VerseRange(start,end);
                 if(index<0)ranges.add(replacement);else ranges.set(index,replacement);
-                saveRanges(ranges);
+                saveV6Ranges(ranges,stabilization);
             }));
     }
 
-    private void removeRange(int index){
-        ArrayList<VerseRange> ranges=new ArrayList<>(prefs.itqanRanges());
-        if(ranges.size()<=1){Toast.makeText(this,"Au moins une plage d’ancrage doit rester définie.",Toast.LENGTH_LONG).show();return;}
+    private void removeStabilizationRange(int index){
+        ArrayList<VerseRange> ranges=new ArrayList<>(prefs.unconsolidatedPromotedRanges());
         VerseRange target=ranges.get(index);
-        new AlertDialog.Builder(this).setTitle("Supprimer cette plage ?").setMessage(target.getStart()+" → "+target.getEndInclusive())
-            .setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{ranges.remove(index);saveRanges(ranges);}).show();
+        new AlertDialog.Builder(this).setTitle("Supprimer cette plage à stabiliser ?").setMessage(target.getStart()+" → "+target.getEndInclusive())
+            .setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{ranges.remove(index);saveV6Ranges(ranges,true);}).show();
     }
 
-    private void saveRanges(List<VerseRange> ranges){
-        if(!prefs.setItqanRanges(ranges)){Toast.makeText(this,"Impossible d’enregistrer les plages d’ancrage.",Toast.LENGTH_LONG).show();return;}
-        refreshRanges();refreshItqan();refreshEffectiveItqanCorpus();
+    private void removeAcquiredRange(int index){
+        ArrayList<VerseRange> ranges=new ArrayList<>(prefs.itqanRanges());
+        if(ranges.size()<=1){Toast.makeText(this,"Au moins une plage Acquise doit rester définie.",Toast.LENGTH_LONG).show();return;}
+        VerseRange target=ranges.get(index);
+        new AlertDialog.Builder(this).setTitle("Supprimer cette plage Acquise ?").setMessage(target.getStart()+" → "+target.getEndInclusive())
+            .setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{ranges.remove(index);saveV6Ranges(ranges,false);}).show();
+    }
+
+    private void saveV6Ranges(List<VerseRange> ranges,boolean stabilization){
+        try{
+            boolean saved=stabilization
+                ?prefs.setV6StabilizationRanges(ranges,geometry)
+                :prefs.setV6AcquiredRanges(ranges,geometry);
+            if(!saved){Toast.makeText(this,"Impossible d’enregistrer les plages.",Toast.LENGTH_LONG).show();return;}
+        }catch(IllegalArgumentException|IllegalStateException error){
+            Toast.makeText(this,error.getMessage()==null?"Plages incompatibles.":error.getMessage(),Toast.LENGTH_LONG).show();return;
+        }
+        refreshRangeLists();refreshItqan();refreshEffectiveItqanCorpus();
         if(!prefs.isItqanCursorValid()||!prefs.isRotationStartValid()||!prefs.isMurajaahCursorValid()){
             new AlertDialog.Builder(this).setTitle("Position à vérifier")
                 .setMessage("Une borne est hors du nouveau corpus. Aucun déplacement automatique n’a été effectué.")
@@ -209,7 +250,7 @@ public final class SettingsActivity extends android.app.Activity {
     private void refreshItqan(){
         TextView rotationValue=Ui.settingValue(rotationSetting);if(rotationValue!=null)rotationValue.setText(prefs.itqanRotationStart().toString());
         boolean invalid=!prefs.isItqanCursorValid()||!prefs.isMurajaahCursorValid();
-        itqanStatus.setText((invalid?"⚠ ":"")+"Position Ancrage · "+prefs.itqanCursor()+"   ·   Entretien · "+prefs.murajaahCursor());
+        itqanStatus.setText((invalid?"⚠ ":"")+"Position Stabilisation · "+prefs.itqanCursor()+"   ·   Révision · "+prefs.murajaahCursor());
         itqanStatus.setTextColor(Ui.MUTED);
         itqanStatus.setVisibility(View.VISIBLE);
     }
@@ -230,11 +271,11 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void showHardAnchoringSelector(){
         if(prefs.itqanRep()>0 || prefs.itqanBlockIndex()>0){
-            Toast.makeText(this,"Terminez la page d’Ancrage en cours avant de modifier ce réglage.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"Terminez la unité de Stabilisation en cours avant de modifier ce réglage.",Toast.LENGTH_LONG).show();
             return;
         }
         List<Integer> candidates=availableHardAnchoringSurahs();
-        if(candidates.isEmpty()){Toast.makeText(this,"Aucune sourate dans le corpus d’Ancrage.",Toast.LENGTH_LONG).show();return;}
+        if(candidates.isEmpty()){Toast.makeText(this,"Aucune sourate dans le corpus de Stabilisation.",Toast.LENGTH_LONG).show();return;}
         List<Integer> selected=prefs.hardAnchoringSurahs();
         String[] labels=new String[candidates.size()];
         boolean[] checked=new boolean[candidates.size()];
@@ -244,7 +285,7 @@ public final class SettingsActivity extends android.app.Activity {
             checked[i]=selected.contains(surah);
         }
         new AlertDialog.Builder(this)
-            .setTitle("Sourates difficiles à ancrer")
+            .setTitle("Sourates difficiles à stabiliser")
             .setMultiChoiceItems(labels,checked,(dialog,which,isChecked)->checked[which]=isChecked)
             .setNegativeButton("Annuler",null)
             .setPositiveButton("Enregistrer",(dialog,which)->{
@@ -260,7 +301,7 @@ public final class SettingsActivity extends android.app.Activity {
         List<VerseRange> pending=prefs.unconsolidatedPromotedRanges();
         String corpus=effective.isEmpty()?"aucune plage":rangeSummary(effective);
         String waiting=pending.isEmpty()?"aucune":rangeSummary(pending);
-        effectiveCorpusStatus.setText("Corpus d’ancrage · "+corpus+"\nEn attente d’ancrage · "+waiting);
+        effectiveCorpusStatus.setText("Corpus de travail · "+corpus+"\nÀ stabiliser · "+waiting);
     }
 
     private static String rangeSummary(List<VerseRange> ranges){
@@ -275,7 +316,7 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void setRotationStart(VerseRef verse){
         if(!prefs.itqanWorkCorpus().contains(verse)){
-            Toast.makeText(this,"Ce verset n’appartient à aucune plage d’ancrage.",Toast.LENGTH_LONG).show();
+            Toast.makeText(this,"Ce verset n’appartient à aucune plage de Stabilisation.",Toast.LENGTH_LONG).show();
             return;
         }
         prefs.setItqanRotationStart(verse);
@@ -284,7 +325,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Mar/Jeu/Sam/Dim · 45 min · position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Sam/Dim · Révision · 45 min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 
@@ -364,20 +405,20 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void showDiagnostic(){
         String state="Schéma : "+prefs.schema()+"\nDébut programme : "+prefs.programStartDate()
-            +"\nLeçon neuve : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
-            +"\nPlages d’ancrage : "+prefs.itqanRanges().size()+"\nCorpus d’ancrage : "+prefs.effectiveItqanRanges().size()+" plage(s)"
-            +"\nPages promues : "+prefs.promotedRanges().size()+"\nEn attente d’ancrage : "+prefs.unconsolidatedPromotedRanges().size()
-            +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Ancrage : "+prefs.itqanCursor()
-            +"\nPosition Entretien : "+prefs.murajaahCursor()
+            +"\nApprentissage : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
+            +"\nPlages Acquises : "+prefs.itqanRanges().size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
+            +"\nPages promues : "+prefs.promotedRanges().size()+"\nÀ stabiliser : "+prefs.unconsolidatedPromotedRanges().size()
+            +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanCursor()
+            +"\nPosition Révision : "+prefs.murajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
-            +"\nVitesse Entretien : "+speedStore.maintenanceSummary()
+            +"\nVitesse Révision : "+speedStore.maintenanceSummary()
             +"\nVitesse Consolidation : "+speedStore.consolidationSummary();
         new AlertDialog.Builder(this).setTitle("Diagnostic Hifz").setMessage(state).setPositiveButton("Fermer",null).show();
     }
 
     private void confirmReset(){
         new AlertDialog.Builder(this).setTitle("Réinitialiser la progression Hifz ?")
-            .setMessage("Efface la progression Hifz locale (leçons, ancrage, entretien, positions et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
+            .setMessage("Efface la progression Hifz locale (Apprentissage, Stabilisation, Consolidation, Révision, positions et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
             .setNegativeButton("Annuler",null).setPositiveButton("Réinitialiser",(d,w)->{prefs.resetPreviewState();getSharedPreferences("hifz_preview_session_gates",MODE_PRIVATE).edit().clear().apply();refreshAll();}).show();
     }
 

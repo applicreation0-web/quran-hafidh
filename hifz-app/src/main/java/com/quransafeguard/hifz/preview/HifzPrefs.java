@@ -825,6 +825,146 @@ public final class HifzPrefs {
         return p.edit().putString("itqanRanges", rangesJson(normalized)).commit();
     }
 
+    /** Schema-6 manual configuration: replace only the configured pending Stabilisation ranges. */
+    public boolean setV6StabilizationRanges(List<VerseRange> ranges, GeometryRepository geometry) {
+        return setV6ManualRanges(itqanRanges(), ranges, geometry);
+    }
+
+    /** Schema-6 manual configuration: replace only the configured Acquired base ranges. */
+    public boolean setV6AcquiredRanges(List<VerseRange> ranges, GeometryRepository geometry) {
+        return setV6ManualRanges(ranges, unconsolidatedPromotedRanges(), geometry);
+    }
+
+    private boolean setV6ManualRanges(List<VerseRange> acquiredRanges,
+                                      List<VerseRange> stabilizationRanges,
+                                      GeometryRepository geometry) {
+        if (geometry == null) throw new IllegalArgumentException("Géométrie Mushaf requise.");
+        validateV6ManualRanges(acquiredRanges, stabilizationRanges);
+        List<VerseRange> acquiredNormalized = normalizeRanges(acquiredRanges);
+        List<VerseRange> stabilizationNormalized = normalizeRanges(stabilizationRanges);
+
+        ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
+        for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
+        LinkedHashSet<String> oldManualAcquired = new LinkedHashSet<>(
+            CorpusLinePolicy.ownedLineIds(itqanRanges(), allLines));
+        LinkedHashSet<String> oldManualStabilization = new LinkedHashSet<>(
+            CorpusLinePolicy.ownedLineIds(unconsolidatedPromotedRanges(), allLines));
+        LinkedHashSet<String> newManualAcquired = new LinkedHashSet<>(
+            CorpusLinePolicy.ownedLineIds(acquiredNormalized, allLines));
+        LinkedHashSet<String> newManualStabilization = new LinkedHashSet<>(
+            CorpusLinePolicy.ownedLineIds(stabilizationNormalized, allLines));
+
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+            for (String lineId : newManualAcquired) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Cette plage contient une ligne en quarantaine.");
+            }
+            for (String lineId : newManualStabilization) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Cette plage contient une ligne en quarantaine.");
+            }
+
+            if ((itqanRep() > 0 || itqanBlockIndex() > 0) && itqanUnitStart() != null && itqanUnitEnd() != null) {
+                if (!rangeCoveredBy(stabilizationNormalized, itqanUnitStart(), itqanUnitEnd())) {
+                    throw new IllegalStateException("Terminez la Stabilisation en cours avant de retirer sa plage.");
+                }
+            }
+
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            learned.removeAll(oldManualStabilization);
+            acquired.removeAll(oldManualAcquired);
+            learned.addAll(newManualStabilization);
+            acquired.addAll(newManualAcquired);
+            for (String lineId : newManualStabilization) {
+                acquired.remove(lineId);
+                stabilized.remove(lineId);
+            }
+            for (String lineId : newManualAcquired) {
+                learned.remove(lineId);
+                stabilized.remove(lineId);
+            }
+
+            LinkedHashMap<String, Long> activeJ10 = v6EpochDayMap("v6ActiveJ10LastReviewed");
+            LinkedHashSet<String> unknownDue = v6LineIdSet("v6UnknownDueLineIds");
+            activeJ10.entrySet().removeIf(entry -> !acquired.contains(entry.getKey()));
+            unknownDue.retainAll(acquired);
+            for (String lineId : acquired) {
+                if (!activeJ10.containsKey(lineId)) unknownDue.add(lineId);
+            }
+            for (String lineId : newManualStabilization) {
+                activeJ10.remove(lineId);
+                unknownDue.remove(lineId);
+            }
+
+            List<VerseRange> consolidatedPromotions = new ArrayList<>(promotedRanges());
+            for (VerseRange oldPending : unconsolidatedPromotedRanges()) {
+                consolidatedPromotions = subtractCoverage(
+                    consolidatedPromotions, oldPending.getStart(), oldPending.getEndInclusive());
+            }
+            ArrayList<VerseRange> promotedNext = new ArrayList<>(consolidatedPromotions);
+            promotedNext.addAll(stabilizationNormalized);
+
+            SharedPreferences.Editor editor = p.edit()
+                .putString("itqanRanges", rangesJson(acquiredNormalized))
+                .putString("promotedRanges", rangesJson(normalizeRanges(promotedNext)))
+                .putString("unconsolidatedPromotedRanges", rangesJson(stabilizationNormalized))
+                .putBoolean("anchoringQueueInitialized", false)
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putString("v6ActiveJ10LastReviewed", epochDayMapJson(activeJ10))
+                .putString("v6UnknownDueLineIds", lineIdsJson(unknownDue));
+            return editor.commit();
+        }
+    }
+
+    private void validateV6ManualRanges(List<VerseRange> acquiredRanges,
+                                        List<VerseRange> stabilizationRanges) {
+        if (acquiredRanges == null || acquiredRanges.isEmpty())
+            throw new IllegalArgumentException("Au moins une plage Acquise est requise.");
+        if (stabilizationRanges == null)
+            throw new IllegalArgumentException("La liste À stabiliser est requise.");
+        validateNoRangeOverlap(acquiredRanges, "Plages Acquises");
+        validateNoRangeOverlap(stabilizationRanges, "Plages à stabiliser");
+        for (VerseRange acquired : acquiredRanges) {
+            for (VerseRange stabilization : stabilizationRanges) {
+                if (rangesOverlap(acquired, stabilization))
+                    throw new IllegalArgumentException("Une plage ne peut pas être à la fois Acquise et À stabiliser.");
+            }
+        }
+    }
+
+    private static void validateNoRangeOverlap(List<VerseRange> ranges, String label) {
+        for (int i = 0; i < ranges.size(); i++) {
+            if (ranges.get(i) == null) throw new IllegalArgumentException(label + " : plage absente.");
+            for (int j = i + 1; j < ranges.size(); j++) {
+                if (ranges.get(j) == null || rangesOverlap(ranges.get(i), ranges.get(j)))
+                    throw new IllegalArgumentException(label + " : chevauchement interdit.");
+            }
+        }
+    }
+
+    private static boolean rangesOverlap(VerseRange left, VerseRange right) {
+        int leftStart = GeometryRepository.ordinal(left.getStart());
+        int leftEnd = GeometryRepository.ordinal(left.getEndInclusive());
+        int rightStart = GeometryRepository.ordinal(right.getStart());
+        int rightEnd = GeometryRepository.ordinal(right.getEndInclusive());
+        return leftStart <= rightEnd && rightStart <= leftEnd;
+    }
+
+    private static boolean rangeCoveredBy(List<VerseRange> ranges, VerseRef start, VerseRef endInclusive) {
+        for (VerseRange range : ranges) {
+            if (GeometryRepository.ordinal(range.getStart()) <= GeometryRepository.ordinal(start)
+                    && GeometryRepository.ordinal(range.getEndInclusive()) >= GeometryRepository.ordinal(endInclusive)) return true;
+        }
+        return false;
+    }
+
     public VerseRef itqanRotationStart() { return ref("itqanRotationStart"); }
     public void setItqanRotationStart(VerseRef value) { putRef("itqanRotationStart", value); }
 

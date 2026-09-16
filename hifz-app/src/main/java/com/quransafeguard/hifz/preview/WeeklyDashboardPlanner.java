@@ -63,81 +63,74 @@ final class WeeklyDashboardPlanner {
                 out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
                 continue;
             }
-
             CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek());
             String morning="—",evening="—",state="À faire";
-
-            if(action==CadenceAction.LEARNING){
-                DashboardLedger.Record learned=ledger.find(date,HifzSessionActivity.SABQI);
-                DashboardLedger.Record review=ledger.find(date,HifzSessionActivity.SABQI_TODAY_REVIEW);
-                boolean learnedJ10=learned==null&&slotConsumed(HifzSessionActivity.SABQI,date);
-                boolean reviewJ10=review==null&&slotConsumed(HifzSessionActivity.SABQI_TODAY_REVIEW,date);
-                String projectedRange="";
-                if(learnedJ10) morning="J10 · créneau utilisé";
-                else if(learned!=null) morning="✓ "+compact(learned.label);
-                else {
+            switch(action){
+                case LEARNING:{
+                    DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
+                    DashboardLedger.Record eveningActual=ledger.find(date,HifzSessionActivity.SABQI_TODAY_REVIEW);
+                    boolean morningJ10=morningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.SABQI,date);
+                    boolean eveningJ10=eveningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.SABQI_TODAY_REVIEW,date);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
-                    if(block==null) morning="Apprentissage · plage à vérifier";
-                    else {
-                        projectedRange=range(block.startVerse,block.endVerse);
-                        morning="Apprentissage · "+projectedRange+" · 5 lignes";
+                    if(morningJ10)morning="J10 · créneau utilisé";
+                    else if(morningActual!=null)morning="✓ "+compact(morningActual.label);
+                    else if(block==null)morning="Apprentissage · plage à vérifier";
+                    else{
+                        morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · 5 lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
+                    if(eveningJ10)evening="J10 · créneau utilisé";
+                    else if(eveningActual!=null)evening="✓ "+compact(eveningActual.label);
+                    else evening="Apprentissage · reprise · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
+                    boolean m=morningActual!=null||morningJ10,e=eveningActual!=null||eveningJ10;
+                    state=m&&e?"Validé":m?"Reprise à faire":"À faire";
+                    break;
                 }
-                if(reviewJ10) evening="J10 · créneau utilisé";
-                else if(review!=null) evening="✓ "+compact(review.label);
-                else evening="Apprentissage · reprise · "+(projectedRange.isEmpty()?"mêmes 5 lignes":projectedRange)
-                    +" · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
-                boolean morningDone=learned!=null||learnedJ10;
-                boolean eveningDone=review!=null||reviewJ10;
-                state=morningDone&&eveningDone?"Validée":morningDone?"Reprise à faire":"À faire";
-            }else if(action==CadenceAction.STABILIZATION){
-                DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.ITQAN);
-                boolean j10=actual==null&&slotConsumed(HifzSessionActivity.ITQAN,date);
-                if(j10) morning="J10 · créneau utilisé";
-                else if(actual!=null) morning="✓ "+compact(actual.label);
-                else if(date.equals(today)&&prefs.anchoringDeferredToday()) morning="Stabilisation · unité reportée";
-                else if(projectedAnchoringIndex>=projectedAnchoring.size()) morning="Stabilisation · aucune unité en attente";
-                else {
-                    AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex);
-                    VerseRef start=GeometryRepository.parseVerse(entry.start);
-                    VerseRef end=GeometryRepository.parseVerse(entry.end);
-                    boolean fractionated=prefs.isFractionatedUnit(geometry.versesForRange(start,end));
-                    int reps=PreviewConfig.itqanTotalReps(entry.protocol);
-                    if(fractionated){
-                        int[] segments=geometry.surahSegmentLineCounts(start,end);
-                        int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(segments));
-                        int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
-                        morning="Stabilisation · "+range(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
-                        block++;
-                        if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
-                        else projectedItqanBlockIndex=block;
-                    }else{
-                        morning="Stabilisation · "+range(start,end)+" · ×"+reps;
-                        projectedItqanBlockIndex=0;
-                        projectedAnchoringIndex++;
+                case STABILIZATION:{
+                    DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.ITQAN);
+                    boolean j10=actual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.ITQAN,date);
+                    if(j10)morning="J10 · créneau utilisé";
+                    else if(actual!=null)morning="✓ "+compact(actual.label);
+                    else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
+                    else if(projectedAnchoringIndex>=projectedAnchoring.size())morning="Stabilisation · aucune unité à stabiliser";
+                    else{
+                        AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex);
+                        VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
+                        List<VerseRef> verses=geometry.versesForRange(start,end);
+                        boolean fractionated=prefs.isFractionatedUnit(verses);
+                        int reps=PreviewConfig.itqanTotalReps(entry.protocol);
+                        if(fractionated){
+                            int[] segments=geometry.surahSegmentLineCounts(start,end);
+                            int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(segments));
+                            int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                            morning="Stabilisation · "+range(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
+                            block++;if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}else projectedItqanBlockIndex=block;
+                        }else{
+                            morning="Stabilisation · "+range(start,end)+" · ×"+reps;
+                            projectedItqanBlockIndex=0;projectedAnchoringIndex++;
+                        }
                     }
+                    state=(actual!=null||j10)?"Validé":"À faire";
+                    break;
                 }
-                state=(actual!=null||j10)?"Validée":"À faire";
-            }else{
-                DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                boolean j10=actual==null&&slotConsumed(HifzSessionActivity.MURAJAAH,date);
-                if(j10) evening="J10 · créneau utilisé";
-                else if(actual!=null) evening="✓ "+compact(actual.label);
-                else {
-                    Projection p=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
-                    evening="Révision · "+p.label;
-                    murajaahCursor=p.next;
+                case REVISION:{
+                    DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.MURAJAAH);
+                    boolean j10=actual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.MURAJAAH,date);
+                    if(j10)evening="J10 · créneau utilisé";
+                    else if(actual!=null)evening="✓ "+compact(actual.label);
+                    else{
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        evening="Révision · "+projected.label;
+                        murajaahCursor=projected.next;
+                    }
+                    state=(actual!=null||j10)?"Validé":"À faire";
+                    break;
                 }
-                state=(actual!=null||j10)?"Validée":"À faire";
+                default:throw new IllegalStateException("Action de cadence inconnue");
             }
             out.add(new Row(date,day(date,today),morning,evening,state));
         }
         return out;
-    }
-
-    private boolean slotConsumed(String mode,LocalDate date){
-        return hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(mode,date);
     }
 
     private Projection projectMurajaah(VerseRef cursor,EligibleCorpus corpus,int minutes){

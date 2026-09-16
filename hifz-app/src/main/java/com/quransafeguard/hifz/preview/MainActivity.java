@@ -10,14 +10,17 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.quransafeguard.hifz.core.CadenceAction;
 import com.quransafeguard.hifz.core.DailyPlan;
 import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
+import com.quransafeguard.hifz.core.ScheduledCadence;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -114,9 +117,9 @@ public final class MainActivity extends android.app.Activity {
         root.addView(directTitle);
         LinearLayout direct = Ui.row(this);
         direct.setGravity(Gravity.CENTER);
-        LinearLayout sabqi = Ui.modeCard(this, "", "Leçon neuve", v -> openMode(HifzSessionActivity.SABQI));
-        LinearLayout itqan = Ui.modeCard(this, "", "Ancrage", v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout murajaah = Ui.modeCard(this, "", "Entretien", v -> openMode(HifzSessionActivity.MURAJAAH));
+        LinearLayout sabqi = Ui.modeCard(this, "", "Apprentissage", v -> openMode(HifzSessionActivity.SABQI));
+        LinearLayout itqan = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> openMode(HifzSessionActivity.MURAJAAH));
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(murajaah);
@@ -166,136 +169,100 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshAll() { refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
 
-    private DailyPlan planFor(LocalDate date) {
-        return HifzSchedule.INSTANCE.planFor(
-            date.getDayOfWeek(), prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
+    private void openMode(String mode) { openMode(mode,HifzClock.today()); }
+
+    private void openMode(String mode,LocalDate scheduledDate) {
+        Intent intent=new Intent(this,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode);
+        if(scheduledDate!=null)intent.putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,scheduledDate.toString());
+        startActivity(intent);
     }
 
-    private void openMode(String mode) {
-        startActivity(new Intent(this, HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE, mode));
+    private boolean modeComplete(LocalDate date,String mode){
+        if(ledger.find(date,mode)!=null)return true;
+        return hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(mode,date);
+    }
+
+    private boolean cadenceComplete(LocalDate date){
+        CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek());
+        switch(action){
+            case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI)
+                &&modeComplete(date,HifzSessionActivity.SABQI_TODAY_REVIEW);
+            case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
+            case REVISION:return modeComplete(date,HifzSessionActivity.MURAJAAH);
+            default:return false;
+        }
+    }
+
+    private ScheduledCadence nextDueCadence(LocalDate todayDate){
+        LinkedHashSet<LocalDate> completed=new LinkedHashSet<>();
+        LocalDate cursor=prefs.programStartDate();
+        while(!cursor.isAfter(todayDate)){
+            if(cadenceComplete(cursor))completed.add(cursor);
+            cursor=cursor.plusDays(1);
+        }
+        return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed);
+    }
+
+    private String nextMode(ScheduledCadence due){
+        if(due==null)return null;
+        LocalDate date=due.getScheduledDate();
+        switch(due.getAction()){
+            case LEARNING:
+                if(!modeComplete(date,HifzSessionActivity.SABQI))return HifzSessionActivity.SABQI;
+                return !modeComplete(date,HifzSessionActivity.SABQI_TODAY_REVIEW)?HifzSessionActivity.SABQI_TODAY_REVIEW:null;
+            case STABILIZATION:return !modeComplete(date,HifzSessionActivity.ITQAN)?HifzSessionActivity.ITQAN:null;
+            case REVISION:return !modeComplete(date,HifzSessionActivity.MURAJAAH)?HifzSessionActivity.MURAJAAH:null;
+            default:return null;
+        }
     }
 
     private void openToday() {
-        String mode = firstIncompleteMode(HifzClock.today());
-        if (mode != null) openMode(mode);
-    }
-
-    private String firstIncompleteMode(LocalDate date) {
-        if (date.isBefore(prefs.programStartDate())) return null;
-        DailyPlan plan = planFor(date);
-        if (!isComplete(date, plan.getMorning().getKind())) return modeFor(plan.getMorning().getKind());
-        if (!isComplete(date, plan.getEvening().getKind())) return modeFor(plan.getEvening().getKind());
-        return null;
-    }
-
-    private boolean isComplete(LocalDate date, SessionKind kind) {
-        if (normalProtocolComplete(date, kind)) return true;
-        String mode = modeFor(kind);
-        return hostBudgetStore != null && hostBudgetStore.isSlotConsumed(mode, date);
-    }
-
-    private boolean normalProtocolComplete(LocalDate date, SessionKind kind) {
-        String key = date.toString();
-        switch (kind) {
-            case SABQI_NEW: return key.equals(prefs.lastSabqiDate());
-            case SABQI_TODAY_REVIEW: return key.equals(prefs.lastSabqiTodayReviewDate());
-            case ITQAN: return key.equals(prefs.lastItqanDate());
-            case RECENT_SABQI_REVIEW: return key.equals(prefs.lastRecentSabqiReviewDate());
-            case OLD_ITQAN_MURAJAAH: return key.equals(prefs.lastMurajaahDate());
-            default: return false;
-        }
-    }
-
-    private boolean hasJ10ConsumedSlot(LocalDate date, DailyPlan plan) {
-        if (hostBudgetStore == null || plan == null) return false;
-        SessionKind[] kinds = {plan.getMorning().getKind(), plan.getEvening().getKind()};
-        for (SessionKind kind : kinds) {
-            String mode = modeFor(kind);
-            if (!normalProtocolComplete(date, kind) && hostBudgetStore.isSlotConsumed(mode, date)) return true;
-        }
-        return false;
-    }
-
-    private static String modeFor(SessionKind kind) {
-        switch (kind) {
-            case SABQI_NEW: return HifzSessionActivity.SABQI;
-            case SABQI_TODAY_REVIEW: return HifzSessionActivity.SABQI_TODAY_REVIEW;
-            case ITQAN: return HifzSessionActivity.ITQAN;
-            case RECENT_SABQI_REVIEW: return HifzSessionActivity.RECENT_SABQI_REVIEW;
-            case OLD_ITQAN_MURAJAAH: return HifzSessionActivity.MURAJAAH;
-            default: throw new IllegalArgumentException("Unsupported session kind: " + kind);
-        }
+        ScheduledCadence due=nextDueCadence(HifzClock.today());
+        String mode=nextMode(due);
+        if(mode!=null)openMode(mode,due.getScheduledDate());
     }
 
     private void refreshToday() {
-        GeometryRepository g = geometry;
-        if (g == null) { today.setText("…"); return; }
-        LocalDate date = HifzClock.today();
-        if (date.isBefore(prefs.programStartDate())) {
-            today.setText("Parcours non démarré");
-            todayAction.setEnabled(false);
-            return;
+        GeometryRepository g=geometry;
+        if(g==null){today.setText("…");return;}
+        LocalDate current=HifzClock.today();
+        if(current.isBefore(prefs.programStartDate())){
+            today.setText("Parcours non démarré");todayAction.setEnabled(false);return;
         }
-        DailyPlan plan = planFor(date);
-        SessionKind next = !isComplete(date, plan.getMorning().getKind())
-            ? plan.getMorning().getKind()
-            : !isComplete(date, plan.getEvening().getKind()) ? plan.getEvening().getKind() : null;
-        if (next == null) {
-            today.setText(hasJ10ConsumedSlot(date, plan)
-                ? "Créneau J10 utilisé · programme du jour terminé"
-                : "Matin ✓ · Soir ✓");
-            todayAction.setEnabled(false);
-            return;
-        }
+        ScheduledCadence due=nextDueCadence(current);
+        if(due==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
+        String mode=nextMode(due);
+        if(mode==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
+        String prefix=due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         String detail;
-        try {
-            switch (next) {
-                case SABQI_NEW: {
-                    int cursor = prefs.sabqiLineCursor();
-                    if (cursor < 0) cursor = g.firstLineIndex(prefs.sabqiStart());
-                    GeometryRepository.FiveLineBlock b = g.fiveLineBlock(cursor);
-                    detail = "Matin · Leçon neuve · " + shortRange(b.startVerse,b.endVerse) + " · 5 lignes";
-                    break;
-                }
-                case SABQI_TODAY_REVIEW:
-                    detail = "Soir · Reprise du soir · 30 min";
-                    break;
-                case ITQAN: {
-                    detail = anchoringTodayDetail(prefs, g);
-                    break;
-                }
-                case RECENT_SABQI_REVIEW:
-                    detail="Matin · Consolidation · 30 min";
-                    break;
-                case OLD_ITQAN_MURAJAAH:
-                    detail="Soir · Entretien · "+plan.getEvening().getTargetMinutes()+" min";
-                    break;
-                default:
-                    detail="Parcours à vérifier";
-            }
-        } catch (RuntimeException error) {
-            detail="Parcours à vérifier";
-        }
-        today.setText(detail);
-        todayAction.setEnabled(true);
+        try{
+            if(HifzSessionActivity.SABQI.equals(mode)){
+                int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
+                GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);
+                detail="Apprentissage · "+shortRange(b.startVerse,b.endVerse)+" · 5 lignes";
+            }else if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)){
+                detail="Apprentissage · reprise · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
+            }else if(HifzSessionActivity.ITQAN.equals(mode)){
+                detail=anchoringTodayDetail(prefs,g);
+            }else if(HifzSessionActivity.MURAJAAH.equals(mode)){
+                detail="Révision · "+HifzSchedule.MAINTENANCE_MINUTES+" min";
+            }else detail="Parcours à vérifier";
+        }catch(RuntimeException error){detail="Parcours à vérifier";}
+        today.setText(prefix+detail);todayAction.setEnabled(true);
     }
 
-    static String anchoringTodayDetail(HifzPrefs prefs, GeometryRepository geometry) {
-        AnchoringQueue.Entry entry = prefs.inProgressAnchoringEntry();
-        if (entry == null) entry = prefs.currentAnchoringEntry(geometry);
-        if (entry == null) return "Matin · Ancrage · aucune page en attente";
-        VerseRef start = GeometryRepository.parseVerse(entry.start);
-        VerseRef end = GeometryRepository.parseVerse(entry.end);
-        boolean fractionated = prefs.isFractionatedUnit(geometry.versesForRange(start, end));
-        int reps = entry == null
-            ? PreviewConfig.ITQAN_LIGHT_TOTAL_REPS
-            : PreviewConfig.itqanTotalReps(entry.protocol);
-        if (!fractionated) return "Matin · Ancrage · " + shortRange(start, end) + " · ×" + reps;
-        int[] segments = geometry.surahSegmentLineCounts(start, end);
-        int blocks = Math.max(1, PreviewConfig.fractionatedBlockCount(segments));
-        int block = Math.max(0, Math.min(prefs.itqanBlockIndex(), blocks - 1));
-        return "Matin · Ancrage fractionné · " + shortRange(start, end)
-            + " · bloc " + (block + 1) + "/" + blocks + " · ×" + reps;
+    static String anchoringTodayDetail(HifzPrefs prefs,GeometryRepository geometry){
+        AnchoringQueue.Entry entry=prefs.inProgressAnchoringEntry();
+        if(entry==null)entry=prefs.currentAnchoringEntry(geometry);
+        if(entry==null)return "Stabilisation · aucune unité à stabiliser";
+        VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
+        boolean fractionated=prefs.isFractionatedUnit(geometry.versesForRange(start,end));
+        int reps=PreviewConfig.itqanTotalReps(entry.protocol);
+        if(!fractionated)return "Stabilisation · "+shortRange(start,end)+" · ×"+reps;
+        int[] segments=geometry.surahSegmentLineCounts(start,end);
+        int blocks=Math.max(1,PreviewConfig.fractionatedBlockCount(segments));
+        int block=Math.max(0,Math.min(prefs.itqanBlockIndex(),blocks-1));
+        return "Stabilisation · "+shortRange(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
     }
 
     private void refreshRecentSabqiAdvisory() {
