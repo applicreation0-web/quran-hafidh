@@ -1,3 +1,4 @@
+# Verification trigger: product patch 6c0a6393eb6801c587def8c841fa2eb895d15145
 name: Quran Hifz 0.7.5 Claude NO-GO TDD
 
 on:
