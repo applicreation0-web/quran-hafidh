@@ -20,19 +20,30 @@ jobs:
       - name: Apply guarded patch
         run: python3 scripts/apply_hifz_075_phone_feedback_patch.py
 
-      - name: Commit product delta
+      - name: Commit remaining delta
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java; then
-            echo NO_PRODUCT_DELTA
+          git diff --check
+          git diff --exit-code -- hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzAudioPack.java
+          if git diff --quiet -- \
+              hifz-app/build.gradle.kts \
+              hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java \
+              hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java \
+              hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java \
+              hifz-app/src/test/java/com/quransafeguard/hifz/preview/CanonicalProgressUiSourceContractTest.java \
+              hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6PersistentStateInstrumentedTest.java; then
+            echo NO_REMAINING_DELTA
             exit 0
           fi
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java \
-                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java \
-                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java \
-                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java
-          git commit -m "feat: align 0.7.5 phone UI with canonical progression"
+          git add \
+              hifz-app/build.gradle.kts \
+              hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java \
+              hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java \
+              hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java \
+              hifz-app/src/test/java/com/quransafeguard/hifz/preview/CanonicalProgressUiSourceContractTest.java \
+              hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6PersistentStateInstrumentedTest.java
+          git commit -m "fix: close remaining 0.7.5 phone feedback contracts"
           git push origin HEAD:work/hifz-0.7.5-retention-j10
