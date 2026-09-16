@@ -99,10 +99,13 @@ public final class HifzV6LegacyJ10MigrationInstrumentedTest {
         new HifzPrefs(context);
 
         assertEquals(6, main.getInt("schema", -1));
-        assertTrue(stringSet(LEGACY_PARTIAL_ACQUIRED).contains(completed));
-        assertTrue(stringSet(ACQUIRED).contains(completed));
-        assertEquals(Long.valueOf(completedDate), longMap(ACTIVE_J10).get(completed));
-        assertTrue(stringSet(LEGACY_IMPORTED).contains(completed));
+        assertTrue("validated legacy sub-blocks become Stabilisé", stringSet(STABILIZED).contains(completed));
+        assertFalse("migration must not invent Acquis credit", stringSet(ACQUIRED).contains(completed));
+        assertFalse("resolved legacy work must not remain partial debt", stringSet(LEGACY_PARTIAL_ACQUIRED).contains(completed));
+        assertEquals("old J10 evidence is retained as archive, not active review credit",
+            Long.valueOf(completedDate), longMap(ORPHAN_J10).get(completed));
+        assertFalse(longMap(ACTIVE_J10).containsKey(completed));
+        assertFalse(stringSet(LEGACY_IMPORTED).contains(completed));
 
         assertTrue("unfinished historical work becomes Appris", stringSet(LEARNED).contains(learned));
         assertEquals(Long.valueOf(learnedLegacyDate), longMap(ORPHAN_J10).get(learned));
@@ -113,7 +116,7 @@ public final class HifzV6LegacyJ10MigrationInstrumentedTest {
         assertTrue(stringSet(ACQUIRED).contains(stableWithoutDate));
         assertTrue(stringSet(UNKNOWN_DUE).contains(stableWithoutDate));
 
-        assertTrue("0.7.4 cannot prove the new Stabilisé state", stringSet(STABILIZED).isEmpty());
+        assertTrue("legacy validated sub-blocks must populate Stabilisé", !stringSet(STABILIZED).isEmpty());
         assertEquals("legacy J10 must remain byte/logically untouched", legacyBefore, snapshot(legacyJ10));
     }
 
