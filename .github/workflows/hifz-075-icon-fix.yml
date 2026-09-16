@@ -1,0 +1,43 @@
+name: Quran Hifz 0.7.5 canonical icon fix
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+    paths:
+      - .github/workflows/hifz-075-icon-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/hifz-0.7.5-retention-j10
+      - name: Add canonical action icon mappings
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java')
+          text = path.read_text()
+          old = '''        if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;\n        if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;\n        if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;\n        if (s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;\n        if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;\n        if (s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;\n        if (s.contains("ancrage")) return R.drawable.ic_hifz_anchor;\n        if (s.contains("entretien")) return R.drawable.ic_hifz_maintenance;'''
+          new = '''        if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;\n        if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;\n        if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;\n        if (s.contains("apprentissage") || s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;\n        if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;\n        if (s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;\n        if (s.contains("stabilisation") || s.contains("ancrage")) return R.drawable.ic_hifz_anchor;\n        if (s.contains("révision") || s.contains("revision") || s.contains("entretien")) return R.drawable.ic_hifz_maintenance;'''
+          if old not in text:
+              raise SystemExit('guard failed: expected icon mapping block not found')
+          path.write_text(text.replace(old, new, 1))
+      - name: Commit exact product fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -q 's.contains("apprentissage")' hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java
+          grep -q 's.contains("stabilisation")' hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java
+          grep -q 's.contains("révision")' hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java
+          git commit -m 'fix: map canonical Hifz action icons'
+          git push origin HEAD:work/hifz-0.7.5-retention-j10
