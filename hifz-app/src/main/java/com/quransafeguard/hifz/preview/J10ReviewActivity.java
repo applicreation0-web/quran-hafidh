@@ -241,7 +241,6 @@ public final class J10ReviewActivity extends android.app.Activity implements Mus
     private static String safeHostMode(String mode) {
         if (HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
                 || HifzSessionActivity.ITQAN.equals(mode)
-                || HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
                 || HifzSessionActivity.MURAJAAH.equals(mode)) return mode;
         return null;
     }

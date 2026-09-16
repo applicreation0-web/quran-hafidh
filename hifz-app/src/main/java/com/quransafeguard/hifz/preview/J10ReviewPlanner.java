@@ -204,7 +204,6 @@ final class J10ReviewPlanner {
     static boolean isReusableJ10Kind(SessionKind kind) {
         return kind == SessionKind.SABQI_TODAY_REVIEW
             || kind == SessionKind.ITQAN
-            || kind == SessionKind.RECENT_SABQI_REVIEW
             || kind == SessionKind.OLD_ITQAN_MURAJAAH;
     }
 
