@@ -32,16 +32,16 @@
 - [x] Render M/W/F Apprentissage, Tue/Thu Stabilisation, Sat/Sun Révision.
 - [x] Remove fixed Sunday Consolidation from the weekly projection/runtime launcher.
 - [x] Rewrite Repères around four actions, three states, J10 and soft carryover.
-- [ ] Run source contracts and compilation on product commit `6e623eb9f8affe09806b66e3d10711c490db8c10`.
+- [ ] Validate source contracts and compilation on the final clean product HEAD.
 
 ### Task 3: Independent À stabiliser / Acquis multi-lists
-**Files:** Modify `HifzPrefs.java`, `SettingsActivity.java`; add focused unit/instrumented tests if needed.
+**Files:** Modify `HifzPrefs.java`, `SettingsActivity.java`; focused instrumented tests in `HifzV6PersistentStateInstrumentedTest.java`.
 - [x] Expose two independent ordered range collections.
 - [x] Validate ranges fail-closed: no self-overlap, no overlap between collections.
 - [x] Persist an edit atomically across schema-6 and legacy compatibility keys without moving cursors silently.
 - [x] Reconcile J10 membership/dates without inventing dates.
 - [x] Expose add/edit/delete for each list.
-- [ ] Add/complete focused persistence, overlap and cursor-preservation regression tests.
+- [x] Add persistence, overlap, cursor-preservation, reopen and UNKNOWN_DUE regression coverage.
 
 ### Task 4: Regression gates
 **Files:** Existing migration/J10/consolidation/stabilization tests and workflow.
