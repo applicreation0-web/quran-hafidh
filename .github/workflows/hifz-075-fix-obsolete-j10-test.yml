@@ -1,0 +1,96 @@
+name: Patch obsolete 0.7.5 J10 migration test
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-claude-no-go-fixes
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  patch:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch only obsolete J10 expectations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6LegacyJ10MigrationInstrumentedTest.java')
+          s = p.read_text()
+          old = '''        assertEquals(6, main.getInt("schema", -1));
+        assertTrue(stringSet(LEGACY_PARTIAL_ACQUIRED).contains(completed));
+        assertTrue(stringSet(ACQUIRED).contains(completed));
+        assertEquals(Long.valueOf(completedDate), longMap(ACTIVE_J10).get(completed));
+        assertTrue(stringSet(LEGACY_IMPORTED).contains(completed));
+
+        assertTrue("unfinished historical work becomes Appris", stringSet(LEARNED).contains(learned));
+        assertEquals(Long.valueOf(learnedLegacyDate), longMap(ORPHAN_J10).get(learned));
+        assertFalse(longMap(ACTIVE_J10).containsKey(learned));
+        assertFalse(stringSet(ACQUIRED).contains(learned));
+
+        String stableWithoutDate = firstOwned(new VerseRef(2, 1), new VerseRef(2, 74));
+        assertTrue(stringSet(ACQUIRED).contains(stableWithoutDate));
+        assertTrue(stringSet(UNKNOWN_DUE).contains(stableWithoutDate));
+
+        assertTrue("0.7.4 cannot prove the new Stabilisé state", stringSet(STABILIZED).isEmpty());
+'''
+          new = '''        assertEquals(6, main.getInt("schema", -1));
+        assertTrue("validated legacy sub-blocks become Stabilisé", stringSet(STABILIZED).contains(completed));
+        assertFalse("migration must not invent Acquis credit", stringSet(ACQUIRED).contains(completed));
+        assertFalse("resolved legacy work must not remain partial debt", stringSet(LEGACY_PARTIAL_ACQUIRED).contains(completed));
+        assertEquals("old J10 evidence is retained as archive, not active review credit",
+            Long.valueOf(completedDate), longMap(ORPHAN_J10).get(completed));
+        assertFalse(longMap(ACTIVE_J10).containsKey(completed));
+        assertFalse(stringSet(LEGACY_IMPORTED).contains(completed));
+
+        assertTrue("unfinished historical work becomes Appris", stringSet(LEARNED).contains(learned));
+        assertEquals(Long.valueOf(learnedLegacyDate), longMap(ORPHAN_J10).get(learned));
+        assertFalse(longMap(ACTIVE_J10).containsKey(learned));
+        assertFalse(stringSet(ACQUIRED).contains(learned));
+
+        String stableWithoutDate = firstOwned(new VerseRef(2, 1), new VerseRef(2, 74));
+        assertTrue(stringSet(ACQUIRED).contains(stableWithoutDate));
+        assertTrue(stringSet(UNKNOWN_DUE).contains(stableWithoutDate));
+
+        assertTrue("legacy validated sub-blocks must populate Stabilisé", !stringSet(STABILIZED).isEmpty());
+'''
+          if old not in s:
+              raise SystemExit('expected obsolete J10 block not found; refusing partial patch')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+          git diff --check
+          git diff -- hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6LegacyJ10MigrationInstrumentedTest.java
+          test "$(git diff --name-only | wc -l | tr -d ' ')" = 1
+
+      - name: Commit test-only correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzV6LegacyJ10MigrationInstrumentedTest.java
+          git commit -m 'test: align legacy J10 migration with stabilized semantics'
+          NEW_HEAD=$(git rev-parse HEAD)
+          echo "NEW_HEAD=$NEW_HEAD"
+          git push origin HEAD:work/hifz-0.7.5-claude-no-go-fixes
+          echo "new_head=$NEW_HEAD" >> "$GITHUB_OUTPUT"
+        id: commit
+
+      - name: Dispatch full closure on exact new HEAD
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run hifz-075-claude-verify.yml --ref work/hifz-0.7.5-claude-no-go-fixes
