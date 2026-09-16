@@ -1,4 +1,4 @@
-name: Quran Hifz 0.7.5 Claude fix verification
+name: Quran Hifz 0.7.5 final closure gate
 
 on:
   push:
@@ -10,12 +10,23 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: quran-hifz-0.7.5-final-${{ github.sha }}
+  cancel-in-progress: false
+
 jobs:
-  targeted-jvm:
+  full-jvm-and-compile:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prove exact HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
 
       - name: Restore immutable Hifz 0.7.4 release assets
         shell: bash
@@ -64,40 +75,56 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Run targeted JVM and source-contract regressions
+      - name: Run full JVM compile and verifier gates
         shell: bash
         run: |
           set -euo pipefail
           gradle --no-daemon \
+            :hifz-core:test \
             :hifz-app:testDebugUnitTest \
             :hifz-app:sourceContractTest \
+            :hifz-app:compileDebugAndroidTestSources \
+            :hifz-app:verifyHifzProductBoundary \
+            :hifz-app:verifyHifzCosmeticContract \
+            :hifz-app:verifyHifzConvergenceRules \
             -x :hifz-app:prepareHifzTafsirRelease \
             --continue \
             --stacktrace
 
-      - name: Record targeted test counts
+      - name: Record exact test counts
         if: always()
         shell: bash
         run: |
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
+          bad=False
           for label, pattern in [
               ('BEHAVIOR_JVM','hifz-app/build/test-results/testDebugUnitTest/**/*.xml'),
               ('SOURCE_CONTRACT','hifz-app/build/test-results/sourceContractTest/**/*.xml'),
+              ('CORE_JVM','hifz-core/build/test-results/test/**/*.xml'),
           ]:
               t=f=e=s=0
               for file in glob.glob(pattern, recursive=True):
                   root=ET.parse(file).getroot()
                   t+=int(root.attrib.get('tests',0)); f+=int(root.attrib.get('failures',0)); e+=int(root.attrib.get('errors',0)); s+=int(root.attrib.get('skipped',0))
               print(f'{label} tests={t} failures={f} errors={e} skipped={s}')
+              if f or e or s or t == 0: bad=True
+          if bad: raise SystemExit('FULL_JVM_COUNTS_NOT_GREEN')
           PY
 
-  targeted-instrumented:
-    needs: targeted-jvm
+  full-instrumented:
+    needs: full-jvm-and-compile
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prove exact HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "HEAD=$(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
 
       - name: Restore immutable Hifz 0.7.4 release assets
         shell: bash
@@ -121,6 +148,8 @@ jobs:
           rm -rf hifz-app/build/generated/hifzTafsir
           mkdir -p hifz-app/build/generated/hifzTafsir
           cp -a baseline074/extracted/assets/tafsir/. hifz-app/build/generated/hifzTafsir/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          test -s app/src/main/assets/reader109/geometry.json
           test -n "$(find hifz-app/build/generated/hifzTafsir -maxdepth 1 -type f -print -quit)"
 
       - uses: actions/setup-java@v4
@@ -151,7 +180,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run Claude NO-GO device regressions
+      - name: Run full 0.7.5 Android regression matrix
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -161,5 +190,5 @@ jobs:
           script: >-
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest
             -x :hifz-app:prepareHifzTafsirRelease
-            -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.ClaudeNoGoRegressionInstrumentedTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6LegacyJ10MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.StabilizationHalfPageInstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest,com.quransafeguard.hifz.preview.ClaudeNoGoRegressionInstrumentedTest
             --stacktrace
