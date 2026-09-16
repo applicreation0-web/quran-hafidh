@@ -66,14 +66,11 @@ public final class OfficialReleaseContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
         String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
-        assertTrue("same-day Sabqi review must be a real runtime mode", session.contains("SABQI_TODAY_REVIEW"));
-        assertTrue("weekend recent Sabqi review must be a real runtime mode", session.contains("RECENT_SABQI_REVIEW"));
-        assertTrue("old Itqan Murajaah must use the consolidated corpus only", session.contains("murajaahCorpus()"));
-        assertTrue("Itqan must advance through the anchored cycle", session.contains("nextAnchored"));
-        assertTrue("Itqan completion must consolidate naturally encountered promoted material", session.contains("completeItqanUnitAndConsolidate"));
+        assertTrue("same-day learning review must remain a real internal phase", session.contains("SABQI_TODAY_REVIEW"));
+        assertTrue("Consolidation runtime mode must remain explicit", session.contains("RECENT_SABQI_REVIEW"));
+        assertTrue("Revision must use the acquired corpus only", session.contains("murajaahCorpus()"));
         assertFalse("mixed A/B Murajaah phase must be removed", session.contains("murajaahBlockB") || session.contains("transitionToBlockB"));
         assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
-        assertFalse("weekend recent review must not stop after one pass", session.contains("recentMurajaahComplete"));
         assertTrue("runtime timed durations must consume HifzSchedule fixed-mode targets", session.contains("HifzSchedule") && session.contains("targetMinutesFor"));
         assertFalse("directly opened sessions must not depend on today's plan", session.contains("scheduledTargetMinutes") || session.contains("absent du planning"));
         assertFalse("session durations must not be duplicated in PreviewConfig", config.contains("SABQI_MINUTES_WORKING") || config.contains("ITQAN_MINUTES_WORKING"));
@@ -81,16 +78,15 @@ public final class OfficialReleaseContractTest {
         assertTrue("mask entropy must persist for the logical Hifz session", session.contains("prefs.maskEntropyFor(mode)") && session.contains("prefs.clearMaskEntropy(mode)"));
     }
 
-    @Test public void timedResumeAndEmptyWeekendHaveExplicitNonTransferPaths() throws Exception {
+    @Test public void timedResumeAndCanonicalCarryoverHaveExplicitNonTransferPaths() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
 
         assertTrue("expired timed work must be committed after process death", session.contains("completeExpiredTimedSession"));
-        assertTrue("empty recent Sabqi must complete truthfully without opening old Itqan", session.contains("completeEmptyRecentSabqiSession"));
-        assertTrue("Today must open the first incomplete morning/evening plan entry", main.contains("firstIncompleteMode") && main.contains("planFor"));
-        assertTrue("dashboard must share the domain schedule", dashboard.contains("planFor"));
+        assertTrue("Today must resolve oldest soft carryover with the canonical cadence", main.contains("nextDueCadence") && main.contains("nextMode") && main.contains("HifzSchedule.INSTANCE.nextDue"));
+        assertTrue("dashboard must share the canonical cadence", dashboard.contains("HifzSchedule.INSTANCE.actionFor"));
         assertFalse("dashboard must not retain A/B transfer projection", dashboard.contains("secondsA") || dashboard.contains("availableB") || dashboard.contains("Murājaʿah A") || dashboard.contains("Murājaʿah B"));
         assertFalse("settings must not offer daily cursor reposition buttons", settings.contains("Repositionner Murājaʿah"));
     }
