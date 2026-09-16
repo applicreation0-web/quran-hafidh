@@ -12,9 +12,14 @@ data class HaafidhSession(
 object SessionPlanner {
     fun morning(day: DayOfWeek, unitId: String): HaafidhSession? {
         return when (day) {
-            DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> HaafidhSession(SessionType.MORNING_NEW, listOf(unitId))
-            DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY -> HaafidhSession(SessionType.MORNING_NEW, listOf(unitId))
+            DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY,
+            DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY ->
+                HaafidhSession(SessionType.MORNING_NEW, listOf(unitId))
             else -> null
         }
+    }
+
+    fun eveningSnowball(unitIds: List<String>): HaafidhSession {
+        return HaafidhSession(SessionType.EVENING_SNOWBALL, unitIds)
     }
 }
