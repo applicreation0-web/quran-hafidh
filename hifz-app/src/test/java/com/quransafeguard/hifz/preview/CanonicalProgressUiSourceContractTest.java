@@ -44,17 +44,32 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(prefs.contains("Une plage ne peut pas être à la fois Acquise et À stabiliser."));
     }
 
-    @Test public void repereLexiconMatchesFourActionsAndThreeStates() throws Exception {
+    @Test public void structuredLearningRangeUsesCanonicalVocabulary() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        for (String name : new String[]{"Apprentissage","Appris","Stabilisation","Stabilisé","Consolidation","Acquis","Révision","J10"}) {
-            assertTrue(name, settings.contains("addRepere(root,\"" + name + "\""));
-        }
-        assertFalse(settings.contains("addRepere(root,\"Leçon neuve\""));
-        assertFalse(settings.contains("addRepere(root,\"Reprise du soir\""));
-        assertFalse(settings.contains("addRepere(root,\"Ancrage\""));
-        assertFalse(settings.contains("addRepere(root,\"Ancrage fractionné\""));
-        assertFalse(settings.contains("addRepere(root,\"Entretien\""));
-        assertFalse(settings.contains("addRepere(root,\"En attente\""));
+        assertTrue(settings.contains("Début de la plage d’Apprentissage"));
+        assertTrue(settings.contains("Fin de la plage d’Apprentissage"));
+        assertFalse(settings.contains("plage à mémoriser"));
+        assertFalse(settings.contains("Position de la leçon hors de la plage"));
+    }
+
+    @Test public void settingsShowCanonicalSchemaInsteadOfLexiconDefinitions() throws Exception {
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        assertTrue(settings.contains("section(root,\"Schéma\")"));
+        assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
+        assertTrue(settings.contains("Consolidation · déclenchée par progression"));
+        assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
+        assertFalse(settings.contains("section(root,\"Repères\")"));
+        assertFalse(settings.contains("addRepere(root"));
+    }
+
+    @Test public void sessionMessagesUseCanonicalFrenchGrammar() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertFalse(session.contains("de la Apprentissage"));
+        assertFalse(session.contains("de Apprentissage"));
+        assertFalse(session.contains("d’Stabilisation"));
+        assertFalse(session.contains("de la Stabilisation"));
+        assertTrue(session.contains("de l’Apprentissage"));
+        assertTrue(session.contains("de la Stabilisation"));
     }
 
     @Test public void quickActionsAndTodayResolverUseCanonicalActionsAndCarryoverDate() throws Exception {
