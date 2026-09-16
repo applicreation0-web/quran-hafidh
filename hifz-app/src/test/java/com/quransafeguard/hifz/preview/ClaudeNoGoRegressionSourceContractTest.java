@@ -68,4 +68,12 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String evening = method(session, "private void renderSabqiTodayReview()", "private void renderConsolidationCycle()");
         assertTrue(evening.contains("HifzDisplayVocabulary.canonicalize(prefs.lastSabqiTodayReviewLabel())"));
     }
+
+    @Test public void validationListenersContainProgressionExceptionsInsteadOfCrashingTheApp() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("private void runValidationSafely(Runnable validation)"));
+        assertTrue(session.contains("runValidationSafely(this::validateSabqi)"));
+        assertTrue(session.contains("runValidationSafely(this::validateItqan)"));
+        assertTrue(session.contains("runValidationSafely(this::validateConsolidationCycle)"));
+    }
 }
