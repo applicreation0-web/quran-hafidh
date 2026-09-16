@@ -156,6 +156,30 @@ public final class GeometryRepository {
         return Collections.unmodifiableList(result);
     }
 
+    /** Resolve exact physical line ids in canonical order; missing, duplicate or reordered ids fail closed. */
+    List<LineMeta> linesForExactIds(List<String> lineIds) {
+        if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("line ids required");
+        LinkedHashSet<String> wanted = new LinkedHashSet<>(lineIds);
+        if (wanted.size() != lineIds.size()) throw new IllegalStateException("Duplicate physical line id");
+        ArrayList<LineMeta> result = new ArrayList<>();
+        for (LineMeta line : lines) if (wanted.contains(line.id)) result.add(line);
+        if (result.size() != wanted.size()) throw new IllegalStateException("Unknown physical Mushaf line id");
+        for (int i = 0; i < result.size(); i++) {
+            if (!result.get(i).id.equals(lineIds.get(i)))
+                throw new IllegalStateException("Physical line ids are not in canonical order");
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    /** Ordered Quran verses touching exactly these physical lines. */
+    List<VerseRef> versesOnLines(List<String> lineIds) {
+        LinkedHashSet<VerseRef> selected = new LinkedHashSet<>();
+        for (LineMeta line : linesForExactIds(lineIds)) selected.addAll(line.verses);
+        ArrayList<VerseRef> result = new ArrayList<>(selected);
+        result.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return Collections.unmodifiableList(result);
+    }
+
     /** Exact per-page geometry already parsed by the singleton; avoids a second full JSON parse in the renderer. */
     public String pageGeometryJson(int page) {
         if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");

@@ -419,24 +419,6 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (!timedSessionLimitReached) addRoundAction("↻", "Répétition", v -> renderMode());
     }
 
-    private static String consolidationUnitId(AnchoringQueue.Entry entry) {
-        return entry.start + "|" + entry.end;
-    }
-
-    private static ConsolidationCycleEngine.Protocol consolidationProtocol(AnchoringQueue.Entry entry) {
-        return entry.protocol == AnchoringQueue.Protocol.LIGHT
-            ? ConsolidationCycleEngine.Protocol.LIGHT : ConsolidationCycleEngine.Protocol.FULL;
-    }
-
-    private AnchoringQueue.Entry consolidationEntry(String unitId) {
-        String[] bounds = unitId.split("\\|", -1);
-        if (bounds.length != 2) throw new IllegalStateException("Unité de Consolidation invalide : " + unitId);
-        AnchoringQueue.Entry entry = prefs.anchoringEntryFor(
-            GeometryRepository.parseVerse(bounds[0]), GeometryRepository.parseVerse(bounds[1]));
-        if (entry == null) throw new IllegalStateException("Unité de Consolidation absente : " + unitId);
-        return entry;
-    }
-
     private void renderConsolidationCycle() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
@@ -448,18 +430,16 @@ private void rebalanceRecentWindow(LocalDate today) {
         consolidationSession = prefs.restoreConsolidationSession(
             consolidationEngine, ConsolidationCycleEngine.Family.STABILIZATION);
         if (consolidationSession == null) {
-            List<AnchoringQueue.Entry> entries = prefs.stabilizedAnchoringEntries(geometry, 3);
-            if (entries.isEmpty()) {
+            List<ConsolidationCycleEngine.Unit> units = prefs.stabilizedConsolidationUnits(geometry, 3);
+            if (units.isEmpty()) {
                 sessionCompleted = true;
                 program.setText("Consolidation · rien à consolider");
                 progress.setText("Aucune unité Stabilisée en attente.");
                 return;
             }
             ConsolidationCycleEngine.Cycle cycle = null;
-            for (int i = 0; i < entries.size(); i++) {
-                AnchoringQueue.Entry entry = entries.get(i);
-                ConsolidationCycleEngine.Unit unit = new ConsolidationCycleEngine.Unit(
-                    consolidationUnitId(entry), consolidationProtocol(entry));
+            for (int i = 0; i < units.size(); i++) {
+                ConsolidationCycleEngine.Unit unit = units.get(i);
                 cycle = i == 0
                     ? consolidationEngine.startCycle("stabilization-" + today, ConsolidationCycleEngine.Family.STABILIZATION, unit)
                     : consolidationEngine.addUnit(cycle, unit);
@@ -476,18 +456,21 @@ private void rebalanceRecentWindow(LocalDate today) {
             return;
         }
         int position = consolidationSession.nextUnitIndex();
-        AnchoringQueue.Entry entry = consolidationEntry(consolidationSession.unitIds().get(position));
-        VerseRef start = GeometryRepository.parseVerse(entry.start);
-        VerseRef end = GeometryRepository.parseVerse(entry.end);
-        currentPage = geometry.pageForVerse(start);
+        List<String> exactLineIds = ConsolidationPhysicalUnitPolicy.decodeLineUnit(
+            consolidationSession.unitIds().get(position));
+        List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(exactLineIds);
+        List<StabilizationHalfPagePolicy.Unit> verified = StabilizationHalfPagePolicy.planPage(physicalLines);
+        if (verified.size() != 1 || !verified.get(0).lineIds.equals(exactLineIds))
+            throw new IllegalStateException("Unité physique de Consolidation invalide");
+        currentPage = physicalLines.get(0).page;
         unitFirstPage = unitLastPage = currentPage;
-        currentSelection = geometry.versesForRange(start, end);
-        currentLineIds = geometry.lineIdsForVerseRange(start, end);
+        currentLineIds = new ArrayList<>(exactLineIds);
+        currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;
         sessionCompleted = false;
         int[] vector = consolidationSession.stageVectorAt(position);
         int target = vector[consolidationSession.stage()];
-        program.setText("Consolidation · " + start + " → " + end + " · unité "
+        program.setText("Consolidation · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
         progress.setText("Étape " + (consolidationSession.stage() + 1) + "/5 · "
             + consolidationSession.donePerStage() + "/" + target);

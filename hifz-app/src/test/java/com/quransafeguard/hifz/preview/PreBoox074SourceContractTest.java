@@ -107,19 +107,26 @@ public final class PreBoox074SourceContractTest {
         assertTrue(free.contains("if(mushaf==null)return super.onKeyDown(code,e);"));
     }
 
-    @Test public void c23AllProductionFractionationUsesSurahSegments() throws Exception {
+    @Test public void c23AllProductionFractionationUsesStrictSurahSegments() throws Exception {
         String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
+        String stabilization = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String planner = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewPlanner.java");
         String observer = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewObserver.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(geometry.contains("surahSegmentLineCounts(VerseRef start, VerseRef end)"));
-        for (String text : new String[]{session, main, weekly, planner, observer}) {
+        assertTrue(stabilization.contains("singleSurah(line)"));
+        assertTrue(stabilization.contains("line.page != page"));
+        assertTrue(stabilization.contains("Physical Mushaf line crosses surah boundary"));
+        assertTrue(session.contains("StabilizationHalfPagePolicy.planPage"));
+        for (String text : new String[]{main, weekly, planner, observer}) {
             assertTrue(text.contains("surahSegmentLineCounts"));
             assertFalse(text.contains("fractionatedBlockLength(unit.size()"));
             assertFalse(text.contains("fractionatedBlockStart(unit.size()"));
         }
+        assertFalse(session.contains("fractionatedBlockLength(unit.size()"));
+        assertFalse(session.contains("fractionatedBlockStart(unit.size()"));
     }
 
     @Test public void c22EveryLiteralUiActionLabelIsPinnedByTheMappingTest() throws Exception {

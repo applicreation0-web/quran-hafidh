@@ -1445,18 +1445,28 @@ public final class HifzPrefs {
         return null;
     }
 
-    /** Frozen candidates for one grouped Consolidation session: stabilized, never already acquired. */
-    List<AnchoringQueue.Entry> stabilizedAnchoringEntries(GeometryRepository geometry, int maxUnits) {
+    /** Frozen candidates for one grouped Consolidation session: exact physical Stabilisation units. */
+    List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(GeometryRepository geometry, int maxUnits) {
+        if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
         if (maxUnits < 1 || maxUnits > 3) throw new IllegalArgumentException("Consolidation group size must be 1..3");
         LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-        ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
+        ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
         for (AnchoringQueue.Entry entry : AnchoringQueue.visitOrder(anchoringQueue(), anchoringQueueIndex())) {
-            List<String> ids = geometry.lineIdsForVerseRange(GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end));
-            boolean ready = !ids.isEmpty();
-            for (String id : ids) if (!stabilized.contains(id) || acquired.contains(id)) { ready = false; break; }
-            if (ready) out.add(entry);
-            if (out.size() >= maxUnits) break;
+            VerseRef start = GeometryRepository.parseVerse(entry.start);
+            VerseRef end = GeometryRepository.parseVerse(entry.end);
+            List<String> entryIds = geometry.lineIdsForVerseRange(start, end);
+            List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(entryIds);
+            List<StabilizationHalfPagePolicy.Unit> planned = StabilizationHalfPagePolicy.planPage(physicalLines);
+            List<StabilizationHalfPagePolicy.Unit> ready = ConsolidationPhysicalUnitPolicy.readyUnits(
+                planned, stabilized, acquired, maxUnits - out.size());
+            ConsolidationCycleEngine.Protocol protocol = entry.protocol == AnchoringQueue.Protocol.LIGHT
+                ? ConsolidationCycleEngine.Protocol.LIGHT : ConsolidationCycleEngine.Protocol.FULL;
+            for (StabilizationHalfPagePolicy.Unit unit : ready) {
+                out.add(new ConsolidationCycleEngine.Unit(
+                    ConsolidationPhysicalUnitPolicy.encodeLineUnit(unit.lineIds), protocol));
+                if (out.size() >= maxUnits) return Collections.unmodifiableList(out);
+            }
         }
         return Collections.unmodifiableList(out);
     }
@@ -1652,35 +1662,68 @@ public final class HifzPrefs {
         }
     }
 
-    /** Atomically closes a frozen 1..3 unit Consolidation group and makes its lines Acquired. */
+    /** Atomically closes a frozen 1..3 unit Consolidation group and makes its exact physical lines Acquired. */
     boolean completeConsolidationSessionV6(ConsolidationCycleEngine.Session session, GeometryRepository geometry,
                                            String date, String label) {
         if (session == null || !session.open() || !session.readyToClose())
             throw new IllegalStateException("Consolidation session must be OPEN and complete");
+        if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
         synchronized (V6_STATE_LOCK) {
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
             LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-            ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
-            ArrayList<VerseRange> forced = new ArrayList<>(forcedPromotedRanges());
-            ArrayList<AnchoringQueue.Entry> queue = new ArrayList<>(anchoringQueue());
+
             for (String unitId : session.unitIds()) {
-                String[] bounds = unitId.split("\\|", -1);
-                if (bounds.length != 2) throw new IllegalStateException("Invalid frozen Consolidation unit id: " + unitId);
-                VerseRef start = GeometryRepository.parseVerse(bounds[0]);
-                VerseRef end = GeometryRepository.parseVerse(bounds[1]);
-                List<String> ids = geometry.lineIdsForVerseRange(start, end);
+                List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
+                List<GeometryRepository.LineMeta> physical = geometry.linesForExactIds(ids);
+                List<StabilizationHalfPagePolicy.Unit> verified = StabilizationHalfPagePolicy.planPage(physical);
+                if (verified.size() != 1 || !verified.get(0).lineIds.equals(ids))
+                    throw new IllegalStateException("Invalid frozen physical Consolidation unit");
                 for (String lineId : ids) {
                     ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
-                    if (state == ProgressState.STABILIZED) { stabilized.remove(lineId); acquired.add(lineId); }
-                    else if (state != ProgressState.ACQUIRED)
+                    if (state == ProgressState.STABILIZED) {
+                        stabilized.remove(lineId);
+                        acquired.add(lineId);
+                    } else if (state != ProgressState.ACQUIRED) {
                         throw new IllegalStateException("Consolidation requires Stabilisé lines: " + lineId);
+                    }
                 }
-                pending = new ArrayList<>(subtractCoverage(pending, start, end));
-                forced = new ArrayList<>(subtractCoverage(forced, start, end));
-                queue.removeIf(entry -> entry.start.equals(bounds[0]) && entry.end.equals(bounds[1]));
             }
+
+            ArrayList<VerseRange> pending = new ArrayList<>(unconsolidatedPromotedRanges());
+            ArrayList<VerseRange> forced = new ArrayList<>(forcedPromotedRanges());
+            ArrayList<AnchoringQueue.Entry> originalQueue = new ArrayList<>(anchoringQueue());
+            int oldIndex = anchoringQueueIndex(originalQueue.size());
+            ArrayList<AnchoringQueue.Entry> keptQueue = new ArrayList<>();
+            for (AnchoringQueue.Entry entry : originalQueue) {
+                List<String> parentIds = geometry.lineIdsForVerseRange(
+                    GeometryRepository.parseVerse(entry.start), GeometryRepository.parseVerse(entry.end));
+                boolean allAcquired = !parentIds.isEmpty() && acquired.containsAll(parentIds);
+                if (allAcquired) {
+                    VerseRef start = GeometryRepository.parseVerse(entry.start);
+                    VerseRef end = GeometryRepository.parseVerse(entry.end);
+                    pending = new ArrayList<>(subtractCoverage(pending, start, end));
+                    forced = new ArrayList<>(subtractCoverage(forced, start, end));
+                } else {
+                    keptQueue.add(entry);
+                }
+            }
+
+            int nextIndex = 0;
+            if (!keptQueue.isEmpty() && !originalQueue.isEmpty()) {
+                outer:
+                for (AnchoringQueue.Entry visit : AnchoringQueue.visitOrder(originalQueue, oldIndex)) {
+                    for (int i = 0; i < keptQueue.size(); i++) {
+                        AnchoringQueue.Entry kept = keptQueue.get(i);
+                        if (kept.start.equals(visit.start) && kept.end.equals(visit.end)) {
+                            nextIndex = i;
+                            break outer;
+                        }
+                    }
+                }
+            }
+
             LocalDate completed = safeDate(date, HifzClock.today());
             List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
             return p.edit()
@@ -1689,8 +1732,8 @@ public final class HifzPrefs {
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
                 .putString("unconsolidatedPromotedRanges", rangesJson(normalizeRanges(pending)))
                 .putString("forcedPromotedRanges", rangesJson(normalizeRanges(forced)))
-                .putString("anchoringQueue", anchoringQueueJson(queue))
-                .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", 0)
+                .putString("anchoringQueue", anchoringQueueJson(keptQueue))
+                .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", nextIndex)
                 .putString("lastRecentSabqiReviewDate", date).putString("lastRecentSabqiReviewLabel", label)
                 .putString("consolidationAttendanceDates", attendanceJson(attendance))
                 .remove(consolidationStateKey(ConsolidationCycleEngine.Family.STABILIZATION))
