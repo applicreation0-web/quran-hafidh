@@ -1324,9 +1324,15 @@ public final class HifzPrefs {
             for (String lineId : new LinkedHashSet<>(lineIds)) {
                 if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
                     throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
+                // Ancrage material enters directly from "À ancrer" (the default/bootstrap
+                // corpus or a manually added range): it never passes through Apprentissage,
+                // so NONE is its normal starting state here, not an error. A LEARNED line is
+                // only ever a pre-redesign migration leftover, kept for compatibility.
                 ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
-                if (state == ProgressState.NONE) throw new IllegalStateException("Cannot Stabilise a line before Apprentissage: " + lineId);
-                if (state == ProgressState.LEARNED) { learned.remove(lineId); stabilized.add(lineId); }
+                if (state == ProgressState.NONE || state == ProgressState.LEARNED) {
+                    learned.remove(lineId);
+                    stabilized.add(lineId);
+                }
             }
             SharedPreferences.Editor e = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
