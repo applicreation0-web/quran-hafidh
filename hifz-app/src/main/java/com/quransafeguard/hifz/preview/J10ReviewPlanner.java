@@ -151,11 +151,9 @@ final class J10ReviewPlanner {
     Map<String, LocalDate> snapshot() { return store.snapshot(); }
 
     private int[] remainingCapacityByDayMinutes(LocalDate start) {
-        int[] out = scheduledCapacityByDayMinutes(start, J10ReviewPolicy.FORECAST_DAYS,
-            prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
+        int[] out = scheduledCapacityByDayMinutes(start, J10ReviewPolicy.FORECAST_DAYS);
         if (out.length == 0) return out;
-        DailyPlan todayPlan = HifzSchedule.INSTANCE.planFor(start.getDayOfWeek(),
-            prefs.recentSabqi().size(), prefs.recentConsolidationActivatedOn() != null);
+        DailyPlan todayPlan = HifzSchedule.INSTANCE.planFor(start.getDayOfWeek());
         int consumed = consumedMinutes(todayPlan.getMorning().getKind(), todayPlan.getMorning().getTargetMinutes())
             + consumedMinutes(todayPlan.getEvening().getKind(), todayPlan.getEvening().getTargetMinutes());
         out[0] = Math.max(0, out[0] - consumed);
@@ -182,13 +180,11 @@ final class J10ReviewPlanner {
         }
     }
 
-    static int[] scheduledCapacityByDayMinutes(LocalDate start, int days,
-                                               int recentBlockCount, boolean consolidationActivated) {
+    static int[] scheduledCapacityByDayMinutes(LocalDate start, int days) {
         if (start == null || days <= 0) return new int[0];
         int[] out = new int[days];
         for (int offset = 0; offset < days; offset++) {
-            DailyPlan plan = HifzSchedule.INSTANCE.planFor(
-                start.plusDays(offset).getDayOfWeek(), Math.max(0, recentBlockCount), consolidationActivated);
+            DailyPlan plan = HifzSchedule.INSTANCE.planFor(start.plusDays(offset).getDayOfWeek());
             out[offset] = reusableCapacityMinutes(
                     plan.getMorning().getKind(), plan.getMorning().getTargetMinutes())
                 + reusableCapacityMinutes(
@@ -211,10 +207,9 @@ final class J10ReviewPlanner {
         return kind == SessionKind.OLD_ITQAN_MURAJAAH;
     }
 
-    static int scheduledCapacityMinutes(LocalDate start, int days,
-                                        int recentBlockCount, boolean consolidationActivated) {
+    static int scheduledCapacityMinutes(LocalDate start, int days) {
         int total = 0;
-        for (int value : scheduledCapacityByDayMinutes(start, days, recentBlockCount, consolidationActivated)) {
+        for (int value : scheduledCapacityByDayMinutes(start, days)) {
             total += value;
         }
         return total;

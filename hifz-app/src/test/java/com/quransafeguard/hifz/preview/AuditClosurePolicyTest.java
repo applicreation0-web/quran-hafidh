@@ -28,16 +28,6 @@ public final class AuditClosurePolicyTest {
         assertEquals("Lun", WeeklyDashboardPlanner.day(today.plusDays(1), today));
     }
 
-    @Test public void consolidationAttendanceIsDurableUniqueSortedAndRangeFiltered() {
-        LocalDate d1 = LocalDate.of(2026, 1, 4);
-        LocalDate d2 = LocalDate.of(2026, 1, 11);
-        LocalDate d3 = LocalDate.of(2026, 1, 18);
-        List<LocalDate> attendance = ConsolidationAttendance.add(Arrays.asList(d2, d1), d2);
-        attendance = ConsolidationAttendance.add(attendance, d3);
-        assertEquals(Arrays.asList(d1, d2, d3), attendance);
-        assertEquals(Arrays.asList(d2, d3), ConsolidationAttendance.between(attendance, d2, d3));
-    }
-
     @Test public void forcedPromotionHasAVisibleDistinctAnchoringOrigin() {
         assertEquals("FORCED_PROMOTION", AnchoringQueue.Origin.valueOf("FORCED_PROMOTION").name());
         assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.originFor(true, true));

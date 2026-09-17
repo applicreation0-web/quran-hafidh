@@ -746,11 +746,6 @@ public final class HifzPrefs {
         if (ordinalBetween(murajaah, tailStart, tailEnd)) murajaah = new VerseRef(2, 1);
         LocalDate migrationDay = HifzClock.today();
         String recent = normalizeRecentJson(p.getString("recentSabqi", "[]"), migrationDay);
-        String activation = p.getString("recentConsolidationActivatedOn", "");
-        if ((activation == null || activation.isEmpty())
-                && recentCount(recent) >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
-            activation = migrationDay.toString();
-        }
 
         SharedPreferences.Editor e = p.edit()
             .putString("itqanRanges", rangesJson(normalizeRanges(base)))
@@ -759,8 +754,6 @@ public final class HifzPrefs {
             .putString("legacyMurajaahPromotedRanges", rangesJson(normalizeRanges(legacy)))
             .putString("forcedPromotedRanges", "[]")
             .putString("recentSabqi", recent)
-            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
-            .putString("consolidationAttendanceDates", "[]")
             .putString("murajaahCursor", murajaah.toString())
             .putString("anchoringQueue", p.getString("anchoringQueue", "[]"))
             .putBoolean("anchoringQueueInitialized", p.getBoolean("anchoringQueueInitialized", false))
@@ -1148,14 +1141,8 @@ public final class HifzPrefs {
         LocalDate blockDate = safeDate(date, null);
         if (blockDate == null) blockDate = HifzClock.today();
         queue.add(new RecentSabqi(startLine, endLine, blockDate, 0));
-        String activation = p.getString("recentConsolidationActivatedOn", "");
-        if ((activation == null || activation.isEmpty())
-                && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
-            activation = blockDate.toString();
-        }
         return p.edit()
             .putString("recentSabqi", recentJson(queue))
-            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
             .putInt("sabqiLineCursor", nextLineCursor)
             .putInt("sabqiRep", 0)
             .putInt("sabqiAssisted", 0)
@@ -1196,21 +1183,20 @@ public final class HifzPrefs {
             LocalDate blockDate = safeDate(date, null);
             if (blockDate == null) blockDate = HifzClock.today();
             queue.add(new RecentSabqi(startLine, endLine, blockDate, 0));
-            String activation = p.getString("recentConsolidationActivatedOn", "");
-            if ((activation == null || activation.isEmpty())
-                    && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) activation = blockDate.toString();
-            return p.edit()
+            java.util.Map<String, String> snowball = weeklySnowballAppendEntries(
+                ConsolidationCycleEngine.Family.LEARNING, lineIds, blockDate);
+            SharedPreferences.Editor e = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
                 .putString("recentSabqi", recentJson(queue))
-                .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
                 .putInt("sabqiLineCursor", nextLineCursor)
                 .putInt("sabqiRep", 0).putInt("sabqiAssisted", 0).putLong("sabqiElapsedMs", 0L)
                 .putString("sabqiTodayReviewDate", date).putInt("sabqiTodayReviewStartLine", startLine)
                 .putInt("sabqiTodayReviewEndLine", endLine).putLong("sabqi_today_reviewElapsedMs", 0L)
-                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label)
-                .commit();
+                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label);
+            for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
+            return e.commit();
         }
     }
 
@@ -1334,6 +1320,9 @@ public final class HifzPrefs {
                     stabilized.add(lineId);
                 }
             }
+            LocalDate blockDate = safeDate(date, HifzClock.today());
+            java.util.Map<String, String> snowball = weeklySnowballAppendEntries(
+                ConsolidationCycleEngine.Family.STABILIZATION, lineIds, blockDate);
             SharedPreferences.Editor e = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
@@ -1346,6 +1335,7 @@ public final class HifzPrefs {
                 .putString("lastItqanDate", date).putString("lastItqanLabel", label)
                 .putString("lastItqanCreditStart", unitStart.toString())
                 .putString("lastItqanCreditEnd", unitEnd.toString());
+            for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return e.commit();
         }
@@ -1590,60 +1580,95 @@ public final class HifzPrefs {
         return null;
     }
 
-    /** Frozen candidates for one grouped Consolidation session: exact physical Stabilisation units. */
-    List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(GeometryRepository geometry, int maxUnits) {
-        if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
-        if (maxUnits < 1 || maxUnits > 3) throw new IllegalArgumentException("Consolidation group size must be 1..3");
-        LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
-        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+    private static String snowballAnchorKey(ConsolidationCycleEngine.Family family) {
+        return family == ConsolidationCycleEngine.Family.LEARNING
+            ? "learningSnowballWeekAnchor" : "stabilizationSnowballWeekAnchor";
+    }
+
+    private static String snowballUnitsKey(ConsolidationCycleEngine.Family family) {
+        return family == ConsolidationCycleEngine.Family.LEARNING
+            ? "learningSnowballUnitIds" : "stabilizationSnowballUnitIds";
+    }
+
+    private static LocalDate mondayOf(LocalDate date) {
+        return date.minusDays(date.getDayOfWeek().getValue() - 1L);
+    }
+
+    /**
+     * This week's (Monday-anchored) accumulated snowball units, or an empty array if the stored
+     * accumulator belongs to an earlier, never Sunday-reviewed week — that week's evening work is
+     * discarded rather than carried forward or allowed to grow past three units.
+     */
+    private JSONArray rolledSnowballUnits(ConsolidationCycleEngine.Family family, LocalDate today) {
+        String weekAnchor = mondayOf(today).toString();
+        if (!weekAnchor.equals(p.getString(snowballAnchorKey(family), ""))) return new JSONArray();
+        try { return new JSONArray(p.getString(snowballUnitsKey(family), "[]")); }
+        catch (Exception error) { return new JSONArray(); }
+    }
+
+    /**
+     * The {anchor, units} pair a state-changing edit should merge in atomically so today's fresh
+     * Appris/Stabilisé physical unit joins this week's Renforcement/Consolidation snowball in the
+     * very same commit that created it.
+     */
+    private java.util.Map<String, String> weeklySnowballAppendEntries(
+            ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
+        JSONArray current = rolledSnowballUnits(family, today);
+        if (current.length() < 3) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+        java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
+        out.put(snowballAnchorKey(family), mondayOf(today).toString());
+        out.put(snowballUnitsKey(family), current.toString());
+        return out;
+    }
+
+    /** This week's accumulated snowball units, tagged for the given review pass. */
+    private List<ConsolidationCycleEngine.Unit> weeklySnowballUnits(
+            ConsolidationCycleEngine.Family family, LocalDate today, ConsolidationCycleEngine.Protocol protocol) {
+        JSONArray current = rolledSnowballUnits(family, today);
         ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
-        for (AnchoringQueue.Entry entry : AnchoringQueue.visitOrder(anchoringQueue(), anchoringQueueIndex())) {
-            VerseRef start = GeometryRepository.parseVerse(entry.start);
-            VerseRef end = GeometryRepository.parseVerse(entry.end);
-            List<String> entryIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end, geometry);
-            if (entryIds.isEmpty()) continue;
-            List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(entryIds);
-            List<StabilizationHalfPagePolicy.Unit> planned = StabilizationHalfPagePolicy.planPage(physicalLines);
-            List<StabilizationHalfPagePolicy.Unit> ready = ConsolidationPhysicalUnitPolicy.readyUnits(
-                planned, stabilized, acquired, maxUnits - out.size());
-            ConsolidationCycleEngine.Protocol protocol = entry.protocol == AnchoringQueue.Protocol.LIGHT
-                ? ConsolidationCycleEngine.Protocol.LIGHT : ConsolidationCycleEngine.Protocol.FULL;
-            for (StabilizationHalfPagePolicy.Unit unit : ready) {
-                out.add(new ConsolidationCycleEngine.Unit(
-                    ConsolidationPhysicalUnitPolicy.encodeLineUnit(unit.lineIds), protocol));
-                if (out.size() >= maxUnits) return Collections.unmodifiableList(out);
-            }
+        for (int i = 0; i < current.length(); i++) {
+            out.add(new ConsolidationCycleEngine.Unit(current.optString(i), protocol));
         }
         return Collections.unmodifiableList(out);
     }
 
-    /**
-     * Frozen candidates for one grouped Renforcement session: exact physical Leçon-neuve (Sabqi)
-     * blocks. Sabqi is never fractionated (always exactly five lines) and never passes through
-     * Stabilisation, so this mirrors {@link #stabilizedConsolidationUnits} but reads the Appris
-     * set and the recentSabqi queue instead of the Ancrage queue.
-     */
-    List<ConsolidationCycleEngine.Unit> learningConsolidationUnits(GeometryRepository geometry, int maxUnits) {
-        if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
-        if (maxUnits < 1 || maxUnits > 3) throw new IllegalArgumentException("Consolidation group size must be 1..3");
-        LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
-        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-        ArrayList<StabilizationHalfPagePolicy.Unit> planned = new ArrayList<>();
-        for (RecentSabqi item : canonicalRecentOrder(recentSabqi())) {
-            ArrayList<String> ids = new ArrayList<>();
-            for (int i = item.startLine; i <= item.endLine; i++) ids.add(geometry.line(i).id);
-            int page = geometry.line(item.startLine).page;
-            int surah = geometry.line(item.startLine).verses.get(0).getSurah();
-            planned.add(new StabilizationHalfPagePolicy.Unit(page, surah, ids));
-        }
-        List<StabilizationHalfPagePolicy.Unit> ready = ConsolidationPhysicalUnitPolicy.readyUnits(
-            planned, learned, acquired, maxUnits);
-        ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
-        for (StabilizationHalfPagePolicy.Unit unit : ready) {
-            out.add(new ConsolidationCycleEngine.Unit(
-                ConsolidationPhysicalUnitPolicy.encodeLineUnit(unit.lineIds), ConsolidationCycleEngine.Protocol.LEARNING37));
-        }
-        return Collections.unmodifiableList(out);
+    /** Clears this week's snowball accumulator once its Sunday ×5 final review has graduated it. */
+    boolean clearWeeklySnowball(ConsolidationCycleEngine.Family family) {
+        return p.edit().putString(snowballUnitsKey(family), "[]").commit();
+    }
+
+    /** Tonight's Consolidation snowball: this week's accumulated Stabilisation units, ×5 each. */
+    List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
+        return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
+            ConsolidationCycleEngine.Protocol.SNOWBALL);
+    }
+
+    /** Tonight's Renforcement snowball: this week's accumulated Apprentissage units, ×10 each. */
+    List<ConsolidationCycleEngine.Unit> learningConsolidationUnits(LocalDate today) {
+        return weeklySnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today,
+            ConsolidationCycleEngine.Protocol.SNOWBALL);
+    }
+
+    /** Sunday's ×5 final review: the same week's accumulated Stabilisation units. */
+    List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {
+        return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL);
+    }
+
+    /** Sunday's ×5 final review: the same week's accumulated Apprentissage units. */
+    List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {
+        return weeklySnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL);
+    }
+
+    public String lastLearningSnowballEveningDate() { return p.getString("lastLearningSnowballEveningDate", ""); }
+    public String lastStabilizationSnowballEveningDate() { return p.getString("lastStabilizationSnowballEveningDate", ""); }
+
+    /** Closes tonight's evening snowball repetitions without graduating anything (Sunday does that). */
+    boolean completeSnowballEvening(ConsolidationCycleEngine.Family family, String date) {
+        String key = family == ConsolidationCycleEngine.Family.LEARNING
+            ? "lastLearningSnowballEveningDate" : "lastStabilizationSnowballEveningDate";
+        return p.edit().putString(key, date).remove(consolidationStateKey(family)).commit();
     }
 
     /** Fail and defer the exact page displayed, even when it is not the physical queue head. */
@@ -1899,8 +1924,6 @@ public final class HifzPrefs {
                 }
             }
 
-            LocalDate completed = safeDate(date, HifzClock.today());
-            List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
             return p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
@@ -1910,7 +1933,7 @@ public final class HifzPrefs {
                 .putString("anchoringQueue", anchoringQueueJson(keptQueue))
                 .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", nextIndex)
                 .putString("lastRecentSabqiReviewDate", date).putString("lastRecentSabqiReviewLabel", label)
-                .putString("consolidationAttendanceDates", attendanceJson(attendance))
+                .putString(snowballUnitsKey(ConsolidationCycleEngine.Family.STABILIZATION), "[]")
                 .remove(consolidationStateKey(ConsolidationCycleEngine.Family.STABILIZATION))
                 .commit();
         }
@@ -1979,6 +2002,7 @@ public final class HifzPrefs {
                 .putBoolean("anchoringQueueInitialized", false)
                 .putString("lastLearningConsolidationDate", date)
                 .putString("lastLearningConsolidationLabel", label)
+                .putString(snowballUnitsKey(ConsolidationCycleEngine.Family.LEARNING), "[]")
                 .remove(consolidationStateKey(ConsolidationCycleEngine.Family.LEARNING))
                 .commit();
         }
@@ -2039,14 +2063,8 @@ public final class HifzPrefs {
         List<RecentSabqi> queue = recentSabqi();
         LocalDate now = HifzClock.today();
         queue.add(new RecentSabqi(start, end, now, 0));
-        String activation = p.getString("recentConsolidationActivatedOn", "");
-        if ((activation == null || activation.isEmpty())
-                && queue.size() >= HifzSchedule.RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION) {
-            activation = now.toString();
-        }
         p.edit()
             .putString("recentSabqi", recentJson(queue))
-            .putString("recentConsolidationActivatedOn", activation == null ? "" : activation)
             .apply();
     }
 

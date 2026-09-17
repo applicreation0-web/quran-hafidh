@@ -48,24 +48,6 @@ public final class AstraFixPolicyTest {
         assertEquals(30_000L, J10SessionBudget.addConsumed(30_000L, -1L));
     }
 
-    @Test public void lateConsolidationAttendanceCanEventuallyPromote() {
-        LocalDate added = LocalDate.of(2026, 1, 1);
-        LocalDate through = LocalDate.of(2026, 6, 30);
-        List<LocalDate> completed = new ArrayList<>();
-        LocalDate d = added.plusDays(91);
-        while (d.getDayOfWeek() != java.time.DayOfWeek.SUNDAY) d = d.plusDays(1);
-        for (int i = 0; i < 17; i++) {
-            completed.add(d);
-            d = d.plusWeeks(1);
-        }
-
-        RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
-            added, through, added, completed, 20, true);
-
-        assertTrue("valid later Sundays must recover attendance debt", decision.promote);
-        assertTrue(decision.completedSessions >= decision.requiredSessions);
-    }
-
     @Test public void newPromotionIsInsertedBeforePendingReconstruction() {
         AnchoringQueue.Entry reconstruction = new AnchoringQueue.Entry(
             "49:1", "49:5", AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 0);

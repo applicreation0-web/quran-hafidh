@@ -8,7 +8,13 @@ import java.util.List;
 /** Pure immutable state machine for grouped Consolidation cycles and frozen session plans. */
 final class ConsolidationCycleEngine {
     enum Family { LEARNING, STABILIZATION }
-    enum Protocol { LEARNING37, LIGHT, FULL }
+    /**
+     * LEARNING37/LIGHT/FULL are the frozen quota tables from the original per-progression
+     * boule de neige design; SNOWBALL/SNOWBALL_FINAL back the weekday-pinned weekly snowball
+     * that replaced it (evening ×10 per unit, Sunday ×5 final review per unit), and apply
+     * uniformly regardless of family, group size or position.
+     */
+    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL }
 
     static final class Unit {
         private final String id;
@@ -231,6 +237,10 @@ final class ConsolidationCycleEngine {
                 return position == 0
                     ? copy(5, 2, 2, 2, 3)
                     : copy(5, 1, 2, 2, 3);
+            case SNOWBALL:
+                return copy(10, 0, 0, 0, 0);
+            case SNOWBALL_FINAL:
+                return copy(5, 0, 0, 0, 0);
             default:
                 throw new IllegalArgumentException("unsupported protocol");
         }
@@ -265,6 +275,7 @@ final class ConsolidationCycleEngine {
 
     private static void validateUnitForFamily(Family family, Unit unit) {
         if (unit == null) throw new IllegalArgumentException("unit required");
+        if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL) return;
         if (family == Family.LEARNING && unit.protocol() != Protocol.LEARNING37) {
             throw new IllegalArgumentException("learning cycle requires LEARNING37 protocol");
         }

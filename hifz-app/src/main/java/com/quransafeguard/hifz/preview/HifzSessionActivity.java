@@ -33,6 +33,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     public static final String ITQAN = "ITQAN";
     public static final String RECENT_SABQI_REVIEW = "RECENT_SABQI_REVIEW";
     public static final String LEARNING_CONSOLIDATION = "LEARNING_CONSOLIDATION";
+    public static final String CONSOLIDATION_FINAL = "CONSOLIDATION_FINAL";
+    public static final String LEARNING_FINAL = "LEARNING_FINAL";
     public static final String MURAJAAH = "MURAJAAH";
 
     private String mode;
@@ -71,7 +73,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean revealedThisRep;
     private Button revealButton;
     private Button murajaahFinishButton;
-    private int recentReviewIndex;
     private LocalDate sessionDate;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
@@ -81,6 +82,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         mode = getIntent().getStringExtra(EXTRA_MODE);
         if (!SABQI.equals(mode) && !SABQI_TODAY_REVIEW.equals(mode) && !ITQAN.equals(mode)
                 && !RECENT_SABQI_REVIEW.equals(mode) && !LEARNING_CONSOLIDATION.equals(mode)
+                && !CONSOLIDATION_FINAL.equals(mode) && !LEARNING_FINAL.equals(mode)
                 && !MURAJAAH.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
@@ -105,7 +107,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;
         }
-        recentReviewIndex = prefs.recentSabqiReviewIndex();
         murajaahActualEnd = prefs.murajaahActualEnd();
         clock = new SessionClock(prefs.elapsedFor(mode), elapsed -> {
             if (timerText != null) {
@@ -190,6 +191,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             else if (ITQAN.equals(mode)) renderItqan();
             else if (RECENT_SABQI_REVIEW.equals(mode)) renderConsolidationCycle();
             else if (LEARNING_CONSOLIDATION.equals(mode)) renderLearningConsolidationCycle();
+            else if (CONSOLIDATION_FINAL.equals(mode)) renderConsolidationFinalReview();
+            else if (LEARNING_FINAL.equals(mode)) renderLearningFinalReview();
             else renderMurajaah();
         } catch (RuntimeException error) {
             sessionCompleted = true;
@@ -328,66 +331,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Calendar/attendance promotion; display order never determines mastery order. */
-private void rebalanceRecentWindow(LocalDate today) {
-    List<HifzPrefs.RecentSabqi> recent = prefs.recentSabqi();
-    if (recent.isEmpty()) return;
-    List<HifzPrefs.RecentSabqi> canonical = HifzPrefs.canonicalRecentOrder(recent);
-    LocalDate activation = prefs.recentConsolidationActivatedOn();
-    if (activation == null && recent.size() <= RecentPromotionPolicy.MAX_RECENT_BLOCKS) return;
-    LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
-    List<LocalDate> completed = activation == null
-        ? Collections.emptyList()
-        : prefs.consolidationAttendanceDates(plannedStart, today);
-
-    int oldestStart = canonical.get(0).startLine;
-    int safeEnd = -1;
-    int safeBlocks = 0;
-    boolean forceOldest = canonical.size() > RecentPromotionPolicy.MAX_RECENT_BLOCKS;
-    for (int i = 0; i < canonical.size(); i++) {
-        HifzPrefs.RecentSabqi item = canonical.get(i);
-        if (i > 0 && item.startLine != canonical.get(i - 1).endLine + 1) break;
-        RecentPromotionPolicy.Decision decision = RecentPromotionPolicy.evaluate(
-            item.addedOn, today, plannedStart, completed, canonical.size(), i == 0);
-        boolean include = decision.promote || (forceOldest && safeEnd < 0);
-        if (!include) break;
-        GeometryRepository.FiveLineBlock block = geometry.fiveLineBlock(item.startLine);
-        if (!block.endsInsideVerse) {
-            safeEnd = item.endLine;
-            safeBlocks = i + 1;
-            if (forceOldest) break;
-        }
-    }
-    if (safeEnd < oldestStart || safeBlocks <= 0) return;
-
-    ArrayList<VerseRef> complete = new ArrayList<>(geometry.versesFullyCoveredByLines(oldestStart, safeEnd));
-    if (complete.isEmpty()) return;
-    if (!prefs.addPromotedVerses(complete, forceOldest)) {
-        onError("Impossible d’enregistrer la promotion de la Consolidation.");
-        return;
-    }
-    List<HifzPrefs.RecentSabqi> promotedBlocks = new ArrayList<>(canonical.subList(0, safeBlocks));
-    if (!prefs.removeRecentBlocks(promotedBlocks)) {
-        onError("Impossible de retirer les blocs promus de la Consolidation.");
-        return;
-    }
-    recentReviewIndex = prefs.recentSabqiReviewIndex();
-}
-
-    private RecentPromotionPolicy.Decision promotionStatus(HifzPrefs.RecentSabqi item, int blockCount, boolean oldest, LocalDate today) {
-        LocalDate activation = prefs.recentConsolidationActivatedOn();
-        LocalDate plannedStart = activation == null ? today.plusDays(1) : activation;
-        List<LocalDate> completed = activation == null
-            ? Collections.emptyList()
-            : prefs.consolidationAttendanceDates(plannedStart, today);
-        return RecentPromotionPolicy.evaluate(item.addedOn, today, plannedStart, completed, blockCount, oldest);
-    }
-
-    private void captureConsolidationAndRebalance() {
-        DashboardLedger ledger = new DashboardLedger(this);
-        ledger.capture(prefs, sessionDate);
-        rebalanceRecentWindow(sessionDate);
-    }
 
     private void renderSabqiTodayReview() {
         String today = sessionDate.toString();
@@ -421,49 +364,41 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (!timedSessionLimitReached) addRoundAction("↻", "Répétition", v -> renderMode());
     }
 
-    private void renderConsolidationCycle() {
+    /** Shared plumbing for every grouped ×N repetition cycle (evening snowball or Sunday final review). */
+    private void renderGroupedCycle(List<ConsolidationCycleEngine.Unit> units, ConsolidationCycleEngine.Family family,
+                                     String cycleIdPrefix, String displayName, String emptyMessage,
+                                     Runnable onValidate) {
         String today = sessionDate.toString();
-        if (today.equals(prefs.lastRecentSabqiReviewDate())) {
-            sessionCompleted = true;
-            program.setText("Consolidation · séance validée");
-            progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
-            return;
-        }
-        consolidationSession = prefs.restoreConsolidationSession(
-            consolidationEngine, ConsolidationCycleEngine.Family.STABILIZATION);
+        consolidationSession = prefs.restoreConsolidationSession(consolidationEngine, family);
         if (consolidationSession == null) {
-            List<ConsolidationCycleEngine.Unit> units = prefs.stabilizedConsolidationUnits(geometry, 3);
             if (units.isEmpty()) {
                 sessionCompleted = true;
-                program.setText("Consolidation · rien à consolider");
-                progress.setText("Aucune unité Stabilisée en attente.");
+                program.setText(displayName + " · rien à faire");
+                progress.setText(emptyMessage);
                 return;
             }
             ConsolidationCycleEngine.Cycle cycle = null;
             for (int i = 0; i < units.size(); i++) {
                 ConsolidationCycleEngine.Unit unit = units.get(i);
                 cycle = i == 0
-                    ? consolidationEngine.startCycle("stabilization-" + today, ConsolidationCycleEngine.Family.STABILIZATION, unit)
+                    ? consolidationEngine.startCycle(cycleIdPrefix + today, family, unit)
                     : consolidationEngine.addUnit(cycle, unit);
             }
             consolidationSession = consolidationEngine.openSession(cycle, "session-" + today);
             if (!prefs.persistConsolidationSession(consolidationSession))
-                throw new IllegalStateException("Impossible d’enregistrer la Consolidation ouverte");
+                throw new IllegalStateException("Impossible d’enregistrer la séance de " + displayName + " ouverte");
         }
         if (consolidationSession.readyToClose()) {
             sessionCompleted = true;
-            program.setText("Consolidation · prête à valider");
+            program.setText(displayName + " · prêt à valider");
             progress.setText("Toutes les répétitions du groupe sont terminées.");
-            addRoundAction("✓", "Valider", v -> runValidationSafely(this::validateConsolidationCycle));
+            addRoundAction("✓", "Valider", v -> runValidationSafely(onValidate));
             return;
         }
         int position = consolidationSession.nextUnitIndex();
         List<String> exactLineIds = ConsolidationPhysicalUnitPolicy.decodeLineUnit(
             consolidationSession.unitIds().get(position));
         List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(exactLineIds);
-        List<StabilizationHalfPagePolicy.Unit> verified = StabilizationHalfPagePolicy.planPage(physicalLines);
-        if (verified.size() != 1 || !verified.get(0).lineIds.equals(exactLineIds))
-            throw new IllegalStateException("Unité physique de Consolidation invalide");
         currentPage = physicalLines.get(0).page;
         unitFirstPage = unitLastPage = currentPage;
         currentLineIds = new ArrayList<>(exactLineIds);
@@ -472,25 +407,90 @@ private void rebalanceRecentWindow(LocalDate today) {
         sessionCompleted = false;
         int[] vector = consolidationSession.stageVectorAt(position);
         int target = vector[consolidationSession.stage()];
-        program.setText("Consolidation · " + currentLineIds.size() + " lignes · unité "
+        program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
-        progress.setText("Étape " + (consolidationSession.stage() + 1) + "/5 · "
-            + consolidationSession.donePerStage() + "/" + target);
+        progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target);
         showCurrent();
-        addRoundAction("↻", "Répétition", v -> completeConsolidationRep());
+        addRoundAction("↻", "Répétition", v -> completeGroupedCycleRep());
     }
 
-    private void completeConsolidationRep() {
+    private void completeGroupedCycleRep() {
         if (!takeRepLock() || consolidationSession == null || consolidationSession.readyToClose()) return;
         consolidationSession = consolidationEngine.recordRepetition(consolidationSession);
         if (!prefs.persistConsolidationSession(consolidationSession)) {
-            onError("Impossible d’enregistrer la répétition de Consolidation.");
+            onError("Impossible d’enregistrer la répétition.");
             return;
         }
         renderMode();
     }
 
+    /** Mardi/Jeudi/Samedi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
+    private void renderConsolidationCycle() {
+        String today = sessionDate.toString();
+        if (today.equals(prefs.lastStabilizationSnowballEveningDate())) {
+            sessionCompleted = true;
+            program.setText("Consolidation · séance validée");
+            progress.setText("Boule de neige du soir terminée.");
+            return;
+        }
+        renderGroupedCycle(prefs.stabilizedConsolidationUnits(sessionDate), ConsolidationCycleEngine.Family.STABILIZATION,
+            "stabilization-", "Consolidation", "Aucune unité Stabilisée cette semaine.",
+            this::validateConsolidationCycle);
+    }
+
     private void validateConsolidationCycle() {
+        if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        if (!prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION, sessionDate.toString())) {
+            onError("Impossible d’enregistrer la Consolidation.");
+            return;
+        }
+        consolidationSession = consolidationEngine.closeSession(consolidationSession);
+        closeClockForCompletedSession();
+        mushaf.cycleCompleted();
+        renderMode();
+    }
+
+    /** Lundi/Mercredi/Vendredi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
+    private void renderLearningConsolidationCycle() {
+        String today = sessionDate.toString();
+        if (today.equals(prefs.lastLearningSnowballEveningDate())) {
+            sessionCompleted = true;
+            program.setText("Renforcement · séance validée");
+            progress.setText("Boule de neige du soir terminée.");
+            return;
+        }
+        renderGroupedCycle(prefs.learningConsolidationUnits(sessionDate), ConsolidationCycleEngine.Family.LEARNING,
+            "learning-", "Renforcement", "Aucun bloc d’Apprentissage cette semaine.",
+            this::validateLearningConsolidationCycle);
+    }
+
+    private void validateLearningConsolidationCycle() {
+        if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        if (!prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.LEARNING, sessionDate.toString())) {
+            onError("Impossible d’enregistrer le Renforcement.");
+            return;
+        }
+        consolidationSession = consolidationEngine.closeSession(consolidationSession);
+        closeClockForCompletedSession();
+        mushaf.cycleCompleted();
+        renderMode();
+    }
+
+    /** Dimanche matin : ×5 final de la boule de neige de la semaine — graduate vers Acquis. */
+    private void renderConsolidationFinalReview() {
+        String today = sessionDate.toString();
+        if (today.equals(prefs.lastRecentSabqiReviewDate())) {
+            sessionCompleted = true;
+            program.setText("Consolidation · séance validée");
+            progress.setText(prefs.lastRecentSabqiReviewLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastRecentSabqiReviewLabel()));
+            return;
+        }
+        renderGroupedCycle(prefs.stabilizationSnowballFinalUnits(sessionDate), ConsolidationCycleEngine.Family.STABILIZATION,
+            "stabilization-final-", "Consolidation", "Aucune boule de neige à finaliser cette semaine.",
+            this::validateConsolidationFinalReview);
+    }
+
+    private void validateConsolidationFinalReview() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         String label = "Consolidation · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
         if (!prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
@@ -503,8 +503,8 @@ private void rebalanceRecentWindow(LocalDate today) {
         renderMode();
     }
 
-    /** Sabqi Renforcement: same engine/UI as Ancrage Consolidation, sourced from recentSabqi. */
-    private void renderLearningConsolidationCycle() {
+    /** Dimanche matin : ×5 final de la boule de neige de la semaine — graduate vers Acquis. */
+    private void renderLearningFinalReview() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastLearningConsolidationDate())) {
             sessionCompleted = true;
@@ -512,65 +512,12 @@ private void rebalanceRecentWindow(LocalDate today) {
             progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
             return;
         }
-        consolidationSession = prefs.restoreConsolidationSession(
-            consolidationEngine, ConsolidationCycleEngine.Family.LEARNING);
-        if (consolidationSession == null) {
-            List<ConsolidationCycleEngine.Unit> units = prefs.learningConsolidationUnits(geometry, 3);
-            if (units.isEmpty()) {
-                sessionCompleted = true;
-                program.setText("Renforcement · rien à renforcer");
-                progress.setText("Aucun bloc d’Apprentissage en attente.");
-                return;
-            }
-            ConsolidationCycleEngine.Cycle cycle = null;
-            for (int i = 0; i < units.size(); i++) {
-                ConsolidationCycleEngine.Unit unit = units.get(i);
-                cycle = i == 0
-                    ? consolidationEngine.startCycle("learning-" + today, ConsolidationCycleEngine.Family.LEARNING, unit)
-                    : consolidationEngine.addUnit(cycle, unit);
-            }
-            consolidationSession = consolidationEngine.openSession(cycle, "session-" + today);
-            if (!prefs.persistConsolidationSession(consolidationSession))
-                throw new IllegalStateException("Impossible d’enregistrer le Renforcement ouvert");
-        }
-        if (consolidationSession.readyToClose()) {
-            sessionCompleted = true;
-            program.setText("Renforcement · prêt à valider");
-            progress.setText("Toutes les répétitions du groupe sont terminées.");
-            addRoundAction("✓", "Valider", v -> runValidationSafely(this::validateLearningConsolidationCycle));
-            return;
-        }
-        int position = consolidationSession.nextUnitIndex();
-        List<String> exactLineIds = ConsolidationPhysicalUnitPolicy.decodeLineUnit(
-            consolidationSession.unitIds().get(position));
-        List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(exactLineIds);
-        currentPage = physicalLines.get(0).page;
-        unitFirstPage = unitLastPage = currentPage;
-        currentLineIds = new ArrayList<>(exactLineIds);
-        currentSelection = geometry.versesOnLines(currentLineIds);
-        currentMask = 0;
-        sessionCompleted = false;
-        int[] vector = consolidationSession.stageVectorAt(position);
-        int target = vector[consolidationSession.stage()];
-        program.setText("Renforcement · " + currentLineIds.size() + " lignes · unité "
-            + (position + 1) + "/" + consolidationSession.sessionGroupSize());
-        progress.setText("Étape " + (consolidationSession.stage() + 1) + "/5 · "
-            + consolidationSession.donePerStage() + "/" + target);
-        showCurrent();
-        addRoundAction("↻", "Répétition", v -> completeLearningConsolidationRep());
+        renderGroupedCycle(prefs.learningSnowballFinalUnits(sessionDate), ConsolidationCycleEngine.Family.LEARNING,
+            "learning-final-", "Renforcement", "Aucune boule de neige à finaliser cette semaine.",
+            this::validateLearningFinalReview);
     }
 
-    private void completeLearningConsolidationRep() {
-        if (!takeRepLock() || consolidationSession == null || consolidationSession.readyToClose()) return;
-        consolidationSession = consolidationEngine.recordRepetition(consolidationSession);
-        if (!prefs.persistConsolidationSession(consolidationSession)) {
-            onError("Impossible d’enregistrer la répétition de Renforcement.");
-            return;
-        }
-        renderMode();
-    }
-
-    private void validateLearningConsolidationCycle() {
+    private void validateLearningFinalReview() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         String label = "Renforcement · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
         if (!prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
@@ -596,34 +543,6 @@ private void rebalanceRecentWindow(LocalDate today) {
             return true;
         }
         return false;
-    }
-
-    private boolean completeConsolidation(String today, long elapsedMs) {
-        int lines = metricsStore.consolidationLines();
-        SpeedCalibration.Result calibration = speedStore.calibrateConsolidation(lines, elapsedMs);
-        String raw = HifzSpeedStore.instrumentationLabel(lines, elapsedMs, calibration);
-        if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
-        String label = "Consolidation · " + targetMinutes() + " min · " + raw;
-        if (!prefs.completeRecentSabqiReview(today, recentReviewIndex, label)) {
-            onError("Impossible d’enregistrer la Consolidation.");
-            return false;
-        }
-        metricsStore.clearConsolidation();
-        captureConsolidationAndRebalance();
-        return true;
-    }
-
-    /** Empty recent work is completed explicitly and never falls through to old Stabilisation. */
-    private boolean completeEmptyRecentSabqiSession() {
-        String today = sessionDate.toString();
-        if (today.equals(prefs.lastRecentSabqiReviewDate())) return false;
-        metricsStore.clearConsolidation();
-        boolean ok = prefs.completeRecentSabqiReview(today, 0, "Consolidation · aucun bloc récent");
-        if (ok) {
-            captureConsolidationAndRebalance();
-            closeClockForCompletedSession();
-        }
-        return ok;
     }
 
     private void onTimedSessionLimit(long elapsed) {
@@ -956,7 +875,8 @@ private void rebalanceRecentWindow(LocalDate today) {
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));
         boolean limited=SABQI.equals(mode)||SABQI_TODAY_REVIEW.equals(mode)||ITQAN.equals(mode)
-            ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode);
+            ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
+            ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;showCurrent();
     }
@@ -1018,7 +938,8 @@ private void rebalanceRecentWindow(LocalDate today) {
 
     private void closeClockForCompletedSession(){
         sessionCompleted=true;awaitingValidation=false;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);prefs.clearMaskEntropy(mode);
-        if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)) metricsStore.clearConsolidation();
+        if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)
+            || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode)) metricsStore.clearConsolidation();
     }
     private boolean isTimedMode() {
         return SABQI_TODAY_REVIEW.equals(mode) || MURAJAAH.equals(mode);
@@ -1028,7 +949,8 @@ private void rebalanceRecentWindow(LocalDate today) {
     if (SABQI.equals(mode)) kind = SessionKind.SABQI_NEW;
     else if (SABQI_TODAY_REVIEW.equals(mode)) kind = SessionKind.SABQI_TODAY_REVIEW;
     else if (ITQAN.equals(mode)) kind = SessionKind.ITQAN;
-    else if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
+    else if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)
+        || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
     else kind = SessionKind.OLD_ITQAN_MURAJAAH;
     return HifzSchedule.INSTANCE.targetMinutesFor(kind);
 }
@@ -1038,6 +960,8 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (ITQAN.equals(mode)) return "Stabilisation";
         if (RECENT_SABQI_REVIEW.equals(mode)) return "Consolidation";
         if (LEARNING_CONSOLIDATION.equals(mode)) return "Renforcement";
+        if (CONSOLIDATION_FINAL.equals(mode)) return "Consolidation";
+        if (LEARNING_FINAL.equals(mode)) return "Renforcement";
         return "Révision";
     }
     @Override public void onReady(){

@@ -63,7 +63,7 @@ public final class CanonicalProgressUiSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(settings.contains("section(root,\"Schéma\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
-        assertTrue(settings.contains("Consolidation · déclenchée par progression"));
+        assertTrue(settings.contains("Consolidation · soir Mar/Jeu/Sam"));
         assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
         assertFalse(settings.contains("addRepere(root"));

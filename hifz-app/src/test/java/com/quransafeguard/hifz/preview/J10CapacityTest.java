@@ -14,13 +14,12 @@ import static org.junit.Assert.assertTrue;
 public final class J10CapacityTest {
     /**
      * Ancrage (SessionKind.ITQAN) is the individual demi-page protocol, never a reusable J10
-     * host; only genuine Entretien (Murajaah, Tue/Thu/Sat/Sun evenings) counts. Progression-
-     * triggered Consolidation never changes this either.
+     * host; only genuine Entretien (Murajaah, every evening except Sunday) counts. The weekday-
+     * pinned Renforcement/Consolidation snowball and Sunday's ×5 final review never change this.
      */
-    @Test public void tenDayCapacityIsEntretienOnlyRegardlessOfConsolidationState() {
+    @Test public void tenDayCapacityIsEntretienOnlyEveryEveningExceptSunday() {
         LocalDate sunday = LocalDate.of(2026, 9, 13);
-        assertEquals(360, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 36, true));
-        assertEquals(360, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 0, false));
+        assertEquals(240, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10));
     }
 
     @Test public void productionPriorityIsCappedAtFivePhysicalLines() {

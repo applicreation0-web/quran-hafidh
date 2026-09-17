@@ -149,11 +149,10 @@ data class ScheduledCadence(
 )
 
 object HifzSchedule {
-    const val RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION = 36
     const val EVENING_REVIEW_MINUTES = 30
     const val CONSOLIDATION_MINUTES = 30
     const val ANCHORING_ENVELOPE_MINUTES = 60
-    const val MAINTENANCE_MINUTES = 60
+    const val MAINTENANCE_MINUTES = 30
 
     fun targetMinutesFor(kind: SessionKind): Int = when (kind) {
         SessionKind.SABQI_NEW -> 0
@@ -206,32 +205,23 @@ object HifzSchedule {
         DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> SessionType.MURAJAAH
     }
 
-    fun planFor(day: DayOfWeek, recentBlockCount: Int): DailyPlan =
-        planFor(day, recentBlockCount, false)
-
     /**
-     * A zero target means repetition-driven with no time envelope. Once Sunday Consolidation has
-     * been activated and persisted by the Android state layer, later promotions cannot revert the
-     * programme to four weekly Ancrage mornings simply because the recent queue dips below 36.
+     * A zero target means repetition-driven with no time envelope. Entretien (Murajaah) is now a
+     * fixed nightly touch every evening except Sunday, which instead carries the weekly snowball's
+     * ×5 final review (also repetition-driven, not time-boxed) and no evening slot at all.
      */
-    fun planFor(day: DayOfWeek, recentBlockCount: Int, consolidationActivated: Boolean): DailyPlan = when (day) {
+    fun planFor(day: DayOfWeek): DailyPlan = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
             PlannedSession(SessionKind.SABQI_NEW, targetMinutesFor(SessionKind.SABQI_NEW)),
-            PlannedSession(SessionKind.SABQI_TODAY_REVIEW, targetMinutesFor(SessionKind.SABQI_TODAY_REVIEW))
-        )
-        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> DailyPlan(
-            PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
             PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         )
-        DayOfWeek.SATURDAY -> DailyPlan(
+        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY -> DailyPlan(
             PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
             PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         )
         DayOfWeek.SUNDAY -> DailyPlan(
-            if (consolidationActivated || recentBlockCount >= RECENT_BLOCKS_FOR_SUNDAY_CONSOLIDATION)
-                PlannedSession(SessionKind.RECENT_SABQI_REVIEW, targetMinutesFor(SessionKind.RECENT_SABQI_REVIEW))
-            else PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
+            PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 0),
+            PlannedSession(SessionKind.SABQI_NEW, 0)
         )
     }
 

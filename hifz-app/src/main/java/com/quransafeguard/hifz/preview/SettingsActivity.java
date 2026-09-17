@@ -132,9 +132,9 @@ public final class SettingsActivity extends android.app.Activity {
         section(root,"Schéma");
         TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",12.5f,true);
         schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
-        TextView consolidationSchemaNote=Ui.text(this,"Consolidation · déclenchée par progression",11f,false);
+        TextView consolidationSchemaNote=Ui.text(this,"Consolidation · soir Mar/Jeu/Sam",11f,false);
         consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
-        TextView renforcementSchemaNote=Ui.text(this,"Renforcement (soir d’Apprentissage) et Consolidation (soir de Stabilisation) sont l’effet boule de neige : chacun regroupe 3 unités du jour (Appris ou Stabilisé) dès qu’elles sont prêtes, et se déclenche par progression — jamais par un jour de semaine fixe.",11f,false);
+        TextView renforcementSchemaNote=Ui.text(this,"Renforcement (soir Lun/Mer/Ven) et Consolidation (soir Mar/Jeu/Sam) sont l’effet boule de neige : chaque soir revoit ×10 tous les blocs de la semaine (Appris ou Stabilisé), puis le dimanche matin les revoit une dernière fois ×5 avant de les faire passer en Acquis. Chaque soir inclut aussi 30 min d’Entretien de l’Acquis ; dimanche soir, rien.",11f,false);
         renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
         TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);
         j10SchemaNote.setTextColor(Ui.MUTED);j10SchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10SchemaNote);
@@ -328,7 +328,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Révision · Mar/Jeu/Sam/Dim · 60 min · position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Entretien · chaque soir (Lun-Sam) · 30 min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 

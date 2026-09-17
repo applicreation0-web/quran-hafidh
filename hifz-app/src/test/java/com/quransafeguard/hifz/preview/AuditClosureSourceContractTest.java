@@ -20,15 +20,6 @@ public final class AuditClosureSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void promotionAttendanceNoLongerDependsOnPrunedDashboardHistory() throws Exception {
-        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(session.contains("prefs.consolidationAttendanceDates(plannedStart, today)"));
-        assertFalse(session.contains("completedDates(RECENT_SABQI_REVIEW"));
-        assertTrue(prefs.contains("consolidationAttendanceDates"));
-        assertTrue(prefs.contains("attendanceJson(attendance)"));
-    }
-
     @Test public void anchoringFailureIsAtomicAndSinglePageRetryIsExplicit() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String queue = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/AnchoringQueue.java");

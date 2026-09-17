@@ -34,6 +34,46 @@ public final class ConsolidationCycleEngineTest {
             new int[][]{{5,2,2,2,3},{5,1,2,2,3},{5,1,2,2,3}});
     }
 
+    /** Every weekday-pinned snowball unit gets the same ×10 (evening) or ×5 (Sunday) quota, regardless of group size. */
+    @Test public void snowballProtocolsAreUniformAcrossGroupSizeAndPosition() {
+        for (int size = 1; size <= 3; size++) {
+            for (int position = 0; position < size; position++) {
+                assertArrayEquals(new int[]{10, 0, 0, 0, 0},
+                    ConsolidationCycleEngine.stageVector(ConsolidationCycleEngine.Protocol.SNOWBALL, size, position));
+                assertEquals(10, ConsolidationCycleEngine.quota(ConsolidationCycleEngine.Protocol.SNOWBALL, size, position));
+                assertArrayEquals(new int[]{5, 0, 0, 0, 0},
+                    ConsolidationCycleEngine.stageVector(ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL, size, position));
+                assertEquals(5, ConsolidationCycleEngine.quota(ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL, size, position));
+            }
+        }
+    }
+
+    @Test public void snowballProtocolsAreValidForBothFamilies() {
+        ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
+        engine.startCycle("learning-snowball", ConsolidationCycleEngine.Family.LEARNING,
+            new ConsolidationCycleEngine.Unit("a", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        engine.startCycle("stabilization-snowball", ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("b", ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL));
+    }
+
+    /** Mon→Wed→Fri: a session grows from one unit to three, each still needing ×10 fresh reps. */
+    @Test public void weeklySnowballGrowsUnitsAcrossEveningsAndEachNeedsFullQuotaAgain() {
+        ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle = engine.startCycle("learning-week1",
+            ConsolidationCycleEngine.Family.LEARNING,
+            new ConsolidationCycleEngine.Unit("mon", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        ConsolidationCycleEngine.Session monday = engine.openSession(cycle, "mon-session");
+        for (int i = 0; i < 10; i++) monday = engine.recordRepetition(monday);
+        assertTrue(monday.readyToClose());
+        cycle = engine.closeSession(monday).cycle();
+
+        cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("wed", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        ConsolidationCycleEngine.Session wednesday = engine.openSession(cycle, "wed-session");
+        assertEquals(2, wednesday.sessionGroupSize());
+        for (int i = 0; i < 20; i++) wednesday = engine.recordRepetition(wednesday);
+        assertTrue(wednesday.readyToClose());
+    }
+
     @Test public void mixedStabilizationProtocolsShareFrozenGroupSize() {
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle = engine.startCycle(

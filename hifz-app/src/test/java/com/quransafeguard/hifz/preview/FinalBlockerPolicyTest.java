@@ -29,12 +29,8 @@ public final class FinalBlockerPolicyTest {
     @Test public void j10ForecastCapacityUsesCanonicalRuntimeCadenceOnly() {
         LocalDate monday = LocalDate.of(2026, 9, 14);
         assertArrayEquals(
-            "J10 capacity is Entretien-only: 0 on Sabqi/Ancrage days, 60 on Tue/Thu/Sat/Sun evenings",
-            new int[]{0, 60, 0, 60, 0, 60, 60},
-            J10ReviewPlanner.scheduledCapacityByDayMinutes(monday, 7, 0, false));
-        assertArrayEquals(
-            "progression-triggered Consolidation must not change weekly J10 capacity",
-            new int[]{0, 60, 0, 60, 0, 60, 60},
-            J10ReviewPlanner.scheduledCapacityByDayMinutes(monday, 7, 99, true));
+            "J10 capacity is Entretien-only: 30 min every evening except Sunday, which has none",
+            new int[]{30, 30, 30, 30, 30, 30, 0},
+            J10ReviewPlanner.scheduledCapacityByDayMinutes(monday, 7));
     }
 }

@@ -40,7 +40,10 @@ final class DashboardLedger {
         upsert(prefs.lastSabqiDate(),HifzSessionActivity.SABQI,prefs.lastSabqiLabel(),today);
         upsert(prefs.lastSabqiTodayReviewDate(),HifzSessionActivity.SABQI_TODAY_REVIEW,prefs.lastSabqiTodayReviewLabel(),today);
         upsert(prefs.lastItqanDate(),HifzSessionActivity.ITQAN,prefs.lastItqanLabel(),today);
-        upsert(prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,prefs.lastRecentSabqiReviewLabel(),today);
+        upsert(prefs.lastStabilizationSnowballEveningDate(),HifzSessionActivity.RECENT_SABQI_REVIEW,"Consolidation · boule de neige",today);
+        upsert(prefs.lastLearningSnowballEveningDate(),HifzSessionActivity.LEARNING_CONSOLIDATION,"Renforcement · boule de neige",today);
+        upsert(prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.CONSOLIDATION_FINAL,prefs.lastRecentSabqiReviewLabel(),today);
+        upsert(prefs.lastLearningConsolidationDate(),HifzSessionActivity.LEARNING_FINAL,prefs.lastLearningConsolidationLabel(),today);
         upsert(prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel(),today);
     }
 

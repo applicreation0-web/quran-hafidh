@@ -71,9 +71,9 @@ final class WeeklyDashboardPlanner {
             switch(action){
                 case LEARNING:{
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
-                    DashboardLedger.Record eveningActual=ledger.find(date,HifzSessionActivity.SABQI_TODAY_REVIEW);
+                    DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
+                    DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
                     boolean morningJ10=morningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.SABQI,date);
-                    boolean eveningJ10=eveningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.SABQI_TODAY_REVIEW,date);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
                     if(morningJ10)morning="J10 · créneau utilisé";
                     else if(morningActual!=null)morning="✓ "+compact(morningActual.label);
@@ -82,11 +82,15 @@ final class WeeklyDashboardPlanner {
                         morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · 5 lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
-                    if(eveningJ10)evening="J10 · créneau utilisé";
-                    else if(eveningActual!=null)evening="✓ "+compact(eveningActual.label);
-                    else evening="Apprentissage · reprise · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
-                    boolean m=morningActual!=null||morningJ10,e=eveningActual!=null||eveningJ10;
-                    state=m&&e?"Validé":m?"Reprise à faire":"À faire";
+                    boolean eveningDone=snowballActual!=null&&entretienActual!=null;
+                    if(eveningDone)evening="✓ Renforcement + Entretien";
+                    else{
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        evening="Renforcement + Entretien · "+projected.label;
+                        murajaahCursor=projected.next;
+                    }
+                    boolean m=morningActual!=null||morningJ10;
+                    state=m&&eveningDone?"Validé":m?"Soir à faire":"À faire";
                     break;
                 }
                 case STABILIZATION:{
@@ -114,20 +118,27 @@ final class WeeklyDashboardPlanner {
                         if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
                         else projectedItqanBlockIndex=block;
                     }
-                    state=(actual!=null||j10)?"Validé":"À faire";
+                    boolean morningDone=actual!=null||j10;
+                    DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
+                    DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
+                    boolean eveningDone=snowballActual!=null&&entretienActual!=null;
+                    if(eveningDone)evening="✓ Consolidation + Entretien";
+                    else{
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        evening="Consolidation + Entretien · "+projected.label;
+                        murajaahCursor=projected.next;
+                    }
+                    state=morningDone&&eveningDone?"Validé":morningDone?"Soir à faire":"À faire";
                     break;
                 }
                 case REVISION:{
-                    DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean j10=actual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.MURAJAAH,date);
-                    if(j10)evening="J10 · créneau utilisé";
-                    else if(actual!=null)evening="✓ "+compact(actual.label);
-                    else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
-                        evening="Révision · "+projected.label;
-                        murajaahCursor=projected.next;
-                    }
-                    state=(actual!=null||j10)?"Validé":"À faire";
+                    DashboardLedger.Record learningFinal=ledger.find(date,HifzSessionActivity.LEARNING_FINAL);
+                    DashboardLedger.Record consolidationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
+                    boolean learningDone=learningFinal!=null||prefs.learningSnowballFinalUnits(date).isEmpty();
+                    boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
+                    morning=(learningDone&&consolidationDone)?"✓ Révision finale ×5":"Révision finale ×5 · Renforcement + Consolidation";
+                    evening="—";
+                    state=(learningDone&&consolidationDone)?"Validé":"À faire";
                     break;
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");

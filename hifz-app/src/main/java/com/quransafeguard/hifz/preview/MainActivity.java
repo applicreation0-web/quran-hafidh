@@ -184,12 +184,19 @@ public final class MainActivity extends android.app.Activity {
         return hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(mode,date);
     }
 
+    /**
+     * A past Sunday's weekly snowball final review can never be caught up later — by the time it
+     * would be revisited, the accumulator has already rolled to a new week — so once a Sunday is
+     * no longer today it is treated as satisfied rather than stalling every later cadence day.
+     */
     private boolean cadenceComplete(LocalDate date){
         CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
-            case REVISION:return modeComplete(date,HifzSessionActivity.MURAJAAH);
+            case REVISION:
+                if(!date.equals(HifzClock.today()))return true;
+                return learningFinalResolved(date)&&consolidationFinalResolved(date);
             default:return false;
         }
     }
@@ -204,51 +211,75 @@ public final class MainActivity extends android.app.Activity {
         return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed);
     }
 
-    private boolean progressionConsolidationDue(GeometryRepository g){
-        consolidationNeedsAttention=false;
-        if(g==null)return false;
-        if(HifzClock.today().toString().equals(prefs.lastRecentSabqiReviewDate()))return false;
-        try{
-            ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
-            ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
-                engine,ConsolidationCycleEngine.Family.STABILIZATION);
-            return open!=null || !prefs.stabilizedConsolidationUnits(g,3).isEmpty();
-        }catch(RuntimeException error){
-            consolidationNeedsAttention=true;
-            android.util.Log.e("QuranHifz","Unable to evaluate progression Consolidation",error);
-            return false;
-        }
+    /** Done, or nothing to review this week (rare, e.g. a brand-new install's first week). */
+    private boolean learningFinalResolved(LocalDate date){
+        return date.toString().equals(prefs.lastLearningConsolidationDate())
+            || prefs.learningSnowballFinalUnits(date).isEmpty();
     }
 
-    /** Sabqi Renforcement mirrors Ancrage Consolidation: progression-triggered, not weekday-pinned. */
-    private boolean progressionLearningConsolidationDue(GeometryRepository g){
-        learningConsolidationNeedsAttention=false;
-        if(g==null)return false;
-        if(HifzClock.today().toString().equals(prefs.lastLearningConsolidationDate()))return false;
-        try{
-            ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
-            ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
-                engine,ConsolidationCycleEngine.Family.LEARNING);
-            return open!=null || !prefs.learningConsolidationUnits(g,3).isEmpty();
-        }catch(RuntimeException error){
-            learningConsolidationNeedsAttention=true;
-            android.util.Log.e("QuranHifz","Unable to evaluate progression Renforcement",error);
-            return false;
-        }
+    private boolean consolidationFinalResolved(LocalDate date){
+        return date.toString().equals(prefs.lastRecentSabqiReviewDate())
+            || prefs.stabilizationSnowballFinalUnits(date).isEmpty();
+    }
+
+    /** Lundi/Mercredi/Vendredi soir, once the morning Apprentissage is done: Renforcement, then Entretien. */
+    private String eveningLearningMode(LocalDate today){
+        String todayStr=today.toString();
+        if(!todayStr.equals(prefs.lastLearningSnowballEveningDate())&&!prefs.learningConsolidationUnits(today).isEmpty())
+            return HifzSessionActivity.LEARNING_CONSOLIDATION;
+        if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
+        return null;
+    }
+
+    /** Mardi/Jeudi/Samedi soir, once the morning Stabilisation is done: Consolidation, then Entretien. */
+    private String eveningStabilizationMode(LocalDate today){
+        String todayStr=today.toString();
+        if(!todayStr.equals(prefs.lastStabilizationSnowballEveningDate())&&!prefs.stabilizedConsolidationUnits(today).isEmpty())
+            return HifzSessionActivity.RECENT_SABQI_REVIEW;
+        if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
+        return null;
     }
 
     private String nextMode(ScheduledCadence due){
-        if(progressionLearningConsolidationDue(geometry))return HifzSessionActivity.LEARNING_CONSOLIDATION;
-        if(progressionConsolidationDue(geometry))return HifzSessionActivity.RECENT_SABQI_REVIEW;
+        consolidationNeedsAttention=false;
+        learningConsolidationNeedsAttention=false;
+        try{
+            return computeNextMode(due);
+        }catch(RuntimeException error){
+            consolidationNeedsAttention=true;
+            learningConsolidationNeedsAttention=true;
+            android.util.Log.e("QuranHifz","Unable to evaluate next Hifz mode",error);
+            return null;
+        }
+    }
+
+    private String computeNextMode(ScheduledCadence due){
         if(due==null)return null;
+        LocalDate today=HifzClock.today();
         LocalDate date=due.getScheduledDate();
+        boolean isToday=date.equals(today);
         switch(due.getAction()){
             case LEARNING:
-                return !modeComplete(date,HifzSessionActivity.SABQI)?HifzSessionActivity.SABQI:null;
-            case STABILIZATION:return !modeComplete(date,HifzSessionActivity.ITQAN)?HifzSessionActivity.ITQAN:null;
-            case REVISION:return !modeComplete(date,HifzSessionActivity.MURAJAAH)?HifzSessionActivity.MURAJAAH:null;
+                if(!modeComplete(date,HifzSessionActivity.SABQI))return HifzSessionActivity.SABQI;
+                return isToday?eveningLearningMode(today):null;
+            case STABILIZATION:
+                if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;
+                return isToday?eveningStabilizationMode(today):null;
+            case REVISION:
+                if(!isToday)return null;
+                if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;
+                if(!consolidationFinalResolved(today))return HifzSessionActivity.CONSOLIDATION_FINAL;
+                return null;
             default:return null;
         }
+    }
+
+    private static boolean isTodayAnchoredMode(String mode){
+        return HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+            ||HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)
+            ||HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode)
+            ||HifzSessionActivity.LEARNING_FINAL.equals(mode)
+            ||HifzSessionActivity.MURAJAAH.equals(mode);
     }
 
     private void openToday() {
@@ -260,9 +291,7 @@ public final class MainActivity extends android.app.Activity {
             return;
         }
         if(mode==null)return;
-        boolean progressionTriggered=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
-            ||HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode);
-        LocalDate scheduled=progressionTriggered ? current : due.getScheduledDate();
+        LocalDate scheduled=isTodayAnchoredMode(mode)?current:due.getScheduledDate();
         openMode(mode,scheduled);
     }
 
@@ -281,15 +310,17 @@ public final class MainActivity extends android.app.Activity {
             return;
         }
         if(mode==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
-        boolean consolidation=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode);
-        boolean learningConsolidation=HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode);
-        String prefix=!consolidation&&!learningConsolidation&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
+        String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         String detail;
         try{
-            if(consolidation){
-                detail="Consolidation · déclenchée par progression";
-            }else if(learningConsolidation){
-                detail="Renforcement · déclenché par progression";
+            if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)){
+                detail="Consolidation · boule de neige du soir";
+            }else if(HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)){
+                detail="Renforcement · boule de neige du soir";
+            }else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode)){
+                detail="Consolidation · révision finale ×5";
+            }else if(HifzSessionActivity.LEARNING_FINAL.equals(mode)){
+                detail="Renforcement · révision finale ×5";
             }else if(HifzSessionActivity.SABQI.equals(mode)){
                 int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
                 GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);
