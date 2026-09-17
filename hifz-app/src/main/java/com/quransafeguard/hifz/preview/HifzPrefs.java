@@ -1611,6 +1611,35 @@ public final class HifzPrefs {
         return Collections.unmodifiableList(out);
     }
 
+    /**
+     * Frozen candidates for one grouped Renforcement session: exact physical Leçon-neuve (Sabqi)
+     * blocks. Sabqi is never fractionated (always exactly five lines) and never passes through
+     * Stabilisation, so this mirrors {@link #stabilizedConsolidationUnits} but reads the Appris
+     * set and the recentSabqi queue instead of the Ancrage queue.
+     */
+    List<ConsolidationCycleEngine.Unit> learningConsolidationUnits(GeometryRepository geometry, int maxUnits) {
+        if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
+        if (maxUnits < 1 || maxUnits > 3) throw new IllegalArgumentException("Consolidation group size must be 1..3");
+        LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        ArrayList<StabilizationHalfPagePolicy.Unit> planned = new ArrayList<>();
+        for (RecentSabqi item : canonicalRecentOrder(recentSabqi())) {
+            ArrayList<String> ids = new ArrayList<>();
+            for (int i = item.startLine; i <= item.endLine; i++) ids.add(geometry.line(i).id);
+            int page = geometry.line(item.startLine).page;
+            int surah = geometry.line(item.startLine).verses.get(0).getSurah();
+            planned.add(new StabilizationHalfPagePolicy.Unit(page, surah, ids));
+        }
+        List<StabilizationHalfPagePolicy.Unit> ready = ConsolidationPhysicalUnitPolicy.readyUnits(
+            planned, learned, acquired, maxUnits);
+        ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
+        for (StabilizationHalfPagePolicy.Unit unit : ready) {
+            out.add(new ConsolidationCycleEngine.Unit(
+                ConsolidationPhysicalUnitPolicy.encodeLineUnit(unit.lineIds), ConsolidationCycleEngine.Protocol.LEARNING37));
+        }
+        return Collections.unmodifiableList(out);
+    }
+
     /** Fail and defer the exact page displayed, even when it is not the physical queue head. */
     public boolean failAndDeferAnchoring(VerseRef displayedStart, VerseRef displayedEnd) {
         List<AnchoringQueue.Entry> queue = anchoringQueue();
@@ -1880,6 +1909,77 @@ public final class HifzPrefs {
                 .commit();
         }
     }
+
+    /**
+     * Atomically closes a frozen 1..3 unit Sabqi Renforcement group and sends its exact physical
+     * lines from Appris directly to Acquis. Sabqi never passes through Stabilisation/À-ancrer:
+     * these verses enter the acquired corpus (and leave any pending/forced overlap) in this one
+     * step, replacing the old attendance/age-gated rebalanceRecentWindow promotion for the units
+     * this session actually reinforced.
+     */
+    boolean completeLearningConsolidationSessionV6(ConsolidationCycleEngine.Session session, GeometryRepository geometry,
+                                                    String date, String label) {
+        if (session == null || !session.open() || !session.readyToClose())
+            throw new IllegalStateException("Consolidation session must be OPEN and complete");
+        if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+
+            ArrayList<RecentSabqi> processed = new ArrayList<>();
+            ArrayList<VerseRef> versesToPromote = new ArrayList<>();
+
+            for (String unitId : session.unitIds()) {
+                List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
+                List<GeometryRepository.LineMeta> physical = geometry.linesForExactIds(ids);
+                if (physical.size() != ids.size())
+                    throw new IllegalStateException("Invalid frozen physical Renforcement unit");
+                for (String lineId : ids) {
+                    ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
+                    if (state == ProgressState.LEARNED) { learned.remove(lineId); acquired.add(lineId); }
+                    else if (state != ProgressState.ACQUIRED) {
+                        throw new IllegalStateException("Renforcement requires Appris lines: " + lineId);
+                    }
+                }
+                int startLine = physical.get(0).globalIndex;
+                int endLine = physical.get(physical.size() - 1).globalIndex;
+                processed.add(new RecentSabqi(startLine, endLine));
+                versesToPromote.addAll(geometry.versesFullyCoveredByLines(startLine, endLine));
+            }
+
+            List<RecentSabqi> remaining = withoutRecentBlocks(recentSabqi(), processed);
+
+            ArrayList<VerseRef> fresh = new ArrayList<>();
+            for (VerseRef verse : versesToPromote) if (!isPromoted(verse)) fresh.add(verse);
+            fresh.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+            ArrayList<VerseRange> allPromoted = new ArrayList<>(promotedRanges());
+            allPromoted.addAll(rangesFromVerses(fresh));
+            List<VerseRange> pending = unconsolidatedPromotedRanges();
+            List<VerseRange> forced = forcedPromotedRanges();
+            for (VerseRef verse : versesToPromote) {
+                pending = subtractCoverage(pending, verse, verse);
+                forced = subtractCoverage(forced, verse, verse);
+            }
+
+            return p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putString("recentSabqi", recentJson(remaining))
+                .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(allPromoted)))
+                .putString("unconsolidatedPromotedRanges", rangesJson(pending))
+                .putString("forcedPromotedRanges", rangesJson(forced))
+                .putBoolean("anchoringQueueInitialized", false)
+                .putString("lastLearningConsolidationDate", date)
+                .putString("lastLearningConsolidationLabel", label)
+                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.LEARNING))
+                .commit();
+        }
+    }
+
+    public String lastLearningConsolidationDate() { return p.getString("lastLearningConsolidationDate", ""); }
+    public String lastLearningConsolidationLabel() { return p.getString("lastLearningConsolidationLabel", ""); }
 
     public String lastSabqiDate() { return p.getString("lastSabqiDate", ""); }
     public String lastSabqiLabel() { return p.getString("lastSabqiLabel", ""); }

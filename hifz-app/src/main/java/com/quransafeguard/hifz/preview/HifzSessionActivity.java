@@ -32,6 +32,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     public static final String SABQI_TODAY_REVIEW = "SABQI_TODAY_REVIEW";
     public static final String ITQAN = "ITQAN";
     public static final String RECENT_SABQI_REVIEW = "RECENT_SABQI_REVIEW";
+    public static final String LEARNING_CONSOLIDATION = "LEARNING_CONSOLIDATION";
     public static final String MURAJAAH = "MURAJAAH";
 
     private String mode;
@@ -79,7 +80,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         super.onCreate(state);
         mode = getIntent().getStringExtra(EXTRA_MODE);
         if (!SABQI.equals(mode) && !SABQI_TODAY_REVIEW.equals(mode) && !ITQAN.equals(mode)
-                && !RECENT_SABQI_REVIEW.equals(mode) && !MURAJAAH.equals(mode)) mode = SABQI;
+                && !RECENT_SABQI_REVIEW.equals(mode) && !LEARNING_CONSOLIDATION.equals(mode)
+                && !MURAJAAH.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
             ? prefs.sabqiTodayReviewDate()
@@ -187,6 +189,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             else if (SABQI_TODAY_REVIEW.equals(mode)) renderSabqiTodayReview();
             else if (ITQAN.equals(mode)) renderItqan();
             else if (RECENT_SABQI_REVIEW.equals(mode)) renderConsolidationCycle();
+            else if (LEARNING_CONSOLIDATION.equals(mode)) renderLearningConsolidationCycle();
             else renderMurajaah();
         } catch (RuntimeException error) {
             sessionCompleted = true;
@@ -304,7 +307,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             label
         );
         if (!ok) { onError("Impossible d’enregistrer l’Apprentissage."); return; }
-        rebalanceRecentWindow(sessionDate);
         awaitingValidation=false;
         closeClockForCompletedSession();
         mushaf.cycleCompleted();
@@ -493,6 +495,86 @@ private void rebalanceRecentWindow(LocalDate today) {
         String label = "Consolidation · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
         if (!prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
             onError("Impossible d’enregistrer la Consolidation.");
+            return;
+        }
+        consolidationSession = consolidationEngine.closeSession(consolidationSession);
+        closeClockForCompletedSession();
+        mushaf.cycleCompleted();
+        renderMode();
+    }
+
+    /** Sabqi Renforcement: same engine/UI as Ancrage Consolidation, sourced from recentSabqi. */
+    private void renderLearningConsolidationCycle() {
+        String today = sessionDate.toString();
+        if (today.equals(prefs.lastLearningConsolidationDate())) {
+            sessionCompleted = true;
+            program.setText("Renforcement · séance validée");
+            progress.setText(prefs.lastLearningConsolidationLabel().isEmpty() ? "Acquis" : HifzDisplayVocabulary.canonicalize(prefs.lastLearningConsolidationLabel()));
+            return;
+        }
+        consolidationSession = prefs.restoreConsolidationSession(
+            consolidationEngine, ConsolidationCycleEngine.Family.LEARNING);
+        if (consolidationSession == null) {
+            List<ConsolidationCycleEngine.Unit> units = prefs.learningConsolidationUnits(geometry, 3);
+            if (units.isEmpty()) {
+                sessionCompleted = true;
+                program.setText("Renforcement · rien à renforcer");
+                progress.setText("Aucun bloc d’Apprentissage en attente.");
+                return;
+            }
+            ConsolidationCycleEngine.Cycle cycle = null;
+            for (int i = 0; i < units.size(); i++) {
+                ConsolidationCycleEngine.Unit unit = units.get(i);
+                cycle = i == 0
+                    ? consolidationEngine.startCycle("learning-" + today, ConsolidationCycleEngine.Family.LEARNING, unit)
+                    : consolidationEngine.addUnit(cycle, unit);
+            }
+            consolidationSession = consolidationEngine.openSession(cycle, "session-" + today);
+            if (!prefs.persistConsolidationSession(consolidationSession))
+                throw new IllegalStateException("Impossible d’enregistrer le Renforcement ouvert");
+        }
+        if (consolidationSession.readyToClose()) {
+            sessionCompleted = true;
+            program.setText("Renforcement · prêt à valider");
+            progress.setText("Toutes les répétitions du groupe sont terminées.");
+            addRoundAction("✓", "Valider", v -> runValidationSafely(this::validateLearningConsolidationCycle));
+            return;
+        }
+        int position = consolidationSession.nextUnitIndex();
+        List<String> exactLineIds = ConsolidationPhysicalUnitPolicy.decodeLineUnit(
+            consolidationSession.unitIds().get(position));
+        List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(exactLineIds);
+        currentPage = physicalLines.get(0).page;
+        unitFirstPage = unitLastPage = currentPage;
+        currentLineIds = new ArrayList<>(exactLineIds);
+        currentSelection = geometry.versesOnLines(currentLineIds);
+        currentMask = 0;
+        sessionCompleted = false;
+        int[] vector = consolidationSession.stageVectorAt(position);
+        int target = vector[consolidationSession.stage()];
+        program.setText("Renforcement · " + currentLineIds.size() + " lignes · unité "
+            + (position + 1) + "/" + consolidationSession.sessionGroupSize());
+        progress.setText("Étape " + (consolidationSession.stage() + 1) + "/5 · "
+            + consolidationSession.donePerStage() + "/" + target);
+        showCurrent();
+        addRoundAction("↻", "Répétition", v -> completeLearningConsolidationRep());
+    }
+
+    private void completeLearningConsolidationRep() {
+        if (!takeRepLock() || consolidationSession == null || consolidationSession.readyToClose()) return;
+        consolidationSession = consolidationEngine.recordRepetition(consolidationSession);
+        if (!prefs.persistConsolidationSession(consolidationSession)) {
+            onError("Impossible d’enregistrer la répétition de Renforcement.");
+            return;
+        }
+        renderMode();
+    }
+
+    private void validateLearningConsolidationCycle() {
+        if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        String label = "Renforcement · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
+        if (!prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
+            onError("Impossible d’enregistrer le Renforcement.");
             return;
         }
         consolidationSession = consolidationEngine.closeSession(consolidationSession);
@@ -842,7 +924,8 @@ private void rebalanceRecentWindow(LocalDate today) {
 
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));
-        boolean limited=SABQI.equals(mode)||SABQI_TODAY_REVIEW.equals(mode)||ITQAN.equals(mode)||RECENT_SABQI_REVIEW.equals(mode);
+        boolean limited=SABQI.equals(mode)||SABQI_TODAY_REVIEW.equals(mode)||ITQAN.equals(mode)
+            ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;showCurrent();
     }
@@ -904,7 +987,7 @@ private void rebalanceRecentWindow(LocalDate today) {
 
     private void closeClockForCompletedSession(){
         sessionCompleted=true;awaitingValidation=false;clock.pause();clock.reset();prefs.setElapsedFor(mode,0L);prefs.clearMaskEntropy(mode);
-        if (RECENT_SABQI_REVIEW.equals(mode)) metricsStore.clearConsolidation();
+        if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)) metricsStore.clearConsolidation();
     }
     private boolean isTimedMode() {
         return SABQI_TODAY_REVIEW.equals(mode) || MURAJAAH.equals(mode);
@@ -914,7 +997,7 @@ private void rebalanceRecentWindow(LocalDate today) {
     if (SABQI.equals(mode)) kind = SessionKind.SABQI_NEW;
     else if (SABQI_TODAY_REVIEW.equals(mode)) kind = SessionKind.SABQI_TODAY_REVIEW;
     else if (ITQAN.equals(mode)) kind = SessionKind.ITQAN;
-    else if (RECENT_SABQI_REVIEW.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
+    else if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
     else kind = SessionKind.OLD_ITQAN_MURAJAAH;
     return HifzSchedule.INSTANCE.targetMinutesFor(kind);
 }
@@ -923,6 +1006,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         if (SABQI_TODAY_REVIEW.equals(mode)) return "Apprentissage";
         if (ITQAN.equals(mode)) return "Stabilisation";
         if (RECENT_SABQI_REVIEW.equals(mode)) return "Consolidation";
+        if (LEARNING_CONSOLIDATION.equals(mode)) return "Renforcement";
         return "Révision";
     }
     @Override public void onReady(){

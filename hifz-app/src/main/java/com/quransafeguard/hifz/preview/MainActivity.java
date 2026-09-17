@@ -33,6 +33,7 @@ public final class MainActivity extends android.app.Activity {
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
     private boolean consolidationNeedsAttention;
+    private boolean learningConsolidationNeedsAttention;
     private TextView today;
     private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
@@ -186,8 +187,7 @@ public final class MainActivity extends android.app.Activity {
     private boolean cadenceComplete(LocalDate date){
         CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek());
         switch(action){
-            case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI)
-                &&modeComplete(date,HifzSessionActivity.SABQI_TODAY_REVIEW);
+            case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
             case REVISION:return modeComplete(date,HifzSessionActivity.MURAJAAH);
             default:return false;
@@ -220,14 +220,31 @@ public final class MainActivity extends android.app.Activity {
         }
     }
 
+    /** Sabqi Renforcement mirrors Ancrage Consolidation: progression-triggered, not weekday-pinned. */
+    private boolean progressionLearningConsolidationDue(GeometryRepository g){
+        learningConsolidationNeedsAttention=false;
+        if(g==null)return false;
+        if(HifzClock.today().toString().equals(prefs.lastLearningConsolidationDate()))return false;
+        try{
+            ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+            ConsolidationCycleEngine.Session open=prefs.restoreConsolidationSession(
+                engine,ConsolidationCycleEngine.Family.LEARNING);
+            return open!=null || !prefs.learningConsolidationUnits(g,3).isEmpty();
+        }catch(RuntimeException error){
+            learningConsolidationNeedsAttention=true;
+            android.util.Log.e("QuranHifz","Unable to evaluate progression Renforcement",error);
+            return false;
+        }
+    }
+
     private String nextMode(ScheduledCadence due){
+        if(progressionLearningConsolidationDue(geometry))return HifzSessionActivity.LEARNING_CONSOLIDATION;
         if(progressionConsolidationDue(geometry))return HifzSessionActivity.RECENT_SABQI_REVIEW;
         if(due==null)return null;
         LocalDate date=due.getScheduledDate();
         switch(due.getAction()){
             case LEARNING:
-                if(!modeComplete(date,HifzSessionActivity.SABQI))return HifzSessionActivity.SABQI;
-                return !modeComplete(date,HifzSessionActivity.SABQI_TODAY_REVIEW)?HifzSessionActivity.SABQI_TODAY_REVIEW:null;
+                return !modeComplete(date,HifzSessionActivity.SABQI)?HifzSessionActivity.SABQI:null;
             case STABILIZATION:return !modeComplete(date,HifzSessionActivity.ITQAN)?HifzSessionActivity.ITQAN:null;
             case REVISION:return !modeComplete(date,HifzSessionActivity.MURAJAAH)?HifzSessionActivity.MURAJAAH:null;
             default:return null;
@@ -238,13 +255,14 @@ public final class MainActivity extends android.app.Activity {
         LocalDate current=HifzClock.today();
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
-        if(consolidationNeedsAttention){
+        if(consolidationNeedsAttention||learningConsolidationNeedsAttention){
             startActivity(new Intent(this,SettingsActivity.class));
             return;
         }
         if(mode==null)return;
-        LocalDate scheduled=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
-            ? current : due.getScheduledDate();
+        boolean progressionTriggered=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+            ||HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode);
+        LocalDate scheduled=progressionTriggered ? current : due.getScheduledDate();
         openMode(mode,scheduled);
     }
 
@@ -257,18 +275,21 @@ public final class MainActivity extends android.app.Activity {
         }
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
-        if(consolidationNeedsAttention){
+        if(consolidationNeedsAttention||learningConsolidationNeedsAttention){
             today.setText("Consolidation · état à vérifier");
             todayAction.setEnabled(true);
             return;
         }
         if(mode==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
         boolean consolidation=HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode);
-        String prefix=!consolidation&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
+        boolean learningConsolidation=HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode);
+        String prefix=!consolidation&&!learningConsolidation&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         String detail;
         try{
             if(consolidation){
                 detail="Consolidation · déclenchée par progression";
+            }else if(learningConsolidation){
+                detail="Renforcement · déclenché par progression";
             }else if(HifzSessionActivity.SABQI.equals(mode)){
                 int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
                 GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);
