@@ -1,0 +1,79 @@
+name: Quran Hifz debug test APK
+
+on:
+  push:
+    branches:
+      - claude/app-dernier-chat-c19bfs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hifz-debug-test-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Quran Hifz JVM tests (core + app)
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
+
+      - name: Run Quran Hifz source contracts
+        run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+
+      - name: Assemble debug APK
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+
+      - name: Locate debug APK
+        id: apk
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          sha256sum "$apk"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-debug-${{ github.sha }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-debug-test-results-${{ github.sha }}
+          path: |
+            hifz-core/build/test-results/
+            hifz-core/build/reports/tests/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+          if-no-files-found: warn
+          retention-days: 14

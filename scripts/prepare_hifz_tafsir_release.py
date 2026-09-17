@@ -34,6 +34,11 @@ def read_source(root: Path, name: str, count: int, encoded: bool) -> bytes:
     return gzip.decompress(payload)
 
 
+def source_present(root: Path, name: str, count: int, encoded: bool) -> bool:
+    suffix = ".gz.b64.part" if encoded else ".gz.part"
+    return all((root / f"{name}{suffix}{i:02d}").exists() for i in range(count))
+
+
 def prepare_database(raw: bytes, expected: int, table: str) -> bytes:
     with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
         tmp.write(raw)
@@ -75,13 +80,18 @@ def main() -> None:
         if stale.is_file():
             stale.unlink()
 
-    for name, parts, encoded, expected, table in CORPORA:
+    available = [c for c in CORPORA if source_present(source, c[0], c[1], c[2])]
+    missing = [c[0] for c in CORPORA if c not in available]
+    if missing:
+        print(f"HIFZ_TAFSIR_OPTIONAL_CORPORA_MISSING: {', '.join(missing)}")
+
+    for name, parts, encoded, expected, table in available:
         raw = read_source(source, name, parts, encoded)
         prepared = prepare_database(raw, expected, table)
         write_parts(output, name, prepared, parts)
 
     # Re-open generated corpora and verify both metadata and row counts.
-    for name, parts, _encoded, expected, table in CORPORA:
+    for name, parts, _encoded, expected, table in available:
         compressed = b"".join((output / f"{name}.gz.part{i:02d}").read_bytes() for i in range(parts))
         raw = gzip.decompress(compressed)
         with tempfile.NamedTemporaryFile(suffix=".sqlite") as tmp:
