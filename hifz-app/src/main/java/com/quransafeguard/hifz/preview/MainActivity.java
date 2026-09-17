@@ -315,9 +315,13 @@ public final class MainActivity extends android.app.Activity {
         List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
             geometry.linesForExactIds(owned));
         int blocks=Math.max(1,planned.size());
-        if(blocks<=1)return "Stabilisation · "+shortRange(start,end)+" · ×"+reps;
+        if(blocks<=1){
+            int lines=planned.isEmpty()?0:planned.get(0).lineIds.size();
+            return "Stabilisation · "+shortRange(start,end)+" · "+lines+" lignes · ×"+reps;
+        }
         int block=Math.max(0,Math.min(prefs.itqanBlockIndex(),blocks-1));
-        return "Stabilisation · "+shortRange(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
+        int lines=planned.get(block).lineIds.size();
+        return "Stabilisation · "+shortRange(start,end)+" · bloc "+(block+1)+"/"+blocks+" · "+lines+" lignes · ×"+reps;
     }
 
     private void refreshRecentSabqiAdvisory() {

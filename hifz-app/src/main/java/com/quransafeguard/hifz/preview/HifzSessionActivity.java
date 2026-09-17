@@ -835,7 +835,7 @@ private void rebalanceRecentWindow(LocalDate today) {
         currentSelection = Collections.emptyList();
         currentLineIds = Collections.emptyList();
         currentMask = 0;
-        program.setText("Révision · objectif " + murajaahPlan.start + " → " + murajaahPlan.actualPlannedEnd);
+        program.setText("Révision · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
@@ -865,19 +865,50 @@ private void rebalanceRecentWindow(LocalDate today) {
         renderMode();
     }
 
+    /**
+     * The acquired corpus can be smaller than the time-budgeted line target, so a single
+     * Révision session legitimately loops back through it more than once (e.g. a 60-minute
+     * objective on a 366-line corpus). "through" may therefore sit on a second or later pass,
+     * so this must not stop at the first return to the plan's start — only a hard cap
+     * (comfortably above any realistic number of laps) guards against a corrupt corpus.
+     */
     private int countMurajaahLinesThrough(VerseRef through){
         if (murajaahPlan == null || through == null) return 0;
         EligibleCorpus corpus = prefs.murajaahCorpus();
         if (!corpus.contains(through)) throw new IllegalArgumentException("Fin d’Révision hors du corpus acquis : " + through);
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         VerseRef cursor = murajaahPlan.start;
-        for (int visited = 0; visited < 6236; visited++) {
+        for (int visited = 0; visited < 6236 * 20; visited++) {
             ids.addAll(geometry.lineIdsForVerseRange(cursor, cursor));
             if (cursor.equals(through)) return ids.size();
             cursor = corpus.next(cursor);
-            if (cursor.equals(murajaahPlan.start)) break;
         }
         throw new IllegalArgumentException("Fin d’Révision inaccessible depuis le curseur courant : " + through);
+    }
+
+    /**
+     * Human-readable objective spanning every disjoint segment the plan actually traverses
+     * (the acquired corpus may hold several ranges, and the plan can wrap back through it more
+     * than once); a plain "start → end" would silently hide most of the session's real scope.
+     */
+    private String murajaahObjectiveLabel() {
+        List<VerseRef> traversal = murajaahPlan.traversalVerses;
+        if (traversal.isEmpty()) return murajaahPlan.start + " → " + murajaahPlan.actualPlannedEnd;
+        StringBuilder label = new StringBuilder();
+        VerseRef segmentStart = traversal.get(0);
+        VerseRef previous = segmentStart;
+        for (int i = 1; i <= traversal.size(); i++) {
+            VerseRef current = i < traversal.size() ? traversal.get(i) : null;
+            boolean contiguous = current != null
+                && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
+            if (!contiguous) {
+                if (label.length() > 0) label.append(" · puis ");
+                label.append(segmentStart).append(" → ").append(previous);
+                if (current != null) segmentStart = current;
+            }
+            if (current != null) previous = current;
+        }
+        return label.toString();
     }
 
     private void updateMurajaahProgress() {

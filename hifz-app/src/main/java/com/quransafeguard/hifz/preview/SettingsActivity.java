@@ -126,6 +126,8 @@ public final class SettingsActivity extends android.app.Activity {
         schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
         TextView consolidationSchemaNote=Ui.text(this,"Consolidation · déclenchée par progression",11f,false);
         consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
+        TextView renforcementSchemaNote=Ui.text(this,"Renforcement (soir d’Apprentissage) et Consolidation (soir de Stabilisation) sont l’effet boule de neige : chacun regroupe 3 unités du jour (Appris ou Stabilisé) dès qu’elles sont prêtes, et se déclenche par progression — jamais par un jour de semaine fixe.",11f,false);
+        renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
         TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);
         j10SchemaNote.setTextColor(Ui.MUTED);j10SchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10SchemaNote);
         TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau",11f,false);
