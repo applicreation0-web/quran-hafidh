@@ -15,7 +15,7 @@ class HifzWeeklyPlanningTest {
         assertEquals(CadenceAction.LEARNING, HifzSchedule.actionFor(DayOfWeek.WEDNESDAY))
         assertEquals(CadenceAction.STABILIZATION, HifzSchedule.actionFor(DayOfWeek.THURSDAY))
         assertEquals(CadenceAction.LEARNING, HifzSchedule.actionFor(DayOfWeek.FRIDAY))
-        assertEquals(CadenceAction.REVISION, HifzSchedule.actionFor(DayOfWeek.SATURDAY))
+        assertEquals(CadenceAction.STABILIZATION, HifzSchedule.actionFor(DayOfWeek.SATURDAY))
         assertEquals(CadenceAction.REVISION, HifzSchedule.actionFor(DayOfWeek.SUNDAY))
     }
 

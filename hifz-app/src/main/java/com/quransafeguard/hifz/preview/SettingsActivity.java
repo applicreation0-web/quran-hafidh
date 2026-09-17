@@ -61,7 +61,7 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(top);
 
         section(root,"Parcours");
-        TextView protocol=Ui.text(this,"Lun/Mer/Ven · Apprentissage   ·   Mar/Jeu · Stabilisation   ·   Sam/Dim · Révision",11f,false);
+        TextView protocol=Ui.text(this,"Lun/Mer/Ven · Apprentissage   ·   Mar/Jeu/Sam · Stabilisation   ·   Dim · Révision",11f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
 
         sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
@@ -318,7 +318,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Sam/Dim · Révision · 45 min · position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Mar/Jeu/Sam/Dim · Révision · 60 min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 

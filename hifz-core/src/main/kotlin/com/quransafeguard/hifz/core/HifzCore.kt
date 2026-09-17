@@ -153,7 +153,7 @@ object HifzSchedule {
     const val EVENING_REVIEW_MINUTES = 30
     const val CONSOLIDATION_MINUTES = 30
     const val ANCHORING_ENVELOPE_MINUTES = 60
-    const val MAINTENANCE_MINUTES = 45
+    const val MAINTENANCE_MINUTES = 60
 
     fun targetMinutesFor(kind: SessionKind): Int = when (kind) {
         SessionKind.SABQI_NEW -> 0
@@ -163,10 +163,15 @@ object HifzSchedule {
         SessionKind.OLD_ITQAN_MURAJAAH -> MAINTENANCE_MINUTES
     }
 
+    /**
+     * Canonical weekly cadence: three Leçon-neuve mornings (Mon/Wed/Fri) pair with three
+     * Ancrage mornings (Tue/Thu/Sat) to form the weekly groups of three the retention/J10
+     * redesign relies on (S1/S2/S3 and A1/A2/A3). Sunday is the sole reserved Révision day.
+     */
     fun actionFor(day: DayOfWeek): CadenceAction = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> CadenceAction.LEARNING
-        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> CadenceAction.STABILIZATION
-        DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> CadenceAction.REVISION
+        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY -> CadenceAction.STABILIZATION
+        DayOfWeek.SUNDAY -> CadenceAction.REVISION
     }
 
     /**

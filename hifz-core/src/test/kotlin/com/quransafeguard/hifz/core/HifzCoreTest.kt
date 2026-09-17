@@ -70,12 +70,12 @@ class HifzCoreTest {
             assertEquals(eveningMinutes, plan.evening.targetMinutes)
         }
         assertPlan(DayOfWeek.MONDAY, 0, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
-        assertPlan(DayOfWeek.TUESDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.TUESDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 60)
         assertPlan(DayOfWeek.WEDNESDAY, 0, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
-        assertPlan(DayOfWeek.THURSDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.THURSDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 60)
         assertPlan(DayOfWeek.FRIDAY, 0, SessionKind.SABQI_NEW, SessionKind.SABQI_TODAY_REVIEW, 0, 30)
-        assertPlan(DayOfWeek.SATURDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
-        assertPlan(DayOfWeek.SUNDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.SATURDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 60)
+        assertPlan(DayOfWeek.SUNDAY, 0, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 60)
     }
 
     @Test fun directSessionTargetsDoNotDependOnTodaysSchedule() {
@@ -83,7 +83,7 @@ class HifzCoreTest {
         assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.SABQI_TODAY_REVIEW))
         assertEquals(60, HifzSchedule.targetMinutesFor(SessionKind.ITQAN))
         assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.RECENT_SABQI_REVIEW))
-        assertEquals(45, HifzSchedule.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
+        assertEquals(60, HifzSchedule.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
     }
 
     @Test fun sundaySwitchesToConsolidationAtTheCentralizedThreshold() {
@@ -93,7 +93,7 @@ class HifzCoreTest {
         val switched = HifzSchedule.planFor(DayOfWeek.SUNDAY, 36)
         assertEquals(SessionKind.RECENT_SABQI_REVIEW, switched.morning.kind)
         assertEquals(30, switched.morning.targetMinutes)
-        assertEquals(45, switched.evening.targetMinutes)
+        assertEquals(60, switched.evening.targetMinutes)
     }
 
     @Test fun sundayConsolidationStaysActiveOnceActivationWasPersisted() {
@@ -102,7 +102,7 @@ class HifzCoreTest {
         val afterActivation = HifzSchedule.planFor(DayOfWeek.SUNDAY, 20, true)
         assertEquals(SessionKind.RECENT_SABQI_REVIEW, afterActivation.morning.kind)
         assertEquals(30, afterActivation.morning.targetMinutes)
-        assertEquals(45, afterActivation.evening.targetMinutes)
+        assertEquals(60, afterActivation.evening.targetMinutes)
     }
 
     @Test fun legacyMorningTypeStillMatchesScheduleForCompatibility() {

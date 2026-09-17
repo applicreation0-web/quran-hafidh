@@ -201,10 +201,14 @@ final class J10ReviewPlanner {
         return isReusableJ10Kind(kind) ? Math.max(0, targetMinutes) : 0;
     }
 
+    /**
+     * Only genuine Entretien time is reusable J10 capacity. Sabqi/Ancrage individual protocols
+     * and their separate Renforcement (boule de neige) counters never count, even though
+     * SessionKind.ITQAN historically named the anchoring morning slot before it became the
+     * demi-page Ancrage queue.
+     */
     static boolean isReusableJ10Kind(SessionKind kind) {
-        return kind == SessionKind.SABQI_TODAY_REVIEW
-            || kind == SessionKind.ITQAN
-            || kind == SessionKind.OLD_ITQAN_MURAJAAH;
+        return kind == SessionKind.OLD_ITQAN_MURAJAAH;
     }
 
     static int scheduledCapacityMinutes(LocalDate start, int days,

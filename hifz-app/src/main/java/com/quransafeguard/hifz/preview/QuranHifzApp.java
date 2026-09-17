@@ -180,10 +180,9 @@ public final class QuranHifzApp extends Application
             && !activity.isFinishing() && !activity.isDestroyed();
     }
 
+    /** Only Entretien (Murajaah) is reusable J10 host time; Sabqi/Ancrage never are. */
     static boolean isReusableJ10Host(String mode) {
-        return HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)
-            || HifzSessionActivity.ITQAN.equals(mode)
-            || HifzSessionActivity.MURAJAAH.equals(mode);
+        return HifzSessionActivity.MURAJAAH.equals(mode);
     }
 
     private synchronized void showSustainabilityAlert(Activity activity, J10ReviewPolicy.Forecast forecast,

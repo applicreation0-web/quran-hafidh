@@ -20,12 +20,19 @@ public final class CanonicalProgressUiSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
+    /**
+     * The retention/J10 redesign needs three Ancrage mornings (Tue/Thu/Sat) to pair with the
+     * three Leçon-neuve mornings (Mon/Wed/Fri), forming weekly groups of three (S1/S2/S3 and
+     * A1/A2/A3). Sunday is the sole reserved Révision day; the old two-day Tue/Thu
+     * Stabilisation plus Sat/Sun Révision split is the legacy schedule being replaced here.
+     */
     @Test public void settingsExposeCanonicalWeeklyCadenceAndNotLegacySchedule() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(settings.contains("Lun/Mer/Ven · Apprentissage"));
-        assertTrue(settings.contains("Mar/Jeu · Stabilisation"));
-        assertTrue(settings.contains("Sam/Dim · Révision"));
-        assertFalse(settings.contains("Mar/Jeu/Sam · Ancrage"));
+        assertTrue(settings.contains("Mar/Jeu/Sam · Stabilisation"));
+        assertTrue(settings.contains("Dim · Révision"));
+        assertFalse(settings.contains("Mar/Jeu · Stabilisation"));
+        assertFalse(settings.contains("Sam/Dim · Révision"));
         assertFalse(settings.contains("Dim · Ancrage puis Consolidation"));
     }
 

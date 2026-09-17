@@ -8,13 +8,19 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public final class J10CapacityTest {
-    @Test public void tenDayCapacityIncludesAnchoringAsReusableJ10Time() {
+    /**
+     * Ancrage (SessionKind.ITQAN) is the individual demi-page protocol, never a reusable J10
+     * host; only genuine Entretien (Murajaah, Tue/Thu/Sat/Sun evenings) counts. Progression-
+     * triggered Consolidation never changes this either.
+     */
+    @Test public void tenDayCapacityIsEntretienOnlyRegardlessOfConsolidationState() {
         LocalDate sunday = LocalDate.of(2026, 9, 13);
-        assertEquals(690, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 36, true));
-        assertEquals(750, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 0, false));
+        assertEquals(360, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 36, true));
+        assertEquals(360, J10ReviewPlanner.scheduledCapacityMinutes(sunday, 10, 0, false));
     }
 
     @Test public void productionPriorityIsCappedAtFivePhysicalLines() {
@@ -58,9 +64,9 @@ public final class J10CapacityTest {
         assertEquals(java.util.Arrays.asList(100, 101), J10ReviewPlanner.priorityLineIndexes(
             lines, today, J10ReviewPolicy.Sustainability.NORMAL, 5));
     }
-    @Test public void anchoringIsAReusableJ10HostInProductionPolicy() {
-        assertTrue(J10ReviewPlanner.isReusableJ10Kind(com.quransafeguard.hifz.core.SessionKind.ITQAN));
-        assertTrue(QuranHifzApp.isReusableJ10Host(HifzSessionActivity.ITQAN));
+    @Test public void anchoringIsNeverAReusableJ10HostInProductionPolicy() {
+        assertFalse(J10ReviewPlanner.isReusableJ10Kind(com.quransafeguard.hifz.core.SessionKind.ITQAN));
+        assertFalse(QuranHifzApp.isReusableJ10Host(HifzSessionActivity.ITQAN));
     }
 
 }

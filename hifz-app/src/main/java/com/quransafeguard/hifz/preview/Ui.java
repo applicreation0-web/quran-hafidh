@@ -171,7 +171,7 @@ final class Ui {
             : lower.contains("reprise") ? "30 min"
             : lower.contains("consolidation") ? "Cycle 1–3"
             : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq") ? "Répétitions"
-            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur") ? "45 min" : "";
+            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur") ? "60 min" : "";
         if (!cue.isEmpty()) {
             TextView subtitle = text(context, cue, 11f, false);
             subtitle.setTextColor(MUTED);
