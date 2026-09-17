@@ -140,7 +140,9 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(!session.contains("Stable sans aide")) { "A fault-free Consolidation must not directly promote a block." }
         check(!session.contains("markFirstRecentStable")) { "Consolidation actions must target the displayed block." }
         check(!session.contains("reconcileStablePromotions")) { "Review quality must not directly promote to Ancrage." }
-        check(session.contains("rebalanceRecentWindow")) { "Recent work must apply the calendar/attendance promotion rule." }
+        check(session.contains("validateConsolidationFinalReview") && session.contains("validateLearningFinalReview")) {
+            "Recent work must only reach Acquis through the weekly snowball's Sunday ×5 final review."
+        }
         check(!session.contains("À renforcer")) {
             "The canonical schema6 flow must not expose the obsolete reinforcement action."
         }
