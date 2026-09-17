@@ -82,7 +82,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="hifz-release-${{ github.sha }}"
+          tag="hifz-release-${{ github.sha }}-run${{ github.run_number }}"
           gh release create "$tag" "${{ steps.apk.outputs.path }}" \
             --repo "${{ github.repository }}" \
             --title "Quran Hifz release APK ($tag)" \
