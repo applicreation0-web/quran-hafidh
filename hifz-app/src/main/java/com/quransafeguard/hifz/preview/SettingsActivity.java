@@ -30,6 +30,8 @@ import java.util.concurrent.Executors;
 /** BOOX-oriented configuration. Rotation anchor is editable; live cursors are read-only. */
 public final class SettingsActivity extends android.app.Activity {
     private static final int REQUEST_AUDIO_ZIP = 4103;
+    private static final int REQUEST_BACKUP_EXPORT = 4104;
+    private static final int REQUEST_BACKUP_IMPORT = 4105;
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private J10ReviewPlanner j10Planner;
@@ -116,6 +118,12 @@ public final class SettingsActivity extends android.app.Activity {
         LinearLayout einkRow=Ui.row(this);einkRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));einkRow.setMinimumHeight(Ui.dp(this,48));
         TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",13f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
         Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);root.addView(einkRow);
+
+        section(root,"Sauvegarde");
+        root.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));root.addView(Ui.divider(this));
+        root.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));
+        TextView backupNote=Ui.text(this,"Sans compte ni serveur, la progression vit uniquement dans l’appli : désinstaller l’appli ou perdre l’appareil l’efface. Exportez régulièrement.",11f,false);
+        backupNote.setTextColor(Ui.MUTED);backupNote.setPadding(Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,4),0);root.addView(backupNote);
 
         section(root,"Avancé");
         root.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));root.addView(Ui.divider(this));
@@ -370,6 +378,16 @@ public final class SettingsActivity extends android.app.Activity {
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==REQUEST_BACKUP_EXPORT){
+            if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;
+            writeBackupTo(data.getData());
+            return;
+        }
+        if(requestCode==REQUEST_BACKUP_IMPORT){
+            if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;
+            readBackupFrom(data.getData());
+            return;
+        }
         if(requestCode!=REQUEST_AUDIO_ZIP||resultCode!=RESULT_OK||data==null)return;
         Uri uri=data.getData();if(uri==null)return;
         try{
@@ -386,6 +404,51 @@ public final class SettingsActivity extends android.app.Activity {
                 else{audioStatus.setText(result.message);Toast.makeText(this,result.message,Toast.LENGTH_LONG).show();}
             });
         },"hifz-audio-import").start();
+    }
+
+    private void exportBackup(){
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_TITLE,"quran-hifz-sauvegarde-"+HifzClock.today()+".json");
+        startActivityForResult(intent,REQUEST_BACKUP_EXPORT);
+    }
+
+    private void writeBackupTo(Uri uri){
+        try(java.io.OutputStream out=getContentResolver().openOutputStream(uri)){
+            if(out==null)throw new java.io.IOException("Impossible d’ouvrir le fichier.");
+            out.write(HifzBackup.export(this).toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            Toast.makeText(this,"Sauvegarde exportée.",Toast.LENGTH_LONG).show();
+        }catch(Exception error){
+            Toast.makeText(this,"Échec de l’export : "+error.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void confirmImportBackup(){
+        new AlertDialog.Builder(this).setTitle("Importer une sauvegarde")
+            .setMessage("La progression actuelle sera entièrement remplacée par le contenu du fichier choisi. Continuer ?")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Choisir le fichier",(d,w)->{
+                Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/json");
+                startActivityForResult(Intent.createChooser(intent,"Choisir la sauvegarde"),REQUEST_BACKUP_IMPORT);
+            }).show();
+    }
+
+    private void readBackupFrom(Uri uri){
+        try(java.io.InputStream in=getContentResolver().openInputStream(uri)){
+            if(in==null)throw new java.io.IOException("Impossible d’ouvrir le fichier.");
+            java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();
+            byte[] chunk=new byte[8192];int n;
+            while((n=in.read(chunk))>=0)buffer.write(chunk,0,n);
+            org.json.JSONObject root=new org.json.JSONObject(buffer.toString(java.nio.charset.StandardCharsets.UTF_8.name()));
+            int count=HifzBackup.restore(this,root);
+            Toast.makeText(this,"Sauvegarde restaurée ("+count+" entrées). Relancez l’appli.",Toast.LENGTH_LONG).show();
+            recreate();
+        }catch(Exception error){
+            Toast.makeText(this,"Échec de l’import : "+error.getMessage(),Toast.LENGTH_LONG).show();
+        }
     }
 
     private void chooseVerse(String title,VerseRef current,VerseChosen chosen){
