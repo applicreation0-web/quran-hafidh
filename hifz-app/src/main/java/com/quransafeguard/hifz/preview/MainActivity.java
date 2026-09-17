@@ -38,6 +38,8 @@ public final class MainActivity extends android.app.Activity {
     private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
     private LinearLayout dashboard;
+    private LinearLayout sabqiQuickAccess;
+    private LinearLayout itqanQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
@@ -122,6 +124,8 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout sabqi = Ui.modeCard(this, "", "Apprentissage", v -> openMode(HifzSessionActivity.SABQI));
         LinearLayout itqan = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
         LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> openMode(HifzSessionActivity.MURAJAAH));
+        sabqiQuickAccess = sabqi;
+        itqanQuickAccess = itqan;
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(murajaah);
@@ -179,7 +183,20 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
+    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
+
+    /**
+     * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Lun/Mer/Ven
+     * vs. Mar/Jeu/Sam) — opening tomorrow's Apprentissage today would let a learner get ahead of the
+     * weekly snowball attribution it's built on. Révision/Renforcement/Consolidation stay free since
+     * they need to be testable/catchable-up any day.
+     */
+    private void refreshQuickAccessCadenceGating() {
+        if (geometry == null) return;
+        CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek());
+        if (sabqiQuickAccess != null) sabqiQuickAccess.setEnabled(action == CadenceAction.LEARNING);
+        if (itqanQuickAccess != null) itqanQuickAccess.setEnabled(action == CadenceAction.STABILIZATION);
+    }
 
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
 

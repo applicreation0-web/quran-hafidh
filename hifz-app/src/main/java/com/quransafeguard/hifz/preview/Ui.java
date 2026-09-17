@@ -140,17 +140,20 @@ final class Ui {
         int iconRes = iconFor(label, symbol);
         if (iconRes != 0) {
             icon.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            icon.setCompoundDrawableTintList(ColorStateList.valueOf(INK));
+            icon.setCompoundDrawableTintList(cardIconTint());
             icon.setMinHeight(dp(context, 25));
         } else {
             icon.setText(symbol);
         }
         icon.setGravity(Gravity.CENTER);
+        icon.setDuplicateParentStateEnabled(true);
         card.addView(icon, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView caption = text(context, label, 10.5f, false);
         caption.setGravity(Gravity.CENTER);
         caption.setSingleLine(true);
+        caption.setTextColor(cardIconTint());
+        caption.setDuplicateParentStateEnabled(true);
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cp.topMargin = dp(context,2);
@@ -333,6 +336,11 @@ final class Ui {
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
             new int[]{MUTED,PAPER,PAPER,INK});
+    }
+
+    /** cardAction icons have no ink background to invert against on press, unlike iconButton/roundAction. */
+    private static ColorStateList cardIconTint() {
+        return new ColorStateList(new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{MUTED, INK});
     }
 
     private static ColorStateList iconTintFlat() {
