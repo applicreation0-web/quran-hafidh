@@ -147,7 +147,18 @@ public final class MushafView extends WebView {
     }
 
     public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
-        lastStrictLineFocus = false;
+        show(page, selection, lineIds, maskPercent, false);
+    }
+
+    /**
+     * A fractionated Stabilisation block's lineIds can include a boundary verse whose own
+     * physical lines straddle the split (CorpusLinePolicy assigns each line to its earliest
+     * verse, so a verse can start in one block and continue into lines owned by the next).
+     * The default whole-verse shading then greys out lines beyond the block's real 6-8 line
+     * working set. strictLineFocus=true shades exactly lineIds instead, like J10's view.
+     */
+    public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus) {
+        lastStrictLineFocus = strictLineFocus;
         retried = false;
         load(page, selection, lineIds, maskPercent);
     }

@@ -132,4 +132,20 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(validate.contains("corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart())"));
         assertFalse(validate.contains("corpus.nextAnchored(itqanUnit.end, prefs.itqanRotationStart())"));
     }
+
+    /**
+     * Live-confirmed: a fractionated Stabilisation block's boundary verse can straddle the split
+     * (CorpusLinePolicy assigns a line to its earliest verse, so a verse can start in block 1's
+     * lines and continue into lines actually owned by block 2). The default whole-verse shading
+     * then greys out more physical lines than the block's real 6-8 line working set (confirmed:
+     * 10 lines shaded for a block the split policy caps at 8). showCurrent() must request strict
+     * per-line shading, like J10 already does, whenever the current unit is fractionated.
+     */
+    @Test public void fractionatedStabilizationUsesStrictLineFocusNotWholeVerseShading() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
+        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan)"));
+        assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus)"));
+        assertTrue(mushaf.contains("lastStrictLineFocus = strictLineFocus;"));
+    }
 }

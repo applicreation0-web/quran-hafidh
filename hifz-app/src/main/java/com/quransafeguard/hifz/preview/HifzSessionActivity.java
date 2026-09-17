@@ -935,7 +935,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
-    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask);}
+    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
 
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));
