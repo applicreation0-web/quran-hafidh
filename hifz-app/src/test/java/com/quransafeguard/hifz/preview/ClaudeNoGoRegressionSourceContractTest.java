@@ -27,14 +27,14 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         return source.substring(a, b);
     }
 
-    @Test public void homeRoutesProgressionTriggeredConsolidation() throws Exception {
+    @Test public void homeRoutesTheWeekdayPinnedConsolidationSnowball() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("MainActivity must expose the existing Consolidation mode",
             main.contains("HifzSessionActivity.RECENT_SABQI_REVIEW"));
-        assertTrue("Home must inspect ready Stabilisation units before declaring the program up to date",
+        assertTrue("Home must inspect this week's accumulated Stabilisation units before offering the evening snowball",
             main.contains("stabilizedConsolidationUnits"));
-        assertTrue("Home must resume an already-frozen Consolidation session",
-            main.contains("restoreConsolidationSession"));
+        assertTrue("Home must not re-offer tonight's snowball once it was already validated",
+            main.contains("lastStabilizationSnowballEveningDate"));
     }
 
     @Test public void stabilizationProjectionUsesTheSamePhysicalPlannerAsRuntime() throws Exception {
@@ -46,13 +46,16 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             week.contains("firstTen"));
     }
 
+    /**
+     * The physical unit fed into the weekly snowball is computed once, in renderItqan(), from
+     * owned physical lines; stabilizedConsolidationUnits() now just reads that same unit back
+     * from this week's accumulator, so it no longer needs its own ownedLineIdsForRangeOnPage call.
+     */
     @Test public void stabilizationAndConsolidationUseOwnedPhysicalLinesForEntryBoundaries() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String ready = method(prefs, "List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits", "/** Fail and defer");
         String complete = method(prefs, "boolean entryIsFullyStabilizedOrAcquired", "public AnchoringQueue.Entry currentAnchoringEntry");
         String render = method(session, "private void renderItqan()", "private String itqanProgramLabel()");
-        assertTrue(ready.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
         assertTrue(complete.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
         assertTrue(render.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
     }
@@ -69,22 +72,39 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(evening.contains("HifzDisplayVocabulary.canonicalize(prefs.lastSabqiTodayReviewLabel())"));
     }
 
+    /**
+     * The four grouped-cycle validations (evening snowball ×2, Sunday final review ×2) share
+     * renderGroupedCycle()'s single "runValidationSafely(onValidate)" call site, so each is
+     * verified by confirming it is passed in as that Runnable rather than by its own literal
+     * "runValidationSafely(this::validateX)" call.
+     */
     @Test public void validationListenersContainProgressionExceptionsInsteadOfCrashingTheApp() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(session.contains("private void runValidationSafely(Runnable validation)"));
         assertTrue(session.contains("runValidationSafely(this::validateSabqi)"));
         assertTrue(session.contains("runValidationSafely(this::validateItqan)"));
-        assertTrue(session.contains("runValidationSafely(this::validateConsolidationCycle)"));
+        assertTrue(session.contains("v -> runValidationSafely(onValidate)"));
+        assertTrue(session.contains("this::validateConsolidationCycle"));
+        assertTrue(session.contains("this::validateLearningConsolidationCycle"));
+        assertTrue(session.contains("this::validateConsolidationFinalReview"));
+        assertTrue(session.contains("this::validateLearningFinalReview"));
     }
 
+    /**
+     * The Consolidation gate is now evaluated fresh every day (evening snowball once the
+     * morning's Stabilisation is done, Sunday's ×5 final review otherwise) rather than
+     * progression-triggered; nextMode() wraps the whole computation so a corrupt state never
+     * crashes the app, only routes to Diagnostic.
+     */
     @Test public void homeConsolidationGateIsDailyAndNeverThrows() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        String gate = method(main, "private boolean progressionConsolidationDue", "private String nextMode");
-        assertTrue(gate.contains("lastRecentSabqiReviewDate()"));
+        String gate = method(main, "private String nextMode(ScheduledCadence due)", "private String computeNextMode");
         assertTrue(gate.contains("catch(RuntimeException"));
-        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        String units = method(prefs, "List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits", "public boolean failAndDeferAnchoring");
-        assertTrue(units.indexOf("entryIds.isEmpty()") >= 0 && units.indexOf("entryIds.isEmpty()") < units.indexOf("linesForExactIds(entryIds)"));
+        assertTrue(gate.contains("consolidationNeedsAttention=true"));
+        assertTrue(gate.contains("learningConsolidationNeedsAttention=true"));
+        String evening = method(main, "private String eveningStabilizationMode", "private String nextMode(ScheduledCadence due)");
+        assertTrue(evening.contains("lastStabilizationSnowballEveningDate"));
+        assertTrue(evening.contains("stabilizedConsolidationUnits"));
     }
 
     @Test public void rangeNormalizationNeverSplitsPerSurah() throws Exception {

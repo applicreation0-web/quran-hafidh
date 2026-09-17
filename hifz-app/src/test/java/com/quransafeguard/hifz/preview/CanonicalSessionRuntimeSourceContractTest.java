@@ -50,11 +50,16 @@ public final class CanonicalSessionRuntimeSourceContractTest {
             session.contains("private void renderRecentSabqiReview()"));
     }
 
+    /**
+     * Readiness for the evening snowball no longer re-derives "ready" units from raw state each
+     * time (ConsolidationPhysicalUnitPolicy.readyUnits): it reads back the exact physical units
+     * this week's morning completions already appended, via the same encode/decode round-trip.
+     */
     @Test public void consolidationRuntimePreservesExactPhysicalStabilizationUnits() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue(prefs.contains("stabilizedConsolidationUnits"));
-        assertTrue(prefs.contains("ConsolidationPhysicalUnitPolicy.readyUnits"));
+        assertTrue(prefs.contains("weeklySnowballUnits"));
         assertTrue(prefs.contains("ConsolidationPhysicalUnitPolicy.encodeLineUnit"));
         assertTrue(prefs.contains("ConsolidationPhysicalUnitPolicy.decodeLineUnit"));
         assertTrue(session.contains("prefs.stabilizedConsolidationUnits"));

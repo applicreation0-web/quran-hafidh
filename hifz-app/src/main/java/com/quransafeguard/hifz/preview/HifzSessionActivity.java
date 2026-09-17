@@ -421,6 +421,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             onError("Impossible d’enregistrer la répétition.");
             return;
         }
+        metricsStore.addConsolidationLines(currentLineIds.size());
         renderMode();
     }
 
@@ -440,6 +441,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void validateConsolidationCycle() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         if (!prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.STABILIZATION, sessionDate.toString())) {
             onError("Impossible d’enregistrer la Consolidation.");
             return;
@@ -466,6 +468,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void validateLearningConsolidationCycle() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         if (!prefs.completeSnowballEvening(ConsolidationCycleEngine.Family.LEARNING, sessionDate.toString())) {
             onError("Impossible d’enregistrer le Renforcement.");
             return;
@@ -492,6 +495,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void validateConsolidationFinalReview() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         String label = "Consolidation · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
         if (!prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
             onError("Impossible d’enregistrer la Consolidation.");
@@ -519,6 +523,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void validateLearningFinalReview() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
+        speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         String label = "Renforcement · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
         if (!prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
             onError("Impossible d’enregistrer le Renforcement.");
