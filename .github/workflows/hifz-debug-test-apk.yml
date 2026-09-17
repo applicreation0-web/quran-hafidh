@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: hifz-debug-test-apk-${{ github.ref }}
@@ -64,6 +64,18 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish debug APK as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="hifz-debug-${{ github.sha }}"
+          gh release create "$tag" "${{ steps.apk.outputs.path }}" \
+            --repo "${{ github.repository }}" \
+            --title "Quran Hifz debug test APK ($tag)" \
+            --notes "Automated debug build for personal testing on the ${{ github.ref_name }} branch. Unsigned/debug-signed; not for distribution." \
+            --prerelease
 
       - name: Upload test results on failure
         if: failure()
