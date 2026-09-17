@@ -318,7 +318,7 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Mar/Jeu/Sam/Dim · Révision · 60 min · position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Révision · Mar/Jeu/Sam/Dim · 60 min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 
