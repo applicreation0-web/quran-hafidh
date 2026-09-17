@@ -703,7 +703,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int nextBlock = itqanBlockIndex + 1;
         boolean finalBlock = nextBlock >= itqanBlockCount;
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
-        VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.itqanRotationStart());
+        VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart());
         String label="Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
             +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
         metricsStore.recordAnchoring("Stabilisation réussie · "+itqanUnit.start+" → "+itqanUnit.end

@@ -1096,6 +1096,19 @@ public final class HifzPrefs {
     public VerseRef itqanRotationStart() { return ref("itqanRotationStart"); }
     public void setItqanRotationStart(VerseRef value) { putRef("itqanRotationStart", value); }
 
+    /**
+     * A Stabilisation range edit can leave itqanRotationStart outside the new corpus (Settings
+     * offers a manual fix, but the anchor is only actually consumed here, in the validation path,
+     * so a learner who never revisits Settings would otherwise hit EligibleCorpus.nextAnchored's
+     * require() on every validation attempt). Self-heals to the corpus start instead of throwing.
+     */
+    public VerseRef repairedItqanRotationStart() {
+        if (isRotationStartValid()) return itqanRotationStart();
+        VerseRef repaired = itqanWorkCorpus().getRanges().get(0).getStart();
+        setItqanRotationStart(repaired);
+        return repaired;
+    }
+
     public VerseRef itqanCursor() { return ref("itqanCursor"); }
     public VerseRef murajaahCursor() { return ref("murajaahCursor"); }
     public void setItqanCursor(VerseRef value) { putRef("itqanCursor", value); }

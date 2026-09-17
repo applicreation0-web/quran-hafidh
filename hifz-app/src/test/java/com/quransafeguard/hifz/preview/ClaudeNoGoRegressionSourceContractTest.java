@@ -113,4 +113,23 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(sort.contains("sameSurahAdjacent"));
         assertFalse(sort.contains("fromOrdinal(segmentStart)"));
     }
+
+    /**
+     * Live-confirmed: after a Stabilisation range edit leaves itqanRotationStart outside the new
+     * corpus, EligibleCorpus.nextAnchored's require() threw on every subsequent validation
+     * (surfaced only as the generic "État de progression à vérifier" pink banner, 35/35 done,
+     * with no actionable recovery). validateItqan() must self-heal via repairedItqanRotationStart()
+     * instead of reading the raw, possibly-invalid cursor.
+     */
+    @Test public void stabilizationValidationSelfHealsAnInvalidRotationStartInsteadOfThrowing() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(prefs.contains("public VerseRef repairedItqanRotationStart()"));
+        String repaired = method(prefs, "public VerseRef repairedItqanRotationStart()", "\n\n");
+        assertTrue(repaired.contains("isRotationStartValid()"));
+        assertTrue(repaired.contains("setItqanRotationStart(repaired)"));
+        String validate = method(session, "private void validateItqan()", "private void restartItqanAfterAssistance()");
+        assertTrue(validate.contains("corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart())"));
+        assertFalse(validate.contains("corpus.nextAnchored(itqanUnit.end, prefs.itqanRotationStart())"));
+    }
 }
