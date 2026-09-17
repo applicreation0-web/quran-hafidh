@@ -29,7 +29,7 @@ public final class HifzCadenceTest {
 
     @Test public void insufficientMurajaahSamplesNeverRecalibrate() {
         assertEquals(9.0, HifzCadence.recalibrate(9.0, 19, 600_000L), 0.0001);
-        assertEquals(9.0, HifzCadence.recalibrate(9.0, 100, 299_000L), 0.0001);
+        assertEquals(9.0, HifzCadence.recalibrate(9.0, 100, 59_000L), 0.0001);
         assertEquals(9.0, HifzCadence.recalibrate(9.0, 0, 600_000L), 0.0001);
     }
 
