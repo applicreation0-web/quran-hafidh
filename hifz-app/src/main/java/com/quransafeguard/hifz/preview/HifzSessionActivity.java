@@ -1,5 +1,6 @@
 package com.quransafeguard.hifz.preview;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -763,10 +764,56 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahProgress();
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
+        VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
+        if (nextSegment != null) {
+            VerseRef jumpTarget = nextSegment;
+            LinearLayout jumpAction = Ui.roundAction(this, "", "Segment suivant", v -> {
+                currentPage = geometry.pageForVerse(jumpTarget);
+                currentSelection = Collections.emptyList();
+                currentLineIds = Collections.emptyList();
+                showCurrent();
+                restoreMurajaahEndpointSelectionOnCurrentPage();
+            });
+            actions.addView(jumpAction);
+        }
         LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
         murajaahFinishButton.setEnabled(true);
         actions.addView(validateAction);
+    }
+
+    /**
+     * The acquired corpus can hold several disjoint ranges (murajaahObjectiveLabel splits the
+     * plan the same way); pages between segments are outside the corpus, so free swiping across
+     * them is impractical. Offers the next segment's start once the current page's segment has
+     * been passed, so the learner never has to hunt for it.
+     */
+    private List<VerseRef> murajaahSegmentStarts() {
+        List<VerseRef> traversal = murajaahPlan.traversalVerses;
+        List<VerseRef> starts = new ArrayList<>();
+        if (traversal.isEmpty()) return starts;
+        starts.add(traversal.get(0));
+        for (int i = 1; i < traversal.size(); i++) {
+            if (GeometryRepository.ordinal(traversal.get(i)) != GeometryRepository.ordinal(traversal.get(i - 1)) + 1) {
+                starts.add(traversal.get(i));
+            }
+        }
+        return starts;
+    }
+
+    private VerseRef murajaahNextSegmentAfterPage(int page) {
+        for (VerseRef start : murajaahSegmentStarts()) {
+            if (geometry.pageForVerse(start) > page) return start;
+        }
+        return null;
+    }
+
+    private VerseRef murajaahNextSegmentAfter(VerseRef end) {
+        if (end == null) return null;
+        for (VerseRef start : murajaahSegmentStarts()) {
+            if (GeometryRepository.ordinal(start) > GeometryRepository.ordinal(end)) return start;
+        }
+        return null;
     }
 
     private void finishMurajaah(){
@@ -774,6 +821,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             Toast.makeText(this, "Touchez d’abord le dernier verset réellement révisé.", Toast.LENGTH_LONG).show();
             return;
         }
+        VerseRef unread = murajaahNextSegmentAfter(murajaahActualEnd);
+        if (unread != null) {
+            new AlertDialog.Builder(this).setTitle("Passage restant")
+                .setMessage("L’objectif du jour continue plus loin (" + unread + "…). Valider maintenant clôturera la séance du jour sans le lire.")
+                .setNegativeButton("Continuer la lecture", null)
+                .setPositiveButton("Valider quand même", (d, w) -> completeMurajaahValidation())
+                .show();
+            return;
+        }
+        completeMurajaahValidation();
+    }
+
+    private void completeMurajaahValidation(){
         EligibleCorpus corpus = prefs.murajaahCorpus();
         VerseRef next = corpus.next(murajaahActualEnd);
         long elapsed = clock.elapsedMs();

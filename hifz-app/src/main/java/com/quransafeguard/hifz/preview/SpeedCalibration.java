@@ -30,7 +30,7 @@ final class SpeedCalibration {
             return new Result(Status.REJECTED, current, safeSamples, calibrated, "moins de 20 lignes");
         }
         if (activeElapsedMs < PreviewConfig.SPEED_MIN_SECONDS * 1000L) {
-            return new Result(Status.REJECTED, current, safeSamples, calibrated, "moins de 300 secondes");
+            return new Result(Status.REJECTED, current, safeSamples, calibrated, "moins de " + PreviewConfig.SPEED_MIN_SECONDS + " secondes");
         }
 
         double measured = (activeElapsedMs / 1000.0) / reviewedLines;

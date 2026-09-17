@@ -34,7 +34,7 @@ public final class PreviewConfig {
     public static final double INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING = 8.0;
     public static final double INITIAL_RECENT_SECONDS_PER_LINE_WORKING = 9.0;
     public static final int SPEED_MIN_LINES = 20;
-    public static final int SPEED_MIN_SECONDS = 300;
+    public static final int SPEED_MIN_SECONDS = 60;
     public static final double SPEED_MAX_CHANGE_RATIO = 0.10;
     public static final int SPEED_BOOTSTRAP_SAMPLES_WORKING = 3;
     public static final double SPEED_ACCEPT_MIN_SECONDS_PER_LINE_WORKING = 3.5;

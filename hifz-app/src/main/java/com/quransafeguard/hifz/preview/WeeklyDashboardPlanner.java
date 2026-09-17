@@ -152,8 +152,33 @@ final class WeeklyDashboardPlanner {
         if(!corpus.contains(cursor)) return new Projection("position à vérifier",cursor);
         int lines=HifzCadence.targetLines(minutes,prefs.murajaahSecondsPerLine());
         GeometryRepository.EligibleLinePlan plan=geometry.planEligibleLines(cursor,lines,corpus);
-        return new Projection(range(plan.start,plan.actualPlannedEnd)+" · "+minutes+" min",
+        return new Projection(segmentedRange(plan)+" · "+minutes+" min",
             corpus.next(plan.actualPlannedEnd));
+    }
+
+    /**
+     * The acquired corpus can hold several disjoint ranges, so a plan can wrap back through it
+     * (or jump between ranges) before reaching actualPlannedEnd; a plain start->end range() would
+     * then show a nonsensical reversed span within one surah. Splits the traversal at every
+     * non-contiguous step, the same way HifzSessionActivity.murajaahObjectiveLabel() does.
+     */
+    private static String segmentedRange(GeometryRepository.EligibleLinePlan plan){
+        List<VerseRef> traversal=plan.traversalVerses;
+        if(traversal.isEmpty())return range(plan.start,plan.actualPlannedEnd);
+        StringBuilder out=new StringBuilder();
+        VerseRef segmentStart=traversal.get(0);
+        VerseRef previous=segmentStart;
+        for(int i=1;i<=traversal.size();i++){
+            VerseRef current=i<traversal.size()?traversal.get(i):null;
+            boolean contiguous=current!=null&&GeometryRepository.ordinal(current)==GeometryRepository.ordinal(previous)+1;
+            if(!contiguous){
+                if(out.length()>0)out.append(" · puis ");
+                out.append(range(segmentStart,previous));
+                if(current!=null)segmentStart=current;
+            }
+            if(current!=null)previous=current;
+        }
+        return out.toString();
     }
 
     private int currentSabqiCursor(){

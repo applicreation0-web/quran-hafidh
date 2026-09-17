@@ -1099,6 +1099,7 @@ public final class HifzPrefs {
     public VerseRef itqanCursor() { return ref("itqanCursor"); }
     public VerseRef murajaahCursor() { return ref("murajaahCursor"); }
     public void setItqanCursor(VerseRef value) { putRef("itqanCursor", value); }
+    public void setMurajaahCursor(VerseRef value) { putRef("murajaahCursor", value); }
 
     /** All base Itqan plus every snowball promotion, irrespective of consolidation status. */
     public EligibleCorpus itqanWorkCorpus() {

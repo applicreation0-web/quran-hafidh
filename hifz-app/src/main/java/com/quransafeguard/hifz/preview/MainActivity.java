@@ -125,11 +125,21 @@ public final class MainActivity extends android.app.Activity {
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(murajaah);
-        setGeometryActionsEnabled(false);
         addWeighted(direct, sabqi, 1f);
         addWeighted(direct, itqan, 1f);
         addWeighted(direct, murajaah, 1f);
         root.addView(direct);
+
+        LinearLayout directEvening = Ui.row(this);
+        directEvening.setGravity(Gravity.CENTER);
+        LinearLayout renforcement = Ui.modeCard(this, "", "Renforcement", v -> openMode(HifzSessionActivity.LEARNING_CONSOLIDATION));
+        LinearLayout consolidation = Ui.modeCard(this, "", "Consolidation", v -> openMode(HifzSessionActivity.RECENT_SABQI_REVIEW));
+        geometryActions.add(renforcement);
+        geometryActions.add(consolidation);
+        setGeometryActionsEnabled(false);
+        addWeighted(directEvening, renforcement, 1f);
+        addWeighted(directEvening, consolidation, 1f);
+        root.addView(directEvening);
 
         setContentView(scroll);
         Ui.respectSystemBars(this, holder, 0, 0, 0, 0);

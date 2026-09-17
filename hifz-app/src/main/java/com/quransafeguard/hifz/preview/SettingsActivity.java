@@ -134,11 +134,16 @@ public final class SettingsActivity extends android.app.Activity {
         schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
         TextView consolidationSchemaNote=Ui.text(this,"Consolidation · soir Mar/Jeu/Sam",11f,false);
         consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
-        TextView renforcementSchemaNote=Ui.text(this,"Renforcement (soir Lun/Mer/Ven) et Consolidation (soir Mar/Jeu/Sam) sont l’effet boule de neige : chaque soir revoit ×10 tous les blocs de la semaine (Appris ou Stabilisé), puis le dimanche matin les revoit une dernière fois ×5 avant de les faire passer en Acquis. Chaque soir inclut aussi 30 min d’Entretien de l’Acquis ; dimanche soir, rien.",11f,false);
+        TextView renforcementSchemaNote=Ui.text(this,"Renforcement (Lun/Mer/Ven soir) et Consolidation (Mar/Jeu/Sam soir) — l’effet boule de neige :"
+            +"\n1. Chaque soir : ×10 sur TOUS les blocs Appris ou Stabilisé accumulés depuis le début de la semaine (pas seulement celui du jour)."
+            +"\n2. Dimanche matin : une dernière fois ×5 sur ces mêmes blocs, puis ils passent en Acquis."
+            +"\n3. Chaque soir Lun-Sam ajoute aussi 30 min d’Entretien de l’Acquis. Dimanche soir : rien.",11f,false);
         renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
         TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);
         j10SchemaNote.setTextColor(Ui.MUTED);j10SchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10SchemaNote);
-        TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau",11f,false);
+        TextView j10DetailNote=Ui.text(this,"Un passage Acquis non révisé depuis 10 jours devient prioritaire à la prochaine Révision.",11f,false);
+        j10DetailNote.setTextColor(Ui.MUTED);j10DetailNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10DetailNote);
+        TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau du même type — aucun jour n’est perdu.",11f,false);
         carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(carryoverSchemaNote);
 
         setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
@@ -243,10 +248,29 @@ public final class SettingsActivity extends android.app.Activity {
             Toast.makeText(this,error.getMessage()==null?"Plages incompatibles.":error.getMessage(),Toast.LENGTH_LONG).show();return;
         }
         refreshRangeLists();refreshItqan();refreshEffectiveItqanCorpus();
-        if(!prefs.isItqanCursorValid()||!prefs.isRotationStartValid()||!prefs.isMurajaahCursorValid()){
+        boolean rotationInvalid=!prefs.isRotationStartValid();
+        boolean itqanInvalid=!prefs.isItqanCursorValid();
+        boolean murajaahInvalid=!prefs.isMurajaahCursorValid();
+        if(rotationInvalid||itqanInvalid||murajaahInvalid){
             new AlertDialog.Builder(this).setTitle("Position à vérifier")
-                .setMessage("Une borne est hors du nouveau corpus. Aucun déplacement automatique n’a été effectué.")
-                .setPositiveButton("OK",null).show();
+                .setMessage("Une borne est hors du nouveau corpus. Aucun déplacement automatique n’a été effectué : Répétition et Révision resteront bloquées tant que la position n’est pas corrigée.")
+                .setNegativeButton("Garder",null)
+                .setPositiveButton("Repositionner au début",(d,w)->{
+                    if(rotationInvalid){
+                        VerseRef start=prefs.itqanWorkCorpus().getRanges().get(0).getStart();
+                        prefs.setItqanRotationStart(start);
+                    }
+                    if(itqanInvalid){
+                        VerseRef start=prefs.itqanWorkCorpus().getRanges().get(0).getStart();
+                        prefs.setItqanCursor(start);
+                    }
+                    if(murajaahInvalid){
+                        VerseRef start=prefs.murajaahCorpus().getRanges().get(0).getStart();
+                        prefs.setMurajaahCursor(start);
+                    }
+                    refreshItqan();
+                    Toast.makeText(this,"Positions repositionnées au début du nouveau corpus.",Toast.LENGTH_LONG).show();
+                }).show();
         }
     }
 

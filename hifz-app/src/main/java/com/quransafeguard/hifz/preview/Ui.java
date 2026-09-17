@@ -365,7 +365,8 @@ final class Ui {
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
         if (s.contains("apprentissage") || s.contains("leçon neuve") || s.contains("lecon neuve")) return R.drawable.ic_hifz_new_lesson;
         if (s.contains("reprise")) return R.drawable.ic_hifz_reprise;
-        if (s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;
+        if (s.contains("finale")) return R.drawable.ic_hifz_final_review;
+        if (s.contains("renforcement") || s.contains("consolidation")) return R.drawable.ic_hifz_consolidation;
         if (s.contains("stabilisation") || s.contains("ancrage")) return R.drawable.ic_hifz_anchor;
         if (s.contains("révision") || s.contains("revision") || s.contains("entretien")) return R.drawable.ic_hifz_maintenance;
         if (s.contains("valider") || s.equals("revu") || s.contains("termin")) return R.drawable.ic_ui_validate;
