@@ -148,4 +148,22 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus)"));
         assertTrue(mushaf.contains("lastStrictLineFocus = strictLineFocus;"));
     }
+
+    /**
+     * A Mushaf line always belongs to exactly one surah (StabilizationHalfPagePolicy.singleSurah
+     * already relies on this), but the five-line Sabqi block never checked it: a block could
+     * silently span the last line(s) of one surah plus the first line(s) of the next. Fix mirrors
+     * StabilizationHalfPagePolicy's own never-cross-a-surah discipline.
+     */
+    @Test public void sabqiFiveLineBlockNeverCrossesASurahBoundary() throws Exception {
+        String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
+        String block = method(geometry, "public FiveLineBlock fiveLineBlock(int startLineIndex)", "ArrayList<String> ids = new ArrayList<>();");
+        assertTrue(block.contains("int startSurah = lines.get(startLineIndex).verses.get(0).getSurah();"));
+        assertTrue(block.contains("getSurah() == startSurah"));
+        assertFalse("must not force exactly SABQI_LINES regardless of surah boundary",
+            block.contains("!= PreviewConfig.SABQI_LINES"));
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue("validateSabqi must advance from the block's real end, not a fixed +5",
+            session.contains("sabqiBlock.endLineIndex+1"));
+    }
 }

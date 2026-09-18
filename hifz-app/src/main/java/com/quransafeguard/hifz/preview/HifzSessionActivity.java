@@ -241,7 +241,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             sessionCompleted = true;
             clock.pause();
             currentMask = 0;
-            program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · 5 lignes");
+            program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
             progress.setText(assistancePassed
                 ? "37/37 · prêt à valider · révélations " + prefs.sabqiAssisted()
                 : "37/37 · à renforcer · révélations " + prefs.sabqiAssisted() + " · maximum 2");
@@ -252,7 +252,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         sessionCompleted = false;
         currentMask = PreviewConfig.sabqiMaskForNextRep(rep);
-        program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · 5 lignes");
+        program.setText("Apprentissage · " + sabqiBlock.verseLabel() + " · " + sabqiBlock.lineIds.size() + " lignes");
         updateSabqiProgress(rep, prefs.sabqiAssisted());
         showCurrent();
         addRoundAction("↻","Répétition",v->completeSabqiRep());
@@ -359,8 +359,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask = 0;
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
-        program.setText("Apprentissage · " + block.verseLabel() + " · 5 lignes");
-        progress.setText(timedSessionLimitReached ? "30 min atteintes" : "Répétez les mêmes 5 lignes.");
+        program.setText("Apprentissage · " + block.verseLabel() + " · " + block.lineIds.size() + " lignes");
+        progress.setText(timedSessionLimitReached ? "30 min atteintes" : "Répétez les mêmes lignes.");
         showCurrent();
         if (!timedSessionLimitReached) addRoundAction("↻", "Répétition", v -> renderMode());
     }

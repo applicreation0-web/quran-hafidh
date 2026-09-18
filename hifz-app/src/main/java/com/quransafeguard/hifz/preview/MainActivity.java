@@ -351,7 +351,7 @@ public final class MainActivity extends android.app.Activity {
             }else if(HifzSessionActivity.SABQI.equals(mode)){
                 int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
                 GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);
-                detail="Apprentissage · "+shortRange(b.startVerse,b.endVerse)+" · 5 lignes";
+                detail="Apprentissage · "+shortRange(b.startVerse,b.endVerse)+" · "+b.lineIds.size()+" lignes";
             }else if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)){
                 detail="Apprentissage · reprise · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
             }else if(HifzSessionActivity.ITQAN.equals(mode)){

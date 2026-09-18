@@ -79,7 +79,7 @@ final class WeeklyDashboardPlanner {
                     else if(morningActual!=null)morning="✓ "+compact(morningActual.label);
                     else if(block==null)morning="Apprentissage · plage à vérifier";
                     else{
-                        morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · 5 lignes";
+                        morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
                     boolean eveningDone=snowballActual!=null&&entretienActual!=null;

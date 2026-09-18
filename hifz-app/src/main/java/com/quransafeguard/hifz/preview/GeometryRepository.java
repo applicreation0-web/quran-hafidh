@@ -200,14 +200,20 @@ public final class GeometryRepository {
 
     public int pageForVerse(VerseRef verse) { return lines.get(firstLineIndex(verse)).page; }
 
+    /**
+     * Clips to at most SABQI_LINES physical lines, but never crosses a surah boundary: a Mushaf
+     * line always belongs to exactly one surah (a new surah always starts its own line), so a
+     * block can legitimately be shorter than 5 lines when the surah ends first. The next block
+     * then naturally starts at the following surah's first line.
+     */
     public FiveLineBlock fiveLineBlock(int startLineIndex) {
         if (startLineIndex < 0 || startLineIndex >= lines.size()) {
             throw new IllegalArgumentException("Invalid global Mushaf line " + startLineIndex);
         }
-        int endIndex = Math.min(lines.size() - 1, startLineIndex + PreviewConfig.SABQI_LINES - 1);
-        if (endIndex - startLineIndex + 1 != PreviewConfig.SABQI_LINES) {
-            throw new IllegalStateException("Not enough Quran lines for a five-line Sabqi block");
-        }
+        int startSurah = lines.get(startLineIndex).verses.get(0).getSurah();
+        int maxIndex = Math.min(lines.size() - 1, startLineIndex + PreviewConfig.SABQI_LINES - 1);
+        int endIndex = startLineIndex;
+        while (endIndex < maxIndex && lines.get(endIndex + 1).verses.get(0).getSurah() == startSurah) endIndex++;
         ArrayList<String> ids = new ArrayList<>();
         LinkedHashSet<VerseRef> refs = new LinkedHashSet<>();
         for (int i = startLineIndex; i <= endIndex; i++) {
