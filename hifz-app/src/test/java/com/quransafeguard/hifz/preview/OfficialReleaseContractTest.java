@@ -62,6 +62,36 @@ public final class OfficialReleaseContractTest {
         assertFalse("cycle philosophy forbids a priority promotion queue", prefs.contains("pendingPromotedItqan"));
     }
 
+    /**
+     * The debug->release signature switch means every learner must uninstall and reinstall at
+     * least once, so Export/Import (HifzBackup) is the only path that carries progress across
+     * that boundary. It must stay a generic whole-store dump (so a brand-new key never needs an
+     * export-code update to be included), and any key introduced after schema v6 froze must read
+     * with a safe default rather than the strict required()/requiredV6String() helpers, so
+     * restoring an older export never crashes on a key that export predates.
+     */
+    @Test public void backupStaysGenericAndPostSchemaKeysReadWithSafeDefaults() throws Exception {
+        String backup = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzBackup.java");
+        assertTrue("export must iterate the whole store, not a fixed key list", backup.contains("prefs.getAll()"));
+        assertTrue("import must restore into the exact same preference file", backup.contains("quran_hifz_preview_v1"));
+        assertTrue("import must be a single atomic commit", backup.contains("editor.commit()"));
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("weekly snowball evening gate must default to never-done, not require the key",
+            prefs.contains("public String lastLearningSnowballEveningDate() { return p.getString(\"lastLearningSnowballEveningDate\", \"\"); }"));
+        assertTrue("weekly snowball evening gate must default to never-done, not require the key",
+            prefs.contains("public String lastStabilizationSnowballEveningDate() { return p.getString(\"lastStabilizationSnowballEveningDate\", \"\"); }"));
+        String repair = method(prefs, "boolean repairV5 = p.contains(\"stableRecentLines\")", "if (repairV5) {");
+        assertTrue("v5-era exports missing later-added keys must be backfilled on every launch, not just once",
+            repair.contains("!p.contains(\"consolidationAttendanceDates\")"));
+    }
+
+    private static String method(String source, String start, String end) {
+        int a = source.indexOf(start);
+        int b = source.indexOf(end, a + start.length());
+        if (a < 0 || b < 0 || b <= a) throw new IllegalStateException("Method boundary missing: " + start);
+        return source.substring(a, b);
+    }
+
     @Test public void runtimeUsesIndependentFixedSessionsWithoutHiddenTransfer() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
