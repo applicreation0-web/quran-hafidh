@@ -410,8 +410,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         List<String> exactLineIds = ConsolidationPhysicalUnitPolicy.decodeLineUnit(
             consolidationSession.unitIds().get(position));
         List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(exactLineIds);
-        currentPage = physicalLines.get(0).page;
-        unitFirstPage = unitLastPage = currentPage;
+        unitFirstPage = physicalLines.get(0).page;
+        unitLastPage = physicalLines.get(physicalLines.size() - 1).page;
+        currentPage = unitFirstPage;
         currentLineIds = new ArrayList<>(exactLineIds);
         currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;

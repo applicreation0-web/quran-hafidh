@@ -206,6 +206,25 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             learningFinal.contains("ConsolidationCycleEngine.Protocol.SNOWBALL);"));
     }
 
+    /**
+     * A block or the new continuous pass can legitimately span two Mushaf pages (a 5-line block near
+     * a page break, or the week's 10/15-line continuous reread). renderGroupedCycle must track the
+     * FIRST and LAST physical line's page separately so page-swipe navigation (clamped between
+     * unitFirstPage/unitLastPage in goPage()) can reach every page the unit's lines are actually on,
+     * not just the page its first line happens to sit on.
+     */
+    @Test public void groupedCycleTracksBothEndsOfAMultiPageUnitNotJustItsFirstPage() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String renderGroupedCycle = method(session,
+            "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
+        assertTrue("unitFirstPage must come from the unit's first physical line",
+            renderGroupedCycle.contains("unitFirstPage = physicalLines.get(0).page;"));
+        assertTrue("unitLastPage must come from the unit's LAST physical line, not the first",
+            renderGroupedCycle.contains("unitLastPage = physicalLines.get(physicalLines.size() - 1).page;"));
+        assertFalse("must not collapse the unit to a single page again",
+            renderGroupedCycle.contains("unitFirstPage = unitLastPage = currentPage;"));
+    }
+
     @Test public void freeMemActivityAlsoOffersTheDirectSurahPicker() throws Exception {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue("Mémorisation libre must expose a Sourate nav button",
