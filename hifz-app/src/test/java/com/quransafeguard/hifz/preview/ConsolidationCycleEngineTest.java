@@ -74,6 +74,44 @@ public final class ConsolidationCycleEngineTest {
         assertTrue(wednesday.readyToClose());
     }
 
+    /**
+     * Wednesday/Friday's evening snowball adds a fourth ("continuous") unit on top of the week's
+     * own blocks — SNOWBALL/SNOWBALL_FINAL cycles must tolerate that, while the legacy protocols
+     * (never used with more than three) stay capped at three.
+     */
+    @Test public void snowballCyclesToleratesFourUnitsForTheContinuousPassButLegacyProtocolsStayCappedAtThree() {
+        ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle = engine.startCycle("learning-week2",
+            ConsolidationCycleEngine.Family.LEARNING,
+            new ConsolidationCycleEngine.Unit("mon", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("wed", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("fri", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("continuous", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        ConsolidationCycleEngine.Session session = engine.openSession(cycle, "session-fri");
+        assertEquals(4, session.sessionGroupSize());
+        assertEquals(10, session.quotaAt(3));
+
+        try {
+            engine.addUnit(engine.closeSession(session).cycle(),
+                new ConsolidationCycleEngine.Unit("fifth", ConsolidationCycleEngine.Protocol.SNOWBALL));
+            fail("snowball cycle must never exceed four units");
+        } catch (IllegalStateException expected) {
+            // expected
+        }
+
+        ConsolidationCycleEngine.Cycle legacy = engine.startCycle("legacy",
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("u1", ConsolidationCycleEngine.Protocol.LIGHT));
+        legacy = engine.addUnit(legacy, new ConsolidationCycleEngine.Unit("u2", ConsolidationCycleEngine.Protocol.FULL));
+        legacy = engine.addUnit(legacy, new ConsolidationCycleEngine.Unit("u3", ConsolidationCycleEngine.Protocol.LIGHT));
+        try {
+            engine.addUnit(legacy, new ConsolidationCycleEngine.Unit("u4", ConsolidationCycleEngine.Protocol.LIGHT));
+            fail("legacy cycle must never exceed three units");
+        } catch (IllegalStateException expected) {
+            // expected
+        }
+    }
+
     @Test public void mixedStabilizationProtocolsShareFrozenGroupSize() {
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle = engine.startCycle(

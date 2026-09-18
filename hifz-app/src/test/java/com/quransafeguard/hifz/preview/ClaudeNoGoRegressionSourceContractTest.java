@@ -168,6 +168,32 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /** Lecture's page slider is replaced by a direct surah picker (all 114, canonical order). */
+    @Test public void weeklySnowballAlsoReviewsTheAccumulatedLinesAsOneContinuousPass() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("HifzPrefs must add a combined continuous unit once at least two blocks accumulated",
+            prefs.contains("ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(encodedBlocks)"));
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationPhysicalUnitPolicy.java");
+        assertTrue("encodeContinuousUnit must concatenate every accumulated block's lines",
+            policy.contains("static String encodeContinuousUnit(List<String> encodedUnits)"));
+        String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
+        assertTrue("SNOWBALL/SNOWBALL_FINAL cycles must tolerate a fourth unit for the continuous pass",
+            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 4 : 3"));
+    }
+
+    /**
+     * Sunday's final review graduates the week's physical blocks to Acquis; the synthetic continuous
+     * unit repeats the very same lines and must be excluded from that graduation, or its lines and
+     * verses get double-processed (re-promoted, re-subtracted from the recent-Sabqi queue) the
+     * moment the weekly snowball grows past its first block.
+     */
+    @Test public void sundayFinalReviewGraduationSkipsTheSyntheticContinuousUnit() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("both completion paths must read only the real physical blocks",
+            prefs.contains("for (String unitId : physicalUnitIds(session)) {"));
+        assertFalse("neither completion path may graduate the raw, un-trimmed unit list",
+            prefs.contains("for (String unitId : session.unitIds()) {"));
+    }
+
     @Test public void freeMemActivityAlsoOffersTheDirectSurahPicker() throws Exception {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue("Mémorisation libre must expose a Sourate nav button",

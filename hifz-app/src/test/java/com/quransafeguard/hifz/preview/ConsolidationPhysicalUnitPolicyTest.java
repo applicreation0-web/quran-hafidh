@@ -63,6 +63,27 @@ public final class ConsolidationPhysicalUnitPolicyTest {
         assertEquals(ids, decoded);
     }
 
+    @Test public void continuousUnitConcatenatesEveryBlocksLinesInAccumulationOrder() throws Exception {
+        String monday = ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p1-l1", "p1-l2"));
+        String wednesday = ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p1-l3", "p1-l4"));
+        String friday = ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p1-l5"));
+
+        String continuous = ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(
+            Arrays.asList(monday, wednesday, friday));
+        assertEquals(Arrays.asList("p1-l1", "p1-l2", "p1-l3", "p1-l4", "p1-l5"),
+            ConsolidationPhysicalUnitPolicy.decodeLineUnit(continuous));
+    }
+
+    @Test public void continuousUnitRequiresAtLeastTwoBlocks() {
+        String monday = ConsolidationPhysicalUnitPolicy.encodeLineUnit(Arrays.asList("p1-l1"));
+        try {
+            ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(Collections.singletonList(monday));
+            fail("a single block has nothing to combine with");
+        } catch (IllegalArgumentException expected) {
+            // expected
+        }
+    }
+
     private static List<?> readyUnits(List<StabilizationHalfPagePolicy.Unit> planned,
                                       Set<String> stabilized,
                                       Set<String> acquired,

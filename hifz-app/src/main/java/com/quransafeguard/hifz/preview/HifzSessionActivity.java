@@ -365,6 +365,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!timedSessionLimitReached) addRoundAction("↻", "Répétition", v -> renderMode());
     }
 
+    /**
+     * How many of the week's own physical blocks a Sunday final session graduates — excluding the
+     * weekly snowball's extra "continuous" unit (present whenever more than one block accumulated),
+     * which repeats the same lines already counted by the blocks before it.
+     */
+    private static int physicalUnitCount(ConsolidationCycleEngine.Session session) {
+        int groupSize = session.sessionGroupSize();
+        return groupSize > 1 ? groupSize - 1 : groupSize;
+    }
+
     /** Shared plumbing for every grouped ×N repetition cycle (evening snowball or Sunday final review). */
     private void renderGroupedCycle(List<ConsolidationCycleEngine.Unit> units, ConsolidationCycleEngine.Family family,
                                      String cycleIdPrefix, String displayName, String emptyMessage,
@@ -497,7 +507,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void validateConsolidationFinalReview() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
-        String label = "Consolidation · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
+        String label = "Consolidation · " + physicalUnitCount(consolidationSession) + " unité(s) · Acquis";
         if (!prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
             onError("Impossible d’enregistrer la Consolidation.");
             return;
@@ -525,7 +535,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void validateLearningFinalReview() {
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
-        String label = "Renforcement · " + consolidationSession.sessionGroupSize() + " unité(s) · Acquis";
+        String label = "Renforcement · " + physicalUnitCount(consolidationSession) + " unité(s) · Acquis";
         if (!prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
             onError("Impossible d’enregistrer le Renforcement.");
             return;

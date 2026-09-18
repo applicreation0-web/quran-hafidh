@@ -1635,13 +1635,22 @@ public final class HifzPrefs {
         return out;
     }
 
-    /** This week's accumulated snowball units, tagged for the given review pass. */
+    /**
+     * This week's accumulated snowball units, tagged for the given review pass: each day's block
+     * on its own, plus — once there are at least two — one extra unit combining every accumulated
+     * block's lines into a single continuous pass, so the growing week is also read as one whole,
+     * not just as separate blocks.
+     */
     private List<ConsolidationCycleEngine.Unit> weeklySnowballUnits(
             ConsolidationCycleEngine.Family family, LocalDate today, ConsolidationCycleEngine.Protocol protocol) {
         JSONArray current = rolledSnowballUnits(family, today);
+        ArrayList<String> encodedBlocks = new ArrayList<>();
+        for (int i = 0; i < current.length(); i++) encodedBlocks.add(current.optString(i));
         ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
-        for (int i = 0; i < current.length(); i++) {
-            out.add(new ConsolidationCycleEngine.Unit(current.optString(i), protocol));
+        for (String encoded : encodedBlocks) out.add(new ConsolidationCycleEngine.Unit(encoded, protocol));
+        if (encodedBlocks.size() > 1) {
+            out.add(new ConsolidationCycleEngine.Unit(
+                ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(encodedBlocks), protocol));
         }
         return Collections.unmodifiableList(out);
     }
@@ -1788,10 +1797,11 @@ public final class HifzPrefs {
         if (session == null) throw new IllegalArgumentException("Consolidation session required");
         if (!session.open()) throw new IllegalStateException("Only an OPEN Consolidation session can be persisted");
         ConsolidationCycleEngine.Cycle cycle = session.cycle();
-        if (cycle == null || cycle.family() == null) {
+        if (cycle == null || cycle.family() == null || cycle.units().isEmpty()) {
             throw new IllegalStateException("Consolidation cycle/family required");
         }
-        if (session.sessionGroupSize() < 1 || session.sessionGroupSize() > 3
+        int cap = ConsolidationCycleEngine.maxUnitsFor(cycle.units().get(0).protocol());
+        if (session.sessionGroupSize() < 1 || session.sessionGroupSize() > cap
                 || cycle.units().size() != session.sessionGroupSize()) {
             throw new IllegalStateException("Invalid frozen Consolidation session size");
         }
@@ -1843,7 +1853,7 @@ public final class HifzPrefs {
 
             int groupSize = root.getInt("sessionGroupSize");
             JSONArray units = root.getJSONArray("units");
-            if (groupSize < 1 || groupSize > 3 || units.length() != groupSize) {
+            if (groupSize < 1 || units.length() != groupSize) {
                 throw new IllegalStateException("Corrupt frozen Consolidation group size");
             }
 
@@ -1876,7 +1886,19 @@ public final class HifzPrefs {
         }
     }
 
-    /** Atomically closes a frozen 1..3 unit Consolidation group and makes its exact physical lines Acquired. */
+    /**
+     * The session's real per-day physical blocks, excluding the weekly snowball's synthetic
+     * "continuous" pass — both completion methods are only ever reached from a Sunday final review
+     * (weeklySnowballUnits' only caller for grouped completion), where a session with more than one
+     * unit always has that continuous unit last, already covered line-for-line by the blocks before
+     * it, so graduating it again would double-process the same lines.
+     */
+    private static List<String> physicalUnitIds(ConsolidationCycleEngine.Session session) {
+        List<String> unitIds = session.unitIds();
+        return unitIds.size() > 1 ? unitIds.subList(0, unitIds.size() - 1) : unitIds;
+    }
+
+    /** Atomically closes a frozen 1..3 physical-unit Consolidation group and makes its exact lines Acquired. */
     boolean completeConsolidationSessionV6(ConsolidationCycleEngine.Session session, GeometryRepository geometry,
                                            String date, String label) {
         if (session == null || !session.open() || !session.readyToClose())
@@ -1888,7 +1910,7 @@ public final class HifzPrefs {
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
             LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
 
-            for (String unitId : session.unitIds()) {
+            for (String unitId : physicalUnitIds(session)) {
                 List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
                 List<GeometryRepository.LineMeta> physical = geometry.linesForExactIds(ids);
                 List<StabilizationHalfPagePolicy.Unit> verified = StabilizationHalfPagePolicy.planPage(physical);
@@ -1974,7 +1996,7 @@ public final class HifzPrefs {
             ArrayList<RecentSabqi> processed = new ArrayList<>();
             ArrayList<VerseRef> versesToPromote = new ArrayList<>();
 
-            for (String unitId : session.unitIds()) {
+            for (String unitId : physicalUnitIds(session)) {
                 List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
                 List<GeometryRepository.LineMeta> physical = geometry.linesForExactIds(ids);
                 if (physical.size() != ids.size())

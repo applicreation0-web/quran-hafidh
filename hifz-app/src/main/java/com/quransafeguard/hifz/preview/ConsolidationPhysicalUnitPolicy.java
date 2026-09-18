@@ -66,6 +66,20 @@ final class ConsolidationPhysicalUnitPolicy {
             .encodeToString(raw.toString().getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * The weekly snowball's extra "continuous" pass: every already-accumulated physical unit's
+     * lines, concatenated in accumulation order, as one combined unit — on top of (not instead
+     * of) each block's own individual repetitions.
+     */
+    static String encodeContinuousUnit(List<String> encodedUnits) {
+        if (encodedUnits == null || encodedUnits.size() < 2) {
+            throw new IllegalArgumentException("Continuous unit requires at least two physical units");
+        }
+        ArrayList<String> combined = new ArrayList<>();
+        for (String encoded : encodedUnits) combined.addAll(decodeLineUnit(encoded));
+        return encodeLineUnit(combined);
+    }
+
     static List<String> decodeLineUnit(String encoded) {
         if (encoded == null || !encoded.startsWith("L:") || encoded.length() <= 2) {
             throw new IllegalArgumentException("Invalid Consolidation physical unit id");

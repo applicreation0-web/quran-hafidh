@@ -16,6 +16,15 @@ final class ConsolidationCycleEngine {
      */
     enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL }
 
+    /**
+     * LEARNING37/LIGHT/FULL cycles freeze at three physical units (their quota tables only define
+     * positions 0..2). SNOWBALL/SNOWBALL_FINAL cycles allow a fourth: the weekly snowball's extra
+     * "continuous" unit, added once at least two of the week's own blocks have accumulated.
+     */
+    static int maxUnitsFor(Protocol protocol) {
+        return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 4 : 3;
+    }
+
     static final class Unit {
         private final String id;
         private final Protocol protocol;
@@ -113,7 +122,8 @@ final class ConsolidationCycleEngine {
     Cycle addUnit(Cycle cycle, Unit unit) {
         requireCycle(cycle);
         if (cycle.hasOpenSession()) throw new IllegalStateException("cannot add unit while session is OPEN");
-        if (cycle.units().size() >= 3) throw new IllegalStateException("cycle cannot exceed three units");
+        int cap = maxUnitsFor(unit.protocol());
+        if (cycle.units().size() >= cap) throw new IllegalStateException("cycle cannot exceed " + cap + " units");
         validateUnitForFamily(cycle.family(), unit);
         for (Unit existing : cycle.units()) {
             if (existing.id().equals(unit.id())) throw new IllegalArgumentException("duplicate unit id");
@@ -128,7 +138,6 @@ final class ConsolidationCycleEngine {
         if (cycle.hasOpenSession()) throw new IllegalStateException("cycle already has an OPEN session");
         if (sessionId == null || sessionId.trim().isEmpty()) throw new IllegalArgumentException("session id required");
         int groupSize = cycle.units().size();
-        if (groupSize < 1 || groupSize > 3) throw new IllegalStateException("cycle size must be 1..3");
 
         ArrayList<String> ids = new ArrayList<>();
         ArrayList<Protocol> protocols = new ArrayList<>();
@@ -212,7 +221,8 @@ final class ConsolidationCycleEngine {
 
     static int[] stageVector(Protocol protocol, int groupSize, int position) {
         if (protocol == null) throw new IllegalArgumentException("protocol required");
-        if (groupSize < 1 || groupSize > 3) throw new IllegalArgumentException("group size must be 1..3");
+        int cap = maxUnitsFor(protocol);
+        if (groupSize < 1 || groupSize > cap) throw new IllegalArgumentException("group size must be 1.." + cap);
         if (position < 0 || position >= groupSize) throw new IllegalArgumentException("position out of range");
 
         switch (protocol) {
@@ -248,7 +258,8 @@ final class ConsolidationCycleEngine {
 
     private static int[] normalizeProgress(List<Protocol> protocols, int groupSize,
                                            int stage, int unitIndex, int done) {
-        if (protocols == null || protocols.size() != groupSize || groupSize < 1 || groupSize > 3) {
+        if (protocols == null || protocols.isEmpty() || protocols.size() != groupSize || groupSize < 1
+                || groupSize > maxUnitsFor(protocols.get(0))) {
             throw new IllegalStateException("invalid frozen consolidation snapshot");
         }
         if (stage < 0 || stage > 5 || unitIndex < 0 || unitIndex >= groupSize || done < 0) {
@@ -286,8 +297,10 @@ final class ConsolidationCycleEngine {
 
     private static void requireCycle(Cycle cycle) {
         if (cycle == null) throw new IllegalArgumentException("cycle required");
-        if (cycle.units().isEmpty() || cycle.units().size() > 3) {
-            throw new IllegalStateException("cycle size must be 1..3");
+        if (cycle.units().isEmpty()) throw new IllegalStateException("cycle size must be non-empty");
+        int cap = maxUnitsFor(cycle.units().get(0).protocol());
+        if (cycle.units().size() > cap) {
+            throw new IllegalStateException("cycle size must be 1.." + cap);
         }
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         for (Unit unit : cycle.units()) {
