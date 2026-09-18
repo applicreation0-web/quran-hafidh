@@ -242,6 +242,28 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
+     * A multi-page grouped-cycle unit let every repetition count from page one alone, since
+     * completeGroupedCycleRep() never checked which page was on screen — the second page of a
+     * continuous pass could go entirely unread. The Répétition action must only appear once the
+     * unit's last page is showing, and goPage() must re-check this on every swipe (not just once
+     * at render time), since swiping never re-runs renderGroupedCycle itself.
+     */
+    @Test public void groupedCycleRepetitionActionOnlyAppearsOnTheUnitsLastPage() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue("renderGroupedCycle must delegate the Répétition action to the page-gated helper",
+            session.contains("showCurrent();\n        updateGroupedCycleRepAction();"));
+        String helper = method(session,
+            "private void updateGroupedCycleRepAction() {", "private void completeGroupedCycleRep() {");
+        assertTrue("the action must be withheld while a page other than the last is showing",
+            helper.contains("if (currentPage != unitLastPage) {"));
+        assertTrue("the Répétition action itself must only be added once on the last page",
+            helper.contains("addRoundAction(\"↻\", \"Répétition\", v -> completeGroupedCycleRep());"));
+        String goPage = method(session, "private void goPage(int delta) {", "private void addRoundAction(");
+        assertTrue("goPage must refresh the gated action after every swipe, not just at render time",
+            goPage.contains("updateGroupedCycleRepAction();"));
+    }
+
+    /**
      * StabilizationHalfPagePolicy's 7.5/7.5 line-count split could land mid-verse, splitting a
      * single verse's lines across both physical Consolidation units (confirmed on a real page:
      * Al-Hujurat 49:9 straddling the raw 7/8 boundary on Mushaf page 516). It must now prefer a

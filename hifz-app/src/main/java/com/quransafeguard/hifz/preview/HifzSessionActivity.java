@@ -417,12 +417,28 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;
         sessionCompleted = false;
-        int[] vector = consolidationSession.stageVectorAt(position);
-        int target = vector[consolidationSession.stage()];
         program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
-        progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target);
         showCurrent();
+        updateGroupedCycleRepAction();
+    }
+
+    /**
+     * A multi-page unit (the weekly snowball's continuous pass can span two pages) must not let a
+     * repetition count while the last page is still unseen — otherwise every repetition could be
+     * validated from page one alone, without ever reading the rest. The action only appears once
+     * the unit's last page is on screen; goPage() calls this again after every page swipe.
+     */
+    private void updateGroupedCycleRepAction() {
+        actions.removeAllViews();
+        if (currentPage != unitLastPage) {
+            progress.setText("Tournez la page pour voir la suite avant de valider.");
+            return;
+        }
+        int position = consolidationSession.nextUnitIndex();
+        int[] vector = consolidationSession.stageVectorAt(position);
+        int target = vector[consolidationSession.stage()];
+        progress.setText("Répétition " + consolidationSession.donePerStage() + "/" + target);
         addRoundAction("↻", "Répétition", v -> completeGroupedCycleRep());
     }
 
@@ -955,6 +971,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;showCurrent();
+        boolean groupedCycle=RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
+            ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
+        if(groupedCycle&&consolidationSession!=null&&!consolidationSession.readyToClose())updateGroupedCycleRepAction();
     }
 
     private void addRoundAction(String symbol,String label,View.OnClickListener listener){
