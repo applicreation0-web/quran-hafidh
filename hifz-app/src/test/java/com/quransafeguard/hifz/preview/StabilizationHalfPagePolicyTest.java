@@ -51,6 +51,29 @@ public final class StabilizationHalfPagePolicyTest {
         assertSizes(new int[]{7, 8}, StabilizationHalfPagePolicy.planPage(lines));
     }
 
+    /**
+     * Mirrors a real case (Al-Hujurat, page 516): the raw 7/8 target lands mid-verse, but a clean
+     * verse boundary exists one line short of it. That boundary must win, even though it makes the
+     * halves uneven (6+9 instead of 7+8) — the whole point is to stop cutting a verse in half.
+     */
+    @Test public void fifteenLinesPrefersNearbyCleanVerseBoundaryOverMidVerseSplit() {
+        ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>();
+        VerseRef a = new VerseRef(2, 1), b = new VerseRef(2, 2), c = new VerseRef(2, 3);
+        for (int i = 0; i < 6; i++) lines.add(line(i, 100, "a-" + i, a));
+        for (int i = 6; i < 10; i++) lines.add(line(i, 100, "b-" + i, b));
+        for (int i = 10; i < 15; i++) lines.add(line(i, 100, "c-" + i, c));
+        assertSizes(new int[]{6, 9}, StabilizationHalfPagePolicy.planPage(lines));
+    }
+
+    /** The tolerance is exactly two lines either side of the 7.5 target — this is the edge of it. */
+    @Test public void fifteenLinesAcceptsACleanBoundaryExactlyTwoLinesFromTheTarget() {
+        ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>();
+        VerseRef a = new VerseRef(2, 1), b = new VerseRef(2, 2);
+        for (int i = 0; i < 9; i++) lines.add(line(i, 100, "a-" + i, a));
+        for (int i = 9; i < 15; i++) lines.add(line(i, 100, "b-" + i, b));
+        assertSizes(new int[]{9, 6}, StabilizationHalfPagePolicy.planPage(lines));
+    }
+
     @Test public void surahBoundaryCreatesSeparateContinuousUnits() {
         ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>();
         lines.addAll(uniqueLines(100, 2, 6));

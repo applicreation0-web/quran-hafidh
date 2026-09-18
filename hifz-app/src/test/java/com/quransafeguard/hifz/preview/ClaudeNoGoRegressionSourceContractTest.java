@@ -225,6 +225,20 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             renderGroupedCycle.contains("unitFirstPage = unitLastPage = currentPage;"));
     }
 
+    /**
+     * StabilizationHalfPagePolicy's 7.5/7.5 line-count split could land mid-verse, splitting a
+     * single verse's lines across both physical Consolidation units (confirmed on a real page:
+     * Al-Hujurat 49:9 straddling the raw 7/8 boundary on Mushaf page 516). It must now prefer a
+     * genuine verse boundary within two lines of that target before accepting a mid-verse cut.
+     */
+    @Test public void stabilizationHalfPageSplitPrefersACleanVerseBoundaryNearTheTarget() throws Exception {
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
+        assertTrue("the split must consult a clean-verse-boundary preference before committing to the raw target",
+            policy.contains("int split = preferCleanVerseBoundary(lines, start, count, bestLeft);"));
+        assertTrue("the tolerance must stay at two lines either side of the target",
+            policy.contains("Math.max(5, bestLeft - 2)") && policy.contains("Math.min(count - 5, bestLeft + 2)"));
+    }
+
     @Test public void freeMemActivityAlsoOffersTheDirectSurahPicker() throws Exception {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue("Mémorisation libre must expose a Sourate nav button",

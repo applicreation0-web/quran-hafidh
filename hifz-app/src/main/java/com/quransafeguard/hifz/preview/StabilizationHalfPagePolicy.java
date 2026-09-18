@@ -79,8 +79,37 @@ final class StabilizationHalfPagePolicy {
             units.add(unit(page, surah, lines, start, end));
             return;
         }
-        units.add(unit(page, surah, lines, start, start + bestLeft));
-        units.add(unit(page, surah, lines, start + bestLeft, end));
+        int split = preferCleanVerseBoundary(lines, start, count, bestLeft);
+        units.add(unit(page, surah, lines, start, start + split));
+        units.add(unit(page, surah, lines, start + split, end));
+    }
+
+    /**
+     * The 7.5/7.5 target ignores verse boundaries and can land mid-verse, splitting one verse's
+     * lines across both halves. Prefer the nearest point where a line's last verse actually differs
+     * from the next line's first verse — but only within two lines of that target, and never
+     * outside the same 5..count-5 safety margin the target itself respects. Beyond that tolerance,
+     * cutting mid-verse is accepted for now: a real fix needs waqf-mark data this corpus doesn't
+     * carry (no line/word-level waqf annotations exist in the shipped KFQC geometry corpus).
+     */
+    private static int preferCleanVerseBoundary(
+            List<GeometryRepository.LineMeta> lines, int start, int count, int bestLeft) {
+        int chosenLeft = bestLeft;
+        int chosenDistance = Integer.MAX_VALUE;
+        int lowLeft = Math.max(5, bestLeft - 2);
+        int highLeft = Math.min(count - 5, bestLeft + 2);
+        for (int left = lowLeft; left <= highLeft; left++) {
+            List<VerseRef> beforeVerses = lines.get(start + left - 1).verses;
+            VerseRef lastBefore = beforeVerses.get(beforeVerses.size() - 1);
+            VerseRef firstAfter = lines.get(start + left).verses.get(0);
+            if (lastBefore.equals(firstAfter)) continue;
+            int distance = Math.abs(left - bestLeft);
+            if (distance < chosenDistance) {
+                chosenDistance = distance;
+                chosenLeft = left;
+            }
+        }
+        return chosenLeft;
     }
 
     private static Unit unit(
