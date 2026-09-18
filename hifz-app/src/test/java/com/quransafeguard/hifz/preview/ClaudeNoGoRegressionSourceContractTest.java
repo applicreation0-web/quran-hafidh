@@ -166,4 +166,16 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("validateSabqi must advance from the block's real end, not a fixed +5",
             session.contains("sabqiBlock.endLineIndex+1"));
     }
+
+    /** Lecture's page slider is replaced by a direct surah picker (all 114, canonical order). */
+    @Test public void studyReaderNavigatesByDirectSurahPickerNotAPageSlider() throws Exception {
+        String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        String names = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranSurahNames.java");
+        assertFalse("page slider must be gone from Lecture", study.contains("new SeekBar(this)"));
+        assertTrue("Lecture must open a dialog listing all 114 surahs", study.contains("String[] items = new String[114];"));
+        assertTrue("selecting a surah must jump to its first verse's page",
+            study.contains("setPage(geometry.pageForVerse(new VerseRef(which + 1, 1)))"));
+        assertTrue(names.contains("static String name(int surah)"));
+        assertTrue(names.contains("static String labelFor(int surah)"));
+    }
 }

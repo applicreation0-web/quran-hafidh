@@ -200,6 +200,12 @@ public final class GeometryRepository {
 
     public int pageForVerse(VerseRef verse) { return lines.get(firstLineIndex(verse)).page; }
 
+    /** The surah printed at the top of the given page (its first physical line's surah). */
+    public int firstSurahOnPage(int page) {
+        for (LineMeta line : lines) if (line.page == page) return line.verses.get(0).getSurah();
+        throw new IllegalArgumentException("No canonical physical lines for page " + page);
+    }
+
     /**
      * Clips to at most SABQI_LINES physical lines, but never crosses a surah boundary: a Mushaf
      * line always belongs to exactly one surah (a new surah always starts its own line), so a

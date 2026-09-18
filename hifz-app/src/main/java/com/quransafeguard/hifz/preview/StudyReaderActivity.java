@@ -1,5 +1,6 @@
 package com.quransafeguard.hifz.preview;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -22,7 +23,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -51,10 +51,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private Button tafsirButton;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
-    private SeekBar pageSeek;
+    private TextView surahPicker;
     private boolean controlsVisible = true;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
+    private GeometryRepository geometry;
     private final EinkController eink = new EinkController();
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Runnable autoHide = this::hideControls;
@@ -119,23 +120,51 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
         pageRail = Ui.row(this);
         pageRail.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), Ui.dp(this, 1));
-        pageSeek = new SeekBar(this);
-        pageSeek.setMax(603);
-        pageSeek.setProgress(page - 1);
-        pageSeek.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-        pageSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) pageLabel.setText("Lecture · " + (progress + 1) + " / 604");
-            }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) { showControls(); }
-            @Override public void onStopTrackingTouch(SeekBar seekBar) { setPage(seekBar.getProgress() + 1); }
-        });
-        pageRail.addView(pageSeek, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        surahPicker = Ui.bookText(this, "Sourate", 13f, true);
+        surahPicker.setGravity(Gravity.CENTER);
+        surahPicker.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        surahPicker.setClickable(true);
+        surahPicker.setFocusable(true);
+        surahPicker.setEnabled(false);
+        surahPicker.setContentDescription("Aller à une sourate");
+        surahPicker.setOnClickListener(v -> showSurahPicker());
+        pageRail.addView(surahPicker, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         LinearLayout.LayoutParams railParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         railParams.topMargin = Ui.dp(this, 20);
         readerStack.addView(pageRail, railParams);
         scheduleAutoHide();
+        loadGeometryForSurahPicker();
+    }
+
+    private void loadGeometryForSurahPicker() {
+        io.execute(() -> {
+            try {
+                GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
+                runOnUiThread(() -> {
+                    geometry = loaded;
+                    if (surahPicker != null) { surahPicker.setEnabled(true); updateSurahPickerLabel(); }
+                });
+            } catch (Throwable ignored) {
+                // Surah picker stays disabled; page swipe/back navigation still works without it.
+            }
+        });
+    }
+
+    private void updateSurahPickerLabel() {
+        if (geometry == null || surahPicker == null) return;
+        surahPicker.setText(QuranSurahNames.labelFor(geometry.firstSurahOnPage(page)) + " ▾");
+    }
+
+    private void showSurahPicker() {
+        if (geometry == null) return;
+        showControls();
+        String[] items = new String[114];
+        for (int surah = 1; surah <= 114; surah++) items[surah - 1] = QuranSurahNames.labelFor(surah);
+        new AlertDialog.Builder(this)
+            .setTitle("Aller à une sourate")
+            .setItems(items, (dialog, which) -> setPage(geometry.pageForVerse(new VerseRef(which + 1, 1))))
+            .show();
     }
 
     private Button tafsirReaderAction() {
@@ -167,7 +196,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         tafsirButton.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         pageLabel.setText("Lecture · " + page + " / 604");
-        pageSeek.setProgress(page - 1);
+        updateSurahPickerLabel();
         mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
@@ -534,7 +563,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onPageShown(int shown) {
         page = shown;
         pageLabel.setText("Lecture · " + shown + " / 604");
-        pageSeek.setProgress(shown - 1);
+        updateSurahPickerLabel();
     }
     @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_PAGE_UP) { go(-1); return true; }
