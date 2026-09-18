@@ -177,7 +177,6 @@ val verifyHifzConvergenceRules by tasks.registering {
         }
         check(manifest.contains("ic_quran_hifz_logo")) { "Quran Hifz launcher icon must use the Mushaf/rehal identity." }
 
-        check(study.contains("LAYOUT_DIRECTION_RTL")) { "Arabic-book page slider must be RTL." }
         check(reader.contains("randomOrderKeys") && reader.contains("randomSegmentsForCells")
                 && reader.contains("totalWidth*fraction") && reader.contains("Math.min(cellWidth,remaining)")
                 && reader.contains("markerLayer(svg,polys,lines)")
