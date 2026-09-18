@@ -168,13 +168,27 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /** Lecture's page slider is replaced by a direct surah picker (all 114, canonical order). */
+    @Test public void freeMemActivityAlsoOffersTheDirectSurahPicker() throws Exception {
+        String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
+        assertTrue("Mémorisation libre must expose a Sourate nav button",
+            free.contains("Ui.iconButton(this,\"\",\"Sourate\",v->showSurahPicker())"));
+        assertTrue("selecting a surah must jump the free-memorization page too",
+            free.contains("QuranSurahNames.showPicker(this,geometry,this::setPage)"));
+    }
+
     @Test public void studyReaderNavigatesByDirectSurahPickerNotAPageSlider() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String names = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranSurahNames.java");
         assertFalse("page slider must be gone from Lecture", study.contains("new SeekBar(this)"));
-        assertTrue("Lecture must open a dialog listing all 114 surahs", study.contains("String[] items = new String[114];"));
+        assertTrue("Lecture must open the shared 114-surah picker dialog",
+            study.contains("QuranSurahNames.showPicker(this, geometry, this::setPage)"));
+        assertTrue("Mémorisation libre must also open the shared 114-surah picker dialog",
+            read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java")
+                .contains("QuranSurahNames.showPicker(this,geometry,this::setPage)"));
+        assertTrue("the shared picker must list all 114 surahs", names.contains("String[] items = new String[114];"));
         assertTrue("selecting a surah must jump to its first verse's page",
-            study.contains("setPage(geometry.pageForVerse(new VerseRef(which + 1, 1)))"));
+            names.contains("setPage(geometry.pageForVerse(new VerseRef(which + 1, 1)))")
+                || names.contains("onPageChosen.accept(geometry.pageForVerse(new com.quransafeguard.hifz.core.VerseRef(which + 1, 1)))"));
         assertTrue(names.contains("static String name(int surah)"));
         assertTrue(names.contains("static String labelFor(int surah)"));
     }

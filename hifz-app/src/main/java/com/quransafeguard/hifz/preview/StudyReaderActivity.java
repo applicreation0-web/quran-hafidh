@@ -1,6 +1,5 @@
 package com.quransafeguard.hifz.preview;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -159,12 +158,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void showSurahPicker() {
         if (geometry == null) return;
         showControls();
-        String[] items = new String[114];
-        for (int surah = 1; surah <= 114; surah++) items[surah - 1] = QuranSurahNames.labelFor(surah);
-        new AlertDialog.Builder(this)
-            .setTitle("Aller à une sourate")
-            .setItems(items, (dialog, which) -> setPage(geometry.pageForVerse(new VerseRef(which + 1, 1))))
-            .show();
+        QuranSurahNames.showPicker(this, geometry, this::setPage);
     }
 
     private Button tafsirReaderAction() {

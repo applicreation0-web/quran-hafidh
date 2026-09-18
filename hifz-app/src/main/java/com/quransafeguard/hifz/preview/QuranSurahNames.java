@@ -30,4 +30,14 @@ final class QuranSurahNames {
     static String labelFor(int surah) {
         return surah + " · " + name(surah);
     }
+
+    /** Shared "jump to a surah" dialog for every screen that navigates the Mushaf by page. */
+    static void showPicker(android.app.Activity activity, GeometryRepository geometry, java.util.function.IntConsumer onPageChosen) {
+        String[] items = new String[114];
+        for (int surah = 1; surah <= 114; surah++) items[surah - 1] = labelFor(surah);
+        new android.app.AlertDialog.Builder(activity)
+            .setTitle("Aller à une sourate")
+            .setItems(items, (dialog, which) -> onPageChosen.accept(geometry.pageForVerse(new com.quransafeguard.hifz.core.VerseRef(which + 1, 1))))
+            .show();
+    }
 }

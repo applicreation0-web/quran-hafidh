@@ -50,7 +50,8 @@ public final class UiIconMappingTest {
             {"Valider jusqu’ici", R.drawable.ic_ui_validate},
             {"Revu", R.drawable.ic_ui_validate},
             {"Modifier la plage", R.drawable.ic_ui_edit},
-            {"Supprimer la plage", R.drawable.ic_ui_delete}
+            {"Supprimer la plage", R.drawable.ic_ui_delete},
+            {"Sourate", R.drawable.ic_ui_surah_list}
         });
     }
 

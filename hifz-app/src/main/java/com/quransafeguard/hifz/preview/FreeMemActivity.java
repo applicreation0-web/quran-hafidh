@@ -76,7 +76,9 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         nav.addView(Ui.iconButton(this,"›","Page suivante",v->go(1)));
         if (new HifzAudioGate(this).available()) nav.addView(Ui.iconButton(this,"♪","Audio",v->openAudio()));
-        nav.addView(Ui.iconButton(this,"‹","Page précédente",v->go(-1)));root.addView(nav);
+        nav.addView(Ui.iconButton(this,"‹","Page précédente",v->go(-1)));
+        nav.addView(Ui.iconButton(this,"","Sourate",v->showSurahPicker()));
+        root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
         updateSelectionLabel();
@@ -88,9 +90,13 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         catch (RuntimeException ignored) { return null; }
     }
 
-    private void go(int d){
+    private void go(int d){ setPage(Math.max(1,Math.min(604,page+d))); }
+
+    private void showSurahPicker(){ QuranSurahNames.showPicker(this,geometry,this::setPage); }
+
+    private void setPage(int requested){
         closeAudio();
-        page=Math.max(1,Math.min(604,page+d));
+        page=requested;
         start=end=null; count=0; mask=0;
         save();
         counter.setText("Répétitions · 0");
