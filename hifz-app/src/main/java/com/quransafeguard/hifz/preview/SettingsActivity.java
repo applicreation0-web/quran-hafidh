@@ -135,8 +135,8 @@ public final class SettingsActivity extends android.app.Activity {
         TextView consolidationSchemaNote=Ui.text(this,"Consolidation · soir Mar/Jeu/Sam",11f,false);
         consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
         TextView renforcementSchemaNote=Ui.text(this,"Renforcement (Lun/Mer/Ven soir) et Consolidation (Mar/Jeu/Sam soir) — l’effet boule de neige :"
-            +"\n1. Chaque soir : ×10 sur TOUS les blocs Appris ou Stabilisé accumulés depuis le début de la semaine (pas seulement celui du jour)."
-            +"\n2. Dimanche matin : une dernière fois ×5 sur ces mêmes blocs, puis ils passent en Acquis."
+            +"\n1. Chaque soir : ×10 sur CHAQUE bloc Appris ou Stabilisé accumulé depuis le début de la semaine (pas seulement celui du jour), plus ×10 sur l’ensemble de ces blocs lus d’une traite dès qu’il y en a plus d’un."
+            +"\n2. Dimanche matin : la même chose une dernière fois (chaque bloc ×10 puis l’ensemble ×10), puis ils passent en Acquis."
             +"\n3. Chaque soir Lun-Sam ajoute aussi 30 min d’Entretien de l’Acquis. Dimanche soir : rien.",11f,false);
         renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
         TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);

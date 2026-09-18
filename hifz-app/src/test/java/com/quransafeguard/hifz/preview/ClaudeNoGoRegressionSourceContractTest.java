@@ -194,6 +194,18 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             prefs.contains("for (String unitId : session.unitIds()) {"));
     }
 
+    @Test public void sundaysFinalReviewUsesTheSameTenTimesQuotaAsEveryEveningNotALighterFive() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String stabilizationFinal = method(prefs,
+            "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {", "}");
+        assertTrue("Sunday's Stabilisation final review must use the ×10 SNOWBALL protocol",
+            stabilizationFinal.contains("ConsolidationCycleEngine.Protocol.SNOWBALL);"));
+        String learningFinal = method(prefs,
+            "List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {", "}");
+        assertTrue("Sunday's Apprentissage final review must use the ×10 SNOWBALL protocol",
+            learningFinal.contains("ConsolidationCycleEngine.Protocol.SNOWBALL);"));
+    }
+
     @Test public void freeMemActivityAlsoOffersTheDirectSurahPicker() throws Exception {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue("Mémorisation libre must expose a Sourate nav button",

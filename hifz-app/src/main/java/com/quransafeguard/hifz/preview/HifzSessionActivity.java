@@ -490,7 +490,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Dimanche matin : ×5 final de la boule de neige de la semaine — graduate vers Acquis. */
+    /** Dimanche matin : ×10 final de la boule de neige de la semaine — graduate vers Acquis. */
     private void renderConsolidationFinalReview() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
@@ -518,7 +518,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Dimanche matin : ×5 final de la boule de neige de la semaine — graduate vers Acquis. */
+    /** Dimanche matin : ×10 final de la boule de neige de la semaine — graduate vers Acquis. */
     private void renderLearningFinalReview() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastLearningConsolidationDate())) {

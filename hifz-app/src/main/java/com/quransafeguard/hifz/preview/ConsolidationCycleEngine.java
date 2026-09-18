@@ -9,10 +9,12 @@ import java.util.List;
 final class ConsolidationCycleEngine {
     enum Family { LEARNING, STABILIZATION }
     /**
-     * LEARNING37/LIGHT/FULL are the frozen quota tables from the original per-progression
-     * boule de neige design; SNOWBALL/SNOWBALL_FINAL back the weekday-pinned weekly snowball
-     * that replaced it (evening ×10 per unit, Sunday ×5 final review per unit), and apply
-     * uniformly regardless of family, group size or position.
+     * LEARNING37/LIGHT/FULL are the frozen quota tables from the original per-progression boule de
+     * neige design; SNOWBALL backs the weekday-pinned weekly snowball that replaced it — evening
+     * AND Sunday's final graduation both use the same ×10 per unit, uniformly regardless of family,
+     * group size or position. SNOWBALL_FINAL (×5) is no longer used for new sessions — Sunday is
+     * the same ×10 as every other evening — but the value stays defined so a session already
+     * persisted under it before this change can still be restored and closed out normally.
      */
     enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL }
 

@@ -1655,12 +1655,12 @@ public final class HifzPrefs {
         return Collections.unmodifiableList(out);
     }
 
-    /** Clears this week's snowball accumulator once its Sunday ×5 final review has graduated it. */
+    /** Clears this week's snowball accumulator once its Sunday ×10 final review has graduated it. */
     boolean clearWeeklySnowball(ConsolidationCycleEngine.Family family) {
         return p.edit().putString(snowballUnitsKey(family), "[]").commit();
     }
 
-    /** Tonight's Consolidation snowball: this week's accumulated Stabilisation units, ×5 each. */
+    /** Tonight's Consolidation snowball: this week's accumulated Stabilisation units, ×10 each. */
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
         return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
             ConsolidationCycleEngine.Protocol.SNOWBALL);
@@ -1672,16 +1672,22 @@ public final class HifzPrefs {
             ConsolidationCycleEngine.Protocol.SNOWBALL);
     }
 
-    /** Sunday's ×5 final review: the same week's accumulated Stabilisation units. */
+    /**
+     * Sunday's final review: the same week's accumulated Stabilisation units, same ×10 logic as
+     * every evening this week — Sunday graduates them to Acquis, it doesn't drop to a lighter quota.
+     */
     List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {
         return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL);
+            ConsolidationCycleEngine.Protocol.SNOWBALL);
     }
 
-    /** Sunday's ×5 final review: the same week's accumulated Apprentissage units. */
+    /**
+     * Sunday's final review: the same week's accumulated Apprentissage units, same ×10 logic as
+     * every evening this week — Sunday graduates them to Acquis, it doesn't drop to a lighter quota.
+     */
     List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {
         return weeklySnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL_FINAL);
+            ConsolidationCycleEngine.Protocol.SNOWBALL);
     }
 
     public String lastLearningSnowballEveningDate() { return p.getString("lastLearningSnowballEveningDate", ""); }
