@@ -167,6 +167,22 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             session.contains("sabqiBlock.endLineIndex+1"));
     }
 
+    /**
+     * The raw 5-line target can land mid-verse, splitting a verse's lines across two Sabqi days —
+     * the same class of defect fixed for the Stabilisation half-page split (verified on a real
+     * page: Al-Baqarah 2:276 on page 47). Sabqi must apply the same nearby-clean-boundary
+     * preference, but never at the cost of crossing into the next surah.
+     */
+    @Test public void sabqiFiveLineBlockPrefersACleanVerseBoundaryWithoutCrossingASurah() throws Exception {
+        String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
+        assertTrue("a surah boundary is already a clean stop and must skip the verse-boundary search",
+            geometry.contains("int endIndex = naturalEnd == maxIndex"));
+        assertTrue("the verse-boundary search must consult preferCleanVerseBoundary",
+            geometry.contains("preferCleanVerseBoundary(startLineIndex, startSurah, naturalEnd)"));
+        assertTrue("candidates must never cross into a different surah",
+            geometry.contains("lines.get(candidate).verses.get(0).getSurah() != startSurah) continue;"));
+    }
+
     /** Lecture's page slider is replaced by a direct surah picker (all 114, canonical order). */
     @Test public void weeklySnowballAlsoReviewsTheAccumulatedLinesAsOneContinuousPass() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
