@@ -1621,7 +1621,8 @@ public final class HifzPrefs {
     /**
      * This week's (Monday-anchored) accumulated snowball units, or an empty array if the stored
      * accumulator belongs to an earlier, never Sunday-reviewed week — that week's evening work is
-     * discarded rather than carried forward or allowed to grow past three units.
+     * discarded rather than carried forward or allowed to grow past the configured weekly day
+     * count for this family (learningDaysPerWeek/itqanDaysPerWeek).
      */
     private JSONArray rolledSnowballUnits(ConsolidationCycleEngine.Family family, LocalDate today) {
         String weekAnchor = mondayOf(today).toString();
@@ -1639,7 +1640,9 @@ public final class HifzPrefs {
     private java.util.Map<String, String> weeklySnowballAppendEntries(
             ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
         JSONArray current = rolledSnowballUnits(family, today);
-        if (current.length() < 3) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+        int weeklyCap = family == ConsolidationCycleEngine.Family.LEARNING
+            ? learningDaysPerWeek() : itqanDaysPerWeek();
+        if (current.length() < weeklyCap) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
         java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
         out.put(snowballAnchorKey(family), mondayOf(today).toString());
         out.put(snowballUnitsKey(family), current.toString());
@@ -2220,6 +2223,29 @@ public final class HifzPrefs {
 
     public boolean forceEink() { return p.getBoolean("forceEink", false); }
     public void setForceEink(boolean value) { p.edit().putBoolean("forceEink", value).apply(); }
+
+    /**
+     * How many of the six non-Sunday days a week give their morning to Apprentissage instead of
+     * Stabilisation (Sunday stays the fixed Révision day regardless). Defaults to 3, the original
+     * Mon/Wed/Fri split; see HifzSchedule.actionFor for how this spreads across the week and
+     * ConsolidationCycleEngine.maxUnitsFor for the matching weekly-snowball capacity.
+     */
+    public int learningDaysPerWeek() {
+        int stored = p.getInt("learningDaysPerWeek", HifzSchedule.DEFAULT_LEARNING_DAYS_PER_WEEK);
+        return Math.max(HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK,
+            Math.min(HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK, stored));
+    }
+
+    /** The remaining non-Sunday days, given to Stabilisation. */
+    public int itqanDaysPerWeek() { return 6 - learningDaysPerWeek(); }
+
+    public boolean setLearningDaysPerWeek(int days) {
+        if (days < HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK || days > HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK) {
+            throw new IllegalArgumentException("Learning days per week must be "
+                + HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK + ".." + HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK);
+        }
+        return p.edit().putInt("learningDaysPerWeek", days).commit();
+    }
 
     public List<RecentSabqi> recentSabqi() {
         ArrayList<RecentSabqi> out = new ArrayList<>();

@@ -75,26 +75,29 @@ public final class ConsolidationCycleEngineTest {
     }
 
     /**
-     * Wednesday/Friday's evening snowball adds a fourth ("continuous") unit on top of the week's
-     * own blocks — SNOWBALL/SNOWBALL_FINAL cycles must tolerate that, while the legacy protocols
-     * (never used with more than three) stay capped at three.
+     * A week can now run up to five Apprentissage (or Stabilisation) days (Settings' configurable
+     * split), plus the evening snowball's extra "continuous" unit on top of the week's own blocks
+     * — SNOWBALL/SNOWBALL_FINAL cycles must tolerate up to six units total, while the legacy
+     * protocols (never used with more than three) stay capped at three.
      */
-    @Test public void snowballCyclesToleratesFourUnitsForTheContinuousPassButLegacyProtocolsStayCappedAtThree() {
+    @Test public void snowballCyclesTolerateSixUnitsForFiveDaysPlusTheContinuousPassButLegacyProtocolsStayCappedAtThree() {
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
         ConsolidationCycleEngine.Cycle cycle = engine.startCycle("learning-week2",
             ConsolidationCycleEngine.Family.LEARNING,
             new ConsolidationCycleEngine.Unit("mon", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("tue", ConsolidationCycleEngine.Protocol.SNOWBALL));
         cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("wed", ConsolidationCycleEngine.Protocol.SNOWBALL));
+        cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("thu", ConsolidationCycleEngine.Protocol.SNOWBALL));
         cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("fri", ConsolidationCycleEngine.Protocol.SNOWBALL));
         cycle = engine.addUnit(cycle, new ConsolidationCycleEngine.Unit("continuous", ConsolidationCycleEngine.Protocol.SNOWBALL));
         ConsolidationCycleEngine.Session session = engine.openSession(cycle, "session-fri");
-        assertEquals(4, session.sessionGroupSize());
-        assertEquals(10, session.quotaAt(3));
+        assertEquals(6, session.sessionGroupSize());
+        assertEquals(10, session.quotaAt(5));
 
         try {
             engine.addUnit(engine.closeSession(session).cycle(),
-                new ConsolidationCycleEngine.Unit("fifth", ConsolidationCycleEngine.Protocol.SNOWBALL));
-            fail("snowball cycle must never exceed four units");
+                new ConsolidationCycleEngine.Unit("seventh", ConsolidationCycleEngine.Protocol.SNOWBALL));
+            fail("snowball cycle must never exceed six units");
         } catch (IllegalStateException expected) {
             // expected
         }

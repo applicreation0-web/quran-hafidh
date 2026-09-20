@@ -154,6 +154,11 @@ object HifzSchedule {
     const val ANCHORING_ENVELOPE_MINUTES = 60
     const val MAINTENANCE_MINUTES = 30
 
+    /** Sunday is always reserved for Révision, so at most the other six days can be reassigned. */
+    const val MIN_LEARNING_DAYS_PER_WEEK = 1
+    const val MAX_LEARNING_DAYS_PER_WEEK = 5
+    const val DEFAULT_LEARNING_DAYS_PER_WEEK = 3
+
     fun targetMinutesFor(kind: SessionKind): Int = when (kind) {
         SessionKind.SABQI_NEW -> 0
         SessionKind.SABQI_TODAY_REVIEW -> EVENING_REVIEW_MINUTES
@@ -163,14 +168,19 @@ object HifzSchedule {
     }
 
     /**
-     * Canonical weekly cadence: three Leçon-neuve mornings (Mon/Wed/Fri) pair with three
-     * Ancrage mornings (Tue/Thu/Sat) to form the weekly groups of three the retention
-     * redesign relies on (S1/S2/S3 and A1/A2/A3). Sunday is the sole reserved Révision day.
+     * Canonical weekly cadence: Monday..Saturday split between Apprentissage (LEARNING) and
+     * Stabilisation (STABILIZATION) mornings, Sunday always the reserved Révision day.
+     * learningDaysPerWeek (default 3, the original Mon/Wed/Fri split) sets how many of those six
+     * days go to Apprentissage instead of Stabilisation; the rest go to Stabilisation. The days are
+     * spread as evenly as possible across the week — the same even-distribution formula used for
+     * scheduling N items over M slots — rather than clustered at the start, and it reproduces the
+     * exact legacy Mon/Wed/Fri-vs-Tue/Thu/Sat split at the default of 3.
      */
-    fun actionFor(day: DayOfWeek): CadenceAction = when (day) {
-        DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> CadenceAction.LEARNING
-        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY -> CadenceAction.STABILIZATION
-        DayOfWeek.SUNDAY -> CadenceAction.REVISION
+    fun actionFor(day: DayOfWeek, learningDaysPerWeek: Int = DEFAULT_LEARNING_DAYS_PER_WEEK): CadenceAction {
+        if (day == DayOfWeek.SUNDAY) return CadenceAction.REVISION
+        val n = learningDaysPerWeek.coerceIn(MIN_LEARNING_DAYS_PER_WEEK, MAX_LEARNING_DAYS_PER_WEEK)
+        val index = day.value - 1 // Monday=0 .. Saturday=5
+        return if ((index * n) % 6 < n) CadenceAction.LEARNING else CadenceAction.STABILIZATION
     }
 
     /**
@@ -182,7 +192,8 @@ object HifzSchedule {
     fun nextDue(
         programStartDate: LocalDate,
         today: LocalDate,
-        completedDates: Set<LocalDate>
+        completedDates: Set<LocalDate>,
+        learningDaysPerWeek: Int = DEFAULT_LEARNING_DAYS_PER_WEEK
     ): ScheduledCadence? {
         if (today < programStartDate) return null
         var date = programStartDate
@@ -190,7 +201,7 @@ object HifzSchedule {
             if (!completedDates.contains(date)) {
                 return ScheduledCadence(
                     scheduledDate = date,
-                    action = actionFor(date.dayOfWeek),
+                    action = actionFor(date.dayOfWeek, learningDaysPerWeek),
                     overdue = date < today
                 )
             }

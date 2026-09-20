@@ -183,14 +183,15 @@ public final class MainActivity extends android.app.Activity {
     private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
 
     /**
-     * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Lun/Mer/Ven
-     * vs. Mar/Jeu/Sam) — opening tomorrow's Apprentissage today would let a learner get ahead of the
-     * weekly snowball attribution it's built on. Révision/Renforcement/Consolidation stay free since
-     * they need to be testable/catchable-up any day.
+     * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Settings'
+     * configurable Apprentissage-days-per-week split, Mon/Wed/Fri by default) — opening tomorrow's
+     * Apprentissage today would let a learner get ahead of the weekly snowball attribution it's
+     * built on. Révision/Renforcement/Consolidation stay free since they need to be
+     * testable/catchable-up any day.
      */
     private void refreshQuickAccessCadenceGating() {
         if (geometry == null) return;
-        CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek());
+        CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), prefs.learningDaysPerWeek());
         if (sabqiQuickAccess != null) sabqiQuickAccess.setEnabled(action == CadenceAction.LEARNING);
         if (itqanQuickAccess != null) itqanQuickAccess.setEnabled(action == CadenceAction.STABILIZATION);
     }
@@ -213,7 +214,7 @@ public final class MainActivity extends android.app.Activity {
      * no longer today it is treated as satisfied rather than stalling every later cadence day.
      */
     private boolean cadenceComplete(LocalDate date){
-        CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek());
+        CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), prefs.learningDaysPerWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
@@ -232,7 +233,7 @@ public final class MainActivity extends android.app.Activity {
             if(cadenceComplete(cursor))completed.add(cursor);
             cursor=cursor.plusDays(1);
         }
-        return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed);
+        return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,prefs.learningDaysPerWeek());
     }
 
     /** Done, or nothing to review this week (rare, e.g. a brand-new install's first week). */

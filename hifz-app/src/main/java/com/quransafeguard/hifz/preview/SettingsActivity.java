@@ -16,10 +16,13 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.quransafeguard.hifz.core.CadenceAction;
+import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,8 +35,13 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
-    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting;
+    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
+    private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
+    private static final DayOfWeek[] WEEKDAYS = {
+        DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+        DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY
+    };
 
     private interface VerseChosen { void accept(VerseRef verse); }
 
@@ -57,8 +65,10 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(top);
 
         section(root,"Parcours");
-        TextView protocol=Ui.text(this,"Lun/Mer/Ven · Apprentissage   ·   Mar/Jeu/Sam · Stabilisation   ·   Dim · Révision",11f,false);
+        protocol=Ui.text(this,weeklyCadenceSummary(),11f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
+        learningDaysSetting=Ui.settingRow(this,"Séances d’Apprentissage par semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
+        root.addView(learningDaysSetting);root.addView(Ui.divider(this));
 
         sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
         root.addView(sabqiStartRow);root.addView(Ui.divider(this));
@@ -120,12 +130,9 @@ public final class SettingsActivity extends android.app.Activity {
         section(root,"Schéma");
         TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",12.5f,true);
         schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
-        TextView consolidationSchemaNote=Ui.text(this,"Consolidation · soir Mar/Jeu/Sam",11f,false);
+        consolidationSchemaNote=Ui.text(this,"",11f,false);
         consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
-        TextView renforcementSchemaNote=Ui.text(this,"Renforcement (Lun/Mer/Ven soir) et Consolidation (Mar/Jeu/Sam soir) — l’effet boule de neige :"
-            +"\n1. Chaque soir : ×10 sur CHAQUE bloc Appris ou Stabilisé accumulé depuis le début de la semaine (pas seulement celui du jour), plus ×10 sur l’ensemble de ces blocs lus d’une traite dès qu’il y en a plus d’un."
-            +"\n2. Dimanche matin : la même chose une dernière fois (chaque bloc ×10 puis l’ensemble ×10), puis ils passent en Acquis."
-            +"\n3. Chaque soir ajoute aussi 30 min d’Entretien de l’Acquis, dimanche soir compris.",11f,false);
+        renforcementSchemaNote=Ui.text(this,"",11f,false);
         renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
         TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau du même type — aucun jour n’est perdu.",11f,false);
         carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(carryoverSchemaNote);
@@ -138,7 +145,64 @@ public final class SettingsActivity extends android.app.Activity {
         TextView view=Ui.bookText(this,title,15,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
     }
 
-    private void refreshAll(){refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
+    private void refreshAll(){refreshWeeklyCadence();refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
+
+    /** Weekday abbreviations (Mon..Sat) currently assigned to the given cadence action, e.g. "Lun/Mer/Ven". */
+    private String daysFor(CadenceAction action){
+        int days=prefs.learningDaysPerWeek();
+        StringBuilder out=new StringBuilder();
+        for(int i=0;i<WEEKDAYS.length;i++){
+            if(HifzSchedule.INSTANCE.actionFor(WEEKDAYS[i],days)!=action)continue;
+            if(out.length()>0)out.append("/");
+            out.append(WEEKDAY_ABBREVIATIONS[i]);
+        }
+        return out.toString();
+    }
+
+    /** "Lun/Mer/Ven · Apprentissage · Mar/Jeu/Sam · Stabilisation · Dim · Révision", built from the current split. */
+    private String weeklyCadenceSummary(){
+        return daysFor(CadenceAction.LEARNING)+" · Apprentissage   ·   "
+            +daysFor(CadenceAction.STABILIZATION)+" · Stabilisation   ·   Dim · Révision";
+    }
+
+    private String learningDaysSummary(){
+        int days=prefs.learningDaysPerWeek();
+        return days+"/6 jours   ·   Stabilisation "+(6-days)+"/6";
+    }
+
+    private void refreshWeeklyCadence(){
+        protocol.setText(weeklyCadenceSummary());
+        TextView value=Ui.settingValue(learningDaysSetting);
+        if(value!=null)value.setText(learningDaysSummary());
+        String stabilizationDays=daysFor(CadenceAction.STABILIZATION),learningDays=daysFor(CadenceAction.LEARNING);
+        consolidationSchemaNote.setText("Consolidation · soir "+stabilizationDays);
+        renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") — l’effet boule de neige :"
+            +"\n1. Chaque soir : ×10 sur CHAQUE bloc Appris ou Stabilisé accumulé depuis le début de la semaine (pas seulement celui du jour), plus ×10 sur l’ensemble de ces blocs lus d’une traite dès qu’il y en a plus d’un."
+            +"\n2. Dimanche matin : la même chose une dernière fois (chaque bloc ×10 puis l’ensemble ×10), puis ils passent en Acquis."
+            +"\n3. Chaque soir ajoute aussi 30 min d’Entretien de l’Acquis, dimanche soir compris.");
+    }
+
+    private void chooseLearningDaysPerWeek(){
+        int min=HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK,max=HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK;
+        int current=prefs.learningDaysPerWeek();
+        String[] labels=new String[max-min+1];
+        int checkedIndex=0;
+        for(int i=0;i<labels.length;i++){
+            int days=min+i;
+            labels[i]=days+" Apprentissage  ·  "+(6-days)+" Stabilisation";
+            if(days==current)checkedIndex=i;
+        }
+        int[] selection={checkedIndex};
+        new AlertDialog.Builder(this).setTitle("Séances d’Apprentissage par semaine")
+            .setSingleChoiceItems(labels,checkedIndex,(dialog,which)->selection[0]=which)
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Enregistrer",(dialog,which)->{
+                int days=min+selection[0];
+                if(!prefs.setLearningDaysPerWeek(days)){Toast.makeText(this,"Impossible d’enregistrer ce réglage.",Toast.LENGTH_LONG).show();return;}
+                refreshWeeklyCadence();
+                Toast.makeText(this,"Cadence mise à jour : "+days+" Apprentissage / "+(6-days)+" Stabilisation par semaine.",Toast.LENGTH_LONG).show();
+            }).show();
+    }
 
     private void refreshSabqi(){
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());

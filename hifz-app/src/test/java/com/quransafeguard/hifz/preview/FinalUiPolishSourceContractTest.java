@@ -76,7 +76,7 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(session.contains("return \"Révision\""));
         assertTrue(settings.contains("section(root,\"Schéma\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
-        assertTrue(settings.contains("Consolidation · soir Mar/Jeu/Sam"));
+        assertTrue(settings.contains("consolidationSchemaNote.setText(\"Consolidation · soir \"+stabilizationDays);"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
         assertFalse(settings.contains("addRepere(root"));
     }

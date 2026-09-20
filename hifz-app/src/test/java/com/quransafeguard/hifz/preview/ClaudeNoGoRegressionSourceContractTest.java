@@ -203,8 +203,8 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("encodeContinuousUnit must concatenate every accumulated block's lines",
             policy.contains("static String encodeContinuousUnit(List<String> encodedUnits)"));
         String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
-        assertTrue("SNOWBALL/SNOWBALL_FINAL cycles must tolerate a fourth unit for the continuous pass",
-            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 4 : 3"));
+        assertTrue("SNOWBALL/SNOWBALL_FINAL cycles must tolerate up to five configurable weekly days plus the continuous pass",
+            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 6 : 3"));
     }
 
     /**
@@ -803,5 +803,67 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertTrue("it must resolve to its own icon before the generic pagination fallback",
             ui.contains("if (s.contains(\"passage suivant du corpus\")) return R.drawable.ic_ui_rotation;"));
+    }
+
+    /**
+     * The weekday-pinned cadence (Mon/Wed/Fri Apprentissage vs Tue/Thu/Sat Stabilisation) used to
+     * be hardcoded. Settings can now raise Apprentissage's share of the six non-Sunday days as
+     * high as 5 (Stabilisation as low as 1) via a configurable split, spread evenly across the
+     * week by the same formula at every call site, with Sunday always staying Révision.
+     */
+    @Test public void weeklyCadenceSplitBetweenApprentissageAndStabilisationIsConfigurable() throws Exception {
+        String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
+        assertTrue("the valid range must be named, not a bare magic number at each call site",
+            core.contains("const val MIN_LEARNING_DAYS_PER_WEEK = 1")
+                && core.contains("const val MAX_LEARNING_DAYS_PER_WEEK = 5")
+                && core.contains("const val DEFAULT_LEARNING_DAYS_PER_WEEK = 3"));
+        String actionFor = method(core,
+            "fun actionFor(day: DayOfWeek, learningDaysPerWeek: Int = DEFAULT_LEARNING_DAYS_PER_WEEK): CadenceAction {",
+            "fun nextDue(");
+        assertTrue("Sunday must stay the reserved Révision day regardless of the configured split",
+            actionFor.contains("if (day == DayOfWeek.SUNDAY) return CadenceAction.REVISION"));
+        assertTrue("an out-of-range value must be clamped, never thrown or silently misused",
+            actionFor.contains("learningDaysPerWeek.coerceIn(MIN_LEARNING_DAYS_PER_WEEK, MAX_LEARNING_DAYS_PER_WEEK)"));
+        assertTrue("the split must use the standard even-distribution formula, not cluster days at the start",
+            actionFor.contains("if ((index * n) % 6 < n) CadenceAction.LEARNING else CadenceAction.STABILIZATION"));
+        assertTrue("nextDue must thread the configured split through to actionFor, not silently keep the default",
+            core.contains("learningDaysPerWeek: Int = DEFAULT_LEARNING_DAYS_PER_WEEK\n    ): ScheduledCadence?")
+                && core.contains("action = actionFor(date.dayOfWeek, learningDaysPerWeek)"));
+
+        String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
+        assertTrue("the weekly snowball must have headroom for 5 configurable days plus the continuous pass",
+            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 6 : 3"));
+
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("HifzPrefs must expose a clamped read of the configured split",
+            prefs.contains("public int learningDaysPerWeek() {"));
+        assertTrue("HifzPrefs must reject an out-of-range write rather than silently clamping it",
+            prefs.contains("public boolean setLearningDaysPerWeek(int days) {")
+                && method(prefs, "public boolean setLearningDaysPerWeek(int days) {", "return p.edit()")
+                    .contains("throw new IllegalArgumentException"));
+        assertTrue("the weekly snowball's per-family accumulator cap must follow the configured split, not a hardcoded 3",
+            prefs.contains("int weeklyCap = family == ConsolidationCycleEngine.Family.LEARNING")
+                && prefs.contains("if (current.length() < weeklyCap)"));
+
+        String mainActivity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue("the quick-access gate must use the configured split",
+            mainActivity.contains("HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), prefs.learningDaysPerWeek())"));
+        assertTrue("cadence completion checks must use the configured split",
+            mainActivity.contains("HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), prefs.learningDaysPerWeek())"));
+        assertTrue("the automatic due-task lookup must use the configured split",
+            mainActivity.contains("HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,prefs.learningDaysPerWeek())"));
+
+        String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        assertTrue("the seven-day dashboard projection must use the configured split too",
+            dashboard.contains("HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), prefs.learningDaysPerWeek())"));
+
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        assertTrue("Settings must offer a picker for the weekly split",
+            settings.contains("private void chooseLearningDaysPerWeek(){")
+                && settings.contains(".setSingleChoiceItems(labels,checkedIndex"));
+        assertTrue("Settings must persist the chosen value through HifzPrefs",
+            settings.contains("prefs.setLearningDaysPerWeek(days)"));
+        assertTrue("the Parcours summary must reflect the actual configured split, not a hardcoded Mon/Wed/Fri string",
+            settings.contains("private String weeklyCadenceSummary(){"));
     }
 }
