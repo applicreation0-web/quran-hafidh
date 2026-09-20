@@ -137,8 +137,16 @@ final class WeeklyDashboardPlanner {
                     boolean learningDone=learningFinal!=null||prefs.learningSnowballFinalUnits(date).isEmpty();
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
                     morning=(learningDone&&consolidationDone)?"✓ Révision finale ×5":"Révision finale ×5 · Renforcement + Consolidation";
-                    evening="—";
-                    state=(learningDone&&consolidationDone)?"Validé":"À faire";
+                    boolean morningDone=learningDone&&consolidationDone;
+                    DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
+                    boolean eveningDone=entretienActual!=null;
+                    if(eveningDone)evening="✓ Entretien";
+                    else{
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        evening="Entretien · "+projected.label;
+                        murajaahCursor=projected.next;
+                    }
+                    state=(morningDone&&eveningDone)?"Validé":morningDone?"Soir à faire":"À faire";
                     break;
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");

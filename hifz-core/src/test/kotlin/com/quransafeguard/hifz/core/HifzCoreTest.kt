@@ -75,7 +75,7 @@ class HifzCoreTest {
         assertPlan(DayOfWeek.THURSDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 30)
         assertPlan(DayOfWeek.FRIDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 30)
         assertPlan(DayOfWeek.SATURDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 30)
-        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.SABQI_NEW, 0, 0)
+        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 30)
     }
 
     @Test fun directSessionTargetsDoNotDependOnTodaysSchedule() {

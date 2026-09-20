@@ -366,6 +366,37 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             murajaahCorpus.contains("all.addAll(promotedRanges());"));
     }
 
+    /**
+     * Sunday evening used to have no Entretien slot at all: HifzSchedule.planFor(SUNDAY) carried a
+     * dummy zero-minute SABQI_NEW placeholder for the evening, and MainActivity.computeNextMode's
+     * REVISION case returned null the instant the morning ×5 finales were resolved, with no path
+     * to the ordinary nightly Murajaah. Sunday evening must now behave like every other evening:
+     * a real 30-minute Entretien, gated behind the morning finales and tracked the same way
+     * (lastMurajaahDate) so it can't be silently skipped or double-validated.
+     */
+    @Test public void sundayEveningNowOffersTheOrdinaryEntretien() throws Exception {
+        String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
+        String planFor = method(core, "fun planFor(day: DayOfWeek): DailyPlan = when (day) {", "fun scheduled(");
+        assertTrue("Sunday's evening slot must be the ordinary maintenance Entretien",
+            planFor.contains("DayOfWeek.SUNDAY -> DailyPlan(\n            PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 0),\n            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))"));
+
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertTrue("computeNextMode's REVISION case must fall through to the evening Entretien once both finales resolve",
+            main.contains("if(!consolidationFinalResolved(today))return HifzSessionActivity.CONSOLIDATION_FINAL;\n                return eveningRevisionMode(today);"));
+        String eveningRevision = method(main,
+            "private String eveningRevisionMode(LocalDate today){", "private static boolean isTodayAnchoredMode(String mode){");
+        assertTrue("Sunday evening must offer the ordinary Murajaah mode, gated by lastMurajaahDate like every other evening",
+            eveningRevision.contains("if(!today.toString().equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;"));
+        assertTrue("cadenceComplete's REVISION case must also require the evening Entretien, not just the morning finales",
+            main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date)\n                    &&date.toString().equals(prefs.lastMurajaahDate());"));
+
+        String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        assertTrue("the weekly dashboard must project a real evening Entretien for Sunday instead of a dash",
+            weekly.contains("evening=\"Entretien · \"+projected.label;"));
+        assertFalse("the old evening dash must be gone from the REVISION row",
+            method(weekly, "case REVISION:{", "default:throw").contains("evening=\"—\";"));
+    }
+
     @Test public void murajaahJumpButtonHasItsOwnIconDistinctFromPlainPagination() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("the corpus-jump action must not be labelled like a plain pagination control",

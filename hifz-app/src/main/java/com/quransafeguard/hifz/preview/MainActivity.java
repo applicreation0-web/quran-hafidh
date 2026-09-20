@@ -223,7 +223,8 @@ public final class MainActivity extends android.app.Activity {
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
             case REVISION:
                 if(!date.equals(HifzClock.today()))return true;
-                return learningFinalResolved(date)&&consolidationFinalResolved(date);
+                return learningFinalResolved(date)&&consolidationFinalResolved(date)
+                    &&date.toString().equals(prefs.lastMurajaahDate());
             default:return false;
         }
     }
@@ -267,6 +268,12 @@ public final class MainActivity extends android.app.Activity {
         return null;
     }
 
+    /** Dimanche soir, once the morning ×5 finales are done: ordinary Entretien, same as every other evening. */
+    private String eveningRevisionMode(LocalDate today){
+        if(!today.toString().equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
+        return null;
+    }
+
     private String nextMode(ScheduledCadence due){
         consolidationNeedsAttention=false;
         learningConsolidationNeedsAttention=false;
@@ -296,7 +303,7 @@ public final class MainActivity extends android.app.Activity {
                 if(!isToday)return null;
                 if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;
                 if(!consolidationFinalResolved(today))return HifzSessionActivity.CONSOLIDATION_FINAL;
-                return null;
+                return eveningRevisionMode(today);
             default:return null;
         }
     }

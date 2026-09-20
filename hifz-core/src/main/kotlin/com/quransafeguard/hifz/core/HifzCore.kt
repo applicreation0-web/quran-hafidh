@@ -206,9 +206,10 @@ object HifzSchedule {
     }
 
     /**
-     * A zero target means repetition-driven with no time envelope. Entretien (Murajaah) is now a
-     * fixed nightly touch every evening except Sunday, which instead carries the weekly snowball's
-     * ×5 final review (also repetition-driven, not time-boxed) and no evening slot at all.
+     * A zero target means repetition-driven with no time envelope. Entretien (Murajaah) is a
+     * fixed nightly touch every evening, Sunday included: Sunday morning instead carries the
+     * weekly snowball's ×5 final review (also repetition-driven, not time-boxed), but Sunday
+     * evening still gets its own ordinary 30-minute Entretien like every other day.
      */
     fun planFor(day: DayOfWeek): DailyPlan = when (day) {
         DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
@@ -221,7 +222,7 @@ object HifzSchedule {
         )
         DayOfWeek.SUNDAY -> DailyPlan(
             PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 0),
-            PlannedSession(SessionKind.SABQI_NEW, 0)
+            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         )
     }
 
