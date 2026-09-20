@@ -809,10 +809,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void updateMurajaahActions() {
         actions.removeAllViews();
+        List<MurajaahSegment> segments = murajaahSegments();
+        int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
         if (nextSegment != null) {
             VerseRef jumpTarget = nextSegment;
+            MurajaahSegment current = currentIndex >= 0 ? segments.get(currentIndex) : null;
+            boolean validated = current == null || murajaahValidatedThroughSegment(segments, currentIndex);
             LinearLayout jumpAction = Ui.roundAction(this, "", "Passage suivant du corpus", v -> {
+                if (current != null && !murajaahValidatedThroughSegment(segments, currentIndex)) {
+                    Toast.makeText(this, "Touchez d’abord le dernier verset de ce passage ("
+                        + murajaahVerseLabel(current.end) + ").", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 currentPage = geometry.pageForVerse(jumpTarget);
                 currentSelection = Collections.emptyList();
                 currentLineIds = Collections.emptyList();
@@ -821,11 +830,49 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 updateMurajaahActions();
             });
             actions.addView(jumpAction);
+            if (current != null && !validated && geometry.pageForVerse(current.end) == currentPage) {
+                mushaf.setSelection(Collections.singletonList(current.end),
+                    geometry.lineIdsForVerseRange(current.end, current.end));
+            }
         }
         LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
         murajaahFinishButton.setEnabled(true);
         actions.addView(validateAction);
+    }
+
+    private int murajaahSegmentIndexForPage(List<MurajaahSegment> segments, int page) {
+        for (int i = 0; i < segments.size(); i++) {
+            MurajaahSegment segment = segments.get(i);
+            if (page >= segment.startPage && page <= segment.endPage) return i;
+        }
+        return -1;
+    }
+
+    private int murajaahSegmentIndexForVerse(List<MurajaahSegment> segments, VerseRef verse) {
+        int ordinal = GeometryRepository.ordinal(verse);
+        for (int i = 0; i < segments.size(); i++) {
+            MurajaahSegment segment = segments.get(i);
+            if (ordinal >= GeometryRepository.ordinal(segment.start) && ordinal <= GeometryRepository.ordinal(segment.end))
+                return i;
+        }
+        return -1;
+    }
+
+    /**
+     * A block-jump must be earned by actually touching this segment's own last verse first — not
+     * by raw ordinal/page magnitude (see murajaahSegments' wraparound warning), but by segment
+     * position: either murajaahActualEnd already sits in a later segment (already read past this
+     * one earlier), or it sits in this exact segment and has reached its end.
+     */
+    private boolean murajaahValidatedThroughSegment(List<MurajaahSegment> segments, int segmentIndex) {
+        if (murajaahActualEnd == null) return false;
+        int actualIndex = murajaahSegmentIndexForVerse(segments, murajaahActualEnd);
+        if (actualIndex < 0) return false;
+        if (actualIndex > segmentIndex) return true;
+        if (actualIndex < segmentIndex) return false;
+        return GeometryRepository.ordinal(murajaahActualEnd)
+            >= GeometryRepository.ordinal(segments.get(segmentIndex).end);
     }
 
     private static final class MurajaahSegment {
@@ -902,7 +949,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef unread = murajaahNextSegmentAfter(murajaahActualEnd);
         if (unread != null) {
             new AlertDialog.Builder(this).setTitle("Passage restant")
-                .setMessage("L’objectif du jour continue plus loin (" + unread + "…). Valider maintenant clôturera la séance du jour sans le lire.")
+                .setMessage("L’objectif du jour continue plus loin (" + murajaahVerseLabel(unread) + "…). Valider maintenant clôturera la séance du jour sans le lire.")
                 .setNegativeButton("Continuer la lecture", null)
                 .setPositiveButton("Valider quand même", (d, w) -> completeMurajaahValidation())
                 .show();
@@ -955,7 +1002,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private String murajaahObjectiveLabel() {
         List<VerseRef> traversal = murajaahPlan.traversalVerses;
-        if (traversal.isEmpty()) return murajaahPlan.start + " → " + murajaahPlan.actualPlannedEnd;
+        if (traversal.isEmpty()) return murajaahRangeLabel(murajaahPlan.start, murajaahPlan.actualPlannedEnd);
         StringBuilder label = new StringBuilder();
         VerseRef segmentStart = traversal.get(0);
         VerseRef previous = segmentStart;
@@ -965,12 +1012,24 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
             if (!contiguous) {
                 if (label.length() > 0) label.append(" · puis ");
-                label.append(segmentStart).append(" → ").append(previous);
+                label.append(murajaahRangeLabel(segmentStart, previous));
                 if (current != null) segmentStart = current;
             }
             if (current != null) previous = current;
         }
         return label.toString();
+    }
+
+    /** "2:1 → 2:74" read as surah numbers; the surah name is clearer and only needs repeating when it changes. */
+    private String murajaahRangeLabel(VerseRef start, VerseRef end) {
+        if (start.getSurah() == end.getSurah()) {
+            return QuranSurahNames.name(start.getSurah()) + " " + start.getAyah() + " → " + end.getAyah();
+        }
+        return murajaahVerseLabel(start) + " → " + murajaahVerseLabel(end);
+    }
+
+    private String murajaahVerseLabel(VerseRef ref) {
+        return QuranSurahNames.name(ref.getSurah()) + " " + ref.getAyah();
     }
 
     private void updateMurajaahProgress() {
@@ -1010,6 +1069,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahProgress();
         mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
         checkpointMurajaah(clock.elapsedMs());
+        updateMurajaahActions();
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}

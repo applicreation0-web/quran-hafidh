@@ -347,6 +347,74 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
+     * roundAction's caption used to be a single line clipped to the width of its 48dp icon button
+     * ("Passage suivant du corpus" rendered as "Passage s…"), and adjacent actions had only 2dp of
+     * side padding, reading as visually stuck together once three actions shared one row. The
+     * caption must be allowed to wrap onto a second line instead of truncating, and actions need
+     * more breathing room between them.
+     */
+    @Test public void roundActionCaptionWrapsInsteadOfClippingAndActionsHaveBreathingRoom() throws Exception {
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        String roundAction = method(ui,
+            "static LinearLayout roundAction(", "static LinearLayout cardAction(");
+        assertFalse("caption must no longer be forced onto a single clipped line",
+            roundAction.contains("caption.setSingleLine(true)"));
+        assertTrue("caption must wrap onto up to two lines instead",
+            roundAction.contains("caption.setMaxLines(2)"));
+        assertTrue("caption width must no longer be squeezed to the icon button's own narrow width",
+            roundAction.contains("ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));"));
+        assertTrue("side padding between adjacent actions must be wider than the original 2dp",
+            roundAction.contains("box.setPadding(dp(context,6),0,dp(context,6),0);"));
+    }
+
+    /**
+     * Jumping to the next disjoint segment of the day's Révision objective (e.g. 2:1→2:74 then
+     * 49:1→51:26) must be earned by actually touching this segment's own last verse first — tapping
+     * "Passage suivant du corpus" before reaching it silently skipped unread material. The check
+     * must use segment position (murajaahSegmentIndexForVerse), never raw ordinal/page magnitude,
+     * since a later segment's ordinal can be *lower* than an earlier one's after wraparound.
+     */
+    @Test public void murajaahBlockJumpRequiresValidatingTheCurrentSegmentsLastVerseFirst() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String updateActions = method(session,
+            "private void updateMurajaahActions() {", "private int murajaahSegmentIndexForPage(");
+        assertTrue("the jump handler must re-check validation before actually navigating",
+            updateActions.contains("if (current != null && !murajaahValidatedThroughSegment(segments, currentIndex)) {"));
+        assertTrue("an unvalidated jump attempt must explain what to touch instead of silently doing nothing",
+            updateActions.contains("Touchez d’abord le dernier verset de ce passage ("));
+        assertTrue("the segment's own end verse must be proactively highlighted while unvalidated",
+            updateActions.contains("mushaf.setSelection(Collections.singletonList(current.end),"));
+        String validated = method(session,
+            "private boolean murajaahValidatedThroughSegment(", "\n    }");
+        assertTrue("must compare by segment position, not raw ordinal magnitude across segments",
+            validated.contains("int actualIndex = murajaahSegmentIndexForVerse(segments, murajaahActualEnd);"));
+        assertTrue("already having read into a later segment must count as validated for this one",
+            validated.contains("if (actualIndex > segmentIndex) return true;"));
+        assertTrue("onVerseTap must refresh the gating immediately, not only after the next page swipe",
+            session.contains("checkpointMurajaah(clock.elapsedMs());\n        updateMurajaahActions();"));
+    }
+
+    /**
+     * The Révision objective header showed raw surah numbers (e.g. "2:1 → 2:74 · puis 49:1 →
+     * 51:26"), which the user has to mentally map to a surah name. murajaahRangeLabel must use
+     * QuranSurahNames instead, naming the surah once for a same-surah range and naming both ends
+     * when a segment spans more than one surah.
+     */
+    @Test public void murajaahObjectiveShowsSurahNamesInsteadOfBareNumbers() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String rangeLabel = method(session,
+            "private String murajaahRangeLabel(", "private String murajaahVerseLabel(");
+        assertTrue("a same-surah range must name the surah once, not repeat it for both ends",
+            rangeLabel.contains("QuranSurahNames.name(start.getSurah()) + \" \" + start.getAyah() + \" → \" + end.getAyah();"));
+        String objective = method(session,
+            "private String murajaahObjectiveLabel() {", "/** \"2:1 → 2:74\"");
+        assertFalse("must no longer build the label from bare VerseRef.toString() (\"2:74\")",
+            objective.contains("label.append(segmentStart).append(\" → \").append(previous);"));
+        assertTrue("must delegate every segment's range to the surah-name-aware formatter",
+            objective.contains("label.append(murajaahRangeLabel(segmentStart, previous));"));
+    }
+
+    /**
      * The Mushaf reader shades a verse by verse identity wherever it appears on the page (reader.js
      * selectedPolygons/.ayahPolygon.selected), not by physical line. A grouped-cycle unit (e.g. a
      * 5-line Renforcement block) is a fixed line window, not a verse boundary, so a verse that

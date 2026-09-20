@@ -110,19 +110,27 @@ final class Ui {
         button.setCompoundDrawableTintList(iconTintFlat());
     }
 
-    /** Icon + short caption with one compact grammar across all Hifz modes. */
+    /**
+     * Icon + short caption with one compact grammar across all Hifz modes. The caption wraps onto
+     * a second line (capped at 84dp) instead of clipping to one truncated line — a label like
+     * "Passage suivant du corpus" was being cut down to "Passage s…" when several actions shared
+     * the row (see roundAction's 6dp side padding, widened for the same reason: adjacent actions
+     * were rendering right up against each other).
+     */
     static LinearLayout roundAction(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout box = column(context);
         box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(dp(context,2),0,dp(context,2),0);
+        box.setPadding(dp(context,6),0,dp(context,6),0);
         Button b = iconButton(context, symbol, label, listener);
         box.addView(b);
         TextView caption = text(context, label, 11f, false);
         caption.setTextColor(MUTED);
         caption.setGravity(Gravity.CENTER);
-        caption.setSingleLine(true);
+        caption.setMaxLines(2);
+        caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        caption.setMaxWidth(dp(context, 84));
         box.addView(caption, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return box;
     }
 
