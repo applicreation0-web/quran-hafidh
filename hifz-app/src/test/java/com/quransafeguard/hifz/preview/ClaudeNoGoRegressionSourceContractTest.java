@@ -262,6 +262,48 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
+     * A long absence spanning an unrun Sunday must never let a block quietly age out of the 8-week
+     * history before it was ever actually promoted to Acquis — otherwise it would be stuck at
+     * Stabilisé/Appris forever, never re-offered for graduation. Both the pruning in
+     * appendToSnowballHistory and the window filter in extendedSnowballUnits must consult
+     * weekFullyAcquired before dropping/excluding a week past the normal 8-week cutoff.
+     */
+    @Test public void anUngraduatedWeekIsNeverDroppedPastTheEightWeekCutoff() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String append = method(prefs,
+            "private JSONArray appendToSnowballHistory(", "private boolean weekFullyAcquired(");
+        assertTrue("Pruning must keep a week past the cutoff when it isn't fully acquired yet",
+            append.contains("!weekStart.isBefore(cutoff) || !weekFullyAcquired(week, acquired)"));
+        String weekFullyAcquired = method(prefs,
+            "private boolean weekFullyAcquired(", "private List<ConsolidationCycleEngine.Unit> weeklySnowballUnits(");
+        assertTrue("A block only counts as acquired once every one of its line ids is in v6AcquiredCreditLineIds",
+            weekFullyAcquired.contains("acquired.containsAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(encoded))"));
+        String extended = method(prefs,
+            "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(",
+            "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(");
+        assertTrue("extendedSnowballUnits must still surface an out-of-window week that isn't fully acquired yet",
+            extended.contains("if (!withinWindow && weekFullyAcquired(week, acquired)) continue;"));
+    }
+
+    /**
+     * Retaining an ungraduated week indefinitely (see above) means the 8-week cutoff alone no longer
+     * bounds how many blocks extendedSnowballUnits can hand to one Consolidation cycle — a long
+     * enough absence from Sunday specifically, combined with continued weekday practice, could in
+     * principle pile up more blocks than ConsolidationCycleEngine.maxUnitsFor(SNOWBALL_EXTENDED)
+     * allows, which would throw "group size must be 1..30" the moment the session finally opens.
+     */
+    @Test public void extendedSnowballUnitsClampsToTheEngineCycleCapEvenWithUnboundedHistory() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String extended = method(prefs,
+            "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(",
+            "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(");
+        assertTrue("Must clamp to the engine's own cap for SNOWBALL_EXTENDED, minus one slot for the combined pass",
+            extended.contains("ConsolidationCycleEngine.maxUnitsFor(ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED) - 1"));
+        assertTrue("Overflow must be trimmed from the list actually fed into the cycle",
+            extended.contains("if (encodedBlocks.size() > cap) encodedBlocks = new ArrayList<>(encodedBlocks.subList(0, cap));"));
+    }
+
+    /**
      * SNOWBALL_EXTENDED was added alongside SNOWBALL/SNOWBALL_FINAL, but Protocol enum membership
      * alone is not enough: without an explicit stageVector case it throws
      * IllegalArgumentException("unsupported protocol"), and without a validateUnitForFamily

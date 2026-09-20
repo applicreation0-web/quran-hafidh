@@ -1651,7 +1651,10 @@ public final class HifzPrefs {
      * Rolling 8-calendar-week (Monday-anchored) history of every physical block promoted this
      * family's way, retained so Sunday's extended review (stabilizationSnowballFinalUnits/
      * learningSnowballFinalUnits) can re-read the current + 7 previous weeks' material instead of
-     * just the current week. Pruned to the current + 7 previous week-entries on every append.
+     * just the current week. Pruned to the current + 7 previous week-entries on every append —
+     * except a week whose blocks haven't all graduated to Acquis yet (weekFullyAcquired), which is
+     * kept regardless of age so a long absence spanning an unrun Sunday can never quietly drop a
+     * block that was never actually promoted.
      */
     private JSONArray appendToSnowballHistory(
             ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
@@ -1676,14 +1679,34 @@ public final class HifzPrefs {
         }
 
         LocalDate cutoff = mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L);
+        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
         JSONArray pruned = new JSONArray();
         for (int i = 0; i < history.length(); i++) {
             JSONObject week = history.optJSONObject(i);
             if (week == null) continue;
             LocalDate weekStart = safeDate(week.optString("week"), null);
-            if (weekStart != null && !weekStart.isBefore(cutoff)) pruned.put(week);
+            if (weekStart == null) continue;
+            if (!weekStart.isBefore(cutoff) || !weekFullyAcquired(week, acquired)) pruned.put(week);
         }
         return pruned;
+    }
+
+    /**
+     * A week older than the 8-week cutoff is only safe to drop once every block it produced has
+     * actually been graduated to Acquis — otherwise a long absence spanning an unrun Sunday could
+     * silently retire a block that never got its promotion pass, leaving it stuck at Stabilisé/
+     * Appris forever. An ungraduated week is kept past the cutoff and simply keeps resurfacing in
+     * extendedSnowballUnits until the next Sunday that actually runs graduates it.
+     */
+    private boolean weekFullyAcquired(JSONObject week, java.util.Set<String> acquired) {
+        JSONArray units = week.optJSONArray("units");
+        if (units == null) return true;
+        for (int u = 0; u < units.length(); u++) {
+            String encoded = units.optString(u, "");
+            if (encoded.isEmpty()) continue;
+            if (!acquired.containsAll(ConsolidationPhysicalUnitPolicy.decodeLineUnit(encoded))) return false;
+        }
+        return true;
     }
 
     /**
@@ -1728,7 +1751,9 @@ public final class HifzPrefs {
      * (see appendToSnowballHistory), each read ×3, plus one combined continuous pass over all of
      * them — replacing the old this-week-only ×10 final review so recently learned/stabilized
      * material keeps coming back for roughly 8 weeks instead of dropping out of active review the
-     * moment its own week ends.
+     * moment its own week ends. A week past that window still contributes its blocks here as long
+     * as any of them hasn't graduated yet (see weekFullyAcquired) — covers a long absence that
+     * skipped the Sunday session(s) that would otherwise have promoted them.
      */
     private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(
             ConsolidationCycleEngine.Family family, LocalDate today) {
@@ -1736,13 +1761,16 @@ public final class HifzPrefs {
         try { history = new JSONArray(p.getString(snowballHistoryKey(family), "[]")); }
         catch (Exception malformed) { history = new JSONArray(); }
         LocalDate cutoff = mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L);
+        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
 
         ArrayList<String> encodedBlocks = new ArrayList<>();
         for (int i = 0; i < history.length(); i++) {
             JSONObject week = history.optJSONObject(i);
             if (week == null) continue;
             LocalDate weekStart = safeDate(week.optString("week"), null);
-            if (weekStart == null || weekStart.isBefore(cutoff)) continue;
+            if (weekStart == null) continue;
+            boolean withinWindow = !weekStart.isBefore(cutoff);
+            if (!withinWindow && weekFullyAcquired(week, acquired)) continue;
             JSONArray units = week.optJSONArray("units");
             if (units == null) continue;
             for (int u = 0; u < units.length(); u++) {
@@ -1750,6 +1778,14 @@ public final class HifzPrefs {
                 if (!encoded.isEmpty()) encodedBlocks.add(encoded);
             }
         }
+
+        // A week is only ever retained past the cutoff for being ungraduated (weekFullyAcquired
+        // above), which normally self-limits — but a long enough absence from Sunday specifically,
+        // combined with continued weekday practice, could in principle still pile up more blocks
+        // than the cycle's cap. History is append-ordered oldest-first, so keep the oldest (most
+        // overdue) ones and let the rest wait for a later Sunday rather than overflow the cycle.
+        int cap = ConsolidationCycleEngine.maxUnitsFor(ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED) - 1;
+        if (encodedBlocks.size() > cap) encodedBlocks = new ArrayList<>(encodedBlocks.subList(0, cap));
 
         ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
         for (String encoded : encodedBlocks) {
