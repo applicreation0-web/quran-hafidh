@@ -130,17 +130,17 @@ class HifzWeeklyPlanningTest {
 
     /** nextDue must respect a non-default weekly split when computing which action is due. */
     @Test fun nextDueRespectsANonDefaultLearningDaysPerWeek() {
-        val monday = LocalDate.of(2026, 9, 14) // Monday
-        val tuesday = monday.plusDays(1)
+        val wednesday = LocalDate.of(2026, 9, 16)
 
-        // Tuesday is STABILIZATION under the default 3-day split, but LEARNING once Apprentissage
-        // is raised to 5 days/week — a visible flip that proves nextDue actually uses the param.
-        val dueDefault = HifzSchedule.nextDue(monday, tuesday, setOf(monday))
-        val dueFiveLearningDays = HifzSchedule.nextDue(monday, tuesday, setOf(monday), 5)
+        // Wednesday is LEARNING under the default 3-day split, but STABILIZATION once
+        // Apprentissage is lowered to 1 day/week — a visible flip that proves nextDue actually
+        // uses the param (not just actionFor's own default).
+        val dueDefault = HifzSchedule.nextDue(wednesday, wednesday, emptySet())
+        val dueOneLearningDay = HifzSchedule.nextDue(wednesday, wednesday, emptySet(), 1)
 
         requireNotNull(dueDefault)
-        requireNotNull(dueFiveLearningDays)
-        assertEquals(CadenceAction.STABILIZATION, dueDefault.action)
-        assertEquals(CadenceAction.LEARNING, dueFiveLearningDays.action)
+        requireNotNull(dueOneLearningDay)
+        assertEquals(CadenceAction.LEARNING, dueDefault.action)
+        assertEquals(CadenceAction.STABILIZATION, dueOneLearningDay.action)
     }
 }
