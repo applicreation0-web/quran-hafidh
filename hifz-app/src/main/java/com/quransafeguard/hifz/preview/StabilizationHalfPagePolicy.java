@@ -106,6 +106,17 @@ final class StabilizationHalfPagePolicy {
     }
 
     /**
+     * A validated Consolidation unit must independently re-verify as a single whole block when
+     * later re-planned in isolation (completeConsolidationSessionV6/completeLearningConsolidation
+     * SessionV6 re-run planPage on just that block's own lines and require exactly one result).
+     * That only holds while every block stays within the ≤11-line "stays whole" tier, so no split
+     * here may ever produce a block bigger than that — the same ceiling the two-way split already
+     * respected implicitly (its own count was always ≤15, so a bestLeft/right of at most count-5
+     * could never exceed 10).
+     */
+    private static final int MAX_INDEPENDENTLY_VERIFIABLE_BLOCK = 11;
+
+    /**
      * Stabilisation's weekly unit (~22 lines, three sessions Tue/Thu/Sat) targets 8/7/7 lines,
      * the same "minimize the worst deviation from target" search and clean-verse-boundary
      * preference as the two-way split, generalized to two cut points instead of one.
@@ -120,9 +131,11 @@ final class StabilizationHalfPagePolicy {
             int count) {
         int bestA = -1, bestB = -1;
         double bestScore = Double.POSITIVE_INFINITY;
-        for (int a = 5; a <= count - 10; a++) {
-            for (int b = 5; b <= count - a - 5; b++) {
+        int cap = MAX_INDEPENDENTLY_VERIFIABLE_BLOCK;
+        for (int a = 5; a <= Math.min(cap, count - 10); a++) {
+            for (int b = 5; b <= Math.min(cap, count - a - 5); b++) {
                 int c = count - a - b;
+                if (c < 5 || c > cap) continue;
                 double score = Math.max(Math.abs(a - 8), Math.max(Math.abs(b - 7), Math.abs(c - 7)));
                 if (score < bestScore) {
                     bestScore = score;
@@ -138,6 +151,14 @@ final class StabilizationHalfPagePolicy {
         }
         int split1 = preferCleanVerseBoundary(lines, start, count, bestA);
         int split2 = preferCleanVerseBoundary(lines, start, count, bestA + bestB);
+        // The clean-boundary shift (±2 on each cut) could push a block past the independently-
+        // verifiable ceiling even though bestA/bestB never would; fall back to the exact
+        // (guaranteed-safe) target split rather than risk a block Consolidation could never
+        // re-verify later.
+        if (split1 >= split2 || split1 > cap || split2 - split1 > cap || count - split2 > cap) {
+            split1 = bestA;
+            split2 = bestA + bestB;
+        }
         units.add(unit(page, surah, lines, start, start + split1));
         units.add(unit(page, surah, lines, start + split1, start + split2));
         units.add(unit(page, surah, lines, start + split2, end));

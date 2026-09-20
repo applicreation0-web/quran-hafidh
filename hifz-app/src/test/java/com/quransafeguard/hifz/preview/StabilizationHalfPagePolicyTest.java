@@ -11,6 +11,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public final class StabilizationHalfPagePolicyTest {
     @Test public void eightThroughElevenLinesStayWhole() {
@@ -117,6 +118,25 @@ public final class StabilizationHalfPagePolicyTest {
 
     @Test public void twentyTwoLineWeeklyUnitSplitsThreeWaysAtEightSevenSeven() {
         assertSizes(new int[]{8, 7, 7}, StabilizationHalfPagePolicy.planPage(uniqueLines(100, 2, 22)));
+    }
+
+    /**
+     * A long final verse can push a real weekly unit past 22 lines (up to 30, confirmed across the
+     * whole corpus this session). Every resulting block must still stay ≤11 lines: Consolidation
+     * later re-verifies each frozen block in isolation by re-running planPage on just its own
+     * lines and requiring exactly one whole result back, which only holds within that ≤11 tier.
+     */
+    @Test public void anOversizedWeeklyUnitStillKeepsEveryBlockIndependentlyVerifiable() {
+        List<StabilizationHalfPagePolicy.Unit> units =
+            StabilizationHalfPagePolicy.planPage(uniqueLines(100, 2, 30));
+        assertSizes(new int[]{10, 10, 10}, units);
+        for (StabilizationHalfPagePolicy.Unit unit : units) {
+            assertTrue("block of " + unit.lineIds.size() + " lines must independently re-verify as whole",
+                unit.lineIds.size() <= 11);
+            List<StabilizationHalfPagePolicy.Unit> reverified = StabilizationHalfPagePolicy.planPage(
+                uniqueLines(100, 2, unit.lineIds.size()));
+            assertEquals(1, reverified.size());
+        }
     }
 
     @Test public void plannedUnitsPreserveEveryPhysicalLineExactlyOnceAndInOrder() {

@@ -523,6 +523,28 @@ public final class ClaudeNoGoRegressionSourceContractTest {
                 .contains("linesForIdsOnPage"));
     }
 
+    /**
+     * completeConsolidationSessionV6/completeLearningConsolidationSessionV6 re-verify each frozen
+     * Stabilisation block by re-running planPage on just that block's own lines and requiring
+     * exactly one whole result — which only holds while the block is ≤11 lines (the "stays whole"
+     * tier). The two-way split's own count was always ≤15, so its largest possible half (count-5)
+     * could never exceed 10, keeping this invariant for free; the three-way split's target (8/7/7
+     * over ~22-30 lines) has no such automatic ceiling and could legitimately produce a 12+ line
+     * block without an explicit cap. Confirmed against the whole corpus this session: without the
+     * cap, blocks up to size 12 occur; with it, the observed maximum is exactly 11.
+     */
+    @Test public void threeWaySplitNeverProducesABlockConsolidationCannotReverify() throws Exception {
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
+        assertTrue("the independently-verifiable ceiling must be named and set to 11",
+            policy.contains("private static final int MAX_INDEPENDENTLY_VERIFIABLE_BLOCK = 11;"));
+        String threeWay = method(policy,
+            "private static void appendThreeWaySplit(", "private static int preferCleanVerseBoundary(");
+        assertTrue("the optimizer must only consider combinations where every block stays within the cap",
+            threeWay.contains("if (c < 5 || c > cap) continue;"));
+        assertTrue("the clean-verse-boundary shift must be discarded if it would push any block over the cap",
+            threeWay.contains("if (split1 >= split2 || split1 > cap || split2 - split1 > cap || count - split2 > cap) {"));
+    }
+
     @Test public void murajaahJumpButtonHasItsOwnIconDistinctFromPlainPagination() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("the corpus-jump action must not be labelled like a plain pagination control",
