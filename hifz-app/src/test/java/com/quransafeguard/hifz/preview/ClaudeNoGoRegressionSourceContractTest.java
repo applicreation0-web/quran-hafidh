@@ -347,6 +347,26 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
+     * The Mushaf reader shades a verse by verse identity wherever it appears on the page (reader.js
+     * selectedPolygons/.ayahPolygon.selected), not by physical line. A grouped-cycle unit (e.g. a
+     * 5-line Renforcement block) is a fixed line window, not a verse boundary, so a verse that
+     * starts inside the unit but continues onto lines outside it would get shaded in full — making
+     * the highlighted region visibly span more physical lines than the unit's own declared count.
+     * fractionatedItqan is what showCurrent() forwards to MushafView as strictLineFocus, which
+     * swaps verse-based shading for a highlight confined to exactly the given line ids
+     * (lineFocusLayer) — renderGroupedCycle must set it, the same fix already used for a
+     * fractionated Itqan block, or it silently falls back to the stale value left by whichever mode
+     * last set it (false by default, reproducing the bug).
+     */
+    @Test public void groupedCycleUsesStrictLineFocusSoHighlightNeverSpillsPastTheUnit() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String renderGroupedCycle = method(session,
+            "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
+        assertTrue("renderGroupedCycle must force strict line focus so a long verse can't over-shade past the unit's lines",
+            renderGroupedCycle.contains("fractionatedItqan = true;"));
+    }
+
+    /**
      * A multi-page grouped-cycle unit let every repetition count from page one alone, since
      * completeGroupedCycleRep() never checked which page was on screen — the second page of a
      * continuous pass could go entirely unread. The Répétition action must only appear once the

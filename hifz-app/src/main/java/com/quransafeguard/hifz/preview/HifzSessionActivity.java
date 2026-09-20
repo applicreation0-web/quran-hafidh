@@ -417,6 +417,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = new ArrayList<>(exactLineIds);
         currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;
+        // A grouped-cycle unit is a fixed physical-line window (e.g. 5 lines), not a verse
+        // boundary: shading by verse (the default) would highlight a whole verse wherever it
+        // appears on the page, spilling well past the declared line count whenever a verse in the
+        // unit continues onto lines outside it. Strict line focus confines the highlight to
+        // exactly these lines, the same fix already used for a fractionated Itqan block.
+        fractionatedItqan = true;
         sessionCompleted = false;
         program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
