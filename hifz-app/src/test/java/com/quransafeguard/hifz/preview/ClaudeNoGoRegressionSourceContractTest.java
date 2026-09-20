@@ -301,4 +301,57 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(names.contains("static String name(int surah)"));
         assertTrue(names.contains("static String labelFor(int surah)"));
     }
+
+    /**
+     * murajaahNextSegmentAfterPage/After used to compare raw page numbers and verse ordinals
+     * across segments ("pageForVerse(start) > page", "ordinal(start) > ordinal(end)"). That broke
+     * the instant a disjoint acquired corpus wrapped mid-plan (e.g. finishing Juz 30's tail and
+     * continuing from Al-Baqara): the wrapped segment's page/ordinal is numerically *lower*, so
+     * the comparison silently returned null — no "next segment" button, and finishMurajaah()
+     * validated without warning about the unread wrapped passage. Confirmed against real
+     * geometry.json with Juz 1 + Juz 15 + Juz 30 as the acquired corpus (see the Python
+     * simulation run this session): starting a session at page 604 (An-Nas) produced no jump
+     * target under the old logic, and 1:1 under the fixed logic. The fix must key off each
+     * segment's own [start,end] bounds / list position, never cross-segment magnitude.
+     */
+    @Test public void murajaahNextSegmentLookupSurvivesACorpusWrapAroundNotJustAscendingPages() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertFalse("must no longer compare a segment's page against the current page across segments",
+            session.contains("if (geometry.pageForVerse(start) > page) return start;"));
+        assertFalse("must no longer compare a segment's ordinal against the target ordinal across segments",
+            session.contains("if (GeometryRepository.ordinal(start) > GeometryRepository.ordinal(end)) return start;"));
+        String segments = method(session,
+            "private List<MurajaahSegment> murajaahSegments() {", "private VerseRef murajaahNextSegmentAfterPage(int page) {");
+        assertTrue("each segment must record its own start/end page so membership never needs cross-segment comparison",
+            segments.contains("geometry.pageForVerse(segmentStart), geometry.pageForVerse(previous)"));
+        String afterPage = method(session,
+            "private VerseRef murajaahNextSegmentAfterPage(int page) {", "private VerseRef murajaahNextSegmentAfter(VerseRef end) {");
+        assertTrue("the current page's segment must be found by its own bounds, not by a global page comparison",
+            afterPage.contains("page >= segment.startPage && page <= segment.endPage"));
+        assertTrue("the next segment is simply the following entry in traversal order",
+            afterPage.contains("return i + 1 < segments.size() ? segments.get(i + 1).start : null;"));
+        String afterEnd = method(session,
+            "private VerseRef murajaahNextSegmentAfter(VerseRef end) {", "@Override public void onPageSwipe(int delta){goPage(delta);}");
+        assertTrue("the tapped endpoint's segment must be found by its own ordinal bounds",
+            afterEnd.contains("endOrdinal >= GeometryRepository.ordinal(segment.start)")
+                && afterEnd.contains("endOrdinal <= GeometryRepository.ordinal(segment.end)"));
+    }
+
+    @Test public void murajaahActionsRefreshOnEveryPageSwipeNotJustAtSessionStart() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue("renderMurajaah must delegate its action bar to a helper reusable after a swipe",
+            session.contains("restoreMurajaahEndpointSelectionOnCurrentPage();\n        updateMurajaahActions();"));
+        String goPage = method(session, "private void goPage(int delta) {", "private void addRoundAction(");
+        assertTrue("goPage must refresh the Révision jump button after every swipe, not just at render time",
+            goPage.contains("updateMurajaahActions();"));
+    }
+
+    @Test public void murajaahJumpButtonHasItsOwnIconDistinctFromPlainPagination() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue("the corpus-jump action must not be labelled like a plain pagination control",
+            session.contains("\"Passage suivant du corpus\""));
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        assertTrue("it must resolve to its own icon before the generic pagination fallback",
+            ui.contains("if (s.contains(\"passage suivant du corpus\")) return R.drawable.ic_ui_rotation;"));
+    }
 }

@@ -791,15 +791,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahProgress();
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
+        updateMurajaahActions();
+    }
+
+    private void updateMurajaahActions() {
+        actions.removeAllViews();
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
         if (nextSegment != null) {
             VerseRef jumpTarget = nextSegment;
-            LinearLayout jumpAction = Ui.roundAction(this, "", "Segment suivant", v -> {
+            LinearLayout jumpAction = Ui.roundAction(this, "", "Passage suivant du corpus", v -> {
                 currentPage = geometry.pageForVerse(jumpTarget);
                 currentSelection = Collections.emptyList();
                 currentLineIds = Collections.emptyList();
                 showCurrent();
                 restoreMurajaahEndpointSelectionOnCurrentPage();
+                updateMurajaahActions();
             });
             actions.addView(jumpAction);
         }
@@ -809,36 +815,68 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions.addView(validateAction);
     }
 
-    /**
-     * The acquired corpus can hold several disjoint ranges (murajaahObjectiveLabel splits the
-     * plan the same way); pages between segments are outside the corpus, so free swiping across
-     * them is impractical. Offers the next segment's start once the current page's segment has
-     * been passed, so the learner never has to hunt for it.
-     */
-    private List<VerseRef> murajaahSegmentStarts() {
-        List<VerseRef> traversal = murajaahPlan.traversalVerses;
-        List<VerseRef> starts = new ArrayList<>();
-        if (traversal.isEmpty()) return starts;
-        starts.add(traversal.get(0));
-        for (int i = 1; i < traversal.size(); i++) {
-            if (GeometryRepository.ordinal(traversal.get(i)) != GeometryRepository.ordinal(traversal.get(i - 1)) + 1) {
-                starts.add(traversal.get(i));
-            }
+    private static final class MurajaahSegment {
+        final VerseRef start;
+        final VerseRef end;
+        final int startPage;
+        final int endPage;
+        MurajaahSegment(VerseRef start, VerseRef end, int startPage, int endPage) {
+            this.start = start; this.end = end; this.startPage = startPage; this.endPage = endPage;
         }
-        return starts;
+    }
+
+    /**
+     * Splits the plan's traversal into maximal contiguous runs (murajaahObjectiveLabel builds the
+     * same runs for display). The acquired corpus can hold several disjoint ranges and can wrap
+     * mid-plan (e.g. finishing Juz 30's tail and continuing from Al-Baqara), so a later segment's
+     * page or verse ordinal can be *lower* than an earlier one's. Callers must never compare
+     * across segments by raw page/ordinal magnitude — only by a segment's own [start,end] bounds
+     * or by its position in this list.
+     */
+    private List<MurajaahSegment> murajaahSegments() {
+        List<VerseRef> traversal = murajaahPlan.traversalVerses;
+        List<MurajaahSegment> segments = new ArrayList<>();
+        if (traversal.isEmpty()) return segments;
+        VerseRef segmentStart = traversal.get(0);
+        VerseRef previous = segmentStart;
+        for (int i = 1; i <= traversal.size(); i++) {
+            VerseRef current = i < traversal.size() ? traversal.get(i) : null;
+            boolean contiguous = current != null
+                && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
+            if (!contiguous) {
+                segments.add(new MurajaahSegment(segmentStart, previous,
+                    geometry.pageForVerse(segmentStart), geometry.pageForVerse(previous)));
+                if (current != null) segmentStart = current;
+            }
+            if (current != null) previous = current;
+        }
+        return segments;
     }
 
     private VerseRef murajaahNextSegmentAfterPage(int page) {
-        for (VerseRef start : murajaahSegmentStarts()) {
-            if (geometry.pageForVerse(start) > page) return start;
+        List<MurajaahSegment> segments = murajaahSegments();
+        if (segments.size() < 2) return null;
+        for (int i = 0; i < segments.size(); i++) {
+            MurajaahSegment segment = segments.get(i);
+            if (page >= segment.startPage && page <= segment.endPage) {
+                return i + 1 < segments.size() ? segments.get(i + 1).start : null;
+            }
         }
+        for (MurajaahSegment segment : segments) if (segment.startPage > page) return segment.start;
         return null;
     }
 
     private VerseRef murajaahNextSegmentAfter(VerseRef end) {
         if (end == null) return null;
-        for (VerseRef start : murajaahSegmentStarts()) {
-            if (GeometryRepository.ordinal(start) > GeometryRepository.ordinal(end)) return start;
+        List<MurajaahSegment> segments = murajaahSegments();
+        if (segments.size() < 2) return null;
+        int endOrdinal = GeometryRepository.ordinal(end);
+        for (int i = 0; i < segments.size(); i++) {
+            MurajaahSegment segment = segments.get(i);
+            if (endOrdinal >= GeometryRepository.ordinal(segment.start)
+                && endOrdinal <= GeometryRepository.ordinal(segment.end)) {
+                return i + 1 < segments.size() ? segments.get(i + 1).start : null;
+            }
         }
         return null;
     }
@@ -974,6 +1012,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean groupedCycle=RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(groupedCycle&&consolidationSession!=null&&!consolidationSession.readyToClose())updateGroupedCycleRepAction();
+        if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted)updateMurajaahActions();
     }
 
     private void addRoundAction(String symbol,String label,View.OnClickListener listener){

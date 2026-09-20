@@ -354,6 +354,7 @@ final class Ui {
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
+        if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_rotation;
         if (s.contains("suivant")) return R.drawable.ic_ui_next;
         if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
