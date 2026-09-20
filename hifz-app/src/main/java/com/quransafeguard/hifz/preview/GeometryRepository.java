@@ -205,12 +205,8 @@ public final class GeometryRepository {
         }
         int startSurah = lines.get(startLineIndex).verses.get(0).getSurah();
         int maxIndex = Math.min(lines.size() - 1, startLineIndex + PreviewConfig.SABQI_LINES - 1);
-        int naturalEnd = startLineIndex;
-        while (naturalEnd < maxIndex && lines.get(naturalEnd + 1).verses.get(0).getSurah() == startSurah) naturalEnd++;
-        // A surah boundary is already a definitive, clean stop; only the full 5-line target needs
-        // checking against a mid-verse cut.
-        int endIndex = naturalEnd == maxIndex
-            ? preferCleanVerseBoundary(startLineIndex, startSurah, naturalEnd) : naturalEnd;
+        int endIndex = startLineIndex;
+        while (endIndex < maxIndex && lines.get(endIndex + 1).verses.get(0).getSurah() == startSurah) endIndex++;
         ArrayList<String> ids = new ArrayList<>();
         LinkedHashSet<VerseRef> refs = new LinkedHashSet<>();
         for (int i = startLineIndex; i <= endIndex; i++) {
@@ -226,39 +222,6 @@ public final class GeometryRepository {
         boolean startPartial = startLineIndex > 0 && lines.get(startLineIndex - 1).verses.contains(first);
         boolean endPartial = endIndex + 1 < lines.size() && lines.get(endIndex + 1).verses.contains(last);
         return new FiveLineBlock(startLineIndex, endIndex, first, last, startPartial, endPartial, ids, verses);
-    }
-
-    /**
-     * The raw 5-line target ignores verse boundaries and can land mid-verse, splitting one verse's
-     * lines across two days' Sabqi blocks. Prefer the nearest point — within two lines, and never
-     * crossing into the next surah — where a line's last verse actually differs from the next
-     * line's first verse. Beyond that tolerance, cutting mid-verse is accepted, matching the same
-     * discipline used for the Stabilisation half-page split.
-     */
-    private int preferCleanVerseBoundary(int startLineIndex, int startSurah, int target) {
-        if (isCleanVerseBoundary(target)) return target;
-        int chosen = target;
-        int chosenDistance = Integer.MAX_VALUE;
-        int lo = Math.max(startLineIndex, target - 2);
-        int hi = Math.min(lines.size() - 1, target + 2);
-        for (int candidate = lo; candidate <= hi; candidate++) {
-            if (lines.get(candidate).verses.get(0).getSurah() != startSurah) continue;
-            if (!isCleanVerseBoundary(candidate)) continue;
-            int distance = Math.abs(candidate - target);
-            if (distance < chosenDistance) {
-                chosenDistance = distance;
-                chosen = candidate;
-            }
-        }
-        return chosen;
-    }
-
-    private boolean isCleanVerseBoundary(int index) {
-        if (index + 1 >= lines.size()) return true;
-        List<VerseRef> beforeVerses = lines.get(index).verses;
-        VerseRef lastBefore = beforeVerses.get(beforeVerses.size() - 1);
-        VerseRef firstAfter = lines.get(index + 1).verses.get(0);
-        return !lastBefore.equals(firstAfter);
     }
 
     /** Verses whose complete physical line span lies inside the supplied stable line interval. */

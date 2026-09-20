@@ -168,19 +168,30 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
-     * The raw 5-line target can land mid-verse, splitting a verse's lines across two Sabqi days —
-     * the same class of defect fixed for the Stabilisation half-page split (verified on a real
-     * page: Al-Baqarah 2:276 on page 47). Sabqi must apply the same nearby-clean-boundary
-     * preference, but never at the cost of crossing into the next surah.
+     * Reported directly: a Sabqi block "didn't respect the 5 lines," extending to a 6th line to
+     * finish a verse. Root cause: fiveLineBlock used to call a preferCleanVerseBoundary helper that
+     * could search up to two lines *past* the natural 5-line target to land on a clean verse
+     * boundary — unlike Stabilisation's own preferCleanVerseBoundary (StabilizationHalfPagePolicy),
+     * which only ever shifts the split point *between* two blocks whose combined total is fixed,
+     * Sabqi's version had no sibling block to shrink in compensation: it just unconditionally grew
+     * the standalone block past SABQI_LINES, contradicting fiveLineBlock's own doc comment ("clips
+     * to at most SABQI_LINES"). The hard rule (5 lines/session, only a surah boundary makes a
+     * shorter week) does not admit a verse-boundary exception at all: a mid-verse cut is accepted
+     * and already fully modeled by FiveLineBlock's startsInsideVerse/endsInsideVerse fields.
      */
-    @Test public void sabqiFiveLineBlockPrefersACleanVerseBoundaryWithoutCrossingASurah() throws Exception {
+    @Test public void sabqiFiveLineBlockNeverExceedsFiveLinesForAVerseBoundary() throws Exception {
         String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
-        assertTrue("a surah boundary is already a clean stop and must skip the verse-boundary search",
-            geometry.contains("int endIndex = naturalEnd == maxIndex"));
-        assertTrue("the verse-boundary search must consult preferCleanVerseBoundary",
-            geometry.contains("preferCleanVerseBoundary(startLineIndex, startSurah, naturalEnd)"));
-        assertTrue("candidates must never cross into a different surah",
-            geometry.contains("lines.get(candidate).verses.get(0).getSurah() != startSurah) continue;"));
+        String block = method(geometry, "public FiveLineBlock fiveLineBlock(int startLineIndex)", "ArrayList<String> ids = new ArrayList<>();");
+        assertTrue("endIndex must be capped at maxIndex (startLineIndex + SABQI_LINES - 1), never past it",
+            block.contains("int endIndex = startLineIndex;"));
+        assertTrue("the only early stop must be a surah change, never a verse-boundary search",
+            block.contains("while (endIndex < maxIndex && lines.get(endIndex + 1).verses.get(0).getSurah() == startSurah) endIndex++;"));
+        assertFalse("must no longer call a helper that can push the boundary past the 5-line target",
+            geometry.contains("preferCleanVerseBoundary(startLineIndex"));
+        assertFalse("the forward-searching clean-boundary helper itself must be gone, not just unused",
+            geometry.contains("private int preferCleanVerseBoundary("));
+        assertFalse("its isCleanVerseBoundary helper must be gone too",
+            geometry.contains("private boolean isCleanVerseBoundary("));
     }
 
     /** Lecture's page slider is replaced by a direct surah picker (all 114, canonical order). */
