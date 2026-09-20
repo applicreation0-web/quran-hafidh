@@ -32,11 +32,9 @@ final class WeeklyDashboardPlanner {
     private final HifzPrefs prefs;
     private final GeometryRepository geometry;
     private final DashboardLedger ledger;
-    private final J10HostBudgetStore hostBudgetStore;
 
-    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger,
-                           J10HostBudgetStore hostBudgetStore){
-        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;this.hostBudgetStore=hostBudgetStore;
+    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger){
+        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;
     }
 
     static List<LocalDate> window(LocalDate today){
@@ -73,10 +71,8 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean morningJ10=morningActual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.SABQI,date);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
-                    if(morningJ10)morning="J10 · créneau utilisé";
-                    else if(morningActual!=null)morning="✓ "+compact(morningActual.label);
+                    if(morningActual!=null)morning="✓ "+compact(morningActual.label);
                     else if(block==null)morning="Apprentissage · plage à vérifier";
                     else{
                         morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
@@ -89,15 +85,13 @@ final class WeeklyDashboardPlanner {
                         evening="Renforcement + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
-                    boolean m=morningActual!=null||morningJ10;
+                    boolean m=morningActual!=null;
                     state=m&&eveningDone?"Validé":m?"Soir à faire":"À faire";
                     break;
                 }
                 case STABILIZATION:{
                     DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.ITQAN);
-                    boolean j10=actual==null&&hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(HifzSessionActivity.ITQAN,date);
-                    if(j10)morning="J10 · créneau utilisé";
-                    else if(actual!=null)morning="✓ "+compact(actual.label);
+                    if(actual!=null)morning="✓ "+compact(actual.label);
                     else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
                     else if(projectedAnchoringIndex>=projectedAnchoring.size())morning="Stabilisation · aucune unité à stabiliser";
                     else{
@@ -118,7 +112,7 @@ final class WeeklyDashboardPlanner {
                         if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
                         else projectedItqanBlockIndex=block;
                     }
-                    boolean morningDone=actual!=null||j10;
+                    boolean morningDone=actual!=null;
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
                     boolean eveningDone=snowballActual!=null&&entretienActual!=null;

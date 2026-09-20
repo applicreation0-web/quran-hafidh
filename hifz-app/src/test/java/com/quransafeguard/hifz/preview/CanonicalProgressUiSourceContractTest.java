@@ -21,7 +21,7 @@ public final class CanonicalProgressUiSourceContractTest {
     }
 
     /**
-     * The retention/J10 redesign needs three Ancrage mornings (Tue/Thu/Sat) to pair with the
+     * The retention redesign needs three Ancrage mornings (Tue/Thu/Sat) to pair with the
      * three Leçon-neuve mornings (Mon/Wed/Fri), forming weekly groups of three (S1/S2/S3 and
      * A1/A2/A3). Sunday is the sole reserved Révision day; the old two-day Tue/Thu
      * Stabilisation plus Sat/Sun Révision split is the legacy schedule being replaced here.
@@ -64,7 +64,6 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(settings.contains("section(root,\"Schéma\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("Consolidation · soir Mar/Jeu/Sam"));
-        assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
         assertFalse(settings.contains("addRepere(root"));
     }

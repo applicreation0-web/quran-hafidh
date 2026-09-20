@@ -17,7 +17,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -60,10 +59,5 @@ public final class HifzSessionDateInstrumentedTest {
             assertEquals(sessionDay.toString(), reopened.lastSabqiTodayReviewDate());
             assertEquals(0L, reopened.elapsedFor(HifzSessionActivity.SABQI_TODAY_REVIEW));
         }
-
-        ((QuranHifzApp) context).reconcilePreferenceChange("lastSabqiTodayReviewDate", restartDay);
-        String lineId = GeometryRepository.get(context).line(0).id;
-        Map<String, LocalDate> snapshot = new J10ReviewStore(context).snapshot();
-        assertEquals("J10 credit must keep the recorded session date", sessionDay, snapshot.get(lineId));
     }
 }

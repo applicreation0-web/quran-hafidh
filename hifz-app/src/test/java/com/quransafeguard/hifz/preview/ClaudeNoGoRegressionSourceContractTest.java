@@ -139,7 +139,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
      * lines and continue into lines actually owned by block 2). The default whole-verse shading
      * then greys out more physical lines than the block's real 6-8 line working set (confirmed:
      * 10 lines shaded for a block the split policy caps at 8). showCurrent() must request strict
-     * per-line shading, like J10 already does, whenever the current unit is fractionated.
+     * per-line shading whenever the current unit is fractionated.
      */
     @Test public void fractionatedStabilizationUsesStrictLineFocusNotWholeVerseShading() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");

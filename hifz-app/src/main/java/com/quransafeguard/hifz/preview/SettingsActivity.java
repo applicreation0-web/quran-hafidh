@@ -20,12 +20,9 @@ import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /** BOOX-oriented configuration. Rotation anchor is editable; live cursors are read-only. */
 public final class SettingsActivity extends android.app.Activity {
@@ -34,11 +31,9 @@ public final class SettingsActivity extends android.app.Activity {
     private static final int REQUEST_BACKUP_IMPORT = 4105;
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
-    private J10ReviewPlanner j10Planner;
     private GeometryRepository geometry;
-    private final ExecutorService j10Loader = Executors.newSingleThreadExecutor();
     private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting;
-    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, j10Status, audioStatus;
+    private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus;
 
     private interface VerseChosen { void accept(VerseRef verse); }
 
@@ -48,7 +43,6 @@ public final class SettingsActivity extends android.app.Activity {
         speedStore = new HifzSpeedStore(this);
         try {
             geometry = GeometryRepository.get(this);
-            j10Planner = new J10ReviewPlanner(this);
         } catch (Throwable error) {
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;
@@ -104,12 +98,6 @@ public final class SettingsActivity extends android.app.Activity {
         root.addView(Ui.divider(this));
         root.addView(Ui.settingRow(this,"Consolidation",speedStore.consolidationSummary(),null));
 
-        section(root,"J10");
-        j10Status=Ui.text(this,"",11.5f,false);
-        j10Status.setTextColor(Ui.MUTED);
-        j10Status.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
-        root.addView(j10Status);
-
         section(root,"Audio");
         audioSetting=Ui.settingRow(this,"Al-Husary Muʿallim","Choisir le pack",v->selectAudioZip());
         audioStatus=Ui.settingValue(audioSetting);root.addView(audioSetting);
@@ -137,12 +125,8 @@ public final class SettingsActivity extends android.app.Activity {
         TextView renforcementSchemaNote=Ui.text(this,"Renforcement (Lun/Mer/Ven soir) et Consolidation (Mar/Jeu/Sam soir) — l’effet boule de neige :"
             +"\n1. Chaque soir : ×10 sur CHAQUE bloc Appris ou Stabilisé accumulé depuis le début de la semaine (pas seulement celui du jour), plus ×10 sur l’ensemble de ces blocs lus d’une traite dès qu’il y en a plus d’un."
             +"\n2. Dimanche matin : la même chose une dernière fois (chaque bloc ×10 puis l’ensemble ×10), puis ils passent en Acquis."
-            +"\n3. Chaque soir Lun-Sam ajoute aussi 30 min d’Entretien de l’Acquis. Dimanche soir : rien.",11f,false);
+            +"\n3. Chaque soir ajoute aussi 30 min d’Entretien de l’Acquis, dimanche soir compris.",11f,false);
         renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
-        TextView j10SchemaNote=Ui.text(this,"J10 · garantie de fraîcheur des passages Acquis",11f,false);
-        j10SchemaNote.setTextColor(Ui.MUTED);j10SchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10SchemaNote);
-        TextView j10DetailNote=Ui.text(this,"Un passage Acquis non révisé depuis 10 jours devient prioritaire à la prochaine Révision.",11f,false);
-        j10DetailNote.setTextColor(Ui.MUTED);j10DetailNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(j10DetailNote);
         TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau du même type — aucun jour n’est perdu.",11f,false);
         carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(carryoverSchemaNote);
 
@@ -154,7 +138,7 @@ public final class SettingsActivity extends android.app.Activity {
         TextView view=Ui.bookText(this,title,15,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
     }
 
-    private void refreshAll(){refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshJ10();refreshAudio();}
+    private void refreshAll(){refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
 
     private void refreshSabqi(){
         int first=geometry.firstLineIndex(prefs.sabqiStart()),last=geometry.lastLineIndex(prefs.sabqiEnd());
@@ -352,34 +336,8 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Entretien · chaque soir (Lun-Sam) · 30 min · position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Entretien · chaque soir · 30 min · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
-    }
-
-    private void refreshJ10(){
-        if(j10Status==null)return;
-        j10Status.setText("J10 · calcul…");
-        final LocalDate today = HifzClock.today();
-        j10Loader.execute(() -> {
-            try{
-                J10ReviewPlanner.PriorityGroup group=j10Planner.priorityGroup(today);
-                J10ReviewPolicy.Forecast forecast=group.forecast;
-                String state;
-                if(forecast.sustainability==J10ReviewPolicy.Sustainability.NON_TENABLE){
-                    state="Plan non tenable · déficit "+forecast.deficitMinutes+" min / 10 jours";
-                }else if(forecast.sustainability==J10ReviewPolicy.Sustainability.TENSION){
-                    state="Plan sous tension";
-                }else{
-                    state="Plan tenable";
-                }
-                String priority=group.isEmpty()?"Aucune priorité immédiate"
-                    :"Priorité actuelle · J"+group.maxAgeDays+" · "+group.lineIds.size()+" ligne(s)";
-                String text="Intervalle maximal · 10 jours\n"+state+"\n"+priority;
-                runOnUiThread(() -> { if (!isFinishing() && j10Status != null) j10Status.setText(text); });
-            }catch(RuntimeException error){
-                runOnUiThread(() -> { if (!isFinishing() && j10Status != null) j10Status.setText("J10 · état à vérifier"); });
-            }
-        });
     }
 
     private void refreshAudio(){
@@ -522,11 +480,6 @@ public final class SettingsActivity extends android.app.Activity {
         new AlertDialog.Builder(this).setTitle("Réinitialiser la progression Hifz ?")
             .setMessage("Efface la progression Hifz locale (Apprentissage, Stabilisation, Consolidation, Révision, positions et chronos). Le Mushaf, les Tafsir et l’audio installé ne sont pas modifiés.")
             .setNegativeButton("Annuler",null).setPositiveButton("Réinitialiser",(d,w)->{prefs.resetPreviewState();getSharedPreferences("hifz_preview_session_gates",MODE_PRIVATE).edit().clear().apply();refreshAll();}).show();
-    }
-
-    @Override protected void onDestroy() {
-        j10Loader.shutdownNow();
-        super.onDestroy();
     }
 
 }

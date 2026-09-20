@@ -77,19 +77,16 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(settings.contains("section(root,\"Schéma\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("Consolidation · soir Mar/Jeu/Sam"));
-        assertTrue(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
         assertFalse(settings.contains("addRepere(root"));
     }
 
-    @Test public void settingsExposeReadableSeparatedSpeedsAndJ10State() throws Exception {
+    @Test public void settingsExposeReadableSeparatedSpeeds() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         String speed = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
         assertTrue(settings.contains("section(root,\"Vitesses\")"));
         assertTrue(settings.contains("speedStore.maintenanceSummary()"));
         assertTrue(settings.contains("speedStore.consolidationSummary()"));
-        assertTrue(settings.contains("section(root,\"J10\")"));
-        assertTrue(settings.contains("Intervalle maximal · 10 jours"));
         assertTrue(speed.contains("s/ligne"));
         assertFalse(speed.contains("+ \"L/\""));
     }
@@ -103,16 +100,7 @@ public final class FinalUiPolishSourceContractTest {
         assertFalse(session.contains("Ancrage fractionné"));
     }
 
-    @Test public void j10ConsumedSlotsStayDistinctFromNormalValidatedSessions() throws Exception {
-        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        String week = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue(main.contains("ledger.find(date,mode)!=null"));
-        assertTrue(main.contains("hostBudgetStore.isSlotConsumed(mode,date)"));
-        assertTrue(week.contains("J10 · créneau utilisé"));
-        assertFalse(main.contains("Créneau J10 utilisé") && main.contains("ledger.record"));
-    }
-
-    @Test public void semanticHifzIconsStayMonochromeOutlineAndTwentyFourDp() throws Exception {
+@Test public void semanticHifzIconsStayMonochromeOutlineAndTwentyFourDp() throws Exception {
         String[] files = {
             "ic_hifz_new_lesson.xml", "ic_hifz_reprise.xml", "ic_hifz_consolidation.xml",
             "ic_hifz_anchor.xml", "ic_hifz_maintenance.xml", "ic_hifz_strengthen.xml",

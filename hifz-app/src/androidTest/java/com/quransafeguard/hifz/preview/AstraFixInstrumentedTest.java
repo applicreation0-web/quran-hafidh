@@ -14,13 +14,8 @@ import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -45,40 +40,6 @@ public final class AstraFixInstrumentedTest {
     @After public void tearDown() {
         raw.edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
-    }
-
-    @Test public void historicalAcquiredCorpusDoesNotBootstrapAtJ0() {
-        HifzClock.setClockForTests(Clock.fixed(
-            Instant.parse("2026-09-14T12:00:00Z"), ZoneId.of("UTC")));
-        LocalDate today = HifzClock.today();
-        J10ReviewPlanner planner = new J10ReviewPlanner(context);
-        GeometryRepository geometry = GeometryRepository.get(context);
-        String baseLine = geometry.lineIdsForVerseRange(new VerseRef(2, 1), new VerseRef(2, 1)).get(0);
-
-        assertTrue(planner.syncAcquired(today));
-
-        assertEquals(today.minusDays(10), planner.snapshot().get(baseLine));
-    }
-
-    @Test public void startupReconciliationRecoversHifzCommitMissedByObserver() {
-        LocalDate today = LocalDate.of(2026, 9, 13);
-        HifzPrefs prefs = new HifzPrefs(context);
-        GeometryRepository geometry = GeometryRepository.get(context);
-        AnchoringQueue.Entry first = prefs.currentAnchoringEntry(geometry);
-        VerseRef start = GeometryRepository.parseVerse(first.start);
-        VerseRef end = GeometryRepository.parseVerse(first.end);
-        List<String> ids = geometry.lineIdsForVerseRange(start, end);
-        J10ReviewStore store = new J10ReviewStore(context);
-        assertTrue(store.acquireLines(ids, today.minusDays(10)));
-
-        String label = "Ancrage · " + start + " → " + end;
-        assertTrue(prefs.completeItqanUnitAndConsolidate(start, end,
-            prefs.itqanWorkCorpus().next(end), today.toString(), label));
-
-        J10ReviewPlanner planner = new J10ReviewPlanner(context);
-        new J10ReviewObserver(planner).reconcileAll(today);
-        Map<String, LocalDate> snapshot = planner.snapshot();
-        for (String id : ids) assertEquals(today, snapshot.get(id));
     }
 
     @Test public void newPromotionPreemptsReconstructionOnNextAnchoringRead() {

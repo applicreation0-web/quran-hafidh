@@ -22,37 +22,8 @@ public final class PreBoox074SourceContractTest {
 
     @Test public void c1StructuredCreditsDoNotDependOnVisibleLabels() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        String observer = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewObserver.java");
         assertTrue(prefs.contains("lastItqanCreditStart") && prefs.contains("lastItqanCreditBlockIndex"));
         assertTrue(prefs.contains("lastMurajaahCreditStart") && prefs.contains("lastMurajaahCreditEnd"));
-        assertTrue(observer.contains("Historical v4 fallback only"));
-        assertTrue(observer.indexOf("lastItqanCreditStart") < observer.indexOf("lastItqanLabel"));
-    }
-
-    @Test public void c2C3C13J10IsAsyncPureAndHasNoOpeningPriority() throws Exception {
-        String app = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranHifzApp.java");
-        String planner = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewPlanner.java");
-        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(app.contains("loader.execute"));
-        assertTrue(app.contains("runOnUiThread"));
-        assertFalse(app.contains("openingPriority"));
-        assertTrue(settings.contains("j10Loader.execute"));
-        int forecast = planner.indexOf("J10ReviewPolicy.Forecast forecast(");
-        int priority = planner.indexOf("PriorityGroup priorityGroup(");
-        assertTrue(forecast >= 0 && priority >= 0);
-        assertFalse(planner.substring(forecast, priority).contains("syncAcquired("));
-        int priorityEnd = planner.indexOf("boolean acquireAndReview(", priority);
-        assertTrue(priorityEnd > priority);
-        assertFalse(planner.substring(priority, priorityEnd).contains("syncAcquired("));
-        int reconcileStart = app.indexOf("void reconcilePreferenceChange(");
-        int prefStart = app.indexOf("onSharedPreferenceChanged(", reconcileStart);
-        int resumedStart = app.indexOf("onActivityResumed(", prefStart);
-        assertTrue(reconcileStart >= 0 && prefStart > reconcileStart && resumedStart > prefStart);
-        String reconcileBody = app.substring(reconcileStart, prefStart);
-        String prefListener = app.substring(prefStart, resumedStart);
-        assertTrue(reconcileBody.contains("ensurePlannerSynced(today)"));
-        assertFalse(reconcileBody.contains("lastFullReconcileDate = today"));
-        assertFalse(prefListener.contains("lastFullReconcileDate = today"));
     }
 
     @Test public void c5ToC9AndEinkUiHardeningRemainPresent() throws Exception {
@@ -111,8 +82,6 @@ public final class PreBoox074SourceContractTest {
         String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
         String stabilization = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String planner = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewPlanner.java");
-        String observer = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/J10ReviewObserver.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(geometry.contains("surahSegmentLineCounts(VerseRef start, VerseRef end)"));
@@ -123,11 +92,6 @@ public final class PreBoox074SourceContractTest {
         for (String text : new String[]{main, weekly}) {
             assertTrue(text.contains("CorpusLinePolicy.ownedLineIdsForRangeOnPage"));
             assertTrue(text.contains("StabilizationHalfPagePolicy.planPage"));
-            assertFalse(text.contains("fractionatedBlockLength(unit.size()"));
-            assertFalse(text.contains("fractionatedBlockStart(unit.size()"));
-        }
-        for (String text : new String[]{planner, observer}) {
-            assertTrue(text.contains("surahSegmentLineCounts"));
             assertFalse(text.contains("fractionatedBlockLength(unit.size()"));
             assertFalse(text.contains("fractionatedBlockStart(unit.size()"));
         }

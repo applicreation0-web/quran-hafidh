@@ -188,8 +188,8 @@ public final class HifzV6LegacyJ10MigrationInstrumentedTest {
             .commit());
         Map<String, ?> legacyBeforeRuntime = snapshot(legacyJ10);
 
-        J10ReviewPlanner planner = new J10ReviewPlanner(context);
-        Map<String, LocalDate> runtime = planner.snapshot();
+        J10V6Store store = new J10V6Store(context);
+        Map<String, LocalDate> runtime = store.snapshot();
         assertEquals("runtime must use the exact date imported into schema6",
             importedDate, runtime.get(dated));
         assertFalse("post-migration legacy-only lines must never enter runtime",
@@ -197,12 +197,12 @@ public final class HifzV6LegacyJ10MigrationInstrumentedTest {
 
         LocalDate today = LocalDate.of(2026, 9, 15);
         assertTrue("schema6 sync must not access the retained legacy J10 archive",
-            planner.syncAcquired(today));
+            store.syncAcquired());
         assertTrue("UNKNOWN_DUE must stay explicit instead of receiving an invented date",
             stringSet(UNKNOWN_DUE).contains(unknown));
         assertFalse(longMap(ACTIVE_J10).containsKey(unknown));
 
-        assertTrue(planner.markReviewed(Collections.singleton(unknown), today));
+        assertTrue(store.markReviewed(Collections.singleton(unknown), today));
         assertEquals(Long.valueOf(today.toEpochDay()), longMap(ACTIVE_J10).get(unknown));
         assertFalse(stringSet(UNKNOWN_DUE).contains(unknown));
         assertFalse(stringSet(LEGACY_IMPORTED).contains(unknown));

@@ -164,7 +164,7 @@ object HifzSchedule {
 
     /**
      * Canonical weekly cadence: three Leçon-neuve mornings (Mon/Wed/Fri) pair with three
-     * Ancrage mornings (Tue/Thu/Sat) to form the weekly groups of three the retention/J10
+     * Ancrage mornings (Tue/Thu/Sat) to form the weekly groups of three the retention
      * redesign relies on (S1/S2/S3 and A1/A2/A3). Sunday is the sole reserved Révision day.
      */
     fun actionFor(day: DayOfWeek): CadenceAction = when (day) {

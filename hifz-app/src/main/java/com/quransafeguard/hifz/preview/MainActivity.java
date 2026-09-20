@@ -29,7 +29,6 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
-    private J10HostBudgetStore hostBudgetStore;
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
     private boolean consolidationNeedsAttention;
@@ -47,7 +46,6 @@ public final class MainActivity extends android.app.Activity {
         super.onCreate(state);
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
-        hostBudgetStore = new J10HostBudgetStore(this);
         ledger = new DashboardLedger(this);
 
         ScrollView scroll = new ScrollView(this);
@@ -177,7 +175,6 @@ public final class MainActivity extends android.app.Activity {
         super.onResume();
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
-        if (hostBudgetStore == null) hostBudgetStore = new J10HostBudgetStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
         if (today != null && geometry != null) refreshAll();
@@ -207,8 +204,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private boolean modeComplete(LocalDate date,String mode){
-        if(ledger.find(date,mode)!=null)return true;
-        return hostBudgetStore!=null&&hostBudgetStore.isSlotConsumed(mode,date);
+        return ledger.find(date,mode)!=null;
     }
 
     /**
@@ -409,7 +405,7 @@ public final class MainActivity extends android.app.Activity {
 
         List<WeeklyDashboardPlanner.Row> rows;
         try {
-            rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, hostBudgetStore).week(HifzClock.today());
+            rows = new WeeklyDashboardPlanner(prefs, geometry, ledger).week(HifzClock.today());
         } catch (RuntimeException error) {
             dashboard.removeAllViews();
             TextView unavailable = Ui.text(this, "Semaine indisponible", 10.8f, false);
