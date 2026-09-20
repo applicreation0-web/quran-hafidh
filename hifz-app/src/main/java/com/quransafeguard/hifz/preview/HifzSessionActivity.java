@@ -382,6 +382,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                                      Runnable onValidate) {
         String today = sessionDate.toString();
         consolidationSession = prefs.restoreConsolidationSession(consolidationEngine, family);
+        if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()) {
+            // The week's accumulator grew a new block (e.g. Friday's own) since this session was
+            // frozen open at a smaller size (e.g. Wednesday's 2 units) — reusing it as-is would
+            // silently finish out the old, now-incomplete unit set and never review the new block
+            // this week. Abandon its unfinished progress and fall through to rebuild fresh below.
+            prefs.discardConsolidationSession(family);
+            consolidationSession = null;
+        }
         if (consolidationSession == null) {
             if (units.isEmpty()) {
                 sessionCompleted = true;

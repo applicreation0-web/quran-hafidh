@@ -2020,6 +2020,20 @@ public final class HifzPrefs {
     }
 
     /**
+     * Abandons a frozen OPEN grouped session without marking the evening as validated — unlike
+     * completeSnowballEvening, this does NOT set lastLearningSnowballEveningDate/
+     * lastStabilizationSnowballEveningDate, since the evening's repetitions were not actually
+     * finished. Used when the week's own accumulator has grown a new block since this session was
+     * opened (e.g. a session frozen at 2 units on Wednesday, still unfinished when Friday's own
+     * block appears): the stale session's unfinished progress on its own units is discarded so a
+     * fresh session covering every block accumulated so far — including the new one — can open in
+     * its place, rather than silently finishing out a session that can no longer see it.
+     */
+    boolean discardConsolidationSession(ConsolidationCycleEngine.Family family) {
+        return p.edit().remove(consolidationStateKey(family)).commit();
+    }
+
+    /**
      * The session's real per-day physical blocks, excluding the weekly snowball's synthetic
      * "continuous" pass — both completion methods are only ever reached from a Sunday final review
      * (weeklySnowballUnits' only caller for grouped completion), where a session with more than one

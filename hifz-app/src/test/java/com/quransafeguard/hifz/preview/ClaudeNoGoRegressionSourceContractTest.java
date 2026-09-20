@@ -435,6 +435,34 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
+     * Reported directly: Renforcement's Friday evening session showed bloc1, bloc2 and bloc1+2 but
+     * never bloc3, even though Friday's own Sabqi block had already been learned that morning. Root
+     * cause: renderGroupedCycle only builds a fresh cycle when NO session is persisted — a session
+     * opened Wednesday with 2 units (bloc1, bloc2, combined) that the user hadn't finished all ×10
+     * reps for by Friday was reused as-is, its unit set frozen at cycle-open time and never
+     * re-checked against the week's now-larger accumulator (Cycle/addUnit explicitly forbids adding
+     * a unit to an OPEN session, so the engine has no way to grow it in place). Bloc3 sat in the
+     * weekly accumulator, invisible to Renforcement, until that stale session finally closed on its
+     * own. The fix: when the freshly computed unit list has grown past the persisted session's own
+     * size, discard the stale session (losing its in-progress reps, but never silently skipping the
+     * new block) and fall through to rebuild fresh from the current, complete unit list.
+     */
+    @Test public void groupedCycleRebuildsWhenTheWeekAddsABlockToAStaleUnfinishedSession() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String renderGroupedCycle = method(session,
+            "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
+        assertTrue("must detect a grown accumulator by comparing the persisted session's own size against the fresh unit list",
+            renderGroupedCycle.contains("consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()"));
+        assertTrue("a stale session must be discarded (not silently continued) once the week has grown a new block",
+            renderGroupedCycle.contains("prefs.discardConsolidationSession(family);"));
+        assertTrue("discarding must fall through to the existing fresh-build path, not skip it",
+            renderGroupedCycle.contains("prefs.discardConsolidationSession(family);\n            consolidationSession = null;\n        }\n        if (consolidationSession == null) {"));
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("discardConsolidationSession must exist and must NOT mark the evening as validated",
+            prefs.contains("boolean discardConsolidationSession(ConsolidationCycleEngine.Family family) {\n        return p.edit().remove(consolidationStateKey(family)).commit();\n    }"));
+    }
+
+    /**
      * A multi-page grouped-cycle unit let every repetition count from page one alone, since
      * completeGroupedCycleRep() never checked which page was on screen — the second page of a
      * continuous pass could go entirely unread. The Répétition action must only appear once the
