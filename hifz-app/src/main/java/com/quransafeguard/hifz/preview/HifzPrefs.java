@@ -1504,7 +1504,8 @@ public final class HifzPrefs {
             for (VerseRange range : pendingRanges) {
                 VerseRef cursor = range.getStart();
                 while (range.contains(cursor)) {
-                    GeometryRepository.VerseUnit unit = geometry.eligiblePageUnit(cursor, pendingCorpus);
+                    GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(
+                        cursor, range.getEndInclusive(), pendingCorpus);
                     // A page portion whose verses all sit on lines owned by an earlier verse has no
                     // physical Stabilisation unit. Queueing it would block the queue (never complete).
                     if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unit.end, geometry).isEmpty()) {

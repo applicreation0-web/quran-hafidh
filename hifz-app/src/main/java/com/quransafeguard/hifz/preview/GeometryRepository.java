@@ -143,19 +143,6 @@ public final class GeometryRepository {
     public int lineCount() { return lines.size(); }
     public LineMeta line(int index) { return lines.get(index); }
 
-    /** Ordered physical lines on one page, restricted to the supplied canonical line ids. */
-    List<LineMeta> linesForIdsOnPage(int page, List<String> lineIds) {
-        if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
-        if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("line ids required");
-        LinkedHashSet<String> wanted = new LinkedHashSet<>(lineIds);
-        ArrayList<LineMeta> result = new ArrayList<>();
-        for (LineMeta line : lines) {
-            if (line.page == page && wanted.contains(line.id)) result.add(line);
-        }
-        if (result.isEmpty()) throw new IllegalStateException("No canonical physical lines for page " + page);
-        return Collections.unmodifiableList(result);
-    }
-
     /** Resolve exact physical line ids in canonical order; missing, duplicate or reordered ids fail closed. */
     List<LineMeta> linesForExactIds(List<String> lineIds) {
         if (lineIds == null || lineIds.isEmpty()) throw new IllegalArgumentException("line ids required");
@@ -322,6 +309,50 @@ public final class GeometryRepository {
                 }
             }
             if (lineUsed) ids.add(line.id);
+        }
+        if (selected.isEmpty()) throw new IllegalStateException("No eligible verses on cursor page " + page);
+        ArrayList<VerseRef> ordered = new ArrayList<>(selected);
+        ordered.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return new VerseUnit(page, cursor, ordered.get(ordered.size() - 1), ordered, new ArrayList<>(ids));
+    }
+
+    /**
+     * Like eligiblePageUnit, but for Stabilisation's weekly working unit: extends up to
+     * PreviewConfig.STABILIZATION_WEEKLY_LINES touched physical lines (about 1.5 pages) instead
+     * of stopping at the end of cursor's page, so a week's three sessions (8/7/7) can be planned
+     * as one unit. The only hard stop besides that line budget is a surah change or the caller's
+     * own rangeEnd — a shorter, single-surah week within one pending range is accepted rather
+     * than ever spanning two surahs, or two unrelated pending ranges, in one weekly unit.
+     *
+     * Mirrors eligiblePageUnit's own contract exactly: this only locates the candidate verse
+     * range (start/end). It deliberately does not resolve owned physical lines itself — the
+     * caller does that afterwards via CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end,
+     * this), the same ownership rule ("a shared line belongs to the earliest verse printed on
+     * it") already used for single-page units. Resolving ownership here too would double the
+     * source of truth and risk a shared boundary line being claimed by two consecutive units.
+     */
+    public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {
+        if (!corpus.contains(cursor)) throw new IllegalArgumentException("Itqan cursor is not eligible: " + cursor);
+        int firstIndex = firstLineIndex(cursor);
+        int page = lines.get(firstIndex).page;
+        int startSurah = lines.get(firstIndex).verses.get(0).getSurah();
+        int cursorOrdinal = ordinal(cursor);
+        int rangeEndOrdinal = ordinal(rangeEnd);
+        LinkedHashSet<VerseRef> selected = new LinkedHashSet<>();
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        for (int i = firstIndex; i < lines.size() && ids.size() < PreviewConfig.STABILIZATION_WEEKLY_LINES; i++) {
+            LineMeta line = lines.get(i);
+            if (line.verses.get(0).getSurah() != startSurah) break;
+            boolean lineUsed = false;
+            for (VerseRef ref : line.verses) {
+                int refOrdinal = ordinal(ref);
+                if (refOrdinal >= cursorOrdinal && refOrdinal <= rangeEndOrdinal && corpus.contains(ref)) {
+                    selected.add(ref);
+                    lineUsed = true;
+                }
+            }
+            if (lineUsed) ids.add(line.id);
+            else if (!selected.isEmpty()) break;
         }
         if (selected.isEmpty()) throw new IllegalStateException("No eligible verses on cursor page " + page);
         ArrayList<VerseRef> ordered = new ArrayList<>(selected);

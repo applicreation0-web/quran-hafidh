@@ -8,6 +8,9 @@ public final class PreviewConfig {
     public static final int SABQI_LINES = 5; // frozen
     public static final int FREE_MEM_MINUTES_WORKING = 45;
 
+    /** Stabilisation's weekly unit target: three sessions (Tue/Thu/Sat) at 8/7/7 lines = 1.5 pages/week. */
+    public static final int STABILIZATION_WEEKLY_LINES = 22;
+
     public static final int SABQI_VISIBLE_REPS = 15;
     public static final int SABQI_25_REPS = 5;
     public static final int SABQI_50_REPS = 5;

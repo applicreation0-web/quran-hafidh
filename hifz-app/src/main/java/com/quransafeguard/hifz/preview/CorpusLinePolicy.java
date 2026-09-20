@@ -39,9 +39,10 @@ public final class CorpusLinePolicy {
     }
 
     /**
-     * Exact physical lines owned by one page-local verse range, in Mushaf order.
-     * A shared line belongs to the earliest verse printed on it, so a boundary verse
-     * starting mid-line never steals a line already owned by the preceding range.
+     * Exact physical lines owned by a verse range, in Mushaf order — the range may span more than
+     * one physical page (a Stabilisation weekly unit can now run to ~1.5 pages). A shared line
+     * belongs to the earliest verse printed on it, so a boundary verse starting mid-line never
+     * steals a line already owned by the preceding range.
      */
     public static List<String> ownedLineIdsForRangeOnPage(
             VerseRef start,
@@ -53,14 +54,9 @@ public final class CorpusLinePolicy {
         if (start.compareTo(endInclusive) > 0) {
             throw new IllegalArgumentException("Owned physical range is reversed");
         }
-        int page = geometry.pageForVerse(start);
-        if (geometry.pageForVerse(endInclusive) != page) {
-            throw new IllegalArgumentException("Owned physical range must stay on one Mushaf page");
-        }
         ArrayList<String> result = new ArrayList<>();
         for (int i = 0; i < geometry.lineCount(); i++) {
             GeometryRepository.LineMeta line = geometry.line(i);
-            if (line.page != page) continue;
             VerseRef owner = ownerVerse(line);
             if (owner.compareTo(start) >= 0 && owner.compareTo(endInclusive) <= 0) {
                 result.add(line.id);

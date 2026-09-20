@@ -71,6 +71,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean awaitingValidation;
     private int unitFirstPage = 1;
     private int unitLastPage = 1;
+    private int itqanBlockPage = 1;
     private boolean revealedThisRep;
     private Button revealButton;
     private Button murajaahFinishButton;
@@ -627,33 +628,39 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef savedStart=prefs.itqanUnitStart();
         VerseRef savedEnd=prefs.itqanUnitEnd();
         if((rep>0 || prefs.itqanBlockIndex()>0) && savedStart!=null && savedEnd!=null){
-            currentPage=geometry.pageForVerse(savedStart);
-            unitFirstPage = unitLastPage = currentPage;
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
             List<String> lineIds=CorpusLinePolicy.ownedLineIdsForRangeOnPage(savedStart,savedEnd,geometry);
-            itqanUnit=new GeometryRepository.VerseUnit(currentPage,savedStart,savedEnd,verses,lineIds);
+            List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(lineIds);
+            unitFirstPage = physicalLines.get(0).page;
+            unitLastPage = physicalLines.get(physicalLines.size() - 1).page;
+            currentPage = unitFirstPage;
+            itqanUnit=new GeometryRepository.VerseUnit(unitFirstPage,savedStart,savedEnd,verses,lineIds);
             AnchoringQueue.Entry inProgress = prefs.anchoringEntryFor(savedStart, savedEnd);
             if (inProgress != null) anchoringEntry = inProgress;
         } else {
             VerseRef entryStart = GeometryRepository.parseVerse(anchoringEntry.start);
             VerseRef entryEnd = GeometryRepository.parseVerse(anchoringEntry.end);
-            int page = geometry.pageForVerse(entryStart);
-            itqanUnit = new GeometryRepository.VerseUnit(page, entryStart, entryEnd,
-                geometry.versesForRange(entryStart, entryEnd),
-                CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart, entryEnd, geometry));
-            currentPage=itqanUnit.page;unitFirstPage=unitLastPage=currentPage;
+            List<String> lineIds = CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart, entryEnd, geometry);
+            List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(lineIds);
+            unitFirstPage = physicalLines.get(0).page;
+            unitLastPage = physicalLines.get(physicalLines.size() - 1).page;
+            itqanUnit = new GeometryRepository.VerseUnit(unitFirstPage, entryStart, entryEnd,
+                geometry.versesForRange(entryStart, entryEnd), lineIds);
+            currentPage=unitFirstPage;
         }
 
         itqanSessionProtocol = anchoringEntry.protocol;
         itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
         List<StabilizationHalfPagePolicy.Unit> plannedUnits = StabilizationHalfPagePolicy.planPage(
-            geometry.linesForIdsOnPage(itqanUnit.page, itqanUnit.lineIds));
+            geometry.linesForExactIds(itqanUnit.lineIds));
         itqanBlockCount = plannedUnits.size();
         itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
         StabilizationHalfPagePolicy.Unit workingUnit = plannedUnits.get(itqanBlockIndex);
         currentLineIds = new ArrayList<>(workingUnit.lineIds);
         currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
         fractionatedItqan = itqanBlockCount > 1;
+        itqanBlockPage = geometry.linesForExactIds(currentLineIds).get(0).page;
+        currentPage = itqanBlockPage;
 
         if(rep>=itqanTargetReps){
             boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted());
@@ -708,7 +715,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
         currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);if(currentMask!=oldMask)mushaf.setMask(currentMask);
-        updateRevealButton();if(currentPage!=unitFirstPage){currentPage=unitFirstPage;showCurrent();}
+        updateRevealButton();if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
 

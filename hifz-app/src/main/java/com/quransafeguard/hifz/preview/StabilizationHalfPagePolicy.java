@@ -6,7 +6,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Frozen Stabilisation working-unit policy derived from canonical physical Mushaf lines. */
+/**
+ * Frozen Stabilisation working-unit policy derived from canonical physical Mushaf lines. Despite
+ * the name, an input segment is no longer restricted to one physical page: a Stabilisation weekly
+ * unit (see GeometryRepository.eligibleWeeklyStabilizationUnit) can run to ~1.5 pages, split into
+ * three sessions (8/7/7) instead of the ordinary single-page unit's one or two.
+ */
 final class StabilizationHalfPagePolicy {
     static final class Unit {
         final int page;
@@ -26,16 +31,18 @@ final class StabilizationHalfPagePolicy {
         if (pageLines == null || pageLines.isEmpty()) {
             throw new IllegalStateException("Stabilisation page requires canonical physical lines");
         }
-        if (pageLines.size() > 15) {
-            throw new IllegalStateException("Canonical Mushaf page exceeds 15 physical lines");
+        // The weekly unit's own line-count target is capped, but ownership resolution for its
+        // last verse can still pull in a few more lines when that verse runs long (see
+        // GeometryRepository.eligibleWeeklyStabilizationUnit) — this is a generous sanity bound
+        // against genuine corruption, not the real target.
+        if (pageLines.size() > 2 * PreviewConfig.STABILIZATION_WEEKLY_LINES) {
+            throw new IllegalStateException("Stabilisation unit exceeds the sane line budget");
         }
 
         int page = pageLines.get(0).page;
         ArrayList<Integer> surahs = new ArrayList<>(pageLines.size());
         for (GeometryRepository.LineMeta line : pageLines) {
-            if (line == null || line.page != page) {
-                throw new IllegalStateException("Stabilisation unit may not cross page boundary");
-            }
+            if (line == null) throw new IllegalStateException("Stabilisation unit requires canonical physical lines");
             surahs.add(singleSurah(line));
         }
 
@@ -63,7 +70,21 @@ final class StabilizationHalfPagePolicy {
             units.add(unit(page, surah, lines, start, end));
             return;
         }
+        if (count <= 18) {
+            appendTwoWaySplit(units, lines, page, surah, start, end, count);
+            return;
+        }
+        appendThreeWaySplit(units, lines, page, surah, start, end, count);
+    }
 
+    private static void appendTwoWaySplit(
+            List<Unit> units,
+            List<GeometryRepository.LineMeta> lines,
+            int page,
+            int surah,
+            int start,
+            int end,
+            int count) {
         int bestLeft = -1;
         double bestScore = Double.POSITIVE_INFINITY;
         for (int left = 5; left <= count - 5; left++) {
@@ -82,6 +103,44 @@ final class StabilizationHalfPagePolicy {
         int split = preferCleanVerseBoundary(lines, start, count, bestLeft);
         units.add(unit(page, surah, lines, start, start + split));
         units.add(unit(page, surah, lines, start + split, end));
+    }
+
+    /**
+     * Stabilisation's weekly unit (~22 lines, three sessions Tue/Thu/Sat) targets 8/7/7 lines,
+     * the same "minimize the worst deviation from target" search and clean-verse-boundary
+     * preference as the two-way split, generalized to two cut points instead of one.
+     */
+    private static void appendThreeWaySplit(
+            List<Unit> units,
+            List<GeometryRepository.LineMeta> lines,
+            int page,
+            int surah,
+            int start,
+            int end,
+            int count) {
+        int bestA = -1, bestB = -1;
+        double bestScore = Double.POSITIVE_INFINITY;
+        for (int a = 5; a <= count - 10; a++) {
+            for (int b = 5; b <= count - a - 5; b++) {
+                int c = count - a - b;
+                double score = Math.max(Math.abs(a - 8), Math.max(Math.abs(b - 7), Math.abs(c - 7)));
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestA = a;
+                    bestB = b;
+                }
+            }
+        }
+
+        if (bestA < 0) {
+            appendTwoWaySplit(units, lines, page, surah, start, end, count);
+            return;
+        }
+        int split1 = preferCleanVerseBoundary(lines, start, count, bestA);
+        int split2 = preferCleanVerseBoundary(lines, start, count, bestA + bestB);
+        units.add(unit(page, surah, lines, start, start + split1));
+        units.add(unit(page, surah, lines, start + split1, start + split2));
+        units.add(unit(page, surah, lines, start + split2, end));
     }
 
     /**

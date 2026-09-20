@@ -88,12 +88,19 @@ public final class StabilizationHalfPagePolicyTest {
         assertEquals(3, units.get(1).surah);
     }
 
-    @Test public void pageBoundaryInputFailsClosed() {
-        ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>(uniqueLines(100, 2, 6));
-        for (int i = 0; i < 6; i++) {
-            lines.add(line(6 + i, 101, "p101-" + i, new VerseRef(2, 20 + i)));
+    /**
+     * A Stabilisation weekly unit (see GeometryRepository.eligibleWeeklyStabilizationUnit) can run
+     * to ~1.5 pages, so crossing a physical page boundary is now expected, not fail-closed —
+     * ownership of each physical line is resolved separately (CorpusLinePolicy), not by this
+     * policy. A 22-line unit spanning two pages must still split three ways at 8/7/7.
+     */
+    @Test public void weeklyUnitMaySpanMorePhysicalPagesThanOne() {
+        ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>(uniqueLines(100, 2, 15));
+        int base = lines.size();
+        for (int i = 0; i < 7; i++) {
+            lines.add(line(base + i, 101, "p101-" + i, new VerseRef(2, 20 + i)));
         }
-        expectIllegalState(() -> StabilizationHalfPagePolicy.planPage(lines));
+        assertSizes(new int[]{8, 7, 7}, StabilizationHalfPagePolicy.planPage(lines));
     }
 
     @Test public void physicalLineCrossingSurahBoundaryFailsClosed() {
@@ -103,8 +110,13 @@ public final class StabilizationHalfPagePolicyTest {
         expectIllegalState(() -> StabilizationHalfPagePolicy.planPage(Collections.singletonList(mixed)));
     }
 
-    @Test public void pageOverFifteenPhysicalLinesFailsClosed() {
-        expectIllegalState(() -> StabilizationHalfPagePolicy.planPage(uniqueLines(100, 2, 16)));
+    /** The weekly line budget doubled as a sane fail-closed ceiling, not a per-page limit anymore. */
+    @Test public void unitOverTheSaneLineBudgetFailsClosed() {
+        expectIllegalState(() -> StabilizationHalfPagePolicy.planPage(uniqueLines(100, 2, 45)));
+    }
+
+    @Test public void twentyTwoLineWeeklyUnitSplitsThreeWaysAtEightSevenSeven() {
+        assertSizes(new int[]{8, 7, 7}, StabilizationHalfPagePolicy.planPage(uniqueLines(100, 2, 22)));
     }
 
     @Test public void plannedUnitsPreserveEveryPhysicalLineExactlyOnceAndInOrder() {

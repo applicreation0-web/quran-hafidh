@@ -397,6 +397,132 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             method(weekly, "case REVISION:{", "default:throw").contains("evening=\"—\";"));
     }
 
+    /**
+     * The J10 guard (a 10-day max-review-gap safety net: an interstitial screen, a capacity
+     * forecast Toast, Settings status text, dashboard "créneau utilisé" labels) is retired now
+     * that the app has a fixed 30-min morning+evening review schedule every day. Its behavioral/
+     * UI surface is gone; the underlying schema-6 persistence it shared with the acquired-credit
+     * bookkeeping (J10ReviewStore's legacy migration input, J10V6Store, HifzCorpusState's
+     * activeJ10LineIds()/validate() invariants) is deliberately left in place — it is inert once
+     * unread, and touching it risks live migration/data-integrity issues for existing installs
+     * with no functional benefit.
+     */
+    @Test public void j10GuardSubsystemIsFullyRemovedButMigrationPlumbingSurvives() throws Exception {
+        Path root = Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview");
+        if (!Files.exists(root)) root = Paths.get("..", root.toString());
+        for (String removed : new String[]{
+            "J10ReviewPlanner.java", "J10ReviewPolicy.java", "J10ReviewActivity.java",
+            "J10ReviewObserver.java", "J10ReviewProgress.java", "J10SessionBudget.java",
+            "J10HostBudgetStore.java", "QuranHifzApp.java"}) {
+            assertFalse("the J10 guard/UI file must be deleted: " + removed, Files.exists(root.resolve(removed)));
+        }
+        for (String kept : new String[]{"J10ReviewStore.java", "J10V6Store.java"}) {
+            assertTrue("legacy migration plumbing must survive: " + kept, Files.exists(root.resolve(kept)));
+        }
+        String manifest = read("hifz-app/src/main/AndroidManifest.xml");
+        assertFalse("the retired interstitial must no longer be declared", manifest.contains("J10ReviewActivity"));
+        assertFalse("the app no longer needs a custom Application class", manifest.contains("android:name=\".QuranHifzApp\""));
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertFalse(main.contains("hostBudgetStore"));
+        String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        assertFalse("the dashboard must no longer report J10-consumed slots", weekly.contains("J10 · créneau utilisé"));
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        assertFalse(settings.contains("section(root,\"J10\")"));
+        assertFalse(settings.contains("J10 · garantie de fraîcheur des passages Acquis"));
+    }
+
+    /**
+     * Stabilisation is restructured to a hard weekly cadence: three sessions (Tue/Thu/Sat) at
+     * 8/7/7 lines (~1.5 pages/week), the only hard rule being surah separation — mirroring
+     * Sabqi's existing guaranteed weekly page output. Previously AnchoringQueue entries were
+     * page-sized (~15 lines) and consumed in ≤2 blocks with no week alignment at all. Verified
+     * against real geometry.json this session: 448 weekly units across the whole corpus, zero
+     * gaps, zero duplicate physical lines, zero units spanning more than one surah.
+     */
+    @Test public void stabilizationEntriesAreNowWeeklySizedNotPageSized() throws Exception {
+        String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
+        assertTrue("a weekly Stabilisation unit builder must exist alongside the page-based one",
+            geometry.contains("public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {"));
+        String weeklyUnit = method(geometry,
+            "public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {",
+            "public EligibleLinePlan planEligibleLines(");
+        assertTrue("it must hard-stop at a surah change, never spanning two surahs in one weekly unit",
+            weeklyUnit.contains("if (line.verses.get(0).getSurah() != startSurah) break;"));
+        assertTrue("it must respect the caller's own pending-range end, never spilling into an unrelated range",
+            weeklyUnit.contains("refOrdinal <= rangeEndOrdinal"));
+        assertTrue("it must cap at the weekly line target, not the old single-page target",
+            weeklyUnit.contains("ids.size() < PreviewConfig.STABILIZATION_WEEKLY_LINES"));
+
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("the anchoring queue must chunk pending material into weekly units now, not page units",
+            prefs.contains("geometry.eligibleWeeklyStabilizationUnit(\n                        cursor, range.getEndInclusive(), pendingCorpus);"));
+
+        String config = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/PreviewConfig.java");
+        assertTrue("the weekly line target must be 22 (8+7+7, three sessions/week)",
+            config.contains("STABILIZATION_WEEKLY_LINES = 22"));
+    }
+
+    /**
+     * StabilizationHalfPagePolicy's split now has three tiers instead of two: ≤11 lines stay
+     * whole (unchanged), 12-18 lines split two ways exactly as before (unchanged — every real
+     * single page is ≤15 lines, so this tier's behavior for today's entries is untouched), and
+     * ≥19 lines (only reachable once a weekly unit is ~1.5 pages) split three ways at 8/7/7,
+     * using the same clean-verse-boundary preference as the two-way split.
+     */
+    @Test public void stabilizationPolicyGainsAThreeWaySplitTierWithoutChangingTheTwoWayOne() throws Exception {
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
+        assertTrue("segments of 12-18 lines must still use the original two-way split, unchanged",
+            policy.contains("if (count <= 18) {\n            appendTwoWaySplit(units, lines, page, surah, start, end, count);"));
+        assertTrue("segments of 19+ lines must use the new three-way split",
+            policy.contains("appendThreeWaySplit(units, lines, page, surah, start, end, count);"));
+        String threeWay = method(policy,
+            "private static void appendThreeWaySplit(", "private static int preferCleanVerseBoundary(");
+        assertTrue("the three-way split must target 8/7/7, mirroring the two-way split's 7.5/7.5 target",
+            threeWay.contains("Math.abs(a - 8), Math.max(Math.abs(b - 7), Math.abs(c - 7))"));
+        assertTrue("it must reuse the same clean-verse-boundary preference as the two-way split",
+            threeWay.contains("preferCleanVerseBoundary(lines, start, count, bestA)"));
+        assertTrue("the single-page/15-line ceiling must be gone now that weekly units can span ~1.5 pages",
+            policy.contains("2 * PreviewConfig.STABILIZATION_WEEKLY_LINES"));
+        assertFalse("the old page-crossing guard must be gone: a weekly unit legitimately spans pages",
+            policy.contains("Stabilisation unit may not cross page boundary"));
+    }
+
+    /**
+     * CorpusLinePolicy.ownedLineIdsForRangeOnPage used to throw if start/end verses weren't on
+     * the same physical page. A Stabilisation weekly unit can now run to ~1.5 pages, so every one
+     * of its call sites (all Itqan/Anchoring-related) needs the multi-page-capable version.
+     */
+    @Test public void ownedLineResolutionNoLongerRequiresASinglePhysicalPage() throws Exception {
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/CorpusLinePolicy.java");
+        assertFalse("the same-page assertion must be gone", policy.contains("must stay on one Mushaf page"));
+        assertFalse("pageForVerse must no longer gate ownership resolution",
+            method(policy, "public static List<String> ownedLineIdsForRangeOnPage(", "public static Set<String> touchedLineIds(")
+                .contains("geometry.pageForVerse"));
+    }
+
+    /**
+     * A multi-page Stabilisation unit must render correctly: the swipe range must cover every
+     * page the unit touches (unitFirstPage/unitLastPage, mirroring the grouped-cycle snowball's
+     * own multi-page fix earlier this session), and the Répétition button's page-snap-back must
+     * return to the CURRENT BLOCK's own page, not always the unit's first page — otherwise a
+     * block living on the unit's second page could never be seen while repeating it.
+     */
+    @Test public void multiPageStabilizationUnitsRenderAndSnapBackCorrectly() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue("renderItqan must derive unitFirstPage/unitLastPage from the resolved physical lines",
+            session.contains("unitFirstPage = physicalLines.get(0).page;")
+                && session.contains("unitLastPage = physicalLines.get(physicalLines.size() - 1).page;"));
+        assertTrue("the working block's own page must be tracked separately from the whole unit's span",
+            session.contains("itqanBlockPage = geometry.linesForExactIds(currentLineIds).get(0).page;"));
+        assertTrue("the per-repetition page snap-back must return to the block's own page, not the unit's first page",
+            session.contains("if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}"));
+        assertFalse("the old page-scoped line lookup must no longer be used for the (now multi-page) Itqan unit",
+            session.contains("geometry.linesForIdsOnPage"));
+        assertFalse("linesForIdsOnPage must be deleted now that nothing calls it",
+            read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java")
+                .contains("linesForIdsOnPage"));
+    }
+
     @Test public void murajaahJumpButtonHasItsOwnIconDistinctFromPlainPagination() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("the corpus-jump action must not be labelled like a plain pagination control",
