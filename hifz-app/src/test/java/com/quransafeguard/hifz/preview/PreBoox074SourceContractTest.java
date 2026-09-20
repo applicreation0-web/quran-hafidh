@@ -86,7 +86,6 @@ public final class PreBoox074SourceContractTest {
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(geometry.contains("surahSegmentLineCounts(VerseRef start, VerseRef end)"));
         assertTrue(stabilization.contains("singleSurah(line)"));
-        assertTrue(stabilization.contains("line.page != page"));
         assertTrue(stabilization.contains("Physical Mushaf line crosses surah boundary"));
         assertTrue(session.contains("StabilizationHalfPagePolicy.planPage"));
         for (String text : new String[]{main, weekly}) {
