@@ -774,7 +774,26 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("the optimizer must only consider combinations where every block stays within the cap",
             threeWay.contains("if (c < 5 || c > cap) continue;"));
         assertTrue("the clean-verse-boundary shift must be discarded if it would push any block over the cap",
-            threeWay.contains("if (split1 >= split2 || split1 > cap || split2 - split1 > cap || count - split2 > cap) {"));
+            threeWay.contains("if (split2 - split1 < 5 || split1 > cap || split2 - split1 > cap || count - split2 > cap) {"));
+    }
+
+    /**
+     * split1 and split2 are each independently pulled up to ±2 lines toward their own nearest
+     * clean verse boundary. Nothing stopped both shifts from moving *toward* each other — split1
+     * forward, split2 back — which could squeeze the middle block down to as little as 1-4 lines
+     * even though bestA/bestB were both comfortably ≥5. Confirmed against the whole corpus: 11
+     * real weekly units had a middle block of only 3-4 lines under the old guard; the fix (a
+     * middle block below the same 5-line floor every block is otherwise guaranteed falls back to
+     * the exact target split) brings the corpus-wide minimum back up to 5 everywhere.
+     */
+    @Test public void threeWaySplitNeverStarvesTheMiddleBlockBelowFiveLines() throws Exception {
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StabilizationHalfPagePolicy.java");
+        String threeWay = method(policy,
+            "private static void appendThreeWaySplit(", "private static int preferCleanVerseBoundary(");
+        assertTrue("the fallback must check the middle block's own size, not just split1 < split2",
+            threeWay.contains("if (split2 - split1 < 5"));
+        assertFalse("the old crossing-only check must be gone, not just weakened alongside it",
+            threeWay.contains("split1 >= split2"));
     }
 
     @Test public void murajaahJumpButtonHasItsOwnIconDistinctFromPlainPagination() throws Exception {

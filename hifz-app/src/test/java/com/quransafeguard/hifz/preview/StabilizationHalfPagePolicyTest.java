@@ -121,6 +121,23 @@ public final class StabilizationHalfPagePolicyTest {
     }
 
     /**
+     * Each three-way cut is independently pulled up to ±2 lines toward its own nearest clean verse
+     * boundary. A clean boundary at position 10 pulls split1 forward from its 8-line target, and
+     * another at position 13 pulls split2 back from its 15-line target — squeezing the middle block
+     * down to just 3 lines instead of ~7, even though both individual shifts stayed within the
+     * normal ±2 tolerance. The fix must detect the middle block starved below the 5-line floor every
+     * block is otherwise guaranteed and fall back to the exact 8/7/7 target split.
+     */
+    @Test public void threeWayCutsThatWouldSqueezeTheMiddleBlockFallBackToTheExactTarget() {
+        ArrayList<GeometryRepository.LineMeta> lines = new ArrayList<>();
+        VerseRef a = new VerseRef(2, 1), b = new VerseRef(2, 2), c = new VerseRef(2, 3);
+        for (int i = 0; i < 10; i++) lines.add(line(i, 100, "a-" + i, a));
+        for (int i = 10; i < 13; i++) lines.add(line(i, 100, "b-" + i, b));
+        for (int i = 13; i < 22; i++) lines.add(line(i, 100, "c-" + i, c));
+        assertSizes(new int[]{8, 7, 7}, StabilizationHalfPagePolicy.planPage(lines));
+    }
+
+    /**
      * A long final verse can push a real weekly unit past 22 lines (up to 30, confirmed across the
      * whole corpus this session). Every resulting block must still stay ≤11 lines: Consolidation
      * later re-verifies each frozen block in isolation by re-running planPage on just its own

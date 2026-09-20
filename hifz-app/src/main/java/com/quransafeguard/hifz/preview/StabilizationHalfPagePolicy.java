@@ -151,11 +151,14 @@ final class StabilizationHalfPagePolicy {
         }
         int split1 = preferCleanVerseBoundary(lines, start, count, bestA);
         int split2 = preferCleanVerseBoundary(lines, start, count, bestA + bestB);
-        // The clean-boundary shift (±2 on each cut) could push a block past the independently-
-        // verifiable ceiling even though bestA/bestB never would; fall back to the exact
-        // (guaranteed-safe) target split rather than risk a block Consolidation could never
-        // re-verify later.
-        if (split1 >= split2 || split1 > cap || split2 - split1 > cap || count - split2 > cap) {
+        // Each cut is shifted independently by up to ±2 lines toward a clean verse boundary.
+        // preferCleanVerseBoundary's own window keeps split1 and split2 each within [5, count-5]
+        // of the segment's own ends, but nothing stops the two shifts from moving *toward* each
+        // other — e.g. split1 pulled forward while split2 is pulled back — which can squeeze the
+        // middle block down to just 1-4 lines even though bestA/bestB were both comfortably ≥5.
+        // Fall back to the exact (guaranteed-≥5-per-block) target split whenever a shift would
+        // starve any block below that floor, or push one past the independently-verifiable ceiling.
+        if (split2 - split1 < 5 || split1 > cap || split2 - split1 > cap || count - split2 > cap) {
             split1 = bestA;
             split2 = bestA + bestB;
         }
