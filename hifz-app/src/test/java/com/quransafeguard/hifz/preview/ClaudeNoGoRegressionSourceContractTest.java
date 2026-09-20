@@ -346,6 +346,26 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             goPage.contains("updateMurajaahActions();"));
     }
 
+    /**
+     * murajaahCorpus() used to subtract unconsolidatedPromotedRanges() (freshly learned material
+     * still awaiting its Stabilisation pass) out of promotedRanges() before exposing it to
+     * Révision, per its own doc comment: "Fresh unconsolidated promotions stay hidden." At the
+     * current Stabilisation throughput a page can wait most of a year for that pass, with zero
+     * exposure in the daily Entretien or the weekly ×5 Révision finale in the meantime — the
+     * exact "I'm afraid of forgetting Al-Insan before it's stabilized" gap raised this session.
+     * Freshly promoted material must now stay visible to Révision immediately; only the
+     * AnchoringQueue/promotion bookkeeping still cares whether it is "consolidated" yet.
+     */
+    @Test public void murajaahCorpusNoLongerHidesFreshlyLearnedUnconsolidatedMaterial() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String murajaahCorpus = method(prefs,
+            "public EligibleCorpus murajaahCorpus() {", "public boolean isItqanCursorValid()");
+        assertFalse("must no longer subtract pending promotions out of the Révision corpus",
+            murajaahCorpus.contains("subtractCoverage(consolidated"));
+        assertTrue("every promoted verse, consolidated or not, must feed the Révision corpus",
+            murajaahCorpus.contains("all.addAll(promotedRanges());"));
+    }
+
     @Test public void murajaahJumpButtonHasItsOwnIconDistinctFromPlainPagination() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("the corpus-jump action must not be labelled like a plain pagination control",

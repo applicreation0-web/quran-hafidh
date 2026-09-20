@@ -1123,17 +1123,19 @@ public final class HifzPrefs {
     public EligibleCorpus corpus() { return itqanWorkCorpus(); }
 
     /**
-     * Murajaah sees base Itqan, all already-consolidated promotions, and historical promoted
-     * ranges retained during v2->v3 migration. Fresh unconsolidated promotions stay hidden.
+     * Murajaah sees base Itqan, historical promoted ranges retained during v2->v3 migration, and
+     * every promoted verse — including freshly learned material still awaiting its Stabilisation
+     * pass. That inclusion is deliberate: at the current pace a page can otherwise wait most of a
+     * year for its first Itqan turn, with no exposure at all in between (see the "why isn't a
+     * just-learned surah in Révision" discussion). A page still counts as "unconsolidated" for
+     * AnchoringQueue/promotion bookkeeping (unconsolidatedPromotedRanges) until it clears
+     * Stabilisation and the weekly Consolidation snowball; that status just no longer hides it
+     * from the daily Entretien / weekly Révision finale reading pool.
      */
     public EligibleCorpus murajaahCorpus() {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
-        List<VerseRange> consolidated = new ArrayList<>(promotedRanges());
-        for (VerseRange pending : unconsolidatedPromotedRanges()) {
-            consolidated = subtractCoverage(consolidated, pending.getStart(), pending.getEndInclusive());
-        }
-        all.addAll(consolidated);
+        all.addAll(promotedRanges());
         return EligibleCorpus.Companion.of(all);
     }
 
