@@ -42,7 +42,7 @@ public final class UiIconMappingTest {
             {"Consolidation", R.drawable.ic_hifz_consolidation},
             {"Renforcement", R.drawable.ic_hifz_consolidation},
             {"Révision", R.drawable.ic_hifz_maintenance},
-            {"Segment suivant", R.drawable.ic_ui_next},
+            {"Passage suivant du corpus", R.drawable.ic_ui_rotation},
             {"Leçon neuve", R.drawable.ic_hifz_new_lesson},
             {"Ancrage", R.drawable.ic_hifz_anchor},
             {"Entretien", R.drawable.ic_hifz_maintenance},
