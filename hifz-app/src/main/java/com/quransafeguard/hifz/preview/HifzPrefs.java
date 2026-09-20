@@ -1607,6 +1607,13 @@ public final class HifzPrefs {
             ? "learningSnowballUnitIds" : "stabilizationSnowballUnitIds";
     }
 
+    private static String snowballHistoryKey(ConsolidationCycleEngine.Family family) {
+        return family == ConsolidationCycleEngine.Family.LEARNING
+            ? "learningSnowball8WeekHistory" : "stabilizationSnowball8WeekHistory";
+    }
+
+    private static final int SNOWBALL_EXTENDED_WEEKS = 8;
+
     private static LocalDate mondayOf(LocalDate date) {
         return date.minusDays(date.getDayOfWeek().getValue() - 1L);
     }
@@ -1624,9 +1631,10 @@ public final class HifzPrefs {
     }
 
     /**
-     * The {anchor, units} pair a state-changing edit should merge in atomically so today's fresh
-     * Appris/Stabilisé physical unit joins this week's Renforcement/Consolidation snowball in the
-     * very same commit that created it.
+     * The {anchor, units, history} triple a state-changing edit should merge in atomically so
+     * today's fresh Appris/Stabilisé physical unit joins this week's Renforcement/Consolidation
+     * snowball, and the rolling 8-week history Sunday's extended review reads from, in the very
+     * same commit that created it.
      */
     private java.util.Map<String, String> weeklySnowballAppendEntries(
             ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
@@ -1635,7 +1643,47 @@ public final class HifzPrefs {
         java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
         out.put(snowballAnchorKey(family), mondayOf(today).toString());
         out.put(snowballUnitsKey(family), current.toString());
+        out.put(snowballHistoryKey(family), appendToSnowballHistory(family, unitLineIds, today).toString());
         return out;
+    }
+
+    /**
+     * Rolling 8-calendar-week (Monday-anchored) history of every physical block promoted this
+     * family's way, retained so Sunday's extended review (stabilizationSnowballFinalUnits/
+     * learningSnowballFinalUnits) can re-read the current + 7 previous weeks' material instead of
+     * just the current week. Pruned to the current + 7 previous week-entries on every append.
+     */
+    private JSONArray appendToSnowballHistory(
+            ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
+        String weekAnchor = mondayOf(today).toString();
+        JSONArray history;
+        try { history = new JSONArray(p.getString(snowballHistoryKey(family), "[]")); }
+        catch (Exception malformed) { history = new JSONArray(); }
+
+        try {
+            JSONObject currentWeek = null;
+            for (int i = 0; i < history.length(); i++) {
+                JSONObject week = history.optJSONObject(i);
+                if (week != null && weekAnchor.equals(week.optString("week"))) { currentWeek = week; break; }
+            }
+            if (currentWeek == null) {
+                currentWeek = new JSONObject().put("week", weekAnchor).put("units", new JSONArray());
+                history.put(currentWeek);
+            }
+            currentWeek.getJSONArray("units").put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+        } catch (Exception error) {
+            throw new IllegalStateException("Unable to update the snowball's 8-week history", error);
+        }
+
+        LocalDate cutoff = mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L);
+        JSONArray pruned = new JSONArray();
+        for (int i = 0; i < history.length(); i++) {
+            JSONObject week = history.optJSONObject(i);
+            if (week == null) continue;
+            LocalDate weekStart = safeDate(week.optString("week"), null);
+            if (weekStart != null && !weekStart.isBefore(cutoff)) pruned.put(week);
+        }
+        return pruned;
     }
 
     /**
@@ -1676,21 +1724,61 @@ public final class HifzPrefs {
     }
 
     /**
-     * Sunday's final review: the same week's accumulated Stabilisation units, same ×10 logic as
-     * every evening this week — Sunday graduates them to Acquis, it doesn't drop to a lighter quota.
+     * Sunday's extended review: every physical block from the current + 7 previous calendar weeks
+     * (see appendToSnowballHistory), each read ×3, plus one combined continuous pass over all of
+     * them — replacing the old this-week-only ×10 final review so recently learned/stabilized
+     * material keeps coming back for roughly 8 weeks instead of dropping out of active review the
+     * moment its own week ends.
      */
-    List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {
-        return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL);
+    private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(
+            ConsolidationCycleEngine.Family family, LocalDate today) {
+        JSONArray history;
+        try { history = new JSONArray(p.getString(snowballHistoryKey(family), "[]")); }
+        catch (Exception malformed) { history = new JSONArray(); }
+        LocalDate cutoff = mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L);
+
+        ArrayList<String> encodedBlocks = new ArrayList<>();
+        for (int i = 0; i < history.length(); i++) {
+            JSONObject week = history.optJSONObject(i);
+            if (week == null) continue;
+            LocalDate weekStart = safeDate(week.optString("week"), null);
+            if (weekStart == null || weekStart.isBefore(cutoff)) continue;
+            JSONArray units = week.optJSONArray("units");
+            if (units == null) continue;
+            for (int u = 0; u < units.length(); u++) {
+                String encoded = units.optString(u, "");
+                if (!encoded.isEmpty()) encodedBlocks.add(encoded);
+            }
+        }
+
+        ArrayList<ConsolidationCycleEngine.Unit> out = new ArrayList<>();
+        for (String encoded : encodedBlocks) {
+            out.add(new ConsolidationCycleEngine.Unit(encoded, ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED));
+        }
+        if (encodedBlocks.size() > 1) {
+            out.add(new ConsolidationCycleEngine.Unit(
+                ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(encodedBlocks),
+                ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED));
+        }
+        return Collections.unmodifiableList(out);
     }
 
     /**
-     * Sunday's final review: the same week's accumulated Apprentissage units, same ×10 logic as
-     * every evening this week — Sunday graduates them to Acquis, it doesn't drop to a lighter quota.
+     * Sunday's extended review: every physical Stabilisation block from the current + 7 previous
+     * weeks, ×3 each plus one combined pass, then graduated to Acquis — replacing the old
+     * this-week-only ×10 final review (see extendedSnowballUnits).
+     */
+    List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {
+        return extendedSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today);
+    }
+
+    /**
+     * Sunday's extended review: every physical Apprentissage block from the current + 7 previous
+     * weeks, ×3 each plus one combined pass, then graduated to Acquis — replacing the old
+     * this-week-only ×10 final review (see extendedSnowballUnits).
      */
     List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {
-        return weeklySnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL);
+        return extendedSnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today);
     }
 
     public String lastLearningSnowballEveningDate() { return p.getString("lastLearningSnowballEveningDate", ""); }
@@ -1969,7 +2057,7 @@ public final class HifzPrefs {
                 }
             }
 
-            return p.edit()
+            SharedPreferences.Editor editor = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
@@ -1979,8 +2067,8 @@ public final class HifzPrefs {
                 .putBoolean("anchoringQueueInitialized", true).putInt("anchoringQueueIndex", nextIndex)
                 .putString("lastRecentSabqiReviewDate", date).putString("lastRecentSabqiReviewLabel", label)
                 .putString(snowballUnitsKey(ConsolidationCycleEngine.Family.STABILIZATION), "[]")
-                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.STABILIZATION))
-                .commit();
+                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.STABILIZATION));
+            return editor.commit();
         }
     }
 
@@ -2037,7 +2125,7 @@ public final class HifzPrefs {
                 forced = subtractCoverage(forced, verse, verse);
             }
 
-            return p.edit()
+            SharedPreferences.Editor editor = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
                 .putString("recentSabqi", recentJson(remaining))
@@ -2048,8 +2136,8 @@ public final class HifzPrefs {
                 .putString("lastLearningConsolidationDate", date)
                 .putString("lastLearningConsolidationLabel", label)
                 .putString(snowballUnitsKey(ConsolidationCycleEngine.Family.LEARNING), "[]")
-                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.LEARNING))
-                .commit();
+                .remove(consolidationStateKey(ConsolidationCycleEngine.Family.LEARNING));
+            return editor.commit();
         }
     }
 

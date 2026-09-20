@@ -210,16 +210,79 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             prefs.contains("for (String unitId : session.unitIds()) {"));
     }
 
-    @Test public void sundaysFinalReviewUsesTheSameTenTimesQuotaAsEveryEveningNotALighterFive() throws Exception {
+    @Test public void sundaysFinalReviewUsesTheExtendedEightWeekSnowballNotJustThisWeek() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String stabilizationFinal = method(prefs,
             "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(LocalDate today) {", "}");
-        assertTrue("Sunday's Stabilisation final review must use the ×10 SNOWBALL protocol",
-            stabilizationFinal.contains("ConsolidationCycleEngine.Protocol.SNOWBALL);"));
+        assertTrue("Sunday's Stabilisation final review must delegate to the extended 8-week snowball",
+            stabilizationFinal.contains("extendedSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today)"));
         String learningFinal = method(prefs,
             "List<ConsolidationCycleEngine.Unit> learningSnowballFinalUnits(LocalDate today) {", "}");
-        assertTrue("Sunday's Apprentissage final review must use the ×10 SNOWBALL protocol",
-            learningFinal.contains("ConsolidationCycleEngine.Protocol.SNOWBALL);"));
+        assertTrue("Sunday's Apprentissage final review must delegate to the extended 8-week snowball",
+            learningFinal.contains("extendedSnowballUnits(ConsolidationCycleEngine.Family.LEARNING, today)"));
+        String extended = method(prefs,
+            "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(", "\n    }");
+        assertTrue("The extended Sunday pass must read each accumulated block at ×3, not ×10",
+            extended.contains("ConsolidationCycleEngine.Protocol.SNOWBALL_EXTENDED"));
+        assertTrue("The extended Sunday pass must span an 8-week cumulative window",
+            prefs.contains("SNOWBALL_EXTENDED_WEEKS = 8"));
+    }
+
+    /**
+     * The whole point of the 8-week extension is that a block promoted in week N keeps resurfacing
+     * in Sunday's extended review through week N+7, not just once. Wiping the rolling history when
+     * that Sunday's session graduates its blocks to Acquis would collapse the window back down to
+     * "this week only" the very next Sunday — the history must only ever shrink by the date-based
+     * cutoff in appendToSnowballHistory, never by an unconditional reset on completion.
+     */
+    @Test public void completingSundaysExtendedReviewNeverWipesTheRollingEightWeekHistory() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String stabilizationComplete = method(prefs,
+            "boolean completeConsolidationSessionV6(", "boolean completeLearningConsolidationSessionV6(");
+        assertFalse("Sunday's Stabilisation completion must not reset the snowball history to an empty array",
+            stabilizationComplete.contains("snowballHistoryKey(ConsolidationCycleEngine.Family.STABILIZATION), \"[]\""));
+        String learningComplete = method(prefs,
+            "boolean completeLearningConsolidationSessionV6(", "public String lastLearningConsolidationDate()");
+        assertFalse("Sunday's Apprentissage completion must not reset the snowball history to an empty array",
+            learningComplete.contains("snowballHistoryKey(ConsolidationCycleEngine.Family.LEARNING), \"[]\""));
+        assertTrue("Only the weekly evening accumulator (not the 8-week history) resets on Sunday completion",
+            stabilizationComplete.contains("snowballUnitsKey(ConsolidationCycleEngine.Family.STABILIZATION), \"[]\""));
+        assertTrue("Only the weekly evening accumulator (not the 8-week history) resets on Sunday completion",
+            learningComplete.contains("snowballUnitsKey(ConsolidationCycleEngine.Family.LEARNING), \"[]\""));
+    }
+
+    @Test public void appendingToSnowballHistoryPrunesByCalendarCutoffNotAHardReset() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String append = method(prefs,
+            "private JSONArray appendToSnowballHistory(", "private List<ConsolidationCycleEngine.Unit> weeklySnowballUnits(");
+        assertTrue("History pruning must be based on an 8-week-back calendar cutoff",
+            append.contains("mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L)"));
+        assertTrue("Weeks at or after the cutoff must be kept, not discarded",
+            append.contains("!weekStart.isBefore(cutoff)"));
+    }
+
+    /**
+     * SNOWBALL_EXTENDED was added alongside SNOWBALL/SNOWBALL_FINAL, but Protocol enum membership
+     * alone is not enough: without an explicit stageVector case it throws
+     * IllegalArgumentException("unsupported protocol"), and without a validateUnitForFamily
+     * early-return every extended Sunday cycle would fail as neither LEARNING37 nor LIGHT/FULL.
+     */
+    @Test public void snowballExtendedProtocolIsFullyWiredIntoTheConsolidationEngine() throws Exception {
+        String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
+        assertTrue("Protocol enum must declare SNOWBALL_EXTENDED",
+            engine.contains("enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED }"));
+        assertTrue("maxUnitsFor must give SNOWBALL_EXTENDED enough headroom for up to 8 weeks of blocks",
+            engine.contains("if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;"));
+        String stageVector = method(engine,
+            "static int[] stageVector(Protocol protocol, int groupSize, int position) {",
+            "private static int[] normalizeProgress(");
+        assertTrue("stageVector must handle SNOWBALL_EXTENDED explicitly, not fall through to the unsupported-protocol default",
+            stageVector.contains("case SNOWBALL_EXTENDED:\n                return copy(3, 0, 0, 0, 0);"));
+        String validate = method(engine,
+            "private static void validateUnitForFamily(Family family, Unit unit) {",
+            "private static void requireCycle(");
+        assertTrue("validateUnitForFamily must exempt SNOWBALL_EXTENDED like SNOWBALL/SNOWBALL_FINAL",
+            validate.contains("unit.protocol() == Protocol.SNOWBALL_EXTENDED"));
     }
 
     /**

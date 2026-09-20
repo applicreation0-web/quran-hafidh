@@ -10,20 +10,24 @@ final class ConsolidationCycleEngine {
     enum Family { LEARNING, STABILIZATION }
     /**
      * LEARNING37/LIGHT/FULL are the frozen quota tables from the original per-progression boule de
-     * neige design; SNOWBALL backs the weekday-pinned weekly snowball that replaced it — evening
-     * AND Sunday's final graduation both use the same ×10 per unit, uniformly regardless of family,
-     * group size or position. SNOWBALL_FINAL (×5) is no longer used for new sessions — Sunday is
-     * the same ×10 as every other evening — but the value stays defined so a session already
-     * persisted under it before this change can still be restored and closed out normally.
+     * neige design; SNOWBALL backs the weekday-pinned weekly snowball's evening reviews — ×10 per
+     * unit, uniformly regardless of family, group size or position. SNOWBALL_FINAL (×5) is no
+     * longer used for new sessions — the value stays defined so a session already persisted under
+     * it before that change can still be restored and closed out normally. SNOWBALL_EXTENDED (×3)
+     * backs Sunday's extended review: the current + 7 previous weeks' accumulated blocks, read
+     * ×3 each instead of the evening's ×10, replacing the old this-week-only ×10 Sunday final.
      */
-    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL }
+    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED }
 
     /**
      * LEARNING37/LIGHT/FULL cycles freeze at three physical units (their quota tables only define
      * positions 0..2). SNOWBALL/SNOWBALL_FINAL cycles allow a fourth: the weekly snowball's extra
      * "continuous" unit, added once at least two of the week's own blocks have accumulated.
+     * SNOWBALL_EXTENDED spans up to 8 weeks (up to 3 blocks each) plus one combined pass, so it
+     * needs far more headroom than a single week ever could.
      */
     static int maxUnitsFor(Protocol protocol) {
+        if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;
         return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 4 : 3;
     }
 
@@ -253,6 +257,8 @@ final class ConsolidationCycleEngine {
                 return copy(10, 0, 0, 0, 0);
             case SNOWBALL_FINAL:
                 return copy(5, 0, 0, 0, 0);
+            case SNOWBALL_EXTENDED:
+                return copy(3, 0, 0, 0, 0);
             default:
                 throw new IllegalArgumentException("unsupported protocol");
         }
@@ -288,7 +294,8 @@ final class ConsolidationCycleEngine {
 
     private static void validateUnitForFamily(Family family, Unit unit) {
         if (unit == null) throw new IllegalArgumentException("unit required");
-        if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL) return;
+        if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL
+                || unit.protocol() == Protocol.SNOWBALL_EXTENDED) return;
         if (family == Family.LEARNING && unit.protocol() != Protocol.LEARNING37) {
             throw new IllegalArgumentException("learning cycle requires LEARNING37 protocol");
         }
