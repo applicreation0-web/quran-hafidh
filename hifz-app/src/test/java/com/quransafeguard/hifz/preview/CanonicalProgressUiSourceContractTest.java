@@ -101,7 +101,11 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(week.contains("\"Reprise du soir ·"));
         assertFalse(week.contains("\"Ancrage ·"));
         assertFalse(week.contains("\"Ancrage fractionné ·"));
-        assertFalse(week.contains("\"Entretien ·"));
+        // A bare "Entretien ·" is legitimate now for Sunday evening (no Renforcement/Consolidation
+        // component that day, since Sunday morning is the ×5 snowball finale instead); the weekday
+        // LEARNING/STABILIZATION evenings must still never go bare — they stay compound.
+        assertTrue(week.contains("evening=\"Renforcement + Entretien"));
+        assertTrue(week.contains("evening=\"Consolidation + Entretien"));
     }
 
     @Test public void localHusaryImportContractRemainsUntouched() throws Exception {
