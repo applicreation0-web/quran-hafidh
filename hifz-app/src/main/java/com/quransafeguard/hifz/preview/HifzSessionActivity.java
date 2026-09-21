@@ -919,8 +919,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             });
             actions.addView(jumpAction);
             if (current != null && !validated && geometry.pageForVerse(current.end) == currentPage) {
-                mushaf.setSelection(Collections.singletonList(current.end),
-                    geometry.lineIdsForVerseRange(current.end, current.end));
+                mushaf.setSelection(Collections.singletonList(current.end), currentLineIds);
             }
         }
         LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
@@ -1201,8 +1200,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void restoreMurajaahEndpointSelectionOnCurrentPage() {
         if (!isMurajaahMode() || murajaahActualEnd == null || mushaf == null) return;
         if (geometry.pageForVerse(murajaahActualEnd) != currentPage) return;
-        mushaf.setSelection(Collections.singletonList(murajaahActualEnd),
-            geometry.lineIdsForVerseRange(murajaahActualEnd, murajaahActualEnd));
+        mushaf.setSelection(Collections.singletonList(murajaahActualEnd), currentLineIds);
     }
 
     private void checkpointMurajaah(long elapsed){
@@ -1226,7 +1224,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         murajaahActualEnd=verse;
         updateMurajaahProgress();
-        mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
+        mushaf.setSelection(Collections.singletonList(verse),currentLineIds);
         checkpointMurajaah(clock.elapsedMs());
         updateMurajaahActions();
     }
