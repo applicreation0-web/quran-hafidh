@@ -618,9 +618,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String eveningRevision = method(main,
             "private String eveningRevisionMode(LocalDate today){", "private static boolean isTodayAnchoredMode(String mode){");
         assertTrue("Sunday evening must offer the ordinary Murajaah mode, gated by lastMurajaahDate like every other evening",
-            eveningRevision.contains("if(!today.toString().equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;"));
+            eveningRevision.contains("if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;"));
         assertTrue("cadenceComplete's REVISION case must also require the evening Entretien, not just the morning finales",
-            main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date)\n                    &&date.toString().equals(prefs.lastMurajaahDate());"));
+            main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date)\n                    &&date.toString().equals(prefs.lastActiveMurajaahDate())\n                    &&date.toString().equals(prefs.lastMurajaahDate());"));
 
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue("the weekly dashboard must project a real evening Entretien for Sunday instead of a dash",

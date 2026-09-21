@@ -825,8 +825,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     /**
      * Daily, mandatory, masked-by-default recall test that must be completed before the passive
-     * Entretien comes due — shares the same corpus/cursor traversal as renderMurajaah, but the
-     * whole page is masked from the start (Révéler on demand) instead of shown in clear.
+     * Entretien comes due. Starts from the exact same murajaahCursor as renderMurajaah and sizes
+     * its own (shorter, 15-minute) plan the same way — so, since traversal order is deterministic,
+     * this plan is always a strict prefix of whatever passive's own (45-minute) plan will be right
+     * after. Completing it never advances the cursor (see completeActiveMurajaah), so that prefix
+     * gets tested from memory here, then re-read in clear moments later during passive — the same
+     * portion, twice, the same day, for stronger retention. The whole page is masked from the start
+     * (Révéler on demand) instead of shown in clear.
      */
     private void renderMurajaahActive(){
         String today = sessionDate.toString();
@@ -1024,21 +1029,38 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         completeMurajaahValidation();
     }
 
+    /**
+     * The active pass deliberately never advances murajaahCursor (see completeActiveMurajaah):
+     * its whole point is to test-then-restudy the same portion, so passive — started right after,
+     * from the same untouched cursor — re-covers it in clear before finally advancing the cursor.
+     * Its elapsed time is also excluded from the maintenance speed calibration, since a masked
+     * recall pass (thinking time, reveals) runs at a different pace than plain passive reading and
+     * would otherwise corrupt the per-line estimate both modes size their line targets from.
+     */
     private void completeMurajaahValidation(){
-        EligibleCorpus corpus = prefs.murajaahCorpus();
-        VerseRef next = corpus.next(murajaahActualEnd);
+        boolean active = MURAJAAH_ACTIVE.equals(mode);
         long elapsed = clock.elapsedMs();
         int lines = countMurajaahLinesThrough(murajaahActualEnd);
-        SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
-        String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
-        if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
-        boolean active = MURAJAAH_ACTIVE.equals(mode);
-        String label = (active ? "Révision active · réel : " : "Révision · réel : ") + murajaahPlan.start + " → " + murajaahActualEnd
-            + " · prochain curseur " + next + " · " + raw;
-        boolean ok = active
-            ? prefs.completeActiveMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label)
-            : prefs.completeMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label);
-        if (!ok) { onError("Impossible d’enregistrer la validation de la Révision."); return; }
+        if (active) {
+            String label = "Révision active · testé : " + murajaahPlan.start + " → " + murajaahActualEnd
+                + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
+            if (!prefs.completeActiveMurajaah(sessionDate.toString(), label)) {
+                onError("Impossible d’enregistrer la validation de la Révision active.");
+                return;
+            }
+        } else {
+            EligibleCorpus corpus = prefs.murajaahCorpus();
+            VerseRef next = corpus.next(murajaahActualEnd);
+            SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
+            String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
+            if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
+            String label = "Révision · réel : " + murajaahPlan.start + " → " + murajaahActualEnd
+                + " · prochain curseur " + next + " · " + raw;
+            if (!prefs.completeMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label)) {
+                onError("Impossible d’enregistrer la validation de la Révision.");
+                return;
+            }
+        }
         closeClockForCompletedSession();
         renderMode();
     }

@@ -1917,15 +1917,14 @@ public final class HifzPrefs {
     }
 
     /**
-     * Closes the daily Révision active (masked recall test): advances the same murajaahCursor
-     * passive Entretien continues from, but records the day under lastActiveMurajaahDate instead
-     * of lastMurajaahDate — so passive Entretien still comes due today, right after active.
+     * Closes the daily Révision active (masked recall test): deliberately leaves murajaahCursor
+     * untouched, so the passive Entretien that follows starts at the very same position and its
+     * (larger) range naturally re-covers — in clear, right after — the same portion just tested
+     * from memory. Only resets this session's own transient progress markers so passive opens at
+     * the range's first page instead of resuming where the active pass left off.
      */
-    public boolean completeActiveMurajaah(VerseRef nextCursor, VerseRef reviewedStart, VerseRef reviewedEnd,
-                                          String date, String label) {
-        if (nextCursor == null) return false;
+    public boolean completeActiveMurajaah(String date, String label) {
         return p.edit()
-            .putString("murajaahCursor", nextCursor.toString())
             .putLong("murajaahElapsedMs", 0L)
             .putString("murajaahActualEnd", "")
             .remove("murajaahPage")
