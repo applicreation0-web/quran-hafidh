@@ -39,6 +39,7 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout dashboard;
     private LinearLayout sabqiQuickAccess;
     private LinearLayout itqanQuickAccess;
+    private LinearLayout murajaahQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
@@ -124,6 +125,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> openMode(murajaahQuickAccessMode()));
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
+        murajaahQuickAccess = murajaah;
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(murajaah);
@@ -180,7 +182,7 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
+    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshMurajaahQuickAccessCue(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
 
     /**
      * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Settings'
@@ -194,6 +196,20 @@ public final class MainActivity extends android.app.Activity {
         CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), prefs.learningDaysPerWeek());
         if (sabqiQuickAccess != null) sabqiQuickAccess.setEnabled(action == CadenceAction.LEARNING);
         if (itqanQuickAccess != null) itqanQuickAccess.setEnabled(action == CadenceAction.STABILIZATION);
+    }
+
+    /**
+     * The "Révision" quick-access card's duration cue must track whichever of the daily
+     * active/passive pair murajaahQuickAccessMode() will actually open — a leftover static
+     * "30 min" (from before the 15 min active / 45 min passive split) is wrong for both.
+     */
+    private void refreshMurajaahQuickAccessCue() {
+        if (murajaahQuickAccess == null || murajaahQuickAccess.getChildCount() < 3) return;
+        boolean activeNext = HifzSessionActivity.MURAJAAH_ACTIVE.equals(murajaahQuickAccessMode());
+        int minutes = HifzSchedule.INSTANCE.targetMinutesFor(
+            activeNext ? SessionKind.ACTIVE_MURAJAAH : SessionKind.OLD_ITQAN_MURAJAAH);
+        View cue = murajaahQuickAccess.getChildAt(2);
+        if (cue instanceof TextView) ((TextView) cue).setText(minutes + " min");
     }
 
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
