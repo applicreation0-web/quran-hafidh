@@ -27,6 +27,7 @@ public final class UiIconMappingTest {
             {"Référence", R.drawable.ic_ui_info},
             {"Lecture", R.drawable.ic_ui_reading},
             {"Mémoriser", R.drawable.ic_ui_memorize},
+            {"Progression", R.drawable.ic_ui_progress_map},
             {"Paramètres", R.drawable.ic_ui_settings},
             {"Audio", R.drawable.ic_ui_audio},
             {"Écouter", R.drawable.ic_ui_audio},

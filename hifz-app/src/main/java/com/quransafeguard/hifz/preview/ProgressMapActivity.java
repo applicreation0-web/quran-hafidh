@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -116,33 +117,49 @@ public final class ProgressMapActivity extends android.app.Activity {
      */
     private void loadStatuses() {
         io.execute(() -> {
-            List<VerseRange> acquis = new ArrayList<>(prefs.itqanRanges());
-            acquis.addAll(prefs.consolidatedPromotedRanges());
-            List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();
-            VerseRef sabqiEnd = prefs.sabqiEnd();
-            int sabqiEndOrdinal = sabqiEnd == null ? -1 : GeometryRepository.ordinal(sabqiEnd);
-            int[] statuses = new int[605];
-
-            for (int page = 1; page <= 604; page++) {
-                List<GeometryRepository.LineMeta> lines = geometry.linesForExactIds(geometry.lineIdsOnPage(page));
-                boolean anyStabiliser = false, anyApprentissage = false, anyAcquis = false;
-                for (GeometryRepository.LineMeta line : lines) {
-                    for (VerseRef verse : line.verses) {
-                        if (containsVerse(stabiliser, verse)) anyStabiliser = true;
-                        else if (containsVerse(acquis, verse)) anyAcquis = true;
-                        else if (GeometryRepository.ordinal(verse) <= sabqiEndOrdinal) anyApprentissage = true;
-                    }
-                }
-                statuses[page] = anyStabiliser ? ProgressGridView.STABILISER
-                    : anyApprentissage ? ProgressGridView.APPRENTISSAGE
-                    : anyAcquis ? ProgressGridView.ACQUIS
-                    : ProgressGridView.VIDE;
+            int[] statuses;
+            try {
+                statuses = computeStatuses();
+            } catch (RuntimeException corruptOrUnconfiguredState) {
+                runOnUiThread(() -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    Toast.makeText(this, "Progression indisponible · ouvrez Diagnostic si le problème persiste.", Toast.LENGTH_LONG).show();
+                });
+                return;
             }
             runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
                 for (int page = 1; page <= 604; page++) grid.setStatus(page, statuses[page]);
                 grid.invalidate();
             });
         });
+    }
+
+    private int[] computeStatuses() {
+        List<VerseRange> acquis = new ArrayList<>(prefs.itqanRanges());
+        acquis.addAll(prefs.consolidatedPromotedRanges());
+        List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();
+        VerseRef sabqiEnd;
+        try { sabqiEnd = prefs.sabqiEnd(); } catch (RuntimeException notYetInitialized) { sabqiEnd = null; }
+        int sabqiEndOrdinal = sabqiEnd == null ? -1 : GeometryRepository.ordinal(sabqiEnd);
+        int[] statuses = new int[605];
+
+        for (int page = 1; page <= 604; page++) {
+            List<GeometryRepository.LineMeta> lines = geometry.linesForExactIds(geometry.lineIdsOnPage(page));
+            boolean anyStabiliser = false, anyApprentissage = false, anyAcquis = false;
+            for (GeometryRepository.LineMeta line : lines) {
+                for (VerseRef verse : line.verses) {
+                    if (containsVerse(stabiliser, verse)) anyStabiliser = true;
+                    else if (containsVerse(acquis, verse)) anyAcquis = true;
+                    else if (GeometryRepository.ordinal(verse) <= sabqiEndOrdinal) anyApprentissage = true;
+                }
+            }
+            statuses[page] = anyStabiliser ? ProgressGridView.STABILISER
+                : anyApprentissage ? ProgressGridView.APPRENTISSAGE
+                : anyAcquis ? ProgressGridView.ACQUIS
+                : ProgressGridView.VIDE;
+        }
+        return statuses;
     }
 
     @Override protected void onDestroy() {

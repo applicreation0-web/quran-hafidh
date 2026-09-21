@@ -82,14 +82,27 @@ public final class ProgressMapSourceContractTest {
         assertTrue("à stabiliser must read the same bucket Diagnostic labels \"À stabiliser\"",
             activity.contains("List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();"));
         assertTrue("en apprentissage must be bounded by the real Sabqi front, not guessed",
-            activity.contains("VerseRef sabqiEnd = prefs.sabqiEnd();"));
-        String loadStatuses = method(activity, "private void loadStatuses() {", "private static boolean containsVerse(");
+            activity.contains("try { sabqiEnd = prefs.sabqiEnd(); } catch (RuntimeException notYetInitialized) { sabqiEnd = null; }"));
+        String computeStatuses = method(activity, "private int[] computeStatuses() {", "private static boolean containsVerse(");
         assertTrue("à stabiliser must win over every other status on a mixed page",
-            loadStatuses.indexOf("anyStabiliser ? ProgressGridView.STABILISER") <
-                loadStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE"));
+            computeStatuses.indexOf("anyStabiliser ? ProgressGridView.STABILISER") <
+                computeStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE"));
         assertTrue("en apprentissage must win over acquis on a mixed page (still-incomplete work stays visible)",
-            loadStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE") <
-                loadStatuses.indexOf("anyAcquis ? ProgressGridView.ACQUIS"));
+            computeStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE") <
+                computeStatuses.indexOf("anyAcquis ? ProgressGridView.ACQUIS"));
+    }
+
+    @Test public void backgroundComputationFailureIsVisibleNotSilent() throws Exception {
+        String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
+        assertTrue("itqanRanges()/parseRanges() throws when nothing is configured yet or state is "
+                + "corrupt (confirmed in HifzPrefs) — a background thread must not silently die on that",
+            activity.contains("try {\n                statuses = computeStatuses();\n            } catch (RuntimeException corruptOrUnconfiguredState) {"));
+        assertTrue("a failed computation must tell the learner, not just leave the grid blank forever",
+            activity.contains("Toast.makeText(this, \"Progression indisponible · ouvrez Diagnostic si le problème persiste.\", Toast.LENGTH_LONG).show();"));
+        assertTrue("posted UI updates must not touch a destroyed Activity's views (no configChanges "
+                + "is declared for this screen, so rotation recreates it while the background scan may "
+                + "still be in flight)",
+            countOccurrences(activity, "if (isFinishing() || isDestroyed()) return;") == 2);
     }
 
     @Test public void tappingAPageOpensLectureThere() throws Exception {
