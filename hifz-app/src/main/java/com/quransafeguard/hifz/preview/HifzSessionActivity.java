@@ -78,6 +78,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private Button murajaahFinishButton;
     /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
     private boolean weakMarkMode;
+    /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
+    private final java.util.Set<Integer> activeRevealedPages = new java.util.HashSet<>();
     private LocalDate sessionDate;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
@@ -1054,6 +1056,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
         VerseRef next = corpus.next(murajaahActualEnd);
         if (active) {
+            advanceWeakVerseStreaksForActiveSession(corpus);
             String label = "Révision active · testé : " + murajaahPlan.start + " → " + murajaahActualEnd
                 + " · prochain curseur " + next + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
             if (!prefs.completeActiveMurajaah(next, sessionDate.toString(), label)) {
@@ -1073,6 +1076,37 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         closeClockForCompletedSession();
         renderMode();
+    }
+
+    /**
+     * Only flagged verses actually covered by today's active pass (from murajaahPlan.start through
+     * murajaahActualEnd, walked the same way countMurajaahLinesThrough does) have their clean-recall
+     * streak touched — a flag elsewhere is left exactly as-is, since it wasn't tested today. Révéler
+     * is a whole-page reveal, not per-verse, so "clean" is evaluated at page granularity: a flagged
+     * verse whose page was never revealed this session counts one clean pass; a verse whose page WAS
+     * revealed at any point resets its streak instead, since we can't tell more precisely which verse
+     * on that page actually needed the help.
+     */
+    private void advanceWeakVerseStreaksForActiveSession(EligibleCorpus corpus) {
+        List<VerseRef> weak = prefs.murajaahWeakVerses();
+        if (weak.isEmpty()) return;
+        LinkedHashSet<VerseRef> covered = new LinkedHashSet<>();
+        VerseRef cursor = murajaahPlan.start;
+        for (int visited = 0; visited < 6236 * 20; visited++) {
+            covered.add(cursor);
+            if (cursor.equals(murajaahActualEnd)) break;
+            cursor = corpus.next(cursor);
+        }
+        List<VerseRef> clean = new ArrayList<>();
+        List<VerseRef> revealed = new ArrayList<>();
+        for (VerseRef verse : weak) {
+            if (!covered.contains(verse)) continue;
+            if (activeRevealedPages.contains(geometry.pageForVerse(verse))) revealed.add(verse);
+            else clean.add(verse);
+        }
+        if (!clean.isEmpty() || !revealed.isEmpty()) {
+            mushaf.setHighlightVerses(prefs.advanceWeakVerseStreaks(clean, revealed));
+        }
     }
 
     /**
@@ -1226,7 +1260,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         button.setOnTouchListener((view,event)->{
             int action=event.getActionMasked();
             if(action==android.view.MotionEvent.ACTION_DOWN){
-                if(currentMask<=0)return false;revealedThisRep=true;view.setPressed(true);mushaf.setMask(0);return true;
+                if(currentMask<=0)return false;revealedThisRep=true;
+                if(MURAJAAH_ACTIVE.equals(mode))activeRevealedPages.add(currentPage);
+                view.setPressed(true);mushaf.setMask(0);return true;
             }
             if(action==android.view.MotionEvent.ACTION_UP||action==android.view.MotionEvent.ACTION_CANCEL){
                 view.setPressed(false);mushaf.setMask(currentMask);if(action==android.view.MotionEvent.ACTION_UP)view.performClick();return true;
