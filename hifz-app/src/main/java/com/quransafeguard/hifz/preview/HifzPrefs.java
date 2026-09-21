@@ -1215,7 +1215,14 @@ public final class HifzPrefs {
         return editor.commit();
     }
 
-    private static final int WEAK_VERSE_CLEAN_STREAK_TO_CLEAR = 3;
+    /** How many clean active recalls in a row auto-clear a weak-spot flag (see advanceWeakVerseStreaks). */
+    public static final int WEAK_VERSE_CLEAN_STREAK_TO_CLEAR = 3;
+
+    /** 0 if never attempted since being flagged (or not flagged at all); otherwise its current clean-recall count, &lt; WEAK_VERSE_CLEAN_STREAK_TO_CLEAR. */
+    public int weakVerseStreak(VerseRef verse) {
+        Integer streak = weakVerseStreaks().get(verse);
+        return streak == null ? 0 : streak;
+    }
 
     private java.util.Map<VerseRef, Integer> weakVerseStreaks() {
         LinkedHashMap<VerseRef, Integer> out = new LinkedHashMap<>();

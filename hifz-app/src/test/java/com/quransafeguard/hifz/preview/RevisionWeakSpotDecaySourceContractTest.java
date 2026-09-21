@@ -49,7 +49,7 @@ public final class RevisionWeakSpotDecaySourceContractTest {
         assertTrue("any reveal on a flagged verse's page must drop its streak back to 0",
             advance.contains("streaks.remove(verse)"));
         String toggle = method(prefs,
-            "public boolean toggleMurajaahWeakVerse(VerseRef verse) {", "private static final int WEAK_VERSE_CLEAN_STREAK_TO_CLEAR");
+            "public boolean toggleMurajaahWeakVerse(VerseRef verse) {", "public static final int WEAK_VERSE_CLEAN_STREAK_TO_CLEAR");
         assertTrue("manually un-flagging a verse must also drop its stored streak, so a later re-flag starts clean",
             toggle.contains("streaks.remove(verse)"));
     }

@@ -42,10 +42,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private static final String TAFSIR_PREFS = "hifz_tafsir_reading";
     private static final String TAFSIR_FONT_KEY = "commentary_font_size_sp";
     private static final String TAFSIR_EDITION_KEY = "edition";
+    /** Jump straight to a page (int extra) and, optionally, highlight one verse on it (string extra, e.g. "2:255"). */
+    public static final String EXTRA_JUMP_PAGE = "jumpPage";
+    public static final String EXTRA_JUMP_VERSE = "jumpVerse";
 
     private MushafView mushaf;
     private int page = 1;
     private VerseRef selected;
+    private VerseRef pendingJumpVerse;
     private TextView pageLabel;
     private Button tafsirButton;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
@@ -61,7 +65,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        page = getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
+        int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
+        page = jumpPage >= 1 && jumpPage <= 604
+            ? jumpPage : getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
+        String jumpVerse = getIntent().getStringExtra(EXTRA_JUMP_VERSE);
+        if (jumpVerse != null) {
+            try { pendingJumpVerse = GeometryRepository.parseVerse(jumpVerse); } catch (RuntimeException malformed) { /* ignore */ }
+        }
+        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
 
@@ -552,7 +563,16 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return text;
     }
 
-    @Override public void onReady() { mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0); }
+    @Override public void onReady() {
+        if (pendingJumpVerse != null) {
+            selected = pendingJumpVerse;
+            tafsirButton.setContentDescription("Tafsir " + pendingJumpVerse.getSurah() + ":" + pendingJumpVerse.getAyah());
+            mushaf.show(page, Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
+            pendingJumpVerse = null;
+        } else {
+            mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+        }
+    }
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int shown) {
         page = shown;

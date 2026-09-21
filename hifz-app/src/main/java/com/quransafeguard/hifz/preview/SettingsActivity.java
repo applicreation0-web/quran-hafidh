@@ -35,7 +35,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weakVersesSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
     private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
     private static final DayOfWeek[] WEEKDAYS = {
@@ -125,6 +125,8 @@ public final class SettingsActivity extends android.app.Activity {
 
         section(root,"Avancé");
         root.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));root.addView(Ui.divider(this));
+        weakVersesSetting=Ui.settingRow(this,"Repères faibles","",v->startActivity(new Intent(this,WeakVersesActivity.class)));
+        root.addView(weakVersesSetting);root.addView(Ui.divider(this));
         root.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
         section(root,"Schéma");
@@ -434,6 +436,9 @@ public final class SettingsActivity extends android.app.Activity {
         murajaahStatus.setText("Révision active "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min puis Entretien "
             +HifzSchedule.MAINTENANCE_MINUTES+" min · chaque soir · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
+        int weakCount=prefs.murajaahWeakVerses().size();
+        TextView weakValue=Ui.settingValue(weakVersesSetting);
+        if(weakValue!=null)weakValue.setText(weakCount==0?"Aucun":weakCount+" verset(s)");
     }
 
     private void refreshAudio(){
