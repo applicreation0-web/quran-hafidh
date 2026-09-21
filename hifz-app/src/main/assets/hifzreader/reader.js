@@ -11,6 +11,8 @@ const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
 let strictLineFocus=!!boot.strictLineFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
+let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
+let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 let audioVerse=null;
 let maskOrderSignature='';
 let maskOrder=[];
@@ -41,14 +43,36 @@ function insideSelection(polys,x,y){
   return polys.some(p=>{try{return p.isPointInFill(pt)}catch(_e){return false}});
 }
 
+/*
+ * A page's first/last line can be flagged as a synchronization landmark: half of it (by cell
+ * count) is excluded from masking entirely, so it always stays visible. Cells are stored in
+ * ascending x order (left to right) while Arabic reads right to left, so the cell array's tail
+ * holds the line's *first*-read words and its head holds the *last*-read words. landmarkStart
+ * therefore keeps the tail half (the words a reader starts the page on); landmarkEnd keeps the
+ * head half (the words right before the page turns) — the other half of that same line still
+ * masks normally, like every other line.
+ */
+function landmarkCellIndices(cellCount,role){
+  if(cellCount<=1)return null;
+  const reveal=Math.ceil(cellCount/2);
+  return role==='start'
+    ? {from:0,to:cellCount-reveal}   // mask candidates: the head half only
+    : {from:reveal,to:cellCount};    // mask candidates: the tail half only
+}
+
 function maskCandidates(lines,polys){
   const out=[];
   lines.forEach(line=>{
     const top=Number(line.top),bottom=Number(line.bottom);
-    (line.cells||[]).forEach((cell,ci)=>{
+    const cells=line.cells||[];
+    const lineId=String(line.id);
+    const role=lineId===landmarkStart?'start':(lineId===landmarkEnd?'end':null);
+    const range=role?landmarkCellIndices(cells.length,role):null;
+    cells.forEach((cell,ci)=>{
+      if(range&&(ci<range.from||ci>=range.to))return;
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      out.push({key:String(line.id)+':'+ci,lineId:String(line.id),index:ci,x0,x1,top,bottom});
+      out.push({key:lineId+':'+ci,lineId,index:ci,x0,x1,top,bottom});
     });
   });
   return out;
@@ -271,6 +295,7 @@ window.HifzReader={
   },
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
+  setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setEink(value){eink=!!value;render()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},

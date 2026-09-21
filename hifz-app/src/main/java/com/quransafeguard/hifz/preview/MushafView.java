@@ -59,6 +59,8 @@ public final class MushafView extends WebView {
     private int lastMask;
     private boolean lastStrictLineFocus;
     private List<VerseRef> currentHighlights = Collections.emptyList();
+    private String landmarkStartLineId;
+    private String landmarkEndLineId;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -205,6 +207,8 @@ public final class MushafView extends WebView {
                 .put("eink", eink.isEink(prefs))
                 .put("strictLineFocus", strictLineFocus)
                 .put("highlights", highlights)
+                .put("landmarkStart", landmarkStartLineId)
+                .put("landmarkEnd", landmarkEndLineId)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -256,6 +260,22 @@ public final class MushafView extends WebView {
         for (VerseRef ref : currentHighlights) array.put(ref.toString());
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setHighlights(" + array.toString() + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    /**
+     * Révision active synchronization landmarks: half of the flagged start/end line (by cell
+     * count, reading-order aware) is excluded from masking entirely so it always stays visible,
+     * the other half of that same line still masks normally. Pass null for either id to clear it
+     * (e.g. a single-line page has no separate start/end).
+     */
+    public void setLandmarkLines(String startLineId, String endLineId) {
+        landmarkStartLineId = startLineId;
+        landmarkEndLineId = endLineId;
+        String startArg = startLineId == null ? "null" : JSONObject.quote(startLineId);
+        String endArg = endLineId == null ? "null" : JSONObject.quote(endLineId);
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setLandmarks(" + startArg + "," + endArg + ");",
             ignored -> post(() -> eink.local(this, prefs))));
     }
 
