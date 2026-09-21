@@ -867,13 +867,26 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ? savedPage : geometry.pageForVerse(murajaahPlan.start);
         currentSelection = Collections.emptyList();
         currentMask = 100;
-        currentLineIds = geometry.lineIdsOnPage(currentPage);
+        currentLineIds = maskableLineIdsForActivePage(currentPage);
         program.setText("Révision active · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
         mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
         updateMurajaahActions();
+    }
+
+    /**
+     * Révision active masks a whole page, but a learner rarely has every page's exact start/end
+     * verse memorized — without some landmark, a page swipe leaves no way to confirm the recall is
+     * actually picking up at the right point. The page's first physical line is therefore excluded
+     * from the maskable set entirely (never randomly drawn into the mask, regardless of percentage)
+     * so it always stays visible as a synchronization anchor; every other line on the page is still
+     * masked normally.
+     */
+    private List<String> maskableLineIdsForActivePage(int page) {
+        List<String> all = geometry.lineIdsOnPage(page);
+        return all.size() > 1 ? all.subList(1, all.size()) : Collections.emptyList();
     }
 
     private void updateMurajaahActions() {
@@ -894,7 +907,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 }
                 currentPage = geometry.pageForVerse(jumpTarget);
                 currentSelection = Collections.emptyList();
-                currentLineIds = active ? geometry.lineIdsOnPage(currentPage) : Collections.emptyList();
+                currentLineIds = active ? maskableLineIdsForActivePage(currentPage) : Collections.emptyList();
                 showCurrent();
                 restoreMurajaahEndpointSelectionOnCurrentPage();
                 updateMurajaahActions();
@@ -1234,7 +1247,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;
-        if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=geometry.lineIdsOnPage(currentPage);
+        if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=maskableLineIdsForActivePage(currentPage);
         showCurrent();
         boolean groupedCycle=RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
@@ -1340,7 +1353,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentPage=page;
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
-                currentLineIds=geometry.lineIdsOnPage(page);
+                currentLineIds=maskableLineIdsForActivePage(page);
                 prefs.setActiveMurajaahPage(page);
             } else {
                 prefs.setMurajaahPage(page);
