@@ -80,6 +80,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean weakMarkMode;
     /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
     private final java.util.Set<Integer> activeRevealedPages = new java.util.HashSet<>();
+    /** Reported as confusing: Révéler alone records nothing — said once per session, not on every touch. */
+    private boolean revealDoesNotMarkHintShown;
     private LocalDate sessionDate;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
@@ -1279,7 +1281,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             int action=event.getActionMasked();
             if(action==android.view.MotionEvent.ACTION_DOWN){
                 if(currentMask<=0)return false;revealedThisRep=true;
-                if(MURAJAAH_ACTIVE.equals(mode))activeRevealedPages.add(currentPage);
+                if(MURAJAAH_ACTIVE.equals(mode)){
+                    activeRevealedPages.add(currentPage);
+                    if(!revealDoesNotMarkHintShown){
+                        revealDoesNotMarkHintShown=true;
+                        Toast.makeText(this,"Révéler n’enregistre rien : utilisez « Marquer » pour signaler un verset difficile.",Toast.LENGTH_LONG).show();
+                    }
+                }
                 view.setPressed(true);mushaf.setMask(0);return true;
             }
             if(action==android.view.MotionEvent.ACTION_UP||action==android.view.MotionEvent.ACTION_CANCEL){

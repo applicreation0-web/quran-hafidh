@@ -59,7 +59,7 @@ public final class RevisionWeakSpotDecaySourceContractTest {
         assertTrue("must track which pages were revealed this active session",
             session.contains("private final java.util.Set<Integer> activeRevealedPages"));
         assertTrue("pressing Révéler must record the current page only in active mode",
-            session.contains("if(MURAJAAH_ACTIVE.equals(mode))activeRevealedPages.add(currentPage);"));
+            session.contains("if(MURAJAAH_ACTIVE.equals(mode)){\n                    activeRevealedPages.add(currentPage);"));
         assertTrue("completing an active session must advance the weak-verse streaks",
             session.contains("advanceWeakVerseStreaksForActiveSession(corpus);"));
         String completeValidation = method(session,
