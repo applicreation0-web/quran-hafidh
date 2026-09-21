@@ -152,7 +152,7 @@ object HifzSchedule {
     const val EVENING_REVIEW_MINUTES = 30
     const val CONSOLIDATION_MINUTES = 30
     const val ANCHORING_ENVELOPE_MINUTES = 60
-    const val MAINTENANCE_MINUTES = 30
+    const val MAINTENANCE_MINUTES = 50
 
     /**
      * Sunday is always reserved for Révision, so only the other six days can be reassigned — the

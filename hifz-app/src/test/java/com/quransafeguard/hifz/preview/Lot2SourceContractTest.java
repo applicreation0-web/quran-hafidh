@@ -40,7 +40,7 @@ public final class Lot2SourceContractTest {
         assertTrue(main.contains("nextDueCadence"));
         assertTrue(main.contains("HifzSchedule.INSTANCE.actionFor"));
         assertTrue(core.contains("EVENING_REVIEW_MINUTES = 30"));
-        assertTrue(core.contains("MAINTENANCE_MINUTES = 30"));
+        assertTrue(core.contains("MAINTENANCE_MINUTES = 50"));
     }
 
     @Test public void quickAccessDurationsDoNotDependOnTodaysPlan() throws Exception {
