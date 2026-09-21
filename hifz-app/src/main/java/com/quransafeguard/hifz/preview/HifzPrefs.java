@@ -866,12 +866,6 @@ public final class HifzPrefs {
         if (!p.edit().remove(maskEntropyKey(mode)).commit()) throw new IllegalStateException("Unable to clear Hifz mask entropy");
     }
 
-    // Legacy diagnostics retained for migration visibility; schema v3 corpus APIs below are authoritative.
-    public VerseRef lowerBound() { return safeRef(p.getString("lowerBound", "2:1"), new VerseRef(2,1)); }
-    public VerseRef promotedFrontier() { return safeRef(p.getString("promotedFrontier", "2:74"), new VerseRef(2,74)); }
-    public VerseRef upperTailStart() { return safeRef(p.getString("upperTailStart", "49:1"), new VerseRef(49,1)); }
-    public void setPromotedFrontier(VerseRef value) { putRef("promotedFrontier", value); }
-
     public VerseRef sabqiStart() { return ref("sabqiStart"); }
     public VerseRef sabqiEnd() { return ref("sabqiEnd"); }
     public void setSabqiStart(VerseRef value) { putRef("sabqiStart", value); }
@@ -2584,11 +2578,6 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
 
     public boolean isUnconsolidatedPromoted(VerseRef verse) {
         for (VerseRange range : unconsolidatedPromotedRanges()) if (range.contains(verse)) return true;
-        return false;
-    }
-
-    public boolean isForcedPromoted(VerseRef verse) {
-        for (VerseRange range : forcedPromotedRanges()) if (range.contains(verse)) return true;
         return false;
     }
 
