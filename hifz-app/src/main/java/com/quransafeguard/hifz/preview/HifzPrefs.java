@@ -1143,6 +1143,35 @@ public final class HifzPrefs {
     public boolean isMurajaahCursorValid() { try { return murajaahCorpus().contains(murajaahCursor()); } catch (RuntimeException e) { return false; } }
     public boolean isRotationStartValid() { try { return itqanWorkCorpus().contains(itqanRotationStart()); } catch (RuntimeException e) { return false; } }
 
+    /**
+     * Verses flagged during Révision active as a personal weak spot (light E-Ink-safe outline,
+     * visible in both active and passive). Global, not scoped to a corpus range: a struggle is a
+     * struggle wherever the verse sits. Phase 3 will add automatic decay after clean active
+     * recalls; for now a flag only clears by tapping the same verse again while marking.
+     */
+    public List<VerseRef> murajaahWeakVerses() {
+        LinkedHashSet<VerseRef> unique = new LinkedHashSet<>();
+        try {
+            JSONArray array = new JSONArray(p.getString("murajaahWeakVerses", "[]"));
+            for (int i = 0; i < array.length(); i++) {
+                try { unique.add(GeometryRepository.parseVerse(array.getString(i))); }
+                catch (Exception malformedEntry) { /* drop a single corrupt entry, keep the rest */ }
+            }
+        } catch (Exception malformed) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(unique);
+    }
+
+    public boolean toggleMurajaahWeakVerse(VerseRef verse) {
+        if (verse == null) return false;
+        LinkedHashSet<VerseRef> current = new LinkedHashSet<>(murajaahWeakVerses());
+        if (!current.remove(verse)) current.add(verse);
+        JSONArray array = new JSONArray();
+        for (VerseRef flagged : current) array.put(flagged.toString());
+        return p.edit().putString("murajaahWeakVerses", array.toString()).commit();
+    }
+
     public int sabqiLineCursor() { return p.getInt("sabqiLineCursor", -1); }
     public void setSabqiLineCursor(int value) { p.edit().putInt("sabqiLineCursor", value).apply(); }
     public int sabqiRep() { return p.getInt("sabqiRep", 0); }

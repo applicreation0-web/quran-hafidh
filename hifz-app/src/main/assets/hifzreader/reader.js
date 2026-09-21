@@ -10,6 +10,7 @@ let mask=Number(boot.mask||0);
 const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
 let strictLineFocus=!!boot.strictLineFocus;
+let highlighted=new Set((boot.highlights||[]).map(String));
 let audioVerse=null;
 let maskOrderSignature='';
 let maskOrder=[];
@@ -75,6 +76,25 @@ function lineFocusLayer(lines){
     layer.appendChild(rect);
   });
   return layer;
+}
+
+/* Personal weak-spot flags: a thin dashed outline cloned above every layer (including any
+ * active mask), never a filled shade — deliberately the lightest possible mark to avoid E-Ink
+ * ghosting from a shape that can stay on screen for many page views. */
+function weakLayer(svg,weakSet){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','weaklayer');
+  if(!weakSet||!weakSet.size)return g;
+  svg.querySelectorAll('.ayahPolygon').forEach(p=>{
+    if(!weakSet.has(String(p.dataset.verse)))return;
+    const outline=p.cloneNode(false);
+    outline.removeAttribute('class');
+    outline.removeAttribute('style');
+    outline.removeAttribute('id');
+    outline.setAttribute('class','weakoutline');
+    g.appendChild(outline);
+  });
+  return g;
 }
 
 function hashSeed(value){
@@ -168,7 +188,7 @@ function render(){
     p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
@@ -180,29 +200,38 @@ function render(){
   }
 
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
-  if(!clamped||!pageGeo||!lineIds.length||!lines.length)return;
-  const polys=selectedPolygons(svg),cells=maskCandidates(lines,polys);if(!cells.length)return;
-  const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
+  if(clamped&&pageGeo&&lineIds.length&&lines.length){
+    const polys=selectedPolygons(svg),cells=maskCandidates(lines,polys);
+    if(cells.length){
+      const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
+      const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
+      const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
+      clip.id='hifz-selection-clip';
+      polys.forEach(p=>{const q=p.cloneNode(false);q.removeAttribute('class');q.removeAttribute('style');clip.appendChild(q)});
+      defs.appendChild(clip);layer.appendChild(defs);
+      const group=document.createElementNS(NS,'g');
+      if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
+      segments.forEach(segment=>{
+        const el=document.createElementNS(NS,'rect');
+        el.setAttribute('class','maskcell');
+        el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
+        el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
+        el.setAttribute('rx','2');el.setAttribute('ry','2');
+        group.appendChild(el);
+      });
+      layer.appendChild(group);
+      // Verse-number rosettes are deliberately redrawn above the random masks.
+      layer.appendChild(markerLayer(svg,polys,lines));
+      svg.appendChild(layer);
+    }
+  }
 
-  const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
-  const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
-  clip.id='hifz-selection-clip';
-  polys.forEach(p=>{const q=p.cloneNode(false);q.removeAttribute('class');q.removeAttribute('style');clip.appendChild(q)});
-  defs.appendChild(clip);layer.appendChild(defs);
-  const group=document.createElementNS(NS,'g');
-  if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
-  segments.forEach(segment=>{
-    const el=document.createElementNS(NS,'rect');
-    el.setAttribute('class','maskcell');
-    el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-    el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-    el.setAttribute('rx','2');el.setAttribute('ry','2');
-    group.appendChild(el);
-  });
-  layer.appendChild(group);
-  // Verse-number rosettes are deliberately redrawn above the random masks.
-  layer.appendChild(markerLayer(svg,polys,lines));
-  svg.appendChild(layer);
+  // Weak-spot outlines always draw last, on top of any mask, so a flagged verse stays
+  // recognizable (as a bare outline, revealing no text) even while its content is hidden.
+  if(highlighted.size){
+    const weak=weakLayer(svg,highlighted);
+    if(weak.childNodes.length)svg.appendChild(weak);
+  }
 }
 
 /* Move only when the selected passage would actually be hidden by the Tafsir panel. */
@@ -241,6 +270,7 @@ window.HifzReader={
     clearReveal();render();
   },
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
+  setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setEink(value){eink=!!value;render()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},

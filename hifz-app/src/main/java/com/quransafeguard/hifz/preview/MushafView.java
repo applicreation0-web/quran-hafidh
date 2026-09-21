@@ -22,6 +22,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 
 /** Offline Mushaf renderer using the exact packaged KFQC SVG page. */
@@ -57,6 +58,7 @@ public final class MushafView extends WebView {
     private List<String> lastLineIds;
     private int lastMask;
     private boolean lastStrictLineFocus;
+    private List<VerseRef> currentHighlights = Collections.emptyList();
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -192,6 +194,8 @@ public final class MushafView extends WebView {
             for (VerseRef ref : selection) verses.put(ref.toString());
             JSONArray lines = new JSONArray();
             for (String id : lineIds) lines.put(String.valueOf(id));
+            JSONArray highlights = new JSONArray();
+            for (VerseRef ref : currentHighlights) highlights.put(ref.toString());
             JSONObject boot = new JSONObject()
                 .put("page", page)
                 .put("selection", verses)
@@ -200,6 +204,7 @@ public final class MushafView extends WebView {
                 .put("maskEntropy", maskEntropy)
                 .put("eink", eink.isEink(prefs))
                 .put("strictLineFocus", strictLineFocus)
+                .put("highlights", highlights)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -238,6 +243,20 @@ public final class MushafView extends WebView {
             script.append("window.HifzReader.setSelection(").append(verses).append(',').append(lines).append("));");
             evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this, prefs)));
         });
+    }
+
+    /**
+     * Personal weak-spot flags: a light, thin outline drawn on top of any mask (never a filled
+     * shade, to minimize E-Ink ink coverage/ghosting risk). Persists across page loads on this
+     * view instance like maskEntropy, so a page swipe redraws it without the caller resending it.
+     */
+    public void setHighlightVerses(List<VerseRef> verses) {
+        currentHighlights = verses == null ? Collections.emptyList() : verses;
+        JSONArray array = new JSONArray();
+        for (VerseRef ref : currentHighlights) array.put(ref.toString());
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setHighlights(" + array.toString() + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
     }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */

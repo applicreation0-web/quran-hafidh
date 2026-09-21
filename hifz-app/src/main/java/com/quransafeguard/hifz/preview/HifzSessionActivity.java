@@ -76,6 +76,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean revealedThisRep;
     private Button revealButton;
     private Button murajaahFinishButton;
+    /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
+    private boolean weakMarkMode;
     private LocalDate sessionDate;
     private final ConsolidationCycleEngine consolidationEngine = new ConsolidationCycleEngine();
     private ConsolidationCycleEngine.Session consolidationSession;
@@ -185,6 +187,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         revealButton = null;
         murajaahFinishButton = null;
         awaitingValidation = false;
+        weakMarkMode = false;
         unitFirstPage = 1;
         unitLastPage = 1;
         try {
@@ -818,6 +821,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask = 0;
         program.setText("Révision · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
+        mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
         updateMurajaahActions();
@@ -865,6 +869,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = geometry.lineIdsOnPage(currentPage);
         program.setText("Révision active · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
+        mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
         updateMurajaahActions();
@@ -909,6 +914,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             configureRevealButton(revealButton);
             actions.addView(revealAction);
             updateRevealButton();
+            LinearLayout markAction = Ui.roundAction(this, "", weakMarkMode ? "Touchez le verset…" : "Marquer", v -> {
+                weakMarkMode = !weakMarkMode;
+                updateMurajaahActions();
+            });
+            actions.addView(markAction);
         }
     }
 
@@ -1151,6 +1161,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     @Override public void onVerseTap(VerseRef verse){
         if (!isMurajaahMode() || murajaahPlan == null) return;
+        if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
         EligibleCorpus corpus = prefs.murajaahCorpus();
         if (!corpus.contains(verse)) {
             Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
@@ -1160,6 +1171,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahProgress();
         mushaf.setSelection(Collections.singletonList(verse),geometry.lineIdsForVerseRange(verse,verse));
         checkpointMurajaah(clock.elapsedMs());
+        updateMurajaahActions();
+    }
+
+    /** Single-shot: one tap while armed by "Marquer" flips that verse's weak-spot flag, then disarms. */
+    private void toggleWeakVerse(VerseRef verse) {
+        weakMarkMode = false;
+        if (!prefs.toggleMurajaahWeakVerse(verse)) {
+            onError("Impossible d’enregistrer le repère.");
+            return;
+        }
+        mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         updateMurajaahActions();
     }
 
