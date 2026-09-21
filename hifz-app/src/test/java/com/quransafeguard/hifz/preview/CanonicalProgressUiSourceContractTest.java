@@ -33,7 +33,8 @@ public final class CanonicalProgressUiSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(settings.contains("private String weeklyCadenceSummary(){"));
         assertTrue(settings.contains("· Apprentissage   ·   \""));
-        assertTrue(settings.contains("· Stabilisation   ·   Dim · Révision\""));
+        assertTrue(settings.contains("· Stabilisation   ·   \""));
+        assertTrue(settings.contains("\"Dim · Révision\""));
         assertFalse(settings.contains("Mar/Jeu · Stabilisation"));
         assertFalse(settings.contains("Sam/Dim · Révision"));
         assertFalse(settings.contains("Dim · Ancrage puis Consolidation"));

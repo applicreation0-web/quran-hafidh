@@ -83,13 +83,21 @@ class HifzWeeklyPlanningTest {
     }
 
     /**
-     * Settings can raise Apprentissage's weekly share as high as MAX_LEARNING_DAYS_PER_WEEK (5),
-     * at Stabilisation's expense — Sunday always stays REVISION regardless.
+     * Settings can raise Apprentissage's weekly share as high as MAX_LEARNING_DAYS_PER_WEEK (6),
+     * at Stabilisation's expense, all the way down to MIN_LEARNING_DAYS_PER_WEEK (0) — Sunday
+     * always stays REVISION regardless.
      */
     @Test fun learningDaysPerWeekCanBeRaisedAtStabilizationsExpense() {
-        assertEquals(HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK, 1)
-        assertEquals(HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK, 5)
+        assertEquals(HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK, 0)
+        assertEquals(HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK, 6)
         assertEquals(HifzSchedule.DEFAULT_LEARNING_DAYS_PER_WEEK, 3)
+
+        val weekdays = listOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY)
+
+        // Zero Apprentissage days: the whole week (Sunday aside) is Stabilisation.
+        for (day in weekdays) assertEquals(CadenceAction.STABILIZATION, HifzSchedule.actionFor(day, 0))
+        assertEquals(CadenceAction.REVISION, HifzSchedule.actionFor(DayOfWeek.SUNDAY, 0))
 
         // One Apprentissage day (Monday only): the rest of the week, Sunday aside, is Stabilisation.
         assertEquals(CadenceAction.LEARNING, HifzSchedule.actionFor(DayOfWeek.MONDAY, 1))
@@ -106,6 +114,11 @@ class HifzWeeklyPlanningTest {
             assertEquals(CadenceAction.LEARNING, HifzSchedule.actionFor(day, 5))
         }
         assertEquals(CadenceAction.REVISION, HifzSchedule.actionFor(DayOfWeek.SUNDAY, 5))
+
+        // Six Apprentissage days: the whole week (Sunday aside) is Apprentissage — Stabilisation
+        // simply never comes due that week, by design.
+        for (day in weekdays) assertEquals(CadenceAction.LEARNING, HifzSchedule.actionFor(day, 6))
+        assertEquals(CadenceAction.REVISION, HifzSchedule.actionFor(DayOfWeek.SUNDAY, 6))
     }
 
     /** Every configurable split still gives exactly six non-Sunday days, split as N Apprentissage / (6-N) Stabilisation. */
@@ -120,12 +133,12 @@ class HifzWeeklyPlanningTest {
         }
     }
 
-    /** Out-of-range values fail closed to the nearest valid bound rather than throwing or misbehaving. */
+    /** Out-of-range values fail closed to the nearest valid bound (now 0..6) rather than throwing or misbehaving. */
     @Test fun outOfRangeLearningDaysPerWeekClampsToValidBounds() {
-        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 1), HifzSchedule.actionFor(DayOfWeek.MONDAY, 0))
-        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 1), HifzSchedule.actionFor(DayOfWeek.MONDAY, -5))
-        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 5), HifzSchedule.actionFor(DayOfWeek.MONDAY, 6))
-        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 5), HifzSchedule.actionFor(DayOfWeek.MONDAY, 100))
+        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 0), HifzSchedule.actionFor(DayOfWeek.MONDAY, -1))
+        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 0), HifzSchedule.actionFor(DayOfWeek.MONDAY, -5))
+        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 6), HifzSchedule.actionFor(DayOfWeek.MONDAY, 7))
+        assertEquals(HifzSchedule.actionFor(DayOfWeek.MONDAY, 6), HifzSchedule.actionFor(DayOfWeek.MONDAY, 100))
     }
 
     /** nextDue must respect a non-default weekly split when computing which action is due. */

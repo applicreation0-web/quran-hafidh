@@ -154,9 +154,13 @@ object HifzSchedule {
     const val ANCHORING_ENVELOPE_MINUTES = 60
     const val MAINTENANCE_MINUTES = 30
 
-    /** Sunday is always reserved for Révision, so at most the other six days can be reassigned. */
-    const val MIN_LEARNING_DAYS_PER_WEEK = 1
-    const val MAX_LEARNING_DAYS_PER_WEEK = 5
+    /**
+     * Sunday is always reserved for Révision, so only the other six days can be reassigned — the
+     * full 0..6 range is allowed, including dedicating the whole week to one family (e.g. 6
+     * Apprentissage days means Stabilisation simply never comes due that week, and vice versa).
+     */
+    const val MIN_LEARNING_DAYS_PER_WEEK = 0
+    const val MAX_LEARNING_DAYS_PER_WEEK = 6
     const val DEFAULT_LEARNING_DAYS_PER_WEEK = 3
 
     fun targetMinutesFor(kind: SessionKind): Int = when (kind) {

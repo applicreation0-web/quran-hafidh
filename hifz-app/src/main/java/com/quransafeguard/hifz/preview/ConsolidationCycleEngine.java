@@ -21,15 +21,15 @@ final class ConsolidationCycleEngine {
 
     /**
      * LEARNING37/LIGHT/FULL cycles freeze at three physical units (their quota tables only define
-     * positions 0..2). SNOWBALL/SNOWBALL_FINAL cycles allow up to six: Settings lets Apprentissage
-     * (or Stabilisation) run as many as HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK (5) days a week,
+     * positions 0..2). SNOWBALL/SNOWBALL_FINAL cycles allow up to seven: Settings lets Apprentissage
+     * (or Stabilisation) run as many as HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK (6) days a week,
      * plus the weekly snowball's extra "continuous" unit, added once at least two of the week's own
      * blocks have accumulated. SNOWBALL_EXTENDED spans up to 8 weeks (up to 3 blocks each) plus one
      * combined pass, so it needs far more headroom than a single week ever could.
      */
     static int maxUnitsFor(Protocol protocol) {
         if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;
-        return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 6 : 3;
+        return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3;
     }
 
     static final class Unit {

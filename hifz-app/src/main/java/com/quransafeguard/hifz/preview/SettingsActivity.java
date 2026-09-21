@@ -159,10 +159,17 @@ public final class SettingsActivity extends android.app.Activity {
         return out.toString();
     }
 
-    /** "Lun/Mer/Ven · Apprentissage · Mar/Jeu/Sam · Stabilisation · Dim · Révision", built from the current split. */
+    /**
+     * "Lun/Mer/Ven · Apprentissage · Mar/Jeu/Sam · Stabilisation · Dim · Révision", built from the
+     * current split. At the 0/6 extremes one family has no day at all that week — its clause is
+     * dropped entirely rather than showing an empty day list before "· Apprentissage/Stabilisation".
+     */
     private String weeklyCadenceSummary(){
-        return daysFor(CadenceAction.LEARNING)+" · Apprentissage   ·   "
-            +daysFor(CadenceAction.STABILIZATION)+" · Stabilisation   ·   Dim · Révision";
+        String learningDays=daysFor(CadenceAction.LEARNING),stabilizationDays=daysFor(CadenceAction.STABILIZATION);
+        StringBuilder out=new StringBuilder();
+        if(!learningDays.isEmpty())out.append(learningDays).append(" · Apprentissage   ·   ");
+        if(!stabilizationDays.isEmpty())out.append(stabilizationDays).append(" · Stabilisation   ·   ");
+        return out.append("Dim · Révision").toString();
     }
 
     private String learningDaysSummary(){

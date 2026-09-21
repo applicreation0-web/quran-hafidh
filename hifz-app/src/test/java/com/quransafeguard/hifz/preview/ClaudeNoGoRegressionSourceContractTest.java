@@ -807,15 +807,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
 
     /**
      * The weekday-pinned cadence (Mon/Wed/Fri Apprentissage vs Tue/Thu/Sat Stabilisation) used to
-     * be hardcoded. Settings can now raise Apprentissage's share of the six non-Sunday days as
-     * high as 5 (Stabilisation as low as 1) via a configurable split, spread evenly across the
-     * week by the same formula at every call site, with Sunday always staying Révision.
+     * be hardcoded. Settings can now set Apprentissage's share of the six non-Sunday days anywhere
+     * from 0 to 6 (Stabilisation gets the rest) via a configurable split, spread evenly across the
+     * week by the same formula at every call site, with Sunday always staying Révision. The 0/6
+     * extremes are deliberately allowed: dedicating the whole week to one family simply means the
+     * other never comes due that week.
      */
     @Test public void weeklyCadenceSplitBetweenApprentissageAndStabilisationIsConfigurable() throws Exception {
         String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
         assertTrue("the valid range must be named, not a bare magic number at each call site",
-            core.contains("const val MIN_LEARNING_DAYS_PER_WEEK = 1")
-                && core.contains("const val MAX_LEARNING_DAYS_PER_WEEK = 5")
+            core.contains("const val MIN_LEARNING_DAYS_PER_WEEK = 0")
+                && core.contains("const val MAX_LEARNING_DAYS_PER_WEEK = 6")
                 && core.contains("const val DEFAULT_LEARNING_DAYS_PER_WEEK = 3"));
         String actionFor = method(core,
             "fun actionFor(day: DayOfWeek, learningDaysPerWeek: Int = DEFAULT_LEARNING_DAYS_PER_WEEK): CadenceAction {",
@@ -831,8 +833,8 @@ public final class ClaudeNoGoRegressionSourceContractTest {
                 && core.contains("action = actionFor(date.dayOfWeek, learningDaysPerWeek)"));
 
         String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
-        assertTrue("the weekly snowball must have headroom for 5 configurable days plus the continuous pass",
-            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 6 : 3"));
+        assertTrue("the weekly snowball must have headroom for 6 configurable days plus the continuous pass",
+            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3"));
 
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue("HifzPrefs must expose a clamped read of the configured split",
@@ -865,5 +867,19 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             settings.contains("prefs.setLearningDaysPerWeek(days)"));
         assertTrue("the Parcours summary must reflect the actual configured split, not a hardcoded Mon/Wed/Fri string",
             settings.contains("private String weeklyCadenceSummary(){"));
+    }
+
+    /**
+     * At the 0 or 6 extreme, one family has no day at all that week. weeklyCadenceSummary must
+     * drop that family's clause entirely rather than printing an empty day list right before
+     * "· Apprentissage"/"· Stabilisation" (e.g. " · Apprentissage   ·   Lun/Mar/.../Sam ·
+     * Stabilisation   ·   Dim · Révision" with a stray leading separator).
+     */
+    @Test public void weeklyCadenceSummaryOmitsAnEmptyFamilyClauseAtTheZeroOrSixExtreme() throws Exception {
+        String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
+        String summary = method(settings, "private String weeklyCadenceSummary(){", "private String learningDaysSummary()");
+        assertTrue("each family's clause must only be appended when that family actually has a day this week",
+            summary.contains("if(!learningDays.isEmpty())")
+                && summary.contains("if(!stabilizationDays.isEmpty())"));
     }
 }
