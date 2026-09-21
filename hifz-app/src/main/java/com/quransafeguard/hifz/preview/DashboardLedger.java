@@ -45,6 +45,7 @@ final class DashboardLedger {
         upsert(prefs.lastRecentSabqiReviewDate(),HifzSessionActivity.CONSOLIDATION_FINAL,prefs.lastRecentSabqiReviewLabel(),today);
         upsert(prefs.lastLearningConsolidationDate(),HifzSessionActivity.LEARNING_FINAL,prefs.lastLearningConsolidationLabel(),today);
         upsert(prefs.lastMurajaahDate(),HifzSessionActivity.MURAJAAH,prefs.lastMurajaahLabel(),today);
+        upsert(prefs.lastActiveMurajaahDate(),HifzSessionActivity.MURAJAAH_ACTIVE,prefs.lastActiveMurajaahLabel(),today);
     }
 
     Record find(LocalDate date,String type){

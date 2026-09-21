@@ -1916,6 +1916,24 @@ public final class HifzPrefs {
             .commit();
     }
 
+    /**
+     * Closes the daily Révision active (masked recall test): advances the same murajaahCursor
+     * passive Entretien continues from, but records the day under lastActiveMurajaahDate instead
+     * of lastMurajaahDate — so passive Entretien still comes due today, right after active.
+     */
+    public boolean completeActiveMurajaah(VerseRef nextCursor, VerseRef reviewedStart, VerseRef reviewedEnd,
+                                          String date, String label) {
+        if (nextCursor == null) return false;
+        return p.edit()
+            .putString("murajaahCursor", nextCursor.toString())
+            .putLong("murajaahElapsedMs", 0L)
+            .putString("murajaahActualEnd", "")
+            .remove("murajaahPage")
+            .putString("lastActiveMurajaahDate", date)
+            .putString("lastActiveMurajaahLabel", label)
+            .commit();
+    }
+
     private static String consolidationStateKey(ConsolidationCycleEngine.Family family) {
         if (family == null) throw new IllegalArgumentException("Consolidation family required");
         switch (family) {
@@ -2208,6 +2226,8 @@ public final class HifzPrefs {
     public String lastMurajaahLabel() { return p.getString("lastMurajaahLabel", ""); }
     public VerseRef lastMurajaahCreditStart() { return optionalRef("lastMurajaahCreditStart"); }
     public VerseRef lastMurajaahCreditEnd() { return optionalRef("lastMurajaahCreditEnd"); }
+    public String lastActiveMurajaahDate() { return p.getString("lastActiveMurajaahDate", ""); }
+    public String lastActiveMurajaahLabel() { return p.getString("lastActiveMurajaahLabel", ""); }
 
     static String elapsedKey(String mode) {
         if (mode == null || mode.trim().isEmpty()) throw new IllegalArgumentException("elapsed mode required");

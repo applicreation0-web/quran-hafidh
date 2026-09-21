@@ -121,7 +121,7 @@ public final class MainActivity extends android.app.Activity {
         direct.setGravity(Gravity.CENTER);
         LinearLayout sabqi = Ui.modeCard(this, "", "Apprentissage", v -> openMode(HifzSessionActivity.SABQI));
         LinearLayout itqan = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> openMode(HifzSessionActivity.MURAJAAH));
+        LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> openMode(murajaahQuickAccessMode()));
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
         geometryActions.add(sabqi);
@@ -208,6 +208,13 @@ public final class MainActivity extends android.app.Activity {
         return ledger.find(date,mode)!=null;
     }
 
+    /** Whichever of the daily active/passive Révision pair is still due today comes first. */
+    private String murajaahQuickAccessMode(){
+        String today=HifzClock.today().toString();
+        return today.equals(prefs.lastActiveMurajaahDate())
+            ? HifzSessionActivity.MURAJAAH : HifzSessionActivity.MURAJAAH_ACTIVE;
+    }
+
     /**
      * A past Sunday's weekly snowball final review can never be caught up later — by the time it
      * would be revisited, the accumulator has already rolled to a new week — so once a Sunday is
@@ -221,6 +228,7 @@ public final class MainActivity extends android.app.Activity {
             case REVISION:
                 if(!date.equals(HifzClock.today()))return true;
                 return learningFinalResolved(date)&&consolidationFinalResolved(date)
+                    &&date.toString().equals(prefs.lastActiveMurajaahDate())
                     &&date.toString().equals(prefs.lastMurajaahDate());
             default:return false;
         }
@@ -247,27 +255,31 @@ public final class MainActivity extends android.app.Activity {
             || prefs.stabilizationSnowballFinalUnits(date).isEmpty();
     }
 
-    /** Lundi/Mercredi/Vendredi soir, once the morning Apprentissage is done: Renforcement, then Entretien. */
+    /** Lundi/Mercredi/Vendredi soir, once the morning Apprentissage is done: Renforcement, then Révision active, then Entretien. */
     private String eveningLearningMode(LocalDate today){
         String todayStr=today.toString();
         if(!todayStr.equals(prefs.lastLearningSnowballEveningDate())&&!prefs.learningConsolidationUnits(today).isEmpty())
             return HifzSessionActivity.LEARNING_CONSOLIDATION;
+        if(!todayStr.equals(prefs.lastActiveMurajaahDate()))return HifzSessionActivity.MURAJAAH_ACTIVE;
         if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
         return null;
     }
 
-    /** Mardi/Jeudi/Samedi soir, once the morning Stabilisation is done: Consolidation, then Entretien. */
+    /** Mardi/Jeudi/Samedi soir, once the morning Stabilisation is done: Consolidation, then Révision active, then Entretien. */
     private String eveningStabilizationMode(LocalDate today){
         String todayStr=today.toString();
         if(!todayStr.equals(prefs.lastStabilizationSnowballEveningDate())&&!prefs.stabilizedConsolidationUnits(today).isEmpty())
             return HifzSessionActivity.RECENT_SABQI_REVIEW;
+        if(!todayStr.equals(prefs.lastActiveMurajaahDate()))return HifzSessionActivity.MURAJAAH_ACTIVE;
         if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
         return null;
     }
 
-    /** Dimanche soir, once the morning ×5 finales are done: ordinary Entretien, same as every other evening. */
+    /** Dimanche soir, once the morning ×5 finales are done: Révision active, then ordinary Entretien, same as every other evening. */
     private String eveningRevisionMode(LocalDate today){
-        if(!today.toString().equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
+        String todayStr=today.toString();
+        if(!todayStr.equals(prefs.lastActiveMurajaahDate()))return HifzSessionActivity.MURAJAAH_ACTIVE;
+        if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
         return null;
     }
 
@@ -310,7 +322,8 @@ public final class MainActivity extends android.app.Activity {
             ||HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)
             ||HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode)
             ||HifzSessionActivity.LEARNING_FINAL.equals(mode)
-            ||HifzSessionActivity.MURAJAAH.equals(mode);
+            ||HifzSessionActivity.MURAJAAH.equals(mode)
+            ||HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode);
     }
 
     private void openToday() {
@@ -360,6 +373,8 @@ public final class MainActivity extends android.app.Activity {
                 detail="Apprentissage · reprise · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
             }else if(HifzSessionActivity.ITQAN.equals(mode)){
                 detail=anchoringTodayDetail(prefs,g);
+            }else if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)){
+                detail="Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min";
             }else if(HifzSessionActivity.MURAJAAH.equals(mode)){
                 detail="Révision · "+HifzSchedule.MAINTENANCE_MINUTES+" min";
             }else detail="Parcours à vérifier";

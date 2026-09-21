@@ -186,7 +186,8 @@ public final class SettingsActivity extends android.app.Activity {
         renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") — l’effet boule de neige :"
             +"\n1. Chaque soir : ×10 sur CHAQUE bloc Appris ou Stabilisé accumulé depuis le début de la semaine (pas seulement celui du jour), plus ×10 sur l’ensemble de ces blocs lus d’une traite dès qu’il y en a plus d’un."
             +"\n2. Dimanche matin : la même chose une dernière fois (chaque bloc ×10 puis l’ensemble ×10), puis ils passent en Acquis."
-            +"\n3. Chaque soir ajoute aussi "+HifzSchedule.MAINTENANCE_MINUTES+" min d’Entretien de l’Acquis, dimanche soir compris.");
+            +"\n3. Chaque soir ajoute aussi "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min de Révision active puis "
+            +HifzSchedule.MAINTENANCE_MINUTES+" min d’Entretien de l’Acquis, dimanche soir compris.");
     }
 
     private void chooseLearningDaysPerWeek(){
@@ -407,7 +408,8 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private void refreshMurajaah(){
-        murajaahStatus.setText("Entretien · chaque soir · "+HifzSchedule.MAINTENANCE_MINUTES+" min · position "+prefs.murajaahCursor());
+        murajaahStatus.setText("Révision active "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min puis Entretien "
+            +HifzSchedule.MAINTENANCE_MINUTES+" min · chaque soir · position "+prefs.murajaahCursor());
         murajaahStatus.setTextColor(Ui.MUTED);
     }
 

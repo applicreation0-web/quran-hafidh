@@ -133,7 +133,8 @@ enum class SessionKind {
     SABQI_TODAY_REVIEW,
     ITQAN,
     RECENT_SABQI_REVIEW,
-    OLD_ITQAN_MURAJAAH
+    OLD_ITQAN_MURAJAAH,
+    ACTIVE_MURAJAAH
 }
 
 enum class CadenceAction { LEARNING, STABILIZATION, REVISION }
@@ -152,7 +153,9 @@ object HifzSchedule {
     const val EVENING_REVIEW_MINUTES = 30
     const val CONSOLIDATION_MINUTES = 30
     const val ANCHORING_ENVELOPE_MINUTES = 60
-    const val MAINTENANCE_MINUTES = 50
+    const val MAINTENANCE_MINUTES = 45
+    /** Daily, mandatory, masked-by-default recall test that runs before the passive Entretien. */
+    const val ACTIVE_REVIEW_MINUTES = 15
 
     /**
      * Sunday is always reserved for Révision, so only the other six days can be reassigned — the
@@ -169,6 +172,7 @@ object HifzSchedule {
         SessionKind.ITQAN -> ANCHORING_ENVELOPE_MINUTES
         SessionKind.RECENT_SABQI_REVIEW -> CONSOLIDATION_MINUTES
         SessionKind.OLD_ITQAN_MURAJAAH -> MAINTENANCE_MINUTES
+        SessionKind.ACTIVE_MURAJAAH -> ACTIVE_REVIEW_MINUTES
     }
 
     /**

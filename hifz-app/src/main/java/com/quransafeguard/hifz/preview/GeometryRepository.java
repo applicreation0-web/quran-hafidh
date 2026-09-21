@@ -193,6 +193,13 @@ public final class GeometryRepository {
         throw new IllegalArgumentException("No canonical physical lines for page " + page);
     }
 
+    /** Every physical line printed on this page, in Mushaf order — used to mask a whole page at once. */
+    public List<String> lineIdsOnPage(int page) {
+        ArrayList<String> ids = new ArrayList<>();
+        for (LineMeta line : lines) if (line.page == page) ids.add(line.id);
+        return Collections.unmodifiableList(ids);
+    }
+
     /**
      * Clips to at most SABQI_LINES physical lines, but never crosses a surah boundary: a Mushaf
      * line always belongs to exactly one surah (a new surah always starts its own line), so a

@@ -69,13 +69,13 @@ class HifzCoreTest {
             assertEquals(morningMinutes, plan.morning.targetMinutes)
             assertEquals(eveningMinutes, plan.evening.targetMinutes)
         }
-        assertPlan(DayOfWeek.MONDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 50)
-        assertPlan(DayOfWeek.TUESDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 50)
-        assertPlan(DayOfWeek.WEDNESDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 50)
-        assertPlan(DayOfWeek.THURSDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 50)
-        assertPlan(DayOfWeek.FRIDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 50)
-        assertPlan(DayOfWeek.SATURDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 50)
-        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 50)
+        assertPlan(DayOfWeek.MONDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
+        assertPlan(DayOfWeek.TUESDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.WEDNESDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
+        assertPlan(DayOfWeek.THURSDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.FRIDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
+        assertPlan(DayOfWeek.SATURDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
+        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
     }
 
     @Test fun directSessionTargetsDoNotDependOnTodaysSchedule() {
@@ -83,7 +83,8 @@ class HifzCoreTest {
         assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.SABQI_TODAY_REVIEW))
         assertEquals(60, HifzSchedule.targetMinutesFor(SessionKind.ITQAN))
         assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.RECENT_SABQI_REVIEW))
-        assertEquals(50, HifzSchedule.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
+        assertEquals(45, HifzSchedule.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
+        assertEquals(15, HifzSchedule.targetMinutesFor(SessionKind.ACTIVE_MURAJAAH))
     }
 
     @Test fun legacyMorningTypeStillMatchesScheduleForCompatibility() {

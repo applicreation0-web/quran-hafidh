@@ -107,8 +107,12 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(core.contains("EVENING_REVIEW_MINUTES = 30")
                 && core.contains("CONSOLIDATION_MINUTES = 30")
                 && core.contains("ANCHORING_ENVELOPE_MINUTES = 60")
-                && core.contains("MAINTENANCE_MINUTES = 50")) {
+                && core.contains("MAINTENANCE_MINUTES = 45")
+                && core.contains("ACTIVE_REVIEW_MINUTES = 15")) {
             "Fixed timed sessions must be defined by HifzSchedule, not duplicate PreviewConfig constants."
+        }
+        check(session.contains("MURAJAAH_ACTIVE") && session.contains("renderMurajaahActive")) {
+            "The daily masked-recall Révision active must run before the passive Entretien."
         }
         check(config.contains("ITQAN_VISIBLE_REPS_WORKING = 15"))
         check(config.contains("ITQAN_100_REPS_WORKING = 10"))

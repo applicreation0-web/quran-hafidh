@@ -37,6 +37,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     public static final String CONSOLIDATION_FINAL = "CONSOLIDATION_FINAL";
     public static final String LEARNING_FINAL = "LEARNING_FINAL";
     public static final String MURAJAAH = "MURAJAAH";
+    public static final String MURAJAAH_ACTIVE = "MURAJAAH_ACTIVE";
 
     private String mode;
     private HifzPrefs prefs;
@@ -85,7 +86,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!SABQI.equals(mode) && !SABQI_TODAY_REVIEW.equals(mode) && !ITQAN.equals(mode)
                 && !RECENT_SABQI_REVIEW.equals(mode) && !LEARNING_CONSOLIDATION.equals(mode)
                 && !CONSOLIDATION_FINAL.equals(mode) && !LEARNING_FINAL.equals(mode)
-                && !MURAJAAH.equals(mode)) mode = SABQI;
+                && !MURAJAAH.equals(mode) && !MURAJAAH_ACTIVE.equals(mode)) mode = SABQI;
         prefs = new HifzPrefs(this);
         String recordedSessionDate = SABQI_TODAY_REVIEW.equals(mode) && prefs.elapsedFor(mode) > 0L
             ? prefs.sabqiTodayReviewDate()
@@ -195,6 +196,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             else if (LEARNING_CONSOLIDATION.equals(mode)) renderLearningConsolidationCycle();
             else if (CONSOLIDATION_FINAL.equals(mode)) renderConsolidationFinalReview();
             else if (LEARNING_FINAL.equals(mode)) renderLearningFinalReview();
+            else if (MURAJAAH_ACTIVE.equals(mode)) renderMurajaahActive();
             else renderMurajaah();
         } catch (RuntimeException error) {
             sessionCompleted = true;
@@ -596,7 +598,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void onTimedSessionLimit(long elapsed) {
         if (timedSessionLimitReached) return;
         timedSessionLimitReached = true;
-        if (MURAJAAH.equals(mode)) {
+        if (isMurajaahMode()) {
             prefs.setElapsedFor(mode, Math.max(elapsed, clock.elapsedMs()));
             updateMurajaahProgress();
             return;
@@ -786,6 +788,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastMurajaahLabel()));
             return;
         }
+        if (!today.equals(prefs.lastActiveMurajaahDate())) {
+            sessionCompleted = true;
+            program.setText("Révision · active requise");
+            progress.setText("Terminez d’abord la Révision active du jour.");
+            return;
+        }
         if (!prefs.isMurajaahCursorValid()) {
             sessionCompleted = true;
             program.setText("Révision · curseur à vérifier");
@@ -815,8 +823,51 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateMurajaahActions();
     }
 
+    /**
+     * Daily, mandatory, masked-by-default recall test that must be completed before the passive
+     * Entretien comes due — shares the same corpus/cursor traversal as renderMurajaah, but the
+     * whole page is masked from the start (Révéler on demand) instead of shown in clear.
+     */
+    private void renderMurajaahActive(){
+        String today = sessionDate.toString();
+        if (today.equals(prefs.lastActiveMurajaahDate())) {
+            sessionCompleted = true;
+            program.setText("Révision active · séance validée");
+            progress.setText(prefs.lastActiveMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastActiveMurajaahLabel()));
+            return;
+        }
+        if (!prefs.isMurajaahCursorValid()) {
+            sessionCompleted = true;
+            program.setText("Révision active · curseur à vérifier");
+            progress.setText("Le corpus acquis ne contient pas ce curseur.");
+            return;
+        }
+        sessionCompleted = false;
+        timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
+        EligibleCorpus corpus = prefs.murajaahCorpus();
+        int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
+        murajaahPlan = geometry.planEligibleLines(prefs.murajaahCursor(), lines, corpus);
+        murajaahActualEnd = prefs.murajaahActualEnd();
+        if (murajaahActualEnd != null && !corpus.contains(murajaahActualEnd)) {
+            murajaahActualEnd = null;
+            prefs.setMurajaahActualEnd(null);
+        }
+        int savedPage = prefs.murajaahPage();
+        currentPage = savedPage >= 1 && savedPage <= 604
+            ? savedPage : geometry.pageForVerse(murajaahPlan.start);
+        currentSelection = Collections.emptyList();
+        currentMask = 100;
+        currentLineIds = geometry.lineIdsOnPage(currentPage);
+        program.setText("Révision active · objectif " + murajaahObjectiveLabel());
+        updateMurajaahProgress();
+        showCurrent();
+        restoreMurajaahEndpointSelectionOnCurrentPage();
+        updateMurajaahActions();
+    }
+
     private void updateMurajaahActions() {
         actions.removeAllViews();
+        boolean active = MURAJAAH_ACTIVE.equals(mode);
         List<MurajaahSegment> segments = murajaahSegments();
         int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
@@ -832,7 +883,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 }
                 currentPage = geometry.pageForVerse(jumpTarget);
                 currentSelection = Collections.emptyList();
-                currentLineIds = Collections.emptyList();
+                currentLineIds = active ? geometry.lineIdsOnPage(currentPage) : Collections.emptyList();
                 showCurrent();
                 restoreMurajaahEndpointSelectionOnCurrentPage();
                 updateMurajaahActions();
@@ -847,6 +898,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
         murajaahFinishButton.setEnabled(true);
         actions.addView(validateAction);
+        if (active) {
+            LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
+            revealButton = (Button) revealAction.getChildAt(0);
+            configureRevealButton(revealButton);
+            actions.addView(revealAction);
+            updateRevealButton();
+        }
     }
 
     private int murajaahSegmentIndexForPage(List<MurajaahSegment> segments, int page) {
@@ -974,10 +1032,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
         String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
         if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
-        String label = "Révision · réel : " + murajaahPlan.start + " → " + murajaahActualEnd
+        boolean active = MURAJAAH_ACTIVE.equals(mode);
+        String label = (active ? "Révision active · réel : " : "Révision · réel : ") + murajaahPlan.start + " → " + murajaahActualEnd
             + " · prochain curseur " + next + " · " + raw;
-        boolean ok = prefs.completeMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label);
-        if (!ok) { onError("Impossible d’enregistrer la validation de l’Révision."); return; }
+        boolean ok = active
+            ? prefs.completeActiveMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label)
+            : prefs.completeMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label);
+        if (!ok) { onError("Impossible d’enregistrer la validation de la Révision."); return; }
         closeClockForCompletedSession();
         renderMode();
     }
@@ -1041,7 +1102,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateMurajaahProgress() {
-        if (!MURAJAAH.equals(mode) || progress == null || murajaahPlan == null) return;
+        if (!isMurajaahMode() || progress == null || murajaahPlan == null) return;
         String target = "objectif " + targetMinutes() + " min";
         if (murajaahActualEnd == null) {
             progress.setText((timedSessionLimitReached ? target + " atteint" : target)
@@ -1054,20 +1115,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void restoreMurajaahEndpointSelectionOnCurrentPage() {
-        if (!MURAJAAH.equals(mode) || murajaahActualEnd == null || mushaf == null) return;
+        if (!isMurajaahMode() || murajaahActualEnd == null || mushaf == null) return;
         if (geometry.pageForVerse(murajaahActualEnd) != currentPage) return;
         mushaf.setSelection(Collections.singletonList(murajaahActualEnd),
             geometry.lineIdsForVerseRange(murajaahActualEnd, murajaahActualEnd));
     }
 
     private void checkpointMurajaah(long elapsed){
-        if (!MURAJAAH.equals(mode) || sessionCompleted) return;
+        if (!isMurajaahMode() || sessionCompleted) return;
         prefs.setMurajaahActualEnd(murajaahActualEnd);
         prefs.setMurajaahPage(currentPage);
     }
 
     @Override public void onVerseTap(VerseRef verse){
-        if (!MURAJAAH.equals(mode) || murajaahPlan == null) return;
+        if (!isMurajaahMode() || murajaahPlan == null) return;
         EligibleCorpus corpus = prefs.murajaahCorpus();
         if (!corpus.contains(verse)) {
             Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
@@ -1089,11 +1150,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
-        if(target==currentPage)return;closeAudio();currentPage=target;showCurrent();
+        if(target==currentPage)return;closeAudio();currentPage=target;
+        if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=geometry.lineIdsOnPage(currentPage);
+        showCurrent();
         boolean groupedCycle=RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(groupedCycle&&consolidationSession!=null&&!consolidationSession.readyToClose())updateGroupedCycleRepAction();
-        if(MURAJAAH.equals(mode)&&murajaahPlan!=null&&!sessionCompleted)updateMurajaahActions();
+        if(isMurajaahMode()&&murajaahPlan!=null&&!sessionCompleted)updateMurajaahActions();
     }
 
     private void addRoundAction(String symbol,String label,View.OnClickListener listener){
@@ -1157,7 +1220,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode)) metricsStore.clearConsolidation();
     }
     private boolean isTimedMode() {
-        return SABQI_TODAY_REVIEW.equals(mode) || MURAJAAH.equals(mode);
+        return SABQI_TODAY_REVIEW.equals(mode) || MURAJAAH.equals(mode) || MURAJAAH_ACTIVE.equals(mode);
+    }
+    private boolean isMurajaahMode() {
+        return MURAJAAH.equals(mode) || MURAJAAH_ACTIVE.equals(mode);
     }
     private int targetMinutes(){
     SessionKind kind;
@@ -1166,6 +1232,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     else if (ITQAN.equals(mode)) kind = SessionKind.ITQAN;
     else if (RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)
         || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
+    else if (MURAJAAH_ACTIVE.equals(mode)) kind = SessionKind.ACTIVE_MURAJAAH;
     else kind = SessionKind.OLD_ITQAN_MURAJAAH;
     return HifzSchedule.INSTANCE.targetMinutesFor(kind);
 }
@@ -1177,6 +1244,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (LEARNING_CONSOLIDATION.equals(mode)) return "Renforcement";
         if (CONSOLIDATION_FINAL.equals(mode)) return "Consolidation";
         if (LEARNING_FINAL.equals(mode)) return "Renforcement";
+        if (MURAJAAH_ACTIVE.equals(mode)) return "Révision active";
         return "Révision";
     }
     @Override public void onReady(){
@@ -1185,7 +1253,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int page){
         currentPage=page;
-        if(MURAJAAH.equals(mode)&&!sessionCompleted){
+        if(isMurajaahMode()&&!sessionCompleted){
+            if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=geometry.lineIdsOnPage(page);
             prefs.setMurajaahPage(page);
             restoreMurajaahEndpointSelectionOnCurrentPage();
         }
@@ -1194,7 +1263,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         super.onResume();
         if(clock==null)return;
         clock.syncPersistedElapsed(prefs.elapsedFor(mode));
-        if(!sessionCompleted&&!awaitingValidation&&(!timedSessionLimitReached||MURAJAAH.equals(mode)))clock.resume();
+        if(!sessionCompleted&&!awaitingValidation&&(!timedSessionLimitReached||isMurajaahMode()))clock.resume();
     }
     @Override protected void onPause(){
         if(clock==null){super.onPause();return;}
