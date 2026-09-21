@@ -203,8 +203,8 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("encodeContinuousUnit must concatenate every accumulated block's lines",
             policy.contains("static String encodeContinuousUnit(List<String> encodedUnits)"));
         String engine = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java");
-        assertTrue("SNOWBALL/SNOWBALL_FINAL cycles must tolerate up to five configurable weekly days plus the continuous pass",
-            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 6 : 3"));
+        assertTrue("SNOWBALL/SNOWBALL_FINAL cycles must tolerate up to six configurable weekly days plus the continuous pass",
+            engine.contains("protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3"));
     }
 
     /**
