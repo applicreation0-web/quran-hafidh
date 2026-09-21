@@ -524,6 +524,7 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nPages promues : "+prefs.promotedRanges().size()+"\nÀ stabiliser : "+prefs.unconsolidatedPromotedRanges().size()
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanCursor()
             +"\nPosition Révision : "+prefs.murajaahCursor()
+            +"\nPosition Révision active : "+prefs.activeMurajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
             +"\nQuarantaine : "+quarantine.size()+" ligne(s)"
             +"\nVitesse Révision : "+speedStore.maintenanceSummary()

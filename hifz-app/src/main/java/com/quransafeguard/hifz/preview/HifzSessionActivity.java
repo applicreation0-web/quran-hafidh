@@ -829,13 +829,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     /**
      * Daily, mandatory, masked-by-default recall test that must be completed before the passive
-     * Entretien comes due. Starts from the exact same murajaahCursor as renderMurajaah and sizes
-     * its own (shorter, 15-minute) plan the same way — so, since traversal order is deterministic,
-     * this plan is always a strict prefix of whatever passive's own (45-minute) plan will be right
-     * after. Completing it never advances the cursor (see completeActiveMurajaah), so that prefix
-     * gets tested from memory here, then re-read in clear moments later during passive — the same
-     * portion, twice, the same day, for stronger retention. The whole page is masked from the start
-     * (Révéler on demand) instead of shown in clear.
+     * Entretien comes due. Reads its own restricted corpus (activeMurajaahCorpus: settled material
+     * only, never "à stabiliser") and its own independent cursor — testing recall from memory on
+     * material still mid-Stabilisation is discouraging rather than constructive, so active and
+     * passive deliberately no longer share one traversal position; each advances its own cursor
+     * on completion. The whole page is masked from the start (Révéler on demand) instead of shown
+     * in clear.
      */
     private void renderMurajaahActive(){
         String today = sessionDate.toString();
@@ -845,7 +844,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastActiveMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastActiveMurajaahLabel()));
             return;
         }
-        if (!prefs.isMurajaahCursorValid()) {
+        if (!prefs.isActiveMurajaahCursorValid()) {
             sessionCompleted = true;
             program.setText("Révision active · curseur à vérifier");
             progress.setText("Le corpus acquis ne contient pas ce curseur.");
@@ -853,15 +852,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
-        EligibleCorpus corpus = prefs.murajaahCorpus();
+        EligibleCorpus corpus = prefs.activeMurajaahCorpus();
         int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
-        murajaahPlan = geometry.planEligibleLines(prefs.murajaahCursor(), lines, corpus);
-        murajaahActualEnd = prefs.murajaahActualEnd();
+        murajaahPlan = geometry.planEligibleLines(prefs.activeMurajaahCursor(), lines, corpus);
+        murajaahActualEnd = prefs.activeMurajaahActualEnd();
         if (murajaahActualEnd != null && !corpus.contains(murajaahActualEnd)) {
             murajaahActualEnd = null;
-            prefs.setMurajaahActualEnd(null);
+            prefs.setActiveMurajaahActualEnd(null);
         }
-        int savedPage = prefs.murajaahPage();
+        int savedPage = prefs.activeMurajaahPage();
         currentPage = savedPage >= 1 && savedPage <= 604
             ? savedPage : geometry.pageForVerse(murajaahPlan.start);
         currentSelection = Collections.emptyList();
@@ -1040,27 +1039,28 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /**
-     * The active pass deliberately never advances murajaahCursor (see completeActiveMurajaah):
-     * its whole point is to test-then-restudy the same portion, so passive — started right after,
-     * from the same untouched cursor — re-covers it in clear before finally advancing the cursor.
-     * Its elapsed time is also excluded from the maintenance speed calibration, since a masked
-     * recall pass (thinking time, reveals) runs at a different pace than plain passive reading and
-     * would otherwise corrupt the per-line estimate both modes size their line targets from.
+     * Active and passive each advance their own independent cursor over their own corpus (see
+     * activeMurajaahCorpus): active excludes "à stabiliser" material, so the two can diverge —
+     * there is no guaranteed overlap between what active tests and what passive covers that same
+     * day. Active's elapsed time is also excluded from the maintenance speed calibration, since a
+     * masked recall pass (thinking time, reveals) runs at a different pace than plain passive
+     * reading and would otherwise corrupt the per-line estimate both modes size their line targets
+     * from.
      */
     private void completeMurajaahValidation(){
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         long elapsed = clock.elapsedMs();
         int lines = countMurajaahLinesThrough(murajaahActualEnd);
+        EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
+        VerseRef next = corpus.next(murajaahActualEnd);
         if (active) {
             String label = "Révision active · testé : " + murajaahPlan.start + " → " + murajaahActualEnd
-                + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
-            if (!prefs.completeActiveMurajaah(sessionDate.toString(), label)) {
+                + " · prochain curseur " + next + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
+            if (!prefs.completeActiveMurajaah(next, sessionDate.toString(), label)) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
             }
         } else {
-            EligibleCorpus corpus = prefs.murajaahCorpus();
-            VerseRef next = corpus.next(murajaahActualEnd);
             SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
             String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
             if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
@@ -1084,7 +1084,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private int countMurajaahLinesThrough(VerseRef through){
         if (murajaahPlan == null || through == null) return 0;
-        EligibleCorpus corpus = prefs.murajaahCorpus();
+        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
         if (!corpus.contains(through)) throw new IllegalArgumentException("Fin d’Révision hors du corpus acquis : " + through);
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         VerseRef cursor = murajaahPlan.start;
@@ -1155,14 +1155,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void checkpointMurajaah(long elapsed){
         if (!isMurajaahMode() || sessionCompleted) return;
-        prefs.setMurajaahActualEnd(murajaahActualEnd);
-        prefs.setMurajaahPage(currentPage);
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            prefs.setActiveMurajaahActualEnd(murajaahActualEnd);
+            prefs.setActiveMurajaahPage(currentPage);
+        } else {
+            prefs.setMurajaahActualEnd(murajaahActualEnd);
+            prefs.setMurajaahPage(currentPage);
+        }
     }
 
     @Override public void onVerseTap(VerseRef verse){
         if (!isMurajaahMode() || murajaahPlan == null) return;
         if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
-        EligibleCorpus corpus = prefs.murajaahCorpus();
+        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
         if (!corpus.contains(verse)) {
             Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
             return;
@@ -1298,8 +1303,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onPageShown(int page){
         currentPage=page;
         if(isMurajaahMode()&&!sessionCompleted){
-            if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=geometry.lineIdsOnPage(page);
-            prefs.setMurajaahPage(page);
+            if(MURAJAAH_ACTIVE.equals(mode)){
+                currentLineIds=geometry.lineIdsOnPage(page);
+                prefs.setActiveMurajaahPage(page);
+            } else {
+                prefs.setMurajaahPage(page);
+            }
             restoreMurajaahEndpointSelectionOnCurrentPage();
         }
     }

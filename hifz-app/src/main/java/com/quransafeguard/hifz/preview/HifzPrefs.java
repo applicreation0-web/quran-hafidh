@@ -1143,6 +1143,49 @@ public final class HifzPrefs {
     public boolean isMurajaahCursorValid() { try { return murajaahCorpus().contains(murajaahCursor()); } catch (RuntimeException e) { return false; } }
     public boolean isRotationStartValid() { try { return itqanWorkCorpus().contains(itqanRotationStart()); } catch (RuntimeException e) { return false; } }
 
+    /** Every promoted range that has already cleared Consolidation — "Pages promues" minus "À stabiliser". */
+    public List<VerseRange> consolidatedPromotedRanges() {
+        List<VerseRange> settled = new ArrayList<>(promotedRanges());
+        for (VerseRange pending : unconsolidatedPromotedRanges()) {
+            settled = subtractCoverage(settled, pending.getStart(), pending.getEndInclusive());
+        }
+        return settled;
+    }
+
+    /**
+     * Révision active only reads genuinely settled material — the declared-acquired base, historical
+     * migration ranges, and every promoted range that has already cleared Consolidation — never the
+     * "à stabiliser" subset still mid-Stabilisation/Consolidation. Testing recall from memory on
+     * material that hasn't finished its own repetitions yet is discouraging, not constructive; passive
+     * Entretien is unaffected and keeps reading everything (murajaahCorpus), fresh material included.
+     */
+    public EligibleCorpus activeMurajaahCorpus() {
+        ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
+        all.addAll(legacyMurajaahPromotedRanges());
+        all.addAll(consolidatedPromotedRanges());
+        return EligibleCorpus.Companion.of(all);
+    }
+
+    /**
+     * Independent from murajaahCursor: active and passive now read different corpora (active
+     * excludes "à stabiliser"), so they can no longer share one traversal position. Defaults to
+     * the active corpus's own first range rather than a hardcoded verse, since which surahs are
+     * actually settled varies per learner.
+     */
+    public VerseRef activeMurajaahCursor() {
+        String raw = p.getString("activeMurajaahCursor", "");
+        if (!raw.isEmpty()) {
+            try { return GeometryRepository.parseVerse(raw); } catch (RuntimeException malformed) { /* fall through to default */ }
+        }
+        return activeMurajaahCorpus().getRanges().get(0).getStart();
+    }
+
+    public void setActiveMurajaahCursor(VerseRef value) { putRef("activeMurajaahCursor", value); }
+
+    public boolean isActiveMurajaahCursorValid() {
+        try { return activeMurajaahCorpus().contains(activeMurajaahCursor()); } catch (RuntimeException e) { return false; }
+    }
+
     /**
      * Verses flagged during Révision active as a personal weak spot (light E-Ink-safe outline,
      * visible in both active and passive). Global, not scoped to a corpus range: a struggle is a
@@ -1926,6 +1969,17 @@ public final class HifzPrefs {
         else p.edit().remove("murajaahPage").apply();
     }
 
+    /** Active's own progress markers — independent from passive's, since they now read different corpora. */
+    public VerseRef activeMurajaahActualEnd() { return optionalRef("activeMurajaahActualEnd"); }
+    public void setActiveMurajaahActualEnd(VerseRef value) {
+        p.edit().putString("activeMurajaahActualEnd", value == null ? "" : value.toString()).apply();
+    }
+    public int activeMurajaahPage() { return p.getInt("activeMurajaahPage", 0); }
+    public void setActiveMurajaahPage(int value) {
+        if (value >= 1 && value <= 604) p.edit().putInt("activeMurajaahPage", value).apply();
+        else p.edit().remove("activeMurajaahPage").apply();
+    }
+
     public boolean completeMurajaah(VerseRef nextCursor, String date, String label) {
         return completeMurajaah(nextCursor, null, null, date, label);
     }
@@ -1946,17 +2000,17 @@ public final class HifzPrefs {
     }
 
     /**
-     * Closes the daily Révision active (masked recall test): deliberately leaves murajaahCursor
-     * untouched, so the passive Entretien that follows starts at the very same position and its
-     * (larger) range naturally re-covers — in clear, right after — the same portion just tested
-     * from memory. Only resets this session's own transient progress markers so passive opens at
-     * the range's first page instead of resuming where the active pass left off.
+     * Closes the daily Révision active (masked recall test): advances activeMurajaahCursor, its own
+     * independent traversal position over activeMurajaahCorpus (settled material only) — no longer
+     * tied to murajaahCursor/murajaahCorpus, since active deliberately excludes "à stabiliser"
+     * material that passive still reads. Only the day's label is kept; no historical trend.
      */
-    public boolean completeActiveMurajaah(String date, String label) {
+    public boolean completeActiveMurajaah(VerseRef nextCursor, String date, String label) {
+        if (nextCursor == null) return false;
         return p.edit()
-            .putLong("murajaahElapsedMs", 0L)
-            .putString("murajaahActualEnd", "")
-            .remove("murajaahPage")
+            .putString("activeMurajaahCursor", nextCursor.toString())
+            .putString("activeMurajaahActualEnd", "")
+            .remove("activeMurajaahPage")
             .putString("lastActiveMurajaahDate", date)
             .putString("lastActiveMurajaahLabel", label)
             .commit();
