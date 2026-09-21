@@ -206,10 +206,33 @@ public final class SettingsActivity extends android.app.Activity {
             .setNegativeButton("Annuler",null)
             .setPositiveButton("Enregistrer",(dialog,which)->{
                 int days=min+selection[0];
-                if(!prefs.setLearningDaysPerWeek(days)){Toast.makeText(this,"Impossible d’enregistrer ce réglage.",Toast.LENGTH_LONG).show();return;}
-                refreshWeeklyCadence();
-                Toast.makeText(this,"Cadence mise à jour : "+days+" Apprentissage / "+(6-days)+" Stabilisation par semaine.",Toast.LENGTH_LONG).show();
+                if(days==current){applyLearningDaysPerWeek(days);return;}
+                if(HifzClock.today().getDayOfWeek()==DayOfWeek.SUNDAY){applyLearningDaysPerWeek(days);return;}
+                warnBeforeMidWeekCadenceChange(days);
             }).show();
+    }
+
+    /**
+     * The weekly cadence (and its boule de neige accumulator) resets every Monday, with Sunday as
+     * the reserved boundary day — changing the split mid-week leaves days already passed classified
+     * under the old split while the rest of this same week would follow the new one, so a day still
+     * due can be reclassified differently once actually caught up. This can't corrupt anything, so
+     * it's a warning the learner can override, not a hard block until Sunday.
+     */
+    private void warnBeforeMidWeekCadenceChange(int days){
+        new AlertDialog.Builder(this).setTitle("Changement en cours de semaine")
+            .setMessage("Cette semaine a déjà commencé avec l’ancienne répartition. Changer maintenant peut "
+                + "faire que le rattrapage d’un jour resté dû cette semaine ne corresponde plus au type de "
+                + "séance prévu à l’origine. Continuer quand même ?")
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Continuer",(dialog,which)->applyLearningDaysPerWeek(days))
+            .show();
+    }
+
+    private void applyLearningDaysPerWeek(int days){
+        if(!prefs.setLearningDaysPerWeek(days)){Toast.makeText(this,"Impossible d’enregistrer ce réglage.",Toast.LENGTH_LONG).show();return;}
+        refreshWeeklyCadence();
+        Toast.makeText(this,"Cadence mise à jour : "+days+" Apprentissage / "+(6-days)+" Stabilisation par semaine.",Toast.LENGTH_LONG).show();
     }
 
     private void refreshSabqi(){
