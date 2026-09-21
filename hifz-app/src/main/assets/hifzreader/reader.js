@@ -87,6 +87,15 @@ function maskCandidates(lines,polys){
   return out;
 }
 
+function maskRect(segment){
+  const el=document.createElementNS(NS,'rect');
+  el.setAttribute('class','maskcell');
+  el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
+  el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
+  el.setAttribute('rx','2');el.setAttribute('ry','2');
+  return el;
+}
+
 function lineFocusLayer(lines){
   const layer=document.createElementNS(NS,'g');
   layer.setAttribute('class','linefocuslayer');
@@ -185,7 +194,7 @@ function randomSegmentsForCells(cells,percent,order){
     if(remaining<=0.0001)break;
     const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({key:String(cell.key),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
+    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
     remaining-=hiddenWidth;
   }
   return segments;
@@ -238,21 +247,37 @@ function render(){
     if(cells.length){
       const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
       const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
-      const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
-      clip.id='hifz-selection-clip';
-      polys.forEach(p=>{const q=p.cloneNode(false);q.removeAttribute('class');q.removeAttribute('style');clip.appendChild(q)});
-      defs.appendChild(clip);layer.appendChild(defs);
-      const group=document.createElementNS(NS,'g');
-      if(polys.length)group.setAttribute('clip-path','url(#hifz-selection-clip)');
-      segments.forEach(segment=>{
-        const el=document.createElementNS(NS,'rect');
-        el.setAttribute('class','maskcell');
-        el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-        el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-        el.setAttribute('rx','2');el.setAttribute('ry','2');
-        group.appendChild(el);
-      });
-      layer.appendChild(group);
+      if(polys.length){
+        /*
+         * A cell's rectangle is the raw geometric line-cell box, not the selected verse's exact
+         * glyph outline — on a line shared by more than one verse, that box can slightly overhang
+         * a neighbor verse that isn't part of today's block, so clipping to the selected verses'
+         * own polygons stays mandatory there. A single-verse line has no neighbor ink to bleed
+         * onto, so its cells render as clean rectangles instead of being cut to the polygon shape.
+         */
+        const multiVerseLines=new Set(lines.filter(l=>(l.verses||[]).length>1).map(l=>String(l.id)));
+        const open=[],clipped=[];
+        segments.forEach(segment=>(multiVerseLines.has(segment.lineId)?clipped:open).push(segment));
+        if(open.length){
+          const openGroup=document.createElementNS(NS,'g');
+          open.forEach(segment=>openGroup.appendChild(maskRect(segment)));
+          layer.appendChild(openGroup);
+        }
+        if(clipped.length){
+          const defs=document.createElementNS(NS,'defs'),clip=document.createElementNS(NS,'clipPath');
+          clip.id='hifz-selection-clip';
+          polys.forEach(p=>{const q=p.cloneNode(false);q.removeAttribute('class');q.removeAttribute('style');clip.appendChild(q)});
+          defs.appendChild(clip);layer.appendChild(defs);
+          const clippedGroup=document.createElementNS(NS,'g');
+          clippedGroup.setAttribute('clip-path','url(#hifz-selection-clip)');
+          clipped.forEach(segment=>clippedGroup.appendChild(maskRect(segment)));
+          layer.appendChild(clippedGroup);
+        }
+      } else {
+        const group=document.createElementNS(NS,'g');
+        segments.forEach(segment=>group.appendChild(maskRect(segment)));
+        layer.appendChild(group);
+      }
       // Verse-number rosettes are deliberately redrawn above the random masks.
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
