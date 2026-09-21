@@ -98,12 +98,15 @@ public final class MainActivity extends android.app.Activity {
         primary.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 3));
         LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        LinearLayout progress = Ui.cardAction(this, "", "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
         LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
+        geometryActions.add(progress);
         geometryActions.add(settings);
         addWeighted(primary, study, 1f);
         addWeighted(primary, free, 1f);
+        addWeighted(primary, progress, 1f);
         addWeighted(primary, settings, 1f);
         root.addView(primary);
 

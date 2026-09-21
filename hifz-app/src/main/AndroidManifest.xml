@@ -10,6 +10,7 @@
         android:usesCleartextTraffic="false">
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".WeakVersesActivity" android:exported="false" />
+        <activity android:name=".ProgressMapActivity" android:exported="false" />
         <activity
             android:name=".HifzSessionActivity"
             android:exported="false"

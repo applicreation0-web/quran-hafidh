@@ -368,6 +368,7 @@ final class Ui {
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
         if (s.equals("lecture")) return R.drawable.ic_ui_reading;
         if (s.contains("mémor")) return R.drawable.ic_ui_memorize;
+        if (s.contains("progression")) return R.drawable.ic_ui_progress_map;
         if (s.contains("param")) return R.drawable.ic_ui_settings;
         if (s.equals("séance")) return R.drawable.ic_ui_session;
         if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_audio;
