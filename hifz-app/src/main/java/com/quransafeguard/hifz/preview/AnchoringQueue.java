@@ -10,16 +10,17 @@ public final class AnchoringQueue {
     private AnchoringQueue() {}
 
     public enum Origin { RECONSTRUCTION, PROMOTED, FORCED_PROMOTION }
-    public enum Protocol { LIGHT, FULL }
+    /** Named ItqanProtocol (not just Protocol) to stay distinct from ConsolidationCycleEngine.Protocol. */
+    public enum ItqanProtocol { LIGHT, FULL }
 
     public static final class Entry {
         public final String start;
         public final String end;
         public final Origin origin;
-        public final Protocol protocol;
+        public final ItqanProtocol protocol;
         public final int failures;
 
-        public Entry(String start, String end, Origin origin, Protocol protocol, int failures) {
+        public Entry(String start, String end, Origin origin, ItqanProtocol protocol, int failures) {
             if (start == null || start.isEmpty() || end == null || end.isEmpty()) {
                 throw new IllegalArgumentException("anchoring range required");
             }
@@ -133,7 +134,7 @@ public final class AnchoringQueue {
         ArrayList<Entry> failed = new ArrayList<>(source);
         Entry current = failed.get(displayedIndex);
         int failures = current.failures + 1;
-        Protocol protocol = failures >= 3 ? Protocol.FULL : current.protocol;
+        ItqanProtocol protocol = failures >= 3 ? ItqanProtocol.FULL : current.protocol;
         failed.set(displayedIndex, new Entry(current.start, current.end, current.origin, protocol, failures));
         return defer(failed, displayedIndex, places);
     }

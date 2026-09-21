@@ -58,7 +58,7 @@ public final class OfficialReleaseContractTest {
         assertTrue("historical promoted material must retain migration-time Murajaah visibility", prefs.contains("legacyMurajaahPromotedRanges"));
         assertTrue("Itqan work corpus must include all promoted material", prefs.contains("itqanWorkCorpus()"));
         assertTrue("Murajaah corpus must have its own consolidated view", prefs.contains("murajaahCorpus()"));
-        assertTrue("x40 validation must be able to consolidate promoted material", prefs.contains("markPromotedConsolidated"));
+        assertTrue("x40 validation must be able to consolidate promoted material", prefs.contains("completeStabilizationBlockV6"));
         assertFalse("cycle philosophy forbids a priority promotion queue", prefs.contains("pendingPromotedItqan"));
     }
 

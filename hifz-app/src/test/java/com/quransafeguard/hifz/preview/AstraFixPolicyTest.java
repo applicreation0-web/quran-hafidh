@@ -11,9 +11,9 @@ import static org.junit.Assert.assertEquals;
 public final class AstraFixPolicyTest {
     @Test public void newPromotionIsInsertedBeforePendingReconstruction() {
         AnchoringQueue.Entry reconstruction = new AnchoringQueue.Entry(
-            "49:1", "49:5", AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 0);
+            "49:1", "49:5", AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.ItqanProtocol.LIGHT, 0);
         AnchoringQueue.Entry promoted = new AnchoringQueue.Entry(
-            "2:75", "2:82", AnchoringQueue.Origin.PROMOTED, AnchoringQueue.Protocol.FULL, 0);
+            "2:75", "2:82", AnchoringQueue.Origin.PROMOTED, AnchoringQueue.ItqanProtocol.FULL, 0);
 
         List<AnchoringQueue.Entry> merged = AnchoringQueue.mergeWithPromotionPriority(
             Collections.singletonList(reconstruction), 0, false, Collections.singletonList(promoted));
@@ -25,9 +25,9 @@ public final class AstraFixPolicyTest {
 
     @Test public void inProgressFractionatedEntryIsNeverPreemptedByNewPromotion() {
         AnchoringQueue.Entry current = new AnchoringQueue.Entry(
-            "49:1", "49:5", AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 0);
+            "49:1", "49:5", AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.ItqanProtocol.LIGHT, 0);
         AnchoringQueue.Entry promoted = new AnchoringQueue.Entry(
-            "2:75", "2:82", AnchoringQueue.Origin.PROMOTED, AnchoringQueue.Protocol.FULL, 0);
+            "2:75", "2:82", AnchoringQueue.Origin.PROMOTED, AnchoringQueue.ItqanProtocol.FULL, 0);
 
         List<AnchoringQueue.Entry> merged = AnchoringQueue.mergeWithPromotionPriority(
             Collections.singletonList(current), 0, true, Arrays.asList(promoted));

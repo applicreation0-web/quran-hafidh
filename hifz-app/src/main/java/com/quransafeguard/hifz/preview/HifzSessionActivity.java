@@ -59,7 +59,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private GeometryRepository.VerseUnit itqanUnit;
     private AnchoringQueue.Entry anchoringEntry;
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
-    private AnchoringQueue.Protocol itqanSessionProtocol = AnchoringQueue.Protocol.FULL;
+    private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
     private boolean fractionatedItqan;
     private int itqanBlockIndex;
     private int itqanBlockCount = 1;

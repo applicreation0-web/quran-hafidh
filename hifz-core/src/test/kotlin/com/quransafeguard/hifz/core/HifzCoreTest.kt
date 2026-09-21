@@ -1,7 +1,5 @@
 package com.quransafeguard.hifz.core
 
-import java.time.DayOfWeek
-import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -54,30 +52,6 @@ class HifzCoreTest {
         assertEquals(VerseRef(52,10), cursor)
     }
 
-    @Test fun noRetroactiveOverdueBeforeProgramStart() {
-        val start = LocalDate.of(2026,9,11)
-        val today = start
-        assertNull(HifzSchedule.scheduled(LocalDate.of(2026,9,10), start, today))
-        assertEquals(SessionType.SABQI, HifzSchedule.scheduled(start, start, today)?.type)
-    }
-
-    @Test fun weeklyMorningAndEveningPlansMatchFrozenEngine() {
-        fun assertPlan(day: DayOfWeek, morning: SessionKind, evening: SessionKind, morningMinutes: Int, eveningMinutes: Int) {
-            val plan = HifzSchedule.planFor(day)
-            assertEquals(morning, plan.morning.kind)
-            assertEquals(evening, plan.evening.kind)
-            assertEquals(morningMinutes, plan.morning.targetMinutes)
-            assertEquals(eveningMinutes, plan.evening.targetMinutes)
-        }
-        assertPlan(DayOfWeek.MONDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
-        assertPlan(DayOfWeek.TUESDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
-        assertPlan(DayOfWeek.WEDNESDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
-        assertPlan(DayOfWeek.THURSDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
-        assertPlan(DayOfWeek.FRIDAY, SessionKind.SABQI_NEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
-        assertPlan(DayOfWeek.SATURDAY, SessionKind.ITQAN, SessionKind.OLD_ITQAN_MURAJAAH, 60, 45)
-        assertPlan(DayOfWeek.SUNDAY, SessionKind.RECENT_SABQI_REVIEW, SessionKind.OLD_ITQAN_MURAJAAH, 0, 45)
-    }
-
     @Test fun directSessionTargetsDoNotDependOnTodaysSchedule() {
         assertEquals(0, HifzSchedule.targetMinutesFor(SessionKind.SABQI_NEW))
         assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.SABQI_TODAY_REVIEW))
@@ -85,16 +59,5 @@ class HifzCoreTest {
         assertEquals(30, HifzSchedule.targetMinutesFor(SessionKind.RECENT_SABQI_REVIEW))
         assertEquals(45, HifzSchedule.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
         assertEquals(15, HifzSchedule.targetMinutesFor(SessionKind.ACTIVE_MURAJAAH))
-    }
-
-    @Test fun legacyMorningTypeStillMatchesScheduleForCompatibility() {
-        val monday = LocalDate.of(2026,9,14)
-        assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.dayOfWeek))
-        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(monday.plusDays(1).dayOfWeek))
-        assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.plusDays(2).dayOfWeek))
-        assertEquals(SessionType.ITQAN, HifzSchedule.typeFor(monday.plusDays(3).dayOfWeek))
-        assertEquals(SessionType.SABQI, HifzSchedule.typeFor(monday.plusDays(4).dayOfWeek))
-        assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(5).dayOfWeek))
-        assertEquals(SessionType.MURAJAAH, HifzSchedule.typeFor(monday.plusDays(6).dayOfWeek))
     }
 }

@@ -93,7 +93,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertNotNull(entry);
         assertEquals("55:70", entry.start);
         assertEquals("56:16", entry.end);
-        assertEquals(AnchoringQueue.Protocol.FULL, entry.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.FULL, entry.protocol);
         assertEquals(40, PreviewConfig.itqanTotalReps(entry.protocol));
     }
 }

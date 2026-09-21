@@ -15,7 +15,7 @@ import static org.junit.Assert.assertTrue;
 public final class AuditClosurePolicyTest {
     private static AnchoringQueue.Entry entry(String start, String end) {
         return new AnchoringQueue.Entry(start, end,
-            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 0);
+            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.ItqanProtocol.LIGHT, 0);
     }
 
     @Test public void dashboardWindowStartsTodayAndContainsExactlySevenConsecutiveDays() {

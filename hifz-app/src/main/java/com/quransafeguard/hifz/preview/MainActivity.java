@@ -11,7 +11,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.quransafeguard.hifz.core.CadenceAction;
-import com.quransafeguard.hifz.core.DailyPlan;
 import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.ScheduledCadence;

@@ -217,6 +217,10 @@ android {
     namespace = "com.quransafeguard.hifz.preview"
     compileSdk = 37
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26

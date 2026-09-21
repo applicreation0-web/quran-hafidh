@@ -43,39 +43,39 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     @Test public void fullFractionatedUnitKeepsFullAcrossQueueReorder() {
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         AnchoringQueue.Entry before = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(before.start);
         VerseRef end = GeometryRepository.parseVerse(before.end);
         assertTrue(prefs.advanceItqanBlock(1, start, end, "2026-09-13", "bloc 1"));
 
-        putOtherPromotionAtQueueHead(AnchoringQueue.Protocol.FULL);
+        putOtherPromotionAtQueueHead(AnchoringQueue.ItqanProtocol.FULL);
         assertTrue(prefs.reconcileAnchoringQueue(geometry));
         AnchoringQueue.Entry after = prefs.currentAnchoringEntry(geometry);
 
         assertSameIdentity(before, after);
-        assertEquals(AnchoringQueue.Protocol.FULL, after.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.FULL, after.protocol);
         assertEquals(40, PreviewConfig.itqanTotalReps(after.protocol));
     }
 
     @Test public void lightFractionatedUnitKeepsLightAcrossQueueReorder() {
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.LIGHT);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.LIGHT);
         AnchoringQueue.Entry before = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(before.start);
         VerseRef end = GeometryRepository.parseVerse(before.end);
         assertTrue(prefs.advanceItqanBlock(1, start, end, "2026-09-13", "bloc 1"));
 
-        putOtherPromotionAtQueueHead(AnchoringQueue.Protocol.LIGHT);
+        putOtherPromotionAtQueueHead(AnchoringQueue.ItqanProtocol.LIGHT);
         assertTrue(prefs.reconcileAnchoringQueue(geometry));
         AnchoringQueue.Entry after = prefs.currentAnchoringEntry(geometry);
 
         assertSameIdentity(before, after);
-        assertEquals(AnchoringQueue.Protocol.LIGHT, after.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.LIGHT, after.protocol);
         assertEquals(35, PreviewConfig.itqanTotalReps(after.protocol));
     }
 
     @Test public void killRestartWithItqanRepAboveZeroResumesSameUnitAndProtocol() {
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         AnchoringQueue.Entry expected = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(expected.start);
         VerseRef end = GeometryRepository.parseVerse(expected.end);
@@ -92,7 +92,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     @Test public void killRestartWithItqanBlockIndexAboveZeroResumesSameUnitAndProtocol() {
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         AnchoringQueue.Entry expected = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(expected.start);
         VerseRef end = GeometryRepository.parseVerse(expected.end);
@@ -110,7 +110,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     @Test public void todayCardAndSessionScreenAgreeOnUnitAndProtocol() {
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         AnchoringQueue.Entry expected = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(expected.start);
         VerseRef end = GeometryRepository.parseVerse(expected.end);
@@ -124,12 +124,12 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     @Test public void startEndAndProtocolArePreservedExactly() {
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         AnchoringQueue.Entry before = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(before.start);
         VerseRef end = GeometryRepository.parseVerse(before.end);
         assertTrue(prefs.advanceItqanBlock(1, start, end, "2026-09-13", "bloc 1"));
-        putOtherPromotionAtQueueHead(AnchoringQueue.Protocol.FULL);
+        putOtherPromotionAtQueueHead(AnchoringQueue.ItqanProtocol.FULL);
         assertTrue(prefs.reconcileAnchoringQueue(geometry));
 
         HifzPrefs reopened = new HifzPrefs(context);
@@ -141,7 +141,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
 
     @Test public void noPrematureValidationAndNoDoubleCredit() {
         LocalDate today = LocalDate.of(2026, 9, 13);
-        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = fractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         AnchoringQueue.Entry entry = prefs.currentAnchoringEntry(geometry);
         VerseRef start = GeometryRepository.parseVerse(entry.start);
         VerseRef end = GeometryRepository.parseVerse(entry.end);
@@ -157,7 +157,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
 
 
     @Test public void crossSurahBlockSelectionSurvivesActivityRecreation() {
-        HifzPrefs prefs = crossSurahFractionatedFixture(AnchoringQueue.Protocol.FULL);
+        HifzPrefs prefs = crossSurahFractionatedFixture(AnchoringQueue.ItqanProtocol.FULL);
         VerseRef start = new VerseRef(55, 70);
         VerseRef end = new VerseRef(56, 16);
         assertTrue(prefs.advanceItqanBlock(2, start, end,
@@ -170,7 +170,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         assertEquals(end, reopened.itqanUnitEnd());
     }
 
-    private HifzPrefs fractionatedFixture(AnchoringQueue.Protocol protocol) {
+    private HifzPrefs fractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
         new HifzPrefs(context);
         String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
         String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\","
@@ -189,7 +189,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
 
-    private HifzPrefs crossSurahFractionatedFixture(AnchoringQueue.Protocol protocol) {
+    private HifzPrefs crossSurahFractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
         new HifzPrefs(context);
         String range = "[{\"start\":\"55:70\",\"end\":\"56:16\"}]";
         String queue = "[{\"start\":\"55:70\",\"end\":\"56:16\","
@@ -207,7 +207,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         return new HifzPrefs(context);
     }
 
-    private void putOtherPromotionAtQueueHead(AnchoringQueue.Protocol currentProtocol) {
+    private void putOtherPromotionAtQueueHead(AnchoringQueue.ItqanProtocol currentProtocol) {
         String ranges = "[{\"start\":\"2:75\",\"end\":\"2:75\"},"
             + "{\"start\":\"53:1\",\"end\":\"53:26\"}]";
         String queue = "[{\"start\":\"2:75\",\"end\":\"2:75\","

@@ -13,14 +13,14 @@ public final class AnchoringQueueTest {
         AnchoringQueue.Entry entry = new AnchoringQueue.Entry(
             "49:1", "49:18",
             AnchoringQueue.Origin.RECONSTRUCTION,
-            AnchoringQueue.Protocol.LIGHT,
+            AnchoringQueue.ItqanProtocol.LIGHT,
             0
         );
 
         assertEquals("49:1", entry.start);
         assertEquals("49:18", entry.end);
         assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, entry.origin);
-        assertEquals(AnchoringQueue.Protocol.LIGHT, entry.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.LIGHT, entry.protocol);
         assertEquals(0, entry.failures);
     }
 
@@ -45,27 +45,27 @@ public final class AnchoringQueueTest {
     @Test public void inProgressRangeKeepsItsOwnProtocolWhenQueueHeadChanges() {
         List<AnchoringQueue.Entry> input = new ArrayList<>();
         input.add(new AnchoringQueue.Entry("A", "A",
-            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 0));
+            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.ItqanProtocol.LIGHT, 0));
         input.add(new AnchoringQueue.Entry("B", "B",
-            AnchoringQueue.Origin.PROMOTED, AnchoringQueue.Protocol.FULL, 0));
+            AnchoringQueue.Origin.PROMOTED, AnchoringQueue.ItqanProtocol.FULL, 0));
 
         AnchoringQueue.Entry resolved = AnchoringQueue.findByRange(input, "B", "B");
 
         assertEquals("B", resolved.start);
-        assertEquals(AnchoringQueue.Protocol.FULL, resolved.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.FULL, resolved.protocol);
     }
 
     @Test public void thirdFailureSwitchesThatPageToFullAndDefersItThreePlaces() {
         List<AnchoringQueue.Entry> input = entries("A", "B", "C", "D", "E", "F");
         input.set(2, new AnchoringQueue.Entry("C", "C",
-            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.Protocol.LIGHT, 2));
+            AnchoringQueue.Origin.RECONSTRUCTION, AnchoringQueue.ItqanProtocol.LIGHT, 2));
 
         AnchoringQueue.Deferral result = AnchoringQueue.failAndDefer(input, 2, 3);
 
         assertEquals(Arrays.asList("D", "E", "F", "C", "A", "B"), starts(result.entries));
         AnchoringQueue.Entry failed = result.entries.get(3);
         assertEquals(3, failed.failures);
-        assertEquals(AnchoringQueue.Protocol.FULL, failed.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.FULL, failed.protocol);
         assertEquals(0, result.nextIndex);
     }
 
@@ -74,7 +74,7 @@ public final class AnchoringQueueTest {
         for (String start : starts) {
             out.add(new AnchoringQueue.Entry(start, start,
                 AnchoringQueue.Origin.RECONSTRUCTION,
-                AnchoringQueue.Protocol.LIGHT, 0));
+                AnchoringQueue.ItqanProtocol.LIGHT, 0));
         }
         return out;
     }

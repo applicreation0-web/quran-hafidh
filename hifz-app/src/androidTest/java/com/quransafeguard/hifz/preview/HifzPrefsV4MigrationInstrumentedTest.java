@@ -48,7 +48,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.forcedPromotedRanges().isEmpty());
         AnchoringQueue.Entry first = prefs.currentAnchoringEntry(GeometryRepository.get(context));
         assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, first.origin);
-        assertEquals(AnchoringQueue.Protocol.LIGHT, first.protocol);
+        assertEquals(AnchoringQueue.ItqanProtocol.LIGHT, first.protocol);
     }
 
     @Test public void alreadyV4InstallPurgesObsoleteStableRecentLinesAndRepairsNewOptionalKeys() {

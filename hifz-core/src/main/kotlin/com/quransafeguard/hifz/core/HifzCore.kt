@@ -7,8 +7,9 @@ import java.time.LocalDate
  * Shared pure domain primitives actually consumed by Quran Hifz.
  *
  * Session/repetition/masking state intentionally lives in the Android Hifz engine
- * (PreviewConfig/HifzPrefs/HifzSessionActivity). Keeping a second unused session
- * engine here previously allowed CI to validate rules that the APK did not execute.
+ * (PreviewConfig/HifzPrefs/HifzSessionActivity). A parallel session-scheduling engine
+ * (SessionType/DailyPlan/typeFor/planFor/scheduled) used to live here too, unreachable
+ * from the APK; it was removed rather than kept as untested-by-runtime documentation.
  */
 data class VerseRef(val surah: Int, val ayah: Int) : Comparable<VerseRef> {
     init { QuranCanon.requireValid(this) }
@@ -126,8 +127,6 @@ class EligibleCorpus private constructor(val ranges: List<VerseRange>) {
     }
 }
 
-enum class SessionType { SABQI, ITQAN, MURAJAAH }
-
 enum class SessionKind {
     SABQI_NEW,
     SABQI_TODAY_REVIEW,
@@ -139,10 +138,6 @@ enum class SessionKind {
 
 enum class CadenceAction { LEARNING, STABILIZATION, REVISION }
 
-data class PlannedSession(val kind: SessionKind, val targetMinutes: Int)
-data class DailyPlan(val morning: PlannedSession, val evening: PlannedSession)
-
-data class ScheduledSession(val date: LocalDate, val type: SessionType, val overdue: Boolean = false)
 data class ScheduledCadence(
     val scheduledDate: LocalDate,
     val action: CadenceAction,
@@ -216,37 +211,5 @@ object HifzSchedule {
             date = date.plusDays(1)
         }
         return null
-    }
-
-    fun typeFor(day: DayOfWeek): SessionType = when (day) {
-        DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> SessionType.SABQI
-        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY -> SessionType.ITQAN
-        DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> SessionType.MURAJAAH
-    }
-
-    /**
-     * A zero target means repetition-driven with no time envelope. Entretien (Murajaah) is a
-     * fixed nightly touch every evening, Sunday included: Sunday morning instead carries the
-     * weekly snowball's ×5 final review (also repetition-driven, not time-boxed), but Sunday
-     * evening still gets its own ordinary 30-minute Entretien like every other day.
-     */
-    fun planFor(day: DayOfWeek): DailyPlan = when (day) {
-        DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY -> DailyPlan(
-            PlannedSession(SessionKind.SABQI_NEW, targetMinutesFor(SessionKind.SABQI_NEW)),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
-        )
-        DayOfWeek.TUESDAY, DayOfWeek.THURSDAY, DayOfWeek.SATURDAY -> DailyPlan(
-            PlannedSession(SessionKind.ITQAN, targetMinutesFor(SessionKind.ITQAN)),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
-        )
-        DayOfWeek.SUNDAY -> DailyPlan(
-            PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 0),
-            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))
-        )
-    }
-
-    fun scheduled(date: LocalDate, programStartDate: LocalDate, today: LocalDate): ScheduledSession? {
-        if (date < programStartDate) return null
-        return ScheduledSession(date, typeFor(date.dayOfWeek), overdue = date < today)
     }
 }

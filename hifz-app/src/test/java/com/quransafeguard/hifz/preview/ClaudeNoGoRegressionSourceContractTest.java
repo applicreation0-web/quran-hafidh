@@ -607,11 +607,6 @@ public final class ClaudeNoGoRegressionSourceContractTest {
      * (lastMurajaahDate) so it can't be silently skipped or double-validated.
      */
     @Test public void sundayEveningNowOffersTheOrdinaryEntretien() throws Exception {
-        String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
-        String planFor = method(core, "fun planFor(day: DayOfWeek): DailyPlan = when (day) {", "fun scheduled(");
-        assertTrue("Sunday's evening slot must be the ordinary maintenance Entretien",
-            planFor.contains("DayOfWeek.SUNDAY -> DailyPlan(\n            PlannedSession(SessionKind.RECENT_SABQI_REVIEW, 0),\n            PlannedSession(SessionKind.OLD_ITQAN_MURAJAAH, targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH))"));
-
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("computeNextMode's REVISION case must fall through to the evening Entretien once both finales resolve",
             main.contains("if(!consolidationFinalResolved(today))return HifzSessionActivity.CONSOLIDATION_FINAL;\n                return eveningRevisionMode(today);"));

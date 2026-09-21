@@ -518,7 +518,8 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void showDiagnostic(){
         List<String> quarantine=prefs.v6QuarantineLineIds();
-        String state="Schéma : "+prefs.schema()+"\nDébut programme : "+prefs.programStartDate()
+        String state="Version : "+BuildConfig.VERSION_NAME+" ("+BuildConfig.VERSION_CODE+")"
+            +"\nSchéma : "+prefs.schema()+"\nDébut programme : "+prefs.programStartDate()
             +"\nApprentissage : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
             +"\nPlages Acquises : "+prefs.itqanRanges().size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
             +"\nPages promues : "+prefs.promotedRanges().size()+"\nÀ stabiliser : "+prefs.unconsolidatedPromotedRanges().size()

@@ -80,18 +80,18 @@ public final class PreviewConfig {
     }
 
     public static int itqanMaskForNextRep(int completed) {
-        return itqanMaskForNextRep(completed, AnchoringQueue.Protocol.FULL);
+        return itqanMaskForNextRep(completed, AnchoringQueue.ItqanProtocol.FULL);
     }
 
-    public static int itqanTotalReps(AnchoringQueue.Protocol protocol) {
-        return protocol == AnchoringQueue.Protocol.LIGHT ? ITQAN_LIGHT_TOTAL_REPS : ITQAN_TOTAL_REPS;
+    public static int itqanTotalReps(AnchoringQueue.ItqanProtocol protocol) {
+        return protocol == AnchoringQueue.ItqanProtocol.LIGHT ? ITQAN_LIGHT_TOTAL_REPS : ITQAN_TOTAL_REPS;
     }
 
-    public static int itqanMaskForNextRep(int completed, AnchoringQueue.Protocol protocol) {
+    public static int itqanMaskForNextRep(int completed, AnchoringQueue.ItqanProtocol protocol) {
         int total = itqanTotalReps(protocol);
         if (completed < 0 || completed >= total) return 0;
         int next = completed + 1;
-        boolean light = protocol == AnchoringQueue.Protocol.LIGHT;
+        boolean light = protocol == AnchoringQueue.ItqanProtocol.LIGHT;
         int a = light ? ITQAN_LIGHT_VISIBLE_REPS : ITQAN_VISIBLE_REPS_WORKING;
         int b = a + (light ? ITQAN_LIGHT_25_REPS : ITQAN_25_REPS_WORKING);
         int c = b + (light ? ITQAN_LIGHT_50_REPS : ITQAN_50_REPS_WORKING);
@@ -103,7 +103,7 @@ public final class PreviewConfig {
         return 100;
     }
 
-    public static boolean isItqanValidationRep(int completedBefore, AnchoringQueue.Protocol protocol) {
+    public static boolean isItqanValidationRep(int completedBefore, AnchoringQueue.ItqanProtocol protocol) {
         int next = completedBefore + 1;
         int total = itqanTotalReps(protocol);
         return next >= total - 1 && next <= total

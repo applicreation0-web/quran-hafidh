@@ -1585,7 +1585,7 @@ public final class HifzPrefs {
                     out.add(new AnchoringQueue.Entry(
                         start, end,
                         AnchoringQueue.Origin.valueOf(o.getString("origin")),
-                        AnchoringQueue.Protocol.valueOf(o.getString("protocol")),
+                        AnchoringQueue.ItqanProtocol.valueOf(o.getString("protocol")),
                         Math.max(0, o.optInt("failures", 0))));
                 } catch (Exception malformedEntry) {
                     repaired = true;
@@ -1660,7 +1660,7 @@ public final class HifzPrefs {
                         boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
                         expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
                             AnchoringQueue.originFor(reconstruction, forced),
-                            reconstruction ? AnchoringQueue.Protocol.LIGHT : AnchoringQueue.Protocol.FULL, 0));
+                            reconstruction ? AnchoringQueue.ItqanProtocol.LIGHT : AnchoringQueue.ItqanProtocol.FULL, 0));
                     }
                     VerseRef next = pendingCorpus.next(unit.end);
                     if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
@@ -2590,17 +2590,6 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
     public boolean isForcedPromoted(VerseRef verse) {
         for (VerseRange range : forcedPromotedRanges()) if (range.contains(verse)) return true;
         return false;
-    }
-
-    /** Mark only the completed overlap consolidated; unrelated pending promotions remain queued in-place. */
-    public boolean markPromotedConsolidated(VerseRef start, VerseRef endInclusive) {
-        List<VerseRange> next = subtractCoverage(unconsolidatedPromotedRanges(), start, endInclusive);
-        List<VerseRange> forced = subtractCoverage(forcedPromotedRanges(), start, endInclusive);
-        return p.edit()
-            .putString("unconsolidatedPromotedRanges", rangesJson(next))
-            .putString("forcedPromotedRanges", rangesJson(forced))
-            .putBoolean("anchoringQueueInitialized", false)
-            .commit();
     }
 
     private void saveRecent(List<RecentSabqi> queue) {
