@@ -61,6 +61,7 @@ public final class MushafView extends WebView {
     private List<VerseRef> currentHighlights = Collections.emptyList();
     private String landmarkStartLineId;
     private String landmarkEndLineId;
+    private boolean maskFollowsSelection = true;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -209,6 +210,7 @@ public final class MushafView extends WebView {
                 .put("highlights", highlights)
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
+                .put("maskFollowsSelection", maskFollowsSelection)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -276,6 +278,19 @@ public final class MushafView extends WebView {
         String endArg = endLineId == null ? "null" : JSONObject.quote(endLineId);
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setLandmarks(" + startArg + "," + endArg + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    /**
+     * Sabqi/Itqan's selection IS the memorization block sharing physical lines with un-selected
+     * neighbor verses, so masking must stay clipped to the selected verses' own shapes there
+     * (the default, true). Murajaah's selection only flags the last verse actually revised for
+     * display — it must not also shrink the mask pool down to that one verse's own shape.
+     */
+    public void setMaskFollowsSelection(boolean value) {
+        maskFollowsSelection = value;
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setMaskFollowsSelection(" + value + ");",
             ignored -> post(() -> eink.local(this, prefs))));
     }
 

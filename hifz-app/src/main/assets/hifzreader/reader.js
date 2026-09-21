@@ -13,6 +13,15 @@ let strictLineFocus=!!boot.strictLineFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
+/*
+ * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
+ * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
+ * must stay clipped to the selected verses' own polygons so a neighbor's text on the same line
+ * never gets exposed as maskable. Murajaah instead uses `selected` purely to flag the "last verse
+ * actually revised" for display; it has no bearing on how much of the page should be maskable, so
+ * it must NOT also narrow the mask pool down to that one verse's own shape.
+ */
+let maskFollowsSelection=boot.maskFollowsSelection!==false;
 let audioVerse=null;
 let maskOrderSignature='';
 let maskOrder=[];
@@ -225,7 +234,7 @@ function render(){
 
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
   if(clamped&&pageGeo&&lineIds.length&&lines.length){
-    const polys=selectedPolygons(svg),cells=maskCandidates(lines,polys);
+    const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);
     if(cells.length){
       const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
       const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
@@ -296,6 +305,7 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
+  setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},

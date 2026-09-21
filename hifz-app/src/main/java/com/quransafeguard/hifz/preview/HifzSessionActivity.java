@@ -823,6 +823,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask = 0;
         program.setText("Révision · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
+        mushaf.setMaskFollowsSelection(false);
         mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
@@ -870,6 +871,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = applyActiveLandmarks(currentPage);
         program.setText("Révision active · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
+        mushaf.setMaskFollowsSelection(false);
         mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
         showCurrent();
         restoreMurajaahEndpointSelectionOnCurrentPage();
