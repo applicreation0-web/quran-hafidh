@@ -33,6 +33,39 @@ function verseOf(p){return p.getAttribute('surah')+':'+p.getAttribute('ayah')}
 function selectedPolygons(svg){return [...svg.querySelectorAll('.ayahPolygon')].filter(p=>selected.includes(String(p.dataset.verse)))}
 function shadeVerseSelection(){if(strictLineFocus)return false;return true}
 
+/*
+ * Right/left-page memory cue (odd page number = right-hand page, even = left-hand page, the same
+ * parity every printed book uses). The 3 short bars must NEVER sit on top of the actual Quran
+ * text, and real per-page margins inside the Mushaf image are far too thin on most of the 604
+ * pages to guarantee that (as little as ~4px on some pages) — so this only ever draws in the
+ * blank gutter that already exists beside #mushaf on wider screens (a side-effect of its fixed
+ * 345:550 aspect ratio), never inside the Mushaf element itself, and stays hidden entirely on
+ * narrower screens where no such gutter exists. The Quran page's own size and position are never
+ * touched by this.
+ */
+function updateSideMarks(){
+  const marks=document.getElementById('sidemarks');
+  const mushafEl=document.getElementById('mushaf');
+  if(!marks||!mushafEl)return;
+  const markWidth=eink?1.7:1.4,markGap=3,safety=3;
+  const marksWidth=3*markWidth+2*markGap;
+  const minGutter=marksWidth+2*safety;
+  const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
+  const rect=mushafEl.getBoundingClientRect();
+  const rightGutter=viewportWidth-rect.right;
+  const leftGutter=rect.left;
+  const onOuterRight=currentPage%2===1;
+  const gutter=onOuterRight?rightGutter:leftGutter;
+  if(!(gutter>=minGutter)){marks.classList.remove('show');return}
+  const inset=(gutter-marksWidth)/2;
+  marks.style.left=onOuterRight?'auto':inset+'px';
+  marks.style.right=onOuterRight?inset+'px':'auto';
+  marks.style.top=(rect.top+rect.height*0.30)+'px';
+  marks.style.height=(rect.height*0.40)+'px';
+  marks.classList.add('show');
+}
+window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));
+
 function prepare(){
   const svg=currentSvg();
   if(!svg){N?.error('SVG Mushaf absent');return}
@@ -42,6 +75,7 @@ function prepare(){
     p.onclick=e=>{e.stopPropagation();const [s,a]=k.split(':').map(Number);N?.verseTap(s,a)};
   });
   render();
+  requestAnimationFrame(updateSideMarks);
   N?.pageShown(currentPage);
 }
 document.addEventListener('click',()=>N?.surfaceTap?.());
@@ -313,9 +347,10 @@ function revealSelection(visibleFraction){
     if(height>limit-safeTop)needed=maxUp;
     const delta=Math.min(needed,maxUp);
     if(delta>0)document.documentElement.style.setProperty('--reveal-shift',(-delta)+'px');
+    updateSideMarks();
   });
 }
-function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px')}
+function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks()}
 
 window.HifzReader={
   setGeometry(geometry){pageGeo=geometry||null;render()},
@@ -331,7 +366,7 @@ window.HifzReader={
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
-  setEink(value){eink=!!value;render()},
+  setEink(value){eink=!!value;render();updateSideMarks()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},
   page(){return currentPage}
