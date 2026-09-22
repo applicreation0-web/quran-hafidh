@@ -138,7 +138,7 @@ public final class OfficialReleaseContractTest {
 
     @Test public void officialVersionIsIncremented() throws Exception {
         String gradle = read("hifz-app/build.gradle.kts");
-        assertTrue("0.7.7 must increment versionCode beyond installed 0.7.6", gradle.contains("versionCode = 14"));
-        assertTrue("official candidate must identify the 0.7.7 BOOX release", gradle.contains("versionName = \"0.7.7-boox\""));
+        assertTrue("0.7.8 must increment versionCode beyond published 0.7.7", gradle.contains("versionCode = 15"));
+        assertTrue("official candidate must identify the 0.7.8 BOOX release", gradle.contains("versionName = \"0.7.8-boox\""));
     }
 }

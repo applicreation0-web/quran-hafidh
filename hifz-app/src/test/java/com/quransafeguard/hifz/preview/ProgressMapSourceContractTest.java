@@ -110,4 +110,15 @@ public final class ProgressMapSourceContractTest {
         assertTrue("a tapped cell must jump Lecture to that exact page",
             activity.contains("intent.putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE, page);"));
     }
+
+    @Test public void touchHandlingClaimsActionDownSoActionUpIsEverDelivered() throws Exception {
+        String grid = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressGridView.java");
+        String onTouchEvent = method(grid, "public boolean onTouchEvent(MotionEvent event) {", "\n    }");
+        assertTrue("a View returning false for ACTION_DOWN never receives that gesture's ACTION_UP "
+                + "(Android stops delivering it entirely) — ACTION_DOWN must be claimed with true, or "
+                + "tapping a cell can never navigate anywhere",
+            onTouchEvent.contains("if (event.getAction() == MotionEvent.ACTION_DOWN) return true;"));
+        assertTrue("the ACTION_DOWN claim must come before the ACTION_UP handling it exists to unlock",
+            onTouchEvent.indexOf("MotionEvent.ACTION_DOWN") < onTouchEvent.indexOf("MotionEvent.ACTION_UP"));
+    }
 }

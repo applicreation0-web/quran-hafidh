@@ -68,7 +68,11 @@ final class ProgressGridView extends View {
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
-        if (event.getAction() != MotionEvent.ACTION_UP || listener == null || cellSize <= 0) return false;
+        if (listener == null || cellSize <= 0) return false;
+        // A View that returns false for ACTION_DOWN never receives the ACTION_UP that follows it
+        // (Android stops delivering that gesture to it entirely) — so ACTION_DOWN must be claimed.
+        if (event.getAction() == MotionEvent.ACTION_DOWN) return true;
+        if (event.getAction() != MotionEvent.ACTION_UP) return false;
         int col = (int) (event.getX() / cellSize), row = (int) (event.getY() / cellSize);
         if (col < 0 || col >= COLUMNS || row < 0) return false;
         int page = row * COLUMNS + col + 1;
