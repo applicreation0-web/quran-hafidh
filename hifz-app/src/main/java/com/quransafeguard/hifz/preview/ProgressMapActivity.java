@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -47,12 +48,21 @@ public final class ProgressMapActivity extends android.app.Activity {
         LinearLayout root = Ui.column(this);
         scroll.addView(root);
 
-        TextView title = Ui.bookText(this, "Carte de progression", 20, true);
-        title.setPadding(0, 0, 0, Ui.dp(this, 4));
-        root.addView(title);
+        LinearLayout top = Ui.row(this);
+        top.setPadding(0, 0, 0, Ui.dp(this, 2));
+        top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
+        TextView title = Ui.bookText(this, "Carte de progression", 18, true);
+        Ui.weight(title, 1f);
+        title.setGravity(Gravity.CENTER);
+        top.addView(title);
+        TextView balance = Ui.text(this, "", 1f, false);
+        balance.setMinWidth(Ui.dp(this, 44));
+        top.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
+        root.addView(top);
+
         TextView subtitle = Ui.text(this, "604 pages du Mushaf, dans l’ordre canonique.", 12.5f, false);
         subtitle.setTextColor(Ui.MUTED);
-        subtitle.setPadding(0, 0, 0, Ui.dp(this, 14));
+        subtitle.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 14));
         root.addView(subtitle);
 
         root.addView(legend());
