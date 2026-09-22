@@ -556,6 +556,7 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nPosition Révision active : "+prefs.activeMurajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
             +"\nQuarantaine : "+quarantine.size()+" ligne(s)"
+            +"\nEstimation fin Stabilisation : "+stabilizationEtaSummary()
             +"\nVitesse Révision : "+speedStore.maintenanceSummary()
             +"\nVitesse Consolidation : "+speedStore.consolidationSummary();
         AlertDialog.Builder dialog=new AlertDialog.Builder(this)
@@ -577,6 +578,19 @@ public final class SettingsActivity extends android.app.Activity {
             });
         }
         dialog.show();
+    }
+
+    /**
+     * Stabilisation runs a fixed PreviewConfig.STABILIZATION_WEEKLY_LINES lines/week (3 sessions,
+     * Tue/Thu/Sat, 8+7+7) regardless of learningDaysPerWeek, so remaining physical lines divided
+     * by that pace, projected from today, is an honest — if optimistic, since a weekly unit can
+     * end early at a surah boundary — estimate of when "à stabiliser" clears entirely.
+     */
+    private String stabilizationEtaSummary(){
+        int remaining=prefs.stabilizationLinesRemaining(geometry);
+        if(remaining==0)return "à jour";
+        int weeks=(remaining+PreviewConfig.STABILIZATION_WEEKLY_LINES-1)/PreviewConfig.STABILIZATION_WEEKLY_LINES;
+        return remaining+" ligne(s) restante(s) · ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
     }
 
     private void confirmReset(){

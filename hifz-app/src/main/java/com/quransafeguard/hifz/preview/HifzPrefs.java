@@ -576,6 +576,27 @@ public final class HifzPrefs {
         }
     }
 
+    /**
+     * Physical lines owned by unconsolidatedPromotedRanges ("à stabiliser") that haven't reached
+     * Stabilized or Acquired yet — what Diagnostic's completion estimate divides by
+     * PreviewConfig.STABILIZATION_WEEKLY_LINES to project an ETA.
+     */
+    int stabilizationLinesRemaining(GeometryRepository geometry) {
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            int remaining = 0;
+            for (VerseRange range : unconsolidatedPromotedRanges()) {
+                for (String lineId : CorpusLinePolicy.ownedLineIdsForRangeOnPage(
+                        range.getStart(), range.getEndInclusive(), geometry)) {
+                    if (!stabilized.contains(lineId) && !acquired.contains(lineId)) remaining++;
+                }
+            }
+            return remaining;
+        }
+    }
+
     void resolveV6Quarantine(
             String lineId,
             HifzV6Migration.QuarantineResolution resolution) {
