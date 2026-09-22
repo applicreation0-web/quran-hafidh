@@ -11,12 +11,14 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * Right/left-page memory cue (odd page = right-hand page, even = left-hand page): 3 short bars
- * drawn ONLY in the natural blank gutter beside #mushaf (a side-effect of its fixed 345:550
- * aspect ratio on wider screens), never inside the Mushaf element itself. Real per-page margins
- * inside the Mushaf image were measured too thin on most of the 604 pages (as little as ~4px) to
- * safely guarantee zero contact with the actual Quran text there, and the reading zone's own
- * sizing formula must never be touched — so this feature only ever reads #mushaf's rendered
- * rect, never writes to its size, and hides itself entirely when no gutter is wide enough.
+ * drawn beside #mushaf, never inside it. Real per-page margins inside the Mushaf image were
+ * measured too thin on most of the 604 pages (as little as ~4px) to safely guarantee zero contact
+ * with the actual Quran text there, so the reading zone now deliberately reserves a small fixed
+ * gutter (40px total width) instead of relying only on whatever space a device's own aspect ratio
+ * happens to leave — an explicit, user-approved trade-off, applied only on screens narrow enough
+ * to need it (a screen with a wider natural gutter already is completely unaffected, since the
+ * formula only ever shrinks #mushaf down to that reserved cap, never below its previous size).
+ * reader.js still only ever reads #mushaf's rendered rect afterwards, never writes to its size.
  */
 public final class SideMarksSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -34,15 +36,20 @@ public final class SideMarksSourceContractTest {
         return source.substring(a, b);
     }
 
-    @Test public void mushafReadingZoneSizingIsUntouched() throws Exception {
+    @Test public void mushafReservesAFixedGutterAndTheBarsAreTaperedForStyle() throws Exception {
         String index = read("hifz-app/src/main/assets/hifzreader/index.html");
-        assertTrue("the Mushaf's own sizing formula must stay byte-for-byte identical — this "
-                + "feature may only read its rendered rect, never resize it",
-            index.contains("#mushaf{width:min(100vw,calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);"
+        assertTrue("the reading zone must cap #mushaf at 100vw minus a fixed 40px, not just 100vw — "
+                + "this is the explicit, user-approved reservation that guarantees the bars always "
+                + "have room, even on screens whose own aspect ratio would otherwise leave none",
+            index.contains("#mushaf{width:min(calc(100vw - 40px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);"
                 + "transform:translateY(var(--reveal-shift));transform-origin:center center}"));
         assertTrue("the bars must be hidden by default, appearing only once JS confirms a safe gutter",
-            index.contains("#sidemarks{position:absolute;display:none;flex-direction:row;align-items:stretch;"
+            index.contains("#sidemarks{position:absolute;display:none;flex-direction:row;align-items:center;"
                 + "justify-content:center;gap:3px;pointer-events:none}"));
+        assertTrue("a calligraphic taper — the two flanking bars shorter than the center one, "
+                + "rounded ends — rather than three identical ticks",
+            index.contains("#sidemarks span{width:1.4px;height:100%;background:var(--sidemark);border-radius:1px}")
+                && index.contains("#sidemarks span:first-child,#sidemarks span:last-child{height:72%}"));
         assertTrue("e-ink must get a slightly thicker stroke, like every other mark in this reader "
                 + "(.ayahPolygon.audio, .weakoutline) — thin/low-contrast marks risk vanishing under "
                 + "a fast 1-bit e-ink refresh",
