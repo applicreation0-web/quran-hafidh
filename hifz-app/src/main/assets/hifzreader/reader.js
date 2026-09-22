@@ -66,6 +66,45 @@ function updateSideMarks(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));
 
+/*
+ * Center/spine cue: a single "tasbih" thread — a thin vertical line strung with small
+ * diamond beads — drawn in the gutter on the OPPOSITE side from #sidemarks, marking where
+ * the book's binding would be. Spans the Mushaf's full rendered height (there is no natural
+ * midpoint to draw the eye to here, unlike the side bars' central taper), and, like the side
+ * bars, only ever draws in a gutter #mushaf's own sizing has left beside it — never inside
+ * it — and hides rather than guess when that gutter is too narrow for even one bead.
+ */
+function updateCenterMark(){
+  const mark=document.getElementById('centermark');
+  const mushafEl=document.getElementById('mushaf');
+  if(!mark||!mushafEl)return;
+  const beadSize=eink?6:5,safety=3;
+  const minGutter=beadSize+2*safety;
+  const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
+  const rect=mushafEl.getBoundingClientRect();
+  const rightGutter=viewportWidth-rect.right;
+  const leftGutter=rect.left;
+  const onOuterRight=currentPage%2===1;
+  const gutter=onOuterRight?leftGutter:rightGutter;
+  if(!(gutter>=minGutter)){mark.classList.remove('show');while(mark.children.length>1)mark.removeChild(mark.lastChild);return}
+  const inset=(gutter-beadSize)/2;
+  mark.style.left=onOuterRight?inset+'px':'auto';
+  mark.style.right=onOuterRight?'auto':inset+'px';
+  mark.style.top=rect.top+'px';
+  mark.style.height=rect.height+'px';
+  const spacing=28;
+  const count=Math.max(1,Math.round(rect.height/spacing));
+  while(mark.children.length>1+count)mark.removeChild(mark.lastChild);
+  while(mark.children.length<1+count)mark.appendChild(document.createElement('div'));
+  for(let i=0;i<count;i++){
+    const bead=mark.children[i+1];
+    bead.className='bead';
+    bead.style.top=(((i+0.5)/count)*100)+'%';
+  }
+  mark.classList.add('show');
+}
+window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));
+
 function prepare(){
   const svg=currentSvg();
   if(!svg){N?.error('SVG Mushaf absent');return}
@@ -76,6 +115,7 @@ function prepare(){
   });
   render();
   requestAnimationFrame(updateSideMarks);
+  requestAnimationFrame(updateCenterMark);
   N?.pageShown(currentPage);
 }
 document.addEventListener('click',()=>N?.surfaceTap?.());
@@ -348,9 +388,10 @@ function revealSelection(visibleFraction){
     const delta=Math.min(needed,maxUp);
     if(delta>0)document.documentElement.style.setProperty('--reveal-shift',(-delta)+'px');
     updateSideMarks();
+    updateCenterMark();
   });
 }
-function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks()}
+function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks();updateCenterMark()}
 
 window.HifzReader={
   setGeometry(geometry){pageGeo=geometry||null;render()},
@@ -366,7 +407,7 @@ window.HifzReader={
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
-  setEink(value){eink=!!value;render();updateSideMarks()},
+  setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},
   page(){return currentPage}

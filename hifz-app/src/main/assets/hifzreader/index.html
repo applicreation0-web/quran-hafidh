@@ -22,6 +22,16 @@ html,body{margin:0;width:100%;height:100%;background:var(--paper);color:#000;-we
 #sidemarks span{width:1.4px;height:100%;background:var(--sidemark);border-radius:1px}
 #sidemarks span:first-child,#sidemarks span:last-child{height:72%}
 body.eink #sidemarks span{width:1.7px}
+/* Center/spine cue: a single "tasbih" thread strung with small diamond beads, drawn in the
+   gutter on the OPPOSITE side from #sidemarks, marking where the book's binding would be.
+   Runs the Mushaf's full rendered height (there's no midpoint to draw the eye to here, unlike
+   the side bars' taper) — reader.js only reveals it once it has measured room for one bead. */
+#centermark{position:absolute;display:none;width:12px;pointer-events:none}
+#centermark.show{display:block}
+#centermark .thread{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--sidemark);opacity:.45;transform:translateX(-50%)}
+#centermark .bead{position:absolute;left:50%;width:5px;height:5px;border-radius:1.5px;background:var(--sidemark);transform:translate(-50%,-50%) rotate(45deg)}
+body.eink #centermark .thread{width:1.3px;opacity:.55}
+body.eink #centermark .bead{width:6px;height:6px}
 /* Fit the complete canonical Mushaf inside the native reading zone, reserving a small fixed gutter
    for the side marks above. Keep 2px safety top/bottom on E-Ink. */
 #mushaf{width:min(calc(100vw - 40px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);transform:translateY(var(--reveal-shift));transform-origin:center center}
@@ -41,5 +51,5 @@ body.eink .weakoutline{stroke-width:1}
 .eink *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 </style>
 </head>
-<body><div id="box"><div id="sidemarks" aria-hidden="true"><span></span><span></span><span></span></div><div id="mushaf" aria-label="Mushaf de Médine"><!--MUSHAF_SVG--></div></div><script src="reader.js"></script></body>
+<body><div id="box"><div id="sidemarks" aria-hidden="true"><span></span><span></span><span></span></div><div id="centermark" aria-hidden="true"><div class="thread"></div></div><div id="mushaf" aria-label="Mushaf de Médine"><!--MUSHAF_SVG--></div></div><script src="reader.js"></script></body>
 </html>
