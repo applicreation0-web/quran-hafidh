@@ -549,6 +549,7 @@ public final class SettingsActivity extends android.app.Activity {
         String state="Version : "+BuildConfig.VERSION_NAME+" ("+BuildConfig.VERSION_CODE+")"
             +"\nSchéma : "+prefs.schema()+"\nDébut programme : "+prefs.programStartDate()
             +"\nApprentissage : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
+            +"\nEstimation fin Apprentissage : "+apprentissageEtaSummary()
             +"\nPlages Acquises : "+prefs.itqanRanges().size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
             +"\nPages promues : "+prefs.promotedRanges().size()+"\nÀ stabiliser : "+prefs.unconsolidatedPromotedRanges().size()
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanCursor()
@@ -590,6 +591,20 @@ public final class SettingsActivity extends android.app.Activity {
         int remaining=prefs.stabilizationLinesRemaining(geometry);
         if(remaining==0)return "à jour";
         int weeks=(remaining+PreviewConfig.STABILIZATION_WEEKLY_LINES-1)/PreviewConfig.STABILIZATION_WEEKLY_LINES;
+        return remaining+" ligne(s) restante(s) · ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
+    }
+
+    /**
+     * Apprentissage's own weekly pace — SABQI_LINES per session, learningDaysPerWeek sessions —
+     * unlike Stabilisation's fixed cadence. Remaining lines run from the live sabqiLineCursor to
+     * sabqiEnd and are bounded below by sabqiStart, so anything printed before it (Al-Fatiha,
+     * under the default 2:75 start) is never counted: it was never part of this walk.
+     */
+    private String apprentissageEtaSummary(){
+        int remaining=prefs.sabqiLinesRemaining(geometry);
+        if(remaining==0)return "à jour";
+        int weeklyPace=PreviewConfig.SABQI_LINES*prefs.learningDaysPerWeek();
+        int weeks=(remaining+weeklyPace-1)/weeklyPace;
         return remaining+" ligne(s) restante(s) · ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
     }
 

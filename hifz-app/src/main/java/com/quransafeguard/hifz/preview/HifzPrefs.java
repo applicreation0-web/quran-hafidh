@@ -597,6 +597,20 @@ public final class HifzPrefs {
         }
     }
 
+    /**
+     * Physical lines from the current Sabqi cursor to sabqiEnd, still to memorize. Bounded below
+     * by sabqiStart, so anything printed before it is never counted as remaining — under the
+     * default start of 2:75, that includes all of Al-Fatiha, which was never part of the
+     * Apprentissage walk to begin with.
+     */
+    int sabqiLinesRemaining(GeometryRepository geometry) {
+        int first = geometry.firstLineIndex(sabqiStart());
+        int last = geometry.lastLineIndex(sabqiEnd());
+        int cursor = sabqiLineCursor();
+        int from = cursor >= 0 ? Math.max(cursor, first) : first;
+        return Math.max(0, last - from + 1);
+    }
+
     void resolveV6Quarantine(
             String lineId,
             HifzV6Migration.QuarantineResolution resolution) {

@@ -24,13 +24,17 @@ import java.util.concurrent.Executors;
  * Whole-Mushaf overview: one cell per page, patterned (never colored) by status, so it stays
  * legible on e-ink. A page's status is read straight off the same corpus buckets Diagnostic
  * already reports (itqanRanges/consolidatedPromotedRanges = Acquis, unconsolidatedPromotedRanges
- * = à stabiliser, everything up to sabqiEnd() not yet promoted = en apprentissage), so this view
- * can never drift from what those numbers already mean elsewhere in the app.
+ * = à stabiliser, everything between sabqiStart() and sabqiEnd() not yet promoted = en
+ * apprentissage), so this view can never drift from what those numbers already mean elsewhere in
+ * the app. Two live estimates (Apprentissage, Stabilisation) sit above the grid, computed from the
+ * same buckets Diagnostic uses for its own equivalent estimates.
  */
 public final class ProgressMapActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private GeometryRepository geometry;
     private ProgressGridView grid;
+    private TextView apprentissageEtaValue;
+    private TextView stabilisationEtaValue;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +70,9 @@ public final class ProgressMapActivity extends android.app.Activity {
         root.addView(subtitle);
 
         root.addView(legend());
+
+        apprentissageEtaValue = etaBox(root, "Estimation fin Apprentissage");
+        stabilisationEtaValue = etaBox(root, "Estimation fin Stabilisation");
 
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
@@ -119,6 +126,22 @@ public final class ProgressMapActivity extends android.app.Activity {
         return box;
     }
 
+    /** A bordered panel holding a title and a value line, filled in once loadStatuses() finishes. */
+    private TextView etaBox(LinearLayout root, String title) {
+        LinearLayout box = Ui.column(this);
+        Ui.panel(box);
+        box.addView(Ui.text(this, title, 13f, true));
+        TextView value = Ui.text(this, "Calcul en cours…", 12.5f, false);
+        value.setTextColor(Ui.MUTED);
+        value.setPadding(0, Ui.dp(this, 2), 0, 0);
+        box.addView(value);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.bottomMargin = Ui.dp(this, 8);
+        root.addView(box, params);
+        return value;
+    }
+
     /**
      * Touches every one of the ~8820 physical lines several times over (lineIdsOnPage/
      * linesForExactIds are both linear scans, called once per page) — cheap on a phone, but this
@@ -128,8 +151,14 @@ public final class ProgressMapActivity extends android.app.Activity {
     private void loadStatuses() {
         io.execute(() -> {
             int[] statuses;
+            String apprentissageEta;
+            String stabilisationEta;
             try {
                 statuses = computeStatuses();
+                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),
+                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());
+                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),
+                    PreviewConfig.STABILIZATION_WEEKLY_LINES);
             } catch (RuntimeException corruptOrUnconfiguredState) {
                 runOnUiThread(() -> {
                     if (isFinishing() || isDestroyed()) return;
@@ -141,16 +170,38 @@ public final class ProgressMapActivity extends android.app.Activity {
                 if (isFinishing() || isDestroyed()) return;
                 for (int page = 1; page <= 604; page++) grid.setStatus(page, statuses[page]);
                 grid.invalidate();
+                apprentissageEtaValue.setText(apprentissageEta);
+                stabilisationEtaValue.setText(stabilisationEta);
             });
         });
+    }
+
+    /**
+     * Same shape as SettingsActivity's Diagnostic estimates: remaining lines divided by a weekly
+     * pace, ceiling-rounded, projected from today.
+     */
+    private static String weeksEtaSummary(int remaining, int weeklyPace) {
+        if (remaining == 0) return "à jour";
+        int weeks = (remaining + weeklyPace - 1) / weeklyPace;
+        return remaining + " ligne(s) restante(s) · ~" + weeks + " semaine(s) · ~" + HifzClock.today().plusWeeks(weeks);
     }
 
     private int[] computeStatuses() {
         List<VerseRange> acquis = new ArrayList<>(prefs.itqanRanges());
         acquis.addAll(prefs.consolidatedPromotedRanges());
         List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();
-        VerseRef sabqiEnd;
-        try { sabqiEnd = prefs.sabqiEnd(); } catch (RuntimeException notYetInitialized) { sabqiEnd = null; }
+        VerseRef sabqiStart, sabqiEnd;
+        try {
+            sabqiStart = prefs.sabqiStart();
+            sabqiEnd = prefs.sabqiEnd();
+        } catch (RuntimeException notYetInitialized) {
+            sabqiStart = null;
+            sabqiEnd = null;
+        }
+        // Bounded below by sabqiStart too, not just above by sabqiEnd — otherwise anything printed
+        // before the Apprentissage walk even begins (Al-Fatiha, under the default 2:75 start) gets
+        // wrongly shown "en apprentissage" instead of the honest "pas commencé".
+        int sabqiStartOrdinal = sabqiStart == null ? Integer.MAX_VALUE : GeometryRepository.ordinal(sabqiStart);
         int sabqiEndOrdinal = sabqiEnd == null ? -1 : GeometryRepository.ordinal(sabqiEnd);
         int[] statuses = new int[605];
 
@@ -161,7 +212,10 @@ public final class ProgressMapActivity extends android.app.Activity {
                 for (VerseRef verse : line.verses) {
                     if (containsVerse(stabiliser, verse)) anyStabiliser = true;
                     else if (containsVerse(acquis, verse)) anyAcquis = true;
-                    else if (GeometryRepository.ordinal(verse) <= sabqiEndOrdinal) anyApprentissage = true;
+                    else {
+                        int ordinal = GeometryRepository.ordinal(verse);
+                        if (ordinal >= sabqiStartOrdinal && ordinal <= sabqiEndOrdinal) anyApprentissage = true;
+                    }
                 }
             }
             statuses[page] = anyStabiliser ? ProgressGridView.STABILISER

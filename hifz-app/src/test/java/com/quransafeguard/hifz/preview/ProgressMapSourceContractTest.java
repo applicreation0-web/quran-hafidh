@@ -81,9 +81,13 @@ public final class ProgressMapSourceContractTest {
                 && activity.contains("acquis.addAll(prefs.consolidatedPromotedRanges());"));
         assertTrue("à stabiliser must read the same bucket Diagnostic labels \"À stabiliser\"",
             activity.contains("List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();"));
-        assertTrue("en apprentissage must be bounded by the real Sabqi front, not guessed",
-            activity.contains("try { sabqiEnd = prefs.sabqiEnd(); } catch (RuntimeException notYetInitialized) { sabqiEnd = null; }"));
+        assertTrue("en apprentissage must be bounded above by the real Sabqi front, not guessed",
+            activity.contains("sabqiEnd = prefs.sabqiEnd();"));
         String computeStatuses = method(activity, "private int[] computeStatuses() {", "private static boolean containsVerse(");
+        assertTrue("en apprentissage must also be bounded BELOW by sabqiStart — otherwise a verse "
+                + "printed before the Apprentissage walk even begins (Al-Fatiha, under the default "
+                + "2:75 start) gets wrongly counted just because its ordinal sits below sabqiEnd",
+            computeStatuses.contains("if (ordinal >= sabqiStartOrdinal && ordinal <= sabqiEndOrdinal) anyApprentissage = true;"));
         assertTrue("à stabiliser must win over every other status on a mixed page",
             computeStatuses.indexOf("anyStabiliser ? ProgressGridView.STABILISER") <
                 computeStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE"));
@@ -92,11 +96,32 @@ public final class ProgressMapSourceContractTest {
                 computeStatuses.indexOf("anyAcquis ? ProgressGridView.ACQUIS"));
     }
 
+    @Test public void liveEtaEstimatesSitAboveTheGridUsingTheSameBucketsDiagnosticUses() throws Exception {
+        String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
+        assertTrue("the two estimates approved in the mockup must both be wired in, in that order",
+            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Estimation fin Apprentissage\");") <
+                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Estimation fin Stabilisation\");"));
+        assertTrue("Apprentissage's estimate must use its own real weekly pace (SABQI_LINES × "
+                + "learningDaysPerWeek), never Stabilisation's fixed one",
+            activity.contains("weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"
+                + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());"));
+        assertTrue("Stabilisation's estimate must reuse the exact same computation Diagnostic uses",
+            activity.contains("weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
+                + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);"));
+    }
+
     @Test public void backgroundComputationFailureIsVisibleNotSilent() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
         assertTrue("itqanRanges()/parseRanges() throws when nothing is configured yet or state is "
-                + "corrupt (confirmed in HifzPrefs) — a background thread must not silently die on that",
-            activity.contains("try {\n                statuses = computeStatuses();\n            } catch (RuntimeException corruptOrUnconfiguredState) {"));
+                + "corrupt (confirmed in HifzPrefs) — a background thread must not silently die on that, "
+                + "whether it's the status scan or either live ETA computation that throws",
+            activity.contains("try {\n"
+                + "                statuses = computeStatuses();\n"
+                + "                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"
+                + "                    PreviewConfig.SABQI_LINES * prefs.learningDaysPerWeek());\n"
+                + "                stabilisationEta = weeksEtaSummary(prefs.stabilizationLinesRemaining(geometry),\n"
+                + "                    PreviewConfig.STABILIZATION_WEEKLY_LINES);\n"
+                + "            } catch (RuntimeException corruptOrUnconfiguredState) {"));
         assertTrue("a failed computation must tell the learner, not just leave the grid blank forever",
             activity.contains("Toast.makeText(this, \"Progression indisponible · ouvrez Diagnostic si le problème persiste.\", Toast.LENGTH_LONG).show();"));
         assertTrue("posted UI updates must not touch a destroyed Activity's views (no configChanges "
