@@ -81,14 +81,14 @@ public final class SideMarksSourceContractTest {
         assertTrue("a screen rotation can change which gutter (if any) exists",
             reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));"));
         assertTrue("the very first render must position the bars before anything is visible",
-            reader.contains("render();\n  requestAnimationFrame(updateSideMarks);\n  N?.pageShown(currentPage);"));
+            reader.contains("render();\n  requestAnimationFrame(updateSideMarks);\n  requestAnimationFrame(updateCenterMark);\n  N?.pageShown(currentPage);"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically (translateY) without changing its "
                 + "gutter width, but the bars' vertical position is measured from the same rect and "
                 + "must be refreshed afterwards or it visibly drifts from the shifted page",
-            reader.contains("updateSideMarks();\n  });\n}\nfunction clearReveal()"));
+            reader.contains("updateSideMarks();\n    updateCenterMark();\n  });\n}\nfunction clearReveal()"));
         assertTrue("clearing the reveal must also re-sync the bars",
-            reader.contains("function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks()}"));
+            reader.contains("function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks();updateCenterMark()}"));
         assertTrue("toggling e-ink mode changes the bars' own stroke width, so it must recompute too",
-            reader.contains("setEink(value){eink=!!value;render();updateSideMarks()},"));
+            reader.contains("setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark()},"));
     }
 }
