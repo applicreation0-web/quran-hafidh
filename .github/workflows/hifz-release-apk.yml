@@ -66,8 +66,13 @@ jobs:
           apk="$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
           test -n "$apk" && test -s "$apk"
           "$ANDROID_HOME"/build-tools/36.0.0/apksigner verify --print-certs "$apk"
-          echo "path=$apk" >> "$GITHUB_OUTPUT"
-          sha256sum "$apk"
+          version="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' hifz-app/build.gradle.kts | head -1)"
+          test -n "$version"
+          renamed="$(dirname "$apk")/quran-hifz-${version}-release.apk"
+          cp "$apk" "$renamed"
+          echo "path=$renamed" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          sha256sum "$renamed"
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
@@ -85,8 +90,8 @@ jobs:
           tag="hifz-release-${{ github.sha }}-run${{ github.run_number }}"
           gh release create "$tag" "${{ steps.apk.outputs.path }}" \
             --repo "${{ github.repository }}" \
-            --title "Quran Hifz release APK ($tag)" \
-            --notes "Signed release build for personal installation on the ${{ github.ref_name }} branch. Same signing key as future releases: keep it to allow in-place upgrades."
+            --title "Quran Hifz ${{ steps.apk.outputs.version }} release APK ($tag)" \
+            --notes "Signed release build, version ${{ steps.apk.outputs.version }}, for personal installation on the ${{ github.ref_name }} branch. Same signing key as future releases: keep it to allow in-place upgrades."
 
       - name: Upload test results on failure
         if: failure()
