@@ -134,13 +134,39 @@ object TrajectoryComparison {
      * 0-100 indicative score, or null when there isn't enough real geometry or enough of a user
      * trace to compare. Tries the reference outline in both directions — a legitimate stroke can
      * reasonably start from either end of a letter, and that's a direction choice, not an error.
+     *
+     * For a single continuous user trace (e.g. one word drawn without lifting the stylus).
      */
     @JvmStatic
+    @JvmOverloads
     fun score(referenceSubpaths: List<DoubleArray>, userStrokePoints: List<Pt>, sampleCount: Int = DEFAULT_SAMPLE_COUNT): Int? {
         val refRaw = referencePoints(referenceSubpaths, sampleCount)
         if (refRaw.isEmpty()) return null
         val userRaw = resamplePolyline(userStrokePoints, sampleCount) ?: return null
+        return finalizeScore(refRaw, userRaw)
+    }
 
+    /**
+     * Same as [score], but for real multi-stroke user input (e.g. a whole line, where writing
+     * separate words means separate pen lifts). Each stroke is sampled with the same
+     * jump-exclusion as [referencePoints] uses for disconnected reference subpaths, so a pen lift
+     * between two strokes never gets counted as real drawn distance the way plain arc-length
+     * resampling of the concatenated points would.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun scoreStrokes(referenceSubpaths: List<DoubleArray>, userStrokes: List<List<Pt>>, sampleCount: Int = DEFAULT_SAMPLE_COUNT): Int? {
+        val refRaw = referencePoints(referenceSubpaths, sampleCount)
+        if (refRaw.isEmpty()) return null
+        val userSubpaths = userStrokes
+            .filter { it.size >= 2 }
+            .map { stroke -> DoubleArray(stroke.size * 2).also { arr -> stroke.forEachIndexed { i, p -> arr[i * 2] = p.x; arr[i * 2 + 1] = p.y } } }
+        val userRaw = referencePoints(userSubpaths, sampleCount)
+        if (userRaw.isEmpty()) return null
+        return finalizeScore(refRaw, userRaw)
+    }
+
+    private fun finalizeScore(refRaw: List<Pt>, userRaw: List<Pt>): Int {
         val ref = normalize(refRaw)
         val user = normalize(userRaw)
         val dist = minOf(dtwDistance(ref, user), dtwDistance(ref.reversed(), user))

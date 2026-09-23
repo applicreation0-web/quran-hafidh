@@ -18,6 +18,10 @@
         <activity android:name=".WeakVersesActivity" android:exported="false" />
         <activity android:name=".ProgressMapActivity" android:exported="false" />
         <activity
+            android:name=".WritingExerciseActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
             android:name=".HifzSessionActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />

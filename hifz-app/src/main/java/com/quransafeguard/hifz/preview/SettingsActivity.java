@@ -123,6 +123,11 @@ public final class SettingsActivity extends android.app.Activity {
         TextView advancedVerifNote=Ui.text(this,"Télécharge une fois un modèle de reconnaissance d’écriture arabe pour vérifier le mot écrit — la seule fonction de l’appli qui utilise Internet. Ne lit pas les voyelles courtes (tashkil).",11f,false);
         advancedVerifNote.setTextColor(Ui.MUTED);advancedVerifNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(advancedVerifNote);
 
+        // Temporary manual entry point for the writing exercise (Step 4): a fixed test line until
+        // it is wired into the real Sabqi/Itqan weekly schedule.
+        root.addView(Ui.button(this,"Tester l’exercice d’écriture (Al-Fatiha 1:3)",
+            v->startActivity(WritingExerciseActivity.intentFor(this,"1:3"))));
+
         section(root,"Sauvegarde");
         root.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));root.addView(Ui.divider(this));
         root.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));

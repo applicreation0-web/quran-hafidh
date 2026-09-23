@@ -24,13 +24,28 @@ public final class GeometryRepository {
         public final int globalIndex;
         public final String id;
         public final int page;
+        /** This line's position within its own page's "lines" array (0-based) — the same index
+         *  WordShapeRepository.shapesForPage(page)[...] and AyahMarkerRepository index by. */
+        public final int lineIndexOnPage;
+        public final double top;
+        public final double bottom;
         public final List<VerseRef> verses;
 
-        LineMeta(int globalIndex, String id, int page, List<VerseRef> verses) {
+        LineMeta(int globalIndex, String id, int page, int lineIndexOnPage, double top, double bottom, List<VerseRef> verses) {
             this.globalIndex = globalIndex;
             this.id = id;
             this.page = page;
+            this.lineIndexOnPage = lineIndexOnPage;
+            this.top = top;
+            this.bottom = bottom;
             this.verses = Collections.unmodifiableList(verses);
+        }
+
+        /** Existing fixture-only constructor (many unit/instrumented tests build synthetic lines
+         *  that never touch real per-page-index/top/bottom values) — kept so those tests don't
+         *  need updating just because the real parser now also carries that data. */
+        LineMeta(int globalIndex, String id, int page, List<VerseRef> verses) {
+            this(globalIndex, id, page, 0, 0.0, 0.0, verses);
         }
     }
 
@@ -116,7 +131,8 @@ public final class GeometryRepository {
                     if (!verses.contains(ref)) verses.add(ref);
                 }
                 verses.sort(Comparator.comparingInt(GeometryRepository::ordinal));
-                result.add(new LineMeta(index++, line.getString("id"), page, verses));
+                result.add(new LineMeta(index++, line.getString("id"), page, i,
+                    line.getDouble("top"), line.getDouble("bottom"), verses));
             }
         }
         if (result.isEmpty()) throw new IllegalStateException("Empty Mushaf geometry");
@@ -173,6 +189,17 @@ public final class GeometryRepository {
         JSONObject pageObject = pages.optJSONObject(Integer.toString(page));
         if (pageObject == null) throw new IllegalStateException("geometry missing for page " + page);
         return pageObject.toString();
+    }
+
+    /** The page's real SVG viewBox [x, y, width, height] — the exact coordinate space every
+     *  line's top/bottom/cells, WordShapeRepository's shapes and AyahMarkerRepository's markers
+     *  are all already expressed in. */
+    public float[] viewBoxForPage(int page) {
+        if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
+        JSONObject pageObject = pages.optJSONObject(Integer.toString(page));
+        if (pageObject == null) throw new IllegalStateException("geometry missing for page " + page);
+        JSONArray box = pageObject.getJSONArray("viewBox");
+        return new float[] { (float) box.getDouble(0), (float) box.getDouble(1), (float) box.getDouble(2), (float) box.getDouble(3) };
     }
 
     public int firstLineIndex(VerseRef verse) {

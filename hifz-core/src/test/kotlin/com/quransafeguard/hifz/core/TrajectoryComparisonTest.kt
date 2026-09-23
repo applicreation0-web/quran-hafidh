@@ -81,4 +81,24 @@ class TrajectoryComparisonTest {
         assertNotNull(score)
         assertTrue(score!! < 70, "expected a clearly low score for an unrelated scribble, got $score")
     }
+
+    @Test fun scoreStrokesTracingEachRealSubpathAsItsOwnPenLiftScoresNearlyPerfect() {
+        // A real line has multiple words, so a real user traces it as several separate strokes
+        // (one pen lift between each). Retracing every one of this cell's own subpaths, each as
+        // its own stroke, is the best possible multi-stroke reproduction of this exact reference.
+        val userStrokes = IYYAKA_CELL.map { subpath ->
+            val pts = ArrayList<Pt>(subpath.size / 2)
+            var i = 0
+            while (i + 1 < subpath.size) { pts.add(Pt(subpath[i], subpath[i + 1])); i += 2 }
+            pts
+        }
+        val score = TrajectoryComparison.scoreStrokes(IYYAKA_CELL, userStrokes)
+        assertNotNull(score)
+        assertTrue(score!! >= 95, "expected a near-perfect score for retracing every subpath as its own stroke, got $score")
+    }
+
+    @Test fun scoreStrokesReturnsNullWithNoUsableStrokes() {
+        assertNull(TrajectoryComparison.scoreStrokes(IYYAKA_CELL, emptyList()))
+        assertNull(TrajectoryComparison.scoreStrokes(IYYAKA_CELL, listOf(listOf(Pt(0.0, 0.0)))))
+    }
 }
