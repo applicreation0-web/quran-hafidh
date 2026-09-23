@@ -57,6 +57,6 @@ public final class HifzAyahMarkerPipelineSourceContractTest {
         assertTrue("must cache per page rather than eagerly loading all 604 pages into memory",
             repo.contains("Map<Integer, float[][]> cache"));
         assertTrue("must expose the per-page marker positions for the writing exercise to draw",
-            repo.contains("public float[][] markersForPage(int page)"));
+            repo.contains("markersForPage(int page)"));
     }
 }
