@@ -79,6 +79,12 @@ public final class WritingExerciseActivity extends android.app.Activity {
         TextView subtitle = Ui.text(this, verseLabel(), 12.5f, false);
         subtitle.setTextColor(Ui.MUTED);
         subtitle.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 10));
+        // Force LTR paragraph order: this caption is a Latin-structured "Page N — Name A → B"
+        // sentence with an embedded Arabic surah name, and without this the bidi algorithm can
+        // visually reorder the "A → B" ayah range around the Arabic run (confirmed on a real
+        // device: "5 → 6" rendered as "6 → 5"). The Arabic name itself still renders correctly
+        // right-to-left internally; only the paragraph-level run order is pinned.
+        subtitle.setTextDirection(android.view.View.TEXT_DIRECTION_LTR);
         root.addView(subtitle);
 
         canvas = new WritingCanvasView(this);
