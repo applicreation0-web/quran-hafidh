@@ -18,12 +18,18 @@ val generateWordShapes by tasks.registering(Exec::class) {
     inputs.file(geometrySourceFile)
     inputs.file(rootProject.file("scripts/generate_hifz_word_shapes.py"))
     outputs.dir(generatedWordShapesDir)
+    // Higher-fidelity sampling than hifz-app's copy (which uses the script's coverage-check
+    // defaults): this test app exists to validate whether more shape detail makes the Palier 3
+    // trajectory score more discriminating, so only it opts into the denser sampling for now.
     commandLine(
         "python3",
         rootProject.file("scripts/generate_hifz_word_shapes.py").absolutePath,
         svgBrSourceDir.absolutePath,
         geometrySourceFile.absolutePath,
-        generatedWordShapesDir.absolutePath
+        generatedWordShapesDir.absolutePath,
+        "--min-samples", "16",
+        "--max-samples", "48",
+        "--samples-per-unit-length", "2.5"
     )
 }
 
