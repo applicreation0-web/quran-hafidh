@@ -50,7 +50,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private int page = 1;
     private VerseRef selected;
     private VerseRef pendingJumpVerse;
-    private TextView pageLabel;
+    private TextView pageNumberBadge;
     private Button tafsirButton;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
@@ -108,16 +108,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         LinearLayout titleRow = Ui.row(this);
         Ui.weight(titleRow, 1f);
         titleRow.setGravity(Gravity.CENTER);
-        rubBadge = Ui.bookText(this, "", 11f, true);
+        rubBadge = Ui.bookText(this, "", 20f, true);
         rubBadge.setGravity(Gravity.CENTER);
         rubBadge.setBackgroundResource(R.drawable.ic_ui_hizb);
         rubBadge.setVisibility(View.GONE);
-        int badgeSize = Ui.dp(this, 22);
+        int badgeSize = Ui.dp(this, 44);
         LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(badgeSize, badgeSize);
-        badgeParams.setMargins(0, 0, Ui.dp(this, 6), 0);
         titleRow.addView(rubBadge, badgeParams);
-        pageLabel = Ui.bookText(this, "Lecture · " + page + " / 604", 13f, true);
-        titleRow.addView(pageLabel);
         TextView balance = Ui.text(this, "", 1f, false);
         balance.setMinWidth(Ui.dp(this, 44));
         topControls.addView(back);
@@ -126,10 +123,20 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerStack.addView(topControls, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        FrameLayout mushafContainer = new FrameLayout(this);
         mushaf = new MushafView(this);
         mushaf.setListener(this);
-        readerStack.addView(mushaf, new LinearLayout.LayoutParams(
+        mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        pageNumberBadge = Ui.bookText(this, "", 13f, false);
+        pageNumberBadge.setTextColor(Ui.MUTED);
+        FrameLayout.LayoutParams pageNumberParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pageNumberParams.setMargins(Ui.dp(this, 14), 0, Ui.dp(this, 14), Ui.dp(this, 10));
+        mushafContainer.addView(pageNumberBadge, pageNumberParams);
+        readerStack.addView(mushafContainer, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        updatePageNumberBadge();
 
         readerActions = Ui.row(this);
         readerActions.setGravity(Gravity.CENTER);
@@ -209,6 +216,17 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         rubBadge.setVisibility(View.VISIBLE);
     }
 
+    /** Page number sits at the bottom-outer corner, like a printed book: right on odd (recto)
+        pages, left on even (verso) pages — a spatial cue for where a page falls in the mushaf. */
+    private void updatePageNumberBadge() {
+        if (pageNumberBadge == null) return;
+        pageNumberBadge.setText(String.valueOf(page));
+        boolean odd = page % 2 == 1;
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) pageNumberBadge.getLayoutParams();
+        params.gravity = Gravity.BOTTOM | (odd ? Gravity.RIGHT : Gravity.LEFT);
+        pageNumberBadge.setLayoutParams(params);
+    }
+
     private void showRubPicker() {
         showControls();
         QuranRubNames.showPicker(this, this::setPage);
@@ -242,10 +260,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         selected = null;
         tafsirButton.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
-        pageLabel.setText("Lecture · " + page + " / 604");
         updateSurahPickerLabel();
         updateRubPickerLabel();
         updateRubBadge();
+        updatePageNumberBadge();
         mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
@@ -620,10 +638,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int shown) {
         page = shown;
-        pageLabel.setText("Lecture · " + shown + " / 604");
         updateSurahPickerLabel();
         updateRubPickerLabel();
         updateRubBadge();
+        updatePageNumberBadge();
     }
     @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_PAGE_UP) { go(-1); return true; }

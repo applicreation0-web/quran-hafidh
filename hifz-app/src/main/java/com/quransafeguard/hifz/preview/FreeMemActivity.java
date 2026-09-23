@@ -6,6 +6,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,7 +25,8 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     private int page = 1;
     private int count = 0;
     private int mask = 0;
-    private TextView title, selection, counter;
+    private TextView selection, counter;
+    private TextView pageNumberBadge;
     private LinearLayout audioHost;
     private HifzAudioDialog audioPlayer;
     private android.content.SharedPreferences state;
@@ -46,7 +48,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
         top.addView(Ui.iconButton(this,"‹","Retour",v->finish()));
-        title = Ui.text(this,"Mémorisation libre · "+page+" / 604",13,true); Ui.weight(title,1f); title.setGravity(Gravity.CENTER); top.addView(title);
+        TextView spacer=Ui.text(this,"",1,false);Ui.weight(spacer,1f);top.addView(spacer);
         TextView balance=Ui.text(this,"",1,false);balance.setMinWidth(Ui.dp(this,44));top.addView(balance,new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,44)));
         root.addView(top);
 
@@ -54,7 +56,15 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         root.addView(audioHost,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
 
         selection = Ui.text(this,"",11.5f,false); selection.setTextColor(Ui.MUTED); selection.setPadding(Ui.dp(this,10),0,Ui.dp(this,10),Ui.dp(this,2)); root.addView(selection);
-        mushaf = new MushafView(this); mushaf.setListener(this); root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        FrameLayout mushafContainer = new FrameLayout(this);
+        mushaf = new MushafView(this); mushaf.setListener(this);
+        mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        pageNumberBadge = Ui.bookText(this, "", 13f, false); pageNumberBadge.setTextColor(Ui.MUTED);
+        FrameLayout.LayoutParams pageNumberParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        pageNumberParams.setMargins(Ui.dp(this,14), 0, Ui.dp(this,14), Ui.dp(this,10));
+        mushafContainer.addView(pageNumberBadge, pageNumberParams);
+        root.addView(mushafContainer,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        updatePageNumberBadge();
 
         counter = Ui.text(this,"Répétitions · "+count,12,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
         LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
@@ -105,7 +115,18 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         counter.setText("Répétitions · 0");
         updateSelectionLabel();updateMaskButtons();
         mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
-        title.setText("Mémorisation libre · "+page+" / 604");
+        updatePageNumberBadge();
+    }
+
+    /** Page number sits at the bottom-outer corner, like a printed book: right on odd (recto)
+        pages, left on even (verso) pages — a spatial cue for where a page falls in the mushaf. */
+    private void updatePageNumberBadge() {
+        if (pageNumberBadge == null) return;
+        pageNumberBadge.setText(String.valueOf(page));
+        boolean odd = page % 2 == 1;
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) pageNumberBadge.getLayoutParams();
+        params.gravity = Gravity.BOTTOM | (odd ? Gravity.RIGHT : Gravity.LEFT);
+        pageNumberBadge.setLayoutParams(params);
     }
 
     private void openAudio(){
@@ -153,7 +174,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         } else mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
     }
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
-    @Override public void onPageShown(int shown){page=shown;title.setText("Mémorisation libre · "+shown+" / 604");}
+    @Override public void onPageShown(int shown){page=shown;updatePageNumberBadge();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(mushaf==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){go(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){go(1);return true;}return super.onKeyDown(code,e);}
     @Override protected void onDestroy(){closeAudio();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
 }
