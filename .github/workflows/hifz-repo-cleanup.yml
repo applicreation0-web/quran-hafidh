@@ -1,0 +1,77 @@
+name: One-off Hifz repo cleanup (releases + stale branches)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Delete broken drafts and prune old releases (keep latest 3 signed + latest 3 debug)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+
+          releases_json="$(gh api "repos/$REPO/releases" --paginate --slurp)"
+          before_count="$(echo "$releases_json" | jq 'length')"
+          echo "Total releases before cleanup: $before_count"
+
+          echo "$releases_json" | jq -r '.[] | select(.draft==true) | .id' | while read -r id; do
+            echo "Deleting broken draft release id=$id"
+            gh api -X DELETE "repos/$REPO/releases/$id" || true
+          done
+
+          echo "$releases_json" | jq -r '
+            [.[] | select(.draft==false and .prerelease==false)]
+            | sort_by(.created_at) | reverse | .[3:]
+            | .[] | "\(.id)\t\(.tag_name)"' | while IFS=$'\t' read -r id tag; do
+            echo "Deleting old signed release id=$id tag=$tag"
+            gh api -X DELETE "repos/$REPO/releases/$id" || true
+            gh api -X DELETE "repos/$REPO/git/refs/tags/$tag" || true
+          done
+
+          echo "$releases_json" | jq -r '
+            [.[] | select(.draft==false and .prerelease==true)]
+            | sort_by(.created_at) | reverse | .[3:]
+            | .[] | "\(.id)\t\(.tag_name)"' | while IFS=$'\t' read -r id tag; do
+            echo "Deleting old debug release id=$id tag=$tag"
+            gh api -X DELETE "repos/$REPO/releases/$id" || true
+            gh api -X DELETE "repos/$REPO/git/refs/tags/$tag" || true
+          done
+
+          after_count="$(gh api "repos/$REPO/releases" --paginate --slurp | jq 'length')"
+          echo "Total releases after cleanup: $after_count"
+
+      - name: Delete stale branches (keep main and the active dev branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          KEEP="main claude/app-dernier-chat-c19bfs"
+
+          branches_json="$(gh api "repos/$REPO/branches" --paginate --slurp)"
+          before_count="$(echo "$branches_json" | jq 'length')"
+          echo "Total branches before cleanup: $before_count"
+
+          echo "$branches_json" | jq -r '.[].name' | while read -r branch; do
+            skip=false
+            for k in $KEEP; do
+              if [ "$branch" = "$k" ]; then skip=true; fi
+            done
+            if [ "$skip" = false ]; then
+              echo "Deleting branch $branch"
+              gh api -X DELETE "repos/$REPO/git/refs/heads/$branch" || true
+            fi
+          done
+
+          after_count="$(gh api "repos/$REPO/branches" --paginate --slurp | jq 'length')"
+          echo "Total branches after cleanup: $after_count"
