@@ -7,6 +7,7 @@ import com.quransafeguard.hifz.core.QuranCanon;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -198,8 +199,12 @@ public final class GeometryRepository {
         if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
         JSONObject pageObject = pages.optJSONObject(Integer.toString(page));
         if (pageObject == null) throw new IllegalStateException("geometry missing for page " + page);
-        JSONArray box = pageObject.getJSONArray("viewBox");
-        return new float[] { (float) box.getDouble(0), (float) box.getDouble(1), (float) box.getDouble(2), (float) box.getDouble(3) };
+        try {
+            JSONArray box = pageObject.getJSONArray("viewBox");
+            return new float[] { (float) box.getDouble(0), (float) box.getDouble(1), (float) box.getDouble(2), (float) box.getDouble(3) };
+        } catch (JSONException error) {
+            throw new IllegalStateException("malformed viewBox for page " + page, error);
+        }
     }
 
     public int firstLineIndex(VerseRef verse) {
