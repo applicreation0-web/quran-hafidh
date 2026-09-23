@@ -17,7 +17,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
-import com.quransafeguard.hifz.core.ArabicHint;
 import com.quransafeguard.hifz.core.TrajectoryComparison;
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -25,9 +24,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Standalone test screen: navigate to ANY physical Mushaf line in the whole corpus (not just one
- * hardcoded line) and score a real trace against it. Two things this app tries that hifz-app's own
- * (already-shipped) writing exercise does not yet:
+ * Standalone test screen — deliberately NOT a memory exercise like hifz-app's real screen. This
+ * one shows the real verse text up front (a reference panel to copy from, correctly or with a
+ * chosen mistake) so a tester can systematically probe what the scoring engine does and doesn't
+ * catch, across ANY physical Mushaf line in the whole corpus. Two things this app tries that
+ * hifz-app's own (already-shipped) writing exercise does not yet:
  *   1. Auto-detects how many words were actually written instead of requiring an exact manual
  *      chip selection — tries every word count starting from the chosen start word and keeps
  *      whichever length scores best.
@@ -51,13 +52,12 @@ public final class WritingTestActivity extends Activity {
     private List<List<double[]>> words;
     private int startWord = 0;
     private Button[] wordChipButtons;
-    private VerseRef hintVerse;
 
     private TextView lineLabel;
     private TextView subtitle;
+    private TextView referenceText;
     private LinearLayout chipsContainer;
     private WritingCanvasView canvas;
-    private TextView hintText;
     private TextView resultView;
     private LinearLayout resultCard;
 
@@ -112,6 +112,25 @@ public final class WritingTestActivity extends Activity {
         navCard.addView(subtitle);
         root.addView(navCard, cardParams());
 
+        TextView referenceLabel = new TextView(this);
+        referenceLabel.setText("TEXTE DE RÉFÉRENCE — recopie-le, correctement ou avec une faute choisie");
+        referenceLabel.setTextSize(11f);
+        referenceLabel.setTextColor(MUTED);
+        referenceLabel.setTypeface(Typeface.DEFAULT_BOLD);
+        referenceLabel.setPadding(dp(2), 0, dp(2), dp(6));
+        root.addView(referenceLabel);
+
+        LinearLayout referenceCard = card();
+        referenceText = new TextView(this);
+        referenceText.setTextSize(24f);
+        referenceText.setTextColor(INK);
+        referenceText.setGravity(Gravity.END);
+        referenceText.setLineSpacing(dp(6), 1.15f);
+        referenceCard.addView(referenceText);
+        LinearLayout.LayoutParams referenceCardParams = cardParams();
+        referenceCardParams.bottomMargin = dp(12);
+        root.addView(referenceCard, referenceCardParams);
+
         TextView chipsLabel = new TextView(this);
         chipsLabel.setText("MOT DE DÉPART (droite → gauche)");
         chipsLabel.setTextSize(11f);
@@ -146,20 +165,11 @@ public final class WritingTestActivity extends Activity {
         canvasFrameParams.bottomMargin = dp(12);
         root.addView(canvasFrame, canvasFrameParams);
 
-        hintText = new TextView(this);
-        hintText.setTextSize(28f);
-        hintText.setTextColor(INK);
-        hintText.setGravity(Gravity.END);
-        hintText.setVisibility(View.GONE);
-        hintText.setPadding(0, 0, 0, dp(12));
-        root.addView(hintText);
-
         LinearLayout buttonRow = row();
         buttonRow.addView(outlineButton("Effacer", v -> {
             canvas.clear();
             showResult(null, null);
         }), buttonWeight());
-        buttonRow.addView(outlineButton("Indice", v -> revealHint()), buttonWeight());
         buttonRow.addView(primaryButton("Évaluer (auto)", v -> evaluateAuto()), buttonWeight());
         LinearLayout.LayoutParams buttonRowParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -210,10 +220,18 @@ public final class WritingTestActivity extends Activity {
             return;
         }
 
-        hintVerse = line.verses.isEmpty() ? null : line.verses.get(0);
         startWord = 0;
-        hintText.setVisibility(View.GONE);
         showResult(null, null);
+
+        StringBuilder text = new StringBuilder();
+        VerseText verseText = VerseText.get(this);
+        for (VerseRef ref : line.verses) {
+            String verse = verseText.textFor(ref);
+            if (verse == null) continue;
+            if (text.length() > 0) text.append("  ·  ");
+            text.append(verse);
+        }
+        referenceText.setText(text.length() > 0 ? text.toString() : "(texte de référence indisponible pour cette ligne)");
 
         canvas.configure(viewBox[0], (float) line.top, viewBox[2], (float) (line.bottom - line.top), markers);
 
@@ -233,18 +251,6 @@ public final class WritingTestActivity extends Activity {
 
     private void refreshChipSelection() {
         for (int i = 0; i < wordChipButtons.length; i++) wordChipButtons[i].setSelected(i == startWord);
-    }
-
-    private void revealHint() {
-        if (hintVerse == null) {
-            hintText.setText("Aucun verset identifié pour cette ligne.");
-            hintText.setVisibility(View.VISIBLE);
-            return;
-        }
-        String text = VerseText.get(this).textFor(hintVerse);
-        String hint = text == null ? null : ArabicHint.firstLettersWithTashkil(text, 3);
-        hintText.setText(hint == null || hint.isEmpty() ? "Indice indisponible." : hint);
-        hintText.setVisibility(View.VISIBLE);
     }
 
     /**

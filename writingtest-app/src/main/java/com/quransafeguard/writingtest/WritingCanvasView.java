@@ -133,6 +133,10 @@ public final class WritingCanvasView extends View {
         float y = event.getY();
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                // This view can sit inside a ScrollView (this test app's own layout does); without
+                // this, the ScrollView's touch interception steals any gesture with vertical motion
+                // before a stroke can be drawn, making the canvas effectively unwritable.
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                 if (strokeStartMs < 0) strokeStartMs = SystemClock.elapsedRealtime();
                 currentStroke = new ArrayList<>();
                 currentVisiblePath = new Path();
@@ -149,6 +153,7 @@ public final class WritingCanvasView extends View {
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                 currentStroke = null;
                 currentVisiblePath = null;
                 break;
