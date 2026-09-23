@@ -311,17 +311,18 @@ public final class WritingTestActivity extends Activity {
             return;
         }
         int lastWord = startWord + bestLength;
+        final int finalScore = bestScore;
         String range = bestLength == 1
             ? "mot " + (startWord + 1)
             : "mots " + (startWord + 1) + "-" + lastWord;
         int shapeColor = bestScore >= 70 ? GOOD : bestScore >= 40 ? WARN : BAD;
-        showResult(range + "  —  forme " + bestScore + " %  ·  contenu : vérification…", shapeColor);
+        showResult(range + "  —  forme " + finalScore + " %  ·  contenu : vérification…", shapeColor);
 
         String expectedText = (wordTexts != null && startWord >= 0 && lastWord <= wordTexts.length)
             ? String.join(" ", Arrays.copyOfRange(wordTexts, startWord, lastWord))
             : null;
         if (expectedText == null) {
-            showResult(range + "  —  forme " + bestScore + " %  ·  contenu : texte de référence indisponible", shapeColor);
+            showResult(range + "  —  forme " + finalScore + " %  ·  contenu : texte de référence indisponible", shapeColor);
             return;
         }
 
@@ -331,11 +332,11 @@ public final class WritingTestActivity extends Activity {
                 // trajectory score alone can't tell) — so a content mismatch always shows red here,
                 // regardless of how good the shape score was, to surface exactly that blind spot.
                 String verdict = matches ? "reconnu ✓" : "NON reconnu (ML Kit a lu : " + String.join(", ", candidates) + ")";
-                showResult(range + "  —  forme " + bestScore + " %  ·  contenu : " + verdict, matches ? shapeColor : BAD);
+                showResult(range + "  —  forme " + finalScore + " %  ·  contenu : " + verdict, matches ? shapeColor : BAD);
             }
 
             @Override public void onError(String message) {
-                showResult(range + "  —  forme " + bestScore + " %  ·  contenu : erreur (" + message + ")", shapeColor);
+                showResult(range + "  —  forme " + finalScore + " %  ·  contenu : erreur (" + message + ")", shapeColor);
             }
         });
     }
