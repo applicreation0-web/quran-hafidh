@@ -55,6 +55,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
     private TextView surahPicker;
+    private TextView rubPicker;
+    private TextView rubBadge;
     private boolean controlsVisible = true;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
@@ -103,13 +105,23 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         topControls.setBackgroundColor(Ui.PAPER);
         topControls.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
         Button back = Ui.iconButton(this, "‹", "Retour", v -> finish());
+        LinearLayout titleRow = Ui.row(this);
+        Ui.weight(titleRow, 1f);
+        titleRow.setGravity(Gravity.CENTER);
+        rubBadge = Ui.bookText(this, "", 11f, true);
+        rubBadge.setGravity(Gravity.CENTER);
+        rubBadge.setBackgroundResource(R.drawable.ic_ui_hizb);
+        rubBadge.setVisibility(View.GONE);
+        int badgeSize = Ui.dp(this, 22);
+        LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(badgeSize, badgeSize);
+        badgeParams.setMargins(0, 0, Ui.dp(this, 6), 0);
+        titleRow.addView(rubBadge, badgeParams);
         pageLabel = Ui.bookText(this, "Lecture · " + page + " / 604", 13f, true);
-        Ui.weight(pageLabel, 1f);
-        pageLabel.setGravity(Gravity.CENTER);
+        titleRow.addView(pageLabel);
         TextView balance = Ui.text(this, "", 1f, false);
         balance.setMinWidth(Ui.dp(this, 44));
         topControls.addView(back);
-        topControls.addView(pageLabel);
+        topControls.addView(titleRow);
         topControls.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         readerStack.addView(topControls, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -139,6 +151,16 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         surahPicker.setContentDescription("Aller à une sourate");
         surahPicker.setOnClickListener(v -> showSurahPicker());
         pageRail.addView(surahPicker, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        rubPicker = Ui.bookText(this, "", 13f, true);
+        rubPicker.setGravity(Gravity.CENTER);
+        rubPicker.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        rubPicker.setClickable(true);
+        rubPicker.setFocusable(true);
+        rubPicker.setContentDescription("Aller à un Hizb");
+        rubPicker.setOnClickListener(v -> showRubPicker());
+        pageRail.addView(rubPicker, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        updateRubPickerLabel();
+        updateRubBadge();
         LinearLayout.LayoutParams railParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         railParams.topMargin = Ui.dp(this, 20);
@@ -172,6 +194,26 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         QuranSurahNames.showPicker(this, geometry, this::setPage);
     }
 
+    private void updateRubPickerLabel() {
+        if (rubPicker == null) return;
+        rubPicker.setText(QuranRubNames.currentLabel(page) + " ▾");
+    }
+
+    private static final String[] RUB_BADGE_LABEL = {"H", "¼", "½", "¾"};
+
+    private void updateRubBadge() {
+        if (rubBadge == null) return;
+        int[] row = QuranRubBoundaries.boundaryOnPage(page);
+        if (row == null) { rubBadge.setVisibility(View.GONE); return; }
+        rubBadge.setText(RUB_BADGE_LABEL[row[5]]);
+        rubBadge.setVisibility(View.VISIBLE);
+    }
+
+    private void showRubPicker() {
+        showControls();
+        QuranRubNames.showPicker(this, this::setPage);
+    }
+
     private Button tafsirReaderAction() {
         Button button = new Button(this);
         button.setAllCaps(false);
@@ -202,6 +244,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         pageLabel.setText("Lecture · " + page + " / 604");
         updateSurahPickerLabel();
+        updateRubPickerLabel();
+        updateRubBadge();
         mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
@@ -578,6 +622,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         page = shown;
         pageLabel.setText("Lecture · " + shown + " / 604");
         updateSurahPickerLabel();
+        updateRubPickerLabel();
+        updateRubBadge();
     }
     @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_PAGE_UP) { go(-1); return true; }

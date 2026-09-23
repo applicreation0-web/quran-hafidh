@@ -78,6 +78,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         if (new HifzAudioGate(this).available()) nav.addView(Ui.iconButton(this,"♪","Audio",v->openAudio()));
         nav.addView(Ui.iconButton(this,"‹","Page précédente",v->go(-1)));
         nav.addView(Ui.iconButton(this,"","Sourate",v->showSurahPicker()));
+        nav.addView(Ui.iconButton(this,"","Hizb",v->showRubPicker()));
         root.addView(nav);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
@@ -93,6 +94,8 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     private void go(int d){ setPage(Math.max(1,Math.min(604,page+d))); }
 
     private void showSurahPicker(){ QuranSurahNames.showPicker(this,geometry,this::setPage); }
+
+    private void showRubPicker(){ QuranRubNames.showPicker(this,this::setPage); }
 
     private void setPage(int requested){
         closeAudio();

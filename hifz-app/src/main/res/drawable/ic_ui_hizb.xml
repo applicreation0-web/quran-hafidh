@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rub' al-hizb style 8-point star (two overlaid squares) — a generic, centuries-old Quran
+     marginalia motif, drawn here from plain geometry rather than any licensed Mushaf typography. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.4" android:strokeLineJoin="round"
+        android:pathData="M12,3 L21,12 L12,21 L3,12 Z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="1.4" android:strokeLineJoin="round"
+        android:pathData="M18.36,5.64 L5.64,5.64 L5.64,18.36 L18.36,18.36 Z" />
+</vector>

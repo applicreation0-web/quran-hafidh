@@ -373,6 +373,7 @@ final class Ui {
         if (s.equals("séance")) return R.drawable.ic_ui_session;
         if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_audio;
         if (s.contains("sourate")) return R.drawable.ic_ui_surah_list;
+        if (s.contains("hizb")) return R.drawable.ic_ui_hizb;
         if (s.contains("réinitial") || s.contains("remettre à zéro")) return R.drawable.ic_ui_reset;
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
         if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
