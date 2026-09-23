@@ -94,7 +94,7 @@ for impossible in ("21:480", "2:293", "4:181", "58:29", "4:186"):
     # not contain a hand-written correction for any one of them.
     require(impossible not in reference_parser,
             f"source anomaly must not be hard-corrected in parser: {impossible}")
-require("TafsirReferenceParser.find(run.text)" in renderer,
+require("TafsirReferenceParser.find(displayText)" in renderer,
         "explicit source Quran references are not annotated by the shared renderer")
 require("run.style != TafsirRunStyle.BOLD_ITALIC" in renderer,
         "source verse-translation anchors must not be reinterpreted as commentary cross-references")
