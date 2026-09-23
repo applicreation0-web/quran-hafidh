@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-hifz-local'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+<style>
+:root{--paper:#faf8f2;--sheet:#fffdf8;--sel:#000;--sel-op:.07;--audio:#171717;--weak:#171717;--sidemark:#171717;--mask:#e8e4da;--reveal-shift:0px;color-scheme:light}
+html{-webkit-tap-highlight-color:transparent;color-scheme:light}
+html,body{margin:0;width:100%;height:100%;background:var(--paper);color:#000;-webkit-user-select:none;user-select:none;overflow:hidden}
+*{box-sizing:border-box}
+#box{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+/* Right/left-page memory cue: 3 short bars beside the Mushaf image, never inside it, drawn in a
+   gutter this reading zone now deliberately reserves (below) so they always have room — a
+   40px total width reduction, only ever applied on the narrow screens that would otherwise have
+   no gutter at all; wide screens that already had one keep their exact previous size. Hidden by
+   default; reader.js only reveals it once it has measured a gutter wide enough to hold it cleanly.
+   A tapered trio (center bar full length, the two flanking ones shorter, rounded ends) rather than
+   three identical bars, for a calligraphic flourish instead of a plain tick mark. */
+#sidemarks{position:absolute;display:none;flex-direction:row;align-items:center;justify-content:center;gap:3px;pointer-events:none}
+#sidemarks.show{display:flex}
+#sidemarks span{width:1.4px;height:100%;background:var(--sidemark);border-radius:1px}
+#sidemarks span:first-child,#sidemarks span:last-child{height:72%}
+body.eink #sidemarks span{width:1.7px}
+/* Center/spine cue: a single "tasbih" thread strung with small diamond beads, drawn in the
+   gutter on the OPPOSITE side from #sidemarks, marking where the book's binding would be.
+   Runs the Mushaf's full rendered height (there's no midpoint to draw the eye to here, unlike
+   the side bars' taper) — reader.js only reveals it once it has measured room for one bead. */
+#centermark{position:absolute;display:none;width:12px;pointer-events:none}
+#centermark.show{display:block}
+#centermark .thread{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--sidemark);opacity:.45;transform:translateX(-50%)}
+#centermark .bead{position:absolute;left:50%;width:5px;height:5px;border-radius:1.5px;background:var(--sidemark);transform:translate(-50%,-50%) rotate(45deg)}
+body.eink #centermark .thread{width:1.3px;opacity:.55}
+body.eink #centermark .bead{width:6px;height:6px}
+/* Fit the complete canonical Mushaf inside the native reading zone, reserving a small fixed gutter
+   for the side marks above. Keep 2px safety top/bottom on E-Ink. */
+#mushaf{width:min(calc(100vw - 40px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);transform:translateY(var(--reveal-shift));transform-origin:center center}
+#mushaf>svg{display:block;width:100%;height:auto}
+.ayahPolygon{pointer-events:all;cursor:pointer;fill:var(--sel)!important;fill-opacity:0;stroke:none!important;outline:none}
+.ayahPolygon:focus,.ayahPolygon:focus-visible{outline:none}
+.ayahPolygon.selected{fill-opacity:var(--sel-op)}
+.ayahPolygon.audio{fill-opacity:0;stroke:var(--audio)!important;stroke-width:1.15;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.ayahPolygon.selected.audio{fill-opacity:var(--sel-op);stroke:var(--audio)!important}
+.masklayer,.linefocuslayer,.weaklayer{pointer-events:none}
+.linefocuscell{fill:var(--sel);fill-opacity:var(--sel-op)}
+.maskcell{fill:var(--mask)}
+.weakoutline{fill:none;stroke:var(--weak);stroke-width:.8;stroke-dasharray:2.4,2;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+body.eink{--paper:#fff;--sheet:#fff;--sel-op:.075;--mask:#e2e2e2}
+body.eink .ayahPolygon.audio{stroke-width:1.35}
+body.eink .weakoutline{stroke-width:1}
+.eink *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+</style>
+</head>
+<body><div id="box"><div id="sidemarks" aria-hidden="true"><span></span><span></span><span></span></div><div id="centermark" aria-hidden="true"><div class="thread"></div></div><div id="mushaf" aria-label="Mushaf de Médine"><!--MUSHAF_SVG--></div></div><script src="reader.js"></script></body>
+</html>

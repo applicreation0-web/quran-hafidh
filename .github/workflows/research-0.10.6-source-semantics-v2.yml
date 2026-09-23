@@ -1,0 +1,42 @@
+name: Research 0.10.6 Qushayri source semantics v2
+on:
+  push:
+    branches: ["research/0.10.6-qushayri-poetry"]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7
+      - run: curl --fail --location --retry 3 -o "${RUNNER_TEMP}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+      - name: Verify source semantics inventories v2
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, fitz, sys
+          sys.path.insert(0, 'scripts')
+          import qushayri_source_semantics_0106 as base
+          from qushayri_source_semantics_0106_verified import build_qushayri_source_semantics, EXPECTED_UNIQUE_POETRY_LINES
+          path='${{ runner.temp }}/lataif.pdf'
+          h=hashlib.sha256(open(path,'rb').read()).hexdigest()
+          assert h == base.EXPECTED_SOURCE_SHA256, h
+          doc=fitz.open(path)
+          s=build_qushayri_source_semantics(doc)
+          print('note relations', s.verified_note_relation_count)
+          print('poetry entries', s.poetry_entry_count)
+          print('poetry occurrences', s.poetry_occurrence_count)
+          print('unique poetry lines', s.poetry_line_count)
+          assert s.verified_note_relation_count == 928
+          assert s.poetry_entry_count == 121
+          assert s.poetry_occurrence_count == 126
+          assert s.poetry_line_count == EXPECTED_UNIQUE_POETRY_LINES == 542
+          known=[v for v in s.poetry_lines.values() if v.poem_id.startswith('35:We have not been firm')]
+          known=sorted(known,key=lambda x:x.line_index)
+          print('known poem lines', [(v.page,v.block,v.line,v.line_index,v.stanza_break_before) for v in known])
+          assert len(known)==4
+          assert [v.stanza_break_before for v in known] == [False,False,True,False]
+          page42=[v for v in s.poetry_lines.values() if v.page==74]
+          print('page 42 indexed poetry lines', [(v.poem_id,v.block,v.line,v.line_index) for v in sorted(page42,key=lambda x:(x.block,x.line))])
+          assert len(page42)==8
+          PY

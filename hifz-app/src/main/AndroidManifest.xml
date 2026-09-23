@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Used only by InkContentVerifier, gated behind the "Vérification avancée de l'écriture"
+         setting (off by default): a one-time download of ML Kit's Arabic ink-recognition model.
+         verifyHifzProductBoundary enforces that no other class in this module may reference any
+         network-capable API. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_quran_hifz_logo"
+        android:roundIcon="@drawable/ic_quran_hifz_logo"
+        android:label="Quran Hifz"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="false">
+        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".WeakVersesActivity" android:exported="false" />
+        <activity android:name=".ProgressMapActivity" android:exported="false" />
+        <activity
+            android:name=".WritingExerciseActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".HifzSessionActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".FreeMemActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".StudyReaderActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

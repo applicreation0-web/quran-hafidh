@@ -1,0 +1,425 @@
+name: Quran Hifz 0.7.4 pre-BOOX final candidate
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.4-preboox
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: quran-hifz-0.7.4-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-hifz-official:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject canonical 604-page Mushaf and audited Tafsir sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+
+          tafsir_dst="app/src/plus/assets/tafsir"
+          rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
+          cp baseline109/extracted/assets/tafsir/* "$tafsir_dst/"
+          test "$(find "$tafsir_dst" -maxdepth 1 -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$tafsir_dst" -maxdepth 1 -type f -name 'qurtubi_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$tafsir_dst" -maxdepth 1 -type f -name 'qushayri_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 2
+          cat "$tafsir_dst"/al_jalalayn_en.sqlite.gz.part* | gzip -dc | sha256sum | grep -q '^26d8715a9bcecda6cb6397f0d8a530cb9404bb69ba66ed5264ed3f5b16d11a56 '
+          cat "$tafsir_dst"/qurtubi_en.sqlite.gz.b64.part* | base64 -d | gzip -t
+          cat "$tafsir_dst"/qushayri_en.sqlite.gz.b64.part* | base64 -d | gzip -t
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify source Tafsir corpora before release normalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, gzip, sqlite3, tempfile
+          from pathlib import Path
+          root = Path('app/src/plus/assets/tafsir')
+          checks = [
+              ('jalalayn', 'al_jalalayn_en.sqlite.gz.part*', False, 6236, 'verse_commentary'),
+              ('qurtubi', 'qurtubi_en.sqlite.gz.b64.part*', True, 432, 'tafsir_entry'),
+              ('qushayri', 'qushayri_en.sqlite.gz.b64.part*', True, 720, 'tafsir_entry'),
+          ]
+          for name, pattern, b64, expected, table in checks:
+              parts = sorted(root.glob(pattern)); assert parts, f'{name}: no parts'
+              payload = b''.join(p.read_bytes() for p in parts)
+              if b64: payload = base64.b64decode(payload)
+              raw = gzip.decompress(payload)
+              with tempfile.NamedTemporaryFile(suffix='.sqlite') as tmp:
+                  tmp.write(raw); tmp.flush(); db = sqlite3.connect(tmp.name)
+                  assert db.execute('pragma quick_check').fetchone()[0] == 'ok'
+                  assert db.execute(f'select count(*) from {table}').fetchone()[0] == expected
+                  db.close()
+          print('TAFSIR_SOURCE_CORPORA_OK')
+          PY
+
+      - name: Generate exact Hifz geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          test -s app/src/main/assets/reader109/geometry.json
+          test -s geometry-report.json
+          python3 - <<'PY'
+          import json
+          report=json.load(open('geometry-report.json'))
+          assert report.get('page_count') == 604, report
+          assert report.get('unique_line_count') == 8820, report
+          assert report.get('multi_page_verse_count') == 0, report
+          print('GEOMETRY_COUNTS_OK 604 8820 MULTI_PAGE_VERSES=0')
+          PY
+
+      - name: Package self-contained audited source
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle_name="quran-hifz-source-${GITHUB_SHA}"
+          stage="$RUNNER_TEMP/hifz-repro/$bundle_name"
+          rm -rf "$RUNNER_TEMP/hifz-repro"
+          mkdir -p "$stage"
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='baseline109/' \
+            --exclude='.gradle/' \
+            --exclude='*/build/' \
+            --exclude='quran-hifz-reproducible-source-*' \
+            ./ "$stage/"
+
+          test "$(find "$stage/app/src/main/assets/mushaf/hafs/kfqc/svg-br" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          test -s "$stage/app/src/main/assets/reader109/geometry.json"
+          test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'qurtubi_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$stage/app/src/plus/assets/tafsir" -maxdepth 1 -type f -name 'qushayri_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 2
+
+          cat > "$stage/SELF_CONTAINED_BUILD.txt" <<EOF
+          QURAN HIFZ 0.7.4 SELF-CONTAINED AUDIT SOURCE
+          HEAD=${GITHUB_SHA}
+          PACKAGE=com.quransafeguard.hifz
+          VERSION_CODE=11
+          VERSION_NAME=0.7.4-boox
+          MUSHAF_PAGES=604
+          AUDIO_DELIVERY=separate-local-pack
+
+          This bundle was captured after the validated Mushaf/Tafsir injection and exact geometry generation.
+          It therefore contains the build inputs that the historical baseline artifact supplied to CI.
+          No JKS, signing password, or local audio pack is included.
+          Build application code with Gradle 9.5 / JDK 17, e.g. :hifz-app:assembleRelease.
+          EOF
+
+          (
+            cd "$stage"
+            find . -type f ! -name SOURCE_FILES_SHA256.txt -print0 | sort -z | xargs -0 sha256sum > SOURCE_FILES_SHA256.txt
+          )
+          archive="quran-hifz-reproducible-source-${GITHUB_SHA}.tar.gz"
+          tar -C "$RUNNER_TEMP/hifz-repro" -czf "$archive" "$bundle_name"
+          sha256sum "$archive" | tee "${archive}.sha256"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0" "emulator" "system-images;android-35;default;x86_64"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Verify final mask, vertical fit and clean scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/test_hifz_claude_audit_regressions.py
+          python3 scripts/verify_hifz_mask_hotfix.py
+          node scripts/test_hifz_mask_segments.js
+          node scripts/test_hifz_vertical_fit.js
+          test ! -e scripts/augment_hifz_word_geometry.py
+          test ! -e scripts/test_hifz_word_line_alignment.py
+          test ! -e scripts/test_hifz_word_mask.js
+          test ! -e hifz-app/src/main/assets/licenses/quran-word-coordinates-MIT.txt
+          ! grep -R -E 'mushaf-layout|Quran-coordinate|line\.words|maskedWordIds' hifz-app/src/main
+          test ! -e .github/workflows/hifz-personal-embedded-audio.yml
+
+      - name: Run behavioral JVM regression and product-boundary suite
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:compileDebugAndroidTestSources :hifz-app:verifyHifzProductBoundary :hifz-app:verifyHifzCosmeticContract :hifz-app:verifyHifzConvergenceRules --stacktrace
+
+      - name: Run source contracts separately
+        run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+
+      - name: Record honest JVM test counts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee hifz-test-counts.txt
+          import glob, xml.etree.ElementTree as ET
+          def count(pattern):
+              tests=failures=errors=skipped=0
+              for f in glob.glob(pattern, recursive=True):
+                  r=ET.parse(f).getroot()
+                  tests += int(r.attrib.get('tests',0)); failures += int(r.attrib.get('failures',0))
+                  errors += int(r.attrib.get('errors',0)); skipped += int(r.attrib.get('skipped',0))
+              return tests,failures,errors,skipped
+          behavior=count('hifz-app/build/test-results/testDebugUnitTest/**/*.xml')
+          contracts=count('hifz-app/build/test-results/sourceContractTest/**/*.xml')
+          print('BEHAVIOR_JVM tests=%d failures=%d errors=%d skipped=%d' % behavior)
+          print('SOURCE_CONTRACT tests=%d failures=%d errors=%d skipped=%d' % contracts)
+          assert behavior[0] > 0 and behavior[1] == behavior[2] == 0
+          assert contracts[0] > 0 and contracts[1] == contracts[2] == 0
+          PY
+
+      - name: Run instrumented Hifz migration and geometry tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          avdmanager create avd --force --name hifz-ci --package "system-images;android-35;default;x86_64" --device "pixel"
+          if ! "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fxq hifz-ci; then
+            echo 'Android AVD creation failed: hifz-ci is not registered' >&2
+            avdmanager list avd >&2 || true
+            find "$ANDROID_AVD_HOME" -maxdepth 2 -type f -print >&2 || true
+            exit 1
+          fi
+          sudo chmod 666 /dev/kvm || true
+          "$ANDROID_HOME/emulator/emulator" -avd hifz-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > emulator.log 2>&1 &
+          if ! timeout 90s adb wait-for-device; then
+            echo 'Android emulator did not register with adb within 90 seconds' >&2
+            adb devices -l >&2 || true
+            cat emulator.log >&2 || true
+            exit 1
+          fi
+          booted=0
+          for i in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$booted" != "1" ]; then
+            echo 'Android emulator failed to boot' >&2
+            cat emulator.log >&2
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          gradle --no-daemon :hifz-app:connectedDebugAndroidTest --stacktrace
+
+          # Work-audit blocker: prove persistence across real process death, not Activity.recreate().
+          runner="com.quransafeguard.hifz.test/androidx.test.runner.AndroidJUnitRunner"
+          gate="com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest"
+          adb shell am instrument -w -e class "${gate}#a_prepareFixtureForExternalForceStop" "$runner" | tee process-death-prepare.log
+          grep -q 'OK (1 test)' process-death-prepare.log
+
+          adb shell monkey -p com.quransafeguard.hifz -c android.intent.category.LAUNCHER 1 > /dev/null
+          before_pid=""
+          for i in $(seq 1 30); do
+            before_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+            [ -n "$before_pid" ] && break
+            sleep 1
+          done
+          test -n "$before_pid"
+
+          adb shell am force-stop com.quransafeguard.hifz
+          for i in $(seq 1 15); do
+            current_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+            [ -z "$current_pid" ] && break
+            sleep 1
+          done
+          test -z "$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+
+          adb shell monkey -p com.quransafeguard.hifz -c android.intent.category.LAUNCHER 1 > /dev/null
+          after_pid=""
+          for i in $(seq 1 30); do
+            after_pid="$(adb shell pidof com.quransafeguard.hifz 2>/dev/null | tr -d '\r' || true)"
+            [ -n "$after_pid" ] && break
+            sleep 1
+          done
+          test -n "$after_pid"
+          test "$after_pid" != "$before_pid"
+
+          adb shell am instrument -w -e class "${gate}#b_verifyFixtureAfterExternalForceStop" "$runner" | tee process-death-verify.log
+          grep -q 'OK (1 test)' process-death-verify.log
+          echo "PROCESS_DEATH_FORCE_STOP_RELAUNCH_OK before=$before_pid after=$after_pid" | tee process-death-proof.txt
+
+      - name: Assemble unsigned official release candidate
+        run: gradle --no-daemon :hifz-app:assembleRelease --stacktrace
+
+      - name: Inspect official release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          apkanalyzer manifest print "$apk" > hifz-app-manifest.xml
+          test "$(apkanalyzer manifest application-id "$apk")" = "com.quransafeguard.hifz"
+          test "$(apkanalyzer manifest version-code "$apk")" = "11"
+          test "$(apkanalyzer manifest version-name "$apk")" = "0.7.4-boox"
+          grep -q 'Quran Hifz' hifz-app-manifest.xml
+          if grep -q 'android:debuggable="true"' hifz-app-manifest.xml; then exit 1; fi
+          grep -q 'configChanges=' hifz-app-manifest.xml
+          if grep -Eqi 'AccessibilityService|BIND_ACCESSIBILITY_SERVICE|QUERY_ALL_PACKAGES|QuranAccessibilityService' hifz-app-manifest.xml; then exit 1; fi
+          if "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify "$apk" >/dev/null 2>&1; then
+            echo 'ERROR: official CI artifact must be unsigned before local signing.' >&2
+            exit 1
+          fi
+          echo 'APK_UNSIGNED_CONFIRMED' | tee hifz-app-unsigned-proof.txt
+
+          unzip -l "$apk" > hifz-app-apk-list.txt
+          grep -q 'assets/reader109/geometry.json' hifz-app-apk-list.txt
+          if grep -q 'assets/reader109/audio.json' hifz-app-apk-list.txt; then
+            echo 'ERROR: divergent reader109/audio.json must not ship.' >&2; exit 1
+          fi
+          if grep -Eq 'assets/audio/husary-muallim/[0-9]{6}\.mp3' hifz-app-apk-list.txt; then
+            echo 'ERROR: Husary audio must remain an external local pack.' >&2; exit 1
+          fi
+          if grep -q '\.gz\.b64\.part' hifz-app-apk-list.txt; then
+            echo 'ERROR: Base64 Tafsir packaging must not ship.' >&2; exit 1
+          fi
+          test "$(grep -E 'assets/mushaf/hafs/kfqc/svg-br/[0-9]{3}\.svg\.br' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 604
+          test "$(grep -E 'assets/tafsir/al_jalalayn_en\.sqlite\.gz\.part[0-9]{2}' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 4
+          test "$(grep -E 'assets/tafsir/qurtubi_en\.sqlite\.gz\.part[0-9]{2}' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 4
+          test "$(grep -E 'assets/tafsir/qushayri_en\.sqlite\.gz\.part[0-9]{2}' hifz-app-apk-list.txt | wc -l | tr -d ' ')" = 2
+
+          APK_PATH="$apk" python3 - <<'PY'
+          import gzip, os, sqlite3, tempfile, zipfile
+          apk = os.environ['APK_PATH']
+          specs = [
+              ('al_jalalayn_en.sqlite', 4, 6236, 'verse_commentary'),
+              ('qurtubi_en.sqlite', 4, 432, 'tafsir_entry'),
+              ('qushayri_en.sqlite', 2, 720, 'tafsir_entry'),
+          ]
+          with zipfile.ZipFile(apk) as z:
+              for name, parts, expected, table in specs:
+                  compressed = b''.join(z.read(f'assets/tafsir/{name}.gz.part{i:02d}') for i in range(parts))
+                  raw = gzip.decompress(compressed)
+                  with tempfile.NamedTemporaryFile(suffix='.sqlite') as tmp:
+                      tmp.write(raw); tmp.flush(); db=sqlite3.connect(tmp.name)
+                      assert db.execute('pragma quick_check').fetchone()[0] == 'ok'
+                      assert db.execute(f'select count(*) from {table}').fetchone()[0] == expected
+                      meta=dict(db.execute('select key,value from source_metadata'))
+                      assert meta.get('personal_use_only') == 'true'
+                      assert meta.get('redistribution_approved') == 'false'
+                      assert meta.get('rights_note','').strip()
+                      db.close()
+          print('PACKAGED_TAFSIR_RELEASE_OK')
+          PY
+
+          sha256sum "$apk" | tee hifz-app-sha256.txt
+          echo "APK=$apk" | tee hifz-app-build-info.txt
+          echo "HEAD=${GITHUB_SHA}" | tee -a hifz-app-build-info.txt
+          echo "PACKAGE=com.quransafeguard.hifz" | tee -a hifz-app-build-info.txt
+          echo "VERSION_CODE=11" | tee -a hifz-app-build-info.txt
+          echo "VERSION_NAME=0.7.4-boox" | tee -a hifz-app-build-info.txt
+          echo "AUDIO_DELIVERY=separate-local-pack" | tee -a hifz-app-build-info.txt
+
+      - name: Verify complete final evidence before upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s geometry-report.json
+          test -s hifz-test-counts.txt
+          test -s process-death-proof.txt
+          test -s hifz-app-manifest.xml
+          test -s hifz-app-apk-list.txt
+          test -s hifz-app-sha256.txt
+          test -s hifz-app-build-info.txt
+          test -s hifz-app-unsigned-proof.txt
+          test -s quran-hifz-reproducible-source-${GITHUB_SHA}.tar.gz
+          test -s quran-hifz-reproducible-source-${GITHUB_SHA}.tar.gz.sha256
+          test -s "$(find hifz-app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          echo FINAL_EVIDENCE_COMPLETE
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-0.7.4-preboox-diagnostics-${{ github.sha }}
+          path: |
+            hifz-core/build/test-results/
+            hifz-core/build/reports/tests/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            emulator.log
+            process-death-prepare.log
+            process-death-verify.log
+            process-death-proof.txt
+            hifz-test-counts.txt
+            geometry-report.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload official unsigned release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-0.7.4-preboox-unsigned-${{ github.sha }}
+          path: |
+            hifz-app/build/outputs/apk/release/*.apk
+            hifz-core/build/test-results/
+            hifz-core/build/reports/tests/
+            hifz-app/build/test-results/
+            hifz-app/build/reports/tests/
+            hifz-app/build/outputs/androidTest-results/
+            hifz-app/build/reports/androidTests/
+            emulator.log
+            process-death-prepare.log
+            process-death-verify.log
+            process-death-proof.txt
+            hifz-app-manifest.xml
+            hifz-app-apk-list.txt
+            hifz-app-sha256.txt
+            hifz-app-build-info.txt
+            hifz-app-unsigned-proof.txt
+            hifz-test-counts.txt
+            geometry-report.json
+            quran-hifz-reproducible-source-*.tar.gz
+            quran-hifz-reproducible-source-*.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+# Durable signing is deliberately local with the existing Quran Hifz JKS.
+# No key material or signing password is stored in GitHub Actions.

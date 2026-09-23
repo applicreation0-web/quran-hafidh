@@ -1,0 +1,25 @@
+name: Research 0.10.6 Qushayri DB presentation
+
+on:
+  push:
+    branches:
+      - "research/0.10.6-qushayri-poetry"
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7
+      - name: Fetch pinned source
+        run: curl --fail --location --retry 3 -o "${RUNNER_TEMP}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+      - name: Build current Qushayri DB
+        run: QUSHAYRI_PDF="${RUNNER_TEMP}/lataif.pdf" QUSHAYRI_OUT="${RUNNER_TEMP}/qushayri.sqlite" python3 scripts/build_qushayri.py
+      - name: Inspect note calls and spacing
+        run: python3 scripts/research_qushayri_db_presentation_0106.py "${RUNNER_TEMP}/qushayri.sqlite" --report "${RUNNER_TEMP}/qushayri-db-presentation-0106.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qushayri-db-presentation-0106
+          path: ${{ runner.temp }}/qushayri-db-presentation-0106.json
+          retention-days: 7

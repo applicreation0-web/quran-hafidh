@@ -1,0 +1,94 @@
+name: Quran Safeguard 0.10.10 clean rebuild
+
+on:
+  push:
+    branches:
+      - "rebuild/0.10.10-hifz-on-0.10.8"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore exact audited 0.10.8 Quran assets
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.8-unsigned
+          run-id: 34096699893
+          github-token: ${{ github.token }}
+          path: baseline108
+
+      - name: Restore immutable Mushaf and Plus Tafsir
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          light = next(Path('baseline108').rglob('*light*unsigned.apk'))
+          plus = next(Path('baseline108').rglob('*plus*unsigned.apk'))
+          with zipfile.ZipFile(light) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/mushaf/') and not n.endswith('/'):
+                      p = Path('app/src/main') / n
+                      p.parent.mkdir(parents=True, exist_ok=True)
+                      p.write_bytes(z.read(n))
+          with zipfile.ZipFile(plus) as z:
+              for n in z.namelist():
+                  if n.startswith('assets/tafsir/') and not n.endswith('/'):
+                      p = Path('app/src/plus') / n
+                      p.parent.mkdir(parents=True, exist_ok=True)
+                      p.write_bytes(z.read(n))
+          PY
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build reader geometry and verify Hifz boundaries
+        run: |
+          pip install pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/verify_reader109.py
+          node scripts/test_reader109_protocol.js
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Unit tests Light and Plus
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+
+      - name: Build Light and Plus debug APKs
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+
+      - name: Upload foundation APKs and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.10-rebuild-foundation
+          path: |
+            app/build/outputs/apk/light/debug/*.apk
+            app/build/outputs/apk/plus/debug/*.apk
+            app/build/test-results/
+            app/build/reports/tests/
+            geometry-report.json
+          retention-days: 7

@@ -1,0 +1,73 @@
+name: Android 0.10.5 canonical Juz/Hizb audit
+
+on:
+  push:
+    branches:
+      - "fix/0.10.5-canonical-juz-hizb"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  canonical-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Source-level fail-closed checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          selector="app/src/main/java/com/quranunlock/guard/QuranPageSelector.kt"
+          prefs="app/src/main/java/com/quranunlock/guard/SafeguardCyclePrefs.kt"
+          tests="app/src/test/java/com/quranunlock/guard/QuranStructureMetadataTest.kt"
+
+          grep -q 'fun sequentialCanonicalQuotaPages' "${selector}"
+          grep -q 'mode = mode' "${prefs}"
+          grep -q 'QuranSelectionMode.JUZ -> GuardPrefs.selectedJuz' "${prefs}"
+          grep -q 'QuranSelectionMode.HIZB -> GuardPrefs.selectedHizb' "${prefs}"
+          grep -q 'plan.pages.all { it in canonicalPool }' "${prefs}"
+          grep -q 'plan.pages.distinct().size == plan.pages.size' "${prefs}"
+          grep -q 'allThirtyJuzStartsAndPagesMatchCanonicalMetadata' "${tests}"
+          grep -q 'allSixtyHizbStartsAndPagesMatchCanonicalMetadata' "${tests}"
+          grep -q 'everyCanonicalDivisionIsGaplessAndNonOverlappingByVerse' "${tests}"
+
+          if grep -A90 'private fun ensurePlan' "${prefs}" | grep -q 'sequentialHizbPages'; then
+            echo 'Legacy Hizb-only planner is still used by ensurePlan' >&2
+            exit 1
+          fi
+
+      - name: Fetch Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Unit tests Light and Plus
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Compile both editions
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug
+
+      - name: Existing release audit
+        run: gradle --no-daemon :app:verifyReleaseAudit
