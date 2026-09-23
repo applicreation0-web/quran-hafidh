@@ -17,6 +17,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.quransafeguard.hifz.core.ArabicTextComparison;
 import com.quransafeguard.hifz.core.TrajectoryComparison;
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -310,35 +311,42 @@ public final class WritingTestActivity extends Activity {
             showResult("Trajectoire (forme) : indisponible.", WARN);
             return;
         }
-        int lastWord = startWord + bestLength;
         final int finalScore = bestScore;
-        String range = bestLength == 1
-            ? "mot " + (startWord + 1)
-            : "mots " + (startWord + 1) + "-" + lastWord;
+        String range = wordRangeLabel(startWord, bestLength);
         int shapeColor = bestScore >= 70 ? GOOD : bestScore >= 40 ? WARN : BAD;
         showResult(range + "  —  forme " + finalScore + " %  ·  contenu : vérification…", shapeColor);
 
-        String expectedText = (wordTexts != null && startWord >= 0 && lastWord <= wordTexts.length)
-            ? String.join(" ", Arrays.copyOfRange(wordTexts, startWord, lastWord))
-            : null;
-        if (expectedText == null) {
+        if (wordTexts == null || wordTexts.length == 0) {
             showResult(range + "  —  forme " + finalScore + " %  ·  contenu : texte de référence indisponible", shapeColor);
             return;
         }
 
-        InkContentVerifier.verify(canvas.rawStrokesFlatXYT(), expectedText, new InkContentVerifier.Callback() {
-            @Override public void onResult(List<String> candidates, boolean matches) {
-                // A wrong or reordered word can still trace a shape close to the reference (the
-                // trajectory score alone can't tell) — so a content mismatch always shows red here,
-                // regardless of how good the shape score was, to surface exactly that blind spot.
-                String verdict = matches ? "reconnu ✓" : "NON reconnu (ML Kit a lu : " + String.join(", ", candidates) + ")";
-                showResult(range + "  —  forme " + finalScore + " %  ·  contenu : " + verdict, matches ? shapeColor : BAD);
+        InkContentVerifier.verify(canvas.rawStrokesFlatXYT(), new InkContentVerifier.Callback() {
+            @Override public void onResult(List<String> candidates) {
+                // ML Kit reads the WHOLE ink on the canvas, whatever its length — it has no notion
+                // of the trajectory search's "best" length above, and the two can disagree (e.g. the
+                // tester wrote the full line but the shape search settled on a shorter prefix). So
+                // this checks every possible length independently and keeps the longest one that
+                // actually matches, instead of only checking the trajectory's chosen length.
+                int matchedLength = -1;
+                for (int len = 1; startWord + len <= wordTexts.length; len++) {
+                    String candidateExpected = String.join(" ", Arrays.copyOfRange(wordTexts, startWord, startWord + len));
+                    if (ArabicTextComparison.anyMatches(candidates, candidateExpected)) matchedLength = len;
+                }
+                String verdict = matchedLength > 0
+                    ? "reconnu ✓ (" + wordRangeLabel(startWord, matchedLength) + ")"
+                    : "NON reconnu (ML Kit a lu : " + String.join(", ", candidates) + ")";
+                showResult(range + "  —  forme " + finalScore + " %  ·  contenu : " + verdict, matchedLength > 0 ? shapeColor : BAD);
             }
 
             @Override public void onError(String message) {
                 showResult(range + "  —  forme " + finalScore + " %  ·  contenu : erreur (" + message + ")", shapeColor);
             }
         });
+    }
+
+    private static String wordRangeLabel(int startWord, int length) {
+        return length == 1 ? "mot " + (startWord + 1) : "mots " + (startWord + 1) + "-" + (startWord + length);
     }
 
     private void showResult(String text, Integer color) {

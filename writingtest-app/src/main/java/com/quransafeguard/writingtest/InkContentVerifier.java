@@ -13,8 +13,6 @@ import com.google.mlkit.vision.digitalink.Ink;
 import com.google.mlkit.vision.digitalink.RecognitionCandidate;
 import com.google.mlkit.vision.digitalink.RecognitionResult;
 
-import com.quransafeguard.hifz.core.ArabicTextComparison;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +21,13 @@ import java.util.List;
  * written, complementing WritingCanvasView's geometric Palier 3 score. The trajectory score alone
  * is shape-only and blind to identity: confirmed on a real device where a wrong/reordered word
  * scored close to a correct one because its overall traced shape happened to be similar once
- * centered and rescaled. This is the second, independent signal that catches that case.
+ * centered and rescaled.
+ *
+ * Recognizes the WHOLE ink as drawn — it has no notion of "how many words" the trajectory search
+ * settled on, since ML Kit reads every stroke on the canvas regardless. The caller is responsible
+ * for deciding which expected text(s) to check the returned candidates against (see
+ * WritingTestActivity.evaluateAuto(), which tries every word-count length rather than just the
+ * trajectory's best-scoring one — the two searches are independent and can disagree).
  *
  * Unlike hifz-app's InkContentVerifier, this test app calls it unconditionally (no settings gate,
  * no HifzPrefs dependency) — its whole purpose here is to validate what each layer does and
@@ -31,13 +35,13 @@ import java.util.List;
  */
 final class InkContentVerifier {
     interface Callback {
-        void onResult(List<String> candidates, boolean matches);
+        void onResult(List<String> candidates);
         void onError(String message);
     }
 
     private InkContentVerifier() {}
 
-    static void verify(List<float[]> strokesAsFlatXYT, String expectedText, Callback callback) {
+    static void verify(List<float[]> strokesAsFlatXYT, Callback callback) {
         DigitalInkRecognitionModelIdentifier modelIdentifier;
         try {
             modelIdentifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag("ar");
@@ -53,11 +57,11 @@ final class InkContentVerifier {
         DigitalInkRecognitionModel model = DigitalInkRecognitionModel.builder(modelIdentifier).build();
         RemoteModelManager manager = RemoteModelManager.getInstance();
         manager.download(model, new DownloadConditions.Builder().build())
-            .addOnSuccessListener((OnSuccessListener<Void>) unused -> recognize(model, strokesAsFlatXYT, expectedText, callback))
+            .addOnSuccessListener((OnSuccessListener<Void>) unused -> recognize(model, strokesAsFlatXYT, callback))
             .addOnFailureListener((OnFailureListener) e -> callback.onError("Échec du téléchargement du modèle : " + e.getMessage()));
     }
 
-    private static void recognize(DigitalInkRecognitionModel model, List<float[]> strokesAsFlatXYT, String expectedText, Callback callback) {
+    private static void recognize(DigitalInkRecognitionModel model, List<float[]> strokesAsFlatXYT, Callback callback) {
         DigitalInkRecognizer recognizer = DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build());
         Ink.Builder inkBuilder = Ink.builder();
         for (float[] stroke : strokesAsFlatXYT) {
@@ -72,8 +76,7 @@ final class InkContentVerifier {
             .addOnSuccessListener((OnSuccessListener<RecognitionResult>) result -> {
                 List<String> candidates = new ArrayList<>();
                 for (RecognitionCandidate c : result.getCandidates()) candidates.add(c.getText());
-                boolean matches = ArabicTextComparison.anyMatches(candidates, expectedText);
-                callback.onResult(candidates, matches);
+                callback.onResult(candidates);
             })
             .addOnFailureListener((OnFailureListener) e -> callback.onError("Échec de la reconnaissance : " + e.getMessage()));
     }
