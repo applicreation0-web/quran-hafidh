@@ -1,0 +1,76 @@
+name: Ink test debug APK (ML Kit tashkil check)
+
+on:
+  push:
+    branches:
+      - claude/app-dernier-chat-c19bfs
+    paths:
+      - 'inktest-app/**'
+      - '.github/workflows/inktest-debug-apk.yml'
+      - 'settings.gradle.kts'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inktest-debug-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Assemble debug APK
+        run: gradle --no-daemon :inktest-app:assembleDebug --stacktrace
+
+      - name: Locate debug APK
+        id: apk
+        run: |
+          set -euo pipefail
+          apk="$(find inktest-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          sha256sum "$apk"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: inktest-debug-${{ github.sha }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish debug APK as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="inktest-debug-${{ github.sha }}"
+          gh release create "$tag" "${{ steps.apk.outputs.path }}" \
+            --repo "${{ github.repository }}" \
+            --title "Ink test debug APK ($tag)" \
+            --notes "Throwaway diagnostic app — NOT part of Quran Hifz. Checks whether ML Kit's Arabic digital-ink model outputs tashkil. Requires internet once to download the Arabic model via Play Services." \
+            --prerelease
