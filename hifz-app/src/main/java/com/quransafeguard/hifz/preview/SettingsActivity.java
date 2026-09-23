@@ -117,6 +117,12 @@ public final class SettingsActivity extends android.app.Activity {
         TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",13f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
         Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);root.addView(einkRow);
 
+        LinearLayout advancedVerifRow=Ui.row(this);advancedVerifRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));advancedVerifRow.setMinimumHeight(Ui.dp(this,48));
+        TextView advancedVerifLabel=Ui.text(this,"Vérification avancée de l’écriture",13f,false);Ui.weight(advancedVerifLabel,1);advancedVerifRow.addView(advancedVerifLabel);
+        Switch advancedVerif=new Switch(this);advancedVerif.setChecked(prefs.advancedWritingVerificationEnabled());advancedVerif.setContentDescription("Vérification avancée de l’écriture");advancedVerif.setOnCheckedChangeListener((button,checked)->prefs.setAdvancedWritingVerificationEnabled(checked));advancedVerifRow.addView(advancedVerif);root.addView(advancedVerifRow);
+        TextView advancedVerifNote=Ui.text(this,"Télécharge une fois un modèle de reconnaissance d’écriture arabe pour vérifier le mot écrit — la seule fonction de l’appli qui utilise Internet. Ne lit pas les voyelles courtes (tashkil).",11f,false);
+        advancedVerifNote.setTextColor(Ui.MUTED);advancedVerifNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(advancedVerifNote);
+
         section(root,"Sauvegarde");
         root.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));root.addView(Ui.divider(this));
         root.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));

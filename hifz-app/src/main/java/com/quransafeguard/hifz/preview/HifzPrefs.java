@@ -133,6 +133,7 @@ public final class HifzPrefs {
                 .putBoolean("recentSpeedCalibrated", false)
                 .putInt("recentSpeedSamples", 0)
                 .putBoolean("forceEink", false)
+                .putBoolean("advancedWritingVerificationEnabled", false)
                 .putString("lastSabqiDate", "")
                 .putString("lastSabqiLabel", "")
                 .putString("lastItqanDate", "")
@@ -2435,6 +2436,16 @@ public final class HifzPrefs {
 
     public boolean forceEink() { return p.getBoolean("forceEink", false); }
     public void setForceEink(boolean value) { p.edit().putBoolean("forceEink", value).apply(); }
+
+    /**
+     * Off by default. The only setting that ever lets Quran Hifz touch the network: a one-time
+     * download of ML Kit's Arabic digital-ink model to check whether handwritten strokes recognize
+     * as the expected word (content only — it does not read tashkil). See InkContentVerifier,
+     * the single class allowed to reference network-capable APIs (enforced by
+     * verifyHifzProductBoundary).
+     */
+    public boolean advancedWritingVerificationEnabled() { return p.getBoolean("advancedWritingVerificationEnabled", false); }
+    public void setAdvancedWritingVerificationEnabled(boolean value) { p.edit().putBoolean("advancedWritingVerificationEnabled", value).apply(); }
 
     /**
      * How many of the six non-Sunday days a week give their morning to Apprentissage instead of

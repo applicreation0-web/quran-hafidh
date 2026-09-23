@@ -45,6 +45,7 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
+    from(rootProject.file("app/src/main/assets/reader109/verses_text.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
     from(generatedHifzWordShapesDir) { into("wordshapes") }
 }
@@ -56,8 +57,39 @@ val verifyHifzProductBoundary by tasks.registering {
         check(!manifest.contains("<queries>")) { "Quran Hifz must not query or enumerate external applications." }
         check(!manifest.contains("QUERY_ALL_PACKAGES")) { "Quran Hifz must never request broad package visibility." }
         check(!manifest.contains("BIND_ACCESSIBILITY_SERVICE")) { "Quran Hifz must never request Safeguard blocking privileges." }
-        check(!manifest.contains("android.permission.INTERNET")) { "Quran Hifz must remain offline-first and must not request INTERNET." }
-        val sourceText = fileTree("src/main") { include("**/*.java", "**/*.kt", "**/*.xml") }.files.joinToString("\n") { it.readText() }
+
+        // Quran Hifz is offline-first by default. The single deliberate exception is
+        // InkContentVerifier: a settings-gated (off by default), one-time model download for
+        // handwriting-content verification. INTERNET may exist ONLY paired with that one file,
+        // and no other file in this module may reference any network-capable API — so a future
+        // change can't quietly add real network use by riding on this permission.
+        val hasInternet = manifest.contains("android.permission.INTERNET")
+        val sourceFiles = fileTree("src/main") { include("**/*.java", "**/*.kt", "**/*.xml") }.files
+        val networkMarkers = listOf(
+            "com.google.mlkit", "RemoteModelManager", "DigitalInkRecognition",
+            "java.net.HttpURLConnection", "java.net.URLConnection", "okhttp", "Retrofit", "WebSocket"
+        )
+        val allowedNetworkFile = "InkContentVerifier.java"
+        val filesWithNetworkMarkers = sourceFiles.filter { f -> networkMarkers.any { f.readText().contains(it) } }
+        val strayNetworkFiles = filesWithNetworkMarkers.filter { it.name != allowedNetworkFile }
+        check(strayNetworkFiles.isEmpty()) {
+            "Network-capable APIs must stay confined to $allowedNetworkFile: found in ${strayNetworkFiles.map { it.name }}"
+        }
+        if (hasInternet) {
+            check(filesWithNetworkMarkers.any { it.name == allowedNetworkFile }) {
+                "INTERNET is declared but no gated verifier justifies it."
+            }
+            val verifierFile = sourceFiles.first { it.name == allowedNetworkFile }
+            check(verifierFile.readText().contains("advancedWritingVerificationEnabled()")) {
+                "$allowedNetworkFile must check the explicit opt-in preference before any network use."
+            }
+        } else {
+            check(filesWithNetworkMarkers.isEmpty()) {
+                "No network-capable code may exist without the matching INTERNET permission and its gate."
+            }
+        }
+
+        val sourceText = sourceFiles.joinToString("\n") { it.readText() }
         listOf("QuranAccessibilityService","ProtectedApps","GuardPrefs.protectedPackages","UsageCyclePolicy","UnlockBudgetIntegrity").forEach { forbidden ->
             check(!sourceText.contains(forbidden)) { "Safeguard-only symbol leaked into Quran Hifz: $forbidden" }
         }
@@ -287,6 +319,9 @@ tasks.named("preBuild").configure {
 dependencies {
     implementation(project(":hifz-core"))
     implementation("org.brotli:dec:0.1.2")
+    // Used only by InkContentVerifier, gated behind the opt-in "advanced writing verification"
+    // setting; see verifyHifzProductBoundary for the enforcement that keeps it confined there.
+    implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core:1.6.1")
