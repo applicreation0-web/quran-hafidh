@@ -38,6 +38,33 @@ public final class LineWritingGeometryTest {
         assertTrue(LineWritingGeometry.referenceSubpathsForLine(null).isEmpty());
     }
 
+    @Test public void wordsForLineKeepsEachCellAsItsOwnGroupInReadingOrder() {
+        float[][][] cellsForLine = new float[][][] {
+            { {1f, 1f, 2f, 2f} },     // cell 0 (leftmost on screen): read second
+            { {10f, 10f, 20f, 20f} }, // cell 1 (rightmost on screen): read first
+        };
+        List<List<double[]>> words = LineWritingGeometry.wordsForLine(cellsForLine);
+        assertEquals(2, words.size());
+        assertEquals(1, words.get(0).size());
+        assertArrayEquals(new double[] {10, 10, 20, 20}, words.get(0).get(0), 1e-9);
+        assertEquals(1, words.get(1).size());
+        assertArrayEquals(new double[] {1, 1, 2, 2}, words.get(1).get(0), 1e-9);
+    }
+
+    @Test public void wordsForLineKeepsMultipleSubpathsWithinOneWord() {
+        float[][][] cellsForLine = new float[][][] {
+            { {0f, 0f}, {1f, 1f}, {2f, 2f} },
+        };
+        List<List<double[]>> words = LineWritingGeometry.wordsForLine(cellsForLine);
+        assertEquals(1, words.size());
+        assertEquals(3, words.get(0).size());
+    }
+
+    @Test public void wordsForLineIsEmptyForEmptyOrNullLines() {
+        assertTrue(LineWritingGeometry.wordsForLine(new float[0][][]).isEmpty());
+        assertTrue(LineWritingGeometry.wordsForLine(null).isEmpty());
+    }
+
     @Test public void markersWithinBandKeepsOnlyThoseInsideTheInclusiveRange() {
         float[][] pageMarkers = new float[][] {
             {10f, 5f},   // above the band

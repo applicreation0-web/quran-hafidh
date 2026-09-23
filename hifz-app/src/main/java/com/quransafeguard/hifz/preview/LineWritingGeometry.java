@@ -20,15 +20,29 @@ final class LineWritingGeometry {
      */
     static List<double[]> referenceSubpathsForLine(float[][][] cellsForLine) {
         List<double[]> result = new ArrayList<>();
-        if (cellsForLine == null) return result;
+        for (List<double[]> word : wordsForLine(cellsForLine)) result.addAll(word);
+        return result;
+    }
+
+    /**
+     * Like {@link #referenceSubpathsForLine}, but keeps each cell (word) as its own group instead
+     * of concatenating them — so a test can compare against just the word(s) actually written
+     * rather than the whole line, which otherwise unfairly penalizes a short or partial trace.
+     * Returned in the same real reading order (right-to-left).
+     */
+    static List<List<double[]>> wordsForLine(float[][][] cellsForLine) {
+        List<List<double[]>> words = new ArrayList<>();
+        if (cellsForLine == null) return words;
         for (int ci = cellsForLine.length - 1; ci >= 0; ci--) {
+            List<double[]> word = new ArrayList<>();
             for (float[] subpath : cellsForLine[ci]) {
                 double[] converted = new double[subpath.length];
                 for (int i = 0; i < subpath.length; i++) converted[i] = subpath[i];
-                result.add(converted);
+                word.add(converted);
             }
+            words.add(word);
         }
-        return result;
+        return words;
     }
 
     /** The subset of a page's ayah-end markers ({x, y} pairs) whose y falls within [top, bottom]. */

@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -11,6 +13,7 @@ import com.quransafeguard.hifz.core.ArabicHint;
 import com.quransafeguard.hifz.core.TrajectoryComparison;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,7 +29,10 @@ public final class WritingExerciseActivity extends android.app.Activity {
     public static final String EXTRA_LINE_ID = "com.quransafeguard.hifz.preview.LINE_ID";
 
     private GeometryRepository.LineMeta line;
-    private List<double[]> referenceSubpaths;
+    /** This line's words (cells), in real reading order — each a group of reference subpaths. */
+    private List<List<double[]>> words;
+    private boolean[] wordSelected;
+    private Button[] wordChipButtons;
     private VerseRef hintVerse;
     private WritingCanvasView canvas;
     private TextView hintText;
@@ -52,7 +58,7 @@ public final class WritingExerciseActivity extends android.app.Activity {
             viewBox = geometry.viewBoxForPage(line.page);
             AyahMarkerRepository markerRepo = new AyahMarkerRepository(this);
             WordShapeRepository wordShapeRepo = new WordShapeRepository(this);
-            referenceSubpaths = LineWritingGeometry.referenceSubpathsForLine(
+            words = LineWritingGeometry.wordsForLine(
                 wordShapeRepo.shapesForPage(line.page)[line.lineIndexOnPage]);
             markersOnThisLine = LineWritingGeometry.markersWithinBand(
                 markerRepo.markersForPage(line.page), line.top, line.bottom);
@@ -61,6 +67,10 @@ public final class WritingExerciseActivity extends android.app.Activity {
             return;
         }
         hintVerse = line.verses.isEmpty() ? null : line.verses.get(0);
+        // Default to just the first word: testing a small group at a time (and writing it
+        // wrong on purpose sometimes) is the whole point — the full line is opt-in via chips.
+        wordSelected = new boolean[words.size()];
+        if (wordSelected.length > 0) wordSelected[0] = true;
 
         LinearLayout root = Ui.column(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -86,6 +96,32 @@ public final class WritingExerciseActivity extends android.app.Activity {
         // right-to-left internally; only the paragraph-level run order is pinned.
         subtitle.setTextDirection(android.view.View.TEXT_DIRECTION_LTR);
         root.addView(subtitle);
+
+        if (!words.isEmpty()) {
+            HorizontalScrollView chipsScroll = new HorizontalScrollView(this);
+            chipsScroll.setHorizontalScrollBarEnabled(false);
+            LinearLayout chipsRow = Ui.row(this);
+            wordChipButtons = new Button[words.size()];
+            for (int i = 0; i < words.size(); i++) {
+                int wordIndex = i;
+                Button chip = Ui.smallButton(this, String.valueOf(i + 1), v -> {
+                    wordSelected[wordIndex] = !wordSelected[wordIndex];
+                    Ui.setChosen(wordChipButtons[wordIndex], wordSelected[wordIndex]);
+                });
+                Ui.setChosen(chip, wordSelected[i]);
+                wordChipButtons[i] = chip;
+                chipsRow.addView(chip);
+            }
+            chipsScroll.addView(chipsRow);
+            LinearLayout.LayoutParams chipsParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            chipsParams.bottomMargin = Ui.dp(this, 8);
+            root.addView(chipsScroll, chipsParams);
+            TextView chipsHint = Ui.text(this, "Mots à écrire (droite → gauche) : touchez pour choisir un petit groupe.", 11f, false);
+            chipsHint.setTextColor(Ui.MUTED);
+            chipsHint.setPadding(0, 0, 0, Ui.dp(this, 8));
+            root.addView(chipsHint);
+        }
 
         canvas = new WritingCanvasView(this);
         canvas.configure(viewBox[0], (float) line.top, viewBox[2], (float) (line.bottom - line.top), markersOnThisLine);
@@ -154,16 +190,24 @@ public final class WritingExerciseActivity extends android.app.Activity {
 
     private void evaluate() {
         if (canvas.isEmpty()) {
-            trajectoryScoreView.setText("Écris la ligne avant d’évaluer.");
+            trajectoryScoreView.setText("Écris d’abord le(s) mot(s) choisi(s) avant d’évaluer.");
             contentScoreView.setText("");
             return;
         }
 
-        Integer score = referenceSubpaths.isEmpty()
-            ? null
-            : TrajectoryComparison.scoreStrokes(referenceSubpaths, canvas.strokesInPageSpace());
+        List<double[]> selectedReference = new ArrayList<>();
+        for (int i = 0; i < words.size(); i++) {
+            if (wordSelected[i]) selectedReference.addAll(words.get(i));
+        }
+        if (selectedReference.isEmpty()) {
+            trajectoryScoreView.setText("Choisis au moins un mot (chiffres ci-dessus) avant d’évaluer.");
+            contentScoreView.setText("");
+            return;
+        }
+
+        Integer score = TrajectoryComparison.scoreStrokes(selectedReference, canvas.strokesInPageSpace());
         trajectoryScoreView.setText(score == null
-            ? "Trajectoire (forme) : indisponible pour cette ligne."
+            ? "Trajectoire (forme) : indisponible pour ce(s) mot(s)."
             : "Trajectoire (forme) : " + score + " %");
 
         if (!prefs.advancedWritingVerificationEnabled()) {
