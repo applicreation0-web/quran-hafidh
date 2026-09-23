@@ -13,6 +13,7 @@ import com.google.mlkit.vision.digitalink.DigitalInkRecognizer;
 import com.google.mlkit.vision.digitalink.DigitalInkRecognizerOptions;
 import com.google.mlkit.vision.digitalink.Ink;
 import com.google.mlkit.vision.digitalink.RecognitionCandidate;
+import com.google.mlkit.vision.digitalink.RecognitionResult;
 
 import com.quransafeguard.hifz.core.ArabicTextComparison;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -46,7 +47,7 @@ public final class InkContentVerifier {
     private InkContentVerifier() {}
 
     public static void verify(Context context, List<float[]> strokesAsFlatXYT, VerseRef verse, Callback callback) {
-        HifzPrefs prefs = HifzPrefs.get(context);
+        HifzPrefs prefs = new HifzPrefs(context);
         if (!prefs.advancedWritingVerificationEnabled()) {
             callback.onDisabled();
             return;
@@ -84,7 +85,7 @@ public final class InkContentVerifier {
         }
 
         recognizer.recognize(inkBuilder.build())
-            .addOnSuccessListener(result -> {
+            .addOnSuccessListener((OnSuccessListener<RecognitionResult>) result -> {
                 List<String> candidates = new ArrayList<>();
                 for (RecognitionCandidate c : result.getCandidates()) candidates.add(c.getText());
 
@@ -92,6 +93,6 @@ public final class InkContentVerifier {
                 Boolean matches = expected == null ? null : ArabicTextComparison.anyMatches(candidates, expected);
                 callback.onResult(candidates, matches);
             })
-            .addOnFailureListener(e -> callback.onError("Échec de la reconnaissance : " + e.getMessage()));
+            .addOnFailureListener((OnFailureListener) e -> callback.onError("Échec de la reconnaissance : " + e.getMessage()));
     }
 }

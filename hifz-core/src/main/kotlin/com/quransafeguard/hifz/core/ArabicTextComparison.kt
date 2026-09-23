@@ -19,6 +19,7 @@ object ArabicTextComparison {
      * this compares one word (or one short known phrase) at a time: a space in a candidate is
      * always the recognizer guessing a sub-word break, never a meaningful content difference.
      */
+    @JvmStatic
     fun normalize(text: String): String {
         val sb = StringBuilder(text.length)
         for (ch in text) {
@@ -29,10 +30,12 @@ object ArabicTextComparison {
     }
 
     /** True if the recognized text matches the expected text once both are normalized. */
+    @JvmStatic
     fun matches(recognized: String, expected: String): Boolean =
         normalize(recognized) == normalize(expected)
 
     /** True if any of ML Kit's ranked candidates matches — recognition of the right word can rank below #1. */
+    @JvmStatic
     fun anyMatches(candidates: List<String>, expected: String): Boolean {
         val normalizedExpected = normalize(expected)
         return candidates.any { normalize(it) == normalizedExpected }
