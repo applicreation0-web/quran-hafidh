@@ -89,11 +89,9 @@ public final class WritingExerciseActivity extends android.app.Activity {
         TextView subtitle = Ui.text(this, verseLabel(), 12.5f, false);
         subtitle.setTextColor(Ui.MUTED);
         subtitle.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 10));
-        // Force LTR paragraph order: this caption is a Latin-structured "Page N — Name A → B"
-        // sentence with an embedded Arabic surah name, and without this the bidi algorithm can
-        // visually reorder the "A → B" ayah range around the Arabic run (confirmed on a real
-        // device: "5 → 6" rendered as "6 → 5"). The Arabic name itself still renders correctly
-        // right-to-left internally; only the paragraph-level run order is pinned.
+        // Pins the overall paragraph to LTR as a belt-and-suspenders measure; verseLabel() itself
+        // does the real work of keeping the Arabic surah name and the ayah range from reordering
+        // into each other (see its own comment — this alone was NOT enough, confirmed on device).
         subtitle.setTextDirection(android.view.View.TEXT_DIRECTION_LTR);
         root.addView(subtitle);
 
@@ -166,14 +164,28 @@ public final class WritingExerciseActivity extends android.app.Activity {
         return params;
     }
 
+    // Unicode directional isolates (LRI/RLI/PDI): setTextDirection alone only fixes the overall
+    // paragraph's base direction — it does NOT stop the bidi algorithm from sweeping the Arabic
+    // surah name and the plain Latin ayah-number range that follows it into one reordered RTL
+    // island (confirmed on a real device: still showed "6 → 5" after that first attempt). Wrapping
+    // each run in its own isolate pins its internal order and stops it merging with its neighbor.
+    private static final String LRI = "⁦";
+    private static final String RLI = "⁧";
+    private static final String PDI = "⁩";
+
     private String verseLabel() {
-        if (line.verses.isEmpty()) return "Page " + line.page;
-        VerseRef first = line.verses.get(0);
-        VerseRef last = line.verses.get(line.verses.size() - 1);
-        String range = first.equals(last)
-            ? QuranSurahNames.name(first.getSurah()) + " " + first.getAyah()
-            : QuranSurahNames.name(first.getSurah()) + " " + first.getAyah() + " → " + last.getAyah();
-        return "Page " + line.page + " — " + range;
+        return verseLabel(line.page, line.verses);
+    }
+
+    static String verseLabel(int page, List<VerseRef> verses) {
+        if (verses.isEmpty()) return "Page " + page;
+        VerseRef first = verses.get(0);
+        VerseRef last = verses.get(verses.size() - 1);
+        String ayahRange = first.equals(last)
+            ? String.valueOf(first.getAyah())
+            : (first.getAyah() + " → " + last.getAyah());
+        String surahName = RLI + QuranSurahNames.name(first.getSurah()) + PDI;
+        return "Page " + page + " — " + surahName + " " + LRI + ayahRange + PDI;
     }
 
     private void revealHint() {
