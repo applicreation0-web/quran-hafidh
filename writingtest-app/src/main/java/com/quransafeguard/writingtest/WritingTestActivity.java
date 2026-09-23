@@ -159,7 +159,11 @@ public final class WritingTestActivity extends Activity {
         canvasFrame.setBackgroundColor(LINE_COLOR);
         canvasFrame.setPadding(dp(2), dp(2), dp(2), dp(2));
         canvas = new WritingCanvasView(this);
-        canvasFrame.addView(canvas, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(460)));
+        // Stretch-to-fill (PageViewportTransform) means every pixel of this band is now a real
+        // writing surface, so 460dp (chosen back when the old letterboxed fit left most of that
+        // height as dead space) pushed the action buttons below the fold on a phone. 220dp keeps
+        // a comfortable single-line writing band while leaving the buttons visible without a scroll.
+        canvasFrame.addView(canvas, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(220)));
         LinearLayout.LayoutParams canvasFrameParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         canvasFrameParams.bottomMargin = dp(12);

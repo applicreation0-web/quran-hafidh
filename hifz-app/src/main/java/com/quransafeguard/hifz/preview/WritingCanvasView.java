@@ -114,14 +114,13 @@ public final class WritingCanvasView extends View {
      */
     public List<List<TrajectoryComparison.Pt>> strokesInPageSpace() {
         List<List<TrajectoryComparison.Pt>> result = new ArrayList<>(strokes.size());
-        float scale = fitScale();
-        float offX = fitOffsetX(scale);
-        float offY = fitOffsetY(scale);
+        float scaleX = fitScaleX();
+        float scaleY = fitScaleY();
         for (List<float[]> stroke : strokes) {
             List<TrajectoryComparison.Pt> converted = new ArrayList<>(stroke.size());
             for (float[] p : stroke) {
-                double pageX = PageViewportTransform.toPageX(p[0], vpX, offX, scale);
-                double pageY = PageViewportTransform.toPageY(p[1], vpY, offY, scale);
+                double pageX = PageViewportTransform.toPageX(p[0], vpX, scaleX);
+                double pageY = PageViewportTransform.toPageY(p[1], vpY, scaleY);
                 converted.add(new TrajectoryComparison.Pt(pageX, pageY));
             }
             result.add(converted);
@@ -175,31 +174,26 @@ public final class WritingCanvasView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         if (vpW <= 0f || vpH <= 0f) return;
-        float scale = fitScale();
-        float offX = fitOffsetX(scale);
-        float offY = fitOffsetY(scale);
+        float scaleX = fitScaleX();
+        float scaleY = fitScaleY();
 
-        canvas.drawRect(offX, offY, offX + vpW * scale, offY + vpH * scale, guidePaint);
+        canvas.drawRect(0f, 0f, getWidth(), getHeight(), guidePaint);
 
         float markerRadius = Math.max(3f, 5f * getResources().getDisplayMetrics().density);
         for (float[] marker : markersPageSpace) {
-            float sx = PageViewportTransform.toScreenX(marker[0], vpX, offX, scale);
-            float sy = PageViewportTransform.toScreenY(marker[1], vpY, offY, scale);
+            float sx = PageViewportTransform.toScreenX(marker[0], vpX, scaleX);
+            float sy = PageViewportTransform.toScreenY(marker[1], vpY, scaleY);
             canvas.drawCircle(sx, sy, markerRadius, markerPaint);
         }
 
         for (Path p : visiblePaths) canvas.drawPath(p, inkPaint);
     }
 
-    private float fitScale() {
-        return PageViewportTransform.scale(getWidth(), getHeight(), vpW, vpH);
+    private float fitScaleX() {
+        return PageViewportTransform.scaleX(getWidth(), vpW);
     }
 
-    private float fitOffsetX(float scale) {
-        return PageViewportTransform.offsetX(getWidth(), vpW, scale);
-    }
-
-    private float fitOffsetY(float scale) {
-        return PageViewportTransform.offsetY(getHeight(), vpH, scale);
+    private float fitScaleY() {
+        return PageViewportTransform.scaleY(getHeight(), vpH);
     }
 }

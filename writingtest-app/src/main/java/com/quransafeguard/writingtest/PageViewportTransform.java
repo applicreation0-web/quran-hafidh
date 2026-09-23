@@ -1,10 +1,16 @@
 package com.quransafeguard.writingtest;
 
 /**
- * Pure "fit and center" math for mapping a Mushaf page-space viewport (a geometry.json-style
- * [x, y, width, height] rectangle) onto an arbitrary on-screen pixel rectangle — the same
- * behavior an SVG's default preserveAspectRatio="xMidYMid meet" gives the WebView-based Mushaf
- * reader for free, replicated by hand for WritingCanvasView since it is a plain Canvas view.
+ * Pure "stretch to fill" math for mapping a Mushaf page-space viewport (a geometry.json-style
+ * [x, y, width, height] rectangle) onto an arbitrary on-screen pixel rectangle.
+ *
+ * Deliberately NOT aspect-ratio-preserving: a real Mushaf line is very wide and short (width:height
+ * routinely 10:1+), so fitting it into a comfortably tall writing canvas while preserving that
+ * exact ratio leaves most of the canvas as unusable dead space above/below a thin writable strip
+ * (confirmed confusing on a real device — a tester couldn't tell where to write). Stretching X and
+ * Y independently to fill the whole canvas makes every pixel of it a real writing surface. This is
+ * self-consistent for scoring: the same per-axis scale is used both to draw (page->screen) and to
+ * convert a trace back (screen->page), so an anisotropic stretch cancels out exactly.
  *
  * Kept free of any android.* import so it can be exercised by a plain JVM unit test — this
  * project has no Robolectric, so a real android.view.View subclass can't be unit-tested directly.
@@ -12,32 +18,29 @@ package com.quransafeguard.writingtest;
 final class PageViewportTransform {
     private PageViewportTransform() {}
 
-    static float scale(float viewWidth, float viewHeight, float vpWidth, float vpHeight) {
-        if (viewWidth <= 0f || viewHeight <= 0f || vpWidth <= 0f || vpHeight <= 0f) return 1f;
-        return Math.min(viewWidth / vpWidth, viewHeight / vpHeight);
+    static float scaleX(float viewWidth, float vpWidth) {
+        if (viewWidth <= 0f || vpWidth <= 0f) return 1f;
+        return viewWidth / vpWidth;
     }
 
-    static float offsetX(float viewWidth, float vpWidth, float scale) {
-        return (viewWidth - vpWidth * scale) / 2f;
+    static float scaleY(float viewHeight, float vpHeight) {
+        if (viewHeight <= 0f || vpHeight <= 0f) return 1f;
+        return viewHeight / vpHeight;
     }
 
-    static float offsetY(float viewHeight, float vpHeight, float scale) {
-        return (viewHeight - vpHeight * scale) / 2f;
+    static float toScreenX(float pageX, float vpX, float scaleX) {
+        return (pageX - vpX) * scaleX;
     }
 
-    static float toScreenX(float pageX, float vpX, float offsetX, float scale) {
-        return offsetX + (pageX - vpX) * scale;
+    static float toScreenY(float pageY, float vpY, float scaleY) {
+        return (pageY - vpY) * scaleY;
     }
 
-    static float toScreenY(float pageY, float vpY, float offsetY, float scale) {
-        return offsetY + (pageY - vpY) * scale;
+    static float toPageX(float screenX, float vpX, float scaleX) {
+        return vpX + screenX / scaleX;
     }
 
-    static float toPageX(float screenX, float vpX, float offsetX, float scale) {
-        return vpX + (screenX - offsetX) / scale;
-    }
-
-    static float toPageY(float screenY, float vpY, float offsetY, float scale) {
-        return vpY + (screenY - offsetY) / scale;
+    static float toPageY(float screenY, float vpY, float scaleY) {
+        return vpY + screenY / scaleY;
     }
 }
