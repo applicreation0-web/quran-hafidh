@@ -52,7 +52,8 @@ public final class UiIconMappingTest {
             {"Revu", R.drawable.ic_ui_validate},
             {"Modifier la plage", R.drawable.ic_ui_edit},
             {"Supprimer la plage", R.drawable.ic_ui_delete},
-            {"Sourate", R.drawable.ic_ui_surah_list}
+            {"Sourate", R.drawable.ic_ui_surah_list},
+            {"Hizb", R.drawable.ic_ui_hizb}
         });
     }
 
