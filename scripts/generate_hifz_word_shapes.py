@@ -38,9 +38,6 @@ ATTR_CLASS_RE = re.compile(r'\bclass="([^"]+)"')
 
 Y_TOLERANCE = 1.0
 X_TOLERANCE = 2.0
-# Defaults tuned for the coverage check (Palier 2); overridable via --min-samples/
-# --max-samples/--samples-per-unit-length for a higher-fidelity pass (e.g. writingtest-app's
-# Palier 3 trajectory comparison, which needs finer shape detail to discriminate similar letters).
 MIN_SAMPLES = 4
 MAX_SAMPLES = 14
 SAMPLES_PER_UNIT_LENGTH = 1.0 / 1.2
@@ -120,29 +117,12 @@ def extract_page(svg_text: str, page_lines: list[dict]) -> tuple[list, int, int]
 
 
 def main() -> int:
-    global MIN_SAMPLES, MAX_SAMPLES, SAMPLES_PER_UNIT_LENGTH
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("svg_br_dir", type=Path, help="mushaf/hafs/kfqc/svg-br directory")
     parser.add_argument("geometry_json", type=Path, help="reader109/geometry.json path")
     parser.add_argument("output_dir", type=Path, help="directory to write NNN.json shape files into")
     parser.add_argument("--pages", type=int, default=604)
-    parser.add_argument(
-        "--min-samples", type=int, default=MIN_SAMPLES,
-        help="floor on points sampled per subpath (default matches the coverage-check tuning)",
-    )
-    parser.add_argument(
-        "--max-samples", type=int, default=MAX_SAMPLES,
-        help="ceiling on points sampled per subpath (default matches the coverage-check tuning)",
-    )
-    parser.add_argument(
-        "--samples-per-unit-length", type=float, default=SAMPLES_PER_UNIT_LENGTH,
-        help="sampling density along each subpath's arc length",
-    )
     args = parser.parse_args()
-
-    MIN_SAMPLES = args.min_samples
-    MAX_SAMPLES = args.max_samples
-    SAMPLES_PER_UNIT_LENGTH = args.samples_per_unit_length
 
     with args.geometry_json.open(encoding="utf-8") as fh:
         geometry = json.load(fh)
