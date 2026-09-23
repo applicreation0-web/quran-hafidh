@@ -34,6 +34,9 @@ jobs:
           yes | sdkmanager --licenses > /dev/null || true
           sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
 
+      - name: Install Python deps for the word-shape geometry generator
+        run: python3 -m pip install --disable-pip-version-check brotli svgpathtools
+
       - name: Set up Gradle 9.5
         uses: gradle/actions/setup-gradle@v4
         with:

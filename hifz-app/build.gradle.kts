@@ -4,7 +4,10 @@ plugins {
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
+val generatedHifzWordShapesDir = layout.buildDirectory.dir("generated/hifzWordShapes").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
+val hifzSvgBrSourceDir = rootProject.file("app/src/main/assets/mushaf/hafs/kfqc/svg-br")
+val hifzGeometrySourceFile = rootProject.file("app/src/main/assets/reader109/geometry.json")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
@@ -19,13 +22,31 @@ val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     )
 }
 
+// Palier 2 (writing-exercise coverage check): per-word ink-shape geometry derived
+// from the real Mushaf glyph paths already bundled for the reader, so the
+// writing exercise always compares against the real letterform, never a guess.
+val generateHifzWordShapes by tasks.registering(Exec::class) {
+    inputs.dir(hifzSvgBrSourceDir)
+    inputs.file(hifzGeometrySourceFile)
+    inputs.file(rootProject.file("scripts/generate_hifz_word_shapes.py"))
+    outputs.dir(generatedHifzWordShapesDir)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/generate_hifz_word_shapes.py").absolutePath,
+        hifzSvgBrSourceDir.absolutePath,
+        hifzGeometrySourceFile.absolutePath,
+        generatedHifzWordShapesDir.absolutePath
+    )
+}
+
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease)
+    dependsOn(prepareHifzTafsirRelease, generateHifzWordShapes)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
+    from(generatedHifzWordShapesDir) { into("wordshapes") }
 }
 
 val verifyHifzProductBoundary by tasks.registering {
