@@ -227,17 +227,29 @@ public final class WritingTestActivity extends Activity {
         startWord = 0;
         showResult(null, null);
 
+        // Only the verses touched by this line, listed in order, whose end actually falls on this
+        // line — never more than the trailing one can spill onto the next line, so the first
+        // `markers.length` entries are exactly the ones ending here (markersWithinBand only keeps
+        // the real end positions inside this line's own band, in the same reading order).
+        int endingOnThisLine = Math.min(markers.length, line.verses.size());
+        int[] markerAyahNumbers = new int[markers.length];
+        for (int i = 0; i < markers.length; i++) {
+            markerAyahNumbers[i] = i < line.verses.size() ? line.verses.get(i).getAyah() : -1;
+        }
+
         StringBuilder text = new StringBuilder();
         VerseText verseText = VerseText.get(this);
-        for (VerseRef ref : line.verses) {
+        for (int i = 0; i < line.verses.size(); i++) {
+            VerseRef ref = line.verses.get(i);
             String verse = verseText.textFor(ref);
             if (verse == null) continue;
-            if (text.length() > 0) text.append("  ·  ");
+            if (text.length() > 0) text.append(' ');
             text.append(verse);
+            if (i < endingOnThisLine) text.append(' ').append(ayahEndMark(ref.getAyah()));
         }
         referenceText.setText(text.length() > 0 ? text.toString() : "(texte de référence indisponible pour cette ligne)");
 
-        canvas.configure(viewBox[0], (float) line.top, viewBox[2], (float) (line.bottom - line.top), markers);
+        canvas.configure(viewBox[0], (float) line.top, viewBox[2], (float) (line.bottom - line.top), markers, markerAyahNumbers);
 
         chipsContainer.removeAllViews();
         wordChipButtons = new Button[words.size()];
@@ -421,5 +433,19 @@ public final class WritingTestActivity extends Activity {
 
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private static final char[] ARABIC_DIGITS = {'٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'};
+
+    /** The real Quranic end-of-ayah convention (ornate parentheses around the ayah number). */
+    private static String ayahEndMark(int ayah) {
+        return "﴾" + arabicDigits(ayah) + "﴿";
+    }
+
+    private static String arabicDigits(int n) {
+        String digits = Integer.toString(n);
+        StringBuilder result = new StringBuilder(digits.length());
+        for (int i = 0; i < digits.length(); i++) result.append(ARABIC_DIGITS[digits.charAt(i) - '0']);
+        return result.toString();
     }
 }

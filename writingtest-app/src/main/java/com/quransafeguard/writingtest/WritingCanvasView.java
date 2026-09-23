@@ -28,13 +28,17 @@ import java.util.List;
  * is a plain Canvas view, not a WebView.
  */
 public final class WritingCanvasView extends View {
+    private static final char[] ARABIC_DIGITS = {'٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'};
+
     private float vpX, vpY, vpW, vpH;
     private float[][] markersPageSpace = new float[0][];
+    private int[] markerAyahNumbers = new int[0];
 
     private final List<List<float[]>> strokes = new ArrayList<>();
     private final List<Path> visiblePaths = new ArrayList<>();
     private final Paint inkPaint = new Paint();
     private final Paint markerPaint = new Paint();
+    private final Paint markerTextPaint = new Paint();
     private final Paint guidePaint = new Paint();
     private long strokeStartMs = -1;
     private List<float[]> currentStroke;
@@ -51,9 +55,17 @@ public final class WritingCanvasView extends View {
         inkPaint.setStrokeCap(Paint.Cap.ROUND);
         inkPaint.setAntiAlias(true);
 
+        // Drawn as a hollow ring with the real ayah number inside — the same "end of verse"
+        // convention as the printed Mushaf's rosette, so a tester can see exactly which verse
+        // ends where instead of a plain unlabeled dot.
         markerPaint.setColor(0xff8a6d3b);
-        markerPaint.setStyle(Paint.Style.FILL);
+        markerPaint.setStyle(Paint.Style.STROKE);
+        markerPaint.setStrokeWidth(2.5f);
         markerPaint.setAntiAlias(true);
+
+        markerTextPaint.setColor(0xff8a6d3b);
+        markerTextPaint.setAntiAlias(true);
+        markerTextPaint.setTextAlign(Paint.Align.CENTER);
 
         guidePaint.setColor(0xffcec9be);
         guidePaint.setStyle(Paint.Style.STROKE);
@@ -64,14 +76,17 @@ public final class WritingCanvasView extends View {
     /**
      * Sets the page-space viewport this canvas displays (e.g. one physical Mushaf line's full
      * width band) and the ayah-end markers to draw within it, in that same page-space coordinate
-     * system. Clears any in-progress writing.
+     * system. {@code ayahNumbers} labels each marker (same index) with the real ayah number it
+     * ends, or is null/shorter than {@code markers} when that isn't known — those markers are
+     * still drawn, just unlabeled. Clears any in-progress writing.
      */
-    public void configure(float pageSpaceX, float pageSpaceY, float pageSpaceWidth, float pageSpaceHeight, float[][] markers) {
+    public void configure(float pageSpaceX, float pageSpaceY, float pageSpaceWidth, float pageSpaceHeight, float[][] markers, int[] ayahNumbers) {
         vpX = pageSpaceX;
         vpY = pageSpaceY;
         vpW = Math.max(1e-3f, pageSpaceWidth);
         vpH = Math.max(1e-3f, pageSpaceHeight);
         markersPageSpace = markers == null ? new float[0][] : markers;
+        markerAyahNumbers = ayahNumbers == null ? new int[0] : ayahNumbers;
         clear();
     }
 
@@ -177,11 +192,18 @@ public final class WritingCanvasView extends View {
 
         canvas.drawRect(0f, 0f, getWidth(), getHeight(), guidePaint);
 
-        float markerRadius = Math.max(3f, 5f * getResources().getDisplayMetrics().density);
-        for (float[] marker : markersPageSpace) {
+        float density = getResources().getDisplayMetrics().density;
+        float markerRadius = Math.max(9f, 12f * density);
+        markerTextPaint.setTextSize(Math.max(10f, 13f * density));
+        for (int i = 0; i < markersPageSpace.length; i++) {
+            float[] marker = markersPageSpace[i];
             float sx = PageViewportTransform.toScreenX(marker[0], vpX, scaleX);
             float sy = PageViewportTransform.toScreenY(marker[1], vpY, scaleY);
             canvas.drawCircle(sx, sy, markerRadius, markerPaint);
+            if (i < markerAyahNumbers.length && markerAyahNumbers[i] > 0) {
+                float textY = sy - (markerTextPaint.descent() + markerTextPaint.ascent()) / 2f;
+                canvas.drawText(arabicDigits(markerAyahNumbers[i]), sx, textY, markerTextPaint);
+            }
         }
 
         for (Path p : visiblePaths) canvas.drawPath(p, inkPaint);
@@ -193,5 +215,12 @@ public final class WritingCanvasView extends View {
 
     private float fitScaleY() {
         return PageViewportTransform.scaleY(getHeight(), vpH);
+    }
+
+    private static String arabicDigits(int n) {
+        String digits = Integer.toString(n);
+        StringBuilder result = new StringBuilder(digits.length());
+        for (int i = 0; i < digits.length(); i++) result.append(ARABIC_DIGITS[digits.charAt(i) - '0']);
+        return result.toString();
     }
 }
