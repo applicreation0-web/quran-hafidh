@@ -76,4 +76,7 @@ tasks.named("preBuild").configure {
 
 dependencies {
     implementation(project(":hifz-core"))
+    // Content verification (which word was actually written), complementing the geometric
+    // Palier 3 trajectory score above, which is shape-only and blind to word identity/order.
+    implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
 }

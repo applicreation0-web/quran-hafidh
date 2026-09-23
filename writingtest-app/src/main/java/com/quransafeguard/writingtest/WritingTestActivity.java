@@ -21,6 +21,7 @@ import com.quransafeguard.hifz.core.TrajectoryComparison;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -50,6 +51,7 @@ public final class WritingTestActivity extends Activity {
     private int lineIndex = 0;
 
     private List<List<double[]>> words;
+    private String[] wordTexts;
     private int startWord = 0;
     private Button[] wordChipButtons;
 
@@ -238,6 +240,7 @@ public final class WritingTestActivity extends Activity {
         }
 
         StringBuilder text = new StringBuilder();
+        List<String> wordTextList = new ArrayList<>();
         VerseText verseText = VerseText.get(this);
         for (int i = 0; i < line.verses.size(); i++) {
             VerseRef ref = line.verses.get(i);
@@ -246,8 +249,14 @@ public final class WritingTestActivity extends Activity {
             if (text.length() > 0) text.append(' ');
             text.append(verse);
             if (i < endingOnThisLine) text.append(' ').append(ayahEndMark(ref.getAyah()));
+            for (String w : verse.trim().split("\\s+")) if (!w.isEmpty()) wordTextList.add(w);
         }
         referenceText.setText(text.length() > 0 ? text.toString() : "(texte de référence indisponible pour cette ligne)");
+        // Parallel to `words` (the geometry cells, same reading order) so evaluateAuto() can look
+        // up the expected TEXT of whatever word range the trajectory auto-detect settles on, for
+        // ML Kit content verification — best-effort: only reliable when every verse.length here
+        // ends on this line (long verses spanning lines can throw the word count off).
+        wordTexts = wordTextList.toArray(new String[0]);
 
         canvas.configure(viewBox[0], (float) line.top, viewBox[2], (float) (line.bottom - line.top), markers, markerAyahNumbers);
 
@@ -305,8 +314,30 @@ public final class WritingTestActivity extends Activity {
         String range = bestLength == 1
             ? "mot " + (startWord + 1)
             : "mots " + (startWord + 1) + "-" + lastWord;
-        int color = bestScore >= 70 ? GOOD : bestScore >= 40 ? WARN : BAD;
-        showResult(range + "  —  " + bestScore + " %", color);
+        int shapeColor = bestScore >= 70 ? GOOD : bestScore >= 40 ? WARN : BAD;
+        showResult(range + "  —  forme " + bestScore + " %  ·  contenu : vérification…", shapeColor);
+
+        String expectedText = (wordTexts != null && startWord >= 0 && lastWord <= wordTexts.length)
+            ? String.join(" ", Arrays.copyOfRange(wordTexts, startWord, lastWord))
+            : null;
+        if (expectedText == null) {
+            showResult(range + "  —  forme " + bestScore + " %  ·  contenu : texte de référence indisponible", shapeColor);
+            return;
+        }
+
+        InkContentVerifier.verify(canvas.rawStrokesFlatXYT(), expectedText, new InkContentVerifier.Callback() {
+            @Override public void onResult(List<String> candidates, boolean matches) {
+                // A wrong or reordered word can still trace a shape close to the reference (the
+                // trajectory score alone can't tell) — so a content mismatch always shows red here,
+                // regardless of how good the shape score was, to surface exactly that blind spot.
+                String verdict = matches ? "reconnu ✓" : "NON reconnu (ML Kit a lu : " + String.join(", ", candidates) + ")";
+                showResult(range + "  —  forme " + bestScore + " %  ·  contenu : " + verdict, matches ? shapeColor : BAD);
+            }
+
+            @Override public void onError(String message) {
+                showResult(range + "  —  forme " + bestScore + " %  ·  contenu : erreur (" + message + ")", shapeColor);
+            }
+        });
     }
 
     private void showResult(String text, Integer color) {
