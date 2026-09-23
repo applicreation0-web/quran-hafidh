@@ -31,7 +31,7 @@ public final class HifzWordShapePipelineSourceContractTest {
         assertTrue("it must invoke the real generator script, not a stand-in",
             gradle.contains("scripts/generate_hifz_word_shapes.py"));
         assertTrue("prepareHifzAssets must depend on it so the asset is never stale",
-            gradle.contains("dependsOn(prepareHifzTafsirRelease, generateHifzWordShapes)"));
+            gradle.contains("dependsOn(prepareHifzTafsirRelease, generateHifzWordShapes, generateHifzAyahMarkers)"));
         assertTrue("the generated shapes must be synced into the app's own assets under wordshapes/",
             gradle.contains("from(generatedHifzWordShapesDir) { into(\"wordshapes\") }"));
     }

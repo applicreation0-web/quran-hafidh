@@ -5,6 +5,7 @@ plugins {
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
 val generatedHifzWordShapesDir = layout.buildDirectory.dir("generated/hifzWordShapes").get().asFile
+val generatedHifzAyahMarkersDir = layout.buildDirectory.dir("generated/hifzAyahMarkers").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
 val hifzSvgBrSourceDir = rootProject.file("app/src/main/assets/mushaf/hafs/kfqc/svg-br")
 val hifzGeometrySourceFile = rootProject.file("app/src/main/assets/reader109/geometry.json")
@@ -39,8 +40,24 @@ val generateHifzWordShapes by tasks.registering(Exec::class) {
     )
 }
 
+// Writing-exercise ayah-end markers: the real verse-end rosette positions already
+// embedded in the source SVGs (ayah:x/ayah:y attributes, already in the same
+// page-space coordinates as geometry.json), so the exercise canvas can keep showing
+// the real verse-end signs, exactly like the printed Mushaf, while the user writes.
+val generateHifzAyahMarkers by tasks.registering(Exec::class) {
+    inputs.dir(hifzSvgBrSourceDir)
+    inputs.file(rootProject.file("scripts/generate_hifz_ayah_markers.py"))
+    outputs.dir(generatedHifzAyahMarkersDir)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/generate_hifz_ayah_markers.py").absolutePath,
+        hifzSvgBrSourceDir.absolutePath,
+        generatedHifzAyahMarkersDir.absolutePath
+    )
+}
+
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease, generateHifzWordShapes)
+    dependsOn(prepareHifzTafsirRelease, generateHifzWordShapes, generateHifzAyahMarkers)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
@@ -48,6 +65,7 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
     from(rootProject.file("app/src/main/assets/reader109/verses_text.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
     from(generatedHifzWordShapesDir) { into("wordshapes") }
+    from(generatedHifzAyahMarkersDir) { into("ayahmarkers") }
 }
 
 val verifyHifzProductBoundary by tasks.registering {
