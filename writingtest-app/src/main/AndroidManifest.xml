@@ -4,6 +4,7 @@
         android:allowBackup="false"
         android:label="Hifz Écriture (Test)"
         android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <activity
             android:name=".WritingTestActivity"
