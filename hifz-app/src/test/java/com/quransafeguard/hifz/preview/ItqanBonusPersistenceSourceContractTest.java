@@ -67,9 +67,10 @@ public final class ItqanBonusPersistenceSourceContractTest {
 
     @Test public void theOnlyCallSiteNowPassesAnExplicitBonusArgument() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue("validateItqan does not yet offer a bonus itself — this only wires the new "
-                + "parameter through so existing behavior is unchanged (an empty bonus is a no-op)",
-            session.contains("sessionDate.toString(), label, Collections.emptyList());"));
+        assertTrue("the call site must pass a real bonus-lines argument, computed from the "
+                + "settled decision (see ItqanBonusDialogSourceContractTest for the full offer/"
+                + "dialog wiring this now derives from)",
+            session.contains("sessionDate.toString(), label, bonusLineIds);"));
         assertFalse("the old 8-argument call must be gone, not left alongside a second call site",
             session.contains("sessionDate.toString(), label);"));
     }
