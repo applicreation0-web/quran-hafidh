@@ -63,6 +63,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean fractionatedItqan;
     private int itqanBlockIndex;
     private int itqanBlockCount = 1;
+    private ItqanPlanSnapshot itqanBonusDecision;
     private GeometryRepository.EligibleLinePlan murajaahPlan;
     private VerseRef murajaahActualEnd;
     private boolean timedSessionLimitReached;
@@ -679,11 +680,42 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         itqanBlockCount = plannedUnits.size();
         itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
         StabilizationHalfPagePolicy.Unit workingUnit = plannedUnits.get(itqanBlockIndex);
-        currentLineIds = new ArrayList<>(workingUnit.lineIds);
+        List<String> ownLineIds = new ArrayList<>(workingUnit.lineIds);
+        ownLineIds.removeAll(prefs.itqanConsumedBonusLineIds());
+        currentLineIds = ownLineIds;
         currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
         fractionatedItqan = itqanBlockCount > 1;
         itqanBlockPage = geometry.linesForExactIds(currentLineIds).get(0).page;
         currentPage = itqanBlockPage;
+
+        // P3 "finish the page?" (Itqān only, never Sabqi): the decision is settled once, before
+        // rep 1, and then reused verbatim for every later render of this exact sub-block —
+        // including after an assistance restart, which repeats the same block rather than asking
+        // again. A decision for a different sub-block or a different parent unit never applies.
+        itqanBonusDecision = prefs.itqanBonusSnapshot();
+        if (itqanBonusDecision != null
+                && !itqanBonusDecision.matches(itqanUnit.start, itqanUnit.end, itqanBlockIndex)) {
+            itqanBonusDecision = null;
+        }
+        if (rep == 0 && itqanBonusDecision == null) {
+            ItqanPageCompletionPolicy.Offer offer = computeItqanBonusOffer(plannedUnits, currentLineIds);
+            if (offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {
+                ItqanPlanSnapshot keep = ItqanPlanSnapshot.undecided(itqanUnit.start, itqanUnit.end, itqanBlockIndex).keep();
+                if (!prefs.saveItqanBonusDecision(keep)) {
+                    onError("Impossible d’enregistrer la décision de Stabilisation.");
+                    return;
+                }
+                itqanBonusDecision = keep;
+            } else {
+                showItqanBonusDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, offer);
+                return;
+            }
+        }
+        if (itqanBonusDecision != null && itqanBonusDecision.decision == ItqanPlanSnapshot.Decision.EXTEND) {
+            currentLineIds = new ArrayList<>(currentLineIds);
+            currentLineIds.addAll(itqanBonusDecision.bonusLineIds);
+            currentSelection = geometry.versesOnLines(currentLineIds, itqanUnit.verses);
+        }
 
         if(rep>=itqanTargetReps){
             boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted());
@@ -717,6 +749,66 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         return "Stabilisation · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
+    }
+
+    /**
+     * P3: only ever offers to borrow from the immediate next sub-block of the SAME parent unit —
+     * never a different parent/week's own working unit, which would need queue-level bookkeeping
+     * this feature deliberately does not take on. Refusing is always legal (see
+     * ItqanPageCompletionPolicy), so a parent's own last sub-block, or a next sub-block that would
+     * be left with nothing of its own, simply never gets an offer.
+     */
+    private ItqanPageCompletionPolicy.Offer computeItqanBonusOffer(
+            List<StabilizationHalfPagePolicy.Unit> plannedUnits, List<String> ownBlockLineIds) {
+        List<GeometryRepository.LineMeta> ownBlockLines = geometry.linesForExactIds(ownBlockLineIds);
+        List<GeometryRepository.LineMeta> candidates = new ArrayList<>();
+        if (itqanBlockIndex + 1 < itqanBlockCount) {
+            StabilizationHalfPagePolicy.Unit nextBlock = plannedUnits.get(itqanBlockIndex + 1);
+            List<GeometryRepository.LineMeta> nextBlockLines = geometry.linesForExactIds(nextBlock.lineIds);
+            int page = ownBlockLines.get(ownBlockLines.size() - 1).page;
+            int maxTakeable = Math.min(2, nextBlockLines.size() - 1);
+            for (int i = 0; i < maxTakeable; i++) {
+                GeometryRepository.LineMeta l = nextBlockLines.get(i);
+                if (l.page != page) break;
+                candidates.add(l);
+            }
+        }
+        return ItqanPageCompletionPolicy.evaluate(ownBlockLineIds, ownBlockLines, candidates);
+    }
+
+    /** Suspends the clock and the repetition button until the user answers — never automatic,
+     *  per spec. A process death before the answer simply re-shows this same dialog next launch,
+     *  since nothing is persisted until one of the two buttons is actually tapped. */
+    private void showItqanBonusDialog(VerseRef unitStart, VerseRef unitEnd, int blockIndex,
+                                       ItqanPageCompletionPolicy.Offer offer) {
+        sessionCompleted = true;
+        clock.pause();
+        boolean plusOne = offer.choice == ItqanPageCompletionPolicy.Choice.PLUS_ONE;
+        String remaining = plusOne ? "1 ligne" : "2 lignes";
+        program.setText(itqanProgramLabel());
+        progress.setText("Il reste "+remaining+" pour terminer la page.");
+        new AlertDialog.Builder(this).setTitle("Stabilisation")
+            .setMessage("Il reste "+remaining+" pour terminer la page. Finir la page ?")
+            .setCancelable(false)
+            .setNegativeButton("Garder le bloc prévu", (d, w) -> {
+                if (!prefs.saveItqanBonusDecision(
+                        ItqanPlanSnapshot.undecided(unitStart, unitEnd, blockIndex).keep())) {
+                    onError("Impossible d’enregistrer la décision de Stabilisation.");
+                    return;
+                }
+                clock.resume();
+                renderMode();
+            })
+            .setPositiveButton(plusOne ? "+1 ligne" : "+2 lignes", (d, w) -> {
+                if (!prefs.saveItqanBonusDecision(
+                        ItqanPlanSnapshot.undecided(unitStart, unitEnd, blockIndex).extend(offer.bonusLineIds))) {
+                    onError("Impossible d’enregistrer la décision de Stabilisation.");
+                    return;
+                }
+                clock.resume();
+                renderMode();
+            })
+            .show();
     }
 
     private void updateItqanProgress(int rep,int reveals){
@@ -765,9 +857,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
         metricsStore.recordAnchoring("Stabilisation réussie · "+itqanUnit.start+" → "+itqanUnit.end
             +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
+        List<String> bonusLineIds = itqanBonusDecision != null
+                && itqanBonusDecision.decision == ItqanPlanSnapshot.Decision.EXTEND
+            ? itqanBonusDecision.bonusLineIds : Collections.emptyList();
         boolean ok = prefs.completeStabilizationBlockV6(
             currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
-            sessionDate.toString(), label, Collections.emptyList());
+            sessionDate.toString(), label, bonusLineIds);
         if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
