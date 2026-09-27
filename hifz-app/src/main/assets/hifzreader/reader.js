@@ -116,8 +116,10 @@ function updatePageBadge(){
   const badge=document.getElementById('pagebadge');
   const mushafEl=document.getElementById('mushaf');
   if(!badge||!mushafEl)return;
-  const size=eink?27:25,safety=3;
-  const minGutter=size+2*safety;
+  // Wider than tall (not a plain 45° fold) so a real 3-digit page number (up to 604) always has
+  // clear, legible room near the flap's own thick bottom-right/bottom-left corner.
+  const w=eink?48:44,h=eink?33:30,safety=3;
+  const minGutter=w+2*safety;
   const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
   const rect=mushafEl.getBoundingClientRect();
   const rightGutter=viewportWidth-rect.right;
@@ -125,12 +127,12 @@ function updatePageBadge(){
   const onOuterRight=currentPage%2===1;
   const gutter=onOuterRight?rightGutter:leftGutter;
   if(!(gutter>=minGutter)){badge.classList.remove('show');return}
-  const inset=(gutter-size)/2;
+  const inset=(gutter-w)/2;
   badge.style.left=onOuterRight?'auto':inset+'px';
   badge.style.right=onOuterRight?inset+'px':'auto';
-  badge.style.top=(rect.bottom-size)+'px';
-  badge.style.width=size+'px';
-  badge.style.height=size+'px';
+  badge.style.top=(rect.bottom-h)+'px';
+  badge.style.width=w+'px';
+  badge.style.height=h+'px';
   badge.textContent=String(currentPage);
   badge.classList.toggle('odd',onOuterRight);
   badge.classList.toggle('even',!onOuterRight);

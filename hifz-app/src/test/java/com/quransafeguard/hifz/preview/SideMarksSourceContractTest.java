@@ -38,10 +38,11 @@ public final class SideMarksSourceContractTest {
 
     @Test public void mushafReservesAFixedGutterAndTheBarsAreTaperedForStyle() throws Exception {
         String index = read("hifz-app/src/main/assets/hifzreader/index.html");
-        assertTrue("the reading zone must cap #mushaf at 100vw minus a fixed 40px, not just 100vw — "
-                + "this is the explicit, user-approved reservation that guarantees the bars always "
-                + "have room, even on screens whose own aspect ratio would otherwise leave none",
-            index.contains("#mushaf{width:min(calc(100vw - 40px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);"
+        assertTrue("the reading zone must cap #mushaf at 100vw minus a fixed 72px, not just 100vw — "
+                + "this is the explicit, user-approved reservation that guarantees the bars (and, "
+                + "since P1, the wider page-number flap) always have room, even on screens whose "
+                + "own aspect ratio would otherwise leave none",
+            index.contains("#mushaf{width:min(calc(100vw - 72px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);"
                 + "transform:translateY(var(--reveal-shift));transform-origin:center center}"));
         assertTrue("the bars must be hidden by default, appearing only once JS confirms a safe gutter",
             index.contains("#sidemarks{position:absolute;display:none;flex-direction:row;align-items:center;"
