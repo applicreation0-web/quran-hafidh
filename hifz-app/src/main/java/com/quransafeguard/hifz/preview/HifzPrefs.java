@@ -1493,12 +1493,22 @@ public final class HifzPrefs {
             .commit();
     }
 
-    /** Atomically advances one frozen Stabilisation half-page and its schema6 line state. */
+    /**
+     * Atomically advances one frozen Stabilisation half-page and its schema6 line state.
+     * bonusLineIds is P3's "finish the page" subset of lineIds actually consumed this commit
+     * (empty when no bonus was accepted) — folded into the same commit as everything else so a
+     * crash can never credit it without also recording it, or vice versa. Tracked in
+     * itqanConsumedBonusLineIds (reset once the parent unit itself is finished, i.e. finalBlock)
+     * so a later render of the parent's remaining sub-blocks knows which of their own lines were
+     * already claimed here; the block's own pending +1/+2 decision snapshot is cleared
+     * unconditionally, since once a block is committed that decision can never apply again.
+     */
     boolean completeStabilizationBlockV6(List<String> lineIds, int nextBlockIndex, boolean finalBlock,
                                          VerseRef unitStart, VerseRef unitEnd, VerseRef nextCursor,
-                                         String date, String label) {
+                                         String date, String label, List<String> bonusLineIds) {
         if (lineIds == null || lineIds.isEmpty() || unitStart == null || unitEnd == null)
             throw new IllegalArgumentException("Stabilisation unit required");
+        List<String> bonus = bonusLineIds == null ? Collections.emptyList() : bonusLineIds;
         synchronized (V6_STATE_LOCK) {
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
@@ -1522,6 +1532,8 @@ public final class HifzPrefs {
             LocalDate blockDate = safeDate(date, HifzClock.today());
             java.util.Map<String, String> snowball = weeklySnowballAppendEntries(
                 ConsolidationCycleEngine.Family.STABILIZATION, lineIds, blockDate);
+            LinkedHashSet<String> consumedBonus = optionalLineIdSet("itqanConsumedBonusLineIds");
+            consumedBonus.addAll(bonus);
             SharedPreferences.Editor e = p.edit()
                 .putString("v6LearnedLineIds", lineIdsJson(learned))
                 .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
@@ -1533,11 +1545,57 @@ public final class HifzPrefs {
                 .putLong("itqanElapsedMs", 0L)
                 .putString("lastItqanDate", date).putString("lastItqanLabel", label)
                 .putString("lastItqanCreditStart", unitStart.toString())
-                .putString("lastItqanCreditEnd", unitEnd.toString());
+                .putString("lastItqanCreditEnd", unitEnd.toString())
+                .putString("itqanConsumedBonusLineIds",
+                    finalBlock ? "[]" : lineIdsJson(consumedBonus))
+                .putString("itqanBonusSnapshotV1", "");
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return e.commit();
         }
+    }
+
+    /** Tolerant counterpart to v6LineIdSet for P3's non-schema6 bookkeeping keys: missing (a
+     *  field new to this install) or corrupt both degrade to empty rather than throwing, since
+     *  losing this bookkeeping only means a future bonus offer might not be made — never a wrong
+     *  progression-state commit. */
+    private LinkedHashSet<String> optionalLineIdSet(String key) {
+        try {
+            JSONArray array = new JSONArray(p.getString(key, "[]"));
+            LinkedHashSet<String> result = new LinkedHashSet<>();
+            for (int i = 0; i < array.length(); i++) result.add(array.getString(i));
+            return result;
+        } catch (Exception corruptOrMissing) {
+            return new LinkedHashSet<>();
+        }
+    }
+
+    /** The pending "finish the page?" decision for whichever Itqān sub-block is currently at
+     *  rep 0, if any. Never throws: a missing or corrupt snapshot is indistinguishable from no
+     *  pending decision, since either way the safe fallback is to (re)compute the offer fresh. */
+    ItqanPlanSnapshot itqanBonusSnapshot() {
+        String raw = p.getString("itqanBonusSnapshotV1", "");
+        if (raw.isEmpty()) return null;
+        try {
+            return ItqanPlanSnapshot.fromJson(new JSONObject(raw));
+        } catch (Exception corrupt) {
+            return null;
+        }
+    }
+
+    /** Persists a +1/+2 decision. Only legal before the first repetition of the block it names —
+     *  once repetitions have started, the accepted lines must never change underneath them. */
+    boolean saveItqanBonusDecision(ItqanPlanSnapshot snapshot) {
+        if (p.getInt("itqanRep", 0) != 0)
+            throw new IllegalStateException("Itqān bonus decision must be settled before rep 1");
+        return p.edit().putString("itqanBonusSnapshotV1", snapshot.toJson().toString()).commit();
+    }
+
+    /** Lines already claimed as a previous sub-block's bonus within the current parent unit — a
+     *  later sub-block of the same parent must exclude these from its own naive re-derivation, or
+     *  they would be repeated. Reset to empty once the parent itself finishes (finalBlock). */
+    List<String> itqanConsumedBonusLineIds() {
+        return new ArrayList<>(optionalLineIdSet("itqanConsumedBonusLineIds"));
     }
 
     public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {

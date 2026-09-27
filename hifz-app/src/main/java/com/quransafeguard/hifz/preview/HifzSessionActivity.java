@@ -767,7 +767,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
         boolean ok = prefs.completeStabilizationBlockV6(
             currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
-            sessionDate.toString(), label);
+            sessionDate.toString(), label, Collections.emptyList());
         if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
