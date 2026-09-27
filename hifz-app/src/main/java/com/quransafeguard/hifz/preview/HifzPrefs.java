@@ -1598,6 +1598,14 @@ public final class HifzPrefs {
         return new ArrayList<>(optionalLineIdSet("itqanConsumedBonusLineIds"));
     }
 
+    /** P4: how much physical material is truly ACQUIRED, for MaintenanceCoveragePolicy's J-15
+     *  Entretien sizing and RoadmapPolicy's lag measurement. Exposes only a count/list copy —
+     *  never the live internal set — so a caller cannot mutate schema6 progression state through
+     *  this accessor. */
+    int acquiredLineCountV6() {
+        return v6LineIdSet("v6AcquiredCreditLineIds").size();
+    }
+
     public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
         VerseRef completedStart = itqanUnitStart();
         VerseRef completedEnd = itqanUnitEnd();

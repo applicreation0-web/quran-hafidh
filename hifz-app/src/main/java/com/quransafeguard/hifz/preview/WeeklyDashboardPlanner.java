@@ -32,9 +32,17 @@ final class WeeklyDashboardPlanner {
     private final HifzPrefs prefs;
     private final GeometryRepository geometry;
     private final DashboardLedger ledger;
+    private final HifzSpeedStore speedStore;
 
-    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger){
-        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;
+    WeeklyDashboardPlanner(HifzPrefs prefs,GeometryRepository geometry,DashboardLedger ledger,HifzSpeedStore speedStore){
+        this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;this.speedStore=speedStore;
+    }
+
+    /** P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying a
+     *  flat constant — see MaintenanceCoveragePolicy. */
+    private int maintenanceMinutes(){
+        return MaintenanceCoveragePolicy.minutes(
+            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
     }
 
     static List<LocalDate> window(LocalDate today){
@@ -81,7 +89,7 @@ final class WeeklyDashboardPlanner {
                     boolean eveningDone=snowballActual!=null&&entretienActual!=null;
                     if(eveningDone)evening="✓ Renforcement + Entretien";
                     else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
                         evening="Renforcement + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
@@ -118,7 +126,7 @@ final class WeeklyDashboardPlanner {
                     boolean eveningDone=snowballActual!=null&&entretienActual!=null;
                     if(eveningDone)evening="✓ Consolidation + Entretien";
                     else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
                         evening="Consolidation + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
@@ -136,7 +144,7 @@ final class WeeklyDashboardPlanner {
                     boolean eveningDone=entretienActual!=null;
                     if(eveningDone)evening="✓ Entretien";
                     else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,HifzSchedule.MAINTENANCE_MINUTES);
+                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
                         evening="Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
