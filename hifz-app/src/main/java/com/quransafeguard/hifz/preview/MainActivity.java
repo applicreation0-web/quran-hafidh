@@ -124,7 +124,7 @@ public final class MainActivity extends android.app.Activity {
         direct.setGravity(Gravity.CENTER);
         LinearLayout sabqi = Ui.modeCard(this, "", "Apprentissage", v -> openMode(HifzSessionActivity.SABQI));
         LinearLayout itqan = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> openMode(murajaahQuickAccessMode()));
+        LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> showRevisionSelector());
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
         murajaahQuickAccess = murajaah;
@@ -212,6 +212,16 @@ public final class MainActivity extends android.app.Activity {
             activeNext ? SessionKind.ACTIVE_MURAJAAH : SessionKind.OLD_ITQAN_MURAJAAH);
         View cue = murajaahQuickAccess.getChildAt(2);
         if (cue instanceof TextView) ((TextView) cue).setText(minutes + " min");
+    }
+
+    /** The Révision card opens this compact selector rather than jumping straight to a mode:
+        Révision active, Quiz spatial and Entretien can now be done in any order. */
+    private void showRevisionSelector() {
+        RevisionSelector.show(this, prefs, new RevisionSelector.Choice() {
+            @Override public void openActiveRevision() { openMode(HifzSessionActivity.MURAJAAH_ACTIVE); }
+            @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
+            @Override public void openSpatialQuiz() { startActivity(new Intent(MainActivity.this, SpatialQuizActivity.class)); }
+        });
     }
 
     private void openMode(String mode) { openMode(mode,HifzClock.today()); }
