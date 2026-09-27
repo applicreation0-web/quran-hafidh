@@ -22,6 +22,7 @@ let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
  * it must NOT also narrow the mask pool down to that one verse's own shape.
  */
 let maskFollowsSelection=boot.maskFollowsSelection!==false;
+let spatialTapEnabled=!!boot.spatialTapEnabled;
 let audioVerse=null;
 let maskOrderSignature='';
 let maskOrder=[];
@@ -140,13 +141,31 @@ function updatePageBadge(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));
 
+/* Spatial quiz only (TEXT_TO_POSITION): resolve a tap to the real physical line under it via
+   pageGeo, rather than the tapped verse. Requires setGeometry to have loaded pageGeo first. */
+function spatialLineIdAt(e){
+  const svg=currentSvg();if(!svg||!pageGeo)return null;
+  const ctm=svg.getScreenCTM();if(!ctm)return null;
+  const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+  const svgPoint=pt.matrixTransform(ctm.inverse());
+  const line=(pageGeo.lines||[]).find(l=>svgPoint.y>=Number(l.top)&&svgPoint.y<=Number(l.bottom));
+  return line?String(line.id):null;
+}
+
 function prepare(){
   const svg=currentSvg();
   if(!svg){N?.error('SVG Mushaf absent');return}
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
     const k=verseOf(p);p.dataset.verse=k;
     p.removeAttribute('tabindex');
-    p.onclick=e=>{e.stopPropagation();const [s,a]=k.split(':').map(Number);N?.verseTap(s,a)};
+    p.onclick=e=>{
+      e.stopPropagation();
+      if(spatialTapEnabled){
+        const lineId=spatialLineIdAt(e);
+        if(lineId){N?.spatialLineTap(lineId);return}
+      }
+      const [s,a]=k.split(':').map(Number);N?.verseTap(s,a);
+    };
   });
   render();
   requestAnimationFrame(updateSideMarks);
@@ -444,6 +463,7 @@ window.HifzReader={
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
+  setSpatialTapEnabled(value){spatialTapEnabled=!!value;},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},
