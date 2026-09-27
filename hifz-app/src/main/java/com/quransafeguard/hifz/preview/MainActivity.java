@@ -153,6 +153,7 @@ public final class MainActivity extends android.app.Activity {
         localLoader.execute(() -> {
             try {
                 GeometryRepository loaded = GeometryRepository.get(getApplicationContext());
+                prefs.reconcileV6AcquiredBootstrap(loaded);
                 prefs.currentAnchoringEntry(loaded);
                 geometry = loaded;
                 runOnUiThread(() -> {
