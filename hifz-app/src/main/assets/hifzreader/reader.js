@@ -107,20 +107,20 @@ function updateCenterMark(){
 window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));
 
 /*
- * Universal page-number badge: a folded page corner (dog-ear), bottom of the Mushaf, in the same
- * outer-margin gutter #sidemarks uses (odd page = right, even page = left) — never inside #mushaf
- * itself, hidden entirely when that gutter is too narrow for even the small reserved footprint,
- * exactly like the other two cues. Centralized here so every Activity that shows a MushafView
- * gets the identical badge for free, instead of each one drawing its own.
+ * Universal page-number badge: a round token, bottom of the Mushaf, in the same outer-margin
+ * gutter #sidemarks uses (odd page = right, even page = left) — never inside #mushaf itself,
+ * hidden entirely when that gutter is too narrow for even the small reserved footprint, exactly
+ * like the other two cues. Centralized here so every Activity that shows a MushafView gets the
+ * identical badge for free, instead of each one drawing its own.
  */
 function updatePageBadge(){
   const badge=document.getElementById('pagebadge');
   const mushafEl=document.getElementById('mushaf');
   if(!badge||!mushafEl)return;
-  // Wider than tall (not a plain 45° fold) so a real 3-digit page number (up to 604) always has
-  // clear, legible room near the flap's own thick bottom-right/bottom-left corner.
-  const w=eink?48:44,h=eink?33:30,safety=3;
-  const minGutter=w+2*safety;
+  // Diameter generous enough that a real 3-digit page number (up to 604) stays legible: a circle
+  // needs more room than a rectangle to inscribe the same text, since its corners are unusable.
+  const d=eink?50:46,safety=3;
+  const minGutter=d+2*safety;
   const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
   const rect=mushafEl.getBoundingClientRect();
   const rightGutter=viewportWidth-rect.right;
@@ -128,12 +128,12 @@ function updatePageBadge(){
   const onOuterRight=currentPage%2===1;
   const gutter=onOuterRight?rightGutter:leftGutter;
   if(!(gutter>=minGutter)){badge.classList.remove('show');return}
-  const inset=(gutter-w)/2;
+  const inset=(gutter-d)/2;
   badge.style.left=onOuterRight?'auto':inset+'px';
   badge.style.right=onOuterRight?inset+'px':'auto';
-  badge.style.top=(rect.bottom-h)+'px';
-  badge.style.width=w+'px';
-  badge.style.height=h+'px';
+  badge.style.top=(rect.bottom-d)+'px';
+  badge.style.width=d+'px';
+  badge.style.height=d+'px';
   badge.textContent=String(currentPage);
   badge.classList.toggle('odd',onOuterRight);
   badge.classList.toggle('even',!onOuterRight);

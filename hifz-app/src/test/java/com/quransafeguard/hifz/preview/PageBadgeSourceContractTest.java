@@ -11,13 +11,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Universal page-number badge (P1): a folded page corner (dog-ear) in the book's outer-margin
- * gutter, bottom of the page — odd (right-hand) pages get a white flap/black digit outlined on a
- * black backing triangle (so the fold stays visible even in body.eink mode, where the page
- * background becomes the same pure white as the flap), even (left-hand) pages get a plain black
- * flap/white digit, the printer's recto/verso convention. Centralized once in the shared
- * reader.js/index.html (not duplicated per-Activity) so Lecture, Mémorisation libre, Sabqi,
- * Itqān, Consolidation, Renforcement and Révision all get the identical badge for free.
+ * Universal page-number badge (P1): a round token in the book's outer-margin gutter, bottom of
+ * the page — odd (right-hand) pages get a white disc/black digit with a black outline (so it
+ * stays visible even in body.eink mode, where the page background becomes the same pure white as
+ * the disc's own fill), even (left-hand) pages get a plain black disc/white digit, the printer's
+ * recto/verso convention. Centralized once in the shared reader.js/index.html (not duplicated
+ * per-Activity) so Lecture, Mémorisation libre, Sabqi, Itqān, Consolidation, Renforcement and
+ * Révision all get the identical badge for free.
  */
 public final class PageBadgeSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -41,25 +41,17 @@ public final class PageBadgeSourceContractTest {
             index.contains("<div id=\"mushaf\" aria-label=\"Mushaf de Médine\"><!--MUSHAF_SVG--></div>"
                 + "<div id=\"pagebadge\" aria-hidden=\"true\"></div>"));
         assertTrue("must never intercept touches — it's a passive memory cue, not a control",
-            index.contains("#pagebadge{position:absolute;display:none;align-items:flex-end;"
-                + "font-size:14px;font-weight:700;line-height:1;pointer-events:none}"));
+            index.contains("#pagebadge{position:absolute;display:none;align-items:center;"
+                + "justify-content:center;border-radius:50%;font-size:15px;font-weight:700;"
+                + "line-height:1;pointer-events:none;box-sizing:border-box}"));
         assertTrue("hidden by default, revealed only once JS confirms a safe gutter",
             index.contains("#pagebadge.show{display:flex}"));
-        assertTrue("even (left-hand/verso) pages: black folded flap, white digit, a bottom-left "
-                + "corner triangle (right angle at bottom-left)",
-            index.contains("#pagebadge.even{background:#000;color:#fff;"
-                + "clip-path:polygon(0 0,0 100%,100% 100%);justify-content:flex-start;padding:0 0 4px 6px}"));
-        assertTrue("odd (right-hand/recto) pages: white folded flap on a black backing triangle, "
-                + "black digit, a bottom-right corner triangle (right angle at bottom-right) — the "
-                + "mirror of .even",
-            index.contains("#pagebadge.odd{background:#000;color:#000;"
-                + "clip-path:polygon(100% 0,100% 100%,0 100%);justify-content:flex-end;padding:0 6px 4px 0}"));
-        assertTrue("the backing triangle must be inset by a uniform amount on all sides so it reads "
-                + "as a border on every edge, including the diagonal fold edge a plain CSS border "
-                + "can't reach once clip-path has cut it",
-            index.contains("#pagebadge.odd::before{content:'';position:absolute;top:1.6px;left:1.6px;"
-                + "right:1.6px;bottom:1.6px;background:#fff;"
-                + "clip-path:polygon(100% 0,100% 100%,0 100%);z-index:-1}"));
+        assertTrue("even (left-hand/verso) pages: plain black disc, white digit",
+            index.contains("#pagebadge.even{background:#000;color:#fff}"));
+        assertTrue("odd (right-hand/recto) pages: white disc, black digit, outlined so it stays "
+                + "visible even in body.eink mode where --paper becomes the same pure white as "
+                + "the disc's own fill",
+            index.contains("#pagebadge.odd{background:#fff;color:#000;border:1.6px solid #000}"));
         assertFalse("no shadow — the spec forbids it for BOOX",
             index.contains("#pagebadge") && index.contains("box-shadow"));
     }
@@ -74,10 +66,11 @@ public final class PageBadgeSourceContractTest {
         assertTrue("odd page = right-hand page, the same parity #sidemarks and #centermark use",
             fn.contains("const onOuterRight=currentPage%2===1;"));
         assertTrue("must sit at the bottom of the rendered page, not centered like #sidemarks",
-            fn.contains("badge.style.top=(rect.bottom-h)+'px';"));
-        assertTrue("the flap must be wider than it is tall so a real 3-digit page number (up to "
-                + "604) always has legible room, not a plain 45° right-triangle fold",
-            fn.contains("const w=eink?48:44,h=eink?33:30,safety=3;"));
+            fn.contains("badge.style.top=(rect.bottom-d)+'px';"));
+        assertTrue("the disc must be generous enough that a real 3-digit page number (up to 604) "
+                + "stays legible — a circle needs more room than a rectangle for the same text "
+                + "since its corners are unusable",
+            fn.contains("const d=eink?50:46,safety=3;"));
         assertTrue("must hide rather than risk clipping into the Quran text when the gutter is too "
                 + "narrow for even the reserved footprint",
             fn.contains("if(!(gutter>=minGutter)){badge.classList.remove('show');return}"));
