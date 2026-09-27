@@ -193,9 +193,17 @@ public final class MainActivity extends android.app.Activity {
      * built on. Révision/Renforcement/Consolidation stay free since they need to be
      * testable/catchable-up any day.
      */
+    /** P4: the Roadmap's own automatic ratio for today, when active, otherwise the user's manual
+     *  learningDaysPerWeek setting — see HifzPrefs.currentRoadmapDecision for exactly when the
+     *  automatic ratio applies (Phase.CURRENT only, for now). */
+    private int effectiveLearningDaysPerWeek() {
+        RoadmapPolicy.Decision decision = geometry != null ? prefs.currentRoadmapDecision(geometry) : null;
+        return decision != null ? decision.learningDays : prefs.learningDaysPerWeek();
+    }
+
     private void refreshQuickAccessCadenceGating() {
         if (geometry == null) return;
-        CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), prefs.learningDaysPerWeek());
+        CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), effectiveLearningDaysPerWeek());
         if (sabqiQuickAccess != null) sabqiQuickAccess.setEnabled(action == CadenceAction.LEARNING);
         if (itqanQuickAccess != null) itqanQuickAccess.setEnabled(action == CadenceAction.STABILIZATION);
     }
@@ -249,7 +257,7 @@ public final class MainActivity extends android.app.Activity {
      * no longer today it is treated as satisfied rather than stalling every later cadence day.
      */
     private boolean cadenceComplete(LocalDate date){
-        CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), prefs.learningDaysPerWeek());
+        CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), effectiveLearningDaysPerWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
@@ -269,7 +277,7 @@ public final class MainActivity extends android.app.Activity {
             if(cadenceComplete(cursor))completed.add(cursor);
             cursor=cursor.plusDays(1);
         }
-        return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,prefs.learningDaysPerWeek());
+        return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());
     }
 
     /** Done, or nothing to review this week (rare, e.g. a brand-new install's first week). */

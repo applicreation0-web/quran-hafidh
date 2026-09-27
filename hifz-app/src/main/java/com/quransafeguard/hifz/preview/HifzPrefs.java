@@ -1606,6 +1606,47 @@ public final class HifzPrefs {
         return v6LineIdSet("v6AcquiredCreditLineIds").size();
     }
 
+    enum RoadmapMode { AUTO, MANUAL }
+
+    /** Whether the Roadmap decides the weekly Apprentissage/Stabilisation ratio automatically, or
+     *  the user's own learningDaysPerWeek setting still applies. Defaults to AUTO for a feature
+     *  meant to replace manual tuning; MANUAL is always the escape hatch back to today's setting. */
+    public RoadmapMode roadmapMode() {
+        return "MANUAL".equals(p.getString("roadmapMode", "AUTO")) ? RoadmapMode.MANUAL : RoadmapMode.AUTO;
+    }
+
+    public boolean setRoadmapMode(RoadmapMode mode) {
+        if (mode == null) throw new IllegalArgumentException("mode required");
+        return p.edit().putString("roadmapMode", mode.name()).commit();
+    }
+
+    /** The verse at the current Sabqi cursor (or sabqiStart if no cursor has been set yet) — the
+     *  one real-progress signal RoadmapPolicy's Sabqi-side inputs are derived from. */
+    VerseRef currentSabqiPosition(GeometryRepository geometry) {
+        int cursor = sabqiLineCursor();
+        if (cursor < 0) cursor = geometry.firstLineIndex(sabqiStart());
+        return geometry.fiveLineBlock(cursor).startVerse;
+    }
+
+    /**
+     * The Roadmap's own automatic decision for today, or null if automatic control isn't active —
+     * either the user chose MANUAL, or the decision would leave Phase.CURRENT. BRIDGE onward needs
+     * the perpetual Itqān rotation's real lag/lap data (not yet wired into this class), so the
+     * caller keeps using the manual learningDaysPerWeek setting until that lands — this method
+     * never guesses with stubbed lag data once Al-Baqara's own Sabqi is done.
+     */
+    RoadmapPolicy.Decision currentRoadmapDecision(GeometryRepository geometry) {
+        if (roadmapMode() == RoadmapMode.MANUAL) return null;
+        VerseRef position = currentSabqiPosition(geometry);
+        RoadmapPolicy.Input input = new RoadmapPolicy.Input(
+            false, null,
+            SabqiRoute.baqaraComplete(position), false, HifzClock.today(),
+            RoadmapPolicy.Phase.CURRENT, true, 0, 0, null,
+            RoadmapPolicy.CruiseWeek.A_4_2, RoadmapPolicy.Regulator.NORMAL);
+        RoadmapPolicy.Decision decision = RoadmapPolicy.decide(input);
+        return decision.phase == RoadmapPolicy.Phase.CURRENT ? decision : null;
+    }
+
     public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
         VerseRef completedStart = itqanUnitStart();
         VerseRef completedEnd = itqanUnitEnd();

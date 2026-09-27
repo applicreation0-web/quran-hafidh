@@ -17,8 +17,15 @@ import com.quransafeguard.hifz.core.VerseRef;
  */
 final class SabqiRoute {
     static final VerseRef ROUTE_END = new VerseRef(48, 29);
+    static final VerseRef BAQARA_END = new VerseRef(2, 286);
 
     private SabqiRoute() {}
+
+    /** True once Al-Baqara's own Sabqi material is entirely behind the cursor — the
+     *  RoadmapPolicy.Input.baqaraSabqiComplete signal. */
+    static boolean baqaraComplete(VerseRef cursor) {
+        return GeometryRepository.ordinal(cursor) > GeometryRepository.ordinal(BAQARA_END);
+    }
 
     /** True once there is no more canonical Sabqi material left to memorize past this cursor —
      *  the one signal RoadmapPolicy.Input.allNewSabqiComplete needs. */

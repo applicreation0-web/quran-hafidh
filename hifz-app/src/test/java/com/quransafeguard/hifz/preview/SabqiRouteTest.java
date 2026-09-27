@@ -35,4 +35,14 @@ public final class SabqiRouteTest {
         assertEquals(SabqiRoute.ROUTE_END, SabqiRoute.clampToRouteEnd(new VerseRef(49, 1)));
         assertEquals(SabqiRoute.ROUTE_END, SabqiRoute.clampToRouteEnd(new VerseRef(114, 6)));
     }
+
+    @Test public void baqaraNotCompleteWhileStillWithinIt() {
+        assertFalse(SabqiRoute.baqaraComplete(new VerseRef(2, 77)));
+        assertFalse(SabqiRoute.baqaraComplete(new VerseRef(2, 286)));
+    }
+
+    @Test public void baqaraCompleteOnceAlImranIsReached() {
+        assertTrue(SabqiRoute.baqaraComplete(new VerseRef(3, 1)));
+        assertTrue(SabqiRoute.baqaraComplete(new VerseRef(48, 29)));
+    }
 }

@@ -67,7 +67,17 @@ public final class SettingsActivity extends android.app.Activity {
         section(root,"Parcours");
         protocol=Ui.text(this,weeklyCadenceSummary(),11f,false);
         protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
+        LinearLayout roadmapModeRow=Ui.row(this);roadmapModeRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));roadmapModeRow.setMinimumHeight(Ui.dp(this,48));
+        TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",13f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
+        Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Pilotage Roadmap automatique");
+        roadmapModeRow.addView(roadmapModeSwitch);root.addView(roadmapModeRow);
         learningDaysSetting=Ui.settingRow(this,"Séances d’Apprentissage par semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
+        learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
+        roadmapModeSwitch.setOnCheckedChangeListener((button,checked)->{
+            prefs.setRoadmapMode(checked?HifzPrefs.RoadmapMode.AUTO:HifzPrefs.RoadmapMode.MANUAL);
+            learningDaysSetting.setEnabled(!checked);
+            refreshWeeklyCadence();
+        });
         root.addView(learningDaysSetting);root.addView(Ui.divider(this));
 
         sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
@@ -160,9 +170,17 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void refreshAll(){refreshWeeklyCadence();refreshRangeLists();refreshSabqi();refreshItqan();refreshHardAnchoring();refreshEffectiveItqanCorpus();refreshMurajaah();refreshAudio();}
 
+    /** P4: the Roadmap's own automatic ratio for today, when active, otherwise the user's manual
+     *  learningDaysPerWeek setting — see HifzPrefs.currentRoadmapDecision for exactly when the
+     *  automatic ratio applies (Phase.CURRENT only, for now). */
+    private int effectiveLearningDaysPerWeek(){
+        RoadmapPolicy.Decision decision = geometry != null ? prefs.currentRoadmapDecision(geometry) : null;
+        return decision != null ? decision.learningDays : prefs.learningDaysPerWeek();
+    }
+
     /** Weekday abbreviations (Mon..Sat) currently assigned to the given cadence action, e.g. "Lun/Mer/Ven". */
     private String daysFor(CadenceAction action){
-        int days=prefs.learningDaysPerWeek();
+        int days=effectiveLearningDaysPerWeek();
         StringBuilder out=new StringBuilder();
         for(int i=0;i<WEEKDAYS.length;i++){
             if(HifzSchedule.INSTANCE.actionFor(WEEKDAYS[i],days)!=action)continue;
@@ -186,8 +204,9 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     private String learningDaysSummary(){
-        int days=prefs.learningDaysPerWeek();
-        return days+"/6 jours   ·   Stabilisation "+(6-days)+"/6";
+        int days=effectiveLearningDaysPerWeek();
+        String base=days+"/6 jours   ·   Stabilisation "+(6-days)+"/6";
+        return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   Automatique" : base;
     }
 
     private void refreshWeeklyCadence(){
