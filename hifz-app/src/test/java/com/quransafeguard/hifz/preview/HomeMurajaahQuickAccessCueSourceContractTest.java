@@ -51,9 +51,12 @@ public final class HomeMurajaahQuickAccessCueSourceContractTest {
         assertTrue("must ask murajaahQuickAccessMode() which submode will actually open, not guess",
             cue.contains("HifzSessionActivity.MURAJAAH_ACTIVE.equals(murajaahQuickAccessMode())"));
         assertTrue("active due must show the real active-review target, not a hardcoded number",
-            cue.contains("activeNext ? SessionKind.ACTIVE_MURAJAAH : SessionKind.OLD_ITQAN_MURAJAAH"));
-        assertTrue("must actually source the minutes from HifzSchedule, not repeat a stale literal",
-            cue.contains("HifzSchedule.INSTANCE.targetMinutesFor("));
+            cue.contains("HifzSchedule.INSTANCE.targetMinutesFor(SessionKind.ACTIVE_MURAJAAH)"));
+        assertTrue("passive (Entretien) due must use the same dynamic J-15 duration the real "
+                + "session and the today-detail label already use — a flat HifzSchedule minute "
+                + "target is wrong once Entretien starts growing with the real ACQUIRED corpus",
+            cue.contains("MaintenanceCoveragePolicy.minutes(\n"
+                + "                    prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine())"));
         assertTrue("no leftover hardcoded pre-split minute literal may remain in this method",
             !cue.contains("30 min") && !cue.contains("\"30\""));
     }

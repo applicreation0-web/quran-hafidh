@@ -10,12 +10,12 @@ import java.nio.file.Paths;
 import static org.junit.Assert.assertTrue;
 
 /**
- * P4's real migration: the Ancrage/Stabilisation queue's own selection (HifzPrefs.
- * currentAnchoringEntry) no longer scans anchoringQueue cyclically from a persisted list index —
- * it now picks the earliest not-yet-Stabilisé/Acquis entry in PerpetualItqanSource's perpetual
- * TAIL(Al-Hujurāt→An-Nās)/FRONT(Al-Baqara→wherever Sabqi has actually reached) order, forever.
- * Consolidation is not separately wired: it only ever processes material that already cleared
- * Stabilisation here, so it inherits this same order for free.
+ * P4/A03: the Ancrage/Stabilisation queue's own selection (HifzPrefs.currentAnchoringEntry) never
+ * stops once every entry is Stabilisé/Acquis — it walks ItqanRotationPolicy's perpetual
+ * TAIL(Al-Hujurāt→An-Nās)/FRONT(Al-Baqara→wherever Sabqi has actually reached) leg+cursor forever,
+ * visiting every physical unit in bounds on its turn regardless of status. Status only decides,
+ * once a unit is reached, whether HifzSessionActivity builds it or gives it another reinforcement
+ * pass — never whether or when it is reached.
  */
 public final class AncragePerpetualRotationWiringSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -26,28 +26,47 @@ public final class AncragePerpetualRotationWiringSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void perpetualStateIsPersistedWithATailStartingDefault() throws Exception {
+    @Test public void rotationStateIsPersistedWithATailStartingDefault() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(prefs.contains(
-            "p.getString(\"p4AncrageLeg\", PerpetualItqanSource.Leg.TAIL_HUJURAT_NAS.name())"));
-        assertTrue(prefs.contains("p.getBoolean(\"p4AncrageInitialTailCompleted\", false)"));
+        assertTrue(prefs.contains("return ItqanRotationPolicy.State.startOfTail();"));
+        assertTrue("an install upgrading from the older leg-only rotation must be migrated, not reset blind",
+            prefs.contains("if (p.contains(\"p4AncrageLeg\")) {"));
     }
 
-    @Test public void currentAnchoringEntryNoLongerScansTheQueueCyclically() throws Exception {
+    @Test public void currentAnchoringEntryNoLongerFiltersByStabilisationStatus() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue("the historical cyclic list-index scan must be gone",
+        assertTrue("the historical cyclic list-index scan must stay gone",
             !prefs.contains("int start = anchoringQueueIndex(queue.size());"));
-        assertTrue("selection must go through PerpetualItqanSource, given every not-yet-done entry",
-            prefs.contains("List<AnchoringQueue.Entry> notDone = new ArrayList<>();"));
-        assertTrue(prefs.contains(
-            "PerpetualItqanSource.Selection selection = PerpetualItqanSource.selectNext(\n"
-                + "            currentState, notDone, currentSabqiPosition(geometry));"));
+        assertTrue("selection must no longer stop once every entry is Stabilisé/Acquis",
+            !prefs.contains("List<AnchoringQueue.Entry> notDone = new ArrayList<>();"));
+        assertTrue("selection must walk ItqanRotationPolicy's own leg+cursor state",
+            prefs.contains("ItqanRotationPolicy.State original = itqanRotationState();"));
+        assertTrue("a leg boundary (not an empty not-done pool) is what triggers the flip",
+            prefs.contains("state = ItqanRotationPolicy.onLegExhausted(state);"));
     }
 
     @Test public void aLegFlipIsPersistedButAStableLegIsNotRewrittenEveryCall() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue("only an actual leg change should trigger a write, mirroring the old "
-                + "index != start guard this replaces",
-            prefs.contains("if (selection.state.leg != currentState.leg && !savePerpetualItqanState(selection.state)) {"));
+        assertTrue("only an actual leg change should trigger a write",
+            prefs.contains("if (state.leg != original.leg && !saveItqanRotationState(state)) {"));
+    }
+
+    @Test public void aUnitAlreadyAcquiredGetsAReinforcementPassInsteadOfARegularCredit() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);"));
+        assertTrue(session.contains("? prefs.completeItqanReinforcementBlock("));
+        assertTrue("the rotation cursor must advance past every completed unit, build or reinforcement alike",
+            session.contains("if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {"));
+    }
+
+    @Test public void reinforcementNeverTouchesProgressionStateOrTheConsolidationSnowball() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        int start = prefs.indexOf("public boolean completeItqanReinforcementBlock(");
+        assertTrue("completeItqanReinforcementBlock must exist", start >= 0);
+        int end = prefs.indexOf("\n    }", start);
+        String body = prefs.substring(start, end);
+        assertTrue(!body.contains("v6StabilizedLineIds"));
+        assertTrue(!body.contains("v6AcquiredCreditLineIds"));
+        assertTrue(!body.contains("weeklySnowballAppendEntries"));
     }
 }

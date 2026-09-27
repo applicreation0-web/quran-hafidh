@@ -138,7 +138,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
         pageRail = Ui.row(this);
         pageRail.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), Ui.dp(this, 1));
-        surahPicker = Ui.bookText(this, "Sourate", 13f, true);
+        // Same nominal size/weight as rubPicker below renders visually lighter here, since this
+        // label carries real Arabic script (the surah name) rather than rubPicker's plain Latin
+        // digits/word — a larger size compensates so the two pickers read with the same intensity.
+        surahPicker = Ui.bookText(this, "Sourate", 15f, true);
         surahPicker.setGravity(Gravity.CENTER);
         surahPicker.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
         surahPicker.setClickable(true);

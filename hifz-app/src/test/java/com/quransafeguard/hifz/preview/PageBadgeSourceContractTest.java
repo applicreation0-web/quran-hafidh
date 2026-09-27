@@ -67,12 +67,17 @@ public final class PageBadgeSourceContractTest {
             fn.contains("const onOuterRight=currentPage%2===1;"));
         assertTrue("must sit at the bottom of the rendered page, not centered like #sidemarks",
             fn.contains("badge.style.top=(rect.bottom-d)+'px';"));
-        assertTrue("the disc must be generous enough that a real 3-digit page number (up to 604) "
-                + "stays legible — a circle needs more room than a rectangle for the same text "
-                + "since its corners are unusable",
-            fn.contains("const d=eink?50:46,safety=3;"));
-        assertTrue("must hide rather than risk clipping into the Quran text when the gutter is too "
-                + "narrow for even the reserved footprint",
+        assertTrue("the ideal disc size must stay generous enough that a real 3-digit page number "
+                + "(up to 604) stays legible when the gutter has room for it",
+            fn.contains("const idealD=eink?50:46,floorD=32,safety=1;"));
+        assertTrue("diameter and font must both shrink together toward the real available gutter "
+                + "instead of an all-or-nothing fixed size — #mushaf's width breakpoint only "
+                + "guarantees 36px per side, below the old fixed 52/56px threshold, which hid the "
+                + "badge entirely there (confirmed on real captures)",
+            fn.contains("const d=Math.min(idealD,gutter-2*safety);")
+                && fn.contains("const font=floorFont+(idealFont-floorFont)*(d-floorD)/(idealD-floorD);"));
+        assertTrue("must hide only below the still-legible floor, never risk clipping into the "
+                + "Quran text",
             fn.contains("if(!(gutter>=minGutter)){badge.classList.remove('show');return}"));
         assertTrue("must read the live page number every time, since MushafView reloads the whole "
                 + "WebView per page turn rather than patching currentPage incrementally",

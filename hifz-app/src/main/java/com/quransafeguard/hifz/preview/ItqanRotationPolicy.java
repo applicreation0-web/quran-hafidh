@@ -2,17 +2,21 @@ package com.quransafeguard.hifz.preview;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
  * P4's perpetual Itqān macro-cycle: TAIL (Al-Hujurāt → An-Nās, 49:1..114:6) then FRONT (Al-Baqara
  * → Al-Fatḥ, 2:1..48:29) then TAIL again, forever. Pure and Android-free — it only ever advances
- * the cursor within whichever leg is current, restricted to material the caller already knows is
- * ACQUIRED; it never decides ACQUIRED-ness itself and never reaches into HifzPrefs/AnchoringQueue.
+ * the cursor within whichever leg is current. Every physical unit in a leg's bounds is met on its
+ * turn regardless of its Stabilisation/Acquis status: status only decides what HifzPrefs does once
+ * a unit is reached (build it, or give it another full reinforcement pass), never whether or when
+ * it is reached — a unit already ACQUIRED long ago is never skipped, and the cycle never stops.
  *
- * A new ACQUIRED verse never causes a jump or rewind: if it falls ahead of the cursor in the
- * current leg it is met naturally when the cursor reaches it; if it falls behind, it waits for the
- * leg's next pass. The only state carried between calls is the leg and the cursor itself.
+ * A unit is never jumped to or rewound for: the cursor only ever advances past whatever was just
+ * presented, so the leg's own physical order is walked exactly once per lap, every lap, forever.
+ * The only state carried between calls is the leg and the cursor itself.
  */
 final class ItqanRotationPolicy {
     enum Leg { TAIL_HUJURAT_NAS, FRONT_BAQARA_HUJURAT }
@@ -86,5 +90,24 @@ final class ItqanRotationPolicy {
 
     private static VerseRef legEnd(Leg leg) {
         return leg == Leg.TAIL_HUJURAT_NAS ? TAIL_END : FRONT_END;
+    }
+
+    /** Display-only preview (WeeklyDashboardPlanner's 7-day projection): sorts candidates into
+     *  (state.leg first, other leg second) order, each ordinal-ascending — never persists or
+     *  decides anything, and never itself filters by Stabilisation/Acquis status. */
+    static List<AnchoringQueue.Entry> projectedOrder(State state, List<AnchoringQueue.Entry> candidates) {
+        ArrayList<AnchoringQueue.Entry> sorted = new ArrayList<>(candidates);
+        sorted.sort(Comparator
+            .comparingInt((AnchoringQueue.Entry e) -> legRank(state.leg, e))
+            .thenComparingInt(e -> GeometryRepository.ordinal(GeometryRepository.parseVerse(e.start))));
+        return sorted;
+    }
+
+    private static int legRank(Leg startingLeg, AnchoringQueue.Entry entry) {
+        VerseRef start = GeometryRepository.parseVerse(entry.start);
+        int o = GeometryRepository.ordinal(start);
+        boolean inStartingLeg = o >= GeometryRepository.ordinal(legStart(startingLeg))
+            && o <= GeometryRepository.ordinal(legEnd(startingLeg));
+        return inStartingLeg ? 0 : 1;
     }
 }

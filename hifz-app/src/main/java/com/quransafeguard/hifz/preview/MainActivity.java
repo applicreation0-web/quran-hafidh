@@ -210,14 +210,20 @@ public final class MainActivity extends android.app.Activity {
 
     /**
      * The "Révision" quick-access card's duration cue must track whichever of the daily
-     * active/passive pair murajaahQuickAccessMode() will actually open — a leftover static
-     * "30 min" (from before the 15 min active / 45 min passive split) is wrong for both.
+     * active/passive pair murajaahQuickAccessMode() will actually open. The passive (Entretien)
+     * side must use the same dynamic MaintenanceCoveragePolicy duration the real session and the
+     * "today" detail label already use — HifzSchedule.targetMinutesFor's flat 45 min was wrong
+     * once Entretien started growing with the real ACQUIRED corpus (see P4 J-15).
      */
     private void refreshMurajaahQuickAccessCue() {
         if (murajaahQuickAccess == null || murajaahQuickAccess.getChildCount() < 3) return;
         boolean activeNext = HifzSessionActivity.MURAJAAH_ACTIVE.equals(murajaahQuickAccessMode());
-        int minutes = HifzSchedule.INSTANCE.targetMinutesFor(
-            activeNext ? SessionKind.ACTIVE_MURAJAAH : SessionKind.OLD_ITQAN_MURAJAAH);
+        int minutes = activeNext
+            ? HifzSchedule.INSTANCE.targetMinutesFor(SessionKind.ACTIVE_MURAJAAH)
+            : (geometry != null
+                ? MaintenanceCoveragePolicy.minutes(
+                    prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine())
+                : HifzSchedule.INSTANCE.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH));
         View cue = murajaahQuickAccess.getChildAt(2);
         if (cue instanceof TextView) ((TextView) cue).setText(minutes + " min");
     }
@@ -225,7 +231,7 @@ public final class MainActivity extends android.app.Activity {
     /** The Révision card opens this compact selector rather than jumping straight to a mode:
         Révision active, Quiz spatial and Entretien can now be done in any order. */
     private void showRevisionSelector() {
-        RevisionSelector.show(this, prefs, new RevisionSelector.Choice() {
+        RevisionSelector.show(this, prefs, geometry, speedStore, new RevisionSelector.Choice() {
             @Override public void openActiveRevision() { openMode(HifzSessionActivity.MURAJAAH_ACTIVE); }
             @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
             @Override public void openSpatialQuiz() { startActivity(new Intent(MainActivity.this, SpatialQuizActivity.class)); }
@@ -311,7 +317,7 @@ public final class MainActivity extends android.app.Activity {
         return null;
     }
 
-    /** Dimanche soir, once the morning ×5 finales are done: Révision active, then ordinary Entretien, same as every other evening. */
+    /** Dimanche soir, once the morning ×3 finales are done: Révision active, then ordinary Entretien, same as every other evening. */
     private String eveningRevisionMode(LocalDate today){
         String todayStr=today.toString();
         if(!todayStr.equals(prefs.lastActiveMurajaahDate()))return HifzSessionActivity.MURAJAAH_ACTIVE;
@@ -398,9 +404,9 @@ public final class MainActivity extends android.app.Activity {
             }else if(HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)){
                 detail="Renforcement · boule de neige du soir";
             }else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode)){
-                detail="Consolidation · révision finale ×5";
+                detail="Consolidation · révision finale ×3";
             }else if(HifzSessionActivity.LEARNING_FINAL.equals(mode)){
-                detail="Renforcement · révision finale ×5";
+                detail="Renforcement · révision finale ×3";
             }else if(HifzSessionActivity.SABQI.equals(mode)){
                 int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
                 GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);

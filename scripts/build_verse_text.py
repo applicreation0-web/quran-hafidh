@@ -3,9 +3,8 @@ the same source's provenance: quranacademy/quran-text mirror, itself a cleaned d
 tanzil.net's quran-uthmani.txt — the same text tanzil.net states "completely matches the Medina
 Mushaf"). One verse per line, in canonical Quran order.
 
-Used only for content verification (InkContentVerifier): comparing ML Kit's recognized text
-against the real word, never for rendering — the Mushaf page itself is always drawn from the
-unmodified KFQC SVG corpus.
+Used by the Quiz spatial's text-based question snippets, never for rendering — the Mushaf page
+itself is always drawn from the unmodified KFQC SVG corpus.
 """
 import json
 from pathlib import Path

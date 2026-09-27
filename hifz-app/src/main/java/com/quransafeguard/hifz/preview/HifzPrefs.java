@@ -133,7 +133,6 @@ public final class HifzPrefs {
                 .putBoolean("recentSpeedCalibrated", false)
                 .putInt("recentSpeedSamples", 0)
                 .putBoolean("forceEink", false)
-                .putBoolean("advancedWritingVerificationEnabled", false)
                 .putString("lastSabqiDate", "")
                 .putString("lastSabqiLabel", "")
                 .putString("lastItqanDate", "")
@@ -1843,7 +1842,11 @@ public final class HifzPrefs {
             .commit();
     }
 
-    private boolean entryIsFullyStabilizedOrAcquired(AnchoringQueue.Entry entry, GeometryRepository geometry) {
+    /** Never used to decide whether a unit is reached by the perpetual rotation (see
+     *  itqanRotationState) — only to decide, once a unit IS reached, whether this is a first
+     *  build (credit progression + Consolidation snowball) or a later reinforcement lap over
+     *  material already ACQUIRED long ago (repeat the full protocol, touch nothing else). */
+    boolean entryIsFullyStabilizedOrAcquired(AnchoringQueue.Entry entry, GeometryRepository geometry) {
         if (entry == null) return false;
         LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
@@ -1854,30 +1857,116 @@ public final class HifzPrefs {
         return true;
     }
 
-    /** P4: the Ancrage/Stabilisation queue's own perpetual TAIL(Hujurāt→Nās)/FRONT(Baqara→Sabqi)
-     *  rotation position — see PerpetualItqanSource. Defaults to State.startOfTail() for an
-     *  install that has never run it. */
-    PerpetualItqanSource.State perpetualItqanState() {
-        PerpetualItqanSource.Leg leg = PerpetualItqanSource.Leg.valueOf(
-            p.getString("p4AncrageLeg", PerpetualItqanSource.Leg.TAIL_HUJURAT_NAS.name()));
-        boolean initialTailCompleted = p.getBoolean("p4AncrageInitialTailCompleted", false);
-        return new PerpetualItqanSource.State(leg, initialTailCompleted);
+    /** P4: the perpetual Itqān macro-cycle's own leg+cursor position — see ItqanRotationPolicy.
+     *  A fresh install with no prior rotation state starts at TAIL_START. An install upgrading
+     *  from the older (0.7.13) leg-only rotation, which never tracked a cursor, restarts that
+     *  same leg from its own beginning — the closest safe reconstruction, since no material is
+     *  ever skipped or lost by revisiting a leg's start once more on the very next upgrade. */
+    ItqanRotationPolicy.State itqanRotationState() {
+        String cursorRaw = p.getString("p4ItqanRotationCursor", "");
+        if (!cursorRaw.isEmpty()) {
+            ItqanRotationPolicy.Leg leg = ItqanRotationPolicy.Leg.valueOf(
+                p.getString("p4ItqanRotationLeg", ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS.name()));
+            VerseRef cursor;
+            try {
+                cursor = GeometryRepository.parseVerse(cursorRaw);
+            } catch (RuntimeException malformed) {
+                cursor = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
+                    ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
+            }
+            boolean initialTailCompleted = p.getBoolean("p4ItqanRotationInitialTailCompleted", false);
+            return new ItqanRotationPolicy.State(leg, cursor, initialTailCompleted);
+        }
+        if (p.contains("p4AncrageLeg")) {
+            ItqanRotationPolicy.Leg leg = "FRONT_BAQARA_HUJURAT".equals(p.getString("p4AncrageLeg", ""))
+                ? ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT : ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
+            boolean initialTailCompleted = p.getBoolean("p4AncrageInitialTailCompleted", false);
+            VerseRef cursor = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
+                ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
+            return new ItqanRotationPolicy.State(leg, cursor, initialTailCompleted);
+        }
+        return ItqanRotationPolicy.State.startOfTail();
     }
 
-    boolean savePerpetualItqanState(PerpetualItqanSource.State state) {
+    boolean saveItqanRotationState(ItqanRotationPolicy.State state) {
         if (state == null) throw new IllegalArgumentException("state required");
         return p.edit()
-            .putString("p4AncrageLeg", state.leg.name())
-            .putBoolean("p4AncrageInitialTailCompleted", state.initialTailCompleted)
+            .putString("p4ItqanRotationLeg", state.leg.name())
+            .putString("p4ItqanRotationCursor", state.cursor.toString())
+            .putBoolean("p4ItqanRotationInitialTailCompleted", state.initialTailCompleted)
+            .commit();
+    }
+
+    /** P4: advances the perpetual Itqān leg/cursor past a just-completed unit's last verse —
+     *  called once a unit's final block validates, whether that was a first build or a later
+     *  reinforcement lap; never called for a non-final sub-block. */
+    public boolean advanceItqanRotationPast(VerseRef unitEnd) {
+        if (unitEnd == null) throw new IllegalArgumentException("unitEnd required");
+        return saveItqanRotationState(ItqanRotationPolicy.advancedPast(itqanRotationState(), unitEnd));
+    }
+
+    /** P4: every physical Stabilisation-sized unit spanning a leg's own fixed bounds — all of
+     *  TAIL, or FRONT up to the Sabqi frontier — independent of unconsolidatedPromotedRanges,
+     *  since a perpetual Itqān lap keeps visiting a unit forever, long after it first graduates
+     *  out of "à stabiliser". Empty for FRONT before Sabqi has reached 2:1 at all. */
+    private List<AnchoringQueue.Entry> physicalUnitsInLeg(
+            ItqanRotationPolicy.Leg leg, VerseRef sabqiFrontier, GeometryRepository geometry) {
+        boolean tail = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
+        VerseRef legStart = tail ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
+        VerseRef legEnd = tail ? ItqanRotationPolicy.TAIL_END : ItqanRotationPolicy.FRONT_END;
+        if (!tail && GeometryRepository.ordinal(sabqiFrontier) < GeometryRepository.ordinal(legStart)) {
+            return Collections.emptyList();
+        }
+        VerseRef effectiveEnd = !tail && GeometryRepository.ordinal(sabqiFrontier) < GeometryRepository.ordinal(legEnd)
+            ? sabqiFrontier : legEnd;
+        VerseRange range = new VerseRange(legStart, effectiveEnd);
+        EligibleCorpus legCorpus = EligibleCorpus.Companion.of(Collections.singletonList(range));
+        ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
+        VerseRef cursor = legStart;
+        while (range.contains(cursor)) {
+            GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(cursor, effectiveEnd, legCorpus);
+            if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unit.end, geometry).isEmpty()) {
+                out.add(new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
+                    AnchoringQueue.Origin.PROMOTED,
+                    tail ? AnchoringQueue.ItqanProtocol.LIGHT : AnchoringQueue.ItqanProtocol.FULL, 0));
+            }
+            VerseRef next = legCorpus.next(unit.end);
+            if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
+            cursor = next;
+        }
+        return out;
+    }
+
+    /** P4: perpetual Itqān reinforcement of a unit whose lines are already ACQUIRED/STABILIZED —
+     *  a later lap, not a first build. Repeats the full protocol exactly like a first pass but
+     *  never re-touches v6 progression state or the Consolidation snowball, which already
+     *  credited this material once and must never see it again as newly promoted. */
+    public boolean completeItqanReinforcementBlock(int nextBlockIndex, boolean finalBlock,
+                                                    VerseRef unitStart, VerseRef unitEnd,
+                                                    String date, String label) {
+        if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
+        return p.edit()
+            .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
+            .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
+            .putString("itqanUnitStart", finalBlock ? "" : unitStart.toString())
+            .putString("itqanUnitEnd", finalBlock ? "" : unitEnd.toString())
+            .putLong("itqanElapsedMs", 0L)
+            .putString("lastItqanDate", date).putString("lastItqanLabel", label)
+            .putString("lastItqanCreditStart", unitStart.toString())
+            .putString("lastItqanCreditEnd", unitEnd.toString())
+            .putString("itqanBonusSnapshotV1", "")
             .commit();
     }
 
     /**
-     * P4: which not-yet-Stabilisé/Acquis entry the Ancrage screen presents next — selected by
-     * PerpetualItqanSource's perpetual TAIL(Al-Hujurāt→An-Nās)/FRONT(Al-Baqara→wherever Sabqi has
-     * actually reached) order, instead of the historical cyclic list-index scan. Consolidation
-     * needs no separate ordering of its own: it only ever processes material that has already
-     * cleared Stabilisation here, so it inherits this same order for free.
+     * P4: the perpetual Itqān rotation's own current unit — TAIL(Al-Hujurāt→An-Nās) then
+     * FRONT(Al-Baqara→wherever Sabqi has actually reached) then TAIL again, forever. Every
+     * physical unit in bounds is visited on its turn regardless of Stabilisation/Acquis status;
+     * status only decides, once a unit is reached, whether the session builds it (still pending)
+     * or gives it another full reinforcement pass (already ACQUIRED from an earlier lap) — see
+     * HifzSessionActivity.validateItqan and completeItqanReinforcementBlock. Consolidation needs
+     * no separate ordering of its own: it only ever processes material that has already cleared
+     * Stabilisation here, so it inherits this same order for free.
      */
     public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
         if (!p.getBoolean("anchoringQueueInitialized", false)
@@ -1891,27 +1980,28 @@ public final class HifzPrefs {
             if (!p.edit().putString("anchoringRetryAfterDate", "").commit())
                 throw new IllegalStateException("Unable to clear Stabilisation retry deferral");
         }
-        List<AnchoringQueue.Entry> queue = anchoringQueue();
-        if (!p.getBoolean("anchoringQueueInitialized", false)) {
-            if (!reconcileAnchoringQueue(geometry)) throw new IllegalStateException("Unable to repair Stabilisation queue");
-            queue = anchoringQueue();
-        }
         AnchoringQueue.Entry inProgress = inProgressAnchoringEntry();
         if (inProgress != null) return inProgress;
-        if (queue.isEmpty()) return null;
-        List<AnchoringQueue.Entry> notDone = new ArrayList<>();
-        for (AnchoringQueue.Entry candidate : queue) {
-            if (!entryIsFullyStabilizedOrAcquired(candidate, geometry)) notDone.add(candidate);
+
+        ItqanRotationPolicy.State original = itqanRotationState();
+        ItqanRotationPolicy.State state = original;
+        VerseRef sabqiFrontier = currentSabqiPosition(geometry);
+        AnchoringQueue.Entry selected = null;
+        for (int attempt = 0; attempt < 2 && selected == null; attempt++) {
+            for (AnchoringQueue.Entry unit : physicalUnitsInLeg(state.leg, sabqiFrontier, geometry)) {
+                if (GeometryRepository.ordinal(GeometryRepository.parseVerse(unit.start))
+                        >= GeometryRepository.ordinal(state.cursor)) {
+                    selected = unit;
+                    break;
+                }
+            }
+            if (selected == null) state = ItqanRotationPolicy.onLegExhausted(state);
         }
-        if (notDone.isEmpty()) return null;
-        PerpetualItqanSource.State currentState = perpetualItqanState();
-        PerpetualItqanSource.Selection selection = PerpetualItqanSource.selectNext(
-            currentState, notDone, currentSabqiPosition(geometry));
-        if (selection == null) return null;
-        if (selection.state.leg != currentState.leg && !savePerpetualItqanState(selection.state)) {
-            throw new IllegalStateException("Unable to persist Ancrage rotation state");
+        if (selected == null) return null; // nothing physical yet (e.g. Sabqi hasn't reached 2:1)
+        if (state.leg != original.leg && !saveItqanRotationState(state)) {
+            throw new IllegalStateException("Unable to persist Itqān rotation state");
         }
-        return selection.entry;
+        return selected;
     }
 
     private static String snowballAnchorKey(ConsolidationCycleEngine.Family family) {
@@ -2570,16 +2660,6 @@ public final class HifzPrefs {
 
     public boolean forceEink() { return p.getBoolean("forceEink", false); }
     public void setForceEink(boolean value) { p.edit().putBoolean("forceEink", value).apply(); }
-
-    /**
-     * Off by default. The only setting that ever lets Quran Hifz touch the network: a one-time
-     * download of ML Kit's Arabic digital-ink model to check whether handwritten strokes recognize
-     * as the expected word (content only — it does not read tashkil). See InkContentVerifier,
-     * the single class allowed to reference network-capable APIs (enforced by
-     * verifyHifzProductBoundary).
-     */
-    public boolean advancedWritingVerificationEnabled() { return p.getBoolean("advancedWritingVerificationEnabled", false); }
-    public void setAdvancedWritingVerificationEnabled(boolean value) { p.edit().putBoolean("advancedWritingVerificationEnabled", value).apply(); }
 
     /**
      * How many of the six non-Sunday days a week give their morning to Apprentissage instead of

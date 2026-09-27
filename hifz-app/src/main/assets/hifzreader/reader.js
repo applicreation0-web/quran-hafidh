@@ -117,10 +117,14 @@ function updatePageBadge(){
   const badge=document.getElementById('pagebadge');
   const mushafEl=document.getElementById('mushaf');
   if(!badge||!mushafEl)return;
-  // Diameter generous enough that a real 3-digit page number (up to 604) stays legible: a circle
-  // needs more room than a rectangle to inscribe the same text, since its corners are unusable.
-  const d=eink?50:46,safety=3;
-  const minGutter=d+2*safety;
+  // Diameter and font both adapt to whatever gutter this screen actually has, shrinking to a
+  // still-legible floor instead of a fixed size that can exceed the narrowest guaranteed gutter
+  // (#mushaf's width breakpoint reserves 72px total, split evenly to 36px per side) and hide the
+  // badge entirely there — real captures showed exactly that. The ideal (larger) size is kept
+  // whenever the actual gutter has room for it.
+  const idealD=eink?50:46,floorD=32,safety=1;
+  const idealFont=eink?16:15,floorFont=eink?11:10;
+  const minGutter=floorD+2*safety;
   const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
   const rect=mushafEl.getBoundingClientRect();
   const rightGutter=viewportWidth-rect.right;
@@ -128,12 +132,15 @@ function updatePageBadge(){
   const onOuterRight=currentPage%2===1;
   const gutter=onOuterRight?rightGutter:leftGutter;
   if(!(gutter>=minGutter)){badge.classList.remove('show');return}
+  const d=Math.min(idealD,gutter-2*safety);
+  const font=floorFont+(idealFont-floorFont)*(d-floorD)/(idealD-floorD);
   const inset=(gutter-d)/2;
   badge.style.left=onOuterRight?'auto':inset+'px';
   badge.style.right=onOuterRight?inset+'px':'auto';
   badge.style.top=(rect.bottom-d)+'px';
   badge.style.width=d+'px';
   badge.style.height=d+'px';
+  badge.style.fontSize=font+'px';
   badge.textContent=String(currentPage);
   badge.classList.toggle('odd',onOuterRight);
   badge.classList.toggle('even',!onOuterRight);

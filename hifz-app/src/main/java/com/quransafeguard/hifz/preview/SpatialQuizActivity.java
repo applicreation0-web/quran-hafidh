@@ -142,7 +142,10 @@ public final class SpatialQuizActivity extends Activity implements MushafView.Li
             case TEXT_TO_POSITION:
                 promptText.setText(q.prompt.arabicSnippet);
                 mushaf.setSpatialTapEnabled(true);
-                mushaf.show(q.prompt.page, Collections.emptyList(), geometry.lineIdsOnPage(q.prompt.page), 0);
+                // The page's own ink must stay hidden — showing it here would let the answer be
+                // read straight off the page instead of recalled from spatial memory, defeating
+                // the question. Landmarks/tap detection are unaffected: masking is purely visual.
+                mushaf.show(q.prompt.page, Collections.emptyList(), geometry.lineIdsOnPage(q.prompt.page), 100);
                 break;
             case POSITION_TO_TEXT:
             case TRANSITION: {

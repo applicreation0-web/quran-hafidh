@@ -18,14 +18,19 @@ final class RevisionSelector {
         void openSpatialQuiz();
     }
 
-    static void show(Activity activity, HifzPrefs prefs, Choice choice) {
+    static void show(Activity activity, HifzPrefs prefs, GeometryRepository geometry,
+                      HifzSpeedStore speedStore, Choice choice) {
         String today = HifzClock.today().toString();
         boolean activeDone = today.equals(prefs.lastActiveMurajaahDate());
         boolean passiveDone = today.equals(prefs.lastMurajaahDate());
+        String maintenanceCue = geometry != null
+            ? MaintenanceCoveragePolicy.minutes(
+                prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()) + " min"
+            : "durée variable";
         String[] items = {
             "Révision active · 15 min · " + (activeDone ? "fait" : "à faire"),
             "Quiz spatial · ≤15 min · facultatif",
-            "Entretien · " + (passiveDone ? "fait" : "à faire"),
+            "Entretien · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
         new AlertDialog.Builder(activity)
             .setTitle("Révision")

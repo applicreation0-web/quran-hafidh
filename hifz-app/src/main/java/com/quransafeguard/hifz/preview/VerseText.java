@@ -12,9 +12,9 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Plain Arabic verse text derived from Tanzil's Uthmani text (see scripts/build_verse_text.py
- * for provenance — the same source used for waqf.json). Used only for content verification
- * (InkContentVerifier comparing recognized handwriting to the real word); the Mushaf page itself
- * is always rendered unmodified from the shipped KFQC SVG corpus, never from this text.
+ * for provenance — the same source used for waqf.json). Used for the Quiz spatial's text-based
+ * question snippets; the Mushaf page itself is always rendered unmodified from the shipped KFQC
+ * SVG corpus, never from this text.
  */
 final class VerseText {
     private static volatile VerseText INSTANCE;

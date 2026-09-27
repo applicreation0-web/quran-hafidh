@@ -860,10 +860,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         List<String> bonusLineIds = itqanBonusDecision != null
                 && itqanBonusDecision.decision == ItqanPlanSnapshot.Decision.EXTEND
             ? itqanBonusDecision.bonusLineIds : Collections.emptyList();
-        boolean ok = prefs.completeStabilizationBlockV6(
-            currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
-            sessionDate.toString(), label, bonusLineIds);
+        // P4: once every physical line here is already ACQUIRED (a later Itqān lap over material
+        // stabilised long ago), this is a perpetual reinforcement pass, not a first build — credit
+        // it without re-touching progression state or the Consolidation snowball a second time.
+        boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
+        boolean ok = reinforcementLap
+            ? prefs.completeItqanReinforcementBlock(
+                nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, sessionDate.toString(), label)
+            : prefs.completeStabilizationBlockV6(
+                currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
+                sessionDate.toString(), label, bonusLineIds);
         if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
+        if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {
+            onError("Impossible d’avancer la rotation d’Itqān.");
+            return;
+        }
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
 

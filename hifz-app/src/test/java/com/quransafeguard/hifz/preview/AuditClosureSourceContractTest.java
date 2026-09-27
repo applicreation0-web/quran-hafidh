@@ -37,8 +37,8 @@ public final class AuditClosureSourceContractTest {
         assertTrue("P4: the dashboard preview must walk the same perpetual TAIL/FRONT order "
                 + "HifzPrefs.currentAnchoringEntry actually selects from, not the old cyclic "
                 + "list-index visit order",
-            dashboard.contains("PerpetualItqanSource.projectedOrder(\n"
-                + "            prefs.perpetualItqanState(), candidateAnchoring, prefs.currentSabqiPosition(geometry));"));
+            dashboard.contains("ItqanRotationPolicy.projectedOrder(\n"
+                + "            prefs.itqanRotationState(), candidateAnchoring);"));
         assertTrue(dashboard.contains("date.equals(today)&&prefs.anchoringDeferredToday()"));
         assertTrue(dashboard.contains("Stabilisation · unité reportée"));
         assertFalse(dashboard.contains("Ancrage · page reportée"));

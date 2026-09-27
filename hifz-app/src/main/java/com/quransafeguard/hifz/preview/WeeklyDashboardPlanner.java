@@ -66,9 +66,9 @@ final class WeeklyDashboardPlanner {
         }
         // P4: preview must walk the same perpetual TAIL(Hujurāt→Nās)/FRONT(Baqara→Sabqi) macro
         // order HifzPrefs.currentAnchoringEntry actually selects from now on — not the old cyclic
-        // list-index visit order — see PerpetualItqanSource.
-        List<AnchoringQueue.Entry> projectedAnchoring=PerpetualItqanSource.projectedOrder(
-            prefs.perpetualItqanState(), candidateAnchoring, prefs.currentSabqiPosition(geometry));
+        // list-index visit order — see ItqanRotationPolicy.
+        List<AnchoringQueue.Entry> projectedAnchoring=ItqanRotationPolicy.projectedOrder(
+            prefs.itqanRotationState(), candidateAnchoring);
         int projectedAnchoringIndex=0;
         int projectedItqanBlockIndex=prefs.itqanBlockIndex();
 
@@ -143,7 +143,7 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record consolidationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
                     boolean learningDone=learningFinal!=null||prefs.learningSnowballFinalUnits(date).isEmpty();
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
-                    morning=(learningDone&&consolidationDone)?"✓ Révision finale ×5":"Révision finale ×5 · Renforcement + Consolidation";
+                    morning=(learningDone&&consolidationDone)?"✓ Révision finale ×3":"Révision finale ×3 · Renforcement + Consolidation";
                     boolean morningDone=learningDone&&consolidationDone;
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
                     boolean eveningDone=entretienActual!=null;

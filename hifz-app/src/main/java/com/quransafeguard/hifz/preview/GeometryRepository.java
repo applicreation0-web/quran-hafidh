@@ -25,8 +25,7 @@ public final class GeometryRepository {
         public final int globalIndex;
         public final String id;
         public final int page;
-        /** This line's position within its own page's "lines" array (0-based) — the same index
-         *  WordShapeRepository.shapesForPage(page)[...] and AyahMarkerRepository index by. */
+        /** This line's position within its own page's "lines" array (0-based). */
         public final int lineIndexOnPage;
         public final double top;
         public final double bottom;
@@ -193,8 +192,7 @@ public final class GeometryRepository {
     }
 
     /** The page's real SVG viewBox [x, y, width, height] — the exact coordinate space every
-     *  line's top/bottom/cells, WordShapeRepository's shapes and AyahMarkerRepository's markers
-     *  are all already expressed in. */
+     *  line's top/bottom/cells are already expressed in. */
     public float[] viewBoxForPage(int page) {
         if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
         JSONObject pageObject = pages.optJSONObject(Integer.toString(page));

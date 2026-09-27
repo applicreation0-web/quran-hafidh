@@ -4,11 +4,7 @@ plugins {
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
-val generatedHifzWordShapesDir = layout.buildDirectory.dir("generated/hifzWordShapes").get().asFile
-val generatedHifzAyahMarkersDir = layout.buildDirectory.dir("generated/hifzAyahMarkers").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
-val hifzSvgBrSourceDir = rootProject.file("app/src/main/assets/mushaf/hafs/kfqc/svg-br")
-val hifzGeometrySourceFile = rootProject.file("app/src/main/assets/reader109/geometry.json")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
@@ -23,49 +19,14 @@ val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     )
 }
 
-// Palier 2 (writing-exercise coverage check): per-word ink-shape geometry derived
-// from the real Mushaf glyph paths already bundled for the reader, so the
-// writing exercise always compares against the real letterform, never a guess.
-val generateHifzWordShapes by tasks.registering(Exec::class) {
-    inputs.dir(hifzSvgBrSourceDir)
-    inputs.file(hifzGeometrySourceFile)
-    inputs.file(rootProject.file("scripts/generate_hifz_word_shapes.py"))
-    outputs.dir(generatedHifzWordShapesDir)
-    commandLine(
-        "python3",
-        rootProject.file("scripts/generate_hifz_word_shapes.py").absolutePath,
-        hifzSvgBrSourceDir.absolutePath,
-        hifzGeometrySourceFile.absolutePath,
-        generatedHifzWordShapesDir.absolutePath
-    )
-}
-
-// Writing-exercise ayah-end markers: the real verse-end rosette positions already
-// embedded in the source SVGs (ayah:x/ayah:y attributes, already in the same
-// page-space coordinates as geometry.json), so the exercise canvas can keep showing
-// the real verse-end signs, exactly like the printed Mushaf, while the user writes.
-val generateHifzAyahMarkers by tasks.registering(Exec::class) {
-    inputs.dir(hifzSvgBrSourceDir)
-    inputs.file(rootProject.file("scripts/generate_hifz_ayah_markers.py"))
-    outputs.dir(generatedHifzAyahMarkersDir)
-    commandLine(
-        "python3",
-        rootProject.file("scripts/generate_hifz_ayah_markers.py").absolutePath,
-        hifzSvgBrSourceDir.absolutePath,
-        generatedHifzAyahMarkersDir.absolutePath
-    )
-}
-
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease, generateHifzWordShapes, generateHifzAyahMarkers)
+    dependsOn(prepareHifzTafsirRelease)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/verses_text.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
-    from(generatedHifzWordShapesDir) { into("wordshapes") }
-    from(generatedHifzAyahMarkersDir) { into("ayahmarkers") }
 }
 
 val verifyHifzProductBoundary by tasks.registering {
@@ -76,35 +37,17 @@ val verifyHifzProductBoundary by tasks.registering {
         check(!manifest.contains("QUERY_ALL_PACKAGES")) { "Quran Hifz must never request broad package visibility." }
         check(!manifest.contains("BIND_ACCESSIBILITY_SERVICE")) { "Quran Hifz must never request Safeguard blocking privileges." }
 
-        // Quran Hifz is offline-first by default. The single deliberate exception is
-        // InkContentVerifier: a settings-gated (off by default), one-time model download for
-        // handwriting-content verification. INTERNET may exist ONLY paired with that one file,
-        // and no other file in this module may reference any network-capable API — so a future
-        // change can't quietly add real network use by riding on this permission.
-        val hasInternet = manifest.contains("android.permission.INTERNET")
+        // Quran Hifz is fully offline: no network-capable API may be referenced anywhere in this
+        // module, and the manifest must never declare INTERNET/ACCESS_NETWORK_STATE.
+        check(!manifest.contains("android.permission.INTERNET")) { "Quran Hifz must stay offline: no INTERNET permission." }
         val sourceFiles = fileTree("src/main") { include("**/*.java", "**/*.kt", "**/*.xml") }.files
         val networkMarkers = listOf(
             "com.google.mlkit", "RemoteModelManager", "DigitalInkRecognition",
             "java.net.HttpURLConnection", "java.net.URLConnection", "okhttp", "Retrofit", "WebSocket"
         )
-        val allowedNetworkFile = "InkContentVerifier.java"
         val filesWithNetworkMarkers = sourceFiles.filter { f -> networkMarkers.any { f.readText().contains(it) } }
-        val strayNetworkFiles = filesWithNetworkMarkers.filter { it.name != allowedNetworkFile }
-        check(strayNetworkFiles.isEmpty()) {
-            "Network-capable APIs must stay confined to $allowedNetworkFile: found in ${strayNetworkFiles.map { it.name }}"
-        }
-        if (hasInternet) {
-            check(filesWithNetworkMarkers.any { it.name == allowedNetworkFile }) {
-                "INTERNET is declared but no gated verifier justifies it."
-            }
-            val verifierFile = sourceFiles.first { it.name == allowedNetworkFile }
-            check(verifierFile.readText().contains("advancedWritingVerificationEnabled()")) {
-                "$allowedNetworkFile must check the explicit opt-in preference before any network use."
-            }
-        } else {
-            check(filesWithNetworkMarkers.isEmpty()) {
-                "No network-capable code may exist without the matching INTERNET permission and its gate."
-            }
+        check(filesWithNetworkMarkers.isEmpty()) {
+            "No network-capable code may exist in an offline app: found in ${filesWithNetworkMarkers.map { it.name }}"
         }
 
         val sourceText = sourceFiles.joinToString("\n") { it.readText() }
@@ -337,9 +280,6 @@ tasks.named("preBuild").configure {
 dependencies {
     implementation(project(":hifz-core"))
     implementation("org.brotli:dec:0.1.2")
-    // Used only by InkContentVerifier, gated behind the opt-in "advanced writing verification"
-    // setting; see verifyHifzProductBoundary for the enforcement that keeps it confined there.
-    implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core:1.6.1")
