@@ -32,17 +32,26 @@ body.eink #sidemarks span{width:1.7px}
 #centermark .bead{position:absolute;left:50%;width:5px;height:5px;border-radius:1.5px;background:var(--sidemark);transform:translate(-50%,-50%) rotate(45deg)}
 body.eink #centermark .thread{width:1.3px;opacity:.55}
 body.eink #centermark .bead{width:6px;height:6px}
-/* Universal page-number badge: a small disc in the book's outer margin gutter, bottom of the
-   page, like a folio number printed at the edge of a real bound page — odd (right-hand) pages
-   get a white disc/black digit/thin black outline, even (left-hand) pages get a black disc/white
-   digit, the same recto/verso convention #sidemarks and #centermark already use. Centralized here
-   (not per-Activity) so every mode that shows a MushafView — Lecture, Mémorisation libre, Sabqi,
-   Itqān, Consolidation, Renforcement, Révision — gets the exact same badge for free. */
-#pagebadge{position:absolute;display:none;align-items:center;justify-content:center;border-radius:50%;font-size:10px;font-weight:600;line-height:1;pointer-events:none}
+/* Universal page-number badge: a folded page corner (dog-ear) in the book's outer margin
+   gutter, bottom of the page, like a real reader's habit of turning down a page corner to keep
+   their place, with the folio number printed on the flap — even (left-hand/verso) pages get a
+   black flap/white digit, odd (right-hand/recto) pages get a white flap/black digit (the
+   inverse), the same recto/verso convention #sidemarks and #centermark already use. A flat
+   clip-path triangle, no shadow/gradient — solid fills only, BOOX/E-Ink friendly.
+   .odd's flap is otherwise invisible against the page in body.eink mode, where --paper becomes
+   the same pure #fff as the flap fill — ::before draws a solid black backing triangle and the
+   real flap sits inset by the border width on top of it, giving a uniform outline along all
+   three edges (a plain CSS border only follows the box's original two straight edges; the
+   diagonal fold edge is a clip-path invention with no border of its own to draw on).
+   Centralized here (not per-Activity) so every mode that shows a MushafView — Lecture,
+   Mémorisation libre, Sabqi, Itqān, Consolidation, Renforcement, Révision — gets the exact same
+   badge for free. */
+#pagebadge{position:absolute;display:none;align-items:flex-end;font-size:11px;font-weight:700;line-height:1;pointer-events:none}
 #pagebadge.show{display:flex}
-#pagebadge.even{background:#000;color:#fff}
-#pagebadge.odd{background:#fff;color:#000;border:1px solid #000}
-body.eink #pagebadge{font-size:11px}
+#pagebadge.even{background:#000;color:#fff;clip-path:polygon(0 0,0 100%,100% 100%);justify-content:flex-start;padding:0 0 3px 5px}
+#pagebadge.odd{background:#000;color:#000;clip-path:polygon(100% 0,100% 100%,0 100%);justify-content:flex-end;padding:0 5px 3px 0}
+#pagebadge.odd::before{content:'';position:absolute;top:1.4px;left:1.4px;right:1.4px;bottom:1.4px;background:#fff;clip-path:polygon(100% 0,100% 100%,0 100%);z-index:-1}
+body.eink #pagebadge{font-size:12px}
 /* Fit the complete canonical Mushaf inside the native reading zone, reserving a small fixed gutter
    for the side marks above. Keep 2px safety top/bottom on E-Ink. */
 #mushaf{width:min(calc(100vw - 40px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);transform:translateY(var(--reveal-shift));transform-origin:center center}

@@ -106,17 +106,17 @@ function updateCenterMark(){
 window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));
 
 /*
- * Universal page-number badge: a small disc, bottom of the Mushaf, in the same outer-margin
- * gutter #sidemarks uses (odd page = right, even page = left) — never inside #mushaf itself,
- * hidden entirely when that gutter is too narrow for even the small reserved diameter, exactly
- * like the other two cues. Centralized here so every Activity that shows a MushafView gets the
- * identical badge for free, instead of each one drawing its own.
+ * Universal page-number badge: a folded page corner (dog-ear), bottom of the Mushaf, in the same
+ * outer-margin gutter #sidemarks uses (odd page = right, even page = left) — never inside #mushaf
+ * itself, hidden entirely when that gutter is too narrow for even the small reserved footprint,
+ * exactly like the other two cues. Centralized here so every Activity that shows a MushafView
+ * gets the identical badge for free, instead of each one drawing its own.
  */
 function updatePageBadge(){
   const badge=document.getElementById('pagebadge');
   const mushafEl=document.getElementById('mushaf');
   if(!badge||!mushafEl)return;
-  const size=eink?20:19,safety=3;
+  const size=eink?27:25,safety=3;
   const minGutter=size+2*safety;
   const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
   const rect=mushafEl.getBoundingClientRect();
