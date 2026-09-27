@@ -32,6 +32,17 @@ body.eink #sidemarks span{width:1.7px}
 #centermark .bead{position:absolute;left:50%;width:5px;height:5px;border-radius:1.5px;background:var(--sidemark);transform:translate(-50%,-50%) rotate(45deg)}
 body.eink #centermark .thread{width:1.3px;opacity:.55}
 body.eink #centermark .bead{width:6px;height:6px}
+/* Universal page-number badge: a small disc in the book's outer margin gutter, bottom of the
+   page, like a folio number printed at the edge of a real bound page — odd (right-hand) pages
+   get a white disc/black digit/thin black outline, even (left-hand) pages get a black disc/white
+   digit, the same recto/verso convention #sidemarks and #centermark already use. Centralized here
+   (not per-Activity) so every mode that shows a MushafView — Lecture, Mémorisation libre, Sabqi,
+   Itqān, Consolidation, Renforcement, Révision — gets the exact same badge for free. */
+#pagebadge{position:absolute;display:none;align-items:center;justify-content:center;border-radius:50%;font-size:10px;font-weight:600;line-height:1;pointer-events:none}
+#pagebadge.show{display:flex}
+#pagebadge.even{background:#000;color:#fff}
+#pagebadge.odd{background:#fff;color:#000;border:1px solid #000}
+body.eink #pagebadge{font-size:11px}
 /* Fit the complete canonical Mushaf inside the native reading zone, reserving a small fixed gutter
    for the side marks above. Keep 2px safety top/bottom on E-Ink. */
 #mushaf{width:min(calc(100vw - 40px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);transform:translateY(var(--reveal-shift));transform-origin:center center}
@@ -51,5 +62,5 @@ body.eink .weakoutline{stroke-width:1}
 .eink *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 </style>
 </head>
-<body><div id="box"><div id="sidemarks" aria-hidden="true"><span></span><span></span><span></span></div><div id="centermark" aria-hidden="true"><div class="thread"></div></div><div id="mushaf" aria-label="Mushaf de Médine"><!--MUSHAF_SVG--></div></div><script src="reader.js"></script></body>
+<body><div id="box"><div id="sidemarks" aria-hidden="true"><span></span><span></span><span></span></div><div id="centermark" aria-hidden="true"><div class="thread"></div></div><div id="mushaf" aria-label="Mushaf de Médine"><!--MUSHAF_SVG--></div><div id="pagebadge" aria-hidden="true"></div></div><script src="reader.js"></script></body>
 </html>

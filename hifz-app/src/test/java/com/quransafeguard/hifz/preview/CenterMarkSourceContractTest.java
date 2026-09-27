@@ -77,14 +77,14 @@ public final class CenterMarkSourceContractTest {
             reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));"));
         assertTrue("the very first render must position the thread before anything is visible",
             reader.contains("requestAnimationFrame(updateSideMarks);\n  requestAnimationFrame(updateCenterMark);"
-                + "\n  N?.pageShown(currentPage);"));
+                + "\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage);"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically without changing its gutters, but the "
                 + "thread's own position is measured from the same rect and must be refreshed too",
-            reader.contains("updateSideMarks();\n    updateCenterMark();\n  });\n}\nfunction clearReveal()"));
+            reader.contains("updateSideMarks();\n    updateCenterMark();\n    updatePageBadge();\n  });\n}\nfunction clearReveal()"));
         assertTrue("clearing the reveal must also re-sync the thread",
             reader.contains("function clearReveal(){document.documentElement.style.setProperty("
-                + "'--reveal-shift','0px');updateSideMarks();updateCenterMark()}"));
+                + "'--reveal-shift','0px');updateSideMarks();updateCenterMark();updatePageBadge()}"));
         assertTrue("toggling e-ink mode changes the thread's and beads' own size, so it must recompute too",
-            reader.contains("setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark()},"));
+            reader.contains("setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},"));
     }
 }

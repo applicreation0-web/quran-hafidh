@@ -105,6 +105,39 @@ function updateCenterMark(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));
 
+/*
+ * Universal page-number badge: a small disc, bottom of the Mushaf, in the same outer-margin
+ * gutter #sidemarks uses (odd page = right, even page = left) — never inside #mushaf itself,
+ * hidden entirely when that gutter is too narrow for even the small reserved diameter, exactly
+ * like the other two cues. Centralized here so every Activity that shows a MushafView gets the
+ * identical badge for free, instead of each one drawing its own.
+ */
+function updatePageBadge(){
+  const badge=document.getElementById('pagebadge');
+  const mushafEl=document.getElementById('mushaf');
+  if(!badge||!mushafEl)return;
+  const size=eink?20:19,safety=3;
+  const minGutter=size+2*safety;
+  const viewportWidth=document.documentElement.clientWidth||window.innerWidth||0;
+  const rect=mushafEl.getBoundingClientRect();
+  const rightGutter=viewportWidth-rect.right;
+  const leftGutter=rect.left;
+  const onOuterRight=currentPage%2===1;
+  const gutter=onOuterRight?rightGutter:leftGutter;
+  if(!(gutter>=minGutter)){badge.classList.remove('show');return}
+  const inset=(gutter-size)/2;
+  badge.style.left=onOuterRight?'auto':inset+'px';
+  badge.style.right=onOuterRight?inset+'px':'auto';
+  badge.style.top=(rect.bottom-size)+'px';
+  badge.style.width=size+'px';
+  badge.style.height=size+'px';
+  badge.textContent=String(currentPage);
+  badge.classList.toggle('odd',onOuterRight);
+  badge.classList.toggle('even',!onOuterRight);
+  badge.classList.add('show');
+}
+window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));
+
 function prepare(){
   const svg=currentSvg();
   if(!svg){N?.error('SVG Mushaf absent');return}
@@ -116,6 +149,7 @@ function prepare(){
   render();
   requestAnimationFrame(updateSideMarks);
   requestAnimationFrame(updateCenterMark);
+  requestAnimationFrame(updatePageBadge);
   N?.pageShown(currentPage);
 }
 document.addEventListener('click',()=>N?.surfaceTap?.());
@@ -389,9 +423,10 @@ function revealSelection(visibleFraction){
     if(delta>0)document.documentElement.style.setProperty('--reveal-shift',(-delta)+'px');
     updateSideMarks();
     updateCenterMark();
+    updatePageBadge();
   });
 }
-function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks();updateCenterMark()}
+function clearReveal(){document.documentElement.style.setProperty('--reveal-shift','0px');updateSideMarks();updateCenterMark();updatePageBadge()}
 
 window.HifzReader={
   setGeometry(geometry){pageGeo=geometry||null;render()},
@@ -407,7 +442,7 @@ window.HifzReader={
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
-  setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark()},
+  setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
   clearReveal(){clearReveal()},
   page(){return currentPage}
