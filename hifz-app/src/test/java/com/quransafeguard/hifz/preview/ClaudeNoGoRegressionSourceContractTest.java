@@ -843,12 +843,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
                 && prefs.contains("if (current.length() < weeklyCap)"));
 
         String mainActivity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue("the quick-access gate must use the configured split",
-            mainActivity.contains("HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), prefs.learningDaysPerWeek())"));
-        assertTrue("cadence completion checks must use the configured split",
-            mainActivity.contains("HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), prefs.learningDaysPerWeek())"));
-        assertTrue("the automatic due-task lookup must use the configured split",
-            mainActivity.contains("HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,prefs.learningDaysPerWeek())"));
+        assertTrue("the quick-access gate must use the configured split (directly or via the P4 "
+                + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
+            mainActivity.contains("HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), effectiveLearningDaysPerWeek())"));
+        assertTrue("cadence completion checks must use the configured split (directly or via the P4 "
+                + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
+            mainActivity.contains("HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), effectiveLearningDaysPerWeek())"));
+        assertTrue("the automatic due-task lookup must use the configured split (directly or via the P4 "
+                + "Roadmap's effectiveLearningDaysPerWeek(), which falls back to it)",
+            mainActivity.contains("HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek())"));
+        assertTrue("effectiveLearningDaysPerWeek() itself must still fall back to the configured split",
+            mainActivity.contains("prefs.learningDaysPerWeek()"));
 
         String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue("the seven-day dashboard projection must use the configured split too",
