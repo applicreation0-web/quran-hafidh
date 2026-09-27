@@ -34,8 +34,11 @@ public final class AuditClosureSourceContractTest {
         String dashboard = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
         assertTrue(prefs.contains("!p.getBoolean(\"anchoringQueueInitialized\", false)"));
         assertTrue(main.contains("prefs.currentAnchoringEntry(loaded)"));
-        assertTrue(dashboard.contains("AnchoringQueue.visitOrder"));
-        assertTrue(dashboard.contains("prefs.anchoringQueueIndex()"));
+        assertTrue("P4: the dashboard preview must walk the same perpetual TAIL/FRONT order "
+                + "HifzPrefs.currentAnchoringEntry actually selects from, not the old cyclic "
+                + "list-index visit order",
+            dashboard.contains("PerpetualItqanSource.projectedOrder(\n"
+                + "            prefs.perpetualItqanState(), candidateAnchoring, prefs.currentSabqiPosition(geometry));"));
         assertTrue(dashboard.contains("date.equals(today)&&prefs.anchoringDeferredToday()"));
         assertTrue(dashboard.contains("Stabilisation · unité reportée"));
         assertFalse(dashboard.contains("Ancrage · page reportée"));

@@ -59,11 +59,16 @@ final class WeeklyDashboardPlanner {
         EligibleCorpus murajaahCorpus=prefs.murajaahCorpus();
 
         prefs.currentAnchoringEntry(geometry);
-        List<AnchoringQueue.Entry> projectedAnchoring=new ArrayList<>();
-        for(AnchoringQueue.Entry entry:AnchoringQueue.visitOrder(prefs.anchoringQueue(),prefs.anchoringQueueIndex())){
+        List<AnchoringQueue.Entry> candidateAnchoring=new ArrayList<>();
+        for(AnchoringQueue.Entry entry:prefs.anchoringQueue()){
             VerseRef entryStart=GeometryRepository.parseVerse(entry.start),entryEnd=GeometryRepository.parseVerse(entry.end);
-            if(!CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart,entryEnd,geometry).isEmpty())projectedAnchoring.add(entry);
+            if(!CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart,entryEnd,geometry).isEmpty())candidateAnchoring.add(entry);
         }
+        // P4: preview must walk the same perpetual TAIL(Hujurāt→Nās)/FRONT(Baqara→Sabqi) macro
+        // order HifzPrefs.currentAnchoringEntry actually selects from now on — not the old cyclic
+        // list-index visit order — see PerpetualItqanSource.
+        List<AnchoringQueue.Entry> projectedAnchoring=PerpetualItqanSource.projectedOrder(
+            prefs.perpetualItqanState(), candidateAnchoring, prefs.currentSabqiPosition(geometry));
         int projectedAnchoringIndex=0;
         int projectedItqanBlockIndex=prefs.itqanBlockIndex();
 

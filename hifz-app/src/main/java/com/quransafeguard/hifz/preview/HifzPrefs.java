@@ -1854,6 +1854,31 @@ public final class HifzPrefs {
         return true;
     }
 
+    /** P4: the Ancrage/Stabilisation queue's own perpetual TAIL(Hujurāt→Nās)/FRONT(Baqara→Sabqi)
+     *  rotation position — see PerpetualItqanSource. Defaults to State.startOfTail() for an
+     *  install that has never run it. */
+    PerpetualItqanSource.State perpetualItqanState() {
+        PerpetualItqanSource.Leg leg = PerpetualItqanSource.Leg.valueOf(
+            p.getString("p4AncrageLeg", PerpetualItqanSource.Leg.TAIL_HUJURAT_NAS.name()));
+        boolean initialTailCompleted = p.getBoolean("p4AncrageInitialTailCompleted", false);
+        return new PerpetualItqanSource.State(leg, initialTailCompleted);
+    }
+
+    boolean savePerpetualItqanState(PerpetualItqanSource.State state) {
+        if (state == null) throw new IllegalArgumentException("state required");
+        return p.edit()
+            .putString("p4AncrageLeg", state.leg.name())
+            .putBoolean("p4AncrageInitialTailCompleted", state.initialTailCompleted)
+            .commit();
+    }
+
+    /**
+     * P4: which not-yet-Stabilisé/Acquis entry the Ancrage screen presents next — selected by
+     * PerpetualItqanSource's perpetual TAIL(Al-Hujurāt→An-Nās)/FRONT(Al-Baqara→wherever Sabqi has
+     * actually reached) order, instead of the historical cyclic list-index scan. Consolidation
+     * needs no separate ordering of its own: it only ever processes material that has already
+     * cleared Stabilisation here, so it inherits this same order for free.
+     */
     public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
         if (!p.getBoolean("anchoringQueueInitialized", false)
                 && !reconcileAnchoringQueue(geometry)) {
@@ -1874,17 +1899,19 @@ public final class HifzPrefs {
         AnchoringQueue.Entry inProgress = inProgressAnchoringEntry();
         if (inProgress != null) return inProgress;
         if (queue.isEmpty()) return null;
-        int start = anchoringQueueIndex(queue.size());
-        for (int step = 0; step < queue.size(); step++) {
-            int index = (start + step) % queue.size();
-            AnchoringQueue.Entry candidate = queue.get(index);
-            if (!entryIsFullyStabilizedOrAcquired(candidate, geometry)) {
-                if (index != start && !p.edit().putInt("anchoringQueueIndex", index).commit())
-                    throw new IllegalStateException("Unable to advance Stabilisation queue");
-                return candidate;
-            }
+        List<AnchoringQueue.Entry> notDone = new ArrayList<>();
+        for (AnchoringQueue.Entry candidate : queue) {
+            if (!entryIsFullyStabilizedOrAcquired(candidate, geometry)) notDone.add(candidate);
         }
-        return null;
+        if (notDone.isEmpty()) return null;
+        PerpetualItqanSource.State currentState = perpetualItqanState();
+        PerpetualItqanSource.Selection selection = PerpetualItqanSource.selectNext(
+            currentState, notDone, currentSabqiPosition(geometry));
+        if (selection == null) return null;
+        if (selection.state.leg != currentState.leg && !savePerpetualItqanState(selection.state)) {
+            throw new IllegalStateException("Unable to persist Ancrage rotation state");
+        }
+        return selection.entry;
     }
 
     private static String snowballAnchorKey(ConsolidationCycleEngine.Family family) {
