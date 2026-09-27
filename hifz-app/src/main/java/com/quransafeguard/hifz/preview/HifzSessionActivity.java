@@ -795,12 +795,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             progress.setText(prefs.lastMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastMurajaahLabel()));
             return;
         }
-        if (!today.equals(prefs.lastActiveMurajaahDate())) {
-            sessionCompleted = true;
-            program.setText("Révision · active requise");
-            progress.setText("Terminez d’abord la Révision active du jour.");
-            return;
-        }
         if (!prefs.isMurajaahCursorValid()) {
             sessionCompleted = true;
             program.setText("Révision · curseur à vérifier");
