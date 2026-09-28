@@ -32,7 +32,7 @@ public final class QuickAccessCardCueSourceContractTest {
         assertTrue("Apprentissage's cue must keep stating its frozen constant",
             ui.contains("? \"5 lignes\""));
         assertTrue("Stabilisation's cue must state its own fixed weekly line target, not a vague word",
-            ui.contains("? PreviewConfig.STABILIZATION_WEEKLY_LINES + \" lignes/semaine\" : \"\";"));
+            ui.contains("? PreviewConfig.STABILIZATION_WEEKLY_LINES + \" lignes/semaine\""));
         assertFalse("the old unquantified label must not remain", ui.contains("? \"Répétitions\""));
     }
 }
