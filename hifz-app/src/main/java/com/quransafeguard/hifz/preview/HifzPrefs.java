@@ -1464,6 +1464,47 @@ public final class HifzPrefs {
         }
     }
 
+    /**
+     * Reported directly: a fixed 5-line block (PreviewConfig.SABQI_LINES, frozen) has no smaller
+     * variant, so renderSabqi() used to dead-end the moment fewer than 5 lines remained before
+     * sabqiEnd() — "fin de plage · bloc requis : 5", permanently, since nothing ever offered a way
+     * past a 1-4 line remnant. Mirrors completeItqanTinyBlockV6's fast path: running the full
+     * SABQI_TOTAL_REPS drill for a remnant this short is pure overhead, so it is credited straight
+     * to Acquis instead, skipping both the repetition protocol and the weekly Renforcement snowball
+     * — there is no "do a normal session instead" alternative to offer here, unlike the Itqan case,
+     * since a normal 5-line lesson is structurally impossible on a remnant this size.
+     */
+    boolean completeSabqiTinyBlockV6(List<String> lineIds, int nextLineCursor, String date, String label) {
+        if (lineIds == null || lineIds.isEmpty() || lineIds.size() >= PreviewConfig.SABQI_LINES)
+            throw new IllegalArgumentException("tiny Sabqi fragment must be 1.." + (PreviewConfig.SABQI_LINES - 1) + " lines");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+            for (String lineId : new LinkedHashSet<>(lineIds)) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
+                ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
+                if (state != ProgressState.ACQUIRED) {
+                    learned.remove(lineId);
+                    stabilized.remove(lineId);
+                    acquired.add(lineId);
+                }
+            }
+            return p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putInt("sabqiLineCursor", nextLineCursor)
+                .putInt("sabqiRep", 0).putInt("sabqiAssisted", 0).putLong("sabqiElapsedMs", 0L)
+                .putString("lastSabqiDate", date).putString("lastSabqiLabel", label)
+                .commit();
+        }
+    }
+
     public int itqanRep() { return p.getInt("itqanRep", 0); }
     public int itqanAssisted() { return p.getInt("itqanAssisted", 0); }
     public int itqanFinalReveals() { return p.getInt("itqanFinalReveals", 0); }

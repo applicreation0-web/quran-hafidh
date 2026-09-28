@@ -247,10 +247,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         if (cursor + PreviewConfig.SABQI_LINES - 1 > endLimit) {
-            sessionCompleted = true;
-            int remaining = endLimit - cursor + 1;
-            program.setText("Apprentissage · fin de plage");
-            progress.setText(remaining + " ligne(s) restante(s) · bloc requis : 5");
+            creditTinySabqiRemnant(cursor, endLimit, today);
             return;
         }
         sabqiBlock = geometry.fiveLineBlock(cursor);
@@ -285,6 +282,25 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         configureRevealButton(revealButton);
         actions.addView(revealAction);
         updateRevealButton();
+    }
+
+    /**
+     * Reported directly: a 1-4 line remnant before sabqiEnd() used to dead-end forever, since a
+     * fixed 5-line block (PreviewConfig.SABQI_LINES) has no smaller variant. Mirrors the Itqan tiny
+     * fragment fast path — credits the remnant straight to Acquis, skipping the full repetition
+     * drill, since there's no normal-sized lesson to fall back to on a remnant this short.
+     */
+    private void creditTinySabqiRemnant(int cursor, int endLimit, String date) {
+        List<String> lineIds = new ArrayList<>();
+        for (int i = cursor; i <= endLimit; i++) lineIds.add(geometry.line(i).id);
+        String label = "Apprentissage · " + lineIds.size() + " ligne(s) · Acquis";
+        if (!prefs.completeSabqiTinyBlockV6(lineIds, endLimit + 1, date, label)) {
+            onError("Impossible d’enregistrer l’Apprentissage.");
+            return;
+        }
+        sessionCompleted = true;
+        program.setText("Apprentissage · séance validée");
+        progress.setText(HifzDisplayVocabulary.canonicalize(label));
     }
 
     private void updateSabqiProgress(int rep, int reveals) {
