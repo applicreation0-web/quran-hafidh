@@ -11,7 +11,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * P2's compact Révision selector (Révision active / Quiz spatial / Entretien) needs free
+ * P2's compact Révision selector (Révision active / Entretien) needs free
  * ordering: Entretien (passive Murajaah) must be openable before Révision active is done that
  * day. Only the UI-ordering gate is removed here — the two cursors stay fully independent, and
  * MainActivity's daily cadenceComplete(REVISION) still requires both to be done that day, just

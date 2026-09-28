@@ -25,7 +25,6 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
-    from(rootProject.file("app/src/main/assets/reader109/verses_text.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
 }
 
@@ -239,8 +238,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "1.0"
+        versionCode = 22
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -35,9 +35,6 @@ public final class MushafView extends WebView {
         default void onSurfaceTap() {}
         /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
         default void onPageSwipe(int delta) {}
-        /** Only fires when setSpatialTapEnabled(true) is active (the spatial quiz's
-            TEXT_TO_POSITION question); onVerseTap is not raised for that same tap. */
-        default void onSpatialLineTap(String lineId) {}
     }
 
     private static final String INLINE_NONCE = "hifz-local";
@@ -65,7 +62,6 @@ public final class MushafView extends WebView {
     private String landmarkStartLineId;
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
-    private boolean spatialTapEnabled = false;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -215,7 +211,6 @@ public final class MushafView extends WebView {
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
                 .put("maskFollowsSelection", maskFollowsSelection)
-                .put("spatialTapEnabled", spatialTapEnabled)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -305,18 +300,6 @@ public final class MushafView extends WebView {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setAudioVerse(" + value + ");",
             ignored -> post(() -> eink.audio(this, prefs))));
-    }
-
-    /**
-     * Spatial quiz only: while true, tapping the Mushaf resolves to the physical line under the
-     * tap (via onSpatialLineTap) instead of the normal verse selection (onVerseTap is not raised
-     * for that same tap). Must never be left on outside the spatial quiz screen. Persisted across
-     * page reloads like maskFollowsSelection, since MushafView reloads the whole WebView per page.
-     */
-    public void setSpatialTapEnabled(boolean enabled) {
-        spatialTapEnabled = enabled;
-        runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setSpatialTapEnabled(" + enabled + ");", null));
     }
 
     /** Runtime recovery path: E-Ink may be changed after the initial WebView boot. */
@@ -423,10 +406,6 @@ public final class MushafView extends WebView {
                 try { listener.onVerseTap(new VerseRef(surah, ayah)); }
                 catch (IllegalArgumentException invalidVerse) { report("Verset invalide ignoré : " + surah + ":" + ayah); }
             });
-        }
-
-        @JavascriptInterface public void spatialLineTap(String lineId) {
-            post(() -> { if (listener != null) listener.onSpatialLineTap(lineId); });
         }
 
         @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }

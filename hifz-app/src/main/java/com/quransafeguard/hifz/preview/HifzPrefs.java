@@ -985,7 +985,7 @@ public final class HifzPrefs {
      * The bootstrap default "Plages acquises" (itqanRanges) has always been a range-level
      * concept — material already known before installing the app, shown in Settings — but
      * schema6's own per-line ACQUIRED credit (v6AcquiredCreditLineIds), which every strict-
-     * acquired-only reader (Quiz spatial, entryIsFullyStabilizedOrAcquired, ETA math) actually
+     * acquired-only reader (entryIsFullyStabilizedOrAcquired, ETA math) actually
      * checks, was never backfilled for it: ensureSchema sets itqanRanges without touching
      * v6AcquiredCreditLineIds at all, since that would need GeometryRepository (real I/O)
      * inside the SharedPreferences-only constructor. Runs once, as soon as geometry is
@@ -1588,6 +1588,56 @@ public final class HifzPrefs {
                     finalBlock ? "[]" : lineIdsJson(consumedBonus))
                 .putString("itqanBonusSnapshotV1", "");
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
+            if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
+            return e.commit();
+        }
+    }
+
+    /**
+     * P4 tiny-fragment fast path: an Itqān sub-block of only 1 or 2 physical lines (a leg-boundary
+     * or Sabqi-frontier remnant too small for a real repeated session) is credited straight to
+     * Acquis instead of Stabilisé — skipping both the repetition protocol and the Consolidation
+     * snowball entirely, since running either for a 1-2 line scrap is pure overhead for material
+     * this short. Unlike completeStabilizationBlockV6, this deliberately never touches
+     * lastItqanDate/lastItqanLabel: the caller immediately chains into the next real (7-8 line)
+     * sub-block the same day, and setting today's date here would wrongly lock that next block out
+     * until tomorrow. lastItqanCreditStart/End still records what was just credited, for Diagnostic.
+     */
+    boolean completeItqanTinyBlockV6(List<String> lineIds, int nextBlockIndex, boolean finalBlock,
+                                      VerseRef unitStart, VerseRef unitEnd, VerseRef nextCursor) {
+        if (lineIds == null || lineIds.isEmpty() || lineIds.size() > 2)
+            throw new IllegalArgumentException("tiny Itqan fragment must be exactly 1 or 2 lines");
+        if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+            for (String lineId : new LinkedHashSet<>(lineIds)) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
+                ProgressState state = progressStateFromSets(lineId, learned, stabilized, acquired);
+                if (state != ProgressState.ACQUIRED) {
+                    learned.remove(lineId);
+                    stabilized.remove(lineId);
+                    acquired.add(lineId);
+                }
+            }
+            SharedPreferences.Editor e = p.edit()
+                .putString("v6LearnedLineIds", lineIdsJson(learned))
+                .putString("v6StabilizedLineIds", lineIdsJson(stabilized))
+                .putString("v6AcquiredCreditLineIds", lineIdsJson(acquired))
+                .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
+                .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
+                .putString("itqanUnitStart", finalBlock ? "" : unitStart.toString())
+                .putString("itqanUnitEnd", finalBlock ? "" : unitEnd.toString())
+                .putLong("itqanElapsedMs", 0L)
+                .putString("lastItqanCreditStart", unitStart.toString())
+                .putString("lastItqanCreditEnd", unitEnd.toString())
+                .putString("itqanConsumedBonusLineIds", finalBlock ? "[]" : lineIdsJson(optionalLineIdSet("itqanConsumedBonusLineIds")))
+                .putString("itqanBonusSnapshotV1", "");
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return e.commit();
         }

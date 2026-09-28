@@ -622,7 +622,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
     }
 
-    private void renderItqan() {
+    /** P4 tiny-fragment fast path (see creditTinyItqanBlockAndChain): a bounded safety cap on how
+     *  many consecutive 1-2 line fragments can auto-chain into the next portion in one render pass
+     *  — real Mushaf data never runs this deep, but this guarantees no runaway recursion either way. */
+    private static final int MAX_ITQAN_AUTO_CHAIN = 5;
+
+    private void renderItqan() { renderItqan(0); }
+
+    private void renderItqan(int autoChainDepth) {
         String today=sessionDate.toString();
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
@@ -687,6 +694,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         fractionatedItqan = itqanBlockCount > 1;
         itqanBlockPage = geometry.linesForExactIds(currentLineIds).get(0).page;
         currentPage = itqanBlockPage;
+
+        // P4 tiny-fragment fast path: a sub-block reduced to 1-2 physical lines (a leg-boundary or
+        // Sabqi-frontier remnant, never a byproduct of splitting a larger chunk — see
+        // StabilizationHalfPagePolicy.appendSegment) is too short for a real repeated session.
+        // Credit it straight to Acquis and chain immediately into the next real (7-8 line) portion
+        // the same day, rather than making the learner "work" a session on a couple of lines.
+        // Reinforcement laps are excluded: that material is already Acquired, so "entering Acquis"
+        // is moot, and the existing full-protocol reinforcement pass already applies to it.
+        if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN
+                && !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)) {
+            creditTinyItqanBlockAndChain(autoChainDepth);
+            return;
+        }
 
         // P3 "finish the page?" (Itqān only, never Sabqi): the decision is settled once, before
         // rep 1, and then reused verbatim for every later render of this exact sub-block —
@@ -840,6 +860,31 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             : geometry.lineCountForVerseRange(itqanUnit.start, itqanUnit.end);
         long elapsed = Math.max(clock.elapsedMs(), prefs.elapsedFor(mode));
         return Math.max(0, lines) + "L/" + Math.max(0L, elapsed / 1000L) + "s/" + prefs.itqanRep() + "r";
+    }
+
+    /**
+     * P4 tiny-fragment fast path: credits a 1-2 line Itqān sub-block straight to Acquis (see
+     * HifzPrefs.completeItqanTinyBlockV6) and immediately re-renders — either the next sub-block of
+     * the same parent unit, or, if this fragment was the whole unit, the next physical unit from
+     * the advanced rotation. Mirrors validateItqan's own nextBlock/finalBlock bookkeeping exactly,
+     * minus the repetition protocol and the Consolidation snowball enrollment this fragment skips.
+     */
+    private void creditTinyItqanBlockAndChain(int autoChainDepth) {
+        int nextBlock = itqanBlockIndex + 1;
+        boolean finalBlock = nextBlock >= itqanBlockCount;
+        EligibleCorpus corpus = prefs.itqanWorkCorpus();
+        VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart());
+        metricsStore.recordAnchoring("Stabilisation fragment auto-validé · "+itqanUnit.start+" → "+itqanUnit.end
+            +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+anchoringInstrumentation());
+        if (!prefs.completeItqanTinyBlockV6(currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next)) {
+            onError("Impossible de créditer directement ce fragment de Stabilisation.");
+            return;
+        }
+        if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {
+            onError("Impossible d’avancer la rotation d’Itqān.");
+            return;
+        }
+        renderItqan(autoChainDepth + 1);
     }
 
     private void validateItqan(){

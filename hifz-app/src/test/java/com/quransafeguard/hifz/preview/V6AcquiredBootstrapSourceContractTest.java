@@ -10,14 +10,14 @@ import java.nio.file.Paths;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Reported directly: the Quiz spatial stayed empty ("Pas encore assez de contenu acquis pour ce
- * quiz.") despite Réglages showing a real "Plages acquises" range (2:1→2:74) — traced to a real
- * bootstrap gap. ensureSchema seeds itqanRanges (the range-level "Plages acquises" the user sees)
- * but leaves v6AcquiredCreditLineIds (the per-line credit every strict-acquired-only reader
- * actually checks — Quiz spatial, entryIsFullyStabilizedOrAcquired, ETA math) empty, since
- * computing owned physical lines needs GeometryRepository, real I/O the SharedPreferences-only
- * constructor never does. reconcileV6AcquiredBootstrap backfills it once real geometry is
- * available, touching only a line still in its pristine NONE state.
+ * Reported directly: a strict-acquired-only reader stayed empty despite Réglages showing a real
+ * "Plages acquises" range (2:1→2:74) — traced to a real bootstrap gap. ensureSchema seeds
+ * itqanRanges (the range-level "Plages acquises" the user sees) but leaves
+ * v6AcquiredCreditLineIds (the per-line credit every strict-acquired-only reader actually checks —
+ * entryIsFullyStabilizedOrAcquired, ETA math) empty, since computing owned physical lines needs
+ * GeometryRepository, real I/O the SharedPreferences-only constructor never does.
+ * reconcileV6AcquiredBootstrap backfills it once real geometry is available, touching only a line
+ * still in its pristine NONE state.
  */
 public final class V6AcquiredBootstrapSourceContractTest {
     private static String read(String repoPath) throws Exception {

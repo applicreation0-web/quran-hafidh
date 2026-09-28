@@ -230,12 +230,11 @@ public final class MainActivity extends android.app.Activity {
     }
 
     /** The Révision card opens this compact selector rather than jumping straight to a mode:
-        Révision active, Quiz spatial and Entretien can now be done in any order. */
+        Révision active and Entretien can now be done in any order. */
     private void showRevisionSelector() {
         RevisionSelector.show(this, prefs, geometry, speedStore, new RevisionSelector.Choice() {
             @Override public void openActiveRevision() { openMode(HifzSessionActivity.MURAJAAH_ACTIVE); }
             @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
-            @Override public void openSpatialQuiz() { startActivity(new Intent(MainActivity.this, SpatialQuizActivity.class)); }
         });
     }
 

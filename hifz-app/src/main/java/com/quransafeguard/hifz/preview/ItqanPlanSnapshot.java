@@ -79,7 +79,7 @@ final class ItqanPlanSnapshot {
 
     /** @throws JSONException on any malformed/incomplete blob — the caller decides whether that's
      *  a hard failure or a silently-recoverable "treat as no pending decision" (HifzPrefs does the
-     *  latter, matching this file's own SpatialQuizStore-style tolerance for non-schema6 extras). */
+     *  latter). */
     static ItqanPlanSnapshot fromJson(JSONObject json) throws JSONException {
         VerseRef unitStart = GeometryRepository.parseVerse(json.getString("unitStart"));
         VerseRef unitEnd = GeometryRepository.parseVerse(json.getString("unitEnd"));
