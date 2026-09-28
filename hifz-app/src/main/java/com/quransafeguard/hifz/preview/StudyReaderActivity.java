@@ -47,6 +47,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     public static final String EXTRA_JUMP_VERSE = "jumpVerse";
 
     private MushafView mushaf;
+    private AnnotationOverlayView annotationOverlay;
+    private AnnotationStore annotationStore;
     private int page = 1;
     private VerseRef selected;
     private VerseRef pendingJumpVerse;
@@ -124,7 +126,15 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
         mushaf = new MushafView(this);
         mushaf.setListener(this);
-        readerStack.addView(mushaf, new LinearLayout.LayoutParams(
+        annotationStore = new AnnotationStore(this);
+        annotationOverlay = new AnnotationOverlayView(this);
+        annotationOverlay.setStore(annotationStore);
+        FrameLayout mushafContainer = new FrameLayout(this);
+        mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mushafContainer.addView(annotationOverlay, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        readerStack.addView(mushafContainer, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         readerActions = Ui.row(this);
@@ -133,6 +143,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 60));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
+        readerActions.addView(Ui.iconButton(this, "↺", "Annuler la note",
+            v -> annotationOverlay.undoLastStroke()));
+        readerActions.addView(Ui.iconButton(this, "⌫", "Effacer les notes",
+            v -> annotationOverlay.clearCurrentPage()));
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -620,6 +634,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int shown) {
         page = shown;
+        annotationOverlay.setPage(shown);
         updateSurahPickerLabel();
         updateRubPickerLabel();
         updateRubBadge();

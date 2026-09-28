@@ -53,7 +53,9 @@ public final class UiIconMappingTest {
             {"Modifier la plage", R.drawable.ic_ui_edit},
             {"Supprimer la plage", R.drawable.ic_ui_delete},
             {"Sourate", R.drawable.ic_ui_surah_list},
-            {"Hizb", R.drawable.ic_ui_hizb}
+            {"Hizb", R.drawable.ic_ui_hizb},
+            {"Annuler la note", R.drawable.ic_ui_reset},
+            {"Effacer les notes", R.drawable.ic_ui_delete}
         });
     }
 

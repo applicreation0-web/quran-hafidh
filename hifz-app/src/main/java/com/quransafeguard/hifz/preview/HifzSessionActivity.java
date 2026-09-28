@@ -9,6 +9,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -45,6 +46,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private HifzSessionMetricsStore metricsStore;
     private GeometryRepository geometry;
     private MushafView mushaf;
+    private AnnotationOverlayView annotationOverlay;
+    private AnnotationStore annotationStore;
     private TextView program, progress, timerText;
     private LinearLayout actions, audioHost;
     private HifzAudioDialog audioPlayer;
@@ -171,7 +174,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         mushaf = new MushafView(this);
         mushaf.setMaskEntropy(prefs.maskEntropyFor(mode));
         mushaf.setListener(this);
-        root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        annotationStore = new AnnotationStore(this);
+        annotationOverlay = new AnnotationOverlayView(this);
+        annotationOverlay.setStore(annotationStore);
+        FrameLayout mushafContainer = new FrameLayout(this);
+        mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mushafContainer.addView(annotationOverlay, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(mushafContainer,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
         LinearLayout controlBar = Ui.row(this);
         controlBar.setGravity(Gravity.CENTER);
@@ -179,6 +190,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
+        controlBar.addView(Ui.roundAction(this,"↺","Annuler la note",v->annotationOverlay.undoLastStroke()));
+        controlBar.addView(Ui.roundAction(this,"⌫","Effacer les notes",v->annotationOverlay.clearCurrentPage()));
         controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
         root.addView(controlBar);
 
@@ -1559,6 +1572,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int page){
         currentPage=page;
+        annotationOverlay.setPage(page);
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
                 currentLineIds=applyActiveLandmarks(page);
