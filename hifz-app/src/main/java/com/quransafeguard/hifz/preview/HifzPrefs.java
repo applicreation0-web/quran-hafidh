@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 /** Versioned local persistence. Structured Hifz and free memorization are intentionally isolated. */
@@ -437,6 +438,32 @@ public final class HifzPrefs {
                 v6LineIdSet("v6StabilizedLineIds"),
                 v6LineIdSet("v6AcquiredCreditLineIds"));
         }
+    }
+
+    /**
+     * Read-only snapshot of every line's real-time schema6 progression state, keyed by line id —
+     * the exact same three sets every session-completion method already updates (learning,
+     * Stabilisation, Consolidation/Renforcement, and the tiny-Itqan-fragment fast path alike), so a
+     * caller reading these directly (ProgressMapActivity) can never show a status the app's own
+     * session logic would contradict. A line absent from all three is simply NONE — "pas commencé".
+     */
+    public static final class ProgressionSnapshot {
+        public final Set<String> learned;
+        public final Set<String> stabilized;
+        public final Set<String> acquired;
+        private ProgressionSnapshot(Set<String> learned, Set<String> stabilized, Set<String> acquired) {
+            this.learned = learned;
+            this.stabilized = stabilized;
+            this.acquired = acquired;
+        }
+    }
+
+    public ProgressionSnapshot progressionSnapshotV6() {
+        requireSchema6ProgressionState();
+        return new ProgressionSnapshot(
+            Collections.unmodifiableSet(v6LineIdSet("v6LearnedLineIds")),
+            Collections.unmodifiableSet(v6LineIdSet("v6StabilizedLineIds")),
+            Collections.unmodifiableSet(v6LineIdSet("v6AcquiredCreditLineIds")));
     }
 
     ProgressAction nextActionV6(String lineId) {

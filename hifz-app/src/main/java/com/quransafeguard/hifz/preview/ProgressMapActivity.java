@@ -12,22 +12,23 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.quransafeguard.hifz.core.VerseRange;
-import com.quransafeguard.hifz.core.VerseRef;
-
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Whole-Mushaf overview: one cell per page, patterned (never colored) by status, so it stays
- * legible on e-ink. A page's status is read straight off the same corpus buckets Diagnostic
- * already reports (itqanRanges/consolidatedPromotedRanges = Acquis, unconsolidatedPromotedRanges
- * = à stabiliser, everything between sabqiStart() and sabqiEnd() not yet promoted = en
- * apprentissage), so this view can never drift from what those numbers already mean elsewhere in
- * the app. Two live estimates (Apprentissage, Stabilisation) sit above the grid, computed from the
- * same buckets Diagnostic uses for its own equivalent estimates.
+ * legible on e-ink. Reported directly: a page's status used to be read off historical range-based
+ * promotion buckets (itqanRanges/promotedRanges/unconsolidatedPromotedRanges) that only the Sabqi/
+ * Renforcement track ever updates — so crediting an Itqan/Stabilisation line (a normal block, a
+ * Sunday Consolidation finale, or the tiny 1-2 line fast path) never moved anything here, since
+ * that whole track's real progress lives in HifzPrefs' per-line schema6 state (NONE/LEARNED/
+ * STABILIZED/ACQUIRED), not those buckets. A page's status now reads that same live per-line state
+ * directly (progressionSnapshotV6): ACQUIRED = Acquis, STABILIZED = à stabiliser (has had its
+ * Itqan repetition pass, awaiting its weekly Consolidation graduation), LEARNED = en apprentissage,
+ * absent from all three = pas commencé — the exact state machine every session-completion method
+ * already updates, for both tracks alike, so this view can never drift from or lag behind what the
+ * learner actually just did. Two live estimates (Apprentissage, Stabilisation) sit above the grid,
+ * computed from the same buckets Diagnostic uses for its own equivalent estimates.
  */
 public final class ProgressMapActivity extends android.app.Activity {
     private HifzPrefs prefs;
@@ -143,10 +144,9 @@ public final class ProgressMapActivity extends android.app.Activity {
     }
 
     /**
-     * Touches every one of the ~8820 physical lines several times over (lineIdsOnPage/
-     * linesForExactIds are both linear scans, called once per page) — cheap on a phone, but this
-     * app targets weak e-ink CPUs too, so it runs off the main thread rather than risk a visible
-     * hitch opening this screen.
+     * Touches every one of the ~8820 physical lines (a HashSet lookup each, against
+     * progressionSnapshotV6's three sets) — cheap on a phone, but this app targets weak e-ink CPUs
+     * too, so it runs off the main thread rather than risk a visible hitch opening this screen.
      */
     private void loadStatuses() {
         io.execute(() -> {
@@ -187,36 +187,15 @@ public final class ProgressMapActivity extends android.app.Activity {
     }
 
     private int[] computeStatuses() {
-        List<VerseRange> acquis = new ArrayList<>(prefs.itqanRanges());
-        acquis.addAll(prefs.consolidatedPromotedRanges());
-        List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();
-        VerseRef sabqiStart, sabqiEnd;
-        try {
-            sabqiStart = prefs.sabqiStart();
-            sabqiEnd = prefs.sabqiEnd();
-        } catch (RuntimeException notYetInitialized) {
-            sabqiStart = null;
-            sabqiEnd = null;
-        }
-        // Bounded below by sabqiStart too, not just above by sabqiEnd — otherwise anything printed
-        // before the Apprentissage walk even begins (Al-Fatiha, under the default 2:75 start) gets
-        // wrongly shown "en apprentissage" instead of the honest "pas commencé".
-        int sabqiStartOrdinal = sabqiStart == null ? Integer.MAX_VALUE : GeometryRepository.ordinal(sabqiStart);
-        int sabqiEndOrdinal = sabqiEnd == null ? -1 : GeometryRepository.ordinal(sabqiEnd);
+        HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();
         int[] statuses = new int[605];
 
         for (int page = 1; page <= 604; page++) {
-            List<GeometryRepository.LineMeta> lines = geometry.linesForExactIds(geometry.lineIdsOnPage(page));
             boolean anyStabiliser = false, anyApprentissage = false, anyAcquis = false;
-            for (GeometryRepository.LineMeta line : lines) {
-                for (VerseRef verse : line.verses) {
-                    if (containsVerse(stabiliser, verse)) anyStabiliser = true;
-                    else if (containsVerse(acquis, verse)) anyAcquis = true;
-                    else {
-                        int ordinal = GeometryRepository.ordinal(verse);
-                        if (ordinal >= sabqiStartOrdinal && ordinal <= sabqiEndOrdinal) anyApprentissage = true;
-                    }
-                }
+            for (String lineId : geometry.lineIdsOnPage(page)) {
+                if (progression.acquired.contains(lineId)) anyAcquis = true;
+                else if (progression.stabilized.contains(lineId)) anyStabiliser = true;
+                else if (progression.learned.contains(lineId)) anyApprentissage = true;
             }
             statuses[page] = anyStabiliser ? ProgressGridView.STABILISER
                 : anyApprentissage ? ProgressGridView.APPRENTISSAGE
@@ -229,10 +208,5 @@ public final class ProgressMapActivity extends android.app.Activity {
     @Override protected void onDestroy() {
         io.shutdownNow();
         super.onDestroy();
-    }
-
-    private static boolean containsVerse(List<VerseRange> ranges, VerseRef verse) {
-        for (VerseRange range : ranges) if (range.contains(verse)) return true;
-        return false;
     }
 }

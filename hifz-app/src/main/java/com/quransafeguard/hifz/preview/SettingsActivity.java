@@ -572,12 +572,19 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void showDiagnostic(){
         List<String> quarantine=prefs.v6QuarantineLineIds();
+        // Reported directly: this screen used to report Itqan/Stabilisation's own progress off
+        // itqanRanges()/unconsolidatedPromotedRanges() — the declared/manual corpus and the
+        // Sabqi-only promotion bucket, neither of which the Itqan track's own completions ever
+        // update (see ProgressMapActivity, which had the exact same bug) — so those two numbers
+        // never moved as real Itqan/Stabilisation work happened. They now read the same live
+        // per-line schema6 state the Progress Map and every session-completion method use.
+        HifzPrefs.ProgressionSnapshot progression=prefs.progressionSnapshotV6();
         String state="Version : "+BuildConfig.VERSION_NAME+" ("+BuildConfig.VERSION_CODE+")"
             +"\nSchéma : "+prefs.schema()+"\nDébut programme : "+prefs.programStartDate()
             +"\nApprentissage : "+prefs.sabqiStart()+" → "+prefs.sabqiEnd()+" · ligne "+prefs.sabqiLineCursor()
             +"\nEstimation fin Apprentissage : "+apprentissageEtaSummary()
-            +"\nPlages Acquises : "+prefs.itqanRanges().size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
-            +"\nPages promues : "+prefs.promotedRanges().size()+"\nÀ stabiliser : "+prefs.unconsolidatedPromotedRanges().size()
+            +"\nLignes acquises (Itqan) : "+progression.acquired.size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
+            +"\nPlages promues (Sabqi) : "+prefs.promotedRanges().size()+"\nLignes à stabiliser (Itqan) : "+progression.stabilized.size()
             +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanCursor()
             +"\nPosition Révision : "+prefs.murajaahCursor()
             +"\nPosition Révision active : "+prefs.activeMurajaahCursor()

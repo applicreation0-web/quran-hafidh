@@ -178,11 +178,15 @@ final class Ui {
             title.setTypeface(Typeface.SERIF, Typeface.BOLD);
         }
         String lower = label.toLowerCase(Locale.ROOT);
+        // Révision/Entretien deliberately get no duration cue here: this single card opens a
+        // choice between Révision active (15 min) and Entretien (its own dynamic duration), so
+        // any one number shown on the card itself would only ever match one of the two — the
+        // RevisionSelector dialog already states both correctly once tapped.
         String cue = lower.contains("apprentissage") || lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
             : lower.contains("reprise") ? "30 min"
             : lower.contains("consolidation") || lower.contains("renforcement") ? "Boule de neige"
-            : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq") ? "Répétitions"
-            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur") ? "30 min" : "";
+            : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq")
+                ? PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine" : "";
         if (!cue.isEmpty()) {
             TextView subtitle = text(context, cue, 11f, false);
             subtitle.setTextColor(MUTED);

@@ -12,7 +12,6 @@ import android.widget.TextView;
 
 import com.quransafeguard.hifz.core.CadenceAction;
 import com.quransafeguard.hifz.core.HifzSchedule;
-import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.ScheduledCadence;
 import com.quransafeguard.hifz.core.VerseRef;
 
@@ -38,7 +37,6 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout dashboard;
     private LinearLayout sabqiQuickAccess;
     private LinearLayout itqanQuickAccess;
-    private LinearLayout murajaahQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
@@ -127,7 +125,6 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> showRevisionSelector());
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
-        murajaahQuickAccess = murajaah;
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(murajaah);
@@ -185,7 +182,7 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshMurajaahQuickAccessCue(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
+    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
 
     /**
      * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Settings'
@@ -207,26 +204,6 @@ public final class MainActivity extends android.app.Activity {
         CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), effectiveLearningDaysPerWeek());
         if (sabqiQuickAccess != null) sabqiQuickAccess.setEnabled(action == CadenceAction.LEARNING);
         if (itqanQuickAccess != null) itqanQuickAccess.setEnabled(action == CadenceAction.STABILIZATION);
-    }
-
-    /**
-     * The "Révision" quick-access card's duration cue must track whichever of the daily
-     * active/passive pair murajaahQuickAccessMode() will actually open. The passive (Entretien)
-     * side must use the same dynamic MaintenanceCoveragePolicy duration the real session and the
-     * "today" detail label already use — HifzSchedule.targetMinutesFor's flat 45 min was wrong
-     * once Entretien started growing with the real ACQUIRED corpus (see P4 J-15).
-     */
-    private void refreshMurajaahQuickAccessCue() {
-        if (murajaahQuickAccess == null || murajaahQuickAccess.getChildCount() < 3) return;
-        boolean activeNext = HifzSessionActivity.MURAJAAH_ACTIVE.equals(murajaahQuickAccessMode());
-        int minutes = activeNext
-            ? HifzSchedule.INSTANCE.targetMinutesFor(SessionKind.ACTIVE_MURAJAAH)
-            : (geometry != null
-                ? MaintenanceCoveragePolicy.minutes(
-                    prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine())
-                : HifzSchedule.INSTANCE.targetMinutesFor(SessionKind.OLD_ITQAN_MURAJAAH));
-        View cue = murajaahQuickAccess.getChildAt(2);
-        if (cue instanceof TextView) ((TextView) cue).setText(minutes + " min");
     }
 
     /** The Révision card opens this compact selector rather than jumping straight to a mode:

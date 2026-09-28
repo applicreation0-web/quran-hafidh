@@ -7,13 +7,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Whole-Mushaf progress map (visual mockup approved before implementation): one cell per page,
  * status told apart by fill PATTERN, never color, since hue carries no meaning on an e-ink BOOX
- * screen and color changes ghost. Status must be read from the exact same public corpus buckets
- * Diagnostic already reports, so this view can never show a number Diagnostic would contradict.
+ * screen and color changes ghost. Status must be read from HifzPrefs' own live per-line schema6
+ * progression state (progressionSnapshotV6), the same state every session-completion method for
+ * both the Sabqi/Renforcement and Itqan/Stabilisation tracks updates, so this view can never lag
+ * behind what the learner actually just did.
  */
 public final class ProgressMapSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -73,27 +76,45 @@ public final class ProgressMapSourceContractTest {
             totalSetColor > 0 && totalSetColor == inkOrLineSetColor);
     }
 
-    @Test public void pageStatusPriorityMatchesTheSameBucketsDiagnosticReports() throws Exception {
+    /**
+     * Reported directly: crediting an Itqan/Stabilisation line (a normal block, a Sunday
+     * Consolidation finale, or the tiny 1-2 line fast path) never moved anything on this screen,
+     * because it only ever touches HifzPrefs' per-line schema6 state (NONE/LEARNED/STABILIZED/
+     * ACQUIRED) — the SAME state every session-completion method for BOTH tracks updates — while
+     * this screen read historical range-based promotion buckets that only the Sabqi/Renforcement
+     * track ever writes to. The grid must read that live per-line state directly so it can never
+     * lag behind what the learner actually just did, for either track.
+     */
+    @Test public void pageStatusReadsTheLivePerLineProgressionStateDirectly() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("Acquis must combine the declared base with the truly-consolidated bucket, "
-                + "exactly like activeMurajaahCorpus does",
-            activity.contains("List<VerseRange> acquis = new ArrayList<>(prefs.itqanRanges());")
-                && activity.contains("acquis.addAll(prefs.consolidatedPromotedRanges());"));
-        assertTrue("à stabiliser must read the same bucket Diagnostic labels \"À stabiliser\"",
-            activity.contains("List<VerseRange> stabiliser = prefs.unconsolidatedPromotedRanges();"));
-        assertTrue("en apprentissage must be bounded above by the real Sabqi front, not guessed",
-            activity.contains("sabqiEnd = prefs.sabqiEnd();"));
-        String computeStatuses = method(activity, "private int[] computeStatuses() {", "private static boolean containsVerse(");
-        assertTrue("en apprentissage must also be bounded BELOW by sabqiStart — otherwise a verse "
-                + "printed before the Apprentissage walk even begins (Al-Fatiha, under the default "
-                + "2:75 start) gets wrongly counted just because its ordinal sits below sabqiEnd",
-            computeStatuses.contains("if (ordinal >= sabqiStartOrdinal && ordinal <= sabqiEndOrdinal) anyApprentissage = true;"));
+        assertTrue("must read HifzPrefs' own live per-line state snapshot, not a historical range bucket",
+            activity.contains("HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();"));
+        assertFalse("must not fall back to the historical Sabqi-only promotion buckets",
+            activity.contains("prefs.itqanRanges()") || activity.contains("prefs.promotedRanges()")
+                || activity.contains("prefs.unconsolidatedPromotedRanges()") || activity.contains("prefs.consolidatedPromotedRanges()"));
+        String computeStatuses = method(activity, "private int[] computeStatuses() {", "@Override protected void onDestroy()");
+        assertTrue("ACQUIRED lines must show Acquis", computeStatuses.contains("progression.acquired.contains(lineId)) anyAcquis = true;"));
+        assertTrue("STABILIZED lines must show à stabiliser (had their Itqan repetition pass, awaiting weekly Consolidation)",
+            computeStatuses.contains("progression.stabilized.contains(lineId)) anyStabiliser = true;"));
+        assertTrue("LEARNED lines must show en apprentissage", computeStatuses.contains("progression.learned.contains(lineId)) anyApprentissage = true;"));
         assertTrue("à stabiliser must win over every other status on a mixed page",
             computeStatuses.indexOf("anyStabiliser ? ProgressGridView.STABILISER") <
                 computeStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE"));
         assertTrue("en apprentissage must win over acquis on a mixed page (still-incomplete work stays visible)",
             computeStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE") <
                 computeStatuses.indexOf("anyAcquis ? ProgressGridView.ACQUIS"));
+    }
+
+    @Test public void progressionSnapshotExposesTheSameThreeSetsEverySessionCompletionMethodUpdates() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String snapshot = method(prefs,
+            "public ProgressionSnapshot progressionSnapshotV6() {", "\n    }");
+        assertTrue("must read the exact same three keys every completion method (learning, "
+                + "Stabilisation, Consolidation/Renforcement, and the tiny-Itqan-fragment fast path) writes",
+            snapshot.contains("v6LineIdSet(\"v6LearnedLineIds\")") && snapshot.contains("v6LineIdSet(\"v6StabilizedLineIds\")")
+                && snapshot.contains("v6LineIdSet(\"v6AcquiredCreditLineIds\")"));
+        assertTrue("must require schema6 state like every other progression accessor",
+            snapshot.contains("requireSchema6ProgressionState();"));
     }
 
     @Test public void liveEtaEstimatesSitAboveTheGridUsingTheSameBucketsDiagnosticUses() throws Exception {
@@ -112,9 +133,9 @@ public final class ProgressMapSourceContractTest {
 
     @Test public void backgroundComputationFailureIsVisibleNotSilent() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("itqanRanges()/parseRanges() throws when nothing is configured yet or state is "
-                + "corrupt (confirmed in HifzPrefs) — a background thread must not silently die on that, "
-                + "whether it's the status scan or either live ETA computation that throws",
+        assertTrue("progressionSnapshotV6()/requireSchema6ProgressionState() throws when state is "
+                + "not yet schema6 or corrupt (confirmed in HifzPrefs) — a background thread must not "
+                + "silently die on that, whether it's the status scan or either live ETA computation that throws",
             activity.contains("try {\n"
                 + "                statuses = computeStatuses();\n"
                 + "                apprentissageEta = weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"

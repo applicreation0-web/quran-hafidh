@@ -7,16 +7,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Reported directly: the home screen's "Révision" quick-access card always showed a static
- * "30 min" cue — a leftover from before the daily Révision active/passive split, wrong on both
- * counts now (15 min active, 45 min passive). Ui.modeCard can only derive a static cue from the
- * card's label ("Révision" never changes), so MainActivity — which already knows exactly which of
- * the two murajaahQuickAccessMode() will actually open — must overwrite that cue itself, and keep
- * it in sync on every onResume via refreshAll(), since the due submode can change within the same
- * app session (e.g. right after finishing today's active recall).
+ * Reported directly: the home screen's single "Révision" quick-access card showed one duration
+ * cue (first a hardcoded "30 min", later a dynamic number picking whichever of the daily
+ * active/passive pair was due next) — but tapping the card always opens a choice between BOTH
+ * Révision active (15 min) and Entretien (its own dynamic duration), so any single number shown
+ * on the outer card can only ever match one of the two and misleads about the other. The card now
+ * carries no duration cue at all; RevisionSelector's dialog is the only place a duration is shown,
+ * and it already states both correctly, side by side, once tapped.
  */
 public final class HomeMurajaahQuickAccessCueSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -27,37 +28,29 @@ public final class HomeMurajaahQuickAccessCueSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    private static String method(String source, String start, String end) {
-        int a = source.indexOf(start);
-        int b = source.indexOf(end, a + start.length());
-        if (a < 0 || b < 0 || b <= a) throw new IllegalStateException("Method boundary missing: " + start);
-        return source.substring(a, b);
+    @Test public void modeCardNeverAssignsADurationCueToRevisionOrEntretien() throws Exception {
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        assertFalse("a single cue on this card would only ever match one of the two révisions it can open",
+            ui.contains("lower.contains(\"révision\")") || ui.contains("lower.contains(\"revision\")")
+                || ui.contains("lower.contains(\"entretien\")") || ui.contains("lower.contains(\"mur\")"));
     }
 
-    @Test public void homeCardTracksWhicheverMurajaahSubmodeWillActuallyOpen() throws Exception {
+    @Test public void homeScreenCarriesNoLeftoverMurajaahCueMachinery() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        // Not a plain contains("murajaahQuickAccess"): murajaahQuickAccessMode() is a distinct,
+        // still-needed method (picks which of the two is due next for the dashboard/selector) and
+        // would otherwise false-fail this assertion by substring overlap.
+        assertFalse("the card's duration cue field was removed",
+            main.contains("murajaahQuickAccess;") || main.contains("murajaahQuickAccess ="));
+        assertFalse("the per-submode cue refresh no longer has a cue to update",
+            main.contains("refreshMurajaahQuickAccessCue"));
+    }
 
-        assertTrue("the card must be kept as a field so its cue can be updated after creation",
-            main.contains("private LinearLayout murajaahQuickAccess;"));
-        assertTrue("the field must actually be wired to the card built for the Révision quick access",
-            main.contains("murajaahQuickAccess = murajaah;"));
-        assertTrue("the cue must be refreshed on every onResume, since the due submode can change "
-                + "within the same app session",
-            main.contains("private void refreshAll() { refreshQuickAccessCadenceGating(); "
-                + "refreshMurajaahQuickAccessCue(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }"));
-
-        String cue = method(main,
-            "private void refreshMurajaahQuickAccessCue() {", "\n    }");
-        assertTrue("must ask murajaahQuickAccessMode() which submode will actually open, not guess",
-            cue.contains("HifzSessionActivity.MURAJAAH_ACTIVE.equals(murajaahQuickAccessMode())"));
-        assertTrue("active due must show the real active-review target, not a hardcoded number",
-            cue.contains("HifzSchedule.INSTANCE.targetMinutesFor(SessionKind.ACTIVE_MURAJAAH)"));
-        assertTrue("passive (Entretien) due must use the same dynamic J-15 duration the real "
-                + "session and the today-detail label already use — a flat HifzSchedule minute "
-                + "target is wrong once Entretien starts growing with the real ACQUIRED corpus",
-            cue.contains("MaintenanceCoveragePolicy.minutes(\n"
-                + "                    prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine())"));
-        assertTrue("no leftover hardcoded pre-split minute literal may remain in this method",
-            !cue.contains("30 min") && !cue.contains("\"30\""));
+    @Test public void revisionSelectorDialogStillStatesBothDurationsCorrectly() throws Exception {
+        String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
+        assertTrue("Révision active's own fixed duration must still be shown once the dialog opens",
+            selector.contains("\"Révision active · 15 min · \""));
+        assertTrue("Entretien must keep using the real dynamic J-15 duration, not a flat number",
+            selector.contains("MaintenanceCoveragePolicy.minutes("));
     }
 }
