@@ -135,8 +135,8 @@ public final class MainActivity extends android.app.Activity {
 
         LinearLayout directEvening = Ui.row(this);
         directEvening.setGravity(Gravity.CENTER);
-        LinearLayout renforcement = Ui.modeCard(this, "", "Renforcement", v -> openMode(HifzSessionActivity.LEARNING_CONSOLIDATION));
-        LinearLayout consolidation = Ui.modeCard(this, "", "Consolidation", v -> openMode(HifzSessionActivity.RECENT_SABQI_REVIEW));
+        LinearLayout renforcement = Ui.modeCard(this, "", "Renforcement", v -> openMode(renforcementQuickAccessMode()));
+        LinearLayout consolidation = Ui.modeCard(this, "", "Consolidation", v -> openMode(consolidationQuickAccessMode()));
         geometryActions.add(renforcement);
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
@@ -232,6 +232,31 @@ public final class MainActivity extends android.app.Activity {
         String today=HifzClock.today().toString();
         return today.equals(prefs.lastActiveMurajaahDate())
             ? HifzSessionActivity.MURAJAAH : HifzSessionActivity.MURAJAAH_ACTIVE;
+    }
+
+    /**
+     * Reported directly: these two direct-access tiles always opened the non-graduating evening
+     * snowball review (LEARNING_CONSOLIDATION/RECENT_SABQI_REVIEW), even on the Sunday the real
+     * finale (LEARNING_FINAL/CONSOLIDATION_FINAL — the only thing that ever graduates material to
+     * Acquis and unlocks it for Entretien) is due. A learner using these shortcuts instead of
+     * "Aujourd'hui" could complete every review faithfully and still never graduate a single line,
+     * with no error or warning — confirmed on a live export where recentSabqi/promotedRanges had
+     * accumulated unpromoted material since day one. Mirror nextMode's own Sunday-due check so
+     * these shortcuts reach the same finale "Aujourd'hui" would have sequenced them into.
+     */
+    private String renforcementQuickAccessMode(){
+        LocalDate today=HifzClock.today();
+        CadenceAction action=HifzSchedule.INSTANCE.actionFor(today.getDayOfWeek(), effectiveLearningDaysPerWeek());
+        return action==CadenceAction.REVISION && !learningFinalResolved(today)
+            ? HifzSessionActivity.LEARNING_FINAL : HifzSessionActivity.LEARNING_CONSOLIDATION;
+    }
+
+    /** See renforcementQuickAccessMode: the Consolidation-track counterpart. */
+    private String consolidationQuickAccessMode(){
+        LocalDate today=HifzClock.today();
+        CadenceAction action=HifzSchedule.INSTANCE.actionFor(today.getDayOfWeek(), effectiveLearningDaysPerWeek());
+        return action==CadenceAction.REVISION && !consolidationFinalResolved(today)
+            ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
     }
 
     /**
