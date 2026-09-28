@@ -14,10 +14,11 @@ import static org.junit.Assert.assertTrue;
  * Requested directly: when today's Itqān sub-block is reduced to just 1 or 2 physical lines (a
  * leg-boundary or Sabqi-frontier remnant — see StabilizationHalfPagePolicy.appendSegment, which
  * only ever returns such a tiny block as a whole, un-split segment, never as a byproduct of
- * splitting a larger one), running a full repeated session on it is pure overhead. Instead it is
- * credited straight to Acquis — skipping both the repetition protocol and the whole Consolidation
- * snowball stage a normal block would go through — and the same render immediately chains into the
- * next real (7-8 line) portion, same day, rather than making the learner wait until tomorrow.
+ * splitting a larger one), running a full repeated session on it is pure overhead. The learner is
+ * asked once, explicitly: credit it straight to Acquis — skipping both the repetition protocol and
+ * the whole Consolidation snowball stage a normal block would go through, then immediately chain
+ * into the next real (7-8 line) portion the same day — or refuse and do a normal session on it
+ * regardless. Never decided silently.
  */
 public final class ItqanTinyFragmentAutoAcquisSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -47,21 +48,59 @@ public final class ItqanTinyFragmentAutoAcquisSourceContractTest {
             tinyBlockMethod.contains("lastItqanDate"));
     }
 
-    @Test public void renderItqanInterceptsATinyWorkingBlockBeforeTheBonusDialogLogic() throws Exception {
+    @Test public void hifzPrefsTracksTheLearnersAnswerByExactBlockIdentityAndGuardsItToRepZero() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("no answer yet for this exact block must read back as null (the caller must ask)",
+            prefs.contains("Boolean itqanTinyBlockDecisionFor(VerseRef unitStart, VerseRef unitEnd, int blockIndex) {"));
+        String decisionFor = methodBody(prefs, "Boolean itqanTinyBlockDecisionFor(VerseRef unitStart, VerseRef unitEnd, int blockIndex) {");
+        assertTrue("a decision for a different block index must never match",
+            decisionFor.contains("if (p.getInt(\"itqanTinyBlockDecisionBlockIndex\", -1) != blockIndex) return null;"));
+        assertTrue("must use the null-tolerant accessor — this key may never have been written yet "
+                + "on a fresh install, and ref() would throw instead of returning null",
+            decisionFor.contains("optionalRef(\"itqanTinyBlockDecisionUnitStart\")"));
+        assertTrue("saving the answer must be guarded to before rep 1, same as the P3 bonus decision",
+            prefs.contains("boolean saveItqanTinyBlockDecision(VerseRef unitStart, VerseRef unitEnd, int blockIndex, boolean skipToAcquis) {\n"
+                + "        if (p.getInt(\"itqanRep\", 0) != 0)"));
+    }
+
+    @Test public void renderItqanAsksBeforeEverAutoCreditingATinyWorkingBlock() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("must be checked right after the working block/currentLineIds are resolved, "
-                + "before the P3 finish-the-page bonus logic runs",
+                + "before the P3 finish-the-page bonus logic runs, and must ask (not decide silently) "
+                + "the first time this exact block is seen",
             session.contains("if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN\n"
                 + "                && !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)) {\n"
-                + "            creditTinyItqanBlockAndChain(autoChainDepth);\n"
-                + "            return;\n"
-                + "        }"));
+                + "            Boolean tinyBlockDecision = prefs.itqanTinyBlockDecisionFor(itqanUnit.start, itqanUnit.end, itqanBlockIndex);\n"
+                + "            if (tinyBlockDecision == null) {\n"
+                + "                showItqanTinyBlockDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, workingUnit.lineIds.size());\n"
+                + "                return;\n"
+                + "            }\n"
+                + "            if (tinyBlockDecision) {\n"
+                + "                creditTinyItqanBlockAndChain(autoChainDepth);\n"
+                + "                return;\n"
+                + "            }"));
         assertTrue("a reinforcement lap (already fully Acquired material) must keep the existing "
-                + "full-protocol reinforcement pass, never the tiny-fragment fast path",
+                + "full-protocol reinforcement pass, never the tiny-fragment fast path or the dialog",
             session.contains("!prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)"));
         assertTrue("the chain must be bounded so no pathological run of tiny fragments can recurse "
                 + "unboundedly",
             session.contains("private static final int MAX_ITQAN_AUTO_CHAIN = 5;"));
+    }
+
+    @Test public void tinyBlockDialogOffersBothChoicesAndNeverDecidesOnItsOwn() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String dialogMethod = methodBody(session,
+            "private void showItqanTinyBlockDialog(VerseRef unitStart, VerseRef unitEnd, int blockIndex, int lineCount) {");
+        assertTrue("must be a real, non-cancelable dialog — dismissing it without an answer must "
+                + "never be treated as either choice",
+            dialogMethod.contains(".setCancelable(false)"));
+        assertTrue("refusing must persist skipToAcquis=false and fall back to the normal flow",
+            dialogMethod.contains("prefs.saveItqanTinyBlockDecision(unitStart, unitEnd, blockIndex, false)"));
+        assertTrue("accepting must persist skipToAcquis=true",
+            dialogMethod.contains("prefs.saveItqanTinyBlockDecision(unitStart, unitEnd, blockIndex, true)"));
+        assertTrue("both answers must resume the clock and re-render rather than deciding silently "
+                + "in the button handler itself",
+            dialogMethod.contains("clock.resume();\n                renderMode();"));
     }
 
     @Test public void creditTinyItqanBlockAndChainMirrorsValidateItqansOwnBookkeepingThenRenders() throws Exception {

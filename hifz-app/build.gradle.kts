@@ -238,8 +238,8 @@ android {
         applicationId = "com.quransafeguard.hifz"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "1.1"
+        versionCode = 23
+        versionName = "1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

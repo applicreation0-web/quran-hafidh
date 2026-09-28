@@ -1586,7 +1586,8 @@ public final class HifzPrefs {
                 .putString("lastItqanCreditEnd", unitEnd.toString())
                 .putString("itqanConsumedBonusLineIds",
                     finalBlock ? "[]" : lineIdsJson(consumedBonus))
-                .putString("itqanBonusSnapshotV1", "");
+                .putString("itqanBonusSnapshotV1", "")
+                .putString("itqanTinyBlockDecisionValue", "");
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return e.commit();
@@ -1637,7 +1638,8 @@ public final class HifzPrefs {
                 .putString("lastItqanCreditStart", unitStart.toString())
                 .putString("lastItqanCreditEnd", unitEnd.toString())
                 .putString("itqanConsumedBonusLineIds", finalBlock ? "[]" : lineIdsJson(optionalLineIdSet("itqanConsumedBonusLineIds")))
-                .putString("itqanBonusSnapshotV1", "");
+                .putString("itqanBonusSnapshotV1", "")
+                .putString("itqanTinyBlockDecisionValue", "");
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return e.commit();
         }
@@ -1677,6 +1679,38 @@ public final class HifzPrefs {
         if (p.getInt("itqanRep", 0) != 0)
             throw new IllegalStateException("Itqān bonus decision must be settled before rep 1");
         return p.edit().putString("itqanBonusSnapshotV1", snapshot.toJson().toString()).commit();
+    }
+
+    /**
+     * The learner's answer to "credit this tiny (1-2 line) fragment straight to Acquis, or do a
+     * normal session on it?" — tied to the exact sub-block it was asked for (same unitStart/
+     * unitEnd/blockIndex identity as itqanBonusSnapshot), so a stale answer left over from a
+     * different block, or a different parent unit, can never apply here. Returns null when no
+     * decision has been made yet for this exact block (the caller must ask).
+     */
+    Boolean itqanTinyBlockDecisionFor(VerseRef unitStart, VerseRef unitEnd, int blockIndex) {
+        String value = p.getString("itqanTinyBlockDecisionValue", "");
+        if (value.isEmpty()) return null;
+        if (p.getInt("itqanTinyBlockDecisionBlockIndex", -1) != blockIndex) return null;
+        VerseRef savedStart = optionalRef("itqanTinyBlockDecisionUnitStart");
+        VerseRef savedEnd = optionalRef("itqanTinyBlockDecisionUnitEnd");
+        if (savedStart == null || savedEnd == null
+                || !unitStart.equals(savedStart) || !unitEnd.equals(savedEnd)) {
+            return null;
+        }
+        return "SKIP".equals(value);
+    }
+
+    /** Only legal before the first repetition of the block it names, same as saveItqanBonusDecision. */
+    boolean saveItqanTinyBlockDecision(VerseRef unitStart, VerseRef unitEnd, int blockIndex, boolean skipToAcquis) {
+        if (p.getInt("itqanRep", 0) != 0)
+            throw new IllegalStateException("Itqān tiny-block decision must be settled before rep 1");
+        return p.edit()
+            .putString("itqanTinyBlockDecisionUnitStart", unitStart.toString())
+            .putString("itqanTinyBlockDecisionUnitEnd", unitEnd.toString())
+            .putInt("itqanTinyBlockDecisionBlockIndex", blockIndex)
+            .putString("itqanTinyBlockDecisionValue", skipToAcquis ? "SKIP" : "NORMAL")
+            .commit();
     }
 
     /** Lines already claimed as a previous sub-block's bonus within the current parent unit — a
@@ -2044,6 +2078,7 @@ public final class HifzPrefs {
             .putString("lastItqanCreditStart", unitStart.toString())
             .putString("lastItqanCreditEnd", unitEnd.toString())
             .putString("itqanBonusSnapshotV1", "")
+            .putString("itqanTinyBlockDecisionValue", "")
             .commit();
     }
 

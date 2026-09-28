@@ -698,14 +698,24 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // P4 tiny-fragment fast path: a sub-block reduced to 1-2 physical lines (a leg-boundary or
         // Sabqi-frontier remnant, never a byproduct of splitting a larger chunk — see
         // StabilizationHalfPagePolicy.appendSegment) is too short for a real repeated session.
-        // Credit it straight to Acquis and chain immediately into the next real (7-8 line) portion
-        // the same day, rather than making the learner "work" a session on a couple of lines.
-        // Reinforcement laps are excluded: that material is already Acquired, so "entering Acquis"
-        // is moot, and the existing full-protocol reinforcement pass already applies to it.
+        // Ask once whether to credit it straight to Acquis and chain immediately into the next real
+        // (7-8 line) portion the same day, or to do a normal session on it regardless — never
+        // decided silently. Reinforcement laps are excluded: that material is already Acquired, so
+        // "entering Acquis" is moot, and the existing full-protocol reinforcement pass already
+        // applies to it.
         if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN
                 && !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)) {
-            creditTinyItqanBlockAndChain(autoChainDepth);
-            return;
+            Boolean tinyBlockDecision = prefs.itqanTinyBlockDecisionFor(itqanUnit.start, itqanUnit.end, itqanBlockIndex);
+            if (tinyBlockDecision == null) {
+                showItqanTinyBlockDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, workingUnit.lineIds.size());
+                return;
+            }
+            if (tinyBlockDecision) {
+                creditTinyItqanBlockAndChain(autoChainDepth);
+                return;
+            }
+            // false: the learner refused the fast path — fall through to the normal P3 bonus
+            // logic and repeated session below, exactly as if this block were never tiny.
         }
 
         // P3 "finish the page?" (Itqān only, never Sabqi): the decision is settled once, before
@@ -862,12 +872,46 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         return Math.max(0, lines) + "L/" + Math.max(0L, elapsed / 1000L) + "s/" + prefs.itqanRep() + "r";
     }
 
+    /** Suspends the clock and the repetition button until the user answers — never automatic, same
+     *  as showItqanBonusDialog. A process death before the answer simply re-shows this same dialog
+     *  next launch, since nothing is persisted until one of the two buttons is actually tapped. */
+    private void showItqanTinyBlockDialog(VerseRef unitStart, VerseRef unitEnd, int blockIndex, int lineCount) {
+        sessionCompleted = true;
+        clock.pause();
+        String plural = lineCount > 1 ? "lignes" : "ligne";
+        program.setText(itqanProgramLabel());
+        progress.setText("Fragment de "+lineCount+" "+plural+" : valider directement en Acquis ?");
+        new AlertDialog.Builder(this).setTitle("Stabilisation")
+            .setMessage("Ce fragment ne fait que "+lineCount+" "+plural+". Le valider directement en "
+                + "Acquis (sans répétitions), ou faire une séance normale dessus ?")
+            .setCancelable(false)
+            .setNegativeButton("Séance normale", (d, w) -> {
+                if (!prefs.saveItqanTinyBlockDecision(unitStart, unitEnd, blockIndex, false)) {
+                    onError("Impossible d’enregistrer la décision de Stabilisation.");
+                    return;
+                }
+                clock.resume();
+                renderMode();
+            })
+            .setPositiveButton("Valider en Acquis", (d, w) -> {
+                if (!prefs.saveItqanTinyBlockDecision(unitStart, unitEnd, blockIndex, true)) {
+                    onError("Impossible d’enregistrer la décision de Stabilisation.");
+                    return;
+                }
+                clock.resume();
+                renderMode();
+            })
+            .show();
+    }
+
     /**
      * P4 tiny-fragment fast path: credits a 1-2 line Itqān sub-block straight to Acquis (see
      * HifzPrefs.completeItqanTinyBlockV6) and immediately re-renders — either the next sub-block of
      * the same parent unit, or, if this fragment was the whole unit, the next physical unit from
      * the advanced rotation. Mirrors validateItqan's own nextBlock/finalBlock bookkeeping exactly,
      * minus the repetition protocol and the Consolidation snowball enrollment this fragment skips.
+     * Only reached once the learner has explicitly chosen this over a normal session (see
+     * showItqanTinyBlockDialog).
      */
     private void creditTinyItqanBlockAndChain(int autoChainDepth) {
         int nextBlock = itqanBlockIndex + 1;
