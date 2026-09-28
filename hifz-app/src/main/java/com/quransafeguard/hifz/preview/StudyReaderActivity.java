@@ -138,10 +138,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
         pageRail = Ui.row(this);
         pageRail.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), Ui.dp(this, 1));
-        // Same nominal size/weight as rubPicker below renders visually lighter here, since this
-        // label carries real Arabic script (the surah name) rather than rubPicker's plain Latin
-        // digits/word — a larger size compensates so the two pickers read with the same intensity.
-        surahPicker = Ui.bookText(this, "Sourate", 15f, true);
+        // Must stay the exact same size as rubPicker below: pageRail centers each child by its
+        // own bounding box (padding + line height), so any size difference between the two shifts
+        // their text baselines off the shared row line even though the row itself looks centered.
+        // Arabic script does read visually lighter than rubPicker's plain Latin digits/word at an
+        // identical size, but that's a much smaller defect than a broken baseline, so it stays.
+        surahPicker = Ui.bookText(this, "Sourate", 13f, true);
         surahPicker.setGravity(Gravity.CENTER);
         surahPicker.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
         surahPicker.setClickable(true);

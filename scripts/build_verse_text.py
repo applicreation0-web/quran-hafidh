@@ -3,6 +3,14 @@ the same source's provenance: quranacademy/quran-text mirror, itself a cleaned d
 tanzil.net's quran-uthmani.txt — the same text tanzil.net states "completely matches the Medina
 Mushaf"). One verse per line, in canonical Quran order.
 
+Tanzil's convention prepends the decorative Basmala heading to every surah's first ayah line
+(except At-Tawbah, which has none) even though the Basmala is not itself part of ayah 1's text —
+Al-Fatiha is the sole exception, where the Basmala genuinely *is* verse 1. The KFQC Mushaf SVG
+corpus agrees: the Basmala is a separate heading glyph run with no ayahPolygon/verse of its own,
+so geometry.json's per-verse line/cell data never includes it. Left un-stripped here, a first-ayah
+quiz question would show "verse 2:1" text that includes the Basmala while the masked page region
+only ever covers "الم" — stripping it keeps this file's text aligned with what the page renders.
+
 Used by the Quiz spatial's text-based question snippets, never for rendering — the Mushaf page
 itself is always drawn from the unmodified KFQC SVG corpus.
 """
@@ -32,6 +40,25 @@ for surah, verse_count in enumerate(COUNTS, start=1):
         verses[f'{surah}:{ayah}'] = lines[i]
         i += 1
 
+# Strip the prepended Basmala from every surah's first ayah except Al-Fatiha (1:1 *is* the
+# Basmala) and At-Tawbah (9:1, which carries none). The Basmala is always exactly 4 whitespace-
+# separated words (Tanzil spells the first one with an extra shadda for two surahs whose next word
+# triggers that orthographic assimilation, so matching by word count rather than a literal string
+# handles both spellings without hardcoding either).
+basmala_word_count = len(verses['1:1'].split())
+assert basmala_word_count == 4
+stripped = 0
+for surah in range(2, 115):
+    if surah == 9:
+        continue
+    key = f'{surah}:1'
+    words = verses[key].split(' ')
+    if len(words) <= basmala_word_count:
+        raise ValueError(f'{key} is too short to carry a prepended Basmala: {verses[key]!r}')
+    verses[key] = ' '.join(words[basmala_word_count:])
+    stripped += 1
+assert stripped == 112, f'expected to strip the Basmala from 112 first ayahs, stripped {stripped}'
+
 OUT.write_text(json.dumps({'schema': 1, 'source': 'tanzil-uthmani', 'verses': verses},
                            ensure_ascii=False, separators=(',', ':')))
-print('verses written:', len(verses))
+print('verses written:', len(verses), 'basmala prefixes stripped:', stripped)
