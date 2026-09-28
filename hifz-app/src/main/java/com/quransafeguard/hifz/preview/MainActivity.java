@@ -63,7 +63,7 @@ public final class MainActivity extends android.app.Activity {
         holder.addView(root, new FrameLayout.LayoutParams(
             contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
 
-        TextView title = Ui.bookText(this, "Quran Hifz", 24, true);
+        TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
         title.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 5));
         root.addView(title);

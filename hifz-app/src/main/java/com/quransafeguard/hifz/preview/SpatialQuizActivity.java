@@ -152,7 +152,11 @@ public final class SpatialQuizActivity extends Activity implements MushafView.Li
                 promptText.setText(q.kind == SpatialQuizEngine.Kind.TRANSITION
                     ? "Quelle est la suite ?" : "Quel texte correspond à cette position ?");
                 mushaf.setSpatialTapEnabled(false);
-                mushaf.show(q.prompt.page, Collections.emptyList(),
+                // Passing the real verse as the selection (not just its line) makes the mask
+                // follow that verse's own SVG polygon — the same real-glyph clipping Sabqi/Itqān
+                // sessions already use — instead of blanking the whole physical line, which can
+                // start or end mid-verse and previously bled into a neighbor verse's own text.
+                mushaf.show(q.prompt.page, Collections.singletonList(q.prompt.verse),
                     Collections.singletonList(q.prompt.targetLineId), 100, true);
                 for (SpatialQuizEngine.Candidate choice : q.choices) {
                     Button button = Ui.button(this, choice.arabicSnippet, v -> onChoiceSelected(choice));

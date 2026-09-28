@@ -4,7 +4,7 @@
         android:allowBackup="false"
         android:icon="@drawable/ic_quran_hifz_logo"
         android:roundIcon="@drawable/ic_quran_hifz_logo"
-        android:label="Quran Hifz"
+        android:label="Quran Haafidh"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
