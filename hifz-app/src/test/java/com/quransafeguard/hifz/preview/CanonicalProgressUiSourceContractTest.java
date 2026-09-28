@@ -105,11 +105,13 @@ public final class CanonicalProgressUiSourceContractTest {
         assertFalse(week.contains("\"Reprise du soir ·"));
         assertFalse(week.contains("\"Ancrage ·"));
         assertFalse(week.contains("\"Ancrage fractionné ·"));
-        // A bare "Entretien ·" is legitimate now for Sunday evening (no Renforcement/Consolidation
-        // component that day, since Sunday morning is the ×5 snowball finale instead); the weekday
-        // LEARNING/STABILIZATION evenings must still never go bare — they stay compound.
-        assertTrue(week.contains("evening=\"Renforcement + Entretien"));
-        assertTrue(week.contains("evening=\"Consolidation + Entretien"));
+        // Every evening — weekday LEARNING/STABILIZATION and Sunday's REVISION alike — is genuinely
+        // compound: Révision active (a mandatory 15-min step, see HifzSchedule.ACTIVE_REVIEW_MINUTES
+        // and MainActivity's eveningLearningMode/eveningStabilizationMode/eveningRevisionMode) always
+        // comes before Entretien, so none of these evening labels may ever go bare.
+        assertTrue(week.contains("evening=\"Renforcement + Révision active ("));
+        assertTrue(week.contains("evening=\"Consolidation + Révision active ("));
+        assertTrue(week.contains("evening=\"Révision active ("));
     }
 
     @Test public void localHusaryImportContractRemainsUntouched() throws Exception {

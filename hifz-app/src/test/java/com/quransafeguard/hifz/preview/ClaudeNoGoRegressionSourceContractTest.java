@@ -618,8 +618,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date)\n                    &&date.toString().equals(prefs.lastActiveMurajaahDate())\n                    &&date.toString().equals(prefs.lastMurajaahDate());"));
 
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue("the weekly dashboard must project a real evening Entretien for Sunday instead of a dash",
-            weekly.contains("evening=\"Entretien · \"+projected.label;"));
+        assertTrue("the weekly dashboard must project a real evening Entretien for Sunday instead of a dash "
+                + "(compound with the same mandatory Révision active step every other evening has)",
+            weekly.contains("evening=\"Révision active (\"+HifzSchedule.ACTIVE_REVIEW_MINUTES+\" min) + Entretien · \"+projected.label;"));
         assertFalse("the old evening dash must be gone from the REVISION row",
             method(weekly, "case REVISION:{", "default:throw").contains("evening=\"—\";"));
     }

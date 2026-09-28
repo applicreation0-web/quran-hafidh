@@ -83,6 +83,7 @@ final class WeeklyDashboardPlanner {
                 case LEARNING:{
                     DashboardLedger.Record morningActual=ledger.find(date,HifzSessionActivity.SABQI);
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.LEARNING_CONSOLIDATION);
+                    DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
                     GeometryRepository.FiveLineBlock block=safeSabqi(sabqiCursor);
                     if(morningActual!=null)morning="✓ "+compact(morningActual.label);
@@ -91,11 +92,11 @@ final class WeeklyDashboardPlanner {
                         morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
-                    boolean eveningDone=snowballActual!=null&&entretienActual!=null;
-                    if(eveningDone)evening="✓ Renforcement + Entretien";
+                    boolean eveningDone=snowballActual!=null&&activeActual!=null&&entretienActual!=null;
+                    if(eveningDone)evening="✓ Renforcement + Révision active + Entretien";
                     else{
                         Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
-                        evening="Renforcement + Entretien · "+projected.label;
+                        evening="Renforcement + Révision active ("+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min) + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
                     boolean m=morningActual!=null;
@@ -127,12 +128,13 @@ final class WeeklyDashboardPlanner {
                     }
                     boolean morningDone=actual!=null;
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
+                    DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean eveningDone=snowballActual!=null&&entretienActual!=null;
-                    if(eveningDone)evening="✓ Consolidation + Entretien";
+                    boolean eveningDone=snowballActual!=null&&activeActual!=null&&entretienActual!=null;
+                    if(eveningDone)evening="✓ Consolidation + Révision active + Entretien";
                     else{
                         Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
-                        evening="Consolidation + Entretien · "+projected.label;
+                        evening="Consolidation + Révision active ("+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min) + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
                     state=morningDone&&eveningDone?"Validé":morningDone?"Soir à faire":"À faire";
@@ -145,12 +147,13 @@ final class WeeklyDashboardPlanner {
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
                     morning=(learningDone&&consolidationDone)?"✓ Révision finale ×3":"Révision finale ×3 · Renforcement + Consolidation";
                     boolean morningDone=learningDone&&consolidationDone;
+                    DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean eveningDone=entretienActual!=null;
-                    if(eveningDone)evening="✓ Entretien";
+                    boolean eveningDone=activeActual!=null&&entretienActual!=null;
+                    if(eveningDone)evening="✓ Révision active + Entretien";
                     else{
                         Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
-                        evening="Entretien · "+projected.label;
+                        evening="Révision active ("+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min) + Entretien · "+projected.label;
                         murajaahCursor=projected.next;
                     }
                     state=(morningDone&&eveningDone)?"Validé":morningDone?"Soir à faire":"À faire";
