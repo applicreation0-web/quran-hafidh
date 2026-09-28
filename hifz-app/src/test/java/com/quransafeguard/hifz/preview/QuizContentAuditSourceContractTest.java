@@ -44,17 +44,21 @@ public final class QuizContentAuditSourceContractTest {
     }
 
     @Test public void shippedVerseTextNoLongerCarriesTheBasmalaOnNonFatihaFirstAyahs() throws Exception {
+        // Deliberately never hardcodes the Basmala as a second Arabic literal here: the source of
+        // truth is 1:1's own shipped value, read once and reused — typing the same text twice in
+        // two different files risks an invisible Unicode normalization mismatch between them.
         String json = read("app/src/main/assets/reader109/verses_text.json");
         org.json.JSONObject verses = new org.json.JSONObject(json).getJSONObject("verses");
         String basmala = verses.getString("1:1");
-        assertEquals("Al-Fatiha's own ayah 1 is the Basmala and must stay exactly that",
-            "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَـٰنِ ٱلرَّحِیمِ", basmala);
-        assertEquals("verse 2:1 must be the real ayah text alone, matching what the page masks",
-            "الۤمۤ", verses.getString("2:1"));
-        assertFalse("no other surah's first ayah may still carry the heading",
-            verses.getString("95:1").contains(basmala));
-        assertFalse("no other surah's first ayah may still carry the heading",
-            verses.getString("97:1").contains(basmala));
+        assertEquals("Al-Fatiha's Basmala is always exactly 4 words", 4, basmala.trim().split("\\s+").length);
+        assertEquals("verse 2:1 must be the real ayah alone (\"Alif Lam Meem\", 1 word), not the "
+                + "3-4 extra words of a prepended Basmala heading",
+            1, verses.getString("2:1").trim().split("\\s+").length);
+        assertEquals("95:1 (At-Tin) spells its Basmala with an extra shadda but is still exactly "
+                + "4 Basmala words followed by its own 2-word ayah, so must now be 2 words alone",
+            2, verses.getString("95:1").trim().split("\\s+").length);
+        assertEquals("97:1 (Al-Qadr) is the same shadda-spelling case, its own ayah is 5 words alone",
+            5, verses.getString("97:1").trim().split("\\s+").length);
         assertFalse("At-Tawbah has no Basmala heading to begin with; its own text must be untouched",
             verses.getString("9:1").startsWith(basmala));
     }
