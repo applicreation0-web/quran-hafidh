@@ -1586,8 +1586,8 @@ public final class HifzPrefs {
                 .putString("lastItqanCreditEnd", unitEnd.toString())
                 .putString("itqanConsumedBonusLineIds",
                     finalBlock ? "[]" : lineIdsJson(consumedBonus))
-                .putString("itqanBonusSnapshotV1", "")
-                .putString("itqanTinyBlockDecisionValue", "");
+                .putString("itqanTinyBlockDecisionValue", "")
+                .putString("itqanBonusSnapshotV1", "");
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
             return e.commit();
