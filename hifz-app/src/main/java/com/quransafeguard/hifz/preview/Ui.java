@@ -178,15 +178,20 @@ final class Ui {
             title.setTypeface(Typeface.SERIF, Typeface.BOLD);
         }
         String lower = label.toLowerCase(Locale.ROOT);
-        // Révision/Entretien deliberately get no duration cue here: this single card opens a
-        // choice between Révision active (15 min) and Entretien (its own dynamic duration), so
-        // any one number shown on the card itself would only ever match one of the two — the
-        // RevisionSelector dialog already states both correctly once tapped.
+        // Révision/Entretien deliberately never get a duration cue here: this single card opens a
+        // choice between Révision active (15 min) and Entretien (its own dynamic duration), so any
+        // one number shown on the card itself would only ever match one of the two — the
+        // RevisionSelector dialog already states both correctly once tapped. "Au choix" still fills
+        // the cue slot (rather than leaving it empty) so this card keeps the same three-line height
+        // as its siblings in the same row — an empty cue here recentres the whole row around a
+        // shorter card instead of leaving a blank gap under this one.
         String cue = lower.contains("apprentissage") || lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
             : lower.contains("reprise") ? "30 min"
             : lower.contains("consolidation") || lower.contains("renforcement") ? "Boule de neige"
             : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq")
-                ? PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine" : "";
+                ? PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine"
+            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur")
+                ? "Au choix" : "";
         if (!cue.isEmpty()) {
             TextView subtitle = text(context, cue, 11f, false);
             subtitle.setTextColor(MUTED);

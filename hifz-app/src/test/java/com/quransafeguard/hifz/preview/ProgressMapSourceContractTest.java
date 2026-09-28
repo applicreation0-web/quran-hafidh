@@ -77,26 +77,34 @@ public final class ProgressMapSourceContractTest {
     }
 
     /**
-     * Reported directly: crediting an Itqan/Stabilisation line (a normal block, a Sunday
-     * Consolidation finale, or the tiny 1-2 line fast path) never moved anything on this screen,
-     * because it only ever touches HifzPrefs' per-line schema6 state (NONE/LEARNED/STABILIZED/
-     * ACQUIRED) — the SAME state every session-completion method for BOTH tracks updates — while
-     * this screen read historical range-based promotion buckets that only the Sabqi/Renforcement
-     * track ever writes to. The grid must read that live per-line state directly so it can never
-     * lag behind what the learner actually just did, for either track.
+     * Reported directly (twice): crediting an Itqan/Stabilisation line never moved anything on
+     * this screen while it read historical range-based promotion buckets that only the Sabqi/
+     * Renforcement track ever writes to. Switching straight to per-line STABILIZED state fixed
+     * that but broke something else: a declared Itqan/Ancrage range starts every one of its lines
+     * in state NONE (completeStabilizationBlockV6's own comment confirms this is Ancrage material's
+     * normal starting state), so a huge declared-but-untouched range showed as "pas commencé"
+     * instead of "à stabiliser" — indistinguishable from a page never declared for any track.
+     * "À stabiliser" must therefore be declared-corpus membership (effectiveItqanRanges) combined
+     * with "not yet ACQUIRED", not a specific per-line sub-state.
      */
-    @Test public void pageStatusReadsTheLivePerLineProgressionStateDirectly() throws Exception {
+    @Test public void pageStatusCombinesLiveAcquiredStateWithDeclaredItqanCorpusMembership() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
-        assertTrue("must read HifzPrefs' own live per-line state snapshot, not a historical range bucket",
+        assertTrue("must read HifzPrefs' own live per-line state snapshot for Acquis, not a historical range bucket",
             activity.contains("HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();"));
-        assertFalse("must not fall back to the historical Sabqi-only promotion buckets",
-            activity.contains("prefs.itqanRanges()") || activity.contains("prefs.promotedRanges()")
-                || activity.contains("prefs.unconsolidatedPromotedRanges()") || activity.contains("prefs.consolidatedPromotedRanges()"));
+        assertTrue("à stabiliser must be declared Itqan-corpus membership (base range + every Sabqi-fed promotion)",
+            activity.contains("Set<String> itqanEligible = CorpusLinePolicy.ownedLineIds(prefs.effectiveItqanRanges(), allLines);"));
+        assertFalse("must not fall back to the Sabqi-only pending-promotion bucket for à stabiliser — "
+                + "it never includes a declared-but-untouched Ancrage range still in state NONE",
+            activity.contains("prefs.unconsolidatedPromotedRanges()") || activity.contains("prefs.consolidatedPromotedRanges()")
+                || activity.contains("progression.stabilized"));
         String computeStatuses = method(activity, "private int[] computeStatuses() {", "@Override protected void onDestroy()");
         assertTrue("ACQUIRED lines must show Acquis", computeStatuses.contains("progression.acquired.contains(lineId)) anyAcquis = true;"));
-        assertTrue("STABILIZED lines must show à stabiliser (had their Itqan repetition pass, awaiting weekly Consolidation)",
-            computeStatuses.contains("progression.stabilized.contains(lineId)) anyStabiliser = true;"));
-        assertTrue("LEARNED lines must show en apprentissage", computeStatuses.contains("progression.learned.contains(lineId)) anyApprentissage = true;"));
+        assertTrue("declared-Itqan-corpus lines not yet Acquis must show à stabiliser, whatever their NONE/LEARNED/STABILIZED sub-state",
+            computeStatuses.contains("itqanEligible.contains(lineId)) anyStabiliser = true;"));
+        assertTrue("Sabqi's own LEARNED lines must show en apprentissage", computeStatuses.contains("progression.learned.contains(lineId)) anyApprentissage = true;"));
+        assertTrue("Acquis must be checked before à stabiliser so a graduated line never gets stuck hatched",
+            computeStatuses.indexOf("progression.acquired.contains(lineId)) anyAcquis = true;") <
+                computeStatuses.indexOf("itqanEligible.contains(lineId)) anyStabiliser = true;"));
         assertTrue("à stabiliser must win over every other status on a mixed page",
             computeStatuses.indexOf("anyStabiliser ? ProgressGridView.STABILISER") <
                 computeStatuses.indexOf("anyApprentissage ? ProgressGridView.APPRENTISSAGE"));

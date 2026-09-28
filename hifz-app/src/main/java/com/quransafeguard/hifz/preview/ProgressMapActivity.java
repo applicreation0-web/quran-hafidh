@@ -12,23 +12,31 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Whole-Mushaf overview: one cell per page, patterned (never colored) by status, so it stays
- * legible on e-ink. Reported directly: a page's status used to be read off historical range-based
- * promotion buckets (itqanRanges/promotedRanges/unconsolidatedPromotedRanges) that only the Sabqi/
- * Renforcement track ever updates — so crediting an Itqan/Stabilisation line (a normal block, a
- * Sunday Consolidation finale, or the tiny 1-2 line fast path) never moved anything here, since
- * that whole track's real progress lives in HifzPrefs' per-line schema6 state (NONE/LEARNED/
- * STABILIZED/ACQUIRED), not those buckets. A page's status now reads that same live per-line state
- * directly (progressionSnapshotV6): ACQUIRED = Acquis, STABILIZED = à stabiliser (has had its
- * Itqan repetition pass, awaiting its weekly Consolidation graduation), LEARNED = en apprentissage,
- * absent from all three = pas commencé — the exact state machine every session-completion method
- * already updates, for both tracks alike, so this view can never drift from or lag behind what the
- * learner actually just did. Two live estimates (Apprentissage, Stabilisation) sit above the grid,
- * computed from the same buckets Diagnostic uses for its own equivalent estimates.
+ * legible on e-ink. Reported directly (twice): a page's status used to be read off historical
+ * range-based promotion buckets that only the Sabqi/Renforcement track ever updates, so crediting
+ * an Itqan/Stabilisation line never moved anything here. Switching straight to the per-line schema6
+ * state (STABILIZED = à stabiliser) fixed that but broke something else: a declared Itqan/Ancrage
+ * range (itqanRanges()/unconsolidatedPromotedRanges(), set once in Settings or at install) starts
+ * every one of its lines in state NONE — completeStabilizationBlockV6's own comment confirms NONE
+ * is "Ancrage material['s] normal starting state" — so a huge declared range not yet individually
+ * touched by a real Stabilisation block showed as "pas commencé" instead of "à stabiliser",
+ * indistinguishable from a page never declared for any track at all.
+ *
+ * A page's status now combines both signals correctly: ACQUIRED (progressionSnapshotV6) = Acquis;
+ * declared Itqan-eligible (effectiveItqanRanges = itqanRanges + every Sabqi-fed promotion) but not
+ * yet ACQUIRED = à stabiliser, whatever its NONE/LEARNED/STABILIZED sub-state; Sabqi's own LEARNED
+ * = en apprentissage; neither = pas commencé. This is the only page status that still needs a
+ * declared-range check — Sabqi's own front-to-back walk has no equivalent "declared but not yet
+ * reached" backlog, since its LEARNED state is set the moment each day's lesson happens. Two live
+ * estimates (Apprentissage, Stabilisation) sit above the grid, computed from the same buckets
+ * Diagnostic uses for its own equivalent estimates.
  */
 public final class ProgressMapActivity extends android.app.Activity {
     private HifzPrefs prefs;
@@ -188,13 +196,19 @@ public final class ProgressMapActivity extends android.app.Activity {
 
     private int[] computeStatuses() {
         HifzPrefs.ProgressionSnapshot progression = prefs.progressionSnapshotV6();
+        ArrayList<GeometryRepository.LineMeta> allLines = new ArrayList<>();
+        for (int i = 0; i < geometry.lineCount(); i++) allLines.add(geometry.line(i));
+        // Declared Itqan-eligible corpus (the base range plus every Sabqi-fed promotion) — a line
+        // in here starts in state NONE (see class doc) and stays "à stabiliser" through NONE,
+        // LEARNED and STABILIZED alike, until it actually reaches ACQUIRED.
+        Set<String> itqanEligible = CorpusLinePolicy.ownedLineIds(prefs.effectiveItqanRanges(), allLines);
         int[] statuses = new int[605];
 
         for (int page = 1; page <= 604; page++) {
             boolean anyStabiliser = false, anyApprentissage = false, anyAcquis = false;
             for (String lineId : geometry.lineIdsOnPage(page)) {
                 if (progression.acquired.contains(lineId)) anyAcquis = true;
-                else if (progression.stabilized.contains(lineId)) anyStabiliser = true;
+                else if (itqanEligible.contains(lineId)) anyStabiliser = true;
                 else if (progression.learned.contains(lineId)) anyApprentissage = true;
             }
             statuses[page] = anyStabiliser ? ProgressGridView.STABILISER

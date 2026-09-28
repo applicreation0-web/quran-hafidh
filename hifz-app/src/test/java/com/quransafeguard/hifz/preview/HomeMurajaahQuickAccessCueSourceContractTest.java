@@ -15,9 +15,15 @@ import static org.junit.Assert.assertTrue;
  * cue (first a hardcoded "30 min", later a dynamic number picking whichever of the daily
  * active/passive pair was due next) — but tapping the card always opens a choice between BOTH
  * Révision active (15 min) and Entretien (its own dynamic duration), so any single number shown
- * on the outer card can only ever match one of the two and misleads about the other. The card now
- * carries no duration cue at all; RevisionSelector's dialog is the only place a duration is shown,
- * and it already states both correctly, side by side, once tapped.
+ * on the outer card can only ever match one of the two and misleads about the other.
+ *
+ * Reported again after the fix: dropping the cue text entirely left this card with only two
+ * lines (icon+caption) while its "Apprentissage"/"Stabilisation" siblings in the same row still
+ * have three (icon+caption+cue) — an empty cue slot doesn't leave a blank gap under the shorter
+ * card, it recentres the whole row's vertical alignment around it, visibly breaking the row. The
+ * card now shows "Au choix" instead: honest (it genuinely is a choice, not a fixed duration) and
+ * keeps the three-line height so the row stays aligned. RevisionSelector's dialog remains the only
+ * place an actual duration is shown, stating both correctly, side by side, once tapped.
  */
 public final class HomeMurajaahQuickAccessCueSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -28,11 +34,14 @@ public final class HomeMurajaahQuickAccessCueSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void modeCardNeverAssignsADurationCueToRevisionOrEntretien() throws Exception {
+    @Test public void modeCardGivesRevisionAHonestNonDurationCueNotAnEmptyOne() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
-        assertFalse("a single cue on this card would only ever match one of the two révisions it can open",
-            ui.contains("lower.contains(\"révision\")") || ui.contains("lower.contains(\"revision\")")
-                || ui.contains("lower.contains(\"entretien\")") || ui.contains("lower.contains(\"mur\")"));
+        assertTrue("Révision/Entretien must still match their own branch of the cue ternary",
+            ui.contains("lower.contains(\"révision\") || lower.contains(\"revision\") "
+                + "|| lower.contains(\"entretien\") || lower.contains(\"mur\")"));
+        assertTrue("the cue must be a non-empty, non-numeric placeholder — never a specific duration "
+                + "that would only match one of the two révisions this card can open",
+            ui.contains("? \"Au choix\" : \"\";"));
     }
 
     @Test public void homeScreenCarriesNoLeftoverMurajaahCueMachinery() throws Exception {
