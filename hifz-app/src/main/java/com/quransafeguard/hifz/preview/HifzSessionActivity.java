@@ -687,7 +687,29 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.itqanRep();
         VerseRef savedStart=prefs.itqanUnitStart();
         VerseRef savedEnd=prefs.itqanUnitEnd();
-        if((rep>0 || prefs.itqanBlockIndex()>0) && savedStart!=null && savedEnd!=null){
+        // Reported directly, confirmed on a live export: this used to trust savedStart/savedEnd
+        // as soon as rep or blockIndex was non-zero, with no check against anchoringEntry (the
+        // position currentAnchoringEntry just computed) — so a session already mid-repetition on
+        // a unit from before a rotation-position fix (or a Plages Acquises edit that moved the
+        // real position forward) kept reappearing verbatim forever, no matter what the rotation
+        // itself now correctly computed. A saved unit is only ever safe to resume when it's still
+        // the exact unit anchoringEntry says is current; anything else is stale and must be
+        // discarded so the fresh pick below actually takes over.
+        boolean savedMatchesCurrentEntry = savedStart!=null && savedEnd!=null
+            && savedStart.toString().equals(anchoringEntry.start) && savedEnd.toString().equals(anchoringEntry.end);
+        if ((rep>0 || prefs.itqanBlockIndex()>0) && !savedMatchesCurrentEntry) {
+            if (!prefs.discardStaleItqanProgress()) {
+                onError("Impossible d’actualiser la position de Stabilisation.");
+                return;
+            }
+            // Re-render from a clean slate rather than patching every local variable below (rep,
+            // itqanBonusDecision, …) that assumed the stale unit — this is the same recursion the
+            // tiny-fragment fast path already uses after a state change, and it terminates
+            // immediately: the freshly-cleared prefs make this branch false on the next pass.
+            renderItqan(autoChainDepth);
+            return;
+        }
+        if(savedMatchesCurrentEntry){
             List<VerseRef> verses=geometry.versesForRange(savedStart,savedEnd);
             List<String> lineIds=CorpusLinePolicy.ownedLineIdsForRangeOnPage(savedStart,savedEnd,geometry);
             List<GeometryRepository.LineMeta> physicalLines = geometry.linesForExactIds(lineIds);

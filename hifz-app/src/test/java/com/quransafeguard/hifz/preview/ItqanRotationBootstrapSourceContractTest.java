@@ -40,14 +40,17 @@ public final class ItqanRotationBootstrapSourceContractTest {
 
     @Test public void currentAnchoringEntryReconcilesAFreshRotationBeforeSelecting() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        String m = method(prefs, "public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {",
+        String entry = method(prefs, "public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {",
             "\n    }");
+        assertTrue("must run the shared one-time bootstrap before picking a unit",
+            entry.contains("ensureItqanRotationBootstrapped(geometry);"));
+        String bootstrap = method(prefs, "private void ensureItqanRotationBootstrapped(GeometryRepository geometry) {", "\n    }");
         assertTrue("must check whether the rotation has ever had a real position before trusting its default",
-            m.contains("needsItqanRotationBootstrap()"));
+            bootstrap.contains("needsItqanRotationBootstrap()"));
         assertTrue("must reconcile against real progress, not the leg's absolute start",
-            m.contains("reconciledLegStartCursor(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, geometry)"));
+            bootstrap.contains("reconciledLegStartCursor(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, geometry)"));
         assertTrue("the reconciled position must be persisted immediately so this runs only once",
-            m.contains("saveItqanRotationState(new ItqanRotationPolicy.State("));
+            bootstrap.contains("saveItqanRotationState(new ItqanRotationPolicy.State("));
     }
 
     @Test public void reconciliationStopsAtTheFirstNotYetMasteredVerse() throws Exception {

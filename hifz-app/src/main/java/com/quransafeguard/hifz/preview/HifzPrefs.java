@@ -2095,6 +2095,33 @@ public final class HifzPrefs {
         return p.getString("p4ItqanRotationCursor", "").isEmpty() && !p.contains("p4AncrageLeg");
     }
 
+    /** Runs and persists the one-time rotation bootstrap (see reconciledLegStartCursor) if it has
+     *  never run before; a no-op every other call. Shared by currentAnchoringEntry (which needs
+     *  the real position to pick a unit) and itqanRotationLiveCursor (display only), so neither
+     *  path can ever show/use the unreconciled leg-start default. */
+    private void ensureItqanRotationBootstrapped(GeometryRepository geometry) {
+        if (!needsItqanRotationBootstrap()) return;
+        VerseRef bootstrapped = reconciledLegStartCursor(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, geometry);
+        if (!saveItqanRotationState(new ItqanRotationPolicy.State(
+                ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, bootstrapped, false))) {
+            throw new IllegalStateException("Unable to persist Itqān rotation bootstrap");
+        }
+    }
+
+    /**
+     * Reported directly, from an audit requested right after the rotation-reset bug: Settings and
+     * Diagnostic displayed "Position Stabilisation" from the legacy itqanCursor field — a value
+     * only ever written by the Settings "reposition on invalid range" repair action, never by a
+     * real session completion. It had been silently disconnected from the actual position driving
+     * Stabilisation (the perpetual rotation's own itqanRotationState) since P4 replaced the older
+     * cursor-based selection, so the number shown to the learner could be pure fiction. Use this
+     * for any display that claims to show the current Stabilisation position instead.
+     */
+    public VerseRef itqanRotationLiveCursor(GeometryRepository geometry) {
+        ensureItqanRotationBootstrapped(geometry);
+        return itqanRotationState().cursor;
+    }
+
     /**
      * Reported directly: a program that had already declared/consolidated real progress into
      * Surah 49 (Plages Acquises plus a Renforcement/Consolidation finale) got sent all the way
@@ -2217,13 +2244,7 @@ public final class HifzPrefs {
                 && !reconcileAnchoringQueue(geometry)) {
             throw new IllegalStateException("Unable to persist anchoring queue");
         }
-        if (needsItqanRotationBootstrap()) {
-            VerseRef bootstrapped = reconciledLegStartCursor(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, geometry);
-            if (!saveItqanRotationState(new ItqanRotationPolicy.State(
-                    ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, bootstrapped, false))) {
-                throw new IllegalStateException("Unable to persist Itqān rotation bootstrap");
-            }
-        }
+        ensureItqanRotationBootstrapped(geometry);
         String retryText = p.getString("anchoringRetryAfterDate", "");
         LocalDate retry = safeDate(retryText, null);
         if (retry != null) {
@@ -2232,7 +2253,20 @@ public final class HifzPrefs {
                 throw new IllegalStateException("Unable to clear Stabilisation retry deferral");
         }
         AnchoringQueue.Entry inProgress = inProgressAnchoringEntry();
-        if (inProgress != null) return inProgress;
+        if (inProgress != null) {
+            // Reported directly: a session already mid-repetition on a unit the (now-fixed)
+            // bootstrap would never have picked in the first place — because it sits entirely
+            // inside a declared Plage Acquise — kept reappearing no matter what the bootstrap fix
+            // computed, since this in-progress check runs first and just resumes it verbatim.
+            // Discard that stale progress here so the fresh-pick logic below actually gets a turn.
+            // Never done for genuine reinforcement-lap material: physicalUnitsInLeg deliberately
+            // revisits every unit forever regardless of Stabilisation/Acquis status, and only the
+            // one-time bootstrap itself needs to skip declared material on the very first lap.
+            if (!fullyDeclaredAcquired(inProgress.start, inProgress.end, geometry)) return inProgress;
+            if (!discardStaleItqanProgress()) {
+                throw new IllegalStateException("Unable to discard a stale Stabilisation session");
+            }
+        }
 
         ItqanRotationPolicy.State original = itqanRotationState();
         ItqanRotationPolicy.State state = original;
@@ -2253,6 +2287,36 @@ public final class HifzPrefs {
             throw new IllegalStateException("Unable to persist Itqān rotation state");
         }
         return selected;
+    }
+
+    /** True only when every verse of [startText, endText] sits inside a declared Plage Acquise. */
+    private boolean fullyDeclaredAcquired(String startText, String endText, GeometryRepository geometry) {
+        VerseRef start = GeometryRepository.parseVerse(startText);
+        VerseRef end = GeometryRepository.parseVerse(endText);
+        List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end, geometry);
+        if (ids.isEmpty()) return false;
+        List<VerseRange> declared = itqanRanges();
+        for (VerseRef verse : geometry.versesForRange(start, end)) {
+            boolean covered = false;
+            for (VerseRange range : declared) if (range.contains(verse)) { covered = true; break; }
+            if (!covered) return false;
+        }
+        return true;
+    }
+
+    /** Clears an in-progress Stabilisation session's rep/block/unit state. Used both here (a
+     *  session pinned to declared-Acquis material) and by HifzSessionActivity.renderItqan (a saved
+     *  itqanUnitStart/End that no longer matches currentAnchoringEntry's own current unit — see
+     *  that call site for the concrete bug this recovers from). */
+    boolean discardStaleItqanProgress() {
+        return p.edit()
+            .putInt("itqanRep", 0).putInt("itqanBlockIndex", 0)
+            .putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
+            .putString("itqanUnitStart", "").putString("itqanUnitEnd", "")
+            .putLong("itqanElapsedMs", 0L)
+            .putString("itqanBonusSnapshotV1", "")
+            .putString("itqanTinyBlockDecisionValue", "")
+            .commit();
     }
 
     private static String snowballAnchorKey(ConsolidationCycleEngine.Family family) {

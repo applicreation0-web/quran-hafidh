@@ -376,8 +376,13 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void refreshItqan(){
         TextView rotationValue=Ui.settingValue(rotationSetting);if(rotationValue!=null)rotationValue.setText(prefs.itqanRotationStart().toString());
-        boolean invalid=!prefs.isItqanCursorValid()||!prefs.isMurajaahCursorValid();
-        itqanStatus.setText((invalid?"⚠ ":"")+"Position Stabilisation · "+prefs.itqanCursor()+"   ·   Révision · "+prefs.murajaahCursor());
+        // Reported directly: this used to show the legacy itqanCursor field, only ever moved by
+        // the "reposition on invalid range" repair action below — never by a real session — so it
+        // could silently diverge from where Stabilisation actually is. itqanRotationLiveCursor
+        // reads the real perpetual-rotation position instead (see HifzPrefs for the full story).
+        VerseRef liveItqanCursor=prefs.itqanRotationLiveCursor(geometry);
+        boolean invalid=!prefs.itqanWorkCorpus().contains(liveItqanCursor)||!prefs.isMurajaahCursorValid();
+        itqanStatus.setText((invalid?"⚠ ":"")+"Position Stabilisation · "+liveItqanCursor+"   ·   Révision · "+prefs.murajaahCursor());
         itqanStatus.setTextColor(Ui.MUTED);
         itqanStatus.setVisibility(View.VISIBLE);
     }
@@ -585,7 +590,7 @@ public final class SettingsActivity extends android.app.Activity {
             +"\nEstimation fin Apprentissage : "+apprentissageEtaSummary()
             +"\nLignes acquises (Itqan) : "+progression.acquired.size()+"\nCorpus de travail : "+prefs.effectiveItqanRanges().size()+" plage(s)"
             +"\nPlages promues (Sabqi) : "+prefs.promotedRanges().size()+"\nLignes à stabiliser (Itqan) : "+progression.stabilized.size()
-            +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanCursor()
+            +"\nDébut rotation : "+prefs.itqanRotationStart()+"\nPosition Stabilisation : "+prefs.itqanRotationLiveCursor(geometry)
             +"\nPosition Révision : "+prefs.murajaahCursor()
             +"\nPosition Révision active : "+prefs.activeMurajaahCursor()
             +"\nFile de Consolidation : "+prefs.recentSabqi().size()
