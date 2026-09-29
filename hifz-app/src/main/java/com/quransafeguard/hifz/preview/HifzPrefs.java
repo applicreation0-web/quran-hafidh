@@ -2088,6 +2088,47 @@ public final class HifzPrefs {
             .commit();
     }
 
+    /** True only the very first time the perpetual rotation ever needs a position and none was
+     *  ever persisted — see reconciledLegStartCursor for why that case can't just trust
+     *  itqanRotationState's own default. */
+    private boolean needsItqanRotationBootstrap() {
+        return p.getString("p4ItqanRotationCursor", "").isEmpty() && !p.contains("p4AncrageLeg");
+    }
+
+    /**
+     * Reported directly: a program that had already declared/consolidated real progress into
+     * Surah 49 (Plages Acquises plus a Renforcement/Consolidation finale) got sent all the way
+     * back to 49:1 the moment the rotation needed a fresh position for the first time — because
+     * itqanRotationState's documented "closest safe reconstruction" for a never-tracked cursor is
+     * to restart the leg from its own start. Safe in that nothing real is skipped, but costly in
+     * practice: a full 35-repetition drill on material already mastered weeks earlier. Walks the
+     * leg verse by verse from its start and stops at the first verse not yet fully
+     * Stabilisé/Acquis, so the one-time bootstrap resumes exactly where real progress actually
+     * leaves off instead of redoing it. Only ever runs once per install: currentAnchoringEntry
+     * persists the result immediately via saveItqanRotationState.
+     */
+    private VerseRef reconciledLegStartCursor(ItqanRotationPolicy.Leg leg, GeometryRepository geometry) {
+        VerseRef start = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
+            ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
+        VerseRef end = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
+            ? ItqanRotationPolicy.TAIL_END : ItqanRotationPolicy.FRONT_END;
+        LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+        LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        VerseRef cursor = start;
+        while (GeometryRepository.ordinal(cursor) <= GeometryRepository.ordinal(end)) {
+            List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(cursor, cursor, geometry);
+            boolean done = !ids.isEmpty();
+            for (String id : ids) {
+                if (!stabilized.contains(id) && !acquired.contains(id)) { done = false; break; }
+            }
+            if (!done) return cursor;
+            VerseRef next = QuranCanon.INSTANCE.next(cursor);
+            if (next == null || GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(cursor)) break;
+            cursor = next;
+        }
+        return end;
+    }
+
     /** P4: advances the perpetual Itqān leg/cursor past a just-completed unit's last verse —
      *  called once a unit's final block validates, whether that was a first build or a later
      *  reinforcement lap; never called for a non-final sub-block. */
@@ -2164,6 +2205,13 @@ public final class HifzPrefs {
         if (!p.getBoolean("anchoringQueueInitialized", false)
                 && !reconcileAnchoringQueue(geometry)) {
             throw new IllegalStateException("Unable to persist anchoring queue");
+        }
+        if (needsItqanRotationBootstrap()) {
+            VerseRef bootstrapped = reconciledLegStartCursor(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, geometry);
+            if (!saveItqanRotationState(new ItqanRotationPolicy.State(
+                    ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, bootstrapped, false))) {
+                throw new IllegalStateException("Unable to persist Itqān rotation bootstrap");
+            }
         }
         String retryText = p.getString("anchoringRetryAfterDate", "");
         LocalDate retry = safeDate(retryText, null);
