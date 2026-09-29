@@ -2114,12 +2114,23 @@ public final class HifzPrefs {
             ? ItqanRotationPolicy.TAIL_END : ItqanRotationPolicy.FRONT_END;
         LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        // Plages Acquises is the learner's own explicit "I already know this by heart" declaration
+        // (unlike promotedRanges/effectiveItqanRanges, which only mark material ELIGIBLE for
+        // stabilisation work, not already stabilised) — honour it here too, so extending a declared
+        // range in Settings can move the one-time bootstrap past a verse never actually drilled.
+        List<VerseRange> declaredAcquired = itqanRanges();
         VerseRef cursor = start;
         while (GeometryRepository.ordinal(cursor) <= GeometryRepository.ordinal(end)) {
-            List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(cursor, cursor, geometry);
-            boolean done = !ids.isEmpty();
-            for (String id : ids) {
-                if (!stabilized.contains(id) && !acquired.contains(id)) { done = false; break; }
+            boolean done = false;
+            for (VerseRange range : declaredAcquired) {
+                if (range.contains(cursor)) { done = true; break; }
+            }
+            if (!done) {
+                List<String> ids = CorpusLinePolicy.ownedLineIdsForRangeOnPage(cursor, cursor, geometry);
+                done = !ids.isEmpty();
+                for (String id : ids) {
+                    if (!stabilized.contains(id) && !acquired.contains(id)) { done = false; break; }
+                }
             }
             if (!done) return cursor;
             VerseRef next = QuranCanon.INSTANCE.next(cursor);

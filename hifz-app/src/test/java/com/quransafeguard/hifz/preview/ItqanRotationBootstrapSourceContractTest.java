@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -58,6 +59,27 @@ public final class ItqanRotationBootstrapSourceContractTest {
             m.contains("!stabilized.contains(id) && !acquired.contains(id)"));
         assertTrue("must return as soon as a not-fully-mastered verse is found, not walk the whole leg",
             m.contains("if (!done) return cursor;"));
+    }
+
+    /**
+     * Reported directly, right after the first fix shipped: the learner extended Plages Acquises
+     * in Settings (49:1-49:8 -> 49:1-49:18) specifically to force the bootstrap past the 1-verse
+     * fragment straight to Qaf, but the reconciliation only checked v6StabilizedLineIds/
+     * v6AcquiredCreditLineIds — a declared range in Settings never touches those (see
+     * reconcileV6AcquiredBootstrap's one-time seeding gate), so the edit had no effect. Must also
+     * honour itqanRanges() — the learner's own explicit "I already know this" declaration — while
+     * still never trusting promotedRanges/effectiveItqanRanges for the same purpose, since those
+     * only mark material ELIGIBLE for stabilisation, not already mastered.
+     */
+    @Test public void reconciliationAlsoHonoursADeclaredPlageAcquise() throws Exception {
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        String m = method(prefs, "private VerseRef reconciledLegStartCursor(", "\n    }");
+        assertTrue("must read the learner's own declared corpus",
+            m.contains("List<VerseRange> declaredAcquired = itqanRanges();"));
+        assertTrue("a verse inside a declared range must count as already mastered",
+            m.contains("range.contains(cursor)"));
+        assertFalse("must never trust the auto-grown eligible corpus as already mastered",
+            m.contains("promotedRanges()") || m.contains("effectiveItqanRanges()"));
     }
 
     @Test public void bootstrapGateOnlyFiresWhenNoCursorWasEverPersisted() throws Exception {
