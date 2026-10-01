@@ -1,0 +1,82 @@
+name: Android 0.10.4 full Plus audit
+
+on:
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up Python corpus tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Fetch pinned private tafsir sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "${src}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+          python3 scripts/prepare_multitafsir_assets.py --source-dir "${src}" --assets-dir app/src/plus/assets/tafsir --work-dir "${RUNNER_TEMP}/tafsir-work"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Prove Hikam layer unchanged from 0.10.3
+        run: python3 scripts/verify_0104_hikam_freeze.py
+
+      - name: Source-level multi-tafsir contradictory audit
+        run: python3 scripts/verify_0104_update.py
+
+      - name: Taddabur and neutral-reading audit
+        run: python3 scripts/verify_0104_taddabur.py
+
+      - name: Existing full release audit
+        run: gradle --no-daemon :app:verifyReleaseAudit
+
+      - name: Light and Plus tests
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Build Light and Plus debug
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug
+
+      - name: Build unsigned Light and Plus release
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
+
+      - name: Prove Light tafsir isolation
+        run: python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+
+      - name: Prove Light Taddabur isolation
+        run: python3 scripts/verify_light_apk_no_taddabur.py app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+
+      - name: Prove all three Plus tafsir corpora
+        run: python3 scripts/verify_plus_apk_multitafsir.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+
+      - name: Prove Plus Taddabur, neutral reader and readability controls
+        run: python3 scripts/verify_plus_apk_taddabur.py app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk

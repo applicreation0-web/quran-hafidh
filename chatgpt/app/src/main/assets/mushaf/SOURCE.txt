@@ -1,0 +1,26 @@
+Quran Unlock — Medina Mushaf source
+
+Edition:
+- Riwaya: Hafs 'an 'Asim
+- Publisher/source edition: King Fahd Glorious Qur'an Printing Complex (KFQC)
+- Canonical page count: 604
+
+Vector page source used by the build:
+https://github.com/quranpedia/quran-svg
+Pinned commit:
+1b427fab77aae1403fe7e1f0b8c794a5384d5605
+
+Path:
+mushafs/hafs/kfqc/svg-br/001.svg.br ... 604.svg.br
+
+The Brotli files are losslessly compressed versions of the same SVG pages.
+They are decompressed locally in memory when a page is opened.
+
+The quran-svg project states that its KFQC page vectors derive from the
+King Fahd Complex digital Mushaf al-Madinah and that the KFQC digital
+edition is permitted for digital/software use. Quran Unlock pins a reviewed
+commit and checks the Git blob hashes of pages 001, 302, and 604 in addition
+to verifying the complete 604-page set.
+
+The app does not require a second Quran application and does not require
+network access at runtime to display the embedded Mushaf pages.

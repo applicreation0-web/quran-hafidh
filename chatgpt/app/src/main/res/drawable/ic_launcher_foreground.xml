@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Abstract open Qur'an. The adaptive-icon background supplies the cream field. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#171715"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22,35 C34,31 45,34 54,43 C63,34 74,31 86,35 L83,65 C72,62 63,65 54,73 C45,65 36,62 25,65 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#171715"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,43 L54,73" />
+
+    <!-- Simplified rehal: two quiet crossed supports, intentionally non-ornamental. -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#171715"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M31,82 L50,61 M77,82 L58,61" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#171715"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M35,82 L73,82" />
+</vector>

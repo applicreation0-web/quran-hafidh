@@ -1,0 +1,49 @@
+name: Android 0.10.5 sensitive-app scope audit
+
+on:
+  push:
+    branches:
+      - "fix/0.10.5-sensitive-scope"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  sensitive-scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Strict sensitive-app Accessibility audit
+        run: python3 scripts/verify_0105_sensitive_scope.py
+
+      - name: Fetch Medina Mushaf pages required by Android release gates
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Legacy release audit remains green
+        run: gradle --no-daemon :app:verifyPrivacyBoundary :app:verifyUnlockBudgetIntegrity
+
+      - name: Light and Plus tests
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest

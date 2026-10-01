@@ -1,0 +1,138 @@
+name: Publish Quran Safeguard 0.10.1
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: startsWith(github.event.head_commit.message, 'Release Quran Safeguard 0.10.1')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v0.10.1
+      APK_NAME: Quran-Safeguard-0.10.1-release.apk
+      APK_SIZE: "71981397"
+      APK_SHA256: 43c3d61e96ee23eb2c289266d99ff6dcb2da7898a92c88aa30dc0283b1c3a1f2
+    steps:
+      - name: Reconstituer et vérifier le paquet signé
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/quran-safeguard-release"
+          parts_dir="${release_dir}/parts"
+          mkdir -p "${parts_dir}"
+
+          while read -r name size expected_sha blob_sha; do
+            [[ -n "${name}" ]] || continue
+            target="${parts_dir}/${name}"
+            gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${blob_sha}" --jq '.content' \
+              | tr -d '\n' \
+              | base64 --decode \
+              | base64 --decode > "${target}"
+            [[ "$(stat -c '%s' "${target}")" == "${size}" ]]
+            printf '%s  %s\n' "${expected_sha}" "${target}" | sha256sum --check --status
+          done <<'MANIFEST'
+          part-000-0 524288 f7608b5f32cc5db48a2c2cc01a94ebdaf19a3a6986e6db8bc73896b74d9435b9 8d1d957bcaa1f4b0e71a0c6b27ac9fea54954f62
+          part-000-1 524288 986e9f680f41763fcfa4ffbfe0bbc214d6df485e75730aa033f991eece6f43c3 083ef4567941436287c1279f1cb33112fd608cf5
+          part-000-2 524288 0aa380e2bb60b08a207b7da6441ef1f03465a1ffc9c0c87ab1dd322357744e00 32f16cdd8322f06f6cdfaaf7436a740241401228
+          part-000-3 524288 7fe2b5da8bc3aaa8de91385f2dd95289f377ddd632063e4eaa6c7111f232ed25 b83d57cef22309d849530cf2d89ac7f390563681
+          part-001-0 524288 b4a164f62b31f9a2c1c13b29ac2960165948b378d319e565071aa4f2c581a408 923be22875faaf383da8ba9b09cece3eeae9efff
+          part-001-1 524288 7b5670de72f07d5b47e6507264265903b78744857a01425b867cea3577e271a7 ad176e9d846af93ad24c0622eaf4d1eebd7a65d2
+          part-001-2 524288 6ec546ff63b38a877ae84b6b54b22f624f16c538fa385f10973a79979418e145 bab0d9587cb947d68b8f70fef3eb55717bd975cd
+          part-001-3 524288 4dbd3daf1b2fb00a63aac3469fa41ee3ae17662a29962b9850f5940d617d775f 6a64590dfa13304d827bea3bc1b2deb510b57997
+          part-002-0 524288 de680e7af49d30a276a62b830bcafe19481a981d432f41fc7c3198098c1bd8f3 e1fb5a165ea595ec56193c3a84942f3156f0f9c2
+          part-002-1 524288 3ad90a9aede9f38a461ba1f4251486da680b13b855f025bcff0d3738051f9dc9 fc49e7ad6dcfb0fc1986b7c6d16a67c8ee0197fe
+          part-002-2 524288 f24dcec2f3b9551120834f01c622179aa96ef0b10ba266f710bfe0c9d937bdb3 5694d8757371ddcd8f30f525a72089ca2557b7de
+          part-002-3 524288 d386b5b3ed9cbf8b79af43932b2db0a9c37b5dfdc750d8c0caae20fd077d21d8 4e120a4b10510728616dd2ead39fef69873a7574
+          part-003-0 524288 337e6f609f75f5065750bc1a5cf9fb95f26103d3ba0d132d2d4d363a1b52a811 ae38fb6e904823ef11280850f9b96c66b64badc2
+          part-003-1 524288 d0dfcd4625e5240e1ca285ed493e016757c2724410518854ad78eb7c69cc9d26 9b9b2811ee0d084d32280d10d1834423b4684e17
+          part-003-2 524288 1c110c617552e3dedcd303424cd92f1821d082a5c312d59a9b4a27ebb1dcd2f2 91a07bf989252e1b22991034cf7e4bfb21f53504
+          part-003-3 524288 89ad837610617c953c8f21369a0e391ea991dd9c305f76a6089e01bba923c523 59a851b218841a47939bb297270e0eb7ea0c587c
+          part-004 2097152 e15a959280d85dfafc033b4f102b91d7a3ae090efced436ffb9b6b4908c9cd8f 19e710625ef89e1cd1be71ef57e36bdb3f99d5d7
+          part-005 2097152 957a179e0f8c65119aeeebf9571548cb91ad1430bc611541a845ce84f5ba1a9e e3bbe78836aa5ca72c7b57be787946143bc5c9b8
+          part-006 2097152 68a403de6835ca7c3cb06db619482b0f1a770f338624b769072dbdc4f8400a45 ad005731101e3ad8719e47f496f53b9b52f76607
+          part-007 2097152 137b9fc1f05a6bc8985f8bd0146b239cf22deb57e7fb456115d0c3b05771ee50 4428413b8c530a11480310dd573076ccbab4c5e4
+          part-008 2097152 2ebeb053305862ec91d40a9cd79d2255516be031fb50a3bd698812629fa528d6 cde2a69be77aa5a0856d982111a7a92015434b52
+          part-009 2097152 d5faad142e53112dd06174601e33c69f78c175ece33a523e8d89470739f80ee9 2564076a2e5fc5c99554595004631dd826725ee6
+          part-010 2097152 9bb35316bcfb2c214eaa9d13945ba77f674f4d05346244c3e4829e1828f7014b 90a59259937369156fc12c40af6bdaf9f50a69d5
+          part-011 2097152 7484b0e75618508e440532d6dce8c4e40906a687be293cc25608703d7cb2fc36 810eea8bb9360c60652581c3a224f3888a6bc622
+          part-012 2097152 2710ea217d220d544ad5be50df6da2f4c8923ad88db11465d0ea0acf64e5be30 4865681b826da643759c368ed06450c811bfe8d3
+          part-013 2097152 53613f00535335ef937b747f0f6481ad57bed6f2fa5141eb2196538016ddb18b ea9c87a3af298d43c5dc00f0849d3af3bf213387
+          part-014 2097152 43798adf140256464fd2dcaa513229db3d02a3637e1a8612f85480311fce8b7a 28240de97b8e92e5b4bbd2a6663a0366fd08e385
+          part-015 2097152 00664c2e74ca8b9bcda3b1d040e7ff930271a3d5897157ade63ba9029ef59bed 4f61349404eb145d4132bfd3d761380e8c09b783
+          part-016 2097152 8f51159fdade429f7ffc04df9f15135b5cece7381e5e4e2411929b9dae6f4247 6463fb62a51adef2a92da6079652a1fa116296e9
+          part-017 2097152 771b4c3149dcc91b8d9613e00cbadd463b86efbf290f546c4237566f5874080c 596bca5dbe48cdfd40c226454e58e386cd6d6640
+          part-018 2097152 f47633d15befcdb0281a6da554ec3709948a78b99833714c504b335b8abfc8dc f574ae57243a3fdf8473cd8f9ebf648d471edde5
+          part-019 2097152 0d54a635b1593568c255cba0b7525455b34d4da17c7a4132e87733449d1075e5 47c05ce3ef19e703842d0c60a40e75bfd063c3b9
+          part-020 2097152 2f3f9bcc2b62701ada96b2b514ddfee6758959ff217489769abf9cf373db9111 a5eea60d0b4387c91d05440674e0e90ae5b9a719
+          part-021 2097152 ef98362b8d32beccdcdc35c5a5b7b8769dc94a70e68cee0dbefd37b08399627b 4a2320c824fe1723b86599dd17685546cb875070
+          part-022 2097152 9553209124ad79becf294f55ef6b3fcc0cbc151f9d646795686c2102f56df4dc 10ef287afe115e63c949265330b609e5382a3be9
+          part-023 2097152 31bf302c1e49219cb290dc42f28c94662c671e3ad2c6779c40f1195b0a42e2a4 fd35a80a64ef096a1b7c5868eb647a315baed656
+          part-024 2097152 8751a114b85e2a01c5878b2e9cace91462dcd3b877f41c6207bf8c698e69c6a0 f321eed97eb761ac709f9bbfdad5b174daa4560f
+          part-025 2097152 be17af39d771b8211080aadf60914c8decc86d315f6a42c085beabd1200d7d8b 2b30a5effd772a0d189584b30516743c89da39e5
+          part-026 2097152 47dd03a4410eb451c174f1ee20e461b68f767672e0638a572fb260aaa65f4c9d 0a7d90475cf1efeb76f42e848e97aef6044b02c2
+          part-027 2097152 50544dd357fdc931ee66c5d1ac4e866fafafe89ed21a13366bee0e197653a100 2c7f88934a1f3c933d7cc283feada065edaea87d
+          part-028 2097152 138fd0c4a24c8aee1082300fbd8a0965d1a27a75c443d17594baad8ca52bd6de 905cbd5fc0fb5555aed71b079573db5763fcc18e
+          part-029 2097152 fba2ef37d9ca49d44b44f2d43e28ca9d842cca55f9613169b68760239bb11758 260a935eb01ee7d0671b95345b1380652ea58f8c
+          part-030 2097152 de525ebe4c9f3433bc2a266d1cf9b46378b7fb107bf9891e4440b3f8dfacb74e 1b6d40c4b453d194d9a6baf152e2841c6e45caaf
+          part-031 2097152 bf4eca9f8b9225bf6b1787b7eb4663cfe02bfbdb879a5cceacfdfc8e38730517 8a713dc2d72ea51fec4254876d98e193580d9ee4
+          part-032 2097152 4f9338de4f5b538e67b97297113217df776f80c057203a0c6d59d24a7919c25e 114b018c8ed18de00a3ff940fd0bea60129a128d
+          part-033 2097152 d647c3112fd18ad4a6085e0368fcb33a555cfa4b781906b8d06fae99d8a768ab d5de5328659060a19c221bbcee5d4f593430a6ba
+          part-034 678229 b7f05a8d242cd792a0ead317e031c69b1932ca9f44c7e6bfb61bcb9cf51b98b7 6a4aa8df71c469f9fd7d6fbbdefb73d10dc6629a
+          MANIFEST
+
+          cat "${parts_dir}"/part-* > "${release_dir}/${APK_NAME}"
+          [[ "$(stat -c '%s' "${release_dir}/${APK_NAME}")" == "${APK_SIZE}" ]]
+          printf '%s  %s\n' "${APK_SHA256}" "${release_dir}/${APK_NAME}" | sha256sum --check --status
+          printf '%s  %s\n' "${APK_SHA256}" "${APK_NAME}" > "${release_dir}/Quran-Safeguard-0.10.1-release-SHA256.txt"
+
+      - name: Publier la release privée
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/quran-safeguard-release"
+          if gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "La release ${RELEASE_TAG} existe déjà."
+            exit 0
+          fi
+
+          cat > "${release_dir}/release-notes.md" <<'NOTES'
+          ## Quran Safeguard 0.10.1
+
+          Cette mise à jour consolide le fonctionnement quotidien de Safeguard :
+
+          - le seuil de 15 minutes repose sur le temps cumulé passé dans toutes les applications cibles ;
+          - le palier de 90 minutes repose sur le même cumul et prime en cas de chevauchement ;
+          - le filtre matinal guide la lecture des 20 pages avec navigation par glissement et temporisation fiable ;
+          - les limites de Hizb et de Juz suivent les versets réels, même lorsqu'elles commencent ou finissent au milieu d'une page ;
+          - la lecture peut se poursuivre librement après l'atteinte du quota ;
+          - les Hikam sont affichées seules, sans commentaires ;
+          - après un déblocage ou un joker, Safeguard revient immédiatement à l'application cible et conserve son écran lorsque Android le permet ;
+          - les transitions, l'ergonomie et les parcours de protection ont été harmonisés.
+
+          ### Vérifications
+
+          - 115 tests unitaires réussis ;
+          - audit contradictoire et stress tests réussis ;
+          - build release Android validé ;
+          - APK signé avec les schémas v2 et v3, un seul signataire RSA 4096 bits ;
+          - SHA-256 de l'APK : `43c3d61e96ee23eb2c289266d99ff6dcb2da7898a92c88aa30dc0283b1c3a1f2` ;
+          - empreinte SHA-256 du certificat : `6C:70:6F:4E:A4:4E:F6:67:D0:B9:69:8C:07:A3:9E:92:9B:1E:28:6D:23:97:66:55:04:41:1D:ED:B3:74:57:AC`.
+
+          ### Limitation Android connue
+
+          Certaines applications bancaires peuvent refuser de s'ouvrir dès qu'un service d'accessibilité tiers est actif. Safeguard ne compte et ne bloque que les applications cibles configurées, mais ne peut pas contourner la politique de sécurité propre à la banque. Dans ce cas, désactivez temporairement Safeguard ou utilisez l'application bancaire sur un autre appareil.
+          NOTES
+
+          gh release create "${RELEASE_TAG}" \
+            "${release_dir}/${APK_NAME}" \
+            "${release_dir}/Quran-Safeguard-0.10.1-release-SHA256.txt" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "Quran Safeguard 0.10.1" \
+            --notes-file "${release_dir}/release-notes.md"

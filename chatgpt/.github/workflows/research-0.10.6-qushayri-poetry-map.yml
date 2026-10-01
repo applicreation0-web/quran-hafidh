@@ -1,0 +1,23 @@
+name: Research 0.10.6 Qushayri poetry map
+
+on:
+  push:
+    branches:
+      - "research/0.10.6-qushayri-poetry"
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7
+      - name: Fetch pinned source
+        run: curl --fail --location --retry 3 -o "${RUNNER_TEMP}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+      - name: Map Poetry Index to source
+        run: python3 scripts/research_qushayri_poetry_map_0106.py "${RUNNER_TEMP}/lataif.pdf" --report "${RUNNER_TEMP}/qushayri-poetry-map-0106.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qushayri-poetry-map-0106
+          path: ${{ runner.temp }}/qushayri-poetry-map-0106.json
+          retention-days: 7
