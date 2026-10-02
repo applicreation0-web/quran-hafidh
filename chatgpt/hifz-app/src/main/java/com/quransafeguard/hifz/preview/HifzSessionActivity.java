@@ -84,6 +84,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean revealedThisRep;
     private Button revealButton;
     private Button murajaahFinishButton;
+    private Button annotationButton;
+    private boolean annotationEnabled = true;
     /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
     private boolean weakMarkMode;
     /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
@@ -206,13 +208,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
-        controlBar.addView(Ui.roundAction(this,"↺","Annuler la note",v->annotationOverlay.undoLastStroke()));
-        controlBar.addView(Ui.roundAction(this,"⌫","Effacer les notes",v->annotationOverlay.clearCurrentPage()));
+        annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+        annotationButton.setSelected(annotationEnabled);
+        controlBar.addView(annotationButton);
+        controlBar.addView(Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke()));
+        controlBar.addView(Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage()));
         controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
         root.addView(controlBar);
 
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
+    }
+
+    private void toggleAnnotationMode() {
+        annotationEnabled = !annotationEnabled;
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
+        annotationButton.setSelected(annotationEnabled);
+        annotationButton.setContentDescription(annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
     }
 
     private void renderMode() {
