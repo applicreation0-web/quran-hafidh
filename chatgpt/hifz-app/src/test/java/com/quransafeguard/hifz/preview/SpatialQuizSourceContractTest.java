@@ -63,7 +63,7 @@ public final class SpatialQuizSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(selector.contains("Quiz spatial · ≤15 min · facultatif"));
         assertTrue(selector.contains("void openSpatialQuiz()"));
-        assertTrue(main.contains("startActivity(new Intent(this, SpatialQuizActivity.class))"));
+        assertTrue(main.contains("startActivity(new Intent(MainActivity.this, SpatialQuizActivity.class))"));
         assertFalse("no second permanent quiz tile on the home screen",
             main.contains("Ui.modeCard(this, \"\", \"Quiz spatial\""));
     }
