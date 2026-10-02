@@ -1146,7 +1146,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /**
-     * Blind 15-minute recall prefers audited semantic anchors when their exact visual ranges are
+     * Blind 20-minute recall prefers audited semantic anchors when their exact visual ranges are
      * available. Until that geometry is complete, the proven first/last half-line landmarks remain
      * untouched as the fallback, so importing a partial semantic corpus cannot degrade Revision.
      */
