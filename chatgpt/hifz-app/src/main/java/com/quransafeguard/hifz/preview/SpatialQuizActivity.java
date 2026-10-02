@@ -113,7 +113,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
 
         LinearLayout top = Ui.row(this);
         top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
-        TextView title = Ui.bookText(this, "Quiz spatial · Acquis", 17f, true);
+        TextView title = Ui.bookText(this, "Quiz · Acquis", 17f, true);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
         top.addView(title);
@@ -192,9 +192,9 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         if (currentKind == Kind.TEXT_TO_POSITION) {
             currentTarget = chooseLine(acquiredLines);
             if (currentTarget == null) return false;
-            prompt.setText("Retrouvez la position de cette ligne.");
-            revealButton.setText("Positionner");
-            revealButton.setContentDescription("Positionner");
+            prompt.setText("Mémorisez cette ligne, puis retrouvez sa position.");
+            revealButton.setText("Voir la page");
+            revealButton.setContentDescription("Voir la page");
             mushaf.clearSemanticCues();
             mushaf.prepareQuizIsolatedLine(currentTarget.id);
             mushaf.show(currentTarget.page, Collections.emptyList(), Collections.emptyList(), 0);
@@ -209,7 +209,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
             currentTarget = chooseLine(transitionTargets);
             if (currentTarget == null || currentTarget.globalIndex <= 0) return false;
             currentPrevious = geometry.line(currentTarget.globalIndex - 1);
-            prompt.setText("Enchaînez avec la ligne indiquée.");
+            prompt.setText("Continuez après la ligne visible.");
             revealButton.setText("Révéler");
             revealButton.setContentDescription("Révéler");
             showMaskedQuestion(currentTarget, Collections.singletonList(currentPrevious.id), true);
@@ -239,7 +239,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
 
         if (currentKind == Kind.TEXT_TO_POSITION && !placementStage) {
             placementStage = true;
-            prompt.setText("Touchez l’emplacement exact de la ligne.");
+            prompt.setText("Touchez l’emplacement exact.");
             feedback.setText("");
             revealButton.setText("Révéler");
             revealButton.setContentDescription("Révéler");
@@ -342,7 +342,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     private void showUnavailable(String message) {
         LinearLayout root = Ui.column(this);
         root.setGravity(Gravity.CENTER);
-        TextView title = Ui.bookText(this, "Quiz spatial", 18f, true);
+        TextView title = Ui.bookText(this, "Quiz", 18f, true);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
         TextView body = Ui.text(this, message, 13f, false);
