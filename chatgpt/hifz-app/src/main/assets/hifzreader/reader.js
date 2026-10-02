@@ -15,6 +15,7 @@ let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
+let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -360,18 +361,70 @@ function markerLayer(svg,polys,lines){
   return g;
 }
 
+function validWordBox(box){
+  return Array.isArray(box)&&box.length===4&&
+    box.every(Number.isFinite)&&box[0]>=0&&box[1]>=0&&box[2]<=345&&box[3]<=550&&
+    box[2]>box[0]&&box[3]>box[1];
+}
+
+function protectedWordBoxes(){
+  if(!semanticAnchorMaskMode)return[];
+  const out=[];
+  (pageLandmarkBoxes||[]).forEach(box=>{const b=(box||[]).map(Number);if(validWordBox(b))out.push(b)});
+  (semanticCues||[]).forEach(cue=>(cue.boxes||[]).forEach(box=>{
+    const b=(box||[]).map(Number);if(validWordBox(b))out.push(b);
+  }));
+  return out;
+}
+
+/** Cut exact Quran-word holes out of the opaque mask layer; never estimate from line cells. */
+function applyProtectedWordHoles(layer,svg){
+  const boxes=protectedWordBoxes();if(!boxes.length)return;
+  const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return;
+  const defs=document.createElementNS(NS,'defs');
+  const holeMask=document.createElementNS(NS,'mask');
+  holeMask.id='hifz-exact-word-holes';
+  holeMask.setAttribute('maskUnits','userSpaceOnUse');
+  holeMask.setAttribute('maskContentUnits','userSpaceOnUse');
+  holeMask.setAttribute('x',vb.x);holeMask.setAttribute('y',vb.y);
+  holeMask.setAttribute('width',vb.width);holeMask.setAttribute('height',vb.height);
+  const full=document.createElementNS(NS,'rect');
+  full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
+  full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
+  full.setAttribute('fill','white');holeMask.appendChild(full);
+  boxes.forEach(box=>{
+    const hole=document.createElementNS(NS,'rect');
+    hole.setAttribute('x',box[0]);hole.setAttribute('y',box[1]);
+    hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',box[3]-box[1]);
+    hole.setAttribute('fill','black');holeMask.appendChild(hole);
+  });
+  defs.appendChild(holeMask);layer.insertBefore(defs,layer.firstChild);
+  layer.setAttribute('mask','url(#hifz-exact-word-holes)');
+}
+
 function semanticCueLayer(svg){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','semanticcuelayer');
-  if(!pageGeo||!Array.isArray(semanticCues)||!semanticCues.length)return g;
-  const allLines=pageGeo.lines||[],vb=svg.viewBox&&svg.viewBox.baseVal;
-  semanticCues.forEach(cue=>{
-    const index=Math.max(1,Number(cue.index)||1);
-    const lineIndex=Math.max(0,(Number(cue.startLine)||1)-1);
-    const line=allLines[lineIndex];if(!line)return;
+  if(!Array.isArray(semanticCues)||!semanticCues.length)return g;
+  const allLines=pageGeo?(pageGeo.lines||[]):[];
 
-    // Exact amorce ranges reuse the same quiet fill grammar as Sabqi/Itqan.
-    // No outline is drawn around Quran ink.
+  semanticCues.forEach(cue=>{
+    // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
+    const exact=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox);
+    if(exact.length){
+      exact.forEach(box=>{
+        const rect=document.createElementNS(NS,'rect');
+        rect.setAttribute('x',box[0]);rect.setAttribute('y',box[1]);
+        rect.setAttribute('width',box[2]-box[0]);rect.setAttribute('height',box[3]-box[1]);
+        rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
+        rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
+        rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','none');
+        g.appendChild(rect);
+      });
+      return;
+    }
+
+    // Legacy exact-cell range path retained only for old audited sidecars. Never infer a range.
     (cue.ranges||[]).forEach(range=>{
       const rline=allLines.find(x=>String(x.id)===String(range.lineId));if(!rline)return;
       const cells=rline.cells||[],from=Math.max(0,Number(range.fromCell)||0),to=Math.min(cells.length,Math.max(from,Number(range.toCell)||0));
@@ -446,7 +499,9 @@ function render(){
         segments.forEach(segment=>group.appendChild(maskRect(segment)));
         layer.appendChild(group);
       }
-      // Verse-number rosettes are deliberately redrawn above the random masks.
+      // Exact page landmarks + semantic amorces are holes in the mask itself.
+      // Verse-number rosettes remain visible and are not used as recall landmarks.
+      applyProtectedWordHoles(layer,svg);
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
     }
@@ -508,6 +563,7 @@ window.HifzReader={
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setSemanticCues(cues,anchorMaskMode){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;render()},
+  setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
@@ -515,6 +571,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,validWordBox,protectedWordBoxes};
 prepare();
 N?.ready();
