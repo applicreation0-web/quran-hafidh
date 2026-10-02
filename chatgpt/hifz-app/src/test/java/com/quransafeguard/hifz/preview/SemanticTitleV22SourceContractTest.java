@@ -28,7 +28,7 @@ public final class SemanticTitleV22SourceContractTest {
         assertTrue(source.contains("46c8c905beaf2e03b2589c296d1574e7417dbab59f9e580911e9ebe0c8073bea"));
         assertTrue(source.contains("19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336"));
         assertTrue(source.contains("parseTitleOverlay"));
-        assertTrue(source.contains("String title = meta.titleV22"));
+        assertTrue(source.contains("String title = meta.titleV23"));
         assertTrue(source.contains("requiredText(row, \"title_fr_v2_1\")"));
         assertTrue(source.contains("anchor_arabic_v2_1"));
         assertTrue(source.contains("anchor_word_count_v2_1"));
