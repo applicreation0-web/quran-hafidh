@@ -71,7 +71,7 @@ function updateSideMarks(){
   marks.style.height=(rect.height*0.40)+'px';
   marks.classList.add('show');
 }
-window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));
+if(typeof window.addEventListener==='function')window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));
 
 /*
  * Center/spine cue: a single "tasbih" thread — a thin vertical line strung with small
@@ -110,7 +110,7 @@ function updateCenterMark(){
   }
   mark.classList.add('show');
 }
-window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));
+if(typeof window.addEventListener==='function')window.addEventListener('resize',()=>requestAnimationFrame(updateCenterMark));
 
 /*
  * Universal page-number badge: a round token, bottom of the Mushaf, in the same outer-margin
@@ -152,7 +152,7 @@ function updatePageBadge(){
   badge.classList.toggle('even',!onOuterRight);
   badge.classList.add('show');
 }
-window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));
+if(typeof window.addEventListener==='function')window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));
 
 function prepare(){
   const svg=currentSvg();
