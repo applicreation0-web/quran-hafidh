@@ -54,6 +54,9 @@ public final class SemanticCueSourceContractTest {
         assertTrue(source.contains("semanticButton = Ui.smallButton(this, \"Amorces\""));\n        assertTrue(source.contains("setButtonIconWithText(semanticButton, icon, \"Amorces\")"));
         assertTrue(source.contains("toggleSemanticCues()"));
         assertTrue(source.contains("SemanticTitlePopup.show"));
+        assertTrue(source.contains("annotationButton = Ui.iconButton(this, \"\", \"Annoter\""));
+        assertTrue(source.contains("Ui.iconButton(this, \"\", \"Annuler la note\""));
+        assertTrue(source.contains("Ui.iconButton(this, \"\", \"Effacer les notes\""));
         assertTrue("repères default OFF until user enables them",
             source.contains("getBoolean(\"semantic_cues_enabled\", false)"));
         assertFalse("no second permanent semantic-title button",
