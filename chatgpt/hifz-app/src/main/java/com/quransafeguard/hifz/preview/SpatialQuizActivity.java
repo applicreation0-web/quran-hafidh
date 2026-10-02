@@ -271,6 +271,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         answerUnlocked = true;
         setScoreButtonsEnabled(true);
         revealButton.setEnabled(false);
+        revealButton.setVisibility(View.GONE);
     }
 
     private void score(int grade) {
