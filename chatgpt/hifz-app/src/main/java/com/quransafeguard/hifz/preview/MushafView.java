@@ -33,6 +33,8 @@ public final class MushafView extends WebView {
         void onError(String message);
         void onPageShown(int page);
         default void onSurfaceTap() {}
+        /** Tapping a tiny semantic passage number never masquerades as a Quran verse tap. */
+        default void onSemanticCueTap(String passageId) {}
         /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
         default void onPageSwipe(int delta) {}
     }
@@ -62,6 +64,8 @@ public final class MushafView extends WebView {
     private String landmarkStartLineId;
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
+    private JSONArray semanticCues = new JSONArray();
+    private boolean semanticAnchorMaskMode;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -190,7 +194,8 @@ public final class MushafView extends WebView {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
             String svg = readPageSvg(page);
-            String geometry = lineIds.isEmpty() ? null : GeometryRepository.get(getContext()).pageGeometryJson(page);
+            boolean needsGeometry = !lineIds.isEmpty() || semanticCues.length() > 0;
+            String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
             JSONArray verses = new JSONArray();
@@ -211,6 +216,8 @@ public final class MushafView extends WebView {
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
                 .put("maskFollowsSelection", maskFollowsSelection)
+                .put("semanticCues", semanticCues)
+                .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -292,6 +299,35 @@ public final class MushafView extends WebView {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setMaskFollowsSelection(" + value + ");",
             ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    /**
+     * Semantic cues are optional, read-only overlay metadata. Exact anchor ranges are supplied by
+     * the audited corpus geometry; without them the renderer shows only a safe line-aligned marker.
+     * anchorMaskMode is reserved for Révision active and must only be enabled after the repository
+     * confirms complete exact geometry for that page.
+     */
+    public void setSemanticCues(JSONArray cues, boolean anchorMaskMode) {
+        semanticCues = cues == null ? new JSONArray() : cues;
+        semanticAnchorMaskMode = anchorMaskMode;
+        final String geometry;
+        try {
+            geometry = semanticCues.length() == 0 ? null : GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
+        } catch (Throwable error) {
+            report("Géométrie des repères indisponible : " + safeMessage(error));
+            return;
+        }
+        runWhenReady(() -> {
+            StringBuilder script = new StringBuilder("window.HifzReader&&(");
+            if (geometry != null) script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
+            script.append("window.HifzReader.setSemanticCues(")
+                .append(semanticCues.toString()).append(',').append(anchorMaskMode).append("));");
+            evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this, prefs)));
+        });
+    }
+
+    public void clearSemanticCues() {
+        setSemanticCues(new JSONArray(), false);
     }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */
@@ -409,6 +445,9 @@ public final class MushafView extends WebView {
         }
 
         @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }
+        @JavascriptInterface public void semanticCueTap(String passageId) {
+            post(() -> { if (listener != null && passageId != null) listener.onSemanticCueTap(passageId); });
+        }
         @JavascriptInterface public void error(String message) { showFailure("Erreur d’affichage Mushaf : " + message); }
         @JavascriptInterface public void pageShown(int page) {
             post(() -> {
