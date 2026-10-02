@@ -423,9 +423,7 @@ public final class MainActivity extends android.app.Activity {
             }else if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)){
                 detail="Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min";
             }else if(HifzSessionActivity.MURAJAAH.equals(mode)){
-                int maintenanceMinutes=MaintenanceCoveragePolicy.minutes(
-                    prefs.acquiredLineCountV6(), g.lineCount(), speedStore.maintenanceSecondsPerLine());
-                detail="Révision · "+maintenanceMinutes+" min";
+                detail="Révision · "+HifzSchedule.MAINTENANCE_MINUTES+" min";
             }else detail="Parcours à vérifier";
         }catch(RuntimeException error){detail="Parcours à vérifier";}
         today.setText(prefix+detail);todayAction.setEnabled(true);
