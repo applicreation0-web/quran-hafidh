@@ -64,12 +64,20 @@ public final class SemanticCueSourceContractTest {
             source.contains("semanticTitleButton"));
     }
 
-    @Test public void activeRevisionKeepsLegacyLandmarksWhenExactAnchorGeometryIsIncomplete() throws Exception {
-        String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(source.contains("hasCompleteExactGeometryForPage(page)"));
-        assertTrue(source.contains("mushaf.setSemanticCues(semanticPassages.readerCuesForPage(page), true)"));
-        assertTrue(source.contains("return applyActiveLandmarks(page);"));
-        assertTrue(source.contains("currentLineIds = applyActiveRecallCues(currentPage)"));
+    @Test public void activeRevisionIsDrivenByAuditedAmorcesWithoutApproximateWordGeometry() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
+        assertTrue(session.contains("activeCuePrompt.setText(activeRecallCue.anchorArabic)"));
+        assertTrue(session.contains("Amorce suivante"));
+        assertTrue(session.contains("advanceActiveRecallCue()"));
+        assertTrue(session.contains("mushaf.setLandmarkLines(null, null)"));
+        assertFalse("active revision must not fall back to unrelated half-line landmarks",
+            session.contains("applyActiveLandmarks(") || session.contains("applyActiveRecallCues("));
+        assertTrue("the semantic index must use frozen audited passage boundaries",
+            repository.contains("surah_start") && repository.contains("ayah_start")
+                && repository.contains("surah_end") && repository.contains("ayah_end"));
+        assertTrue(repository.contains("firstEligibleCueAtOrContaining"));
+        assertTrue(repository.contains("nextEligibleCue"));
     }
 
     @Test public void sabqiAndItqanCannotInheritSemanticCueState() throws Exception {
