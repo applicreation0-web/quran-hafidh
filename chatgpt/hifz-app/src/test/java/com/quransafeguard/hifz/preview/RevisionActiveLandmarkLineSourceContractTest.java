@@ -50,23 +50,20 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
         }
     }
 
-    @Test public void sessionAppliesLandmarksOnEveryActivePageEntryAndSwipe() throws Exception {
+    @Test public void activeSessionUsesOneAuditedAmorceAndNoLegacyHalfLineFallback() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String helper = method(session,
-            "private List<String> applyActiveLandmarks(int page) {", "private void updateMurajaahActions()");
-        assertTrue("must read the full page's lines, masking is now handled at cell granularity, not by dropping a whole line",
-            helper.contains("geometry.lineIdsOnPage(page)"));
-        assertTrue("must push the page's first line as the start landmark", helper.contains("all.get(0)"));
-        assertTrue("must push the page's last line as the end landmark", helper.contains("all.get(all.size() - 1)"));
-        assertTrue("must actually tell the reader about both landmarks",
-            helper.contains("mushaf.setLandmarkLines(first, last);"));
-        assertTrue("every active page-entry/page-swipe path must route through the semantic-aware wrapper",
-            countOccurrences(session, "applyActiveRecallCues(") >= 4);
-        assertTrue("the semantic-aware wrapper must preserve these landmarks as the fail-closed fallback",
-            helper.contains("return applyActiveLandmarks(page);"));
-        assertTrue("no active-mode call site may bypass the helper with the raw page lookup",
-            !session.contains("currentLineIds=geometry.lineIdsOnPage(")
-                && !session.contains("currentLineIds = geometry.lineIdsOnPage("));
+        assertTrue("active recall must render the audited Quranic amorce outside the masked Mushaf",
+            session.contains("activeCuePrompt.setText(activeRecallCue.anchorArabic)"));
+        assertTrue("the current semantic passage bounds page swipes",
+            session.contains("unitFirstPage = activeRecallCue.startPage")
+                && session.contains("unitLastPage = activeRecallCue.endPage"));
+        assertTrue("every active page remains fully maskable; no synthetic word boxes are created",
+            session.contains("currentMask = 100")
+                && session.contains("currentLineIds = geometry.lineIdsOnPage(currentPage)"));
+        assertTrue("the old synchronization landmarks must be explicitly cleared",
+            session.contains("mushaf.setLandmarkLines(null, null)"));
+        assertTrue("the old half-line fallback must no longer participate in active recall",
+            !session.contains("applyActiveLandmarks(") && !session.contains("applyActiveRecallCues("));
     }
 
     @Test public void mushafForwardsLandmarksToTheReaderAndIntoTheBootPayload() throws Exception {
