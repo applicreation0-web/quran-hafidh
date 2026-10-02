@@ -4,7 +4,10 @@ plugins {
 
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
+val generatedSemanticAssetsDir = layout.buildDirectory.dir("generated/semanticAssets").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
+val semanticV21SourceDir = file("src/main/semantic-source/v2_1")
+val semanticV21Output = generatedSemanticAssetsDir.resolve("semantic/semantic_passages_v2_1.json")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
@@ -19,13 +22,26 @@ val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     )
 }
 
+val prepareSemanticV21 by tasks.registering(Exec::class) {
+    inputs.dir(semanticV21SourceDir)
+    inputs.file(rootProject.file("scripts/materialize_semantic_v2_1.py"))
+    outputs.file(semanticV21Output)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/materialize_semantic_v2_1.py").absolutePath,
+        semanticV21SourceDir.absolutePath,
+        semanticV21Output.absolutePath
+    )
+}
+
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease)
+    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
+    from(generatedSemanticAssetsDir)
 }
 
 val verifyHifzProductBoundary by tasks.registering {
