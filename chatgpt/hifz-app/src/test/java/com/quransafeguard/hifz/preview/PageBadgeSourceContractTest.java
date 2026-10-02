@@ -58,7 +58,7 @@ public final class PageBadgeSourceContractTest {
 
     @Test public void positionsInTheSameOuterGutterAsSideMarksAndHidesWhenTooNarrow() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        String fn = method(reader, "function updatePageBadge(){", "\nwindow.addEventListener('resize'");
+        String fn = method(reader, "function updatePageBadge(){", "\nif(typeof window.addEventListener==='function')window.addEventListener('resize'");
         assertTrue("must measure the Mushaf's real rendered box, never assume a size",
             fn.contains("const rect=mushafEl.getBoundingClientRect();"));
         assertTrue("must never assign to the Mushaf element's own style — only #pagebadge may move",
@@ -87,7 +87,7 @@ public final class PageBadgeSourceContractTest {
     @Test public void recomputesEverywhereTheOtherMarksDo() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue("a screen rotation can change which gutter (if any) exists",
-            reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));"));
+            reader.contains("if(typeof window.addEventListener==='function')window.addEventListener('resize',()=>requestAnimationFrame(updatePageBadge));"));
         assertTrue("the very first render must position the badge before anything is visible",
             reader.contains("requestAnimationFrame(updateCenterMark);\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage);"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically, and the badge sits at its bottom edge, "
