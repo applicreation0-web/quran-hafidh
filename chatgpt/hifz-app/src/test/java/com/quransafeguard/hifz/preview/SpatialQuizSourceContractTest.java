@@ -51,6 +51,9 @@ public final class SpatialQuizSourceContractTest {
         assertTrue(reader.contains("function quizGuideLayer(svg)"));
         assertTrue(reader.contains("const line=(pageGeo.lines||[]).find"));
         assertTrue(reader.contains("quizVisibleLines.has(lineId)"));
+        assertTrue(reader.contains("Fail closed: whitespace/out-of-band taps are not snapped"));
+        assertFalse("placement taps must never select a nearest line",
+            reader.contains("lines.reduce((best,item)"));
         assertFalse(activity.contains("GridLayout"));
         assertFalse(activity.contains("15x"));
     }
