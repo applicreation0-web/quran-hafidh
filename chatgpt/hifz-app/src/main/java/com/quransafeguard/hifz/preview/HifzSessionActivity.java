@@ -184,6 +184,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            annotationEnabled = false;
+            annotationOverlay.setDrawingEnabled(false);
+        }
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
