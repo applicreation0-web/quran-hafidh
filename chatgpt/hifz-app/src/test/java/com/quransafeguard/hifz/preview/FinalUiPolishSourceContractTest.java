@@ -46,9 +46,10 @@ public final class FinalUiPolishSourceContractTest {
     @Test public void studyTafsirUsesOneCompactAlwaysClickableActionSeparatedFromPageSlider() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         assertFalse("Study Tafsir must not use the vertical icon-over-caption action", study.contains("Ui.roundAction(this, \"\", \"Tafsir\""));
-        assertTrue("Study Tafsir must use the compact text action", study.contains("Ui.smallButton(this, \"Tafsir\""));
-        assertTrue("Tafsir must remain easily tappable without dominating the toolbar", study.contains("button.setMinimumWidth(Ui.dp(this, 96))"));
-        assertTrue("Tafsir needs a readable compact text size", study.contains("button.setTextSize(14f)"));
+        assertFalse("Study Tafsir must not use a boxed smallButton", study.contains("Ui.smallButton(this, \"Tafsir\""));
+        assertTrue("Tafsir must stay visually light", study.contains("button.setBackgroundColor(android.graphics.Color.TRANSPARENT)"));
+        assertTrue("Tafsir keeps a generous touch target without a heavy rectangle", study.contains("button.setMinHeight(Ui.dp(this, 48))"));
+        assertTrue("Tafsir needs a readable compact text size", study.contains("button.setTextSize(13.5f)"));
         assertTrue("Tafsir must explain the missing selection instead of being disabled", study.contains("Touchez d’abord un verset pour ouvrir le Tafsir."));
         assertFalse("Tafsir action must never be disabled in Lecture", study.contains("tafsirButton.setEnabled(false)"));
         assertTrue("page slider must be clearly separated from Tafsir action", study.contains("railParams.topMargin = Ui.dp(this, 20)"));
