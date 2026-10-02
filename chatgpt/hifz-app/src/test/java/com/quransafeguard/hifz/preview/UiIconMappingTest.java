@@ -39,6 +39,8 @@ public final class UiIconMappingTest {
             {"Révéler", R.drawable.ic_ui_reveal},
             {"Repères", R.drawable.ic_ui_semantic_cues},
             {"Amorces", R.drawable.ic_ui_semantic_key},
+            {"Afficher les amorces", R.drawable.ic_ui_semantic_key},
+            {"Masquer les amorces", R.drawable.ic_ui_semantic_key},
             {"Afficher les repères", R.drawable.ic_ui_semantic_cues},
             {"Masquer les repères", R.drawable.ic_ui_semantic_cues_off},
             {"Annoter", R.drawable.ic_ui_edit},
