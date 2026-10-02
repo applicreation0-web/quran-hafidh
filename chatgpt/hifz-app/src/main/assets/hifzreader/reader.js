@@ -430,7 +430,8 @@ function semanticCueLayer(svg){
     const lineIndex=Math.max(0,(Number(cue.startLine)||1)-1);
     const line=allLines[lineIndex];if(!line)return;
 
-    // Exact phrase outline is drawn only from audited visual ranges; never infer word boxes.
+    // Exact amorce ranges reuse the same quiet fill grammar as Sabqi/Itqan.
+    // No outline is drawn around Quran ink.
     (cue.ranges||[]).forEach(range=>{
       const rline=allLines.find(x=>String(x.id)===String(range.lineId));if(!rline)return;
       const cells=rline.cells||[],from=Math.max(0,Number(range.fromCell)||0),to=Math.min(cells.length,Math.max(from,Number(range.toCell)||0));
@@ -439,40 +440,13 @@ function semanticCueLayer(svg){
       for(let i=from;i<to;i++){x0=Math.min(x0,Number(cells[i][0]));x1=Math.max(x1,Number(cells[i][1]));}
       if(!Number.isFinite(x0)||!Number.isFinite(x1)||x1<=x0)return;
       const rect=document.createElementNS(NS,'rect');
-      rect.setAttribute('x',x0-0.8);rect.setAttribute('y',Number(rline.top)+0.5);
-      rect.setAttribute('width',(x1-x0)+1.6);rect.setAttribute('height',Math.max(1,Number(rline.bottom)-Number(rline.top)-1));
-      rect.setAttribute('rx','1.6');rect.setAttribute('ry','1.6');
-      rect.setAttribute('fill','none');rect.setAttribute('stroke','#524f49');
-      rect.setAttribute('stroke-width',eink?'1.0':'0.75');rect.setAttribute('opacity',eink?'0.82':'0.62');
-      rect.setAttribute('pointer-events','none');
+      rect.setAttribute('x',x0);rect.setAttribute('y',Number(rline.top)+0.25);
+      rect.setAttribute('width',x1-x0);rect.setAttribute('height',Math.max(1,Number(rline.bottom)-Number(rline.top)-0.5));
+      rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
+      rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
+      rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','none');
       g.appendChild(rect);
     });
-
-    const cells=line.cells||[];if(!cells.length||!vb)return;
-    let minX=Infinity,maxX=-Infinity;
-    cells.forEach(cell=>{minX=Math.min(minX,Number(cell[0]));maxX=Math.max(maxX,Number(cell[1]));});
-    if(!Number.isFinite(minX)||!Number.isFinite(maxX))return;
-    const outerRight=currentPage%2===1;
-    const edge=outerRight?vb.x+vb.width:vb.x;
-    const gap=outerRight?edge-maxX:minX-edge;
-    if(gap<6)return; // never place a control on Quran ink when the physical margin is too thin
-    const x=outerRight?maxX+gap*.52:minX-gap*.52;
-    const y=(Number(line.top)+Number(line.bottom))/2;
-    const marker=document.createElementNS(NS,'g');
-    marker.setAttribute('role','button');marker.setAttribute('tabindex','0');
-    marker.setAttribute('aria-label','Repère '+index+(cue.title?' · '+cue.title:''));
-    const circle=document.createElementNS(NS,'circle');
-    circle.setAttribute('cx',x);circle.setAttribute('cy',y);circle.setAttribute('r',eink?'5.2':'4.6');
-    circle.setAttribute('fill','#faf8f0');circle.setAttribute('stroke','#524f49');circle.setAttribute('stroke-width',eink?'1':'0.8');
-    const label=document.createElementNS(NS,'text');
-    label.setAttribute('x',x);label.setAttribute('y',y+(eink?1.8:1.6));
-    label.setAttribute('text-anchor','middle');label.setAttribute('font-size',eink?'5.5':'5');
-    label.setAttribute('font-family','sans-serif');label.setAttribute('fill','#121211');label.textContent=String(index);
-    marker.appendChild(circle);marker.appendChild(label);
-    const activate=e=>{e.preventDefault();e.stopPropagation();N?.semanticCueTap?.(String(cue.id||''));};
-    marker.addEventListener('click',activate);
-    marker.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){activate(e)}});
-    g.appendChild(marker);
   });
   return g;
 }
@@ -552,7 +526,7 @@ function render(){
     if(quiz.childNodes.length)svg.appendChild(quiz);
   }
 
-  // Semantic markers/phrase outlines are always a final, non-destructive overlay.
+  // Semantic amorce highlights are always a final, non-destructive overlay.
   if(semanticCues.length){
     const cues=semanticCueLayer(svg);
     if(cues.childNodes.length)svg.appendChild(cues);
