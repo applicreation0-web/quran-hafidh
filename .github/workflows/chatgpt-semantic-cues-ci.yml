@@ -1,6 +1,9 @@
 name: ChatGPT semantic cues isolated CI
 
 on:
+  push:
+    branches:
+      - work/chatgpt-semantic-cues
   workflow_dispatch:
 
 permissions:
