@@ -97,15 +97,12 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         LinearLayout progress = Ui.cardAction(this, "", "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
-        LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
         geometryActions.add(progress);
-        geometryActions.add(settings);
         addWeighted(primary, study, 1f);
         addWeighted(primary, free, 1f);
         addWeighted(primary, progress, 1f);
-        addWeighted(primary, settings, 1f);
         root.addView(primary);
 
         TextView dashTitle = Ui.bookText(this, "Semaine", 17, true);
@@ -143,6 +140,12 @@ public final class MainActivity extends android.app.Activity {
         addWeighted(directEvening, renforcement, 1f);
         addWeighted(directEvening, consolidation, 1f);
         root.addView(directEvening);
+
+        root.addView(Ui.divider(this));
+        LinearLayout settings = Ui.settingRow(this, "Paramètres", "", v ->
+            startActivity(new Intent(this, SettingsActivity.class)));
+        geometryActions.add(settings);
+        root.addView(settings);
 
         setContentView(scroll);
         Ui.respectSystemBars(this, holder, 0, 0, 0, 0);
