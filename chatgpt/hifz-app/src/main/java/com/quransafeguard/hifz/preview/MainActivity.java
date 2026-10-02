@@ -115,7 +115,7 @@ public final class MainActivity extends android.app.Activity {
         dashboard.setPadding(0, 0, 0, 0);
         root.addView(dashboard);
 
-        TextView directTitle = Ui.bookText(this, "Accès rapide", 15, true);
+        TextView directTitle = Ui.bookText(this, "Autres séances", 15, true);
         directTitle.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 2));
         root.addView(directTitle);
         LinearLayout direct = Ui.row(this);
