@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -180,6 +181,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         feedback.setText("");
         setScoreButtonsEnabled(false);
         revealButton.setEnabled(true);
+        revealButton.setVisibility(View.VISIBLE);
 
         currentKind = availableKinds.get(questionCount % availableKinds.size());
         currentTarget = null;
@@ -251,6 +253,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         answerUnlocked = true;
         setScoreButtonsEnabled(true);
         revealButton.setEnabled(false);
+        revealButton.setVisibility(View.GONE);
         if (feedback.getText().length() == 0) feedback.setText("Réponse affichée · évaluez votre rappel.");
     }
 
@@ -281,9 +284,10 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     }
 
     private void setScoreButtonsEnabled(boolean enabled) {
-        if (exactButton != null) exactButton.setEnabled(enabled);
-        if (almostButton != null) almostButton.setEnabled(enabled);
-        if (reviewButton != null) reviewButton.setEnabled(enabled);
+        int visibility = enabled ? View.VISIBLE : View.GONE;
+        if (exactButton != null) { exactButton.setEnabled(enabled); exactButton.setVisibility(visibility); }
+        if (almostButton != null) { almostButton.setEnabled(enabled); almostButton.setVisibility(visibility); }
+        if (reviewButton != null) { reviewButton.setEnabled(enabled); reviewButton.setVisibility(visibility); }
     }
 
     private void updateScore() {
@@ -318,6 +322,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         prompt.setText(reason);
         feedback.setText("Quiz facultatif · aucun changement de progression.");
         revealButton.setEnabled(false);
+        revealButton.setVisibility(View.GONE);
         setScoreButtonsEnabled(false);
         updateScore();
     }
