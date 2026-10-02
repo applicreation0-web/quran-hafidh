@@ -15,11 +15,6 @@ let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
-let quizTargetLine=boot.quizTargetLine?String(boot.quizTargetLine):null;
-let quizVisibleLines=new Set((boot.quizVisibleLines||[]).map(String));
-let quizGuideVisible=boot.quizGuideVisible!==false;
-let quizCaptureLineTap=!!boot.quizCaptureLineTap;
-let quizIsolatedLine=boot.quizIsolatedLine?String(boot.quizIsolatedLine):null;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -162,17 +157,6 @@ function prepare(){
     p.removeAttribute('tabindex');
     p.onclick=e=>{
       e.stopPropagation();
-      if(quizCaptureLineTap&&pageGeo){
-        const svg=currentSvg(),ctm=svg&&svg.getScreenCTM();
-        if(svg&&ctm){
-          const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
-          const local=pt.matrixTransform(ctm.inverse());
-          const lines=pageGeo.lines||[];
-          const line=lines.find(item=>Number(item.top)<=local.y&&local.y<=Number(item.bottom));
-          // Fail closed: whitespace/out-of-band taps are not snapped to the nearest line.
-          if(line){N?.quizLineTap?.(String(line.id));return;}
-        }
-      }
       const [s,a]=k.split(':').map(Number);N?.verseTap(s,a);
     };
   });
@@ -231,7 +215,6 @@ function maskCandidates(lines,polys){
     cells.forEach((cell,ci)=>{
       if(range&&(ci<range.from||ci>=range.to))return;
       const key=lineId+':'+ci;
-      if(quizVisibleLines.has(lineId))return;
       if(semanticVisible.has(key))return;
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
@@ -377,49 +360,6 @@ function markerLayer(svg,polys,lines){
   return g;
 }
 
-function quizGuideLayer(svg){
-  const g=document.createElementNS(NS,'g');
-  g.setAttribute('class','quizlayer');
-  if(!pageGeo||!quizTargetLine||!quizGuideVisible)return g;
-  const line=(pageGeo.lines||[]).find(item=>String(item.id)===String(quizTargetLine));
-  if(!line||!(line.cells||[]).length)return g;
-  let x0=Infinity,x1=-Infinity;
-  (line.cells||[]).forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-  if(!Number.isFinite(x0)||!Number.isFinite(x1)||x1<=x0)return g;
-  const rect=document.createElementNS(NS,'rect');
-  rect.setAttribute('x',x0-1.8);rect.setAttribute('y',Number(line.top)+0.4);
-  rect.setAttribute('width',(x1-x0)+3.6);rect.setAttribute('height',Math.max(1,Number(line.bottom)-Number(line.top)-0.8));
-  rect.setAttribute('rx','2');rect.setAttribute('ry','2');
-  rect.setAttribute('fill','none');rect.setAttribute('stroke','#121211');
-  rect.setAttribute('stroke-width',eink?'1.3':'1.0');
-  rect.setAttribute('stroke-dasharray',eink?'3.2 2.2':'2.8 2');
-  rect.setAttribute('opacity','0.78');
-  rect.setAttribute('pointer-events','none');
-  g.appendChild(rect);
-  return g;
-}
-
-function applyQuizViewBox(svg){
-  if(!svg)return;
-  if(!svg.dataset.hifzOriginalViewBox){
-    svg.dataset.hifzOriginalViewBox=svg.getAttribute('viewBox')||'';
-  }
-  document.body.classList.toggle('quiz-isolated',!!quizIsolatedLine);
-  if(!quizIsolatedLine||!pageGeo){
-    const original=svg.dataset.hifzOriginalViewBox;
-    if(original)svg.setAttribute('viewBox',original);
-    return;
-  }
-  const line=(pageGeo.lines||[]).find(item=>String(item.id)===String(quizIsolatedLine));
-  if(!line||!(line.cells||[]).length)return;
-  let x0=Infinity,x1=-Infinity;
-  (line.cells||[]).forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-  const top=Number(line.top),bottom=Number(line.bottom);
-  if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
-  const padX=12,padY=3;
-  svg.setAttribute('viewBox',[(x0-padX),(top-padY),(x1-x0)+padX*2,(bottom-top)+padY*2].join(' '));
-}
-
 function semanticCueLayer(svg){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','semanticcuelayer');
@@ -454,12 +394,11 @@ function semanticCueLayer(svg){
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
-  applyQuizViewBox(svg);
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
     p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer,.quizlayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
@@ -520,12 +459,6 @@ function render(){
     if(weak.childNodes.length)svg.appendChild(weak);
   }
 
-  // Optional quiz guide uses the exact physical line geometry, never an approximate grid.
-  if(quizTargetLine&&quizGuideVisible){
-    const quiz=quizGuideLayer(svg);
-    if(quiz.childNodes.length)svg.appendChild(quiz);
-  }
-
   // Semantic amorce highlights are always a final, non-destructive overlay.
   if(semanticCues.length){
     const cues=semanticCueLayer(svg);
@@ -575,23 +508,6 @@ window.HifzReader={
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setSemanticCues(cues,anchorMaskMode){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;render()},
-  setQuizGuide(targetLineId,visibleLineIds){
-    quizTargetLine=targetLineId?String(targetLineId):null;
-    quizVisibleLines=new Set((visibleLineIds||[]).map(String));
-    quizGuideVisible=true;quizCaptureLineTap=false;quizIsolatedLine=null;
-    render();
-  },
-  setQuizState(targetLineId,visibleLineIds,guideVisible,captureLineTap,isolatedLineId){
-    quizTargetLine=targetLineId?String(targetLineId):null;
-    quizVisibleLines=new Set((visibleLineIds||[]).map(String));
-    quizGuideVisible=!!guideVisible;
-    quizCaptureLineTap=!!captureLineTap;
-    quizIsolatedLine=isolatedLineId?String(isolatedLineId):null;
-    render();
-    requestAnimationFrame(updateSideMarks);
-    requestAnimationFrame(updateCenterMark);
-    requestAnimationFrame(updatePageBadge);
-  },
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
@@ -599,6 +515,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,quizGuideLayer};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys};
 prepare();
 N?.ready();
