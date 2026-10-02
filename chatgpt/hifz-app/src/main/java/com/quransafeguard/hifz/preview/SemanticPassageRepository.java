@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.content.Context;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -133,30 +134,36 @@ final class SemanticPassageRepository {
     }
 
     JSONArray readerCuesForPage(int page) {
-        JSONArray out = new JSONArray();
-        for (Cue cue : cuesForPage(page)) {
-            if (!cue.anchorOnCurrentPage) continue;
-            JSONObject item = new JSONObject();
-            item.put("id", cue.passageId);
-            item.put("index", cue.indexOnPage);
-            item.put("title", cue.title);
-            item.put("anchor", cue.anchorArabic);
-            item.put("anchorWordCount", cue.anchorWordCount);
-            item.put("startLine", cue.startLine);
-            JSONArray ranges = new JSONArray();
-            for (CellRange range : cue.visualRanges) {
-                ranges.put(new JSONObject()
-                    .put("lineId", range.lineId)
-                    .put("fromCell", range.fromCell)
-                    .put("toCell", range.toCell));
+        try {
+            JSONArray out = new JSONArray();
+            for (Cue cue : cuesForPage(page)) {
+                if (!cue.anchorOnCurrentPage) continue;
+                JSONObject item = new JSONObject();
+                item.put("id", cue.passageId);
+                item.put("index", cue.indexOnPage);
+                item.put("title", cue.title);
+                item.put("anchor", cue.anchorArabic);
+                item.put("anchorWordCount", cue.anchorWordCount);
+                item.put("startLine", cue.startLine);
+                JSONArray ranges = new JSONArray();
+                for (CellRange range : cue.visualRanges) {
+                    ranges.put(new JSONObject()
+                        .put("lineId", range.lineId)
+                        .put("fromCell", range.fromCell)
+                        .put("toCell", range.toCell));
+                }
+                item.put("ranges", ranges);
+                out.put(item);
             }
-            item.put("ranges", ranges);
-            out.put(item);
+            return out;
+        } catch (JSONException invalidReaderPayload) {
+            // Parsed corpus values are already validated. If JSON serialization still fails,
+            // fail closed instead of leaking a partial/approximate cue payload to the reader.
+            throw new IllegalStateException("semantic cue serialization failed", invalidReaderPayload);
         }
-        return out;
     }
 
-    private static void parseInto(String raw, Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) {
+    private static void parseInto(String raw, Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) throws JSONException {
         JSONObject root = new JSONObject(raw);
         require("V2.1".equals(root.optString("schema_version", "")), "wrong semantic schema");
         require(!root.optBoolean("boundaries_changed", true), "semantic boundaries changed");
