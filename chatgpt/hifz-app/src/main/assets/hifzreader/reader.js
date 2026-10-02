@@ -168,13 +168,8 @@ function prepare(){
           const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
           const local=pt.matrixTransform(ctm.inverse());
           const lines=pageGeo.lines||[];
-          let line=lines.find(item=>Number(item.top)<=local.y&&local.y<=Number(item.bottom));
-          if(!line&&lines.length){
-            line=lines.reduce((best,item)=>{
-              const d=Math.abs(((Number(item.top)+Number(item.bottom))/2)-local.y);
-              return !best||d<best.d?{item,d}:best;
-            },null)?.item;
-          }
+          const line=lines.find(item=>Number(item.top)<=local.y&&local.y<=Number(item.bottom));
+          // Fail closed: whitespace/out-of-band taps are not snapped to the nearest line.
           if(line){N?.quizLineTap?.(String(line.id));return;}
         }
       }
