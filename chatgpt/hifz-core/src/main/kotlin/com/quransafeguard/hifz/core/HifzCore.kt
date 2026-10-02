@@ -150,7 +150,7 @@ object HifzSchedule {
     const val ANCHORING_ENVELOPE_MINUTES = 60
     const val MAINTENANCE_MINUTES = 45
     /** Daily, mandatory, masked-by-default recall test that runs before the passive Entretien. */
-    const val ACTIVE_REVIEW_MINUTES = 15
+    const val ACTIVE_REVIEW_MINUTES = 20
 
     /**
      * Sunday is always reserved for Révision, so only the other six days can be reassigned — the
