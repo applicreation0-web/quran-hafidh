@@ -3,7 +3,6 @@ package com.quransafeguard.hifz.preview;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -14,11 +13,9 @@ import com.quransafeguard.hifz.core.VerseRef;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -93,13 +90,9 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     private void buildQuestionCorpus() {
         HifzPrefs.ProgressionSnapshot snapshot = prefs.progressionSnapshotV6();
         Set<String> acquired = new HashSet<>(snapshot.acquired);
-        Map<String, GeometryRepository.LineMeta> acquiredById = new HashMap<>();
         for (int i = 0; i < geometry.lineCount(); i++) {
             GeometryRepository.LineMeta line = geometry.line(i);
-            if (acquired.contains(line.id)) {
-                acquiredLines.add(line);
-                acquiredById.put(line.id, line);
-            }
+            if (acquired.contains(line.id)) acquiredLines.add(line);
         }
 
         for (GeometryRepository.LineMeta line : acquiredLines) {
