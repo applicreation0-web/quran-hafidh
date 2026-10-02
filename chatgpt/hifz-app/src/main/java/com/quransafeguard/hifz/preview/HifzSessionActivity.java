@@ -51,7 +51,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
-    private TextView program, progress, timerText, activeCuePrompt;
+    private TextView program, progress, timerText;
     private LinearLayout actions, audioHost;
     private HifzAudioDialog audioPlayer;
     private SessionClock clock;
@@ -172,17 +172,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         meta.addView(timerText);
         root.addView(meta);
 
-        activeCuePrompt = Ui.bookText(this, "", 20f, true);
-        activeCuePrompt.setGravity(Gravity.CENTER);
-        activeCuePrompt.setTextDirection(View.TEXT_DIRECTION_RTL);
-        activeCuePrompt.setPadding(Ui.dp(this, 12), Ui.dp(this, 7), Ui.dp(this, 12), Ui.dp(this, 7));
-        activeCuePrompt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_ui_semantic_key, 0, 0, 0);
-        activeCuePrompt.setCompoundDrawablePadding(Ui.dp(this, 8));
-        activeCuePrompt.setContentDescription("Amorce sémantique");
-        activeCuePrompt.setVisibility(View.GONE);
-        root.addView(activeCuePrompt, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
         audioHost = Ui.column(this);
         audioHost.setPadding(0,0,0,0);
         audioHost.setVisibility(View.GONE);
@@ -208,12 +197,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
-        annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
-        annotationButton.setSelected(annotationEnabled);
-        controlBar.addView(annotationButton);
-        controlBar.addView(Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke()));
-        controlBar.addView(Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage()));
-        controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
+        if (!MURAJAAH_ACTIVE.equals(mode)) {
+            annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+            annotationButton.setSelected(annotationEnabled);
+            controlBar.addView(annotationButton);
+            controlBar.addView(Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke()));
+            controlBar.addView(Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage()));
+            controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
+        }
         root.addView(controlBar);
 
         setContentView(root);
@@ -237,7 +228,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahFinishButton = null;
         awaitingValidation = false;
         weakMarkMode = false;
-        if (activeCuePrompt != null && !MURAJAAH_ACTIVE.equals(mode)) activeCuePrompt.setVisibility(View.GONE);
         if (!MURAJAAH_ACTIVE.equals(mode)) activeRecallCue = null;
         unitFirstPage = 1;
         unitLastPage = 1;
@@ -1114,7 +1104,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         String today = sessionDate.toString();
         if (today.equals(prefs.lastActiveMurajaahDate())) {
             sessionCompleted = true;
-            activeCuePrompt.setVisibility(View.GONE);
             program.setText("Révision active · séance validée");
             progress.setText(prefs.lastActiveMurajaahLabel().isEmpty()
                 ? "Curseur sauvegardé"
@@ -1123,7 +1112,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         if (!prefs.isActiveMurajaahCursorValid()) {
             sessionCompleted = true;
-            activeCuePrompt.setVisibility(View.GONE);
             program.setText("Révision active · curseur à vérifier");
             progress.setText("Le corpus acquis ne contient pas ce curseur.");
             return;
@@ -1131,7 +1119,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (semanticPassages == null || !semanticPassages.isAvailable()) {
             sessionCompleted = true;
             clock.pause();
-            activeCuePrompt.setVisibility(View.GONE);
             program.setText("Révision active · Amorces indisponibles");
             progress.setText("Le corpus sémantique V2.1 doit être valide pour cette séance.");
             return;
@@ -1157,7 +1144,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (activeRecallCue == null) {
             sessionCompleted = true;
             clock.pause();
-            activeCuePrompt.setVisibility(View.GONE);
             program.setText("Révision active · aucun passage disponible");
             progress.setText("Aucun passage sémantique complet n’est encore dans le corpus acquis.");
             return;
@@ -1172,19 +1158,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask = 100;
         currentLineIds = geometry.lineIdsOnPage(currentPage);
 
-        // The only recall cue is the audited Quranic amorce shown in this strip. The Mushaf itself
-        // stays fully masked until the learner deliberately holds Révéler.
-        mushaf.clearSemanticCues();
-        mushaf.setLandmarkLines(null, null);
+        // Recall cues stay in their real Mushaf positions. No duplicated Arabic prompt is shown
+        // above the page; the page itself is the spatial memory map.
         mushaf.setMaskFollowsSelection(false);
         mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
-        activeCuePrompt.setText(activeRecallCue.anchorArabic);
-        activeCuePrompt.setVisibility(View.VISIBLE);
+        applyActiveRevisionPageCues();
 
         program.setText("Révision active · Amorces · " + targetMinutes() + " min");
         updateMurajaahProgress();
         showCurrent();
         updateMurajaahActions();
+    }
+
+    private void applyActiveRevisionPageCues() {
+        if (mushaf == null || semanticPassages == null || !semanticPassages.isAvailable()) return;
+        boolean exact = semanticPassages.hasCompleteExactGeometryForPage(currentPage);
+        mushaf.setLandmarkLines(null, null);
+        mushaf.setSemanticCues(semanticPassages.readerCuesForPage(currentPage), exact);
     }
 
     private void advanceActiveRecallCue() {
@@ -1210,9 +1200,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentSelection = Collections.emptyList();
         currentLineIds = geometry.lineIdsOnPage(currentPage);
         currentMask = 100;
-        mushaf.clearSemanticCues();
-        mushaf.setLandmarkLines(null, null);
-        activeCuePrompt.setText(next.anchorArabic);
+        applyActiveRevisionPageCues();
         showCurrent();
         updateMurajaahProgress();
         updateMurajaahActions();
@@ -1223,22 +1211,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         if (active) {
             if (activeRecallCue == null) return;
-            LinearLayout nextAction = Ui.roundAction(this, "", "Amorce suivante", v -> advanceActiveRecallCue());
-            actions.addView(nextAction);
-
             LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
             revealButton = (Button) revealAction.getChildAt(0);
             configureRevealButton(revealButton);
             actions.addView(revealAction);
             updateRevealButton();
 
-            LinearLayout markAction = Ui.roundAction(this, "", weakMarkMode ? "Touchez le verset…" : "Marquer", v -> {
-                weakMarkMode = !weakMarkMode;
-                updateMurajaahActions();
-            });
-            actions.addView(markAction);
+            LinearLayout nextAction = Ui.roundAction(this, "", "Suivant", v -> advanceActiveRecallCue());
+            actions.addView(nextAction);
 
-            LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
+            LinearLayout validateAction = Ui.roundAction(this, "", "Terminer", v -> finishMurajaah());
             murajaahFinishButton = (Button) validateAction.getChildAt(0);
             murajaahFinishButton.setEnabled(murajaahActualEnd != null);
             actions.addView(validateAction);
@@ -1382,6 +1364,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         if (MURAJAAH_ACTIVE.equals(mode)) {
+            long targetMs = targetMinutes() * 60_000L;
+            long elapsedMs = Math.max(0L, clock.elapsedMs());
+            if (elapsedMs < targetMs) {
+                long totalSeconds = elapsedMs / 1000L;
+                String elapsedLabel = String.format(java.util.Locale.ROOT, "%d:%02d",
+                    totalSeconds / 60L, totalSeconds % 60L);
+                new AlertDialog.Builder(this)
+                    .setTitle("Terminer la séance ?")
+                    .setMessage("Temps effectué : " + elapsedLabel + " / " + targetMinutes()
+                        + ":00. La séance n’a pas encore atteint sa durée cible.")
+                    .setNegativeButton("Continuer", null)
+                    .setPositiveButton("Terminer quand même", (d, w) -> completeMurajaahValidation())
+                    .show();
+                return;
+            }
             completeMurajaahValidation();
             return;
         }
@@ -1724,8 +1721,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
                 currentLineIds=geometry.lineIdsOnPage(page);
-                mushaf.clearSemanticCues();
-                mushaf.setLandmarkLines(null, null);
+                applyActiveRevisionPageCues();
                 prefs.setActiveMurajaahPage(page);
             } else {
                 prefs.setMurajaahPage(page);
