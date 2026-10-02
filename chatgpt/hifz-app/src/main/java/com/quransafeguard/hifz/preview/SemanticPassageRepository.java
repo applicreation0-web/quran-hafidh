@@ -8,21 +8,29 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Read-only semantic passage index.
+ * Read-only index over the frozen V2.1 semantic corpus.
  *
- * The app deliberately treats this corpus as optional data: if the audited V2.1 asset is absent,
- * malformed, or incomplete, every existing Quran/Hifz flow keeps working exactly as before.
- * Passage boundaries are never inferred at runtime.
+ * The semantic JSON is never repaired or normalized at runtime. Any schema/hash/completeness
+ * mismatch disables this optional feature while the rest of Quran Haafidh keeps its prior behavior.
+ * Exact visual geometry is deliberately NOT inferred from reader109 line cells: those cells are
+ * source-ink groups, not linguistic words.
  */
 final class SemanticPassageRepository {
     static final String ASSET_PATH = "semantic/semantic_passages_v2_1.json";
+    static final String EXPECTED_SHA256 =
+        "b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7";
+    static final int EXPECTED_GLOBAL_PASSAGES = 1256;
+    static final int EXPECTED_PAGE_RECORDS = 1644;
 
     static final class CellRange {
         final String lineId;
@@ -42,18 +50,30 @@ final class SemanticPassageRepository {
         final int indexOnPage;
         final String title;
         final String anchorArabic;
+        final int anchorWordCount;
         final int startLine;
+        final int firstWordId;
+        final int lastWordId;
+        final int firstWordPosition;
+        final int lastWordPosition;
         final boolean anchorOnCurrentPage;
         final List<CellRange> visualRanges;
 
         Cue(String passageId, int page, int indexOnPage, String title, String anchorArabic,
-            int startLine, boolean anchorOnCurrentPage, List<CellRange> visualRanges) {
+            int anchorWordCount, int startLine, int firstWordId, int lastWordId,
+            int firstWordPosition, int lastWordPosition, boolean anchorOnCurrentPage,
+            List<CellRange> visualRanges) {
             this.passageId = passageId;
             this.page = page;
             this.indexOnPage = indexOnPage;
             this.title = title;
             this.anchorArabic = anchorArabic;
+            this.anchorWordCount = anchorWordCount;
             this.startLine = startLine;
+            this.firstWordId = firstWordId;
+            this.lastWordId = lastWordId;
+            this.firstWordPosition = firstWordPosition;
+            this.lastWordPosition = lastWordPosition;
             this.anchorOnCurrentPage = anchorOnCurrentPage;
             this.visualRanges = Collections.unmodifiableList(new ArrayList<>(visualRanges));
         }
@@ -70,9 +90,12 @@ final class SemanticPassageRepository {
     SemanticPassageRepository(Context context) {
         boolean loaded = false;
         try {
-            String raw = readAsset(context, ASSET_PATH);
-            parseInto(raw, byPage, byId);
-            loaded = !byPage.isEmpty();
+            byte[] raw = readAsset(context, ASSET_PATH);
+            if (!EXPECTED_SHA256.equals(sha256(raw))) {
+                throw new IllegalStateException("semantic V2.1 SHA-256 mismatch");
+            }
+            parseInto(new String(raw, StandardCharsets.UTF_8), byPage, byId);
+            loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES;
         } catch (Throwable unavailableAsset) {
             // Fail closed: semantic cues are an optional enhancement, never a reader dependency.
             byPage.clear();
@@ -96,8 +119,8 @@ final class SemanticPassageRepository {
 
     /**
      * Exact blind-recall mode is enabled only when every anchor actually starting on this page has
-     * audited visual cell ranges. A page with no on-page anchor, or only line-level metadata,
-     * deliberately falls back to the existing first/last-line landmarks.
+     * separately verified visual geometry. V2.1 itself contains no word geometry, so importing only
+     * the frozen corpus intentionally keeps this false and preserves the proven legacy landmarks.
      */
     boolean hasCompleteExactGeometryForPage(int page) {
         boolean found = false;
@@ -118,6 +141,7 @@ final class SemanticPassageRepository {
             item.put("index", cue.indexOnPage);
             item.put("title", cue.title);
             item.put("anchor", cue.anchorArabic);
+            item.put("anchorWordCount", cue.anchorWordCount);
             item.put("startLine", cue.startLine);
             JSONArray ranges = new JSONArray();
             for (CellRange range : cue.visualRanges) {
@@ -134,46 +158,114 @@ final class SemanticPassageRepository {
 
     private static void parseInto(String raw, Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) {
         JSONObject root = new JSONObject(raw);
+        require("V2.1".equals(root.optString("schema_version", "")), "wrong semantic schema");
+        require(!root.optBoolean("boundaries_changed", true), "semantic boundaries changed");
+        require(root.optInt("global_passage_count", 0) == EXPECTED_GLOBAL_PASSAGES,
+            "wrong global passage count");
+
+        JSONArray globals = root.optJSONArray("global_passages");
         JSONArray records = root.optJSONArray("page_passage_records");
-        if (records == null) throw new IllegalStateException("semantic passage records missing");
+        require(globals != null && globals.length() == EXPECTED_GLOBAL_PASSAGES,
+            "global_passages incomplete");
+        require(records != null && records.length() == EXPECTED_PAGE_RECORDS,
+            "page_passage_records incomplete");
+
+        Set<String> globalIds = new HashSet<>();
+        for (int i = 0; i < globals.length(); i++) {
+            JSONObject row = globals.getJSONObject(i);
+            String id = requiredText(row, "passage_global_id");
+            require(globalIds.add(id), "duplicate global passage id " + id);
+            requiredAuditedFields(row);
+        }
+
+        Set<Integer> pages = new HashSet<>();
+        Set<String> recordIds = new HashSet<>();
+        Map<String, Integer> onPageCounts = new HashMap<>();
 
         for (int i = 0; i < records.length(); i++) {
             JSONObject row = records.getJSONObject(i);
             int page = row.optInt("page", 0);
-            if (page < 1 || page > 604) continue;
-            String id = row.optString("passage_global_id", "").trim();
-            if (id.isEmpty()) continue;
-            boolean anchorOnPage = yes(row.opt("anchor_is_on_current_page"));
-            int index = Math.max(1, row.optInt("passage_index_on_page", 1));
-            int startLine = Math.max(1, row.optInt("start_line", 1));
-            String title = row.optString("title_fr", "").trim();
-            String anchor = row.optString("anchor_arabic", "").trim();
+            require(page >= 1 && page <= 604, "page outside Mushaf");
+            pages.add(page);
 
-            ArrayList<CellRange> ranges = new ArrayList<>();
-            JSONArray geometry = row.optJSONArray("visual_ranges");
-            if (geometry == null) geometry = row.optJSONArray("anchor_visual_ranges");
-            if (geometry != null) {
-                for (int j = 0; j < geometry.length(); j++) {
-                    JSONObject range = geometry.optJSONObject(j);
-                    if (range == null) continue;
-                    String lineId = range.optString("line_id", range.optString("lineId", "")).trim();
-                    int from = range.has("from_cell") ? range.optInt("from_cell", -1) : range.optInt("fromCell", -1);
-                    int to = range.has("to_cell") ? range.optInt("to_cell", -1) : range.optInt("toCell", -1);
-                    if (!lineId.isEmpty() && from >= 0 && to > from) ranges.add(new CellRange(lineId, from, to));
-                }
+            String id = requiredText(row, "passage_global_id");
+            require(globalIds.contains(id), "unknown passage id " + id);
+            recordIds.add(id);
+            int index = row.optInt("passage_index_on_page", 0);
+            require(index >= 1, "missing passage_index_on_page for " + id);
+
+            int startLine = row.optInt("start_line", 0);
+            int endLine = row.optInt("end_line", 0);
+            require(startLine >= 1 && endLine >= startLine, "invalid line span for " + id);
+
+            String title = requiredText(row, "title_fr_v2_1");
+            String anchor = requiredText(row, "anchor_arabic_v2_1");
+            int anchorWordCount = row.optInt("anchor_word_count_v2_1", 0);
+            require(anchorWordCount >= 1, "invalid audited anchor length for " + id);
+            require("AUDITED_V2_1".equals(requiredText(row, "minimality_verified_v2_1")),
+                "anchor is not audited V2.1 for " + id);
+
+            // These are source locator fields only. They are retained for future exact geometry
+            // joins but never converted into line-cell positions by arithmetic or guesswork.
+            int firstWordId = positiveInt(row, "first_word_id");
+            int lastWordId = positiveInt(row, "last_word_id");
+            int firstWordPosition = positiveInt(row, "first_word_position");
+            int lastWordPosition = positiveInt(row, "last_word_position");
+            boolean anchorOnPage = yes(row.opt("anchor_is_on_current_page"));
+            if (anchorOnPage) {
+                onPageCounts.put(id, onPageCounts.getOrDefault(id, 0) + 1);
             }
 
-            Cue cue = new Cue(id, page, index, title, anchor, startLine, anchorOnPage, ranges);
+            // The frozen V2.1 JSON has no visual_ranges. Keeping this empty is intentional:
+            // reader109 cells are ink groups, not words, so manufacturing ranges here would create
+            // false precision and leak semantic help into blind recall.
+            List<CellRange> ranges = Collections.emptyList();
+
+            Cue cue = new Cue(id, page, index, title, anchor, anchorWordCount, startLine,
+                firstWordId, lastWordId, firstWordPosition, lastWordPosition, anchorOnPage, ranges);
             byPage.computeIfAbsent(page, ignored -> new ArrayList<>()).add(cue);
-            // Prefer the occurrence that actually contains the anchor for title lookup.
             Cue previous = byId.get(id);
             if (previous == null || (!previous.anchorOnCurrentPage && anchorOnPage)) byId.put(id, cue);
+        }
+
+        require(pages.size() == 604, "semantic page coverage incomplete");
+        require(recordIds.equals(globalIds), "page records do not cover global passages");
+        require(byId.size() == EXPECTED_GLOBAL_PASSAGES, "semantic id index incomplete");
+        require(onPageCounts.size() == EXPECTED_GLOBAL_PASSAGES,
+            "not every passage has an on-page anchor occurrence");
+        for (String id : globalIds) {
+            require(onPageCounts.getOrDefault(id, 0) == 1,
+                "passage must have exactly one on-page anchor occurrence: " + id);
         }
 
         for (Map.Entry<Integer, List<Cue>> entry : byPage.entrySet()) {
             entry.getValue().sort((a, b) -> Integer.compare(a.indexOnPage, b.indexOnPage));
             entry.setValue(Collections.unmodifiableList(new ArrayList<>(entry.getValue())));
         }
+    }
+
+    private static void requiredAuditedFields(JSONObject row) {
+        requiredText(row, "title_fr_v2_1");
+        requiredText(row, "anchor_arabic_v2_1");
+        require(row.optInt("anchor_word_count_v2_1", 0) >= 1, "invalid audited anchor length");
+        require("AUDITED_V2_1".equals(requiredText(row, "minimality_verified_v2_1")),
+            "global anchor is not audited V2.1");
+    }
+
+    private static String requiredText(JSONObject row, String key) {
+        String value = row.optString(key, "").trim();
+        require(!value.isEmpty(), "missing " + key);
+        return value;
+    }
+
+    private static int positiveInt(JSONObject row, String key) {
+        int value = row.optInt(key, 0);
+        require(value >= 1, "invalid " + key);
+        return value;
+    }
+
+    private static void require(boolean condition, String message) {
+        if (!condition) throw new IllegalStateException(message);
     }
 
     private static boolean yes(Object raw) {
@@ -183,13 +275,20 @@ final class SemanticPassageRepository {
         return "YES".equalsIgnoreCase(value) || "TRUE".equalsIgnoreCase(value) || "1".equals(value);
     }
 
-    private static String readAsset(Context context, String path) throws Exception {
+    private static byte[] readAsset(Context context, String path) throws Exception {
         try (InputStream input = context.getAssets().open(path);
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[8192];
             int count;
             while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
-            return new String(output.toByteArray(), StandardCharsets.UTF_8);
+            return output.toByteArray();
         }
+    }
+
+    private static String sha256(byte[] data) throws Exception {
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(data);
+        StringBuilder hex = new StringBuilder(digest.length * 2);
+        for (byte value : digest) hex.append(String.format(java.util.Locale.ROOT, "%02x", value & 0xff));
+        return hex.toString();
     }
 }
