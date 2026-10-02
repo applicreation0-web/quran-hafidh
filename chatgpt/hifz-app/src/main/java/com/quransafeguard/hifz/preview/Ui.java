@@ -188,7 +188,7 @@ final class Ui {
         }
         String lower = label.toLowerCase(Locale.ROOT);
         // Révision/Entretien deliberately never get a duration cue here: this single card opens a
-        // choice between Révision active (15 min) and Entretien (its own dynamic duration), so any
+        // choice between Révision active (20 min) and Entretien (its own dynamic duration), so any
         // one number shown on the card itself would only ever match one of the two — the
         // RevisionSelector dialog already states both correctly once tapped. "Au choix" still fills
         // the cue slot (rather than leaving it empty) so this card keeps the same three-line height
@@ -420,8 +420,10 @@ final class Ui {
         if (s.contains("sabqi")) return R.drawable.ic_hifz_new_lesson;
         if (s.contains("itq")) return R.drawable.ic_hifz_anchor;
         if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_hifz_maintenance;
+        if (s.contains("annoter") || s.contains("crayon")) return R.drawable.ic_ui_edit;
         if (s.contains("annuler la note")) return R.drawable.ic_ui_undo;
         if (s.contains("annuler")) return R.drawable.ic_ui_reset;
+        if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("effacer")) return R.drawable.ic_ui_delete;
         return 0;
     }
