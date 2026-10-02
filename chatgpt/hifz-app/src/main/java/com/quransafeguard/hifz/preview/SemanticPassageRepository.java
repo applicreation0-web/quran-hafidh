@@ -213,7 +213,7 @@ final class SemanticPassageRepository {
                 "anchor is not audited V2.1 for " + id);
 
             // These are source locator fields only. They are retained for future exact geometry
-            // joins but never converted into line-cell positions by arithmetic or guesswork.
+            // joins but never converted into line-cell positions by arithmetic or inference.
             int firstWordId = positiveInt(row, "first_word_id");
             int lastWordId = positiveInt(row, "last_word_id");
             int firstWordPosition = positiveInt(row, "first_word_position");
