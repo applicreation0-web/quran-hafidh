@@ -384,6 +384,7 @@ function semanticCueLayer(svg){
       rect.setAttribute('rx','1.6');rect.setAttribute('ry','1.6');
       rect.setAttribute('fill','none');rect.setAttribute('stroke','#524f49');
       rect.setAttribute('stroke-width',eink?'1.0':'0.75');rect.setAttribute('opacity',eink?'0.82':'0.62');
+      rect.setAttribute('pointer-events','none');
       g.appendChild(rect);
     });
 
