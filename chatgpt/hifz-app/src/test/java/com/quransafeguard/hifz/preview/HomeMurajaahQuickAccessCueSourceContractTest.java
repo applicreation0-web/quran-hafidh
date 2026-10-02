@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
  * Reported directly: the home screen's single "Révision" quick-access card showed one duration
  * cue (first a hardcoded "30 min", later a dynamic number picking whichever of the daily
  * active/passive pair was due next) — but tapping the card always opens a choice between BOTH
- * Révision active (15 min) and Entretien (its own dynamic duration), so any single number shown
+ * Révision active (20 min) and Entretien (its own dynamic duration), so any single number shown
  * on the outer card can only ever match one of the two and misleads about the other.
  *
  * Reported again after the fix: dropping the cue text entirely left this card with only two
@@ -58,7 +58,7 @@ public final class HomeMurajaahQuickAccessCueSourceContractTest {
     @Test public void revisionSelectorDialogStillStatesBothDurationsCorrectly() throws Exception {
         String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
         assertTrue("Révision active's own fixed duration must still be shown once the dialog opens",
-            selector.contains("\"Révision active · 15 min · \""));
+            selector.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
         assertTrue("Entretien must keep using the real dynamic J-15 duration, not a flat number",
             selector.contains("MaintenanceCoveragePolicy.minutes("));
     }
