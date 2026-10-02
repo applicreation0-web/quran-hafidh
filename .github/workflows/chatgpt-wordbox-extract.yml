@@ -1,0 +1,49 @@
+name: ChatGPT temporary word-box extraction
+
+on:
+  push:
+    branches:
+      - work/chatgpt-semantic-cues
+
+permissions:
+  contents: read
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download public Tibyan release and extract audited geometry DB
+        run: |
+          set -euo pipefail
+          url="https://github.com/helalrules7/tibyan/releases/download/v0.4.0/app-release.apk"
+          curl -L --fail --retry 3 -o /tmp/tibyan.apk "$url"
+          echo "f7c9b8fd91c7b3e620267eb325e6acde240215b6bfb401681991f0ad69d75f83  /tmp/tibyan.apk" | sha256sum -c -
+          db_path="$(unzip -Z1 /tmp/tibyan.apk | grep -E '(^|/)content\.db$' | head -n1)"
+          test -n "$db_path"
+          unzip -p /tmp/tibyan.apk "$db_path" > /tmp/content.db
+          test "$(sqlite3 /tmp/content.db 'SELECT COUNT(*) FROM word_box;')" = "77430"
+          mkdir -p /tmp/wordbox-export
+          sqlite3 -header -csv /tmp/content.db \
+            'SELECT surah,ayah,word,page,x0/10.0 AS x0,y0/10.0 AS y0,x1/10.0 AS x1,y1/10.0 AS y1,exact FROM word_box ORDER BY page,surah,ayah,word;' \
+            > /tmp/wordbox-export/word_box.csv
+          cat > /tmp/wordbox-export/PROVENANCE.txt <<'EOF'
+          source_repo=helalrules7/tibyan
+          source_commit=159f210280a5423fff32ffe2027bd89a2cd89161
+          source_release=v0.4.0
+          source_apk_sha256=f7c9b8fd91c7b3e620267eb325e6acde240215b6bfb401681991f0ad69d75f83
+          table=word_box
+          row_count=77430
+          coordinates=viewBox units (source stores tenths; export divides by 10)
+          exact=1 means every word in the verse matched its predicted source-SVG pieces
+          EOF
+          sha256sum /tmp/wordbox-export/word_box.csv > /tmp/wordbox-export/SHA256SUMS.txt
+
+      - name: Upload word-box export
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-wordbox-export-${{ github.sha }}
+          path: /tmp/wordbox-export/
+          retention-days: 2
