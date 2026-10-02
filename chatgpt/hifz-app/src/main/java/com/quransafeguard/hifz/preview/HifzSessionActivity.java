@@ -51,7 +51,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
-    private TextView program, progress, timerText;
+    private TextView program, progress, timerText, activeCuePrompt;
     private LinearLayout actions, audioHost;
     private HifzAudioDialog audioPlayer;
     private SessionClock clock;
@@ -72,6 +72,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private ItqanPlanSnapshot itqanBonusDecision;
     private GeometryRepository.EligibleLinePlan murajaahPlan;
     private VerseRef murajaahActualEnd;
+    private SemanticPassageRepository.Cue activeRecallCue;
     private boolean timedSessionLimitReached;
     private boolean repActionLocked;
     private boolean hasShown;
@@ -169,6 +170,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         meta.addView(timerText);
         root.addView(meta);
 
+        activeCuePrompt = Ui.bookText(this, "", 20f, true);
+        activeCuePrompt.setGravity(Gravity.CENTER);
+        activeCuePrompt.setTextDirection(View.TEXT_DIRECTION_RTL);
+        activeCuePrompt.setPadding(Ui.dp(this, 12), Ui.dp(this, 7), Ui.dp(this, 12), Ui.dp(this, 7));
+        activeCuePrompt.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_ui_semantic_key, 0, 0, 0);
+        activeCuePrompt.setCompoundDrawablePadding(Ui.dp(this, 8));
+        activeCuePrompt.setContentDescription("Amorce sémantique");
+        activeCuePrompt.setVisibility(View.GONE);
+        root.addView(activeCuePrompt, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
         audioHost = Ui.column(this);
         audioHost.setPadding(0,0,0,0);
         audioHost.setVisibility(View.GONE);
@@ -213,6 +225,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahFinishButton = null;
         awaitingValidation = false;
         weakMarkMode = false;
+        if (activeCuePrompt != null && !MURAJAAH_ACTIVE.equals(mode)) activeCuePrompt.setVisibility(View.GONE);
+        if (!MURAJAAH_ACTIVE.equals(mode)) activeRecallCue = null;
         unitFirstPage = 1;
         unitLastPage = 1;
         try {
@@ -1080,91 +1094,145 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /**
-     * Daily, mandatory, masked-by-default recall test that must be completed before the passive
-     * Entretien comes due. Reads its own restricted corpus (activeMurajaahCorpus: settled material
-     * only, never "à stabiliser") and its own independent cursor — testing recall from memory on
-     * material still mid-Stabilisation is discouraging rather than constructive, so active and
-     * passive deliberately no longer share one traversal position; each advances its own cursor
-     * on completion. The whole page is masked from the start (Révéler on demand) instead of shown
-     * in clear.
+     * Daily 20-minute recall is structured by the frozen V2.1 semantic passages themselves.
+     * The audited Quranic amorce is shown outside the masked Mushaf, so recall never depends on
+     * approximate word geometry. Sabqi/Itqan remain cue-free; this semantic prompt exists only here.
      */
     private void renderMurajaahActive(){
         String today = sessionDate.toString();
         if (today.equals(prefs.lastActiveMurajaahDate())) {
             sessionCompleted = true;
+            activeCuePrompt.setVisibility(View.GONE);
             program.setText("Révision active · séance validée");
-            progress.setText(prefs.lastActiveMurajaahLabel().isEmpty() ? "Curseur sauvegardé" : HifzDisplayVocabulary.canonicalize(prefs.lastActiveMurajaahLabel()));
+            progress.setText(prefs.lastActiveMurajaahLabel().isEmpty()
+                ? "Curseur sauvegardé"
+                : HifzDisplayVocabulary.canonicalize(prefs.lastActiveMurajaahLabel()));
             return;
         }
         if (!prefs.isActiveMurajaahCursorValid()) {
             sessionCompleted = true;
+            activeCuePrompt.setVisibility(View.GONE);
             program.setText("Révision active · curseur à vérifier");
             progress.setText("Le corpus acquis ne contient pas ce curseur.");
             return;
         }
+        if (semanticPassages == null || !semanticPassages.isAvailable()) {
+            sessionCompleted = true;
+            clock.pause();
+            activeCuePrompt.setVisibility(View.GONE);
+            program.setText("Révision active · Amorces indisponibles");
+            progress.setText("Le corpus sémantique V2.1 doit être valide pour cette séance.");
+            return;
+        }
+
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
         EligibleCorpus corpus = prefs.activeMurajaahCorpus();
-        int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
-        murajaahPlan = geometry.planEligibleLines(prefs.activeMurajaahCursor(), lines, corpus);
         murajaahActualEnd = prefs.activeMurajaahActualEnd();
         if (murajaahActualEnd != null && !corpus.contains(murajaahActualEnd)) {
             murajaahActualEnd = null;
             prefs.setActiveMurajaahActualEnd(null);
         }
-        int savedPage = prefs.activeMurajaahPage();
-        currentPage = savedPage >= 1 && savedPage <= 604
-            ? savedPage : geometry.pageForVerse(murajaahPlan.start);
+
+        VerseRef recallCursor = murajaahActualEnd == null
+            ? prefs.activeMurajaahCursor()
+            : corpus.next(murajaahActualEnd);
+        if (activeRecallCue == null
+                || !corpus.contains(activeRecallCue.startVerse)
+                || !corpus.contains(activeRecallCue.endVerse)) {
+            activeRecallCue = semanticPassages.firstEligibleCueAtOrContaining(recallCursor, corpus);
+        }
+        if (activeRecallCue == null) {
+            sessionCompleted = true;
+            clock.pause();
+            activeCuePrompt.setVisibility(View.GONE);
+            program.setText("Révision active · aucun passage disponible");
+            progress.setText("Aucun passage sémantique complet n’est encore dans le corpus acquis.");
+            return;
+        }
+
+        int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
+        murajaahPlan = geometry.planEligibleLines(activeRecallCue.startVerse, lines, corpus);
+        unitFirstPage = activeRecallCue.startPage;
+        unitLastPage = activeRecallCue.endPage;
+        currentPage = Math.max(unitFirstPage, Math.min(unitLastPage, activeRecallCue.page));
         currentSelection = Collections.emptyList();
         currentMask = 100;
-        currentLineIds = applyActiveRecallCues(currentPage);
-        program.setText("Révision active · objectif " + murajaahObjectiveLabel());
-        updateMurajaahProgress();
+        currentLineIds = geometry.lineIdsOnPage(currentPage);
+
+        // The only recall cue is the audited Quranic amorce shown in this strip. The Mushaf itself
+        // stays fully masked until the learner deliberately holds Révéler.
+        mushaf.clearSemanticCues();
+        mushaf.setLandmarkLines(null, null);
         mushaf.setMaskFollowsSelection(false);
         mushaf.setHighlightVerses(prefs.murajaahWeakVerses());
+        activeCuePrompt.setText(activeRecallCue.anchorArabic);
+        activeCuePrompt.setVisibility(View.VISIBLE);
+
+        program.setText("Révision active · Amorces · " + targetMinutes() + " min");
+        updateMurajaahProgress();
         showCurrent();
-        restoreMurajaahEndpointSelectionOnCurrentPage();
         updateMurajaahActions();
     }
 
-    /**
-     * Révision active masks a whole page, but a learner rarely has every page's exact start/end
-     * verse memorized — without some landmark, a page swipe leaves no way to confirm the recall is
-     * actually picking up at the right point, or where it should stop before turning the page.
-     * Half of the page's first physical line (its reading-first words) and half of its last
-     * physical line (its reading-last words, right before the turn) stay permanently visible as
-     * synchronization anchors — see reader.js's landmarkCellIndices for the reading-order-aware
-     * cell split; the other half of each of those two lines still masks normally, like every other
-     * line on the page.
-     */
-    private List<String> applyActiveLandmarks(int page) {
-        List<String> all = geometry.lineIdsOnPage(page);
-        String first = all.isEmpty() ? null : all.get(0);
-        String last = all.isEmpty() ? null : all.get(all.size() - 1);
-        mushaf.setLandmarkLines(first, last);
-        return all;
-    }
+    private void advanceActiveRecallCue() {
+        if (activeRecallCue == null) return;
+        EligibleCorpus corpus = prefs.activeMurajaahCorpus();
 
-    /**
-     * Blind 20-minute recall prefers audited semantic anchors when their exact visual ranges are
-     * available. Until that geometry is complete, the proven first/last half-line landmarks remain
-     * untouched as the fallback, so importing a partial semantic corpus cannot degrade Revision.
-     */
-    private List<String> applyActiveRecallCues(int page) {
-        List<String> all = geometry.lineIdsOnPage(page);
-        if (semanticPassages != null && semanticPassages.isAvailable()
-                && semanticPassages.hasCompleteExactGeometryForPage(page)) {
-            mushaf.setLandmarkLines(null, null);
-            mushaf.setSemanticCues(semanticPassages.readerCuesForPage(page), true);
-            return all;
+        // Completing one semantic unit advances only the active-revision cursor candidate. It does
+        // not promote, demote, or otherwise mutate Hifz acquisition state.
+        murajaahActualEnd = activeRecallCue.endVerse;
+        prefs.setActiveMurajaahActualEnd(murajaahActualEnd);
+        checkpointMurajaah(clock.elapsedMs());
+
+        SemanticPassageRepository.Cue next = semanticPassages.nextEligibleCue(activeRecallCue, corpus);
+        if (next == null || next.passageId.equals(activeRecallCue.passageId)) {
+            updateMurajaahProgress();
+            updateMurajaahActions();
+            return;
         }
+        activeRecallCue = next;
+        unitFirstPage = next.startPage;
+        unitLastPage = next.endPage;
+        currentPage = next.page;
+        currentSelection = Collections.emptyList();
+        currentLineIds = geometry.lineIdsOnPage(currentPage);
+        currentMask = 100;
         mushaf.clearSemanticCues();
-        return applyActiveLandmarks(page);
+        mushaf.setLandmarkLines(null, null);
+        activeCuePrompt.setText(next.anchorArabic);
+        showCurrent();
+        updateMurajaahProgress();
+        updateMurajaahActions();
     }
 
     private void updateMurajaahActions() {
         actions.removeAllViews();
         boolean active = MURAJAAH_ACTIVE.equals(mode);
+        if (active) {
+            if (activeRecallCue == null) return;
+            LinearLayout nextAction = Ui.roundAction(this, "", "Amorce suivante", v -> advanceActiveRecallCue());
+            actions.addView(nextAction);
+
+            LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
+            revealButton = (Button) revealAction.getChildAt(0);
+            configureRevealButton(revealButton);
+            actions.addView(revealAction);
+            updateRevealButton();
+
+            LinearLayout markAction = Ui.roundAction(this, "", weakMarkMode ? "Touchez le verset…" : "Marquer", v -> {
+                weakMarkMode = !weakMarkMode;
+                updateMurajaahActions();
+            });
+            actions.addView(markAction);
+
+            LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
+            murajaahFinishButton = (Button) validateAction.getChildAt(0);
+            murajaahFinishButton.setEnabled(murajaahActualEnd != null);
+            actions.addView(validateAction);
+            return;
+        }
+
         List<MurajaahSegment> segments = murajaahSegments();
         int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
@@ -1194,18 +1262,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
         murajaahFinishButton.setEnabled(true);
         actions.addView(validateAction);
-        if (active) {
-            LinearLayout revealAction = Ui.roundAction(this, "", "Révéler", null);
-            revealButton = (Button) revealAction.getChildAt(0);
-            configureRevealButton(revealButton);
-            actions.addView(revealAction);
-            updateRevealButton();
-            LinearLayout markAction = Ui.roundAction(this, "", weakMarkMode ? "Touchez le verset…" : "Marquer", v -> {
-                weakMarkMode = !weakMarkMode;
-                updateMurajaahActions();
-            });
-            actions.addView(markAction);
-        }
     }
 
     private int murajaahSegmentIndexForPage(List<MurajaahSegment> segments, int page) {
@@ -1311,6 +1367,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void finishMurajaah(){
         if (!StructuredSessionPolicy.murajaahCanValidate(murajaahActualEnd != null)) {
             Toast.makeText(this, "Touchez d’abord le dernier verset réellement révisé.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            completeMurajaahValidation();
             return;
         }
         VerseRef unread = murajaahNextSegmentAfter(murajaahActualEnd);
@@ -1455,6 +1515,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void updateMurajaahProgress() {
         if (!isMurajaahMode() || progress == null || murajaahPlan == null) return;
         String target = "objectif " + targetMinutes() + " min";
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            String state = timedSessionLimitReached ? target + " atteint" : target;
+            progress.setText(state + " · récitez le passage puis passez à l’Amorce suivante");
+            eink.local(progress, prefs);
+            return;
+        }
         if (murajaahActualEnd == null) {
             progress.setText((timedSessionLimitReached ? target + " atteint" : target)
                 + " · touchez le dernier verset réellement révisé");
@@ -1466,7 +1532,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void restoreMurajaahEndpointSelectionOnCurrentPage() {
-        if (!isMurajaahMode() || murajaahActualEnd == null || mushaf == null) return;
+        if (!isMurajaahMode() || MURAJAAH_ACTIVE.equals(mode) || murajaahActualEnd == null || mushaf == null) return;
         if (geometry.pageForVerse(murajaahActualEnd) != currentPage) return;
         mushaf.setSelection(Collections.singletonList(murajaahActualEnd), currentLineIds);
     }
@@ -1484,8 +1550,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     @Override public void onVerseTap(VerseRef verse){
         if (!isMurajaahMode() || murajaahPlan == null) return;
-        if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
-        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            if (weakMarkMode) toggleWeakVerse(verse);
+            return;
+        }
+        EligibleCorpus corpus = prefs.murajaahCorpus();
         if (!corpus.contains(verse)) {
             Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
             return;
@@ -1521,10 +1590,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int target=Math.max(1,Math.min(604,currentPage+delta));
         boolean limited=SABQI.equals(mode)||SABQI_TODAY_REVIEW.equals(mode)||ITQAN.equals(mode)
             ||RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
-            ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
+            ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode)
+            ||MURAJAAH_ACTIVE.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;
-        if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=applyActiveRecallCues(currentPage);
+        if(MURAJAAH_ACTIVE.equals(mode)) {
+            currentLineIds=geometry.lineIdsOnPage(currentPage);
+            mushaf.clearSemanticCues();
+            mushaf.setLandmarkLines(null, null);
+        }
         showCurrent();
         boolean groupedCycle=RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
