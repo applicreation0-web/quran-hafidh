@@ -51,7 +51,7 @@ public final class SemanticCueSourceContractTest {
 
     @Test public void readingUsesOneToggleAndTransientTitleInsteadOfButtonProliferation() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertTrue(source.contains("semanticButton = Ui.smallButton(this, \"Repères\""));\n        assertTrue(source.contains("setButtonIconWithText(semanticButton, icon, \"Repères\")"));
+        assertTrue(source.contains("semanticButton = Ui.smallButton(this, \"Amorces\""));\n        assertTrue(source.contains("setButtonIconWithText(semanticButton, icon, \"Amorces\")"));
         assertTrue(source.contains("toggleSemanticCues()"));
         assertTrue(source.contains("SemanticTitlePopup.show"));
         assertTrue("repères default OFF until user enables them",
