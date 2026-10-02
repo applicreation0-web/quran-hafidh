@@ -20,6 +20,8 @@ import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.SessionKind;
 import com.quransafeguard.hifz.core.VerseRef;
 
+import org.json.JSONArray;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1177,7 +1179,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void applyActiveRevisionPageCues() {
         if (mushaf == null || semanticPassages == null || !semanticPassages.isAvailable()) return;
         boolean exact = semanticPassages.hasCompleteExactGeometryForPage(currentPage);
-        mushaf.setLandmarkLines(null, null);
+        mushaf.setLandmarkLines(null, null); // retire the old half-line heuristic completely
+        mushaf.setPageLandmarkBoxes(exact
+            ? semanticPassages.pageLandmarkBoxes(currentPage)
+            : new JSONArray());
         mushaf.setSemanticCues(semanticPassages.readerCuesForPage(currentPage), exact);
     }
 
