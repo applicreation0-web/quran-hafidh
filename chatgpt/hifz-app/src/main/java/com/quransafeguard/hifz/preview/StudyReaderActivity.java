@@ -54,6 +54,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
     private Button semanticButton;
+    private Button annotationButton;
+    private boolean annotationEnabled = true;
     private SemanticPassageRepository semanticPassages;
     private boolean semanticCuesEnabled;
     private Dialog semanticTitleDialog;
@@ -155,9 +157,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
-        readerActions.addView(Ui.iconButton(this, "↺", "Annuler la note",
+        annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+        annotationButton.setSelected(annotationEnabled);
+        readerActions.addView(annotationButton);
+        readerActions.addView(Ui.iconButton(this, "", "Annuler la note",
             v -> annotationOverlay.undoLastStroke()));
-        readerActions.addView(Ui.iconButton(this, "⌫", "Effacer les notes",
+        readerActions.addView(Ui.iconButton(this, "", "Effacer les notes",
             v -> annotationOverlay.clearCurrentPage()));
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -248,6 +253,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         button.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
         button.setMinimumWidth(Ui.dp(this, 96));
         return button;
+    }
+
+    private void toggleAnnotationMode() {
+        annotationEnabled = !annotationEnabled;
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
+        annotationButton.setSelected(annotationEnabled);
+        annotationButton.setContentDescription(annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+        showControls();
     }
 
     private void toggleSemanticCues() {
