@@ -3,6 +3,8 @@ package com.quransafeguard.hifz.preview;
 import android.app.Activity;
 import android.app.AlertDialog;
 
+import com.quransafeguard.hifz.core.HifzSchedule;
+
 /**
  * The compact Révision selector (P2): Révision active, Entretien — free order. A dialogue, not a
  * new Activity. Carries no progression logic of its own; it only reports today's done/to-do status
@@ -27,7 +29,7 @@ final class RevisionSelector {
                 prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()) + " min"
             : "durée variable";
         String[] items = {
-            "Révision active · 15 min · " + (activeDone ? "fait" : "à faire"),
+            "Révision active · " + HifzSchedule.ACTIVE_REVIEW_MINUTES + " min · " + (activeDone ? "fait" : "à faire"),
             "Quiz spatial · ≤15 min · facultatif",
             "Entretien · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
