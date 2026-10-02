@@ -35,6 +35,20 @@ public final class SemanticCueSourceContractTest {
             source.contains("guess") || source.contains("approximateWord"));
     }
 
+    @Test public void frozenV21CorpusIsMaterializedIntoApkAssetsWithHashFence() throws Exception {
+        String build = read("hifz-app/build.gradle.kts");
+        String materializer = read("scripts/materialize_semantic_v2_1.py");
+        assertTrue(build.contains("prepareSemanticV21"));
+        assertTrue(build.contains("semantic/semantic_passages_v2_1.json"));
+        assertTrue(build.contains("from(generatedSemanticAssetsDir)"));
+        assertTrue(materializer.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
+        assertTrue(materializer.contains("Qaf 50:15 must remain autonomous"));
+        assertTrue(materializer.contains("Al-Hujurat 49:11-13 must remain continuous"));
+        assertTrue(materializer.contains("output.write_bytes(raw)"));
+        assertFalse("materializer must not normalize or rewrite semantic JSON",
+            materializer.contains("json.dumps("));
+    }
+
     @Test public void readingUsesOneToggleAndTransientTitleInsteadOfButtonProliferation() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         assertTrue(source.contains("semanticButton = Ui.iconButton"));
