@@ -75,10 +75,13 @@ public final class RevisionMaskIgnoresLastRevisedVerseSourceContractTest {
             session.contains("program.setText(\"Révision · objectif \" + murajaahObjectiveLabel());\n"
                 + "        updateMurajaahProgress();\n"
                 + "        mushaf.setMaskFollowsSelection(false);"));
-        assertTrue("active Révision must turn it off before the page is first shown",
-            session.contains("program.setText(\"Révision active · objectif \" + murajaahObjectiveLabel());\n"
-                + "        updateMurajaahProgress();\n"
-                + "        mushaf.setMaskFollowsSelection(false);"));
+        int activeStart = session.indexOf("private void renderMurajaahActive(){");
+        int activeEnd = session.indexOf("private void advanceActiveRecallCue()", activeStart);
+        String activeRender = session.substring(activeStart, activeEnd);
+        assertTrue("active Révision must turn selection-clipped masking off before the page is first shown",
+            activeRender.contains("mushaf.setMaskFollowsSelection(false);"));
+        assertTrue("active Révision must expose the semantic Amorces programme",
+            activeRender.contains("Révision active · Amorces · "));
         assertTrue("exactly the two Murajaah render entry points may disable it — Sabqi/Itqan must "
                 + "keep the default so their own selection-clipped masking is unaffected",
             countOccurrences(session, "mushaf.setMaskFollowsSelection(false);") == 2);
