@@ -28,7 +28,9 @@ public final class SemanticTitleV22SourceContractTest {
         assertTrue(source.contains("46c8c905beaf2e03b2589c296d1574e7417dbab59f9e580911e9ebe0c8073bea"));
         assertTrue(source.contains("19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336"));
         assertTrue(source.contains("parseTitleOverlay"));
-        assertTrue(source.contains("String title = meta.titleV23"));
+        assertTrue(source.contains("EXPECTED_CANONICAL_MUNIR_PASSAGES = 1243"));
+        assertTrue(source.contains("tafsir_munir_grouping"));
+        assertTrue(source.contains("group.titleMunirAr"));
         assertTrue(source.contains("requiredText(row, \"title_fr_v2_1\")"));
         assertTrue(source.contains("anchor_arabic_v2_1"));
         assertTrue(source.contains("anchor_word_count_v2_1"));
@@ -55,13 +57,14 @@ public final class SemanticTitleV22SourceContractTest {
         assertTrue(materializer.contains("output.write_bytes(raw_titles)"));
     }
 
-    @Test public void titleLayerCannotLeakIntoSabqiItqanOrQuizProgression() throws Exception {
+    @Test public void semanticLayerNeverLeaksIntoSabqiOrItqanAndNoSpatialQuizRemains() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String quiz = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SpatialQuizActivity.java");
+        String manifest = read("hifz-app/src/main/AndroidManifest.xml");
         assertFalse(session.contains("title_fr_v2_3"));
-        assertFalse(quiz.contains("title_fr_v2_3"));
         assertTrue(session.contains("mushaf.clearSemanticCues()"));
-        assertTrue(session.contains("activeCuePrompt.setText(activeRecallCue.anchorArabic)"));
-        assertTrue(quiz.contains("aucun changement de progression"));
-    }
+        assertTrue(session.contains("applyActiveRevisionPageCues()"));
+        assertFalse(session.contains("activeCuePrompt"));
+        assertFalse(manifest.contains("SpatialQuizActivity"));
+    }}
+
 }
