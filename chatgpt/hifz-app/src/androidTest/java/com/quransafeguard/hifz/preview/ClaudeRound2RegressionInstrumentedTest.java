@@ -66,7 +66,7 @@ public final class ClaudeRound2RegressionInstrumentedTest {
         }
         HifzPrefs reloaded = new HifzPrefs(context);
         assertTrue("Ownerless verse must not remain in the Stabilisation queue", reloaded.anchoringQueue().isEmpty());
-        assertTrue(reloaded.stabilizedConsolidationUnits(geometry, 3).isEmpty());
+        assertTrue(reloaded.stabilizedConsolidationUnits(HifzClock.today()).isEmpty());
     }
 
     @Test public void completedConsolidationTodayYieldsBackToScheduledCadence() throws Exception {
