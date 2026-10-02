@@ -310,6 +310,8 @@ public final class MushafView extends WebView {
     public void setSemanticCues(JSONArray cues, boolean anchorMaskMode) {
         semanticCues = cues == null ? new JSONArray() : cues;
         semanticAnchorMaskMode = anchorMaskMode;
+        // Before the first show(), state is enough: the next boot payload will carry these cues.
+        if (requestedPage < 1 || requestedPage > 604) return;
         final String geometry;
         try {
             geometry = semanticCues.length() == 0 ? null : GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
