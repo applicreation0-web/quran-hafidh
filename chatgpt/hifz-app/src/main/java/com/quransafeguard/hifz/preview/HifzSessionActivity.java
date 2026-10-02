@@ -1248,7 +1248,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 }
                 currentPage = geometry.pageForVerse(jumpTarget);
                 currentSelection = Collections.emptyList();
-                currentLineIds = active ? applyActiveRecallCues(currentPage) : Collections.emptyList();
+                currentLineIds = Collections.emptyList();
                 showCurrent();
                 restoreMurajaahEndpointSelectionOnCurrentPage();
                 updateMurajaahActions();
@@ -1717,7 +1717,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationOverlay.setPage(page);
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
-                currentLineIds=applyActiveRecallCues(page);
+                currentLineIds=geometry.lineIdsOnPage(page);
+                mushaf.clearSemanticCues();
+                mushaf.setLandmarkLines(null, null);
                 prefs.setActiveMurajaahPage(page);
             } else {
                 prefs.setMurajaahPage(page);
