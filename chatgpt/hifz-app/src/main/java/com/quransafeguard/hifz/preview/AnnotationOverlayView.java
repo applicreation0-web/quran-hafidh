@@ -30,6 +30,7 @@ final class AnnotationOverlayView extends View {
     private int page = -1;
     private final List<float[]> strokes = new ArrayList<>();
     private final List<Float> activeStroke = new ArrayList<>();
+    private boolean drawingEnabled = true;
 
     AnnotationOverlayView(Context context) {
         super(context);
@@ -54,6 +55,12 @@ final class AnnotationOverlayView extends View {
         invalidate();
     }
 
+    void setDrawingEnabled(boolean enabled) {
+        drawingEnabled = enabled;
+        if (!enabled) activeStroke.clear();
+        invalidate();
+    }
+
     void clearCurrentPage() {
         if (store == null || page < 0) return;
         strokes.clear();
@@ -70,7 +77,7 @@ final class AnnotationOverlayView extends View {
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
-        if (page < 0 || event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return false;
+        if (!drawingEnabled || page < 0 || event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) return false;
         float w = getWidth(), h = getHeight();
         if (w <= 0 || h <= 0) return false;
         switch (event.getActionMasked()) {
