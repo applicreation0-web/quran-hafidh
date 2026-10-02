@@ -164,8 +164,10 @@ final class SemanticPassageRepository {
     private final Map<String, Cue> byId = new HashMap<>();
     private final List<Cue> orderedCues = new ArrayList<>();
     private final boolean available;
+    private final WordGeometryRepository wordGeometry;
 
     SemanticPassageRepository(Context context) {
+        wordGeometry = new WordGeometryRepository(context);
         boolean loaded = false;
         try {
             byte[] raw = readAsset(context, ASSET_PATH);
@@ -256,18 +258,22 @@ final class SemanticPassageRepository {
     }
 
     /**
-     * Exact blind-recall mode is enabled only when every anchor actually starting on this page has
-     * separately verified visual geometry. V2.1 itself contains no word geometry, so importing only
-     * the frozen corpus intentionally keeps this false and preserves the proven legacy landmarks.
+     * Exact recall is enabled only when the page's six geographic landmark words and every
+     * Al-Munir amorce beginning on the page have exact word boxes in the pinned QCF sidecar.
+     * No line-cell arithmetic or proportional approximation is accepted.
      */
     boolean hasCompleteExactGeometryForPage(int page) {
-        boolean found = false;
+        if (wordGeometry.pageLandmarkBoxes(page).length() != 6) return false;
         for (Cue cue : cuesForPage(page)) {
             if (!cue.anchorOnCurrentPage) continue;
-            found = true;
-            if (!cue.hasExactVisualRange()) return false;
+            if (wordGeometry.anchorBoxes(page, cue.startVerse, cue.anchorWordCount).length()
+                    != cue.anchorWordCount) return false;
         }
-        return found;
+        return true;
+    }
+
+    JSONArray pageLandmarkBoxes(int page) {
+        return wordGeometry.pageLandmarkBoxes(page);
     }
 
     JSONArray readerCuesForPage(int page) {
@@ -282,6 +288,12 @@ final class SemanticPassageRepository {
                 item.put("anchor", cue.anchorArabic);
                 item.put("anchorWordCount", cue.anchorWordCount);
                 item.put("startLine", cue.startLine);
+
+                // Exact viewBox-space boxes come from the pinned quran-ws word sidecar.
+                // An empty array is an explicit fail-closed state; the reader never estimates.
+                item.put("boxes", wordGeometry.anchorBoxes(
+                    page, cue.startVerse, cue.anchorWordCount));
+
                 JSONArray ranges = new JSONArray();
                 for (CellRange range : cue.visualRanges) {
                     ranges.put(new JSONObject()
@@ -294,8 +306,6 @@ final class SemanticPassageRepository {
             }
             return out;
         } catch (JSONException invalidReaderPayload) {
-            // Parsed corpus values are already validated. If JSON serialization still fails,
-            // fail closed instead of leaking a partial/approximate cue payload to the reader.
             throw new IllegalStateException("semantic cue serialization failed", invalidReaderPayload);
         }
     }
