@@ -61,11 +61,11 @@ public final class SpatialQuizSourceContractTest {
     @Test public void revisionSelectorAddsQuizWithoutAddingAnotherHomeCard() throws Exception {
         String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue(selector.contains("Quiz spatial · ≤15 min · facultatif"));
+        assertTrue(selector.contains("Quiz · Acquis · ≤15 min · facultatif"));
         assertTrue(selector.contains("void openSpatialQuiz()"));
         assertTrue(main.contains("startActivity(new Intent(MainActivity.this, SpatialQuizActivity.class))"));
         assertFalse("no second permanent quiz tile on the home screen",
-            main.contains("Ui.modeCard(this, \"\", \"Quiz spatial\""));
+            main.contains("Ui.modeCard(this, \"\", \"Quiz\""));
     }
 
     @Test public void manifestKeepsQuizPrivate() throws Exception {
