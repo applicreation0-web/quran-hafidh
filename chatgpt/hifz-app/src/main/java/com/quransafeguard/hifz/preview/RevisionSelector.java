@@ -15,7 +15,6 @@ final class RevisionSelector {
 
     interface Choice {
         void openActiveRevision();
-        void openSpatialQuiz();
         void openPassiveRevision();
     }
 
@@ -24,20 +23,15 @@ final class RevisionSelector {
         String today = HifzClock.today().toString();
         boolean activeDone = today.equals(prefs.lastActiveMurajaahDate());
         boolean passiveDone = today.equals(prefs.lastMurajaahDate());
-        String maintenanceCue = geometry != null
-            ? MaintenanceCoveragePolicy.minutes(
-                prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()) + " min"
-            : "durée variable";
+        String maintenanceCue = HifzSchedule.MAINTENANCE_MINUTES + " min";
         String[] items = {
             "Révision active · Amorces · " + HifzSchedule.ACTIVE_REVIEW_MINUTES + " min · " + (activeDone ? "fait" : "à faire"),
-            "Quiz · Acquis · ≤15 min · facultatif",
             "Entretien · lecture · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
         new AlertDialog.Builder(activity)
             .setTitle("Révision")
             .setItems(items, (dialog, which) -> {
                 if (which == 0) choice.openActiveRevision();
-                else if (which == 1) choice.openSpatialQuiz();
                 else choice.openPassiveRevision();
             })
             .show();
