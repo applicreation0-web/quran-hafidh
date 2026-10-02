@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Read-only index over frozen V2.1 boundaries/anchors with the audited V2.2 French-title layer.
+ * Read-only index over the frozen V2.1 semantic corpus.
  *
  * The semantic JSON is never repaired or normalized at runtime. Any schema/hash/completeness
  * mismatch disables this optional feature while the rest of Quran Haafidh keeps its prior behavior.
@@ -30,13 +30,14 @@ import java.util.Set;
  * source-ink groups, not linguistic words.
  */
 final class SemanticPassageRepository {
-    // Provenance fences: V2.1 remains the immutable structural/anchor source.
-    static final String FROZEN_V21_ASSET_PATH = "semantic/semantic_passages_v2_1.json";
-    static final String FROZEN_V21_SHA256 =
-        "b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7";
-    static final String ASSET_PATH = "semantic/semantic_passages_v2_2_titles.json";
+    static final String ASSET_PATH = "semantic/semantic_passages_v2_1.json";
     static final String EXPECTED_SHA256 =
-        "f8655e2d4269183b8ab5665a394db8255aeac20683f2d79bdf45c04f85e9bfde";
+        "b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7";
+    static final String TITLE_ASSET_PATH = "semantic/semantic_titles_v2_2.json";
+    static final String EXPECTED_TITLE_SHA256 =
+        "4148cb96f68b85121ba3753676d97d9e7b3adaf7f0717707b74b8b8ca0baf071";
+    static final String EXPECTED_V22_CORPUS_SHA256 =
+        "c4700d626c6e55869de017e1841eb5b9e3ef0eb6139d7f0e84ffd7feff7e6db8";
     static final int EXPECTED_GLOBAL_PASSAGES = 1256;
     static final int EXPECTED_PAGE_RECORDS = 1644;
 
@@ -125,9 +126,15 @@ final class SemanticPassageRepository {
         try {
             byte[] raw = readAsset(context, ASSET_PATH);
             if (!EXPECTED_SHA256.equals(sha256(raw))) {
-                throw new IllegalStateException("semantic V2.2 title-layer SHA-256 mismatch");
+                throw new IllegalStateException("semantic V2.1 SHA-256 mismatch");
             }
-            parseInto(new String(raw, StandardCharsets.UTF_8), byPage, byId);
+            byte[] titleRaw = readAsset(context, TITLE_ASSET_PATH);
+            if (!EXPECTED_TITLE_SHA256.equals(sha256(titleRaw))) {
+                throw new IllegalStateException("semantic V2.2 title SHA-256 mismatch");
+            }
+            Map<String, String> titlesV22 =
+                parseTitleOverlay(new String(titleRaw, StandardCharsets.UTF_8));
+            parseInto(new String(raw, StandardCharsets.UTF_8), titlesV22, byPage, byId);
             orderedCues.addAll(byId.values());
             orderedCues.sort((a, b) -> a.startVerse.compareTo(b.startVerse));
             loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES
@@ -247,7 +254,8 @@ final class SemanticPassageRepository {
         }
     }
 
-    private static void parseInto(String raw, Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) throws JSONException {
+    private static void parseInto(String raw, Map<String, String> titlesV22,
+            Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) throws JSONException {
         JSONObject root = new JSONObject(raw);
         require("V2.1".equals(root.optString("schema_version", "")), "wrong semantic schema");
         require(!root.optBoolean("boundaries_changed", true), "semantic boundaries changed");
@@ -268,15 +276,20 @@ final class SemanticPassageRepository {
             String id = requiredText(row, "passage_global_id");
             require(globalIds.add(id), "duplicate global passage id " + id);
             requiredAuditedFields(row);
-            String titleV22 = requiredV22Title(row);
             VerseRef startVerse = new VerseRef(positiveInt(row, "surah_start"), positiveInt(row, "ayah_start"));
             VerseRef endVerse = new VerseRef(positiveInt(row, "surah_end"), positiveInt(row, "ayah_end"));
             require(startVerse.compareTo(endVerse) <= 0, "invalid global verse span for " + id);
             int startPage = positiveInt(row, "starts_on_page");
             int endPage = positiveInt(row, "ends_on_page");
             require(startPage <= endPage && endPage <= 604, "invalid global page span for " + id);
+            String titleV22 = titlesV22.get(id);
+            require(titleV22 != null && !titleV22.trim().isEmpty(),
+                "missing audited V2.2 title for " + id);
             globalMeta.put(id, new PassageMeta(startVerse, endVerse, startPage, endPage, titleV22));
         }
+
+        require(titlesV22.keySet().equals(globalIds),
+            "V2.2 title IDs do not exactly match frozen V2.1 passages");
 
         Set<Integer> pages = new HashSet<>();
         Set<String> recordIds = new HashSet<>();
@@ -298,8 +311,7 @@ final class SemanticPassageRepository {
             int endLine = row.optInt("end_line", 0);
             require(startLine >= 1 && endLine >= startLine, "invalid line span for " + id);
 
-            requiredText(row, "title_fr_v2_1"); // V2.1 integrity data only; never used as the displayed title.
-            require(!row.has("title_fr_v2_2"), "V2.2 title must not be copied into page records");
+            requiredText(row, "title_fr_v2_1"); // frozen V2.1 title remains an integrity field
             String anchor = requiredText(row, "anchor_arabic_v2_1");
             PassageMeta meta = globalMeta.get(id);
             require(meta != null, "missing global passage metadata for " + id);
@@ -349,27 +361,47 @@ final class SemanticPassageRepository {
         }
     }
 
+    private static Map<String, String> parseTitleOverlay(String raw) throws JSONException {
+        JSONObject root = new JSONObject(raw);
+        require("V2.2_TITLES".equals(root.optString("schema_version", "")),
+            "wrong V2.2 title schema");
+        require(EXPECTED_SHA256.equals(root.optString("source_v2_1_sha256", "")),
+            "V2.2 title overlay is not tied to frozen V2.1");
+        require(EXPECTED_V22_CORPUS_SHA256.equals(
+                root.optString("source_v2_2_corpus_sha256", "")),
+            "V2.2 title overlay is not tied to audited final corpus");
+        require(root.optInt("title_count", 0) == EXPECTED_GLOBAL_PASSAGES,
+            "wrong V2.2 title count");
+
+        JSONArray rows = root.optJSONArray("titles");
+        require(rows != null && rows.length() == EXPECTED_GLOBAL_PASSAGES,
+            "V2.2 title rows incomplete");
+        Map<String, String> titles = new HashMap<>();
+        Set<String> uniqueTitles = new HashSet<>();
+        for (int i = 0; i < rows.length(); i++) {
+            JSONObject titleRow = rows.getJSONObject(i);
+            String id = requiredText(titleRow, "passage_global_id");
+            String title = requiredText(titleRow, "title_fr_v2_2");
+            String status = requiredText(titleRow, "title_audit_status_v2_2");
+            String distinctiveness = requiredText(titleRow, "title_distinctiveness_v2_2");
+            require("EXACT_SOURCE".equals(status) || "SOURCE_DERIVED".equals(status)
+                    || "CONSENSUS_DERIVED".equals(status) || "V2_1_CONFIRMED".equals(status),
+                "unaudited V2.2 title status for " + id);
+            require("HIGH".equals(distinctiveness) || "MEDIUM".equals(distinctiveness),
+                "unacceptable V2.2 title distinctiveness for " + id);
+            require(titles.put(id, title) == null, "duplicate V2.2 title ID " + id);
+            require(uniqueTitles.add(title), "duplicate V2.2 title text");
+        }
+        require(titles.size() == EXPECTED_GLOBAL_PASSAGES, "V2.2 title index incomplete");
+        return titles;
+    }
+
     private static void requiredAuditedFields(JSONObject row) {
         requiredText(row, "title_fr_v2_1");
         requiredText(row, "anchor_arabic_v2_1");
         require(row.optInt("anchor_word_count_v2_1", 0) >= 1, "invalid audited anchor length");
         require("AUDITED_V2_1".equals(requiredText(row, "minimality_verified_v2_1")),
             "global anchor is not audited V2.1");
-    }
-
-    private static String requiredV22Title(JSONObject row) {
-        String title = requiredText(row, "title_fr_v2_2");
-        String status = requiredText(row, "title_audit_status_v2_2");
-        require("SOURCE_DERIVED".equals(status) || "CONSENSUS_DERIVED".equals(status)
-                || "V2_1_CONFIRMED".equals(status),
-            "invalid V2.2 title audit status");
-        JSONArray sources = row.optJSONArray("title_sources_v2_2");
-        require(sources != null && sources.length() > 0, "missing V2.2 title sources");
-        requiredText(row, "title_audit_note_v2_2");
-        String distinctiveness = requiredText(row, "title_distinctiveness_v2_2");
-        require("HIGH".equals(distinctiveness) || "MEDIUM".equals(distinctiveness),
-            "V2.2 title is not approved for runtime");
-        return title;
     }
 
     private static String requiredText(JSONObject row, String key) {

@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
-"""Build the audited V2.2 French-title layer over the frozen V2.1 semantic corpus.
+"""Materialize the audited V2.2 French title overlay beside the frozen V2.1 corpus.
 
-Only title/audit fields are added to global_passages. Every V2.1 field and every
-page_passage_record must remain unchanged. The compact source is an XZ-compressed
-TSV transport containing exactly one audited title for each frozen passage ID.
+V2.1 remains authoritative for passage IDs, boundaries, page records, anchors and every
+pre-existing semantic field. This script materializes only an audited title overlay keyed by
+passage_global_id and refuses any mismatch with the already-materialized frozen V2.1 asset.
 """
 from __future__ import annotations
-import base64, hashlib, json, lzma, re, sys
+
+import base64
+import hashlib
+import json
+import lzma
+import sys
 from pathlib import Path
 
 EXPECTED_V21_SHA256 = "b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"
-EXPECTED_TITLES_TSV_SHA256 = "b10a74aacaaef8c5a034f262904a325d0a15af46b23abb5caae7f5572a17e60f"
-EXPECTED_V22_SHA256 = "f8655e2d4269183b8ab5665a394db8255aeac20683f2d79bdf45c04f85e9bfde"
-EXPECTED_GLOBAL_PASSAGES = 1256
-EXPECTED_PAGE_RECORDS = 1644
-EXPECTED_FRAGMENTS = [f"part-{i:02d}.b64" for i in range(8)]
+EXPECTED_V22_CORPUS_SHA256 = "c4700d626c6e55869de017e1841eb5b9e3ef0eb6139d7f0e84ffd7feff7e6db8"
+EXPECTED_TITLE_OVERLAY_SHA256 = "4148cb96f68b85121ba3753676d97d9e7b3adaf7f0717707b74b8b8ca0baf071"
+EXPECTED_TITLE_COUNT = 1256
+EXPECTED_FRAGMENTS = [f"part-{i:02d}.b64" for i in range(1, 10)]
+VALID_STATUS = {"EXACT_SOURCE", "SOURCE_DERIVED", "CONSENSUS_DERIVED", "V2_1_CONFIRMED"}
+VALID_DISTINCTIVENESS = {"HIGH", "MEDIUM"}
 
 
 def fail(message: str) -> None:
-    raise SystemExit("semantic V2.2 title materialization rejected: " + message)
+    raise SystemExit("semantic V2.2 title overlay rejected: " + message)
 
 
 def require(condition: bool, message: str) -> None:
@@ -30,75 +36,83 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def decode_titles(source_dir: Path) -> dict[str, str]:
-    actual = sorted(p.name for p in source_dir.glob("*.b64"))
-    require(actual == EXPECTED_FRAGMENTS, "title transport fragment set differs from manifest")
-    encoded = "".join("".join((source_dir / name).read_text(encoding="ascii").split()) for name in EXPECTED_FRAGMENTS)
-    try:
-        raw = lzma.decompress(base64.b64decode(encoded, validate=True), format=lzma.FORMAT_XZ)
-    except Exception as exc:
-        fail(f"title transport decode failed: {exc}")
-    require(sha256(raw) == EXPECTED_TITLES_TSV_SHA256, "audited title TSV SHA-256 mismatch")
-    titles: dict[str, str] = {}
-    for line_no, line in enumerate(raw.decode("utf-8").splitlines(), 1):
-        require("\t" in line, f"title TSV line {line_no} has no tab")
-        pid, title = line.split("\t", 1)
-        pid, title = pid.strip(), title.strip()
-        require(pid and title, f"title TSV line {line_no} is incomplete")
-        require(pid not in titles, f"duplicate title ID {pid}")
-        titles[pid] = title
-    expected = [f"SP{i:04d}" for i in range(1, EXPECTED_GLOBAL_PASSAGES + 1)]
-    require(sorted(titles) == expected, "title TSV must contain exactly SP0001..SP1256")
-    return titles
-
-
 def main() -> None:
     if len(sys.argv) != 4:
         fail("usage: materialize_semantic_v2_2_titles.py V21_JSON TITLE_SOURCE_DIR OUTPUT_JSON")
-    v21_path, title_dir, output = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
-    v21_raw = v21_path.read_bytes()
-    require(sha256(v21_raw) == EXPECTED_V21_SHA256, "frozen V2.1 SHA-256 mismatch")
-    root = json.loads(v21_raw.decode("utf-8"))
-    require(len(root.get("global_passages", [])) == EXPECTED_GLOBAL_PASSAGES, "V2.1 global passage count changed")
-    require(len(root.get("page_passage_records", [])) == EXPECTED_PAGE_RECORDS, "V2.1 page record count changed")
-    frozen_records = json.loads(json.dumps(root["page_passage_records"], ensure_ascii=False))
-    titles = decode_titles(title_dir)
 
-    for row in root["global_passages"]:
-        pid = row.get("passage_global_id", "")
-        require(pid in titles, f"missing audited title for {pid}")
-        old = str(row.get("title_fr_v2_1", "")).strip()
-        title = titles[pid]
-        if title == old:
-            status = "V2_1_CONFIRMED"
-            note = "Titre V2.1 relu passage par passage et conservé volontairement : portée correcte, contexte identifiable et distinctivité suffisante."
-        else:
-            has_direct_source = bool(str(row.get("title_source_ar", "")).strip())
-            munir = str(row.get("tafsir_munir_grouping", "")).strip()
-            status = "SOURCE_DERIVED" if (has_direct_source or munir not in {"", "NOT_AVAILABLE"}) else "CONSENSUS_DERIVED"
-            note = "Titre reformulé après lecture de la plage gelée et contrôle des métadonnées exégétiques V2.1 afin de couvrir le passage entier et supprimer un intitulé générique ou insuffisamment distinctif."
-        sources = []
-        if str(row.get("title_source_ar", "")).strip():
-            sources.append("V2.1:title_source_ar")
-        if str(row.get("tafsir_munir_grouping", "")).strip() not in {"", "NOT_AVAILABLE"}:
-            sources.append("V2.1:tafsir_munir_grouping")
-        if str(row.get("tafsir_asas_grouping", "")).strip() not in {"", "NOT_AVAILABLE"}:
-            sources.append("V2.1:tafsir_asas_grouping")
-        sources.append("Quran:passage_range")
-        words = re.findall(r"[\wÀ-ÿʿʾāīūĀĪŪḥḤṣṢḍḌṭṬẓẒġĠḫḪ’'-]+", title, flags=re.UNICODE)
-        row["title_fr_v2_2"] = title
-        row["title_audit_status_v2_2"] = status
-        row["title_sources_v2_2"] = sources
-        row["title_audit_note_v2_2"] = note
-        row["title_distinctiveness_v2_2"] = "HIGH" if len(words) <= 14 else "MEDIUM"
+    v21_path = Path(sys.argv[1])
+    source_dir = Path(sys.argv[2])
+    output = Path(sys.argv[3])
 
-    require(root["page_passage_records"] == frozen_records, "page passage records changed during title materialization")
+    raw_v21 = v21_path.read_bytes()
+    require(sha256(raw_v21) == EXPECTED_V21_SHA256, "frozen V2.1 SHA-256 mismatch")
+    try:
+        v21 = json.loads(raw_v21.decode("utf-8"))
+    except Exception as exc:
+        fail(f"frozen V2.1 JSON parse failed: {exc}")
+    globals_v21 = v21.get("global_passages")
+    require(isinstance(globals_v21, list) and len(globals_v21) == EXPECTED_TITLE_COUNT,
+            "frozen V2.1 global passage set changed")
+    expected_ids = [str(row.get("passage_global_id", "")) for row in globals_v21]
+    require(expected_ids == [f"SP{i:04d}" for i in range(1, EXPECTED_TITLE_COUNT + 1)],
+            "frozen V2.1 passage ID sequence changed")
+
+    actual = sorted(p.name for p in source_dir.glob("*.b64"))
+    require(actual == EXPECTED_FRAGMENTS, "V2.2 title transport fragment set changed")
+    encoded = "".join(
+        "".join((source_dir / name).read_text(encoding="ascii").split())
+        for name in EXPECTED_FRAGMENTS
+    )
+    try:
+        packed = base64.b64decode(encoded, validate=True)
+        raw_titles = lzma.decompress(packed, format=lzma.FORMAT_XZ)
+    except Exception as exc:
+        fail(f"V2.2 title transport decode failed: {exc}")
+
+    require(sha256(raw_titles) == EXPECTED_TITLE_OVERLAY_SHA256,
+            "V2.2 title overlay SHA-256 mismatch")
+    try:
+        overlay = json.loads(raw_titles.decode("utf-8"))
+    except Exception as exc:
+        fail(f"V2.2 title overlay JSON parse failed: {exc}")
+
+    require(overlay.get("schema_version") == "V2.2_TITLES", "wrong V2.2 title schema")
+    require(overlay.get("source_v2_1_sha256") == EXPECTED_V21_SHA256,
+            "overlay is not tied to frozen V2.1")
+    require(overlay.get("source_v2_2_corpus_sha256") == EXPECTED_V22_CORPUS_SHA256,
+            "overlay is not tied to audited V2.2 corpus")
+    require(int(overlay.get("title_count", 0) or 0) == EXPECTED_TITLE_COUNT,
+            "wrong V2.2 title count")
+    rows = overlay.get("titles")
+    require(isinstance(rows, list) and len(rows) == EXPECTED_TITLE_COUNT,
+            "V2.2 title rows incomplete")
+
+    actual_ids = []
+    seen_titles: set[str] = set()
+    for index, row in enumerate(rows):
+        require(isinstance(row, dict), f"title row {index} is not an object")
+        pid = str(row.get("passage_global_id", "")).strip()
+        title = str(row.get("title_fr_v2_2", "")).strip()
+        status = str(row.get("title_audit_status_v2_2", "")).strip()
+        distinctiveness = str(row.get("title_distinctiveness_v2_2", "")).strip()
+        require(bool(pid) and bool(title), f"title row {index} has blank ID/title")
+        require(status in VALID_STATUS, f"{pid}: unaudited V2.2 title status {status!r}")
+        require(distinctiveness in VALID_DISTINCTIVENESS,
+                f"{pid}: unacceptable V2.2 title distinctiveness {distinctiveness!r}")
+        require(title not in seen_titles, f"duplicate V2.2 title: {title}")
+        seen_titles.add(title)
+        actual_ids.append(pid)
+
+    require(actual_ids == expected_ids, "V2.2 title IDs do not exactly match frozen V2.1")
     output.parent.mkdir(parents=True, exist_ok=True)
-    raw = (json.dumps(root, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
-    require(sha256(raw) == EXPECTED_V22_SHA256,
-            f"V2.2 output SHA-256 mismatch: expected {EXPECTED_V22_SHA256}, got {sha256(raw)}")
-    output.write_bytes(raw)
-    print(f"Semantic V2.2 titles OK: sha256={EXPECTED_V22_SHA256} globals=1256 records=1644 pages=604")
+    output.write_bytes(raw_titles)
+    require(sha256(output.read_bytes()) == EXPECTED_TITLE_OVERLAY_SHA256,
+            "generated V2.2 title overlay changed after writing")
+    print(
+        f"Semantic title overlay V2.2 OK: sha256={EXPECTED_TITLE_OVERLAY_SHA256} "
+        f"titles={EXPECTED_TITLE_COUNT} base={EXPECTED_V21_SHA256[:12]} "
+        f"corpus={EXPECTED_V22_CORPUS_SHA256[:12]}"
+    )
 
 
 if __name__ == "__main__":
