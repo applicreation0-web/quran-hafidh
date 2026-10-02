@@ -132,7 +132,7 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         assertTrue(prefs.completeStabilizationBlockV6(
             units.get(1).lineIds, 2, true,
             new VerseRef(54, 7), new VerseRef(54, 27), null,
-            "2026-09-16", "migration regression"));
+            "2026-09-16", "migration regression", Collections.emptyList()));
         for (GeometryRepository.LineMeta line : page) {
             assertEquals(HifzPrefs.ProgressState.STABILIZED, prefs.progressStateV6(line.id));
         }
@@ -155,7 +155,15 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
             .putString("v6QuarantineLineIds", "[]")
             .commit());
 
-        List<ConsolidationCycleEngine.Unit> ready = prefs.stabilizedConsolidationUnits(geometry, 3);
+        java.time.LocalDate today = HifzClock.today();
+        java.time.LocalDate weekAnchor = today.minusDays(today.getDayOfWeek().getValue() - 1L);
+        assertTrue(main.edit()
+            .putString("stabilizationSnowballWeekAnchor", weekAnchor.toString())
+            .putString("stabilizationSnowballUnitIds",
+                new JSONArray().put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(stabilized)).toString())
+            .commit());
+
+        List<ConsolidationCycleEngine.Unit> ready = prefs.stabilizedConsolidationUnits(today);
         assertEquals(1, ready.size());
         assertEquals(stabilized,
             ConsolidationPhysicalUnitPolicy.decodeLineUnit(ready.get(0).id()));
