@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/** Regression fence: V2.2 may replace French titles only; V2.1 stays authoritative otherwise. */
+/** Regression fence: V2.3 may replace French titles only; V2.1 stays authoritative otherwise. */
 public final class SemanticTitleV22SourceContractTest {
     private static String read(String repoPath) throws Exception {
         Path direct = Paths.get(repoPath);
@@ -20,34 +20,37 @@ public final class SemanticTitleV22SourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void runtimeJoinsAuditedV22TitlesOntoFrozenV21Passages() throws Exception {
+    @Test public void runtimeJoinsAuditedV23TitlesOntoFrozenV21Passages() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
         assertTrue(source.contains("semantic/semantic_passages_v2_1.json"));
         assertTrue(source.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
-        assertTrue(source.contains("semantic/semantic_titles_v2_2.json"));
-        assertTrue(source.contains("4148cb96f68b85121ba3753676d97d9e7b3adaf7f0717707b74b8b8ca0baf071"));
-        assertTrue(source.contains("c4700d626c6e55869de017e1841eb5b9e3ef0eb6139d7f0e84ffd7feff7e6db8"));
+        assertTrue(source.contains("semantic/semantic_titles_v2_3.json"));
+        assertTrue(source.contains("46c8c905beaf2e03b2589c296d1574e7417dbab59f9e580911e9ebe0c8073bea"));
+        assertTrue(source.contains("19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336"));
         assertTrue(source.contains("parseTitleOverlay"));
         assertTrue(source.contains("String title = meta.titleV22"));
         assertTrue(source.contains("requiredText(row, \"title_fr_v2_1\")"));
         assertTrue(source.contains("anchor_arabic_v2_1"));
         assertTrue(source.contains("anchor_word_count_v2_1"));
         assertTrue(source.contains("minimality_verified_v2_1"));
-        assertFalse("V2.2 title overlay must not supply boundaries",
+        assertFalse("V2.3 title overlay must not supply boundaries",
             source.contains("titleRow.optInt(\"surah_start\"") || source.contains("titleRow.optInt(\"start_line\""));
     }
 
-    @Test public void buildMaterializesBothFrozenV21AndSeparateV22TitleOverlay() throws Exception {
+    @Test public void buildMaterializesBothFrozenV21AndSeparateV23TitleOverlay() throws Exception {
         String build = read("hifz-app/build.gradle.kts");
-        String materializer = read("scripts/materialize_semantic_v2_2_titles.py");
+        String materializer = read("scripts/materialize_semantic_v2_3_titles.py");
         assertTrue(build.contains("prepareSemanticV21"));
-        assertTrue(build.contains("prepareSemanticV22Titles"));
+        assertTrue(build.contains("prepareSemanticV23Titles"));
         assertTrue(build.contains("semantic/semantic_passages_v2_1.json"));
-        assertTrue(build.contains("semantic/semantic_titles_v2_2.json"));
-        assertTrue(build.contains("src/main/semantic-source/v2_2_titles"));
+        assertTrue(build.contains("semantic/semantic_titles_v2_3.json"));
+        assertTrue(build.contains("src/main/semantic-source/v2_3_titles"));
         assertTrue(materializer.contains("EXPECTED_TITLE_COUNT = 1256"));
-        assertTrue(materializer.contains("c4700d626c6e55869de017e1841eb5b9e3ef0eb6139d7f0e84ffd7feff7e6db8"));
-        assertTrue(materializer.contains("4148cb96f68b85121ba3753676d97d9e7b3adaf7f0717707b74b8b8ca0baf071"));
+        assertTrue(materializer.contains("EXPECTED_FRAGMENTS"));
+        assertTrue(materializer.contains("FULL_WASIT_REVIEWED_CONFIRMED"));
+        assertTrue(materializer.contains("FULL_WASIT_REVIEWED_CHANGED"));
+        assertTrue(materializer.contains("19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336"));
+        assertTrue(materializer.contains("46c8c905beaf2e03b2589c296d1574e7417dbab59f9e580911e9ebe0c8073bea"));
         assertTrue(materializer.contains("actual_ids == expected_ids"));
         assertTrue(materializer.contains("output.write_bytes(raw_titles)"));
     }
@@ -55,8 +58,8 @@ public final class SemanticTitleV22SourceContractTest {
     @Test public void titleLayerCannotLeakIntoSabqiItqanOrQuizProgression() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String quiz = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SpatialQuizActivity.java");
-        assertFalse(session.contains("title_fr_v2_2"));
-        assertFalse(quiz.contains("title_fr_v2_2"));
+        assertFalse(session.contains("title_fr_v2_3"));
+        assertFalse(quiz.contains("title_fr_v2_3"));
         assertTrue(session.contains("mushaf.clearSemanticCues()"));
         assertTrue(session.contains("activeCuePrompt.setText(activeRecallCue.anchorArabic)"));
         assertTrue(quiz.contains("aucun changement de progression"));

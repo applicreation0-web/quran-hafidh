@@ -33,11 +33,11 @@ final class SemanticPassageRepository {
     static final String ASSET_PATH = "semantic/semantic_passages_v2_1.json";
     static final String EXPECTED_SHA256 =
         "b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7";
-    static final String TITLE_ASSET_PATH = "semantic/semantic_titles_v2_2.json";
+    static final String TITLE_ASSET_PATH = "semantic/semantic_titles_v2_3.json";
     static final String EXPECTED_TITLE_SHA256 =
-        "4148cb96f68b85121ba3753676d97d9e7b3adaf7f0717707b74b8b8ca0baf071";
-    static final String EXPECTED_V22_CORPUS_SHA256 =
-        "c4700d626c6e55869de017e1841eb5b9e3ef0eb6139d7f0e84ffd7feff7e6db8";
+        "46c8c905beaf2e03b2589c296d1574e7417dbab59f9e580911e9ebe0c8073bea";
+    static final String EXPECTED_V23_CORPUS_SHA256 =
+        "19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336";
     static final int EXPECTED_GLOBAL_PASSAGES = 1256;
     static final int EXPECTED_PAGE_RECORDS = 1644;
 
@@ -105,14 +105,14 @@ final class SemanticPassageRepository {
         final VerseRef end;
         final int startPage;
         final int endPage;
-        final String titleV22;
+        final String titleV23;
 
-        PassageMeta(VerseRef start, VerseRef end, int startPage, int endPage, String titleV22) {
+        PassageMeta(VerseRef start, VerseRef end, int startPage, int endPage, String titleV23) {
             this.start = start;
             this.end = end;
             this.startPage = startPage;
             this.endPage = endPage;
-            this.titleV22 = titleV22;
+            this.titleV23 = titleV23;
         }
     }
 
@@ -130,11 +130,11 @@ final class SemanticPassageRepository {
             }
             byte[] titleRaw = readAsset(context, TITLE_ASSET_PATH);
             if (!EXPECTED_TITLE_SHA256.equals(sha256(titleRaw))) {
-                throw new IllegalStateException("semantic V2.2 title SHA-256 mismatch");
+                throw new IllegalStateException("semantic V2.3 title SHA-256 mismatch");
             }
-            Map<String, String> titlesV22 =
+            Map<String, String> titlesV23 =
                 parseTitleOverlay(new String(titleRaw, StandardCharsets.UTF_8));
-            parseInto(new String(raw, StandardCharsets.UTF_8), titlesV22, byPage, byId);
+            parseInto(new String(raw, StandardCharsets.UTF_8), titlesV23, byPage, byId);
             orderedCues.addAll(byId.values());
             orderedCues.sort((a, b) -> a.startVerse.compareTo(b.startVerse));
             loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES
@@ -254,7 +254,7 @@ final class SemanticPassageRepository {
         }
     }
 
-    private static void parseInto(String raw, Map<String, String> titlesV22,
+    private static void parseInto(String raw, Map<String, String> titlesV23,
             Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) throws JSONException {
         JSONObject root = new JSONObject(raw);
         require("V2.1".equals(root.optString("schema_version", "")), "wrong semantic schema");
@@ -282,14 +282,14 @@ final class SemanticPassageRepository {
             int startPage = positiveInt(row, "starts_on_page");
             int endPage = positiveInt(row, "ends_on_page");
             require(startPage <= endPage && endPage <= 604, "invalid global page span for " + id);
-            String titleV22 = titlesV22.get(id);
-            require(titleV22 != null && !titleV22.trim().isEmpty(),
-                "missing audited V2.2 title for " + id);
-            globalMeta.put(id, new PassageMeta(startVerse, endVerse, startPage, endPage, titleV22));
+            String titleV23 = titlesV23.get(id);
+            require(titleV23 != null && !titleV23.trim().isEmpty(),
+                "missing audited V2.3 title for " + id);
+            globalMeta.put(id, new PassageMeta(startVerse, endVerse, startPage, endPage, titleV23));
         }
 
-        require(titlesV22.keySet().equals(globalIds),
-            "V2.2 title IDs do not exactly match frozen V2.1 passages");
+        require(titlesV23.keySet().equals(globalIds),
+            "V2.3 title IDs do not exactly match frozen V2.1 passages");
 
         Set<Integer> pages = new HashSet<>();
         Set<String> recordIds = new HashSet<>();
@@ -315,7 +315,7 @@ final class SemanticPassageRepository {
             String anchor = requiredText(row, "anchor_arabic_v2_1");
             PassageMeta meta = globalMeta.get(id);
             require(meta != null, "missing global passage metadata for " + id);
-            String title = meta.titleV22;
+            String title = meta.titleV23;
             int anchorWordCount = row.optInt("anchor_word_count_v2_1", 0);
             require(anchorWordCount >= 1, "invalid audited anchor length for " + id);
             require("AUDITED_V2_1".equals(requiredText(row, "minimality_verified_v2_1")),
@@ -363,36 +363,36 @@ final class SemanticPassageRepository {
 
     private static Map<String, String> parseTitleOverlay(String raw) throws JSONException {
         JSONObject root = new JSONObject(raw);
-        require("V2.2_TITLES".equals(root.optString("schema_version", "")),
-            "wrong V2.2 title schema");
+        require("V2.3_TITLES".equals(root.optString("schema_version", "")),
+            "wrong V2.3 title schema");
         require(EXPECTED_SHA256.equals(root.optString("source_v2_1_sha256", "")),
-            "V2.2 title overlay is not tied to frozen V2.1");
-        require(EXPECTED_V22_CORPUS_SHA256.equals(
-                root.optString("source_v2_2_corpus_sha256", "")),
-            "V2.2 title overlay is not tied to audited final corpus");
+            "V2.3 title overlay is not tied to frozen V2.1");
+        require(EXPECTED_V23_CORPUS_SHA256.equals(
+                root.optString("source_v2_3_corpus_sha256", "")),
+            "V2.3 title overlay is not tied to audited final corpus");
         require(root.optInt("title_count", 0) == EXPECTED_GLOBAL_PASSAGES,
-            "wrong V2.2 title count");
+            "wrong V2.3 title count");
 
         JSONArray rows = root.optJSONArray("titles");
         require(rows != null && rows.length() == EXPECTED_GLOBAL_PASSAGES,
-            "V2.2 title rows incomplete");
+            "V2.3 title rows incomplete");
         Map<String, String> titles = new HashMap<>();
         Set<String> uniqueTitles = new HashSet<>();
         for (int i = 0; i < rows.length(); i++) {
             JSONObject titleRow = rows.getJSONObject(i);
             String id = requiredText(titleRow, "passage_global_id");
-            String title = requiredText(titleRow, "title_fr_v2_2");
-            String status = requiredText(titleRow, "title_audit_status_v2_2");
-            String distinctiveness = requiredText(titleRow, "title_distinctiveness_v2_2");
-            require("EXACT_SOURCE".equals(status) || "SOURCE_DERIVED".equals(status)
-                    || "CONSENSUS_DERIVED".equals(status) || "V2_1_CONFIRMED".equals(status),
-                "unaudited V2.2 title status for " + id);
+            String title = requiredText(titleRow, "title_fr_v2_3");
+            String status = requiredText(titleRow, "title_audit_status_v2_3");
+            String distinctiveness = requiredText(titleRow, "title_distinctiveness_v2_3");
+            require("FULL_WASIT_REVIEWED_CONFIRMED".equals(status)
+                    || "FULL_WASIT_REVIEWED_CHANGED".equals(status),
+                "unaudited V2.3 title status for " + id);
             require("HIGH".equals(distinctiveness) || "MEDIUM".equals(distinctiveness),
-                "unacceptable V2.2 title distinctiveness for " + id);
-            require(titles.put(id, title) == null, "duplicate V2.2 title ID " + id);
-            require(uniqueTitles.add(title), "duplicate V2.2 title text");
+                "unacceptable V2.3 title distinctiveness for " + id);
+            require(titles.put(id, title) == null, "duplicate V2.3 title ID " + id);
+            require(uniqueTitles.add(title), "duplicate V2.3 title text");
         }
-        require(titles.size() == EXPECTED_GLOBAL_PASSAGES, "V2.2 title index incomplete");
+        require(titles.size() == EXPECTED_GLOBAL_PASSAGES, "V2.3 title index incomplete");
         return titles;
     }
 
