@@ -10,12 +10,7 @@ import java.nio.file.Paths;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/**
- * P4's J-15 dynamic Entretien duration must replace every reader of the old flat
- * HifzSchedule.MAINTENANCE_MINUTES constant for the passive Murajaah/Entretien session — the
- * session's own target-minutes computation, the MainActivity dashboard's "today" label, the
- * WeeklyDashboardPlanner's 7-day ETA projection, and both SettingsActivity display strings.
- */
+/** Product contract: Entretien is a fixed 30-minute session everywhere it is displayed or planned. */
 public final class MaintenanceCoverageWiringSourceContractTest {
     private static String read(String repoPath) throws Exception {
         Path direct = Paths.get(repoPath);
@@ -25,40 +20,26 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void acquiredLineCountV6ExposesOnlyACountNeverTheLiveSet() throws Exception {
-        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(prefs.contains("int acquiredLineCountV6() {\n"
-            + "        return v6LineIdSet(\"v6AcquiredCreditLineIds\").size();\n    }"));
-    }
-
-    @Test public void sessionDurationUsesMaintenanceCoveragePolicyForPlainMurajaah() throws Exception {
+    @Test public void dynamicMaintenancePolicyIsGone() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("if (kind == SessionKind.OLD_ITQAN_MURAJAAH) {"));
-        assertTrue(session.contains("return MaintenanceCoveragePolicy.minutes(\n"
-            + "            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());"));
+        assertFalse(session.contains("MaintenanceCoveragePolicy"));
+        assertTrue(session.contains("HifzSchedule.INSTANCE.targetMinutesFor(kind)"));
     }
 
-    @Test public void weeklyDashboardPlannerNoLongerUsesTheFlatConstant() throws Exception {
+    @Test public void weeklyDashboardUsesTheFixedCoreConstant() throws Exception {
         String planner = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertFalse("the 7-day ETA projection must use the same dynamic duration as a real session",
-            planner.contains("HifzSchedule.MAINTENANCE_MINUTES"));
-        assertTrue(planner.contains("private int maintenanceMinutes(){"));
-        assertTrue(planner.contains("HifzSpeedStore speedStore"));
+        assertTrue(planner.contains("return HifzSchedule.MAINTENANCE_MINUTES;"));
     }
 
-    @Test public void mainActivityTodayLabelAndPlannerCallSiteBothUseTheDynamicDuration() throws Exception {
+    @Test public void mainActivityUsesTheFixedCoreConstant() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertFalse(main.contains("HifzSchedule.MAINTENANCE_MINUTES"));
-        assertTrue(main.contains("int maintenanceMinutes=MaintenanceCoveragePolicy.minutes(\n"
-            + "                    prefs.acquiredLineCountV6(), g.lineCount(), speedStore.maintenanceSecondsPerLine());"));
-        assertTrue(main.contains("new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());"));
+        assertTrue(main.contains("detail=\"Révision · \"+HifzSchedule.MAINTENANCE_MINUTES+\" min\";"));
+        assertFalse(main.contains("MaintenanceCoveragePolicy"));
     }
 
-    @Test public void settingsActivityDisplayStringsBothUseTheDynamicDuration() throws Exception {
+    @Test public void settingsUseTheFixedCoreConstant() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertFalse(settings.contains("HifzSchedule.MAINTENANCE_MINUTES"));
-        assertTrue(settings.contains("private int maintenanceMinutes(){"));
-        assertTrue(settings.contains("+maintenanceMinutes()+\" min d’Entretien de l’Acquis, dimanche soir compris.\");"));
-        assertTrue(settings.contains("+maintenanceMinutes()+\" min · chaque soir · position \"+prefs.murajaahCursor());"));
+        assertTrue(settings.contains("return HifzSchedule.MAINTENANCE_MINUTES;"));
+        assertFalse(settings.contains("MaintenanceCoveragePolicy"));
     }
 }
