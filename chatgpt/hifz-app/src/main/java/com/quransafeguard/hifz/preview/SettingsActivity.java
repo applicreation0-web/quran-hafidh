@@ -456,11 +456,9 @@ public final class SettingsActivity extends android.app.Activity {
         Toast.makeText(this,"Début de rotation enregistré. Les positions actuelles restent inchangées.",Toast.LENGTH_LONG).show();
     }
 
-    /** P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying a
-     *  flat constant — see MaintenanceCoveragePolicy. */
+    /** Product-frozen Entretien duration. */
     private int maintenanceMinutes(){
-        return MaintenanceCoveragePolicy.minutes(
-            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
+        return HifzSchedule.MAINTENANCE_MINUTES;
     }
 
     private void refreshMurajaah(){
