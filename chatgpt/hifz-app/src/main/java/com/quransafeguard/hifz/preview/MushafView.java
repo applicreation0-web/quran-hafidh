@@ -66,6 +66,8 @@ public final class MushafView extends WebView {
     private boolean maskFollowsSelection = true;
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
+    private String quizTargetLineId;
+    private List<String> quizVisibleLineIds = Collections.emptyList();
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -194,7 +196,8 @@ public final class MushafView extends WebView {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
             String svg = readPageSvg(page);
-            boolean needsGeometry = !lineIds.isEmpty() || semanticCues.length() > 0;
+            boolean needsGeometry = !lineIds.isEmpty() || semanticCues.length() > 0
+                || quizTargetLineId != null || !quizVisibleLineIds.isEmpty();
             String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
@@ -218,6 +221,8 @@ public final class MushafView extends WebView {
                 .put("maskFollowsSelection", maskFollowsSelection)
                 .put("semanticCues", semanticCues)
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
+                .put("quizTargetLine", quizTargetLineId)
+                .put("quizVisibleLines", new JSONArray(quizVisibleLineIds))
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -330,6 +335,37 @@ public final class MushafView extends WebView {
 
     public void clearSemanticCues() {
         setSemanticCues(new JSONArray(), false);
+    }
+
+    /** Exact physical-line guide used only by the optional spatial quiz. */
+    public void setQuizGuide(String targetLineId, List<String> visibleLineIds) {
+        quizTargetLineId = targetLineId;
+        quizVisibleLineIds = visibleLineIds == null
+            ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(visibleLineIds));
+        if (requestedPage < 1 || requestedPage > 604) return;
+        final String geometry;
+        try {
+            geometry = GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
+        } catch (Throwable error) {
+            report("Géométrie du quiz indisponible : " + safeMessage(error));
+            return;
+        }
+        JSONArray visible = new JSONArray();
+        for (String id : quizVisibleLineIds) visible.put(id);
+        String target = quizTargetLineId == null ? "null" : JSONObject.quote(quizTargetLineId);
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&(window.HifzReader.setGeometry(" + geometry + "),window.HifzReader.setQuizGuide("
+                + target + "," + visible.toString() + "));",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    public void clearQuizGuide() {
+        quizTargetLineId = null;
+        quizVisibleLineIds = Collections.emptyList();
+        if (requestedPage < 1 || requestedPage > 604) return;
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setQuizGuide(null,[]);",
+            ignored -> post(() -> eink.local(this, prefs))));
     }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */
