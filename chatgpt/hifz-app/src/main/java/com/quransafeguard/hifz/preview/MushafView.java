@@ -355,19 +355,34 @@ public final class MushafView extends WebView {
         setQuizState(targetLineId, Collections.emptyList(), false, true, null);
     }
 
+    /** State-only counterpart used before show(): avoids briefly revealing the previous live page. */
+    public void prepareQuizPlacement(String targetLineId) {
+        storeQuizState(targetLineId, Collections.emptyList(), false, true, null);
+    }
+
     /** Text→position prompt: crop the real shipped Mushaf SVG to this exact physical line. */
     public void setQuizIsolatedLine(String lineId) {
         setQuizState(null, Collections.emptyList(), false, false, lineId);
     }
 
-    private void setQuizState(String targetLineId, List<String> visibleLineIds,
-                              boolean guideVisible, boolean captureLineTap, String isolatedLineId) {
+    /** State-only counterpart used before show(): the new boot payload starts already cropped. */
+    public void prepareQuizIsolatedLine(String lineId) {
+        storeQuizState(null, Collections.emptyList(), false, false, lineId);
+    }
+
+    private void storeQuizState(String targetLineId, List<String> visibleLineIds,
+                                boolean guideVisible, boolean captureLineTap, String isolatedLineId) {
         quizTargetLineId = targetLineId;
         quizVisibleLineIds = visibleLineIds == null
             ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(visibleLineIds));
         quizGuideVisible = guideVisible;
         quizCaptureLineTap = captureLineTap;
         quizIsolatedLineId = isolatedLineId;
+    }
+
+    private void setQuizState(String targetLineId, List<String> visibleLineIds,
+                              boolean guideVisible, boolean captureLineTap, String isolatedLineId) {
+        storeQuizState(targetLineId, visibleLineIds, guideVisible, captureLineTap, isolatedLineId);
         if (requestedPage < 1 || requestedPage > 604) return;
         final String geometry;
         try {
