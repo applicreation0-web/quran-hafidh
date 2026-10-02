@@ -153,8 +153,8 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(core.contains("EVENING_REVIEW_MINUTES = 30")
                 && core.contains("CONSOLIDATION_MINUTES = 30")
                 && core.contains("ANCHORING_ENVELOPE_MINUTES = 60")
-                && core.contains("MAINTENANCE_MINUTES = 45")
-                && core.contains("ACTIVE_REVIEW_MINUTES = 20")) {
+                && core.contains("MAINTENANCE_MINUTES = 30")
+                && core.contains("ACTIVE_REVIEW_MINUTES = 30")) {
             "Fixed timed sessions must be defined by HifzSchedule, not duplicate PreviewConfig constants."
         }
         check(session.contains("MURAJAAH_ACTIVE") && session.contains("renderMurajaahActive")) {
