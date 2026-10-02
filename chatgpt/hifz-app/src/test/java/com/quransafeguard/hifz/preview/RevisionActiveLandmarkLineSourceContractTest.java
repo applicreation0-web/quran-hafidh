@@ -34,8 +34,8 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
         assertTrue(session.contains("\"Révéler\""));
         assertTrue(session.contains("\"Suivant\""));
         assertTrue(session.contains("\"Terminer\""));
-        assertFalse(session.contains("\"Amorce suivante\""));
-        assertFalse(session.contains("\"Valider jusqu’ici\""));
+        assertFalse(session.contains("Ui.roundAction(this, \"\", \"Amorce suivante\""));
+        assertFalse(session.contains("Ui.roundAction(this, \"\", \"Valider jusqu’ici\""));
     }
 
     @Test public void earlyFinishRequiresExplicitConfirmation() throws Exception {
