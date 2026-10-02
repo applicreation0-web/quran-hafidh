@@ -7,23 +7,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/**
- * Reported directly: a fully masked page in Révision active gives a learner no way to confirm
- * they're reciting from the right point after a page swipe, or where to stop before turning the
- * page, unless they have every page's exact start/end verse memorized. Half of the page's first
- * physical line (its reading-first words) and half of its last physical line (its reading-last
- * words) now stay permanently visible as synchronization landmarks; the other half of each of
- * those two lines still masks normally. Cells are stored in ascending x order (left to right)
- * while Arabic reads right to left, so "reading-first" means the cell array's *tail* and
- * "reading-last" means its *head* — landmarkCellIndices in reader.js must get this the right way
- * round, or the visible half would be the wrong end of the line.
- *
- * These are source-contract checks because HifzSessionActivity/MushafView require an Android
- * Context this JVM test suite cannot construct, and the reader is a WebView/JS component with no
- * Robolectric in this project.
- */
+/** Source contract for the revised spatial active-recall UI. */
 public final class RevisionActiveLandmarkLineSourceContractTest {
     private static String read(String repoPath) throws Exception {
         Path direct = Paths.get(repoPath);
@@ -33,68 +20,28 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    private static String method(String source, String start, String end) {
-        int a = source.indexOf(start);
-        int b = source.indexOf(end, a + start.length());
-        if (a < 0 || b < 0 || b <= a) throw new IllegalStateException("Method boundary missing: " + start);
-        return source.substring(a, b);
-    }
-
-    private static int countOccurrences(String haystack, String needle) {
-        int count = 0, from = 0;
-        while (true) {
-            int at = haystack.indexOf(needle, from);
-            if (at < 0) return count;
-            count++;
-            from = at + needle.length();
-        }
-    }
-
-    @Test public void activeSessionUsesOneAuditedAmorceAndNoLegacyHalfLineFallback() throws Exception {
+    @Test public void activeSessionKeepsOfficialAmorcesInTheirRealMushafPositions() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue("active recall must render the audited Quranic amorce outside the masked Mushaf",
-            session.contains("activeCuePrompt.setText(activeRecallCue.anchorArabic)"));
-        assertTrue("the current semantic passage bounds page swipes",
-            session.contains("unitFirstPage = activeRecallCue.startPage")
-                && session.contains("unitLastPage = activeRecallCue.endPage"));
-        assertTrue("every active page remains fully maskable; no synthetic word boxes are created",
-            session.contains("currentMask = 100")
-                && session.contains("currentLineIds = geometry.lineIdsOnPage(currentPage)"));
-        assertTrue("the old synchronization landmarks must be explicitly cleared",
-            session.contains("mushaf.setLandmarkLines(null, null)"));
-        assertTrue("the old half-line fallback must no longer participate in active recall",
-            !session.contains("applyActiveLandmarks(") && !session.contains("applyActiveRecallCues("));
+        assertFalse("the duplicated Arabic prompt above the Mushaf is retired", session.contains("activeCuePrompt"));
+        assertTrue("all page cues are applied in place", session.contains("applyActiveRevisionPageCues()"));
+        assertTrue(session.contains("semanticPassages.readerCuesForPage(currentPage)"));
+        assertTrue("active recall remains fully masked outside explicit visible ranges", session.contains("currentMask = 100"));
+        assertTrue("no old half-line landmark fallback is used", session.contains("mushaf.setLandmarkLines(null, null)"));
     }
 
-    @Test public void mushafForwardsLandmarksToTheReaderAndIntoTheBootPayload() throws Exception {
-        String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
-        assertTrue("must expose a setter mirroring setHighlightVerses/setAudioVerse",
-            mushaf.contains("public void setLandmarkLines(String startLineId, String endLineId) {"));
-        assertTrue("a fresh page load must carry the current start landmark",
-            mushaf.contains(".put(\"landmarkStart\", landmarkStartLineId)"));
-        assertTrue("a fresh page load must carry the current end landmark",
-            mushaf.contains(".put(\"landmarkEnd\", landmarkEndLineId)"));
-        assertTrue("live updates (without a full reload) must call the reader's own setter",
-            mushaf.contains("window.HifzReader.setLandmarks("));
+    @Test public void activeActionsAreOnlyRevealNextAndFinish() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("\"Révéler\""));
+        assertTrue(session.contains("\"Suivant\""));
+        assertTrue(session.contains("\"Terminer\""));
+        assertFalse(session.contains("\"Amorce suivante\""));
+        assertFalse(session.contains("\"Valider jusqu’ici\""));
     }
 
-    @Test public void readerRevealsTheReadingOrderCorrectHalfOfEachLandmarkLine() throws Exception {
-        String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        assertTrue("reader must expose the live setter the native side calls",
-            reader.contains("setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()}"));
-        String split = method(reader,
-            "function landmarkCellIndices(cellCount,role){", "function maskCandidates(lines,polys){");
-        assertTrue("a single-cell line can't be meaningfully split, so it must stay fully maskable",
-            split.contains("if(cellCount<=1)return null;"));
-        assertTrue("the reveal count must round up so an odd cell count favors revealing, not hiding",
-            split.contains("Math.ceil(cellCount/2)"));
-        assertTrue("'start' must mask the head (low-index/leftmost) half — since cells run low-to-high in x "
-                + "while Arabic reads right to left, the leftmost cells are read *last*, so they're safe to mask",
-            split.contains("{from:0,to:cellCount-reveal}"));
-        assertTrue("'end' must mask the tail (high-index/rightmost) half — the rightmost cells are read *first*, "
-                + "so masking them (not the landmark's leftmost reading-last words) is what makes it an end landmark",
-            split.contains("{from:reveal,to:cellCount}"));
-        assertTrue("maskCandidates must actually honor that range when building today's mask pool",
-            reader.contains("if(range&&(ci<range.from||ci>=range.to))return;"));
+    @Test public void earlyFinishRequiresExplicitConfirmation() throws Exception {
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        assertTrue(session.contains("Temps effectué : "));
+        assertTrue(session.contains("La séance n’a pas encore atteint sa durée cible."));
+        assertTrue(session.contains("Terminer quand même"));
     }
 }
