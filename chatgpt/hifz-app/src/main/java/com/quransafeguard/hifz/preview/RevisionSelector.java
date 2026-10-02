@@ -13,6 +13,7 @@ final class RevisionSelector {
 
     interface Choice {
         void openActiveRevision();
+        void openSpatialQuiz();
         void openPassiveRevision();
     }
 
@@ -27,12 +28,14 @@ final class RevisionSelector {
             : "durée variable";
         String[] items = {
             "Révision active · 15 min · " + (activeDone ? "fait" : "à faire"),
+            "Quiz spatial · ≤15 min · facultatif",
             "Entretien · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
         new AlertDialog.Builder(activity)
             .setTitle("Révision")
             .setItems(items, (dialog, which) -> {
                 if (which == 0) choice.openActiveRevision();
+                else if (which == 1) choice.openSpatialQuiz();
                 else choice.openPassiveRevision();
             })
             .show();
