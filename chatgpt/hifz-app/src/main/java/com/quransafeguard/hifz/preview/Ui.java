@@ -110,6 +110,15 @@ final class Ui {
         button.setCompoundDrawableTintList(iconTintFlat());
     }
 
+    /** Keep a visible, unambiguous text label while allowing the semantic state icon to change. */
+    static void setButtonIconWithText(Button button, int iconRes, String label) {
+        if (button == null) return;
+        button.setText(label == null ? "" : label);
+        button.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
+        button.setCompoundDrawableTintList(iconTint());
+        button.setCompoundDrawablePadding(dp(button.getContext(), 5));
+    }
+
     /**
      * Icon + short caption with one compact grammar across all Hifz modes. The caption wraps onto
      * a second line (capped at 84dp) instead of clipping to one truncated line — a label like

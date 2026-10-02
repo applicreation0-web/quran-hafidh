@@ -150,7 +150,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 60));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
-        semanticButton = Ui.iconButton(this, "", "Afficher les repères", v -> toggleSemanticCues());
+        semanticButton = Ui.smallButton(this, "Repères", v -> toggleSemanticCues());\n        semanticButton.setMinimumWidth(Ui.dp(this, 92));
         semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
@@ -241,21 +241,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private Button tafsirReaderAction() {
-        Button button = new Button(this);
-        button.setAllCaps(false);
-        button.setText("Tafsir");
-        button.setTextSize(14.5f);
+        Button button = Ui.smallButton(this, "Tafsir", v -> openTafsir());
+        button.setTextSize(14f);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        button.setTextColor(Ui.INK);
-        button.setGravity(Gravity.CENTER);
         button.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
-        button.setOnClickListener(v -> openTafsir());
-        button.setStateListAnimator(null);
-        button.setElevation(0f);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        button.setMinimumHeight(Ui.dp(this, 60));
-        button.setMinimumWidth(Ui.dp(this, 190));
-        button.setPadding(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
+        button.setMinimumWidth(Ui.dp(this, 96));
         return button;
     }
 
@@ -275,7 +265,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         String description = semanticCuesEnabled ? "Masquer les repères" : "Afficher les repères";
         semanticButton.setContentDescription(description);
         int icon = Ui.iconFor(description, "");
-        if (icon != 0) Ui.setButtonIcon(semanticButton, icon);
+        if (icon != 0) Ui.setButtonIconWithText(semanticButton, icon, "Repères");
     }
 
     private void applySemanticCues() {
