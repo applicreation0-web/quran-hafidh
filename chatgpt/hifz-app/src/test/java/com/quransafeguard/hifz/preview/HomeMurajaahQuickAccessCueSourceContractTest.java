@@ -59,7 +59,7 @@ public final class HomeMurajaahQuickAccessCueSourceContractTest {
         String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
         assertTrue("Révision active's own fixed duration must still be shown once the dialog opens",
             selector.contains("HifzSchedule.ACTIVE_REVIEW_MINUTES"));
-        assertTrue("Entretien must keep using the real dynamic J-15 duration, not a flat number",
-            selector.contains("MaintenanceCoveragePolicy.minutes("));
+        assertTrue("Entretien must use the product-frozen 30-minute core duration",
+            selector.contains("HifzSchedule.MAINTENANCE_MINUTES"));
     }
 }
