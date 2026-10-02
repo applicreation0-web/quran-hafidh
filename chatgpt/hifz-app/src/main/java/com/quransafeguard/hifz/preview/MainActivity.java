@@ -214,7 +214,6 @@ public final class MainActivity extends android.app.Activity {
     private void showRevisionSelector() {
         RevisionSelector.show(this, prefs, geometry, speedStore, new RevisionSelector.Choice() {
             @Override public void openActiveRevision() { openMode(HifzSessionActivity.MURAJAAH_ACTIVE); }
-            @Override public void openSpatialQuiz() { startActivity(new Intent(MainActivity.this, SpatialQuizActivity.class)); }
             @Override public void openPassiveRevision() { openMode(HifzSessionActivity.MURAJAAH); }
         });
     }
