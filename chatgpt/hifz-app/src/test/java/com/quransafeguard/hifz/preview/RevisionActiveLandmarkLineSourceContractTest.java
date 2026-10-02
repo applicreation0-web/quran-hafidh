@@ -60,8 +60,10 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
         assertTrue("must push the page's last line as the end landmark", helper.contains("all.get(all.size() - 1)"));
         assertTrue("must actually tell the reader about both landmarks",
             helper.contains("mushaf.setLandmarkLines(first, last);"));
-        assertTrue("every page-entry/page-swipe path in active mode must route through this one helper",
-            countOccurrences(session, "applyActiveLandmarks(") >= 5);
+        assertTrue("every active page-entry/page-swipe path must route through the semantic-aware wrapper",
+            countOccurrences(session, "applyActiveRecallCues(") >= 4);
+        assertTrue("the semantic-aware wrapper must preserve these landmarks as the fail-closed fallback",
+            helper.contains("return applyActiveLandmarks(page);"));
         assertTrue("no active-mode call site may bypass the helper with the raw page lookup",
             !session.contains("currentLineIds=geometry.lineIdsOnPage(")
                 && !session.contains("currentLineIds = geometry.lineIdsOnPage("));
