@@ -410,6 +410,7 @@ final class Ui {
         if (s.contains("sabqi")) return R.drawable.ic_hifz_new_lesson;
         if (s.contains("itq")) return R.drawable.ic_hifz_anchor;
         if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_hifz_maintenance;
+        if (s.contains("annuler la note")) return R.drawable.ic_ui_undo;
         if (s.contains("annuler")) return R.drawable.ic_ui_reset;
         if (s.contains("effacer")) return R.drawable.ic_ui_delete;
         return 0;
