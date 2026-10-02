@@ -32,24 +32,13 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     static final long QUIZ_LIMIT_MS = 15L * 60L * 1000L;
 
     private enum Kind {
+        TEXT_TO_POSITION,
         POSITION_TO_TEXT,
-        TRANSITION,
-        SEMANTIC_TO_POSITION
-    }
-
-    private static final class SemanticTarget {
-        final SemanticPassageRepository.Cue cue;
-        final GeometryRepository.LineMeta line;
-
-        SemanticTarget(SemanticPassageRepository.Cue cue, GeometryRepository.LineMeta line) {
-            this.cue = cue;
-            this.line = line;
-        }
+        TRANSITION
     }
 
     private HifzPrefs prefs;
     private GeometryRepository geometry;
-    private SemanticPassageRepository semanticPassages;
     private MushafView mushaf;
     private TextView prompt;
     private TextView feedback;
@@ -63,16 +52,14 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     private final Random random = new Random();
     private final ArrayList<GeometryRepository.LineMeta> acquiredLines = new ArrayList<>();
     private final ArrayList<GeometryRepository.LineMeta> transitionTargets = new ArrayList<>();
-    private final ArrayList<SemanticTarget> semanticTargets = new ArrayList<>();
     private final ArrayList<Kind> availableKinds = new ArrayList<>();
 
     private GeometryRepository.LineMeta currentTarget;
     private GeometryRepository.LineMeta currentPrevious;
-    private SemanticTarget currentSemantic;
     private Kind currentKind;
     private String previousQuestionLineId;
     private boolean answerUnlocked;
-    private boolean semanticPositionTapped;
+    private boolean placementStage;
     private int questionCount;
     private int exactCount;
     private int almostCount;
@@ -90,7 +77,6 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
             showUnavailable("La géométrie exacte du Mushaf est indisponible.");
             return;
         }
-        semanticPassages = new SemanticPassageRepository(this);
         try {
             buildQuestionCorpus();
         } catch (RuntimeException unavailableProgression) {
@@ -122,21 +108,9 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
             if (previous.page == line.page && acquired.contains(previous.id)) transitionTargets.add(line);
         }
 
-        if (semanticPassages.isAvailable()) {
-            for (int page = 1; page <= 604; page++) {
-                List<String> ids = geometry.lineIdsOnPage(page);
-                for (SemanticPassageRepository.Cue cue : semanticPassages.cuesForPage(page)) {
-                    if (!cue.anchorOnCurrentPage || cue.startLine < 1 || cue.startLine > ids.size()) continue;
-                    String lineId = ids.get(cue.startLine - 1);
-                    GeometryRepository.LineMeta line = acquiredById.get(lineId);
-                    if (line != null && !cue.anchorArabic.isEmpty()) semanticTargets.add(new SemanticTarget(cue, line));
-                }
-            }
-        }
-
+        availableKinds.add(Kind.TEXT_TO_POSITION);
         availableKinds.add(Kind.POSITION_TO_TEXT);
         if (!transitionTargets.isEmpty()) availableKinds.add(Kind.TRANSITION);
-        if (!semanticTargets.isEmpty()) availableKinds.add(Kind.SEMANTIC_TO_POSITION);
     }
 
     private void buildUi() {
@@ -209,7 +183,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     private boolean nextQuestion() {
         if (finished || availableKinds.isEmpty()) return false;
         answerUnlocked = false;
-        semanticPositionTapped = false;
+        placementStage = false;
         feedback.setText("");
         setScoreButtonsEnabled(false);
         revealButton.setEnabled(true);
@@ -217,30 +191,33 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         currentKind = availableKinds.get(questionCount % availableKinds.size());
         currentTarget = null;
         currentPrevious = null;
-        currentSemantic = null;
 
         if (currentKind == Kind.TRANSITION && transitionTargets.isEmpty()) currentKind = Kind.POSITION_TO_TEXT;
-        if (currentKind == Kind.SEMANTIC_TO_POSITION && semanticTargets.isEmpty()) currentKind = Kind.POSITION_TO_TEXT;
 
-        if (currentKind == Kind.POSITION_TO_TEXT) {
+        if (currentKind == Kind.TEXT_TO_POSITION) {
+            currentTarget = chooseLine(acquiredLines);
+            if (currentTarget == null) return false;
+            prompt.setText("Retrouvez la position de cette ligne.");
+            revealButton.setText("Positionner");
+            revealButton.setContentDescription("Positionner");
+            mushaf.clearSemanticCues();
+            mushaf.prepareQuizIsolatedLine(currentTarget.id);
+            mushaf.show(currentTarget.page, Collections.emptyList(), Collections.emptyList(), 0);
+        } else if (currentKind == Kind.POSITION_TO_TEXT) {
             currentTarget = chooseLine(acquiredLines);
             if (currentTarget == null) return false;
             prompt.setText("Récitez la ligne indiquée.");
+            revealButton.setText("Révéler");
+            revealButton.setContentDescription("Révéler");
             showMaskedQuestion(currentTarget, Collections.emptyList(), true);
-        } else if (currentKind == Kind.TRANSITION) {
+        } else {
             currentTarget = chooseLine(transitionTargets);
             if (currentTarget == null || currentTarget.globalIndex <= 0) return false;
             currentPrevious = geometry.line(currentTarget.globalIndex - 1);
             prompt.setText("Enchaînez avec la ligne indiquée.");
+            revealButton.setText("Révéler");
+            revealButton.setContentDescription("Révéler");
             showMaskedQuestion(currentTarget, Collections.singletonList(currentPrevious.id), true);
-        } else {
-            currentSemantic = semanticTargets.get(random.nextInt(semanticTargets.size()));
-            currentTarget = currentSemantic.line;
-            previousQuestionLineId = currentTarget.id;
-            prompt.setText("Où commence ce repère ?  " + currentSemantic.cue.anchorArabic);
-            mushaf.clearSemanticCues();
-            mushaf.setQuizGuide(null, Collections.emptyList());
-            mushaf.show(currentTarget.page, Collections.emptyList(), geometry.lineIdsOnPage(currentTarget.page), 100);
         }
         return true;
     }
@@ -264,25 +241,35 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
 
     private void revealAnswer() {
         if (currentTarget == null || finished) return;
-        if (currentKind == Kind.SEMANTIC_TO_POSITION) {
-            mushaf.setQuizGuide(currentTarget.id, Collections.emptyList());
+
+        if (currentKind == Kind.TEXT_TO_POSITION && !placementStage) {
+            placementStage = true;
+            prompt.setText("Touchez l’emplacement exact de la ligne.");
+            feedback.setText("");
+            revealButton.setText("Révéler");
+            revealButton.setContentDescription("Révéler");
+            mushaf.prepareQuizPlacement(currentTarget.id);
+            mushaf.show(currentTarget.page, Collections.emptyList(), geometry.lineIdsOnPage(currentTarget.page), 100);
+            return;
         }
+
+        mushaf.setQuizGuide(currentTarget.id, Collections.emptyList());
         mushaf.setMask(0);
         answerUnlocked = true;
         setScoreButtonsEnabled(true);
         revealButton.setEnabled(false);
-        if (currentKind == Kind.SEMANTIC_TO_POSITION && !semanticPositionTapped) {
-            feedback.setText("Repère affiché · évaluez votre rappel.");
-        } else if (feedback.getText().length() == 0) {
-            feedback.setText("Réponse affichée · évaluez votre rappel.");
-        }
+        if (feedback.getText().length() == 0) feedback.setText("Réponse affichée · évaluez votre rappel.");
     }
 
     @Override public void onVerseTap(VerseRef verse) {
-        if (finished || currentKind != Kind.SEMANTIC_TO_POSITION || currentTarget == null || answerUnlocked) return;
-        semanticPositionTapped = true;
-        boolean correct = currentTarget.verses.contains(verse);
-        feedback.setText(correct ? "Position correcte." : "Autre position · le repère exact est maintenant indiqué.");
+        // Spatial placement is scored from the exact physical line tap, not a whole-verse polygon.
+    }
+
+    @Override public void onQuizLineTap(String lineId) {
+        if (finished || currentKind != Kind.TEXT_TO_POSITION || !placementStage
+                || currentTarget == null || answerUnlocked) return;
+        boolean correct = currentTarget.id.equals(lineId);
+        feedback.setText(correct ? "Position correcte." : "Autre position · la ligne exacte est maintenant indiquée.");
         mushaf.setQuizGuide(currentTarget.id, Collections.emptyList());
         mushaf.setMask(0);
         answerUnlocked = true;
