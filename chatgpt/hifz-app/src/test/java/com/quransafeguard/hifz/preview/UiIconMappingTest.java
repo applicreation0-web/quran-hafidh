@@ -38,8 +38,10 @@ public final class UiIconMappingTest {
             {"Répéter le verset", R.drawable.ic_ui_repeat},
             {"Révéler", R.drawable.ic_ui_reveal},
             {"Repères", R.drawable.ic_ui_semantic_cues},
+            {"Amorces", R.drawable.ic_ui_semantic_key},
             {"Afficher les repères", R.drawable.ic_ui_semantic_cues},
             {"Masquer les repères", R.drawable.ic_ui_semantic_cues_off},
+            {"Annoter", R.drawable.ic_ui_edit},
             {"Annuler la note", R.drawable.ic_ui_undo},
             {"À renforcer", R.drawable.ic_hifz_strengthen},
             {"Apprentissage", R.drawable.ic_hifz_new_lesson},
@@ -58,7 +60,7 @@ public final class UiIconMappingTest {
             {"Supprimer la plage", R.drawable.ic_ui_delete},
             {"Sourate", R.drawable.ic_ui_surah_list},
             {"Hizb", R.drawable.ic_ui_hizb},
-            {"Effacer les notes", R.drawable.ic_ui_delete}
+            {"Effacer les notes", R.drawable.ic_ui_annotation_erase}
         });
     }
 
