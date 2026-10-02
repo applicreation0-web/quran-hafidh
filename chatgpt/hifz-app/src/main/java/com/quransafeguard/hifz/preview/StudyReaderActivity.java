@@ -53,6 +53,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef selected;
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
+    private Button semanticButton;
+    private SemanticPassageRepository semanticPassages;
+    private boolean semanticCuesEnabled;
+    private Dialog semanticTitleDialog;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
     private TextView surahPicker;
@@ -75,8 +79,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (jumpVerse != null) {
             try { pendingJumpVerse = GeometryRepository.parseVerse(jumpVerse); } catch (RuntimeException malformed) { /* ignore */ }
         }
-        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
+        SharedPreferences studyPrefs = getSharedPreferences("hifz_study", MODE_PRIVATE);
+        studyPrefs.edit().putInt("page", page).apply();
         hifzPrefs = new HifzPrefs(this);
+        semanticPassages = new SemanticPassageRepository(this);
+        semanticCuesEnabled = semanticPassages.isAvailable() && studyPrefs.getBoolean("semantic_cues_enabled", false);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
 
         rootRow = new LinearLayout(this);
@@ -143,6 +150,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 60));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
+        semanticButton = Ui.iconButton(this, "", "Afficher les repères", v -> toggleSemanticCues());
+        semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
+        readerActions.addView(semanticButton);
+        updateSemanticButton();
         readerActions.addView(Ui.iconButton(this, "↺", "Annuler la note",
             v -> annotationOverlay.undoLastStroke()));
         readerActions.addView(Ui.iconButton(this, "⌫", "Effacer les notes",
@@ -248,6 +259,34 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return button;
     }
 
+    private void toggleSemanticCues() {
+        if (semanticPassages == null || !semanticPassages.isAvailable()) return;
+        semanticCuesEnabled = !semanticCuesEnabled;
+        getSharedPreferences("hifz_study", MODE_PRIVATE).edit()
+            .putBoolean("semantic_cues_enabled", semanticCuesEnabled).apply();
+        updateSemanticButton();
+        applySemanticCues();
+        showControls();
+    }
+
+    private void updateSemanticButton() {
+        if (semanticButton == null) return;
+        semanticButton.setSelected(semanticCuesEnabled);
+        String description = semanticCuesEnabled ? "Masquer les repères" : "Afficher les repères";
+        semanticButton.setContentDescription(description);
+        int icon = Ui.iconFor(description, "");
+        if (icon != 0) Ui.setButtonIcon(semanticButton, icon);
+    }
+
+    private void applySemanticCues() {
+        if (mushaf == null) return;
+        if (!semanticCuesEnabled || semanticPassages == null || !semanticPassages.isAvailable()) {
+            mushaf.clearSemanticCues();
+            return;
+        }
+        mushaf.setSemanticCues(semanticPassages.readerCuesForPage(page), false);
+    }
+
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
@@ -275,6 +314,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override public void onPageSwipe(int delta) { go(delta); }
     @Override public void onSurfaceTap() { if (controlsVisible) hideControls(); else showControls(); }
+    @Override public void onSemanticCueTap(String passageId) {
+        if (!semanticCuesEnabled || semanticPassages == null) return;
+        SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
+        if (cue == null) return;
+        semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+    }
 
     private void showControls() {
         controlsVisible = true;
@@ -638,6 +683,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         updateSurahPickerLabel();
         updateRubPickerLabel();
         updateRubBadge();
+        applySemanticCues();
     }
     @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_PAGE_UP) { go(-1); return true; }
@@ -646,6 +692,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
     @Override protected void onDestroy() {
         io.shutdownNow();
+        if (semanticTitleDialog != null && semanticTitleDialog.isShowing()) semanticTitleDialog.dismiss();
         if (mushaf != null) {
             mushaf.removeCallbacks(autoHide);
             mushaf.destroySafely();
