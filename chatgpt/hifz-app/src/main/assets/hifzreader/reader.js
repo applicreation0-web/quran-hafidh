@@ -17,6 +17,9 @@ let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
 let quizTargetLine=boot.quizTargetLine?String(boot.quizTargetLine):null;
 let quizVisibleLines=new Set((boot.quizVisibleLines||[]).map(String));
+let quizGuideVisible=boot.quizGuideVisible!==false;
+let quizCaptureLineTap=!!boot.quizCaptureLineTap;
+let quizIsolatedLine=boot.quizIsolatedLine?String(boot.quizIsolatedLine):null;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -159,6 +162,22 @@ function prepare(){
     p.removeAttribute('tabindex');
     p.onclick=e=>{
       e.stopPropagation();
+      if(quizCaptureLineTap&&pageGeo){
+        const svg=currentSvg(),ctm=svg&&svg.getScreenCTM();
+        if(svg&&ctm){
+          const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;
+          const local=pt.matrixTransform(ctm.inverse());
+          const lines=pageGeo.lines||[];
+          let line=lines.find(item=>Number(item.top)<=local.y&&local.y<=Number(item.bottom));
+          if(!line&&lines.length){
+            line=lines.reduce((best,item)=>{
+              const d=Math.abs(((Number(item.top)+Number(item.bottom))/2)-local.y);
+              return !best||d<best.d?{item,d}:best;
+            },null)?.item;
+          }
+          if(line){N?.quizLineTap?.(String(line.id));return;}
+        }
+      }
       const [s,a]=k.split(':').map(Number);N?.verseTap(s,a);
     };
   });
@@ -366,7 +385,7 @@ function markerLayer(svg,polys,lines){
 function quizGuideLayer(svg){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','quizlayer');
-  if(!pageGeo||!quizTargetLine)return g;
+  if(!pageGeo||!quizTargetLine||!quizGuideVisible)return g;
   const line=(pageGeo.lines||[]).find(item=>String(item.id)===String(quizTargetLine));
   if(!line||!(line.cells||[]).length)return g;
   let x0=Infinity,x1=-Infinity;
@@ -383,6 +402,27 @@ function quizGuideLayer(svg){
   rect.setAttribute('pointer-events','none');
   g.appendChild(rect);
   return g;
+}
+
+function applyQuizViewBox(svg){
+  if(!svg)return;
+  if(!svg.dataset.hifzOriginalViewBox){
+    svg.dataset.hifzOriginalViewBox=svg.getAttribute('viewBox')||'';
+  }
+  document.body.classList.toggle('quiz-isolated',!!quizIsolatedLine);
+  if(!quizIsolatedLine||!pageGeo){
+    const original=svg.dataset.hifzOriginalViewBox;
+    if(original)svg.setAttribute('viewBox',original);
+    return;
+  }
+  const line=(pageGeo.lines||[]).find(item=>String(item.id)===String(quizIsolatedLine));
+  if(!line||!(line.cells||[]).length)return;
+  let x0=Infinity,x1=-Infinity;
+  (line.cells||[]).forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+  const top=Number(line.top),bottom=Number(line.bottom);
+  if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
+  const padX=12,padY=3;
+  svg.setAttribute('viewBox',[(x0-padX),(top-padY),(x1-x0)+padX*2,(bottom-top)+padY*2].join(' '));
 }
 
 function semanticCueLayer(svg){
@@ -445,6 +485,7 @@ function semanticCueLayer(svg){
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
+  applyQuizViewBox(svg);
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
     p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
@@ -511,7 +552,7 @@ function render(){
   }
 
   // Optional quiz guide uses the exact physical line geometry, never an approximate grid.
-  if(quizTargetLine){
+  if(quizTargetLine&&quizGuideVisible){
     const quiz=quizGuideLayer(svg);
     if(quiz.childNodes.length)svg.appendChild(quiz);
   }
@@ -568,7 +609,19 @@ window.HifzReader={
   setQuizGuide(targetLineId,visibleLineIds){
     quizTargetLine=targetLineId?String(targetLineId):null;
     quizVisibleLines=new Set((visibleLineIds||[]).map(String));
+    quizGuideVisible=true;quizCaptureLineTap=false;quizIsolatedLine=null;
     render();
+  },
+  setQuizState(targetLineId,visibleLineIds,guideVisible,captureLineTap,isolatedLineId){
+    quizTargetLine=targetLineId?String(targetLineId):null;
+    quizVisibleLines=new Set((visibleLineIds||[]).map(String));
+    quizGuideVisible=!!guideVisible;
+    quizCaptureLineTap=!!captureLineTap;
+    quizIsolatedLine=isolatedLineId?String(isolatedLineId):null;
+    render();
+    requestAnimationFrame(updateSideMarks);
+    requestAnimationFrame(updateCenterMark);
+    requestAnimationFrame(updatePageBadge);
   },
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
