@@ -38,11 +38,9 @@ final class WeeklyDashboardPlanner {
         this.prefs=prefs;this.geometry=geometry;this.ledger=ledger;this.speedStore=speedStore;
     }
 
-    /** P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying a
-     *  flat constant — see MaintenanceCoveragePolicy. */
+    /** Product-frozen Entretien duration. */
     private int maintenanceMinutes(){
-        return MaintenanceCoveragePolicy.minutes(
-            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
+        return HifzSchedule.MAINTENANCE_MINUTES;
     }
 
     static List<LocalDate> window(LocalDate today){
