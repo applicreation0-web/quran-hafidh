@@ -65,6 +65,5 @@ public final class SemanticTitleV22SourceContractTest {
         assertTrue(session.contains("applyActiveRevisionPageCues()"));
         assertFalse(session.contains("activeCuePrompt"));
         assertFalse(manifest.contains("SpatialQuizActivity"));
-    }}
-
+    }
 }
