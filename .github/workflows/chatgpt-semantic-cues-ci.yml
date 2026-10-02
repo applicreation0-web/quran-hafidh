@@ -1,0 +1,87 @@
+name: ChatGPT semantic cues isolated CI
+
+on:
+  push:
+    branches:
+      - work/chatgpt-semantic-cues
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatgpt-semantic-cues-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: chatgpt
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Verify semantic branch scope
+        run: |
+          set -euo pipefail
+          test -d hifz-app
+          test -d hifz-core
+          test -s app/src/main/assets/reader109/geometry.json
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+
+      - name: Run focused JS/Python anti-regression checks
+        run: |
+          set -euo pipefail
+          python3 scripts/test_hifz_claude_audit_regressions.py
+          python3 scripts/verify_hifz_mask_hotfix.py
+          node scripts/test_hifz_mask_segments.js
+          node scripts/test_hifz_vertical_fit.js
+
+      - name: Run Hifz JVM tests and contracts
+        run: >-
+          gradle --no-daemon
+          :hifz-core:test
+          :hifz-app:testDebugUnitTest
+          :hifz-app:sourceContractTest
+          :hifz-app:compileDebugAndroidTestSources
+          :hifz-app:verifyHifzProductBoundary
+          :hifz-app:verifyHifzCosmeticContract
+          :hifz-app:verifyHifzConvergenceRules
+          --stacktrace
+
+      - name: Compile debug APK
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatgpt-semantic-cues-ci-${{ github.sha }}
+          path: |
+            chatgpt/hifz-app/build/test-results/
+            chatgpt/hifz-app/build/reports/tests/
+            chatgpt/hifz-core/build/test-results/
+            chatgpt/hifz-core/build/reports/tests/
+          if-no-files-found: warn
+          retention-days: 14
