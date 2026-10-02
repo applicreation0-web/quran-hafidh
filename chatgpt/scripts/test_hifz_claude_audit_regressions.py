@@ -16,8 +16,11 @@ def test_runtime_uses_domain_schedule_as_single_source_of_truth():
     # Calendar/session selection stays schedule-driven, while a mode opened directly must obtain
     # its duration from the same domain constants without depending on whether that mode happens
     # to be scheduled today. This prevents quick-access and midnight rollover crashes.
-    assert "HifzSchedule.INSTANCE.planFor" in main, (
-        "Today/dashboard must keep consuming HifzSchedule.planFor()"
+    assert "HifzSchedule.INSTANCE.actionFor" in main, (
+        "Today/dashboard cadence gating must keep consuming HifzSchedule.actionFor()"
+    )
+    assert "HifzSchedule.INSTANCE.nextDue" in main, (
+        "Today/dashboard overdue selection must keep consuming HifzSchedule.nextDue()"
     )
     assert "fun targetMinutesFor(kind: SessionKind)" in core, (
         "HifzSchedule must expose the canonical per-mode target duration"
@@ -82,7 +85,11 @@ def test_dead_cursor_setter_and_test_only_reset_copy_are_removed():
     prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java")
     settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java")
 
-    assert "void setMurajaahCursor" not in prefs
+    # The 1.12 repair flow still needs a persisted Murajaah cursor setter when a user edits
+    # the review corpus and the old cursor falls outside the new range. What must stay absent is
+    # any test-only reset UI/copy leaking into production Settings.
+    assert "public void setMurajaahCursor" in prefs
+    assert "prefs.setMurajaahCursor(start)" in settings
     assert '"État de test"' not in settings
     assert "Efface la progression Hifz locale" in settings
 
