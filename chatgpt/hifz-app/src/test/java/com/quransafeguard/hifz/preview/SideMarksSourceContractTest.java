@@ -61,7 +61,7 @@ public final class SideMarksSourceContractTest {
 
     @Test public void neverWritesToMushafSizeOnlyReadsItsRect() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        String fn = method(reader, "function updateSideMarks(){", "\nwindow.addEventListener('resize'");
+        String fn = method(reader, "function updateSideMarks(){", "\nif(typeof window.addEventListener==='function')window.addEventListener('resize'");
         assertTrue("must measure the Mushaf's real rendered box, never assume a size",
             fn.contains("const rect=mushafEl.getBoundingClientRect();"));
         assertTrue("must never assign to the Mushaf element's own style — only #sidemarks may move",
@@ -80,7 +80,7 @@ public final class SideMarksSourceContractTest {
     @Test public void recomputesWhenTheLayoutCanActuallyChange() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue("a screen rotation can change which gutter (if any) exists",
-            reader.contains("window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));"));
+            reader.contains("if(typeof window.addEventListener==='function')window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));"));
         assertTrue("the very first render must position the bars before anything is visible",
             reader.contains("render();\n  requestAnimationFrame(updateSideMarks);\n  requestAnimationFrame(updateCenterMark);\n  requestAnimationFrame(updatePageBadge);\n  N?.pageShown(currentPage);"));
         assertTrue("a Tafsir reveal shifts #mushaf vertically (translateY) without changing its "
