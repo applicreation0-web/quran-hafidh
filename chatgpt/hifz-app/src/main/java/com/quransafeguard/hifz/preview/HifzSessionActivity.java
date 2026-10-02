@@ -1,6 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -45,6 +46,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private HifzSpeedStore speedStore;
     private HifzSessionMetricsStore metricsStore;
     private GeometryRepository geometry;
+    private SemanticPassageRepository semanticPassages;
+    private Dialog semanticTitleDialog;
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
@@ -114,6 +117,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         speedStore = new HifzSpeedStore(this);
         metricsStore = new HifzSessionMetricsStore(this);
+        semanticPassages = new SemanticPassageRepository(this);
         try {
             geometry = GeometryRepository.get(this);
         } catch (Throwable error) {
@@ -201,6 +205,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void renderMode() {
         closeAudio();
+        // Semantic cues are never carried into Sabqi/Itqan or any validation flow by accident.
+        // Révision active opts back in explicitly below only when exact audited geometry exists.
+        if (mushaf != null) mushaf.clearSemanticCues();
         actions.removeAllViews();
         revealButton = null;
         murajaahFinishButton = null;
@@ -1110,7 +1117,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ? savedPage : geometry.pageForVerse(murajaahPlan.start);
         currentSelection = Collections.emptyList();
         currentMask = 100;
-        currentLineIds = applyActiveLandmarks(currentPage);
+        currentLineIds = applyActiveRecallCues(currentPage);
         program.setText("Révision active · objectif " + murajaahObjectiveLabel());
         updateMurajaahProgress();
         mushaf.setMaskFollowsSelection(false);
@@ -1138,6 +1145,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         return all;
     }
 
+    /**
+     * Blind 15-minute recall prefers audited semantic anchors when their exact visual ranges are
+     * available. Until that geometry is complete, the proven first/last half-line landmarks remain
+     * untouched as the fallback, so importing a partial semantic corpus cannot degrade Revision.
+     */
+    private List<String> applyActiveRecallCues(int page) {
+        List<String> all = geometry.lineIdsOnPage(page);
+        if (semanticPassages != null && semanticPassages.isAvailable()
+                && semanticPassages.hasCompleteExactGeometryForPage(page)) {
+            mushaf.setLandmarkLines(null, null);
+            mushaf.setSemanticCues(semanticPassages.readerCuesForPage(page), true);
+            return all;
+        }
+        mushaf.clearSemanticCues();
+        return applyActiveLandmarks(page);
+    }
+
     private void updateMurajaahActions() {
         actions.removeAllViews();
         boolean active = MURAJAAH_ACTIVE.equals(mode);
@@ -1156,7 +1180,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 }
                 currentPage = geometry.pageForVerse(jumpTarget);
                 currentSelection = Collections.emptyList();
-                currentLineIds = active ? applyActiveLandmarks(currentPage) : Collections.emptyList();
+                currentLineIds = active ? applyActiveRecallCues(currentPage) : Collections.emptyList();
                 showCurrent();
                 restoreMurajaahEndpointSelectionOnCurrentPage();
                 updateMurajaahActions();
@@ -1485,6 +1509,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
+    @Override public void onSemanticCueTap(String passageId) {
+        if (!MURAJAAH_ACTIVE.equals(mode) || semanticPassages == null) return;
+        SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
+        if (cue == null) return;
+        semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+    }
     private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
 
     private void goPage(int delta) {
@@ -1494,7 +1524,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
         if(limited)target=Math.max(unitFirstPage,Math.min(unitLastPage,target));
         if(target==currentPage)return;closeAudio();currentPage=target;
-        if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=applyActiveLandmarks(currentPage);
+        if(MURAJAAH_ACTIVE.equals(mode))currentLineIds=applyActiveRecallCues(currentPage);
         showCurrent();
         boolean groupedCycle=RECENT_SABQI_REVIEW.equals(mode)||LEARNING_CONSOLIDATION.equals(mode)
             ||CONSOLIDATION_FINAL.equals(mode)||LEARNING_FINAL.equals(mode);
@@ -1613,7 +1643,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationOverlay.setPage(page);
         if(isMurajaahMode()&&!sessionCompleted){
             if(MURAJAAH_ACTIVE.equals(mode)){
-                currentLineIds=applyActiveLandmarks(page);
+                currentLineIds=applyActiveRecallCues(page);
                 prefs.setActiveMurajaahPage(page);
             } else {
                 prefs.setMurajaahPage(page);
@@ -1634,6 +1664,12 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){
+        closeAudio();
+        if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
+        if(clock!=null)clock.dispose();
+        if(mushaf!=null)mushaf.destroySafely();
+        super.onDestroy();
+    }
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }
