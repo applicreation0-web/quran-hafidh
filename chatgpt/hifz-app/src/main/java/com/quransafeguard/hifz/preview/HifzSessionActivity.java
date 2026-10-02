@@ -1701,12 +1701,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode)) kind = SessionKind.RECENT_SABQI_REVIEW;
     else if (MURAJAAH_ACTIVE.equals(mode)) kind = SessionKind.ACTIVE_MURAJAAH;
     else kind = SessionKind.OLD_ITQAN_MURAJAAH;
-    if (kind == SessionKind.OLD_ITQAN_MURAJAAH) {
-        // P4 J-15: the passive Entretien grows with the real ACQUIRED corpus instead of staying
-        // a flat constant — see MaintenanceCoveragePolicy.
-        return MaintenanceCoveragePolicy.minutes(
-            prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine());
-    }
     return HifzSchedule.INSTANCE.targetMinutesFor(kind);
 }
     private String displayModeName(){
