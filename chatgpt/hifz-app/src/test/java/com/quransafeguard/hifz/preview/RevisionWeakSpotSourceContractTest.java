@@ -36,8 +36,10 @@ public final class RevisionWeakSpotSourceContractTest {
     @Test public void sessionArmsMarkingOnlyInActiveAndNeverMovesTheCursorWhileArmed() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue("marking must be gated to Révision active, never passive", session.contains("weakMarkMode"));
-        assertTrue("armed tap must short-circuit before the normal cursor-tracking tap logic",
-            session.contains("if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }"));
+        assertTrue("active taps must never move the semantic traversal cursor; they only mark when armed",
+            session.contains("if (MURAJAAH_ACTIVE.equals(mode)) {")
+                && session.contains("if (weakMarkMode) toggleWeakVerse(verse);")
+                && session.contains("return;"));
         assertTrue("marking mode must reset on every mode entry so it never leaks across sessions",
             session.contains("weakMarkMode = false;"));
         assertTrue("both renderMurajaah and renderMurajaahActive must push the flagged set to the reader",
