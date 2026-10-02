@@ -29,9 +29,9 @@ final class RevisionSelector {
                 prefs.acquiredLineCountV6(), geometry.lineCount(), speedStore.maintenanceSecondsPerLine()) + " min"
             : "durée variable";
         String[] items = {
-            "Révision active · " + HifzSchedule.ACTIVE_REVIEW_MINUTES + " min · " + (activeDone ? "fait" : "à faire"),
-            "Quiz spatial · ≤15 min · facultatif",
-            "Entretien · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
+            "Révision active · Amorces · " + HifzSchedule.ACTIVE_REVIEW_MINUTES + " min · " + (activeDone ? "fait" : "à faire"),
+            "Quiz · Acquis · ≤15 min · facultatif",
+            "Entretien · lecture · " + maintenanceCue + " · " + (passiveDone ? "fait" : "à faire"),
         };
         new AlertDialog.Builder(activity)
             .setTitle("Révision")
