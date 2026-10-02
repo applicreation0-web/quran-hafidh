@@ -40,6 +40,7 @@ public final class UiIconMappingTest {
             {"Repères", R.drawable.ic_ui_semantic_cues},
             {"Afficher les repères", R.drawable.ic_ui_semantic_cues},
             {"Masquer les repères", R.drawable.ic_ui_semantic_cues_off},
+            {"Annuler la note", R.drawable.ic_ui_undo},
             {"À renforcer", R.drawable.ic_hifz_strengthen},
             {"Apprentissage", R.drawable.ic_hifz_new_lesson},
             {"Stabilisation", R.drawable.ic_hifz_anchor},
