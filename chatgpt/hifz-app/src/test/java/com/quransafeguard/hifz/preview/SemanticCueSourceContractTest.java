@@ -23,8 +23,14 @@ public final class SemanticCueSourceContractTest {
     @Test public void repositoryFailsClosedUntilAuditedV21AssetIsPresent() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
         assertTrue(source.contains("semantic/semantic_passages_v2_1.json"));
+        assertTrue(source.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
+        assertTrue(source.contains("title_fr_v2_1"));
+        assertTrue(source.contains("anchor_arabic_v2_1"));
+        assertTrue(source.contains("anchor_word_count_v2_1"));
+        assertTrue(source.contains("minimality_verified_v2_1"));
         assertTrue(source.contains("Fail closed"));
         assertTrue(source.contains("hasCompleteExactGeometryForPage"));
+        assertTrue(source.contains("source-ink groups, not linguistic words"));
         assertFalse("runtime must not infer fake word boxes from line geometry",
             source.contains("guess") || source.contains("approximateWord"));
     }
