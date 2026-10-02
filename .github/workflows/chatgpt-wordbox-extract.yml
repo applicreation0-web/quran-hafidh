@@ -41,6 +41,48 @@ jobs:
           EOF
           sha256sum /tmp/wordbox-export/word_box.csv > /tmp/wordbox-export/SHA256SUMS.txt
 
+          curl -L --fail --retry 3 -o /tmp/ayahinfo_1024.zip \
+            "https://files.quran.app/hafs/madani/databases/ayahinfo/ayahinfo_1024.zip"
+          echo "b36fce9dab5275a0324b9cf78f67e6b6167cb68661ee53c64861217135b8eaa1  /tmp/ayahinfo_1024.zip" | sha256sum -c -
+          python3 - <<'PY'
+          import collections,csv,sqlite3,statistics,tempfile,zipfile
+          db=sqlite3.connect('/tmp/content.db')
+          boxes=collections.defaultdict(list)
+          for s,a,w,page,x0,x1 in db.execute(
+              'SELECT surah,ayah,word,page,x0,x1 FROM word_box ORDER BY surah,ayah,word'):
+              boxes[(s,a)].append((w,page,x1-x0))
+          with tempfile.NamedTemporaryFile(suffix='.db') as tmp:
+              with zipfile.ZipFile('/tmp/ayahinfo_1024.zip') as z:
+                  tmp.write(z.read('ayahinfo_1024.db')); tmp.flush()
+              olddb=sqlite3.connect(tmp.name)
+              pos=collections.defaultdict(lambda:collections.defaultdict(int))
+              for s,a,p,w in olddb.execute(
+                  'SELECT sura_number,ayah_number,position,max_x-min_x FROM glyphs'):
+                  pos[(s,a)][p]+=w
+          rows=[]
+          for verse,bs in boxes.items():
+              n=len(bs); ps=sorted(pos[verse])
+              if not ps: continue
+              ps=ps[:-1]
+              widths=[pos[verse][p] for p in ps]
+              extra=len(ps)-n
+              if extra<0: continue
+              drop=set(sorted(range(len(ps)),key=lambda i:widths[i])[:extra])
+              old=[w for i,w in enumerate(widths) if i not in drop]
+              if len(old)!=n: continue
+              ratios=[b[2]/o for b,o in zip(bs,old) if o>0]
+              if len(ratios)!=n: continue
+              med=statistics.median(ratios)
+              for (word,page,_),ratio in zip(bs,ratios):
+                  if not 0.6 <= ratio/med <= 1.6:
+                      rows.append((verse[0],verse[1],word,page,ratio/med))
+          with open('/tmp/wordbox-export/flagged_words.csv','w',newline='') as fh:
+              w=csv.writer(fh); w.writerow(['surah','ayah','word','page','width_ratio_vs_verse_median'])
+              w.writerows(rows)
+          print('flagged words',len(rows))
+          PY
+          sha256sum /tmp/wordbox-export/flagged_words.csv >> /tmp/wordbox-export/SHA256SUMS.txt
+
       - name: Upload word-box export
         uses: actions/upload-artifact@v4
         with:
