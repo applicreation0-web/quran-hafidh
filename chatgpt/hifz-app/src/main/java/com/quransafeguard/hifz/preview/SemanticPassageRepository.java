@@ -20,6 +20,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Read-only index over the frozen V2.1 semantic corpus.
@@ -39,7 +41,10 @@ final class SemanticPassageRepository {
     static final String EXPECTED_V23_CORPUS_SHA256 =
         "19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336";
     static final int EXPECTED_GLOBAL_PASSAGES = 1256;
+    static final int EXPECTED_CANONICAL_MUNIR_PASSAGES = 1243;
     static final int EXPECTED_PAGE_RECORDS = 1644;
+    private static final Pattern MUNIR_RANGE = Pattern.compile(
+        "^(\\d+):(\\d+)[–-](\\d+)(?:\\s+(.*))?$");
 
     static final class CellRange {
         final String lineId;
@@ -101,18 +106,57 @@ final class SemanticPassageRepository {
     }
 
     private static final class PassageMeta {
+        final String canonicalId;
         final VerseRef start;
         final VerseRef end;
         final int startPage;
         final int endPage;
-        final String titleV23;
+        final String titleMunirAr;
 
-        PassageMeta(VerseRef start, VerseRef end, int startPage, int endPage, String titleV23) {
+        PassageMeta(String canonicalId, VerseRef start, VerseRef end, int startPage, int endPage,
+                    String titleMunirAr) {
+            this.canonicalId = canonicalId;
             this.start = start;
             this.end = end;
             this.startPage = startPage;
             this.endPage = endPage;
-            this.titleV23 = titleV23;
+            this.titleMunirAr = titleMunirAr == null ? "" : titleMunirAr;
+        }
+    }
+
+    private static final class GroupBuilder {
+        final String canonicalId;
+        final VerseRef start;
+        final VerseRef end;
+        int startPage = Integer.MAX_VALUE;
+        int endPage = 0;
+        String titleMunirAr = "";
+
+        GroupBuilder(String canonicalId, VerseRef start, VerseRef end) {
+            this.canonicalId = canonicalId;
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    private static final class AnchorData {
+        final String anchor;
+        final int wordCount;
+        final int startLine;
+        final int firstWordId;
+        final int lastWordId;
+        final int firstWordPosition;
+        final int lastWordPosition;
+
+        AnchorData(String anchor, int wordCount, int startLine, int firstWordId, int lastWordId,
+                   int firstWordPosition, int lastWordPosition) {
+            this.anchor = anchor;
+            this.wordCount = wordCount;
+            this.startLine = startLine;
+            this.firstWordId = firstWordId;
+            this.lastWordId = lastWordId;
+            this.firstWordPosition = firstWordPosition;
+            this.lastWordPosition = lastWordPosition;
         }
     }
 
@@ -135,10 +179,12 @@ final class SemanticPassageRepository {
             Map<String, String> titlesV23 =
                 parseTitleOverlay(new String(titleRaw, StandardCharsets.UTF_8));
             parseInto(new String(raw, StandardCharsets.UTF_8), titlesV23, byPage, byId);
-            orderedCues.addAll(byId.values());
+            Map<String, Cue> canonical = new HashMap<>();
+            for (Cue cue : byId.values()) canonical.put(cue.passageId, cue);
+            orderedCues.addAll(canonical.values());
             orderedCues.sort((a, b) -> a.startVerse.compareTo(b.startVerse));
             loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES
-                && orderedCues.size() == EXPECTED_GLOBAL_PASSAGES;
+                && orderedCues.size() == EXPECTED_CANONICAL_MUNIR_PASSAGES;
         } catch (Throwable unavailableAsset) {
             // Fail closed: semantic cues are an optional enhancement, never a reader dependency.
             byPage.clear();
@@ -270,31 +316,97 @@ final class SemanticPassageRepository {
             "page_passage_records incomplete");
 
         Set<String> globalIds = new HashSet<>();
-        Map<String, PassageMeta> globalMeta = new HashMap<>();
+        Map<String, String> legacyToGroupKey = new HashMap<>();
+        Map<String, GroupBuilder> groups = new HashMap<>();
+
         for (int i = 0; i < globals.length(); i++) {
             JSONObject row = globals.getJSONObject(i);
             String id = requiredText(row, "passage_global_id");
             require(globalIds.add(id), "duplicate global passage id " + id);
             requiredAuditedFields(row);
-            VerseRef startVerse = new VerseRef(positiveInt(row, "surah_start"), positiveInt(row, "ayah_start"));
-            VerseRef endVerse = new VerseRef(positiveInt(row, "surah_end"), positiveInt(row, "ayah_end"));
-            require(startVerse.compareTo(endVerse) <= 0, "invalid global verse span for " + id);
-            int startPage = positiveInt(row, "starts_on_page");
-            int endPage = positiveInt(row, "ends_on_page");
-            require(startPage <= endPage && endPage <= 604, "invalid global page span for " + id);
-            String titleV23 = titlesV23.get(id);
-            require(titleV23 != null && !titleV23.trim().isEmpty(),
+
+            VerseRef legacyStart = new VerseRef(
+                positiveInt(row, "surah_start"), positiveInt(row, "ayah_start"));
+            VerseRef legacyEnd = new VerseRef(
+                positiveInt(row, "surah_end"), positiveInt(row, "ayah_end"));
+            require(legacyStart.compareTo(legacyEnd) <= 0, "invalid global verse span for " + id);
+            int legacyStartPage = positiveInt(row, "starts_on_page");
+            int legacyEndPage = positiveInt(row, "ends_on_page");
+            require(legacyStartPage <= legacyEndPage && legacyEndPage <= 604,
+                "invalid global page span for " + id);
+
+            // Keep V2.3 as an integrity-checked historical asset, but do not use its editorial
+            // wording as the runtime semantic title. Runtime structure and title come from the
+            // explicit Al-Munir grouping only.
+            String historicalTitle = titlesV23.get(id);
+            require(historicalTitle != null && !historicalTitle.trim().isEmpty(),
                 "missing audited V2.3 title for " + id);
-            globalMeta.put(id, new PassageMeta(startVerse, endVerse, startPage, endPage, titleV23));
+
+            String grouping = requiredText(row, "tafsir_munir_grouping");
+            VerseRef canonicalStart;
+            VerseRef canonicalEnd;
+            String titleAr;
+
+            // Direct Al-Munir control: An-Nas is one explicit unit, 114:1-6. The older audit
+            // metadata split its final verses and is therefore overridden rather than propagated.
+            if ("SP1255".equals(id) || "SP1256".equals(id)) {
+                canonicalStart = new VerseRef(114, 1);
+                canonicalEnd = new VerseRef(114, 6);
+                titleAr = "الاستعاذة من شرّ الشياطين";
+            } else {
+                Matcher m = MUNIR_RANGE.matcher(grouping);
+                require(m.matches(), "unparseable Al-Munir grouping for " + id + ": " + grouping);
+                int surah = Integer.parseInt(m.group(1));
+                canonicalStart = new VerseRef(surah, Integer.parseInt(m.group(2)));
+                canonicalEnd = new VerseRef(surah, Integer.parseInt(m.group(3)));
+                titleAr = m.group(4) == null ? "" : m.group(4).trim();
+            }
+
+            require(canonicalStart.compareTo(legacyStart) <= 0
+                    && canonicalEnd.compareTo(legacyEnd) >= 0,
+                "legacy passage is outside Al-Munir unit for " + id);
+
+            String key = canonicalStart.toString() + "–" + canonicalEnd.toString();
+            GroupBuilder group = groups.get(key);
+            if (group == null) {
+                group = new GroupBuilder(id, canonicalStart, canonicalEnd);
+                groups.put(key, group);
+            }
+            group.startPage = Math.min(group.startPage, legacyStartPage);
+            group.endPage = Math.max(group.endPage, legacyEndPage);
+            if (!titleAr.isEmpty()) {
+                require(group.titleMunirAr.isEmpty() || group.titleMunirAr.equals(titleAr),
+                    "conflicting Al-Munir titles inside " + key);
+                group.titleMunirAr = titleAr;
+            }
+            // One explicit Al-Munir heading missing from the old metadata is known and directly
+            // source-verified; keep the exact Arabic heading, not a synthesized French title.
+            if (canonicalStart.equals(new VerseRef(24, 11))
+                    && canonicalEnd.equals(new VerseRef(24, 22))) {
+                group.titleMunirAr = "الحكم الخامس قصة الإفك";
+            }
+            legacyToGroupKey.put(id, key);
         }
 
         require(titlesV23.keySet().equals(globalIds),
             "V2.3 title IDs do not exactly match frozen V2.1 passages");
+        require(groups.size() == EXPECTED_CANONICAL_MUNIR_PASSAGES,
+            "unexpected Al-Munir canonical passage count: " + groups.size());
+
+        Map<String, PassageMeta> globalMeta = new HashMap<>();
+        for (String id : globalIds) {
+            GroupBuilder group = groups.get(legacyToGroupKey.get(id));
+            require(group != null, "missing Al-Munir group for " + id);
+            globalMeta.put(id, new PassageMeta(group.canonicalId, group.start, group.end,
+                group.startPage, group.endPage, group.titleMunirAr));
+        }
 
         Set<Integer> pages = new HashSet<>();
         Set<String> recordIds = new HashSet<>();
-        Map<String, Integer> onPageCounts = new HashMap<>();
+        Map<String, AnchorData> anchors = new HashMap<>();
 
+        // First pass: validate every frozen record and capture only the representative block-start
+        // amorce. Artificial V2.1 sub-split anchors are deliberately discarded.
         for (int i = 0; i < records.length(); i++) {
             JSONObject row = records.getJSONObject(i);
             int page = row.optInt("page", 0);
@@ -304,55 +416,76 @@ final class SemanticPassageRepository {
             String id = requiredText(row, "passage_global_id");
             require(globalIds.contains(id), "unknown passage id " + id);
             recordIds.add(id);
-            int index = row.optInt("passage_index_on_page", 0);
-            require(index >= 1, "missing passage_index_on_page for " + id);
-
             int startLine = row.optInt("start_line", 0);
             int endLine = row.optInt("end_line", 0);
             require(startLine >= 1 && endLine >= startLine, "invalid line span for " + id);
-
-            requiredText(row, "title_fr_v2_1"); // frozen V2.1 title remains an integrity field
+            requiredText(row, "title_fr_v2_1");
             String anchor = requiredText(row, "anchor_arabic_v2_1");
-            PassageMeta meta = globalMeta.get(id);
-            require(meta != null, "missing global passage metadata for " + id);
-            String title = meta.titleV23;
             int anchorWordCount = row.optInt("anchor_word_count_v2_1", 0);
             require(anchorWordCount >= 1, "invalid audited anchor length for " + id);
             require("AUDITED_V2_1".equals(requiredText(row, "minimality_verified_v2_1")),
                 "anchor is not audited V2.1 for " + id);
 
-            // These are source locator fields only. They are retained for future exact geometry
-            // joins but never converted into line-cell positions by arithmetic or inference.
-            int firstWordId = positiveInt(row, "first_word_id");
-            int lastWordId = positiveInt(row, "last_word_id");
-            int firstWordPosition = positiveInt(row, "first_word_position");
-            int lastWordPosition = positiveInt(row, "last_word_position");
+            PassageMeta meta = globalMeta.get(id);
+            boolean representative = id.equals(meta.canonicalId);
             boolean anchorOnPage = yes(row.opt("anchor_is_on_current_page"));
-            if (anchorOnPage) {
-                onPageCounts.put(id, onPageCounts.getOrDefault(id, 0) + 1);
+            if (representative && anchorOnPage) {
+                require(!anchors.containsKey(meta.canonicalId),
+                    "multiple start amorces for Al-Munir unit " + meta.canonicalId);
+                anchors.put(meta.canonicalId, new AnchorData(
+                    anchor, anchorWordCount, startLine,
+                    positiveInt(row, "first_word_id"), positiveInt(row, "last_word_id"),
+                    positiveInt(row, "first_word_position"), positiveInt(row, "last_word_position")));
             }
-
-            // The frozen V2.1 JSON has no visual_ranges. Keeping this empty is intentional:
-            // reader109 cells are ink groups, not words, so manufacturing ranges here would create
-            // false precision and leak semantic help into blind recall.
-            List<CellRange> ranges = Collections.emptyList();
-
-            Cue cue = new Cue(id, page, index, title, anchor, anchorWordCount,
-                meta.start, meta.end, meta.startPage, meta.endPage, startLine,
-                firstWordId, lastWordId, firstWordPosition, lastWordPosition, anchorOnPage, ranges);
-            byPage.computeIfAbsent(page, ignored -> new ArrayList<>()).add(cue);
-            Cue previous = byId.get(id);
-            if (previous == null || (!previous.anchorOnCurrentPage && anchorOnPage)) byId.put(id, cue);
         }
 
         require(pages.size() == 604, "semantic page coverage incomplete");
         require(recordIds.equals(globalIds), "page records do not cover global passages");
-        require(byId.size() == EXPECTED_GLOBAL_PASSAGES, "semantic id index incomplete");
-        require(onPageCounts.size() == EXPECTED_GLOBAL_PASSAGES,
-            "not every passage has an on-page anchor occurrence");
+        require(anchors.size() == EXPECTED_CANONICAL_MUNIR_PASSAGES,
+            "not every Al-Munir unit has exactly one Quranic start amorce");
+
+        Map<String, Cue> canonicalById = new HashMap<>();
+        Set<String> emittedPageGroups = new HashSet<>();
+
+        // Second pass: preserve page coverage but collapse all legacy sub-splits into one Al-Munir
+        // unit. Only the unit's real first occurrence carries the visible amorce.
+        for (int i = 0; i < records.length(); i++) {
+            JSONObject row = records.getJSONObject(i);
+            int page = row.optInt("page", 0);
+            String legacyId = requiredText(row, "passage_global_id");
+            PassageMeta meta = globalMeta.get(legacyId);
+            AnchorData anchor = anchors.get(meta.canonicalId);
+            require(anchor != null, "missing canonical amorce for " + meta.canonicalId);
+
+            String pageGroup = page + "|" + meta.canonicalId;
+            if (!emittedPageGroups.add(pageGroup)) continue;
+
+            int index = row.optInt("passage_index_on_page", 0);
+            require(index >= 1, "missing passage_index_on_page for " + legacyId);
+            boolean anchorOnPage = page == meta.startPage;
+
+            // Exact word-to-cell geometry is joined separately; never infer it from line-cell
+            // counts or proportional arithmetic here.
+            List<CellRange> ranges = Collections.emptyList();
+
+            Cue cue = new Cue(meta.canonicalId, page, index, meta.titleMunirAr, anchor.anchor,
+                anchor.wordCount, meta.start, meta.end, meta.startPage, meta.endPage,
+                anchor.startLine, anchor.firstWordId, anchor.lastWordId,
+                anchor.firstWordPosition, anchor.lastWordPosition, anchorOnPage, ranges);
+            byPage.computeIfAbsent(page, ignored -> new ArrayList<>()).add(cue);
+            if (anchorOnPage) canonicalById.put(meta.canonicalId, cue);
+        }
+
+        require(canonicalById.size() == EXPECTED_CANONICAL_MUNIR_PASSAGES,
+            "canonical Al-Munir cue index incomplete");
+
+        // Keep legacy IDs as read-only aliases so persisted cursors from earlier builds migrate
+        // without data loss; every alias points to the same canonical Al-Munir Cue object.
         for (String id : globalIds) {
-            require(onPageCounts.getOrDefault(id, 0) == 1,
-                "passage must have exactly one on-page anchor occurrence: " + id);
+            PassageMeta meta = globalMeta.get(id);
+            Cue cue = canonicalById.get(meta.canonicalId);
+            require(cue != null, "missing canonical cue alias target for " + id);
+            byId.put(id, cue);
         }
 
         for (Map.Entry<Integer, List<Cue>> entry : byPage.entrySet()) {
