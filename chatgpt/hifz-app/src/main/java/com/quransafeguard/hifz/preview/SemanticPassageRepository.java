@@ -2,6 +2,9 @@ package com.quransafeguard.hifz.preview;
 
 import android.content.Context;
 
+import com.quransafeguard.hifz.core.EligibleCorpus;
+import com.quransafeguard.hifz.core.VerseRef;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -52,6 +55,10 @@ final class SemanticPassageRepository {
         final String title;
         final String anchorArabic;
         final int anchorWordCount;
+        final VerseRef startVerse;
+        final VerseRef endVerse;
+        final int startPage;
+        final int endPage;
         final int startLine;
         final int firstWordId;
         final int lastWordId;
@@ -61,15 +68,19 @@ final class SemanticPassageRepository {
         final List<CellRange> visualRanges;
 
         Cue(String passageId, int page, int indexOnPage, String title, String anchorArabic,
-            int anchorWordCount, int startLine, int firstWordId, int lastWordId,
-            int firstWordPosition, int lastWordPosition, boolean anchorOnCurrentPage,
-            List<CellRange> visualRanges) {
+            int anchorWordCount, VerseRef startVerse, VerseRef endVerse, int startPage, int endPage,
+            int startLine, int firstWordId, int lastWordId, int firstWordPosition,
+            int lastWordPosition, boolean anchorOnCurrentPage, List<CellRange> visualRanges) {
             this.passageId = passageId;
             this.page = page;
             this.indexOnPage = indexOnPage;
             this.title = title;
             this.anchorArabic = anchorArabic;
             this.anchorWordCount = anchorWordCount;
+            this.startVerse = startVerse;
+            this.endVerse = endVerse;
+            this.startPage = startPage;
+            this.endPage = endPage;
             this.startLine = startLine;
             this.firstWordId = firstWordId;
             this.lastWordId = lastWordId;
@@ -84,8 +95,23 @@ final class SemanticPassageRepository {
         }
     }
 
+    private static final class PassageMeta {
+        final VerseRef start;
+        final VerseRef end;
+        final int startPage;
+        final int endPage;
+
+        PassageMeta(VerseRef start, VerseRef end, int startPage, int endPage) {
+            this.start = start;
+            this.end = end;
+            this.startPage = startPage;
+            this.endPage = endPage;
+        }
+    }
+
     private final Map<Integer, List<Cue>> byPage = new HashMap<>();
     private final Map<String, Cue> byId = new HashMap<>();
+    private final List<Cue> orderedCues = new ArrayList<>();
     private final boolean available;
 
     SemanticPassageRepository(Context context) {
@@ -96,11 +122,15 @@ final class SemanticPassageRepository {
                 throw new IllegalStateException("semantic V2.1 SHA-256 mismatch");
             }
             parseInto(new String(raw, StandardCharsets.UTF_8), byPage, byId);
-            loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES;
+            orderedCues.addAll(byId.values());
+            orderedCues.sort((a, b) -> a.startVerse.compareTo(b.startVerse));
+            loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES
+                && orderedCues.size() == EXPECTED_GLOBAL_PASSAGES;
         } catch (Throwable unavailableAsset) {
             // Fail closed: semantic cues are an optional enhancement, never a reader dependency.
             byPage.clear();
             byId.clear();
+            orderedCues.clear();
         }
         available = loaded;
     }
@@ -116,6 +146,54 @@ final class SemanticPassageRepository {
 
     Cue cue(String passageId) {
         return passageId == null ? null : byId.get(passageId);
+    }
+
+    /** Passage containing a verse, using only the frozen audited V2.1 verse boundaries. */
+    Cue cueContaining(VerseRef verse) {
+        if (verse == null) return null;
+        for (Cue cue : orderedCues) {
+            if (verse.compareTo(cue.startVerse) < 0) return null;
+            if (verse.compareTo(cue.endVerse) <= 0) return cue;
+        }
+        return null;
+    }
+
+    /** First complete semantic passage usable from this acquired-corpus cursor, with canonical wrap. */
+    Cue firstEligibleCueAtOrContaining(VerseRef cursor, EligibleCorpus corpus) {
+        if (cursor == null || corpus == null || orderedCues.isEmpty()) return null;
+        Cue containing = cueContaining(cursor);
+        if (fullyEligible(containing, corpus)) return containing;
+
+        int start = 0;
+        while (start < orderedCues.size()
+                && orderedCues.get(start).startVerse.compareTo(cursor) < 0) start++;
+        for (int offset = 0; offset < orderedCues.size(); offset++) {
+            Cue candidate = orderedCues.get((start + offset) % orderedCues.size());
+            if (fullyEligible(candidate, corpus)) return candidate;
+        }
+        return null;
+    }
+
+    /** Next complete acquired passage after the current semantic unit, wrapping canonically. */
+    Cue nextEligibleCue(Cue current, EligibleCorpus corpus) {
+        if (current == null || corpus == null || orderedCues.isEmpty()) return null;
+        int index = -1;
+        for (int i = 0; i < orderedCues.size(); i++) {
+            if (orderedCues.get(i).passageId.equals(current.passageId)) {
+                index = i;
+                break;
+            }
+        }
+        if (index < 0) return firstEligibleCueAtOrContaining(current.endVerse, corpus);
+        for (int offset = 1; offset <= orderedCues.size(); offset++) {
+            Cue candidate = orderedCues.get((index + offset) % orderedCues.size());
+            if (fullyEligible(candidate, corpus)) return candidate;
+        }
+        return null;
+    }
+
+    private static boolean fullyEligible(Cue cue, EligibleCorpus corpus) {
+        return cue != null && corpus.contains(cue.startVerse) && corpus.contains(cue.endVerse);
     }
 
     /**
@@ -178,11 +256,19 @@ final class SemanticPassageRepository {
             "page_passage_records incomplete");
 
         Set<String> globalIds = new HashSet<>();
+        Map<String, PassageMeta> globalMeta = new HashMap<>();
         for (int i = 0; i < globals.length(); i++) {
             JSONObject row = globals.getJSONObject(i);
             String id = requiredText(row, "passage_global_id");
             require(globalIds.add(id), "duplicate global passage id " + id);
             requiredAuditedFields(row);
+            VerseRef startVerse = new VerseRef(positiveInt(row, "surah_start"), positiveInt(row, "ayah_start"));
+            VerseRef endVerse = new VerseRef(positiveInt(row, "surah_end"), positiveInt(row, "ayah_end"));
+            require(startVerse.compareTo(endVerse) <= 0, "invalid global verse span for " + id);
+            int startPage = positiveInt(row, "starts_on_page");
+            int endPage = positiveInt(row, "ends_on_page");
+            require(startPage <= endPage && endPage <= 604, "invalid global page span for " + id);
+            globalMeta.put(id, new PassageMeta(startVerse, endVerse, startPage, endPage));
         }
 
         Set<Integer> pages = new HashSet<>();
@@ -207,6 +293,8 @@ final class SemanticPassageRepository {
 
             String title = requiredText(row, "title_fr_v2_1");
             String anchor = requiredText(row, "anchor_arabic_v2_1");
+            PassageMeta meta = globalMeta.get(id);
+            require(meta != null, "missing global passage metadata for " + id);
             int anchorWordCount = row.optInt("anchor_word_count_v2_1", 0);
             require(anchorWordCount >= 1, "invalid audited anchor length for " + id);
             require("AUDITED_V2_1".equals(requiredText(row, "minimality_verified_v2_1")),
@@ -228,7 +316,8 @@ final class SemanticPassageRepository {
             // false precision and leak semantic help into blind recall.
             List<CellRange> ranges = Collections.emptyList();
 
-            Cue cue = new Cue(id, page, index, title, anchor, anchorWordCount, startLine,
+            Cue cue = new Cue(id, page, index, title, anchor, anchorWordCount,
+                meta.start, meta.end, meta.startPage, meta.endPage, startLine,
                 firstWordId, lastWordId, firstWordPosition, lastWordPosition, anchorOnPage, ranges);
             byPage.computeIfAbsent(page, ignored -> new ArrayList<>()).add(cue);
             Cue previous = byId.get(id);
