@@ -36,8 +36,6 @@ public final class MushafView extends WebView {
         default void onSurfaceTap() {}
         /** Tapping a tiny semantic passage number never masquerades as a Quran verse tap. */
         default void onSemanticCueTap(String passageId) {}
-        /** Exact physical-line answer used by the optional spatial quiz, never by Hifz progression. */
-        default void onQuizLineTap(String lineId) {}
         /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
         default void onPageSwipe(int delta) {}
     }
@@ -69,11 +67,6 @@ public final class MushafView extends WebView {
     private boolean maskFollowsSelection = true;
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
-    private String quizTargetLineId;
-    private List<String> quizVisibleLineIds = Collections.emptyList();
-    private boolean quizGuideVisible = true;
-    private boolean quizCaptureLineTap;
-    private String quizIsolatedLineId;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -202,8 +195,7 @@ public final class MushafView extends WebView {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
             String svg = readPageSvg(page);
-            boolean needsGeometry = !lineIds.isEmpty() || semanticCues.length() > 0
-                || quizTargetLineId != null || quizIsolatedLineId != null || !quizVisibleLineIds.isEmpty();
+            boolean needsGeometry = !lineIds.isEmpty() || semanticCues.length() > 0;
             String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
@@ -227,11 +219,6 @@ public final class MushafView extends WebView {
                 .put("maskFollowsSelection", maskFollowsSelection)
                 .put("semanticCues", semanticCues)
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
-                .put("quizTargetLine", quizTargetLineId)
-                .put("quizVisibleLines", new JSONArray(quizVisibleLineIds))
-                .put("quizGuideVisible", quizGuideVisible)
-                .put("quizCaptureLineTap", quizCaptureLineTap)
-                .put("quizIsolatedLine", quizIsolatedLineId)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -344,67 +331,6 @@ public final class MushafView extends WebView {
 
     public void clearSemanticCues() {
         setSemanticCues(new JSONArray(), false);
-    }
-
-    /** Exact physical-line state used only by the optional spatial quiz. */
-    public void setQuizGuide(String targetLineId, List<String> visibleLineIds) {
-        setQuizState(targetLineId, visibleLineIds, true, false, null);
-    }
-
-    /** Full-page placement question: keep the exact target hidden until the learner taps a line. */
-    public void setQuizPlacement(String targetLineId) {
-        setQuizState(targetLineId, Collections.emptyList(), false, true, null);
-    }
-
-    /** State-only counterpart used before show(): avoids briefly revealing the previous live page. */
-    public void prepareQuizPlacement(String targetLineId) {
-        storeQuizState(targetLineId, Collections.emptyList(), false, true, null);
-    }
-
-    /** Text→position prompt: crop the real shipped Mushaf SVG to this exact physical line. */
-    public void setQuizIsolatedLine(String lineId) {
-        setQuizState(null, Collections.emptyList(), false, false, lineId);
-    }
-
-    /** State-only counterpart used before show(): the new boot payload starts already cropped. */
-    public void prepareQuizIsolatedLine(String lineId) {
-        storeQuizState(null, Collections.emptyList(), false, false, lineId);
-    }
-
-    private void storeQuizState(String targetLineId, List<String> visibleLineIds,
-                                boolean guideVisible, boolean captureLineTap, String isolatedLineId) {
-        quizTargetLineId = targetLineId;
-        quizVisibleLineIds = visibleLineIds == null
-            ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(visibleLineIds));
-        quizGuideVisible = guideVisible;
-        quizCaptureLineTap = captureLineTap;
-        quizIsolatedLineId = isolatedLineId;
-    }
-
-    private void setQuizState(String targetLineId, List<String> visibleLineIds,
-                              boolean guideVisible, boolean captureLineTap, String isolatedLineId) {
-        storeQuizState(targetLineId, visibleLineIds, guideVisible, captureLineTap, isolatedLineId);
-        if (requestedPage < 1 || requestedPage > 604) return;
-        final String geometry;
-        try {
-            geometry = GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
-        } catch (Throwable error) {
-            report("Géométrie du quiz indisponible : " + safeMessage(error));
-            return;
-        }
-        JSONArray visible = new JSONArray();
-        for (String id : quizVisibleLineIds) visible.put(id);
-        String target = quizTargetLineId == null ? "null" : JSONObject.quote(quizTargetLineId);
-        String isolated = quizIsolatedLineId == null ? "null" : JSONObject.quote(quizIsolatedLineId);
-        runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&(window.HifzReader.setGeometry(" + geometry + "),window.HifzReader.setQuizState("
-                + target + "," + visible.toString() + "," + quizGuideVisible + "," + quizCaptureLineTap + ","
-                + isolated + "));",
-            ignored -> post(() -> eink.local(this, prefs))));
-    }
-
-    public void clearQuizGuide() {
-        setQuizState(null, Collections.emptyList(), true, false, null);
     }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */
@@ -524,9 +450,6 @@ public final class MushafView extends WebView {
         @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }
         @JavascriptInterface public void semanticCueTap(String passageId) {
             post(() -> { if (listener != null && passageId != null) listener.onSemanticCueTap(passageId); });
-        }
-        @JavascriptInterface public void quizLineTap(String lineId) {
-            post(() -> { if (listener != null && lineId != null) listener.onQuizLineTap(lineId); });
         }
         @JavascriptInterface public void error(String message) { showFailure("Erreur d’affichage Mushaf : " + message); }
         @JavascriptInterface public void pageShown(int page) {
