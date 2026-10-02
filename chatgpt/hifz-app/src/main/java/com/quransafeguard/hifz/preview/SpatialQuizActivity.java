@@ -14,9 +14,11 @@ import com.quransafeguard.hifz.core.VerseRef;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -89,7 +91,12 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
             return;
         }
         semanticPassages = new SemanticPassageRepository(this);
-        buildQuestionCorpus();
+        try {
+            buildQuestionCorpus();
+        } catch (RuntimeException unavailableProgression) {
+            showUnavailable("Quiz indisponible : la progression Acquis doit d’abord être initialisée.");
+            return;
+        }
         if (acquiredLines.isEmpty()) {
             showUnavailable("Quiz indisponible : aucune ligne n’est encore au statut Acquis.");
             return;
@@ -100,9 +107,13 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
     private void buildQuestionCorpus() {
         HifzPrefs.ProgressionSnapshot snapshot = prefs.progressionSnapshotV6();
         Set<String> acquired = new HashSet<>(snapshot.acquired);
+        Map<String, GeometryRepository.LineMeta> acquiredById = new HashMap<>();
         for (int i = 0; i < geometry.lineCount(); i++) {
             GeometryRepository.LineMeta line = geometry.line(i);
-            if (acquired.contains(line.id)) acquiredLines.add(line);
+            if (acquired.contains(line.id)) {
+                acquiredLines.add(line);
+                acquiredById.put(line.id, line);
+            }
         }
 
         for (GeometryRepository.LineMeta line : acquiredLines) {
@@ -117,8 +128,7 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
                 for (SemanticPassageRepository.Cue cue : semanticPassages.cuesForPage(page)) {
                     if (!cue.anchorOnCurrentPage || cue.startLine < 1 || cue.startLine > ids.size()) continue;
                     String lineId = ids.get(cue.startLine - 1);
-                    if (!acquired.contains(lineId)) continue;
-                    GeometryRepository.LineMeta line = lineById(lineId);
+                    GeometryRepository.LineMeta line = acquiredById.get(lineId);
                     if (line != null && !cue.anchorArabic.isEmpty()) semanticTargets.add(new SemanticTarget(cue, line));
                 }
             }
@@ -127,14 +137,6 @@ public final class SpatialQuizActivity extends android.app.Activity implements M
         availableKinds.add(Kind.POSITION_TO_TEXT);
         if (!transitionTargets.isEmpty()) availableKinds.add(Kind.TRANSITION);
         if (!semanticTargets.isEmpty()) availableKinds.add(Kind.SEMANTIC_TO_POSITION);
-    }
-
-    private GeometryRepository.LineMeta lineById(String id) {
-        for (int i = 0; i < geometry.lineCount(); i++) {
-            GeometryRepository.LineMeta line = geometry.line(i);
-            if (line.id.equals(id)) return line;
-        }
-        return null;
     }
 
     private void buildUi() {
