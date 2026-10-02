@@ -67,6 +67,7 @@ public final class MushafView extends WebView {
     private boolean maskFollowsSelection = true;
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
+    private JSONArray pageLandmarkBoxes = new JSONArray();
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -219,6 +220,7 @@ public final class MushafView extends WebView {
                 .put("maskFollowsSelection", maskFollowsSelection)
                 .put("semanticCues", semanticCues)
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
+                .put("pageLandmarkBoxes", pageLandmarkBoxes)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -303,9 +305,9 @@ public final class MushafView extends WebView {
     }
 
     /**
-     * Semantic cues are optional, read-only overlay metadata. Exact anchor ranges are supplied by
-     * the audited corpus geometry; without them the renderer shows only a safe line-aligned marker.
-     * anchorMaskMode is reserved for Révision active and must only be enabled after the repository
+     * Semantic cues are optional, read-only overlay metadata. Exact Quran-word boxes are joined
+     * from the pinned quran-ws sidecar; no cell-count approximation is allowed.
+     * anchorMaskMode is reserved for Révision active and is enabled only when the repository
      * confirms complete exact geometry for that page.
      */
     public void setSemanticCues(JSONArray cues, boolean anchorMaskMode) {
@@ -331,6 +333,20 @@ public final class MushafView extends WebView {
 
     public void clearSemanticCues() {
         setSemanticCues(new JSONArray(), false);
+    }
+
+    /** Exact first-three/last-three Quran-word boxes for active revision; never inferred from cells. */
+    public void setPageLandmarkBoxes(JSONArray boxes) {
+        pageLandmarkBoxes = boxes == null ? new JSONArray() : boxes;
+        if (requestedPage < 1 || requestedPage > 604) return;
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setPageLandmarkBoxes("
+                + pageLandmarkBoxes.toString() + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    public void clearPageLandmarkBoxes() {
+        setPageLandmarkBoxes(new JSONArray());
     }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */
