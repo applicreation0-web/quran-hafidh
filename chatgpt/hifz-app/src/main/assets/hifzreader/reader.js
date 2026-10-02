@@ -13,6 +13,8 @@ let strictLineFocus=!!boot.strictLineFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
+let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
+let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -189,8 +191,21 @@ function landmarkCellIndices(cellCount,role){
     : {from:reveal,to:cellCount};    // mask candidates: the tail half only
 }
 
+function semanticVisibleCellKeys(){
+  const keys=new Set();
+  if(!semanticAnchorMaskMode)return keys;
+  (semanticCues||[]).forEach(cue=>{
+    (cue.ranges||[]).forEach(range=>{
+      const lineId=String(range.lineId||'');
+      const from=Math.max(0,Number(range.fromCell)||0),to=Math.max(from,Number(range.toCell)||0);
+      for(let i=from;i<to;i++)keys.add(lineId+':'+i);
+    });
+  });
+  return keys;
+}
+
 function maskCandidates(lines,polys){
-  const out=[];
+  const out=[],semanticVisible=semanticVisibleCellKeys();
   lines.forEach(line=>{
     const top=Number(line.top),bottom=Number(line.bottom);
     const cells=line.cells||[];
@@ -199,9 +214,11 @@ function maskCandidates(lines,polys){
     const range=role?landmarkCellIndices(cells.length,role):null;
     cells.forEach((cell,ci)=>{
       if(range&&(ci<range.from||ci>=range.to))return;
+      const key=lineId+':'+ci;
+      if(semanticVisible.has(key))return;
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      out.push({key:lineId+':'+ci,lineId,index:ci,x0,x1,top,bottom});
+      out.push({key,lineId,index:ci,x0,x1,top,bottom});
     });
   });
   return out;
@@ -343,6 +360,62 @@ function markerLayer(svg,polys,lines){
   return g;
 }
 
+function semanticCueLayer(svg){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','semanticcuelayer');
+  if(!pageGeo||!Array.isArray(semanticCues)||!semanticCues.length)return g;
+  const allLines=pageGeo.lines||[],vb=svg.viewBox&&svg.viewBox.baseVal;
+  semanticCues.forEach(cue=>{
+    const index=Math.max(1,Number(cue.index)||1);
+    const lineIndex=Math.max(0,(Number(cue.startLine)||1)-1);
+    const line=allLines[lineIndex];if(!line)return;
+
+    // Exact phrase outline is drawn only from audited visual ranges; never infer word boxes.
+    (cue.ranges||[]).forEach(range=>{
+      const rline=allLines.find(x=>String(x.id)===String(range.lineId));if(!rline)return;
+      const cells=rline.cells||[],from=Math.max(0,Number(range.fromCell)||0),to=Math.min(cells.length,Math.max(from,Number(range.toCell)||0));
+      if(to<=from)return;
+      let x0=Infinity,x1=-Infinity;
+      for(let i=from;i<to;i++){x0=Math.min(x0,Number(cells[i][0]));x1=Math.max(x1,Number(cells[i][1]));}
+      if(!Number.isFinite(x0)||!Number.isFinite(x1)||x1<=x0)return;
+      const rect=document.createElementNS(NS,'rect');
+      rect.setAttribute('x',x0-0.8);rect.setAttribute('y',Number(rline.top)+0.5);
+      rect.setAttribute('width',(x1-x0)+1.6);rect.setAttribute('height',Math.max(1,Number(rline.bottom)-Number(rline.top)-1));
+      rect.setAttribute('rx','1.6');rect.setAttribute('ry','1.6');
+      rect.setAttribute('fill','none');rect.setAttribute('stroke','#524f49');
+      rect.setAttribute('stroke-width',eink?'1.0':'0.75');rect.setAttribute('opacity',eink?'0.82':'0.62');
+      g.appendChild(rect);
+    });
+
+    const cells=line.cells||[];if(!cells.length||!vb)return;
+    let minX=Infinity,maxX=-Infinity;
+    cells.forEach(cell=>{minX=Math.min(minX,Number(cell[0]));maxX=Math.max(maxX,Number(cell[1]));});
+    if(!Number.isFinite(minX)||!Number.isFinite(maxX))return;
+    const outerRight=currentPage%2===1;
+    const edge=outerRight?vb.x+vb.width:vb.x;
+    const gap=outerRight?edge-maxX:minX-edge;
+    if(gap<6)return; // never place a control on Quran ink when the physical margin is too thin
+    const x=outerRight?maxX+gap*.52:minX-gap*.52;
+    const y=(Number(line.top)+Number(line.bottom))/2;
+    const marker=document.createElementNS(NS,'g');
+    marker.setAttribute('role','button');marker.setAttribute('tabindex','0');
+    marker.setAttribute('aria-label','Repère '+index+(cue.title?' · '+cue.title:''));
+    const circle=document.createElementNS(NS,'circle');
+    circle.setAttribute('cx',x);circle.setAttribute('cy',y);circle.setAttribute('r',eink?'5.2':'4.6');
+    circle.setAttribute('fill','#faf8f0');circle.setAttribute('stroke','#524f49');circle.setAttribute('stroke-width',eink?'1':'0.8');
+    const label=document.createElementNS(NS,'text');
+    label.setAttribute('x',x);label.setAttribute('y',y+(eink?1.8:1.6));
+    label.setAttribute('text-anchor','middle');label.setAttribute('font-size',eink?'5.5':'5');
+    label.setAttribute('font-family','sans-serif');label.setAttribute('fill','#121211');label.textContent=String(index);
+    marker.appendChild(circle);marker.appendChild(label);
+    const activate=e=>{e.preventDefault();e.stopPropagation();N?.semanticCueTap?.(String(cue.id||''));};
+    marker.addEventListener('click',activate);
+    marker.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){activate(e)}});
+    g.appendChild(marker);
+  });
+  return g;
+}
+
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
@@ -350,7 +423,7 @@ function render(){
     p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
@@ -410,6 +483,12 @@ function render(){
     const weak=weakLayer(svg,highlighted);
     if(weak.childNodes.length)svg.appendChild(weak);
   }
+
+  // Semantic markers/phrase outlines are always a final, non-destructive overlay.
+  if(semanticCues.length){
+    const cues=semanticCueLayer(svg);
+    if(cues.childNodes.length)svg.appendChild(cues);
+  }
 }
 
 /* Move only when the selected passage would actually be hidden by the Tafsir panel. */
@@ -453,6 +532,7 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
+  setSemanticCues(cues,anchorMaskMode){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
@@ -460,6 +540,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys};
 prepare();
 N?.ready();
