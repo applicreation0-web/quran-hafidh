@@ -150,7 +150,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 60));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
-        semanticButton = Ui.smallButton(this, "Repères", v -> toggleSemanticCues());\n        semanticButton.setMinimumWidth(Ui.dp(this, 92));
+        semanticButton = Ui.smallButton(this, "Amorces", v -> toggleSemanticCues());
+        semanticButton.setMinimumWidth(Ui.dp(this, 96));
         semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
@@ -262,10 +263,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void updateSemanticButton() {
         if (semanticButton == null) return;
         semanticButton.setSelected(semanticCuesEnabled);
-        String description = semanticCuesEnabled ? "Masquer les repères" : "Afficher les repères";
+        String description = semanticCuesEnabled ? "Masquer les amorces" : "Afficher les amorces";
         semanticButton.setContentDescription(description);
         int icon = Ui.iconFor(description, "");
-        if (icon != 0) Ui.setButtonIconWithText(semanticButton, icon, "Repères");
+        if (icon != 0) Ui.setButtonIconWithText(semanticButton, icon, "Amorces");
     }
 
     private void applySemanticCues() {
