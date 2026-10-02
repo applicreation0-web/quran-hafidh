@@ -8,6 +8,8 @@ val generatedSemanticAssetsDir = layout.buildDirectory.dir("generated/semanticAs
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
 val semanticV21SourceDir = file("src/main/semantic-source/v2_1")
 val semanticV21Output = generatedSemanticAssetsDir.resolve("semantic/semantic_passages_v2_1.json")
+val semanticV22TitleSourceDir = file("src/main/semantic-source/v2_2_titles")
+val semanticV22Output = generatedSemanticAssetsDir.resolve("semantic/semantic_passages_v2_2_titles.json")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
@@ -34,14 +36,31 @@ val prepareSemanticV21 by tasks.registering(Exec::class) {
     )
 }
 
+val prepareSemanticV22Titles by tasks.registering(Exec::class) {
+    dependsOn(prepareSemanticV21)
+    inputs.file(semanticV21Output)
+    inputs.dir(semanticV22TitleSourceDir)
+    inputs.file(rootProject.file("scripts/materialize_semantic_v2_2_titles.py"))
+    outputs.file(semanticV22Output)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/materialize_semantic_v2_2_titles.py").absolutePath,
+        semanticV21Output.absolutePath,
+        semanticV22TitleSourceDir.absolutePath,
+        semanticV22Output.absolutePath
+    )
+}
+
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21)
+    dependsOn(prepareHifzTafsirRelease, prepareSemanticV22Titles)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
     from(generatedHifzTafsirDir) { into("tafsir") }
-    from(generatedSemanticAssetsDir)
+    from(generatedSemanticAssetsDir) {
+        exclude("semantic/semantic_passages_v2_1.json")
+    }
 }
 
 val verifyHifzProductBoundary by tasks.registering {

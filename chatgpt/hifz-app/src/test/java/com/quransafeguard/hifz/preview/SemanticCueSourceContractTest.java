@@ -20,14 +20,22 @@ public final class SemanticCueSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void repositoryFailsClosedUntilAuditedV21AssetIsPresent() throws Exception {
+    @Test public void repositoryFailsClosedOnAuditedV22TitleLayerWhileKeepingV21AnchorsFrozen() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
-        assertTrue(source.contains("semantic/semantic_passages_v2_1.json"));
-        assertTrue(source.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
+        assertTrue(source.contains("semantic/semantic_passages_v2_2_titles.json"));
+        assertTrue(source.contains("f8655e2d4269183b8ab5665a394db8255aeac20683f2d79bdf45c04f85e9bfde"));
+        assertTrue("V2.1 provenance must remain explicit",
+            source.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
+        assertTrue(source.contains("title_fr_v2_2"));
+        assertTrue(source.contains("title_audit_status_v2_2"));
+        assertTrue(source.contains("title_sources_v2_2"));
+        assertTrue(source.contains("title_distinctiveness_v2_2"));
+        assertTrue(source.contains("String title = meta.titleV22"));
         assertTrue(source.contains("title_fr_v2_1"));
         assertTrue(source.contains("anchor_arabic_v2_1"));
         assertTrue(source.contains("anchor_word_count_v2_1"));
         assertTrue(source.contains("minimality_verified_v2_1"));
+        assertTrue(source.contains("V2.2 title must not be copied into page records"));
         assertTrue(source.contains("Fail closed"));
         assertTrue(source.contains("hasCompleteExactGeometryForPage"));
         assertTrue(source.contains("source-ink groups, not linguistic words"));
@@ -35,18 +43,26 @@ public final class SemanticCueSourceContractTest {
             source.contains("guess") || source.contains("approximateWord"));
     }
 
-    @Test public void frozenV21CorpusIsMaterializedIntoApkAssetsWithHashFence() throws Exception {
+    @Test public void frozenV21CorpusFeedsHashFencedV22TitleMaterialization() throws Exception {
         String build = read("hifz-app/build.gradle.kts");
-        String materializer = read("scripts/materialize_semantic_v2_1.py");
+        String v21Materializer = read("scripts/materialize_semantic_v2_1.py");
+        String v22Materializer = read("scripts/materialize_semantic_v2_2_titles.py");
         assertTrue(build.contains("prepareSemanticV21"));
+        assertTrue(build.contains("prepareSemanticV22Titles"));
         assertTrue(build.contains("semantic/semantic_passages_v2_1.json"));
-        assertTrue(build.contains("from(generatedSemanticAssetsDir)"));
-        assertTrue(materializer.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
-        assertTrue(materializer.contains("Qaf 50:15 must remain autonomous"));
-        assertTrue(materializer.contains("Al-Hujurat 49:11-13 must remain continuous"));
-        assertTrue(materializer.contains("output.write_bytes(raw)"));
-        assertFalse("materializer must not normalize or rewrite semantic JSON",
-            materializer.contains("json.dumps("));
+        assertTrue(build.contains("semantic/semantic_passages_v2_2_titles.json"));
+        assertTrue(build.contains("exclude(\"semantic/semantic_passages_v2_1.json\")"));
+        assertTrue(v21Materializer.contains("b205596cc09417f16097a70ade03f8d4b6ec1bb4b7ed9faf122a13a346ecf8c7"));
+        assertTrue(v21Materializer.contains("Qaf 50:15 must remain autonomous"));
+        assertTrue(v21Materializer.contains("Al-Hujurat 49:11-13 must remain continuous"));
+        assertTrue(v21Materializer.contains("output.write_bytes(raw)"));
+        assertFalse("V2.1 materializer must not normalize or rewrite semantic JSON",
+            v21Materializer.contains("json.dumps("));
+        assertTrue(v22Materializer.contains("EXPECTED_V21_SHA256"));
+        assertTrue(v22Materializer.contains("EXPECTED_TITLES_TSV_SHA256"));
+        assertTrue(v22Materializer.contains("f8655e2d4269183b8ab5665a394db8255aeac20683f2d79bdf45c04f85e9bfde"));
+        assertTrue(v22Materializer.contains("page passage records changed during title materialization"));
+        assertTrue(v22Materializer.contains("SP0001..SP1256"));
     }
 
     @Test public void readingUsesOneToggleAndTransientTitleInsteadOfButtonProliferation() throws Exception {
