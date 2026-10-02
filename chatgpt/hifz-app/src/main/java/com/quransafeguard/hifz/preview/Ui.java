@@ -389,6 +389,8 @@ final class Ui {
         if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
         if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
+        if (s.contains("masquer les repères") || s.contains("masquer les reperes")) return R.drawable.ic_ui_semantic_cues_off;
+        if (s.contains("repères") || s.contains("reperes")) return R.drawable.ic_ui_semantic_cues;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;
