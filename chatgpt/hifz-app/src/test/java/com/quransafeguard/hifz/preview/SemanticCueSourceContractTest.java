@@ -51,8 +51,9 @@ public final class SemanticCueSourceContractTest {
 
     @Test public void readingUsesOneToggleAndTransientTitleInsteadOfButtonProliferation() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertTrue(source.contains("semanticButton = Ui.smallButton(this, \"Amorces\""));
-        assertTrue(source.contains("setButtonIconWithText(semanticButton, icon, \"Amorces\")"));
+        assertTrue(source.contains("semanticButton = Ui.iconButton(this, \"\", \"Afficher les amorces\""));
+        assertTrue(source.contains("Ui.setButtonIcon(semanticButton, icon)"));
+        assertFalse("Amorces control must stay icon-only", source.contains("setButtonIconWithText(semanticButton"));
         assertTrue(source.contains("toggleSemanticCues()"));
         assertTrue(source.contains("SemanticTitlePopup.show"));
         assertTrue(source.contains("annotationButton = Ui.iconButton(this, \"\", \"Annoter\""));
@@ -67,15 +68,20 @@ public final class SemanticCueSourceContractTest {
     @Test public void activeRevisionIsDrivenByAuditedAmorcesWithoutApproximateWordGeometry() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
-        assertTrue(session.contains("activeCuePrompt.setText(activeRecallCue.anchorArabic)"));
-        assertTrue(session.contains("Amorce suivante"));
+        assertFalse("active revision must not duplicate a Quranic amorce above the Mushaf",
+            session.contains("activeCuePrompt"));
+        assertTrue(session.contains("applyActiveRevisionPageCues()"));
+        assertTrue(session.contains("\"Suivant\""));
+        assertTrue(session.contains("\"Révéler\""));
+        assertTrue(session.contains("\"Terminer\""));
         assertTrue(session.contains("advanceActiveRecallCue()"));
         assertTrue(session.contains("mushaf.setLandmarkLines(null, null)"));
-        assertFalse("active revision must not fall back to unrelated half-line landmarks",
-            session.contains("applyActiveLandmarks(") || session.contains("applyActiveRecallCues("));
-        assertTrue("the semantic index must use frozen audited passage boundaries",
-            repository.contains("surah_start") && repository.contains("ayah_start")
-                && repository.contains("surah_end") && repository.contains("ayah_end"));
+        assertTrue(session.contains("Temps effectué : "));
+        assertTrue("Al-Munir explicit grouping must be the canonical runtime structure",
+            repository.contains("tafsir_munir_grouping")
+                && repository.contains("EXPECTED_CANONICAL_MUNIR_PASSAGES = 1243"));
+        assertTrue("legacy V2.1 IDs remain aliases only for persisted-cursor migration",
+            repository.contains("legacy IDs as read-only aliases"));
         assertTrue(repository.contains("firstEligibleCueAtOrContaining"));
         assertTrue(repository.contains("nextEligibleCue"));
     }
@@ -94,7 +100,25 @@ public final class SemanticCueSourceContractTest {
         String js = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue(js.contains("semanticVisibleCellKeys"));
         assertTrue(js.contains("if(semanticVisible.has(key))return"));
-        assertTrue(js.contains("Exact phrase outline is drawn only from audited visual ranges"));
-        assertTrue(js.contains("if(gap<6)return"));
+        assertTrue(js.contains("same quiet fill grammar as Sabqi/Itqan"));
+        assertTrue(js.contains("fill-opacity','var(--sel-op)"));
+        assertTrue("semantic amorces must never be outlined around Quran ink",
+            !js.contains("semantic cue") || !js.contains("stroke','#524f49'"));
     }
+    @Test public void spatialQuizIsCompletelyRemoved() throws Exception {
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        String selector = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/RevisionSelector.java");
+        String manifest = read("hifz-app/src/main/AndroidManifest.xml");
+        String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
+        String js = read("hifz-app/src/main/assets/hifzreader/reader.js");
+        assertFalse(main.contains("SpatialQuiz"));
+        assertFalse(selector.contains("Quiz · Acquis"));
+        assertFalse(selector.contains("openSpatialQuiz"));
+        assertFalse(manifest.contains("SpatialQuizActivity"));
+        assertFalse(mushaf.contains("Quiz"));
+        assertFalse(js.contains("quizTargetLine"));
+        assertFalse(js.contains("quizVisibleLines"));
+        assertFalse(js.contains("quizGuideLayer"));
+    }
+
 }
