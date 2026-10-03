@@ -46,12 +46,20 @@ assert.strictEqual(Math.round(width(s75)*1000),60000);
 assert.strictEqual(Math.round(width(s100)*1000),80000);
 assert.strictEqual(keys(s100).size,4);
 
+for(const segment of s75){
+  const cell=cells.find(c=>c.key===segment.key);
+  assert.ok(cell);
+  assert.strictEqual(segment.fullErase,false);
+  assert.strictEqual(segment.y,cell.top+0.6);
+  assert.strictEqual(Math.round(segment.height*10)/10,18.8);
+}
 for(const segment of s100){
   const cell=cells.find(c=>c.key===segment.key);
   assert.ok(cell);
   assert.ok(segment.x>=cell.x0-1e-6 && segment.x+segment.width<=cell.x1+1e-6);
-  assert.strictEqual(segment.y,cell.top+0.6);
-  assert.strictEqual(Math.round(segment.height*10)/10,18.8);
+  assert.strictEqual(segment.fullErase,true);
+  assert.strictEqual(segment.y,cell.top+0.15);
+  assert.strictEqual(Math.round(segment.height*10)/10,19.7);
 }
 
 const source=require('fs').readFileSync(require('path').join(__dirname,'../hifz-app/src/main/assets/hifzreader/reader.js'),'utf8');
