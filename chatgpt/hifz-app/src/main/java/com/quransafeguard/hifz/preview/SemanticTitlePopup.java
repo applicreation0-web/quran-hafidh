@@ -23,6 +23,8 @@ final class SemanticTitlePopup {
         shell.setPadding(Ui.dp(activity, 14), Ui.dp(activity, 9), Ui.dp(activity, 14), Ui.dp(activity, 9));
         TextView label = Ui.bookText(activity, title.trim(), 14f, true);
         label.setGravity(Gravity.CENTER);
+        label.setTextDirection(android.view.View.TEXT_DIRECTION_RTL);
+        label.setTextAlignment(android.view.View.TEXT_ALIGNMENT_CENTER);
         label.setTextColor(Ui.INK);
         shell.addView(label, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));

@@ -336,7 +336,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (!semanticCuesEnabled || semanticPassages == null) return;
         SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
         if (cue == null) return;
-        semanticTitleDialog = SemanticTitlePopup.show(this, cue.titleFr, semanticTitleDialog);
+        semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
     }
 
     private void showControls() {

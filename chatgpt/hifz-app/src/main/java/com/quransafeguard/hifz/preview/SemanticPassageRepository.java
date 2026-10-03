@@ -364,7 +364,9 @@ final class SemanticPassageRepository {
                 JSONObject item = new JSONObject();
                 item.put("id", cue.passageId);
                 item.put("index", cue.indexOnPage);
-                item.put("title", cue.titleFr);
+                // Public reader payload is Arabic-only. The audited French overlay remains
+                // packaged/provenance-checked but is deliberately not exposed to the UI.
+                item.put("title", cue.title);
                 item.put("titleMunirAr", cue.title);
                 item.put("anchor", cue.anchorArabic);
                 item.put("anchorWordCount", cue.anchorWordCount);

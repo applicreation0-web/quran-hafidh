@@ -1633,7 +1633,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!MURAJAAH_ACTIVE.equals(mode) || semanticPassages == null) return;
         SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
         if (cue == null) return;
-        semanticTitleDialog = SemanticTitlePopup.show(this, cue.titleFr, semanticTitleDialog);
+        semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
     }
     private void showCurrent(){
         hasShown=true;
