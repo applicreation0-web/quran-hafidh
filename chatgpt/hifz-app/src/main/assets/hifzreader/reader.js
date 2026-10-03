@@ -334,7 +334,7 @@ function randomSegmentsForCells(cells,percent,order){
     if(remaining<=0.0001)break;
     const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.05,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-0.1)});
+    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
     remaining-=hiddenWidth;
   }
   return segments;
