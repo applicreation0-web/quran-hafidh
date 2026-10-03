@@ -23,6 +23,17 @@ def fail(message: str) -> None:
     raise SystemExit("Quran word geometry rejected: " + message)
 
 
+def parse_key(raw: object, page: int) -> tuple[int, int, int]:
+    key = str(raw)
+    try:
+        surah, ayah, word = (int(part) for part in key.split(":"))
+    except Exception:
+        fail(f"page {page}: invalid word key {key!r}")
+    if surah < 1 or surah > 114 or ayah < 1 or word < 1:
+        fail(f"page {page}: invalid word key {key}")
+    return surah, ayah, word
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         fail("usage: verify_quran_word_boxes.py SOURCE_DIR")
@@ -50,24 +61,17 @@ def main() -> None:
                 fail(f"duplicate/out-of-range page {page}")
             if not isinstance(rows, list) or not rows:
                 fail(f"page {page}: no Quran words")
-            last_key = None
             for row in rows:
                 if not isinstance(row, list) or len(row) != 5:
                     fail(f"page {page}: invalid word row")
                 key = str(row[0])
-                try:
-                    surah, ayah, word = (int(part) for part in key.split(":"))
-                except Exception:
-                    fail(f"page {page}: invalid word key {key!r}")
-                if surah < 1 or surah > 114 or ayah < 1 or word < 1:
-                    fail(f"page {page}: invalid word key {key}")
+                parse_key(key, page)
                 if key in seen_words:
                     fail(f"duplicate Quran word key {key}")
                 seen_words.add(key)
                 x0, y0, x1, y1 = (float(v) for v in row[1:])
                 if not (0 <= x0 < x1 <= 345 and 0 <= y0 < y1 <= 550):
                     fail(f"page {page}: invalid box for {key}")
-                last_key = key
                 total += 1
             pages[page] = rows
 
@@ -75,6 +79,30 @@ def main() -> None:
         fail(f"page coverage is {len(pages)}/{EXPECTED_PAGES}")
     if total != EXPECTED_WORDS:
         fail(f"word count is {total}, expected {EXPECTED_WORDS}")
+
+    previous: tuple[int, int, int] | None = None
+    previous_key = ""
+    for page in range(1, EXPECTED_PAGES + 1):
+        for row in pages[page]:
+            current = parse_key(row[0], page)
+            key = str(row[0])
+            if previous is not None:
+                ps, pa, pw = previous
+                s, a, w = current
+                if current <= previous:
+                    fail(f"non-canonical word order: {previous_key} then {key} on page {page}")
+                if s == ps and a == pa:
+                    if w != pw + 1:
+                        fail(f"missing/out-of-order word inside ayah: {previous_key} then {key}")
+                elif s == ps:
+                    if a != pa + 1 or w != 1:
+                        fail(f"non-canonical ayah transition: {previous_key} then {key}")
+                else:
+                    if s != ps + 1 or a != 1 or w != 1:
+                        fail(f"non-canonical surah transition: {previous_key} then {key}")
+            previous = current
+            previous_key = key
+
     if pages[1][0][0] != "1:1:1":
         fail("first Quran word key changed")
     if pages[604][-1][0] != "114:6:3":
@@ -82,7 +110,9 @@ def main() -> None:
 
     print(
         f"Quran word geometry OK: release={EXPECTED_RELEASE} "
-        f"pages={len(pages)} words={total} box_space=345x550"
+        f"pages={len(pages)} words={total} box_space=345x550 order=canonical "
+        f"page1_first3={[row[0] for row in pages[1][:3]]} "
+        f"page604_last3={[row[0] for row in pages[604][-3:]]}"
     )
 
 

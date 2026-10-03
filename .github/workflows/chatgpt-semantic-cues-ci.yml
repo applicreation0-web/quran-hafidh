@@ -58,6 +58,18 @@ jobs:
           node scripts/test_hifz_mask_segments.js
           node scripts/test_hifz_vertical_fit.js
 
+      - name: Run post-Work Al-Munir and exact-geometry audit
+        run: |
+          set -euo pipefail
+          mkdir -p build/postwork-audit
+          python3 scripts/materialize_semantic_v2_1.py \
+            hifz-app/src/main/semantic-source/v2_1 \
+            build/postwork-audit/semantic_passages_v2_1.json
+          python3 scripts/audit_quran_haafidh_postwork.py \
+            build/postwork-audit/semantic_passages_v2_1.json
+          python3 scripts/verify_quran_word_boxes.py \
+            hifz-app/src/main/word-source/quran-ws-v1.1.2
+
       - name: Run Hifz JVM tests and contracts
         run: >-
           gradle --no-daemon
@@ -72,6 +84,54 @@ jobs:
 
       - name: Compile debug APK
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+
+      - name: Verify debug APK payload and SHA-256
+        id: apk
+        run: |
+          set -euo pipefail
+          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          python3 - "$apk" <<'PY'
+          import hashlib, json, re, sys, zipfile
+          apk = sys.argv[1]
+          with zipfile.ZipFile(apk) as z:
+              names = z.namelist()
+              required = {
+                  "assets/semantic/semantic_passages_v2_1.json",
+                  "assets/semantic/semantic_titles_v2_3.json",
+                  "assets/reader109/word-boxes/word-boxes-001-150.json",
+                  "assets/reader109/word-boxes/word-boxes-151-300.json",
+                  "assets/reader109/word-boxes/word-boxes-301-450.json",
+                  "assets/reader109/word-boxes/word-boxes-451-604.json",
+              }
+              missing = sorted(required - set(names))
+              if missing:
+                  raise SystemExit("APK missing required embedded assets: " + repr(missing))
+              forbidden_names = [n for n in names if re.search(r"spatial.?quiz|quiz.?spatial", n, re.I)]
+              if forbidden_names:
+                  raise SystemExit("Spatial quiz artifact still packaged: " + repr(forbidden_names))
+              semantic = json.loads(z.read("assets/semantic/semantic_passages_v2_1.json"))
+              if semantic.get("global_passage_count") != 1256:
+                  raise SystemExit("APK semantic corpus count mismatch")
+              dex = b"".join(z.read(n) for n in names if re.fullmatch(r"classes\d*\.dex", n))
+              for marker in (b"SpatialQuiz", b"quizTargetLine", b"quizVisibleLines", b"quizGuideLayer"):
+                  if marker in dex:
+                      raise SystemExit("Spatial quiz code marker still present in DEX: " + marker.decode())
+          digest = hashlib.sha256(open(apk, "rb").read()).hexdigest()
+          print("APK_PAYLOAD_OK semantic=1256 word_geometry=4_chunks spatial_quiz=absent")
+          print("APK_SHA256=" + digest)
+          PY
+          sha="$(sha256sum "$apk" | awk '{print $1}')"
+          echo "path=$apk" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-haafidh-debug-${{ github.sha }}
+          path: chatgpt/${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload diagnostics on failure
         if: failure()

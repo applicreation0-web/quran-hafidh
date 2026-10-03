@@ -5,6 +5,7 @@ import android.content.Context;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -59,7 +60,13 @@ final class WordGeometryRepository {
         }
 
         JSONArray boxJson() {
-            return new JSONArray().put(x0).put(y0).put(x1).put(y1);
+            JSONArray out = new JSONArray();
+            try {
+                out.put(x0).put(y0).put(x1).put(y1);
+            } catch (JSONException invalidNumber) {
+                throw new IllegalStateException("invalid Quran word box", invalidNumber);
+            }
+            return out;
         }
     }
 
