@@ -67,6 +67,7 @@ public final class MushafView extends WebView {
     private boolean maskFollowsSelection = true;
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
+    private boolean semanticHighlightEnabled = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
@@ -220,6 +221,7 @@ public final class MushafView extends WebView {
                 .put("maskFollowsSelection", maskFollowsSelection)
                 .put("semanticCues", semanticCues)
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
+                .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
@@ -311,8 +313,13 @@ public final class MushafView extends WebView {
      * confirms complete exact geometry for that page.
      */
     public void setSemanticCues(JSONArray cues, boolean anchorMaskMode) {
+        setSemanticCues(cues, anchorMaskMode, true);
+    }
+
+    public void setSemanticCues(JSONArray cues, boolean anchorMaskMode, boolean highlightEnabled) {
         semanticCues = cues == null ? new JSONArray() : cues;
         semanticAnchorMaskMode = anchorMaskMode;
+        semanticHighlightEnabled = highlightEnabled;
         // Before the first show(), state is enough: the next boot payload will carry these cues.
         if (requestedPage < 1 || requestedPage > 604) return;
         final String geometry;
@@ -326,13 +333,14 @@ public final class MushafView extends WebView {
             StringBuilder script = new StringBuilder("window.HifzReader&&(");
             if (geometry != null) script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
             script.append("window.HifzReader.setSemanticCues(")
-                .append(semanticCues.toString()).append(',').append(anchorMaskMode).append("));");
+                .append(semanticCues.toString()).append(',').append(anchorMaskMode).append(',')
+                .append(highlightEnabled).append("));");
             evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this, prefs)));
         });
     }
 
     public void clearSemanticCues() {
-        setSemanticCues(new JSONArray(), false);
+        setSemanticCues(new JSONArray(), false, false);
     }
 
     /** Exact first-three/last-three Quran-word boxes for active revision; never inferred from cells. */
