@@ -50,8 +50,9 @@ public final class RevisionMaskIgnoresLastRevisedVerseSourceContractTest {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue("must default to the legacy Sabqi/Itqan-safe behavior unless explicitly turned off",
             reader.contains("let maskFollowsSelection=boot.maskFollowsSelection!==false;"));
-        assertTrue("render() must actually gate selectedPolygons() behind the flag, not call it unconditionally",
-            reader.contains("const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);"));
+        assertTrue("render() must gate selectedPolygons() behind the flag and feed the gated polygons to masking",
+            reader.contains("const polys=maskFollowsSelection?selectedPolygons(svg):[]")
+                && reader.contains("const cells=maskCandidates(lines,polys)"));
         assertTrue("must expose a live setter the native side can call once per session",
             reader.contains("setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()}"));
     }

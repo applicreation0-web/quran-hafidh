@@ -149,7 +149,7 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("pattern.id='hifz-semantic-hatch'"));
         assertTrue(js.contains("pattern.setAttribute('patternUnits','userSpaceOnUse')"));
         assertTrue(js.contains("hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5')"));
-        assertTrue(js.contains("rect.setAttribute('fill','url(#hifz-semantic-hatch)')"));
+        assertTrue(js.contains("el.setAttribute('fill','url(#hifz-semantic-hatch)')"));
         assertTrue(js.contains("hatch.setAttribute('stroke-opacity',eink?'0.82':'0.46')"));
         assertTrue(js.contains("hatch.setAttribute('stroke-width',eink?'0.70':'0.54')"));
         assertTrue("exact amorce words on one physical line must share one regular frame",
@@ -214,11 +214,11 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("function wordBoxInSvgSpace(box,svg)"));
         assertTrue(js.contains("layer.setAttribute('mask','url(#hifz-exact-word-holes)')"));
         assertTrue("normal reading amorces must use the dedicated hatch, not Sabqi/Itqan solid grey",
-            js.contains("rect.setAttribute('fill','url(#hifz-semantic-hatch)')"));
+            js.contains("el.setAttribute('fill','url(#hifz-semantic-hatch)')"));
         assertTrue(js.contains("pattern.id='hifz-semantic-hatch'"));
-        assertTrue(js.contains("rect.setAttribute('stroke','none')"));
+        assertTrue(js.contains("el.setAttribute('stroke','none')"));
         assertTrue("normal reading amorce highlight itself must be tappable",
-            js.contains("rect.setAttribute('pointer-events','all')"));
+            js.contains("el.setAttribute('pointer-events','all')"));
         assertFalse("active recall must not derive word holes by proportional line arithmetic",
             js.contains("approximateWord") || js.contains("guessWord"));
     }
