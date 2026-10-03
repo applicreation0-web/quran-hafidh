@@ -1268,6 +1268,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = geometry.lineIdsOnPage(currentPage);
         currentMask = 100;
         mushaf.clearSemanticCues();
+        mushaf.clearPageLandmarkBoxes();
         mushaf.setLandmarkLines(null, null);
         showCurrent();
         prefs.setActiveMurajaahPage(currentPage);
@@ -1657,6 +1658,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if(MURAJAAH_ACTIVE.equals(mode)) {
             currentLineIds=geometry.lineIdsOnPage(currentPage);
             mushaf.clearSemanticCues();
+            mushaf.clearPageLandmarkBoxes();
             mushaf.setLandmarkLines(null, null);
         }
         showCurrent();
