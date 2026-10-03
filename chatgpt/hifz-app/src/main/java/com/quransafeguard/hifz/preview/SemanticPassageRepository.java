@@ -38,12 +38,6 @@ final class SemanticPassageRepository {
     static final String TITLE_ASSET_PATH = "semantic/semantic_titles_v2_3.json";
     static final String EXPECTED_TITLE_SHA256 =
         "46c8c905beaf2e03b2589c296d1574e7417dbab59f9e580911e9ebe0c8073bea";
-    static final String AL_MUNIR_FR_ASSET_PATH =
-        "semantic/semantic_titles_al_munir_fr_v1.json";
-    static final String EXPECTED_AL_MUNIR_FR_SHA256 =
-        "7de847efb4fe8c2375ec7c3a8d1386869a52098b7a1d7dffa621467f87b83b19";
-    static final String EXPECTED_AL_MUNIR_FR_AUDIT_ZIP_SHA256 =
-        "411c89130b3c3ceb22700ec0864fc0ef1d1f06f3623a1442f03d41a4e8e290ee";
     static final String EXPECTED_V23_CORPUS_SHA256 =
         "19b7a5048ef2201d2a8967652c0f533c4fc46bd1aa66d7b31f12daf196857336";
     static final int EXPECTED_GLOBAL_PASSAGES = 1256;
@@ -134,7 +128,6 @@ final class SemanticPassageRepository {
         final int page;
         final int indexOnPage;
         final String title;
-        final String titleFr;
         final String anchorArabic;
         final int anchorWordCount;
         final VerseRef startVerse;
@@ -149,7 +142,7 @@ final class SemanticPassageRepository {
         final boolean anchorOnCurrentPage;
         final List<CellRange> visualRanges;
 
-        Cue(String passageId, int page, int indexOnPage, String title, String titleFr, String anchorArabic,
+        Cue(String passageId, int page, int indexOnPage, String title, String anchorArabic,
             int anchorWordCount, VerseRef startVerse, VerseRef endVerse, int startPage, int endPage,
             int startLine, int firstWordId, int lastWordId, int firstWordPosition,
             int lastWordPosition, boolean anchorOnCurrentPage, List<CellRange> visualRanges) {
@@ -157,7 +150,6 @@ final class SemanticPassageRepository {
             this.page = page;
             this.indexOnPage = indexOnPage;
             this.title = title;
-            this.titleFr = titleFr;
             this.anchorArabic = anchorArabic;
             this.anchorWordCount = anchorWordCount;
             this.startVerse = startVerse;
@@ -253,14 +245,7 @@ final class SemanticPassageRepository {
             }
             Map<String, String> titlesV23 =
                 parseTitleOverlay(new String(titleRaw, StandardCharsets.UTF_8));
-            byte[] alMunirFrRaw = readAsset(context, AL_MUNIR_FR_ASSET_PATH);
-            if (!EXPECTED_AL_MUNIR_FR_SHA256.equals(sha256(alMunirFrRaw))) {
-                throw new IllegalStateException("Al-Munir French title SHA-256 mismatch");
-            }
-            Map<String, String> titlesAlMunirFr =
-                parseAlMunirFrenchOverlay(new String(alMunirFrRaw, StandardCharsets.UTF_8));
-            parseInto(new String(raw, StandardCharsets.UTF_8), titlesV23, titlesAlMunirFr,
-                byPage, byId);
+            parseInto(new String(raw, StandardCharsets.UTF_8), titlesV23, byPage, byId);
             Map<String, Cue> canonical = new HashMap<>();
             for (Cue cue : byId.values()) canonical.put(cue.passageId, cue);
             orderedCues.addAll(canonical.values());
@@ -364,8 +349,7 @@ final class SemanticPassageRepository {
                 JSONObject item = new JSONObject();
                 item.put("id", cue.passageId);
                 item.put("index", cue.indexOnPage);
-                // Public reader payload is Arabic-only. The audited French overlay remains
-                // packaged/provenance-checked but is deliberately not exposed to the UI.
+                // Public semantic title payload is canonical Al-Munir Arabic only.
                 item.put("title", cue.title);
                 item.put("titleMunirAr", cue.title);
                 item.put("anchor", cue.anchorArabic);
@@ -394,7 +378,6 @@ final class SemanticPassageRepository {
     }
 
     private static void parseInto(String raw, Map<String, String> titlesV23,
-            Map<String, String> titlesAlMunirFr,
             Map<Integer, List<Cue>> byPage, Map<String, Cue> byId) throws JSONException {
         JSONObject root = new JSONObject(raw);
         require("V2.1".equals(root.optString("schema_version", "")), "wrong semantic schema");
@@ -497,11 +480,6 @@ final class SemanticPassageRepository {
             "V2.3 title IDs do not exactly match frozen V2.1 passages");
         require(groups.size() == EXPECTED_CANONICAL_MUNIR_PASSAGES,
             "unexpected Al-Munir canonical passage count: " + groups.size());
-        Set<String> canonicalIds = new HashSet<>();
-        for (GroupBuilder group : groups.values()) canonicalIds.add(group.canonicalId);
-        require(titlesAlMunirFr.keySet().equals(canonicalIds),
-            "Al-Munir French title IDs do not exactly match canonical grouping");
-
         Map<String, PassageMeta> globalMeta = new HashMap<>();
         for (String id : globalIds) {
             GroupBuilder group = groups.get(legacyToGroupKey.get(id));
@@ -577,10 +555,9 @@ final class SemanticPassageRepository {
             // counts or proportional arithmetic here.
             List<CellRange> ranges = Collections.emptyList();
 
-            String titleFr = titlesAlMunirFr.get(meta.canonicalId);
-            require(titleFr != null && !titleFr.trim().isEmpty(),
-                "missing French title for canonical Al-Munir unit " + meta.canonicalId);
-            Cue cue = new Cue(meta.canonicalId, page, index, meta.titleMunirAr, titleFr, anchor.anchor,
+            require(!meta.titleMunirAr.trim().isEmpty(),
+                "missing Arabic Al-Munir heading for canonical unit " + meta.canonicalId);
+            Cue cue = new Cue(meta.canonicalId, page, index, meta.titleMunirAr, anchor.anchor,
                 anchor.wordCount, meta.start, meta.end, meta.startPage, meta.endPage,
                 anchor.startLine, anchor.firstWordId, anchor.lastWordId,
                 anchor.firstWordPosition, anchor.lastWordPosition, anchorOnPage, ranges);
@@ -606,29 +583,6 @@ final class SemanticPassageRepository {
         }
     }
 
-
-    private static Map<String, String> parseAlMunirFrenchOverlay(String raw) throws JSONException {
-        JSONObject root = new JSONObject(raw);
-        require("AL_MUNIR_FR_V1".equals(root.optString("schema_version", "")),
-            "wrong Al-Munir French title schema");
-        require(EXPECTED_AL_MUNIR_FR_AUDIT_ZIP_SHA256.equals(
-                root.optString("source_audit_zip_sha256", "")),
-            "Al-Munir French titles are not tied to the exhaustive Work audit");
-        require(root.optInt("canonical_title_count", 0) == EXPECTED_CANONICAL_MUNIR_PASSAGES,
-            "wrong Al-Munir French title count");
-
-        JSONArray rows = root.optJSONArray("titles");
-        require(rows != null && rows.length() == EXPECTED_CANONICAL_MUNIR_PASSAGES,
-            "Al-Munir French title rows incomplete");
-        Map<String, String> titles = new HashMap<>();
-        for (int i = 0; i < rows.length(); i++) {
-            JSONObject row = rows.getJSONObject(i);
-            String id = requiredText(row, "canonical_id");
-            String title = requiredText(row, "title_fr");
-            require(titles.put(id, title) == null, "duplicate Al-Munir French title id " + id);
-        }
-        return Collections.unmodifiableMap(titles);
-    }
 
     private static Map<String, String> parseTitleOverlay(String raw) throws JSONException {
         JSONObject root = new JSONObject(raw);

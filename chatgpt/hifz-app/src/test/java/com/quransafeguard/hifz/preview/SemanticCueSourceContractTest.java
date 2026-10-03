@@ -171,40 +171,32 @@ public final class SemanticCueSourceContractTest {
                 && js.contains("rx','1.35'"));
     }
 
-    @Test public void exhaustiveAlMunirFrenchOverlayIsHashFencedButArabicIsTheOnlyRuntimeDisplay() throws Exception {
+    @Test public void alMunirRuntimeIsArabicOnlyAndFrenchOverlayIsNotPackaged() throws Exception {
         String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
-        String materializer = read("scripts/materialize_semantic_al_munir_fr_v1.py");
         String build = read("hifz-app/build.gradle.kts");
-        assertTrue(repository.contains("semantic/semantic_titles_al_munir_fr_v1.json"));
-        assertTrue(repository.contains("7de847efb4fe8c2375ec7c3a8d1386869a52098b7a1d7dffa621467f87b83b19"));
-        assertTrue(repository.contains("EXPECTED_CANONICAL_MUNIR_PASSAGES = 1243"));
-        assertTrue("French overlay may remain packaged for provenance but must not drive reader payload",
-            repository.contains("titlesAlMunirFr.get(meta.canonicalId)")
-                && repository.contains("item.put(\"title\", cue.title)")
-                && !repository.contains("item.put(\"title\", cue.titleFr)"));
+        String workflow = read("../.github/workflows/chatgpt-semantic-cues-ci.yml");
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String popup = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticTitlePopup.java");
+
+        assertTrue(repository.contains("EXPECTED_CANONICAL_MUNIR_PASSAGES = 1243"));
+        assertTrue(repository.contains("item.put(\"title\", cue.title)"));
+        assertFalse(repository.contains("AL_MUNIR_FR_ASSET_PATH"));
+        assertFalse(repository.contains("titleFr"));
+        assertFalse(repository.contains("parseAlMunirFrenchOverlay"));
+        assertFalse(build.contains("prepareAlMunirFrenchTitles"));
+        assertFalse(build.contains("semantic_titles_al_munir_fr_v1.json"));
+        assertTrue("CI must reject accidental French-title packaging",
+            workflow.contains("French Al-Munir title overlay must not be packaged in Arabic-only runtime"));
+
         assertTrue("Lecture must display Arabic Al-Munir only",
             study.contains("SemanticTitlePopup.show(this, cue.title, semanticTitleDialog)"));
         assertTrue("Active revision must display Arabic Al-Munir only",
             session.contains("SemanticTitlePopup.show(this, cue.title, semanticTitleDialog)"));
-        assertFalse(study.contains("SemanticTitlePopup.show(this, cue.titleFr"));
-        assertFalse(session.contains("SemanticTitlePopup.show(this, cue.titleFr"));
+        assertFalse(study.contains("cue.titleFr"));
+        assertFalse(session.contains("cue.titleFr"));
         assertTrue("Arabic semantic title popup must force RTL direction",
             popup.contains("View.TEXT_DIRECTION_RTL"));
-        assertFalse("temporary Java title overrides must be gone",
-            repository.contains("VERIFIED_FRENCH_TITLE_OVERRIDES"));
-        assertTrue(build.contains("prepareAlMunirFrenchTitles"));
-        assertTrue(materializer.contains("EXPECTED_TITLE_COUNT = 1243"));
-        assertTrue(materializer.contains("411c89130b3c3ceb22700ec0864fc0ef1d1f06f3623a1442f03d41a4e8e290ee"));
-        assertTrue(materializer.contains("SP0013"));
-        assertTrue(materializer.contains("enseignement des langues"));
-        assertTrue(materializer.contains("SP0351"));
-        assertTrue(materializer.contains("Amalécites"));
-        assertTrue(materializer.contains("SP1023"));
-        assertTrue(materializer.contains("Les dahriyya"));
-        assertTrue(materializer.contains("REJECTED_FRENCH"));
     }
 
     @Test public void tafsirPanelTracksTheLatestTappedVerse() throws Exception {

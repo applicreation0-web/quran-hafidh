@@ -10,8 +10,6 @@ val semanticV21SourceDir = file("src/main/semantic-source/v2_1")
 val semanticV21Output = generatedSemanticAssetsDir.resolve("semantic/semantic_passages_v2_1.json")
 val semanticV23TitleSourceDir = file("src/main/semantic-source/v2_3_titles")
 val semanticV23TitleOutput = generatedSemanticAssetsDir.resolve("semantic/semantic_titles_v2_3.json")
-val alMunirFrenchTitleSourceDir = file("src/main/semantic-source/al_munir_fr_v1")
-val alMunirFrenchTitleOutput = generatedSemanticAssetsDir.resolve("semantic/semantic_titles_al_munir_fr_v1.json")
 val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 
@@ -54,21 +52,6 @@ val prepareSemanticV23Titles by tasks.registering(Exec::class) {
     )
 }
 
-val prepareAlMunirFrenchTitles by tasks.registering(Exec::class) {
-    dependsOn(prepareSemanticV21)
-    inputs.file(semanticV21Output)
-    inputs.dir(alMunirFrenchTitleSourceDir)
-    inputs.file(rootProject.file("scripts/materialize_semantic_al_munir_fr_v1.py"))
-    outputs.file(alMunirFrenchTitleOutput)
-    commandLine(
-        "python3",
-        rootProject.file("scripts/materialize_semantic_al_munir_fr_v1.py").absolutePath,
-        semanticV21Output.absolutePath,
-        alMunirFrenchTitleSourceDir.absolutePath,
-        alMunirFrenchTitleOutput.absolutePath
-    )
-}
-
 val verifyQuranWordGeometry by tasks.registering(Exec::class) {
     inputs.dir(quranWordGeometrySourceDir)
     inputs.file(rootProject.file("scripts/verify_quran_word_boxes.py"))
@@ -80,7 +63,7 @@ val verifyQuranWordGeometry by tasks.registering(Exec::class) {
 }
 
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21, prepareSemanticV23Titles, prepareAlMunirFrenchTitles, verifyQuranWordGeometry)
+    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21, prepareSemanticV23Titles, verifyQuranWordGeometry)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }

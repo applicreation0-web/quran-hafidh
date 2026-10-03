@@ -100,7 +100,6 @@ jobs:
               required = {
                   "assets/semantic/semantic_passages_v2_1.json",
                   "assets/semantic/semantic_titles_v2_3.json",
-                  "assets/semantic/semantic_titles_al_munir_fr_v1.json",
                   "assets/reader109/word-boxes/word-boxes-001-150.json",
                   "assets/reader109/word-boxes/word-boxes-151-300.json",
                   "assets/reader109/word-boxes/word-boxes-301-450.json",
@@ -115,29 +114,14 @@ jobs:
               semantic = json.loads(z.read("assets/semantic/semantic_passages_v2_1.json"))
               if semantic.get("global_passage_count") != 1256:
                   raise SystemExit("APK semantic corpus count mismatch")
-              munir_fr = json.loads(z.read("assets/semantic/semantic_titles_al_munir_fr_v1.json"))
-              if munir_fr.get("schema_version") != "AL_MUNIR_FR_V1":
-                  raise SystemExit("APK Al-Munir French overlay schema mismatch")
-              if munir_fr.get("source_audit_zip_sha256") != "411c89130b3c3ceb22700ec0864fc0ef1d1f06f3623a1442f03d41a4e8e290ee":
-                  raise SystemExit("APK Al-Munir French overlay audit fence mismatch")
-              titles = munir_fr.get("titles")
-              if munir_fr.get("canonical_title_count") != 1243 or not isinstance(titles, list) or len(titles) != 1243:
-                  raise SystemExit("APK Al-Munir French title count mismatch")
-              ids = [row.get("canonical_id") for row in titles]
-              if len(ids) != len(set(ids)) or any(not x for x in ids):
-                  raise SystemExit("APK Al-Munir French title IDs invalid")
-              if any(not str(row.get("title_fr", "")).strip() for row in titles):
-                  raise SystemExit("APK Al-Munir French title blank")
-              rejected = ("docteur", "docteurs", "crainte savante", "arabité", "négatrice", "négatrices", "croyants qui œuvrent")
-              folded = "\n".join(str(row.get("title_fr", "")).casefold() for row in titles)
-              if any(term.casefold() in folded for term in rejected):
-                  raise SystemExit("APK Al-Munir French overlay contains rejected wording")
+              if "assets/semantic/semantic_titles_al_munir_fr_v1.json" in names:
+                  raise SystemExit("French Al-Munir title overlay must not be packaged in Arabic-only runtime")
               dex = b"".join(z.read(n) for n in names if re.fullmatch(r"classes\d*\.dex", n))
               for marker in (b"SpatialQuiz", b"quizTargetLine", b"quizVisibleLines", b"quizGuideLayer"):
                   if marker in dex:
                       raise SystemExit("Spatial quiz code marker still present in DEX: " + marker.decode())
           digest = hashlib.sha256(open(apk, "rb").read()).hexdigest()
-          print("APK_PAYLOAD_OK semantic=1256 al_munir_fr=1243 word_geometry=4_chunks spatial_quiz=absent")
+          print("APK_PAYLOAD_OK semantic=1256 al_munir_titles=arabic_only word_geometry=4_chunks spatial_quiz=absent")
           print("APK_SHA256=" + digest)
           PY
           sha="$(sha256sum "$apk" | awk '{print $1}')"
