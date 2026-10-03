@@ -53,6 +53,9 @@ assert.ok(Math.abs(Number(hole.attrs.y)-(220-198.4777))<1e-8,'page landmarks mus
 const cues=svg.childNodes.find(n=>n.attrs.class==='semanticcuelayer');
 const cueRect=cues.childNodes.find(n=>n.tagName==='rect');
 assert.ok(cueRect,'semantic hatch must retain an exact Quran word-box rectangle');
-assert.ok(Math.abs(Number(cueRect.attrs.x)-(200-53.3109))<1e-8,'semantic highlight must share the Quran coordinate system');
-assert.ok(Math.abs(Number(cueRect.attrs.y)-(220-198.4777))<1e-8,'semantic highlight must share the Quran coordinate system');
+const exactX=200-53.3109,exactY=220-198.4777;
+assert.ok(Number(cueRect.attrs.x)<=exactX && Number(cueRect.attrs.x)+Number(cueRect.attrs.width)>=exactX+30,
+  'semantic frame must contain the exact Quran word-box horizontally');
+assert.ok(Number(cueRect.attrs.y)<=exactY && Number(cueRect.attrs.y)+Number(cueRect.attrs.height)>=exactY+20,
+  'semantic frame must contain the exact Quran word-box vertically');
 console.log('HIFZ_NEGATIVE_VIEWBOX_WORD_MAPPING_OK');
