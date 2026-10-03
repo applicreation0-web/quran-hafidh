@@ -464,7 +464,7 @@ function workContextLayer(svg,allLines,activeLines,polys){
    * contrast while preserving exact words, line lengths, rosettes and page topology.
    * No SVG blur/filter: that is deliberately avoided on E-Ink to limit grey smearing/ghosting.
    */
-  paper.setAttribute('fill-opacity',eink?'0.66':'0.60');
+  paper.setAttribute('fill-opacity',eink?'0.72':'0.65');
   paper.setAttribute('mask','url(#hifz-work-context-mask)');
   g.appendChild(paper);
   const markers=markerLayer(svg,polys,activeLines);

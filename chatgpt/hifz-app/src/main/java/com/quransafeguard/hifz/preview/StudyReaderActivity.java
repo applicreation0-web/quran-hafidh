@@ -259,28 +259,16 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private Button tafsirReaderAction() {
-        Button button = new Button(this);
-        button.setAllCaps(false);
-        button.setText("Tafsir");
-        button.setTextSize(13.5f);
-        button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
-        button.setTextColor(Ui.INK);
-        button.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-        button.setStateListAnimator(null);
-        button.setElevation(0f);
-        button.setPadding(Ui.dp(this, 10), 0, Ui.dp(this, 10), 0);
-        button.setMinWidth(Ui.dp(this, 56));
-        button.setMinHeight(Ui.dp(this, 48));
-        button.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
-        button.setOnClickListener(v -> openTafsir());
-        return button;
+        return Ui.iconButton(this, "", "Tafsir · touchez un verset puis ouvrez le commentaire",
+            v -> openTafsir());
     }
 
     private void toggleAnnotationMode() {
         annotationEnabled = !annotationEnabled;
         annotationOverlay.setDrawingEnabled(annotationEnabled);
         annotationButton.setSelected(annotationEnabled);
-        annotationButton.setContentDescription(annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+        Ui.setIconDescription(annotationButton,
+            annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
         showControls();
     }
 
@@ -298,7 +286,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (semanticButton == null) return;
         semanticButton.setSelected(semanticCuesEnabled);
         String description = semanticCuesEnabled ? "Masquer les amorces" : "Afficher les amorces";
-        semanticButton.setContentDescription(description);
+        Ui.setIconDescription(semanticButton, description);
         int icon = Ui.iconFor(description, "");
         if (icon != 0) Ui.setButtonIcon(semanticButton, icon);
     }
@@ -319,7 +307,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         mushaf.clearReveal();
         page = next;
         selected = null;
-        tafsirButton.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
+        Ui.setIconDescription(tafsirButton, "Tafsir · touchez un verset puis ouvrez le commentaire");
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         updateSurahPickerLabel();
         updateRubPickerLabel();

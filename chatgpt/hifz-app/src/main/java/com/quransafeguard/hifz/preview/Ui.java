@@ -66,7 +66,7 @@ final class Ui {
         Button button = new Button(context);
         button.setAllCaps(false);
         button.setGravity(Gravity.CENTER);
-        button.setContentDescription(description);
+        setIconDescription(button, description);
         button.setOnClickListener(listener);
         button.setStateListAnimator(null);
         button.setElevation(0f);
@@ -110,6 +110,13 @@ final class Ui {
         button.setCompoundDrawableTintList(iconTintFlat());
     }
 
+    static void setIconDescription(Button button, String description) {
+        if (button == null) return;
+        String value = description == null ? "" : description;
+        button.setContentDescription(value);
+        if (Build.VERSION.SDK_INT >= 26) button.setTooltipText(value);
+    }
+
     /** Keep a visible, unambiguous text label while allowing the semantic state icon to change. */
     static void setButtonIconWithText(Button button, int iconRes, String label) {
         if (button == null) return;
@@ -120,26 +127,15 @@ final class Ui {
     }
 
     /**
-     * Icon + short caption with one compact grammar across all Hifz modes. The caption wraps onto
-     * a second line (capped at 84dp) instead of clipping to one truncated line — a label like
-     * "Passage suivant du corpus" was being cut down to "Passage s…" when several actions shared
-     * the row (see roundAction's 6dp side padding, widened for the same reason: adjacent actions
-     * were rendering right up against each other).
+     * Active-session action: icon only. Every active reader/memorisation toolbar uses the same
+     * 48dp hit target, baseline and spacing; the semantic label remains available to accessibility
+     * and as an Android long-press tooltip instead of consuming vertical space below the icon.
      */
     static LinearLayout roundAction(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout box = column(context);
-        box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(dp(context,6),0,dp(context,6),0);
-        Button b = iconButton(context, symbol, label, listener);
-        box.addView(b);
-        TextView caption = text(context, label, 11f, false);
-        caption.setTextColor(MUTED);
-        caption.setGravity(Gravity.CENTER);
-        caption.setMaxLines(2);
-        caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        caption.setMaxWidth(dp(context, 84));
-        box.addView(caption, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(0, 0, 0, 0);
+        box.addView(iconButton(context, symbol, label, listener));
         return box;
     }
 
@@ -398,7 +394,8 @@ final class Ui {
         if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
         if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
-        if (s.contains("amorce")) return R.drawable.ic_ui_semantic_key;
+        if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
+        if (s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;
         if (s.contains("masquer les repères") || s.contains("masquer les reperes")) return R.drawable.ic_ui_semantic_cues_off;
         if (s.contains("repères") || s.contains("reperes")) return R.drawable.ic_ui_semantic_cues;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;

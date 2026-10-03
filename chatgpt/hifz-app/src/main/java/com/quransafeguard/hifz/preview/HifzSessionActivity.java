@@ -221,7 +221,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationEnabled = !annotationEnabled;
         annotationOverlay.setDrawingEnabled(annotationEnabled);
         annotationButton.setSelected(annotationEnabled);
-        annotationButton.setContentDescription(annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+        Ui.setIconDescription(annotationButton,
+            annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
     }
 
     private void renderMode() {
