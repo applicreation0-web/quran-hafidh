@@ -56,7 +56,7 @@ public final class SemanticCueSourceContractTest {
         assertFalse("Amorces control must stay icon-only", source.contains("setButtonIconWithText(semanticButton"));
         assertTrue(source.contains("toggleSemanticCues()"));
         assertTrue(source.contains("SemanticTitlePopup.show"));
-        assertTrue("tapping a grey amorce must open its title directly",
+        assertTrue("tapping the patterned amorce must open its title directly",
             read("hifz-app/src/main/assets/hifzreader/reader.js").contains("N?.semanticCueTap?.(String(cue.id))"));
         assertTrue(source.contains("annotationButton = Ui.iconButton(this, \"\", \"Annoter\""));
         assertTrue(source.contains("Ui.iconButton(this, \"\", \"Annuler la note\""));
@@ -111,6 +111,17 @@ public final class SemanticCueSourceContractTest {
             html.contains(".maskcell{fill:var(--sheet)}"));
         assertFalse("mask cells must not look like rounded grey pills",
             js.contains("el.setAttribute('rx','2')") || js.contains("el.setAttribute('ry','2')"));
+        assertTrue("Sabqi/Itqan selection keeps its quiet solid-grey vocabulary",
+            html.contains(".ayahPolygon.selected{fill-opacity:var(--sel-op)}"));
+    }
+
+    @Test public void amorcesUseAnEinkSafePatternNotTheSabqiSolidGrey() throws Exception {
+        String js = read("hifz-app/src/main/assets/hifzreader/reader.js");
+        assertTrue(js.contains("pattern.id='hifz-semantic-hatch'"));
+        assertTrue(js.contains("pattern.setAttribute('patternUnits','userSpaceOnUse')"));
+        assertTrue(js.contains("hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5')"));
+        assertTrue(js.contains("rect.setAttribute('fill','url(#hifz-semantic-hatch)')"));
+        assertTrue(js.contains("hatch.setAttribute('stroke-opacity',eink?'0.32':'0.24')"));
     }
 
     @Test public void tafsirPanelTracksTheLatestTappedVerse() throws Exception {
