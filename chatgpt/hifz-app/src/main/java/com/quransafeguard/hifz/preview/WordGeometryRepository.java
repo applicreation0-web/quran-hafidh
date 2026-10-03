@@ -2,6 +2,8 @@ package com.quransafeguard.hifz.preview;
 
 import android.content.Context;
 
+import com.quransafeguard.hifz.core.VerseRef;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
