@@ -69,6 +69,8 @@ public final class MushafView extends WebView {
     private boolean semanticAnchorMaskMode;
     private boolean semanticHighlightEnabled = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
+    private String workBlockStartLineId;
+    private String workBlockEndLineId;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -223,6 +225,8 @@ public final class MushafView extends WebView {
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
                 .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
+                .put("workBlockStart", workBlockStartLineId)
+                .put("workBlockEnd", workBlockEndLineId)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -291,6 +295,17 @@ public final class MushafView extends WebView {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setLandmarks(" + startArg + "," + endArg + ");",
             ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    /** Sabqi/Itqan visual boundary cue. State is consumed on the next page load. */
+    public void setWorkBlockBounds(String startLineId, String endLineId) {
+        workBlockStartLineId = startLineId;
+        workBlockEndLineId = endLineId;
+    }
+
+    public void clearWorkBlockBounds() {
+        workBlockStartLineId = null;
+        workBlockEndLineId = null;
     }
 
     /**
