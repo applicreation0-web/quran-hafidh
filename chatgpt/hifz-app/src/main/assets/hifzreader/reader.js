@@ -417,6 +417,24 @@ function semanticCueLayer(svg){
   if(!semanticHighlightEnabled||!Array.isArray(semanticCues)||!semanticCues.length)return g;
   const allLines=pageGeo?(pageGeo.lines||[]):[];
 
+  // Amorces must never look like the solid-grey Sabqi/Itqan work selection.
+  // A sparse diagonal hatch stays distinguishable on monochrome E-Ink without adding heavy ink.
+  const defs=document.createElementNS(NS,'defs');
+  const pattern=document.createElementNS(NS,'pattern');
+  pattern.id='hifz-semantic-hatch';
+  pattern.setAttribute('patternUnits','userSpaceOnUse');
+  pattern.setAttribute('width','7');
+  pattern.setAttribute('height','7');
+  const hatch=document.createElementNS(NS,'path');
+  hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5');
+  hatch.setAttribute('fill','none');
+  hatch.setAttribute('stroke','var(--sel)');
+  hatch.setAttribute('stroke-opacity',eink?'0.32':'0.24');
+  hatch.setAttribute('stroke-width',eink?'0.60':'0.48');
+  pattern.appendChild(hatch);
+  defs.appendChild(pattern);
+  g.appendChild(defs);
+
   semanticCues.forEach(cue=>{
     // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
     const exact=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox);
@@ -426,8 +444,7 @@ function semanticCueLayer(svg){
         const rect=document.createElementNS(NS,'rect');
         rect.setAttribute('x',box[0]);rect.setAttribute('y',box[1]);
         rect.setAttribute('width',box[2]-box[0]);rect.setAttribute('height',box[3]-box[1]);
-        rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
-        rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
+        rect.setAttribute('fill','url(#hifz-semantic-hatch)');
         rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
         rect.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
         g.appendChild(rect);
@@ -446,8 +463,7 @@ function semanticCueLayer(svg){
       const rect=document.createElementNS(NS,'rect');
       rect.setAttribute('x',x0);rect.setAttribute('y',Number(rline.top)+0.25);
       rect.setAttribute('width',x1-x0);rect.setAttribute('height',Math.max(1,Number(rline.bottom)-Number(rline.top)-0.5));
-      rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
-      rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
+      rect.setAttribute('fill','url(#hifz-semantic-hatch)');
       rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
       rect.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
       g.appendChild(rect);
