@@ -15,6 +15,7 @@ let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
+let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
@@ -230,7 +231,6 @@ function maskRect(segment){
   el.setAttribute('class','maskcell');
   el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
   el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-  el.setAttribute('rx','2');el.setAttribute('ry','2');
   return el;
 }
 
@@ -414,7 +414,7 @@ function applyProtectedWordHoles(layer,svg){
 function semanticCueLayer(svg){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','semanticcuelayer');
-  if(!Array.isArray(semanticCues)||!semanticCues.length)return g;
+  if(!semanticHighlightEnabled||!Array.isArray(semanticCues)||!semanticCues.length)return g;
   const allLines=pageGeo?(pageGeo.lines||[]):[];
 
   semanticCues.forEach(cue=>{
@@ -428,7 +428,9 @@ function semanticCueLayer(svg){
         rect.setAttribute('width',box[2]-box[0]);rect.setAttribute('height',box[3]-box[1]);
         rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
         rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
-        rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','none');
+        rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
+        rect.style.cursor='pointer';
+        rect.addEventListener('click',event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));});
         g.appendChild(rect);
       });
       return;
@@ -447,7 +449,9 @@ function semanticCueLayer(svg){
       rect.setAttribute('width',x1-x0);rect.setAttribute('height',Math.max(1,Number(rline.bottom)-Number(rline.top)-0.5));
       rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
       rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
-      rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','none');
+      rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
+      rect.style.cursor='pointer';
+      rect.addEventListener('click',event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));});
       g.appendChild(rect);
     });
   });
@@ -572,7 +576,7 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
-  setSemanticCues(cues,anchorMaskMode){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;render()},
+  setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
   setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
