@@ -417,6 +417,66 @@ function applyProtectedWordHoles(layer,svg){
   layer.setAttribute('mask','url(#hifz-exact-word-holes)');
 }
 
+
+function workContextLayer(svg,allLines,activeLines,polys){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','workcontextlayer');
+  g.setAttribute('pointer-events','none');
+  // Fail open rather than hide Quran text if exact selected-verse polygons are unavailable.
+  if(!polys||!polys.length)return g;
+  const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return g;
+
+  const defs=document.createElementNS(NS,'defs');
+  const contextMask=document.createElementNS(NS,'mask');
+  contextMask.id='hifz-work-context-mask';
+  contextMask.setAttribute('maskUnits','userSpaceOnUse');
+  contextMask.setAttribute('maskContentUnits','userSpaceOnUse');
+  contextMask.setAttribute('x',vb.x);contextMask.setAttribute('y',vb.y);
+  contextMask.setAttribute('width',vb.width);contextMask.setAttribute('height',vb.height);
+  const full=document.createElementNS(NS,'rect');
+  full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
+  full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
+  full.setAttribute('fill','white');contextMask.appendChild(full);
+  polys.forEach(p=>{
+    const hole=p.cloneNode(false);
+    hole.removeAttribute('class');hole.removeAttribute('style');hole.removeAttribute('id');
+    hole.setAttribute('fill','black');hole.setAttribute('stroke','black');
+    contextMask.appendChild(hole);
+  });
+  defs.appendChild(contextMask);g.appendChild(defs);
+
+  const paper=document.createElementNS(NS,'rect');
+  paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);
+  paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);
+  paper.setAttribute('fill','var(--sheet)');
+  paper.setAttribute('mask','url(#hifz-work-context-mask)');
+  g.appendChild(paper);
+
+  // Preserve page/line topology without leaving readable surrounding Quran text.
+  // Sparse solid-black traces are E-Ink-safe and do not rely on subtle grey levels.
+  const activeIds=new Set((activeLines||[]).map(line=>String(line.id)));
+  (allLines||[]).forEach(line=>{
+    if(activeIds.has(String(line.id)))return;
+    const cells=line.cells||[];if(!cells.length)return;
+    let x0=Infinity,x1=-Infinity;
+    cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+    const y=(Number(line.top)+Number(line.bottom))/2;
+    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(y)||x1<=x0)return;
+    const trace=document.createElementNS(NS,'path');
+    trace.setAttribute('d','M '+x0+' '+y+' H '+x1);
+    trace.setAttribute('fill','none');
+    trace.setAttribute('stroke','var(--ink)');
+    trace.setAttribute('stroke-width',eink?'0.62':'0.52');
+    trace.setAttribute('stroke-dasharray',eink?'1.4 7.6':'1.2 7.0');
+    trace.setAttribute('stroke-linecap','butt');
+    trace.setAttribute('vector-effect','non-scaling-stroke');
+    g.appendChild(trace);
+  });
+  const markers=markerLayer(svg,polys,activeLines);
+  if(markers.childNodes.length)g.appendChild(markers);
+  return g;
+}
+
 function workBlockBoundaryLayer(lines,polys){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','workbracketlayer');
@@ -558,21 +618,28 @@ function render(){
     p.classList.toggle('selected',!workBlockMode&&shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer,.workbracketlayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer,.workcontextlayer,.workbracketlayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
     ? (pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)))
     : [];
   const workBlockMode=!!(workBlockStart||workBlockEnd);
+  const allLines=pageGeo?(pageGeo.lines||[]):[];
+  const polys=maskFollowsSelection?selectedPolygons(svg):[];
   if(strictLineFocus&&lines.length&&!workBlockMode){
     const focus=lineFocusLayer(lines);
     if(focus.childNodes.length)svg.appendChild(focus);
   }
 
+  if(workBlockMode&&lines.length){
+    const context=workContextLayer(svg,allLines,lines,polys);
+    if(context.childNodes.length)svg.appendChild(context);
+  }
+
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
   if(clamped&&pageGeo&&lineIds.length&&lines.length){
-    const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);
+    const cells=maskCandidates(lines,polys);
     if(cells.length){
       const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
       const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');

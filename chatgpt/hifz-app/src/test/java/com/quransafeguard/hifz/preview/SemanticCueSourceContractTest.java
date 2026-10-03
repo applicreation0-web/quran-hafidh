@@ -131,6 +131,17 @@ public final class SemanticCueSourceContractTest {
         assertTrue("BOOX bracket rendering must use a strong simple solid stroke",
             js.contains("path.setAttribute('stroke-width',eink?'1.70':'1.45')")
                 && js.contains("path.setAttribute('stroke','var(--ink)')"));
+        assertTrue("Sabqi/Itqan B+ must neutralize surrounding readable text but preserve page topology",
+            js.contains("function workContextLayer(svg,allLines,activeLines,polys)")
+                && js.contains("contextMask.id='hifz-work-context-mask'")
+                && js.contains("paper.setAttribute('fill','var(--sheet)')")
+                && js.contains("trace.setAttribute('stroke-dasharray',eink?'1.4 7.6':'1.2 7.0')"));
+        assertTrue("B+ must fail open if exact verse polygons are unavailable",
+            js.contains("if(!polys||!polys.length)return g"));
+        assertTrue("selection polygons must be shared by context, progressive mask and brackets",
+            js.contains("const polys=maskFollowsSelection?selectedPolygons(svg):[]")
+                && js.contains("const cells=maskCandidates(lines,polys)")
+                && js.contains("workBlockBoundaryLayer(lines,polys)"));
     }
 
     @Test public void amorcesUseAnEinkSafePatternNotTheSabqiSolidGrey() throws Exception {
@@ -147,17 +158,26 @@ public final class SemanticCueSourceContractTest {
                 && js.contains("rx','1.35'"));
     }
 
-    @Test public void sourceCheckedFrenchAmorceTitlesReplaceUnsafeLiteralWording() throws Exception {
+    @Test public void exhaustiveAlMunirFrenchOverlayIsHashFencedAndRuntimeOnly() throws Exception {
         String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
-        assertTrue(repository.contains("SP0010"));
-        assertTrue(repository.contains("Récompense des croyants qui accomplissent de bonnes œuvres"));
-        assertTrue(repository.contains("SP0026"));
-        assertTrue(repository.contains("Altérations et calomnies des rabbins juifs"));
-        assertTrue(repository.contains("SP0159"));
-        assertTrue(repository.contains("récompense des croyants, hommes et femmes"));
-        assertTrue(repository.contains("SP0414"));
-        assertTrue(repository.contains("Conduite des rabbins et des moines dans leurs rapports avec les gens"));
-        assertTrue(repository.contains("VERIFIED_FRENCH_TITLE_OVERRIDES.getOrDefault"));
+        String materializer = read("scripts/materialize_semantic_al_munir_fr_v1.py");
+        String build = read("hifz-app/build.gradle.kts");
+        assertTrue(repository.contains("semantic/semantic_titles_al_munir_fr_v1.json"));
+        assertTrue(repository.contains("7de847efb4fe8c2375ec7c3a8d1386869a52098b7a1d7dffa621467f87b83b19"));
+        assertTrue(repository.contains("EXPECTED_CANONICAL_MUNIR_PASSAGES = 1243"));
+        assertTrue(repository.contains("titlesAlMunirFr.get(meta.canonicalId)"));
+        assertFalse("temporary Java title overrides must be gone",
+            repository.contains("VERIFIED_FRENCH_TITLE_OVERRIDES"));
+        assertTrue(build.contains("prepareAlMunirFrenchTitles"));
+        assertTrue(materializer.contains("EXPECTED_TITLE_COUNT = 1243"));
+        assertTrue(materializer.contains("411c89130b3c3ceb22700ec0864fc0ef1d1f06f3623a1442f03d41a4e8e290ee"));
+        assertTrue(materializer.contains("SP0013"));
+        assertTrue(materializer.contains("enseignement des langues"));
+        assertTrue(materializer.contains("SP0351"));
+        assertTrue(materializer.contains("Amalécites"));
+        assertTrue(materializer.contains("SP1023"));
+        assertTrue(materializer.contains("Les dahriyya"));
+        assertTrue(materializer.contains("REJECTED_FRENCH"));
     }
 
     @Test public void tafsirPanelTracksTheLatestTappedVerse() throws Exception {
