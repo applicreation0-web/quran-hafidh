@@ -31,11 +31,16 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
 
     @Test public void activeActionsAreOnlyRevealNextAndFinish() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("\"Révéler\""));
-        assertTrue(session.contains("\"Suivant\""));
-        assertTrue(session.contains("\"Terminer\""));
-        assertFalse(session.contains("Ui.roundAction(this, \"\", \"Amorce suivante\""));
-        assertFalse(session.contains("Ui.roundAction(this, \"\", \"Valider jusqu’ici\""));
+        int method = session.indexOf("private void updateMurajaahActions()");
+        int active = session.indexOf("if (active) {", method);
+        int passive = session.indexOf("List<MurajaahSegment> segments", active);
+        assertTrue("active action block must be locatable", method >= 0 && active > method && passive > active);
+        String activeBlock = session.substring(active, passive);
+        assertTrue(activeBlock.contains("\"Révéler\""));
+        assertTrue(activeBlock.contains("\"Suivant\""));
+        assertTrue(activeBlock.contains("\"Terminer\""));
+        assertFalse(activeBlock.contains("Amorce suivante"));
+        assertFalse(activeBlock.contains("Valider jusqu’ici"));
     }
 
     @Test public void earlyFinishRequiresExplicitConfirmation() throws Exception {

@@ -96,14 +96,17 @@ public final class SemanticCueSourceContractTest {
         assertFalse("semantic opt-in must not be wired into Sabqi dispatch", dispatch.contains("setSemanticCues("));
     }
 
-    @Test public void maskedSemanticRecallOnlyExemptsAuditedCellRanges() throws Exception {
+    @Test public void maskedSemanticRecallOnlyExemptsExactAuditedWordBoxes() throws Exception {
         String js = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        assertTrue(js.contains("semanticVisibleCellKeys"));
-        assertTrue(js.contains("if(semanticVisible.has(key))return"));
+        assertTrue(js.contains("function protectedWordBoxes()"));
+        assertTrue(js.contains("function applyProtectedWordHoles(layer,svg)"));
+        assertTrue(js.contains("function wordBoxInSvgSpace(box,svg)"));
+        assertTrue(js.contains("layer.setAttribute('mask','url(#hifz-exact-word-holes)')"));
         assertTrue(js.contains("same quiet fill grammar as Sabqi/Itqan"));
         assertTrue(js.contains("fill-opacity','var(--sel-op)"));
-        assertTrue("semantic amorces must never be outlined around Quran ink",
-            !js.contains("semantic cue") || !js.contains("stroke','#524f49'"));
+        assertTrue(js.contains("rect.setAttribute('stroke','none')"));
+        assertFalse("active recall must not derive word holes by proportional line arithmetic",
+            js.contains("approximateWord") || js.contains("guessWord"));
     }
     @Test public void spatialQuizIsCompletelyRemoved() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
