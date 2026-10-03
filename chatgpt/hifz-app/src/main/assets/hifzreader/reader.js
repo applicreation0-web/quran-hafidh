@@ -17,6 +17,8 @@ let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
 let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
+let workBlockStart=boot.workBlockStart?String(boot.workBlockStart):null;
+let workBlockEnd=boot.workBlockEnd?String(boot.workBlockEnd):null;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -332,7 +334,7 @@ function randomSegmentsForCells(cells,percent,order){
     if(remaining<=0.0001)break;
     const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
+    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.05,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-0.1)});
     remaining-=hiddenWidth;
   }
   return segments;
@@ -411,6 +413,42 @@ function applyProtectedWordHoles(layer,svg){
   layer.setAttribute('mask','url(#hifz-exact-word-holes)');
 }
 
+function workBlockBoundaryLayer(lines){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','workbracketlayer');
+  g.setAttribute('pointer-events','none');
+  const draw=(lineId,side)=>{
+    if(!lineId)return;
+    const line=(lines||[]).find(x=>String(x.id)===String(lineId));
+    if(!line||!(line.cells||[]).length)return;
+    let x0=Infinity,x1=-Infinity;
+    line.cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+    const top=Number(line.top)+0.8,bottom=Number(line.bottom)-0.8;
+    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||bottom<=top)return;
+    const path=document.createElementNS(NS,'path');
+    const arm=eink?4.2:3.6,offset=eink?2.4:2.0;
+    let x,d;
+    if(side==='start'){
+      x=Math.min(343,x1+offset);
+      d='M '+(x-arm)+' '+top+' H '+x+' V '+bottom+' H '+(x-arm);
+    }else{
+      x=Math.max(2,x0-offset);
+      d='M '+(x+arm)+' '+top+' H '+x+' V '+bottom+' H '+(x+arm);
+    }
+    path.setAttribute('d',d);
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke','var(--sel)');
+    path.setAttribute('stroke-width',eink?'1.05':'0.85');
+    path.setAttribute('stroke-linecap','square');
+    path.setAttribute('stroke-linejoin','miter');
+    path.setAttribute('vector-effect','non-scaling-stroke');
+    g.appendChild(path);
+  };
+  draw(workBlockStart,'start');
+  draw(workBlockEnd,'end');
+  return g;
+}
+
 function semanticCueLayer(svg){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','semanticcuelayer');
@@ -429,8 +467,8 @@ function semanticCueLayer(svg){
   hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5');
   hatch.setAttribute('fill','none');
   hatch.setAttribute('stroke','var(--sel)');
-  hatch.setAttribute('stroke-opacity',eink?'0.32':'0.24');
-  hatch.setAttribute('stroke-width',eink?'0.60':'0.48');
+  hatch.setAttribute('stroke-opacity',eink?'0.82':'0.46');
+  hatch.setAttribute('stroke-width',eink?'0.70':'0.54');
   pattern.appendChild(hatch);
   defs.appendChild(pattern);
   g.appendChild(defs);
@@ -476,16 +514,18 @@ function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
-    p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
+    const workBlockMode=!!(workBlockStart||workBlockEnd);
+    p.classList.toggle('selected',!workBlockMode&&shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer,.workbracketlayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
     ? (pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)))
     : [];
-  if(strictLineFocus&&lines.length){
+  const workBlockMode=!!(workBlockStart||workBlockEnd);
+  if(strictLineFocus&&lines.length&&!workBlockMode){
     const focus=lineFocusLayer(lines);
     if(focus.childNodes.length)svg.appendChild(focus);
   }
@@ -533,6 +573,11 @@ function render(){
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
     }
+  }
+
+  if(workBlockMode&&lines.length){
+    const brackets=workBlockBoundaryLayer(lines);
+    if(brackets.childNodes.length)svg.appendChild(brackets);
   }
 
   // Weak-spot outlines always draw last, on top of any mask, so a flagged verse stays
