@@ -58,7 +58,9 @@ public final class PreBoox074SourceContractTest {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue(ui.contains("state_pressed") && ui.contains("shape(INK, INK"));
         assertTrue(ui.contains("new int[]{MUTED,PAPER,PAPER,INK}"));
-        assertTrue(ui.contains("text(context, label, 11f"));
+        assertTrue(ui.contains("int size = dp(context, 48)"));
+        assertTrue(ui.contains("button.setTooltipText(value)"));
+        assertFalse(ui.contains("TextView caption = text(context, label, 11f"));
         assertTrue(study.contains("Ui.dp(this, 48)"));
         assertTrue(study.contains("eink.isEink(hifzPrefs)) return"));
         assertTrue(free.contains("setLayoutDirection(View.LAYOUT_DIRECTION_RTL)"));

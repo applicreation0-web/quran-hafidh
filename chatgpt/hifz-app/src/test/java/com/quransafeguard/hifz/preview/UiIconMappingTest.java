@@ -39,6 +39,7 @@ public final class UiIconMappingTest {
             {"Répéter le verset", R.drawable.ic_ui_repeat},
             {"Révéler", R.drawable.ic_ui_reveal},
             {"Tafsir", R.drawable.ic_ui_tafsir},
+            {"Tafsir · touchez un verset puis ouvrez le commentaire", R.drawable.ic_ui_tafsir},
             {"Repères", R.drawable.ic_ui_semantic_cues},
             {"Amorces", R.drawable.ic_ui_semantic_anchor},
             {"Afficher les amorces", R.drawable.ic_ui_semantic_anchor},

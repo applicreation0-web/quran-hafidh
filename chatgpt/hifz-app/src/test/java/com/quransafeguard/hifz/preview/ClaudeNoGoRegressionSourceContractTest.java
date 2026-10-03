@@ -358,24 +358,22 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
-     * roundAction's caption used to be a single line clipped to the width of its 48dp icon button
-     * ("Passage suivant du corpus" rendered as "Passage s…"), and adjacent actions had only 2dp of
-     * side padding, reading as visually stuck together once three actions shared one row. The
-     * caption must be allowed to wrap onto a second line instead of truncating, and actions need
-     * more breathing room between them.
+     * Active-session controls are intentionally icon-only: permanent captions were consuming
+     * Mushaf height and producing inconsistent baselines across Sabqi/Itqan/Revision. Labels remain
+     * available through contentDescription and long-press tooltips.
      */
-    @Test public void roundActionCaptionWrapsInsteadOfClippingAndActionsHaveBreathingRoom() throws Exception {
+    @Test public void roundActionIsIconOnlyAndKeepsAccessibleDescription() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String roundAction = method(ui,
             "static LinearLayout roundAction(", "static LinearLayout cardAction(");
-        assertFalse("caption must no longer be forced onto a single clipped line",
-            roundAction.contains("caption.setSingleLine(true)"));
-        assertTrue("caption must wrap onto up to two lines instead",
-            roundAction.contains("caption.setMaxLines(2)"));
-        assertTrue("caption width must no longer be squeezed to the icon button's own narrow width",
-            roundAction.contains("ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));"));
-        assertTrue("side padding between adjacent actions must be wider than the original 2dp",
-            roundAction.contains("box.setPadding(dp(context,6),0,dp(context,6),0);"));
+        assertTrue("roundAction must contain exactly the shared icon-button surface",
+            roundAction.contains("box.addView(iconButton(context, symbol, label, listener));"));
+        assertFalse("active-session actions must not render a permanent caption",
+            roundAction.contains("TextView caption"));
+        assertTrue("roundAction container must not add asymmetric padding",
+            roundAction.contains("box.setPadding(0, 0, 0, 0);"));
+        assertTrue("icon labels remain discoverable by long press",
+            ui.contains("button.setTooltipText(value)"));
     }
 
     /**
