@@ -145,8 +145,9 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("function applyProtectedWordHoles(layer,svg)"));
         assertTrue(js.contains("function wordBoxInSvgSpace(box,svg)"));
         assertTrue(js.contains("layer.setAttribute('mask','url(#hifz-exact-word-holes)')"));
-        assertTrue(js.contains("rect.setAttribute('fill','var(--sel)')"));
-        assertTrue(js.contains("fill-opacity','var(--sel-op)"));
+        assertTrue("normal reading amorces must use the dedicated hatch, not Sabqi/Itqan solid grey",
+            js.contains("rect.setAttribute('fill','url(#hifz-semantic-hatch)')"));
+        assertTrue(js.contains("pattern.id='hifz-semantic-hatch'"));
         assertTrue(js.contains("rect.setAttribute('stroke','none')"));
         assertTrue("normal reading amorce highlight itself must be tappable",
             js.contains("rect.setAttribute('pointer-events','all')"));
