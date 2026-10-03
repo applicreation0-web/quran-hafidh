@@ -131,11 +131,13 @@ public final class SemanticCueSourceContractTest {
         assertTrue("BOOX bracket rendering must use a strong simple solid stroke",
             js.contains("path.setAttribute('stroke-width',eink?'1.70':'1.45')")
                 && js.contains("path.setAttribute('stroke','var(--ink)')"));
-        assertTrue("Sabqi/Itqan B+ must neutralize surrounding readable text but preserve page topology",
+        assertTrue("Sabqi/Itqan B+ must keep real surrounding Mushaf faintly readable for visual memory",
             js.contains("function workContextLayer(svg,allLines,activeLines,polys)")
                 && js.contains("contextMask.id='hifz-work-context-mask'")
                 && js.contains("paper.setAttribute('fill','var(--sheet)')")
-                && js.contains("trace.setAttribute('stroke-dasharray',eink?'1.4 7.6':'1.2 7.0')"));
+                && js.contains("paper.setAttribute('fill-opacity',eink?'0.66':'0.60')"));
+        assertTrue("B+ must avoid true blur/filter on E-Ink",
+            js.contains("No SVG blur/filter"));
         assertTrue("B+ must fail open if exact verse polygons are unavailable",
             js.contains("if(!polys||!polys.length)return g"));
         assertTrue("B+ mask holes must override source ayahPolygon fill-opacity=0",

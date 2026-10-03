@@ -458,29 +458,15 @@ function workContextLayer(svg,allLines,activeLines,polys){
   paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);
   paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);
   paper.setAttribute('fill','var(--sheet)');
+  /*
+   * B+ visual-memory context: keep the REAL surrounding Mushaf faintly readable instead of
+   * replacing it with blank paper or synthetic line traces. A semi-opaque paper veil lowers
+   * contrast while preserving exact words, line lengths, rosettes and page topology.
+   * No SVG blur/filter: that is deliberately avoided on E-Ink to limit grey smearing/ghosting.
+   */
+  paper.setAttribute('fill-opacity',eink?'0.66':'0.60');
   paper.setAttribute('mask','url(#hifz-work-context-mask)');
   g.appendChild(paper);
-
-  // Preserve page/line topology without leaving readable surrounding Quran text.
-  // Sparse solid-black traces are E-Ink-safe and do not rely on subtle grey levels.
-  const activeIds=new Set((activeLines||[]).map(line=>String(line.id)));
-  (allLines||[]).forEach(line=>{
-    if(activeIds.has(String(line.id)))return;
-    const cells=line.cells||[];if(!cells.length)return;
-    let x0=Infinity,x1=-Infinity;
-    cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-    const y=(Number(line.top)+Number(line.bottom))/2;
-    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(y)||x1<=x0)return;
-    const trace=document.createElementNS(NS,'path');
-    trace.setAttribute('d','M '+x0+' '+y+' H '+x1);
-    trace.setAttribute('fill','none');
-    trace.setAttribute('stroke','var(--ink)');
-    trace.setAttribute('stroke-width',eink?'0.62':'0.52');
-    trace.setAttribute('stroke-dasharray',eink?'1.4 7.6':'1.2 7.0');
-    trace.setAttribute('stroke-linecap','butt');
-    trace.setAttribute('vector-effect','non-scaling-stroke');
-    g.appendChild(trace);
-  });
   const markers=markerLayer(svg,polys,activeLines);
   if(markers.childNodes.length)g.appendChild(markers);
   return g;
