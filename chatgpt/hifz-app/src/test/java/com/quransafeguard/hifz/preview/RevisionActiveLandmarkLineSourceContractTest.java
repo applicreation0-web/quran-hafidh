@@ -29,18 +29,27 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
         assertTrue("no old half-line landmark fallback is used", session.contains("mushaf.setLandmarkLines(null, null)"));
     }
 
-    @Test public void activeActionsAreOnlyRevealNextAndFinish() throws Exception {
+    @Test public void activeActionsUseSwipeAndOnlyJumpAcrossRealCorpusGaps() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         int method = session.indexOf("private void updateMurajaahActions()");
         int active = session.indexOf("if (active) {", method);
-        int passive = session.indexOf("List<MurajaahSegment> segments", active);
+        int passive = session.indexOf(
+            "List<MurajaahSegment> segments = murajaahSegments();\n"
+                + "        int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);\n"
+                + "        VerseRef nextSegment", active);
         assertTrue("active action block must be locatable", method >= 0 && active > method && passive > active);
         String activeBlock = session.substring(active, passive);
         assertTrue(activeBlock.contains("\"Révéler\""));
-        assertTrue(activeBlock.contains("\"Suivant\""));
         assertTrue(activeBlock.contains("\"Terminer\""));
+        assertTrue(activeBlock.contains("\"Bloc précédent\""));
+        assertTrue(activeBlock.contains("\"Bloc suivant\""));
+        assertTrue(activeBlock.contains("currentPage == current.startPage"));
+        assertTrue(activeBlock.contains("currentPage == current.endPage"));
+        assertFalse("an amorce must never be a Next button", activeBlock.contains("\"Suivant\""));
         assertFalse(activeBlock.contains("Amorce suivante"));
+        assertFalse(activeBlock.contains("advanceActiveRecallCue"));
         assertFalse(activeBlock.contains("Valider jusqu’ici"));
+        assertTrue("normal page swipes must be routed through goPage", session.contains("onPageSwipe(int delta){goPage(delta);}"));
     }
 
     @Test public void earlyFinishRequiresExplicitConfirmation() throws Exception {
