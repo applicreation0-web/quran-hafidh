@@ -52,7 +52,7 @@ final class SemanticPassageRepository {
     private static Map<String, String> buildVerifiedMunirMissingTitles() {
         Map<String, String> out = new HashMap<>();
         out.put("2:1–2:5", "صفات المؤمنين وجزاء المتقين");
-        out.put("2:14–2:16", "صفات المنافقين- 3-");
+        out.put("2:14–2:16", "صفات المنافقين- ٣-");
         out.put("2:221–2:221", "زواج المسلم بالمشركة");
         out.put("2:256–2:257", "منع الإكراه على الدين والله هو الهادي إلى الإيمان");
         out.put("2:282–2:283", "آية الدين وآية الرهن توثيق الدين المؤجل بالكتابة أو الشهادة أو الرهن");
