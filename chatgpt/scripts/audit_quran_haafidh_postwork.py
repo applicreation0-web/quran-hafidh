@@ -23,6 +23,10 @@ KNOWN = {
     (114, 1, 6): "الاستعاذة من شرّ الشياطين",
 }
 SAMPLE_SURAHS = (2, 4, 19, 24, 36, 49, 67, 114)
+KNOWN_ANCHORS = {
+    # Visual regression seen on page 5: the amorce is two words, never the whole 2:28–29 block.
+    (2, 28, 29): ("كَيْفَ تَكْفُرُونَ", 2),
+}
 
 VERIFIED_MISSING_TITLES = {
     (2, 1, 5): "صفات المؤمنين وجزاء المتقين",
@@ -192,6 +196,7 @@ def main() -> None:
         fail(f"semantic page coverage is {len(pages)}/604")
 
     canonical_anchor_counts = Counter()
+    canonical_anchor_values = {}
     anchor_lengths = []
     for key, group in groups.items():
         # The runtime canonical ID is the first legacy row encountered for this exact Al-Munir unit.
@@ -213,7 +218,18 @@ def main() -> None:
         if str(anchor.get("minimality_verified_v2_1", "")).strip() != "AUDITED_V2_1":
             fail(f"{canonical_id}: amorce minimality is not audited")
         canonical_anchor_counts[key] += 1
+        canonical_anchor_values[key] = (text, count)
         anchor_lengths.append(count)
+
+    for key, (expected_text, expected_count) in KNOWN_ANCHORS.items():
+        actual = canonical_anchor_values.get(key)
+        if actual is None:
+            fail(f"known amorce missing for {key}")
+        actual_text, actual_count = actual
+        if normalized_arabic_title(actual_text) != normalized_arabic_title(expected_text):
+            fail(f"known amorce text mismatch for {key}: {actual_text!r}")
+        if actual_count != expected_count:
+            fail(f"known amorce length mismatch for {key}: {actual_count}, expected {expected_count}")
 
     if len(canonical_anchor_counts) != EXPECTED_CANONICAL_MUNIR or any(v != 1 for v in canonical_anchor_counts.values()):
         fail("not every canonical Al-Munir unit has exactly one start amorce")
