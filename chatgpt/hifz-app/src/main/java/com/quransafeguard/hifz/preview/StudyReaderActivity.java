@@ -59,6 +59,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private SemanticPassageRepository semanticPassages;
     private boolean semanticCuesEnabled;
     private Dialog semanticTitleDialog;
+    private Dialog tafsirDialog;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
     private FrameLayout readerPane;
     private TextView surahPicker;
@@ -321,6 +322,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         selected = verse;
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
+        refreshOpenTafsir(verse);
         showControls();
     }
 
@@ -365,15 +367,23 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             return;
         }
         if (largeScreen) { openSideTafsir(verse); return; }
+        if (tafsirDialog != null && tafsirDialog.isShowing()) {
+            refreshOpenTafsir(verse);
+            return;
+        }
         hideControls();
         mushaf.revealSelectionAboveBottomPanel();
-        final Dialog dialog = new Dialog(this);
-        LinearLayout shell = buildTafsirPanel(verse, dialog::dismiss);
-        dialog.setContentView(shell);
-        dialog.setCanceledOnTouchOutside(true);
-        dialog.setOnDismissListener(closed -> { mushaf.clearReveal(); showControls(); });
-        dialog.show();
-        Window w = dialog.getWindow();
+        tafsirDialog = new Dialog(this);
+        LinearLayout shell = buildTafsirPanel(verse, tafsirDialog::dismiss);
+        tafsirDialog.setContentView(shell);
+        tafsirDialog.setCanceledOnTouchOutside(true);
+        tafsirDialog.setOnDismissListener(closed -> {
+            tafsirDialog = null;
+            mushaf.clearReveal();
+            showControls();
+        });
+        tafsirDialog.show();
+        Window w = tafsirDialog.getWindow();
         if (w != null) {
             w.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
             w.setWindowAnimations(0);
@@ -383,6 +393,18 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             w.setLayout(
                 Math.min(getResources().getDisplayMetrics().widthPixels - Ui.dp(this, 16), Ui.dp(this, 760)),
                 Math.max(Ui.dp(this, 220), Math.round(availableHeight * .42f)));
+        }
+    }
+
+    private void refreshOpenTafsir(VerseRef verse) {
+        if (verse == null) return;
+        if (largeScreen && sideTafsir != null && sideTafsir.getVisibility() == View.VISIBLE) {
+            openSideTafsir(verse);
+            return;
+        }
+        if (tafsirDialog != null && tafsirDialog.isShowing()) {
+            tafsirDialog.setContentView(buildTafsirPanel(verse, tafsirDialog::dismiss));
+            mushaf.revealSelectionAboveBottomPanel();
         }
     }
 
@@ -705,6 +727,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override protected void onDestroy() {
         io.shutdownNow();
         if (semanticTitleDialog != null && semanticTitleDialog.isShowing()) semanticTitleDialog.dismiss();
+        if (tafsirDialog != null && tafsirDialog.isShowing()) tafsirDialog.dismiss();
         if (mushaf != null) {
             mushaf.removeCallbacks(autoHide);
             mushaf.destroySafely();
