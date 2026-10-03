@@ -102,7 +102,7 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("function applyProtectedWordHoles(layer,svg)"));
         assertTrue(js.contains("function wordBoxInSvgSpace(box,svg)"));
         assertTrue(js.contains("layer.setAttribute('mask','url(#hifz-exact-word-holes)')"));
-        assertTrue(js.contains("same quiet fill grammar as Sabqi/Itqan"));
+        assertTrue(js.contains("rect.setAttribute('fill','var(--sel)')"));
         assertTrue(js.contains("fill-opacity','var(--sel-op)"));
         assertTrue(js.contains("rect.setAttribute('stroke','none')"));
         assertFalse("active recall must not derive word holes by proportional line arithmetic",
