@@ -1632,9 +1632,18 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (!MURAJAAH_ACTIVE.equals(mode) || semanticPassages == null) return;
         SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
         if (cue == null) return;
-        semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+        semanticTitleDialog = SemanticTitlePopup.show(this, cue.titleFr, semanticTitleDialog);
     }
-    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
+    private void showCurrent(){
+        hasShown=true;
+        boolean workBounds=(SABQI.equals(mode)||ITQAN.equals(mode))&&!currentLineIds.isEmpty();
+        if(workBounds){
+            mushaf.setWorkBlockBounds(currentLineIds.get(0),currentLineIds.get(currentLineIds.size()-1));
+        }else{
+            mushaf.clearWorkBlockBounds();
+        }
+        mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);
+    }
 
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));
