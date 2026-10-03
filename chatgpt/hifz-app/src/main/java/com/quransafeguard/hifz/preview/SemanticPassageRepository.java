@@ -129,6 +129,7 @@ final class SemanticPassageRepository {
         final int page;
         final int indexOnPage;
         final String title;
+        final String titleFr;
         final String anchorArabic;
         final int anchorWordCount;
         final VerseRef startVerse;
@@ -143,7 +144,7 @@ final class SemanticPassageRepository {
         final boolean anchorOnCurrentPage;
         final List<CellRange> visualRanges;
 
-        Cue(String passageId, int page, int indexOnPage, String title, String anchorArabic,
+        Cue(String passageId, int page, int indexOnPage, String title, String titleFr, String anchorArabic,
             int anchorWordCount, VerseRef startVerse, VerseRef endVerse, int startPage, int endPage,
             int startLine, int firstWordId, int lastWordId, int firstWordPosition,
             int lastWordPosition, boolean anchorOnCurrentPage, List<CellRange> visualRanges) {
@@ -151,6 +152,7 @@ final class SemanticPassageRepository {
             this.page = page;
             this.indexOnPage = indexOnPage;
             this.title = title;
+            this.titleFr = titleFr;
             this.anchorArabic = anchorArabic;
             this.anchorWordCount = anchorWordCount;
             this.startVerse = startVerse;
@@ -350,7 +352,8 @@ final class SemanticPassageRepository {
                 JSONObject item = new JSONObject();
                 item.put("id", cue.passageId);
                 item.put("index", cue.indexOnPage);
-                item.put("title", cue.title);
+                item.put("title", cue.titleFr);
+                item.put("titleMunirAr", cue.title);
                 item.put("anchor", cue.anchorArabic);
                 item.put("anchorWordCount", cue.anchorWordCount);
                 item.put("startLine", cue.startLine);
@@ -555,7 +558,10 @@ final class SemanticPassageRepository {
             // counts or proportional arithmetic here.
             List<CellRange> ranges = Collections.emptyList();
 
-            Cue cue = new Cue(meta.canonicalId, page, index, meta.titleMunirAr, anchor.anchor,
+            String titleFr = titlesV23.get(meta.canonicalId);
+            require(titleFr != null && !titleFr.trim().isEmpty(),
+                "missing French title for canonical Al-Munir unit " + meta.canonicalId);
+            Cue cue = new Cue(meta.canonicalId, page, index, meta.titleMunirAr, titleFr, anchor.anchor,
                 anchor.wordCount, meta.start, meta.end, meta.startPage, meta.endPage,
                 anchor.startLine, anchor.firstWordId, anchor.lastWordId,
                 anchor.firstWordPosition, anchor.lastWordPosition, anchorOnPage, ranges);
