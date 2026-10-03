@@ -429,7 +429,6 @@ function semanticCueLayer(svg){
         rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
         rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
         rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
-        rect.style.cursor='pointer';
         rect.addEventListener('click',event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));});
         g.appendChild(rect);
       });
@@ -450,7 +449,6 @@ function semanticCueLayer(svg){
       rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
       rect.setAttribute('fill','var(--sel)');rect.setAttribute('fill-opacity','var(--sel-op)');
       rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
-      rect.style.cursor='pointer';
       rect.addEventListener('click',event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));});
       g.appendChild(rect);
     });
