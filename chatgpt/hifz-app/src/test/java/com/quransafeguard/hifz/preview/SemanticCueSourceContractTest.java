@@ -56,6 +56,8 @@ public final class SemanticCueSourceContractTest {
         assertFalse("Amorces control must stay icon-only", source.contains("setButtonIconWithText(semanticButton"));
         assertTrue(source.contains("toggleSemanticCues()"));
         assertTrue(source.contains("SemanticTitlePopup.show"));
+        assertTrue("amorce popup must use the audited French title",
+            source.contains("cue.titleFr"));
         assertTrue("tapping the patterned amorce must open its title directly",
             read("hifz-app/src/main/assets/hifzreader/reader.js").contains("N?.semanticCueTap?.(String(cue.id))"));
         assertTrue(source.contains("annotationButton = Ui.iconButton(this, \"\", \"Annoter\""));
@@ -111,8 +113,16 @@ public final class SemanticCueSourceContractTest {
             html.contains(".maskcell{fill:var(--sheet)}"));
         assertFalse("mask cells must not look like rounded grey pills",
             js.contains("el.setAttribute('rx','2')") || js.contains("el.setAttribute('ry','2')"));
-        assertTrue("Sabqi/Itqan selection keeps its quiet solid-grey vocabulary",
+        assertTrue("generic verse selection may still use the quiet grey vocabulary",
             html.contains(".ayahPolygon.selected{fill-opacity:var(--sel-op)}"));
+        assertTrue("Sabqi/Itqan work mode must suppress that large grey fill",
+            js.contains("!workBlockMode&&shadeVerseSelection()"));
+        assertTrue("Sabqi/Itqan boundaries must be shown as start/end brackets instead",
+            js.contains("function workBlockBoundaryLayer(lines)")
+                && js.contains("draw(workBlockStart,'start')")
+                && js.contains("draw(workBlockEnd,'end')"));
+        assertTrue("BOOX bracket rendering must use a simple solid stroke",
+            js.contains("path.setAttribute('stroke-width',eink?'1.05':'0.85')"));
     }
 
     @Test public void amorcesUseAnEinkSafePatternNotTheSabqiSolidGrey() throws Exception {
@@ -121,14 +131,27 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("pattern.setAttribute('patternUnits','userSpaceOnUse')"));
         assertTrue(js.contains("hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5')"));
         assertTrue(js.contains("rect.setAttribute('fill','url(#hifz-semantic-hatch)')"));
-        assertTrue(js.contains("hatch.setAttribute('stroke-opacity',eink?'0.32':'0.24')"));
+        assertTrue(js.contains("hatch.setAttribute('stroke-opacity',eink?'0.82':'0.46')"));
+        assertTrue(js.contains("hatch.setAttribute('stroke-width',eink?'0.70':'0.54')"));
     }
 
     @Test public void tafsirPanelTracksTheLatestTappedVerse() throws Exception {
         String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         assertTrue(source.contains("refreshOpenTafsir(verse);"));
         assertTrue(source.contains("private void refreshOpenTafsir(VerseRef verse)"));
-        assertTrue(source.contains("tafsirDialog.setContentView(buildTafsirPanel(verse, tafsirDialog::dismiss))"));
+        assertTrue("phone Tafsir must be a non-modal bottom panel",
+            source.contains("private FrameLayout bottomTafsir")
+                && source.contains("openBottomTafsir(verse)")
+                && source.contains("bottomTafsir.addView(shell"));
+        assertFalse("phone Tafsir must not use a modal Dialog anymore",
+            source.contains("tafsirDialog"));
+        assertTrue("an open phone Tafsir must stay open while a new verse is tapped",
+            source.contains("boolean tafsirWasOpen = isTafsirOpen()")
+                && source.contains("if (tafsirWasOpen && !largeScreen) hideControls();"));
+        assertTrue("BOOX/tablet must keep the non-modal side panel",
+            source.contains("if (largeScreen) {")
+                && source.contains("openSideTafsir(verse)")
+                && source.contains("eink.local(sideTafsir, hifzPrefs)"));
     }
 
     @Test public void amorceIconIsARealKeyAndExactBoxesStayAudited() throws Exception {
