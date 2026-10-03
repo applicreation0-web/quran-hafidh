@@ -48,6 +48,21 @@ final class SemanticPassageRepository {
 
     private static final Map<String, String> VERIFIED_MUNIR_MISSING_TITLES =
         buildVerifiedMunirMissingTitles();
+    private static final Map<String, String> VERIFIED_FRENCH_TITLE_OVERRIDES =
+        buildVerifiedFrenchTitleOverrides();
+
+    private static Map<String, String> buildVerifiedFrenchTitleOverrides() {
+        Map<String, String> out = new HashMap<>();
+        // Source Arabic: جزاء المؤمنين العاملين
+        out.put("SP0010", "Récompense des croyants qui accomplissent de bonnes œuvres");
+        // Source Arabic: تحريف أحبار اليهود وافتراءاتهم
+        out.put("SP0026", "Altérations et calomnies des rabbins juifs");
+        // Source Arabic: توجيه النفوس نحو التفكر في خلق السموات والأرض وجزاء العاملين ذكورا وإناثا
+        out.put("SP0159", "Invitation à méditer sur la création des cieux et de la terre et récompense des croyants, hommes et femmes");
+        // Source Arabic: سيرة الأحبار والرهبان في معاملاتهم مع الناس
+        out.put("SP0414", "Conduite des rabbins et des moines dans leurs rapports avec les gens");
+        return Collections.unmodifiableMap(out);
+    }
 
     private static Map<String, String> buildVerifiedMunirMissingTitles() {
         Map<String, String> out = new HashMap<>();
@@ -558,7 +573,8 @@ final class SemanticPassageRepository {
             // counts or proportional arithmetic here.
             List<CellRange> ranges = Collections.emptyList();
 
-            String titleFr = titlesV23.get(meta.canonicalId);
+            String titleFr = VERIFIED_FRENCH_TITLE_OVERRIDES.getOrDefault(
+                meta.canonicalId, titlesV23.get(meta.canonicalId));
             require(titleFr != null && !titleFr.trim().isEmpty(),
                 "missing French title for canonical Al-Munir unit " + meta.canonicalId);
             Cue cue = new Cue(meta.canonicalId, page, index, meta.titleMunirAr, titleFr, anchor.anchor,
