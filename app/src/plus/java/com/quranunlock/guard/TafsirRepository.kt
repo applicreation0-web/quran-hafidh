@@ -141,10 +141,13 @@ internal object TafsirRepository {
                     "italic" -> TafsirRunStyle.ITALIC
                     "bold" -> TafsirRunStyle.BOLD
                     "bold_italic" -> TafsirRunStyle.BOLD_ITALIC
+                    "technical_term" -> TafsirRunStyle.TECHNICAL_TERM
+                    "transliteration" -> TafsirRunStyle.TRANSLITERATION
+                    "poetry" -> TafsirRunStyle.POETRY
                     "note_ref" -> TafsirRunStyle.NOTE_REF
                     else -> null
                 } ?: return emptyList()
-                val text = value.getString("text")
+                val text = JalalaynHonorificPresentation.normalize(value.getString("text"))
                 if (text.isNotEmpty()) add(TafsirRun(style, text))
             }
         }

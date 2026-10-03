@@ -1,0 +1,103 @@
+name: Android 0.10.5 stability core
+
+on:
+  push:
+    branches:
+      - "release/0.10.5-stability-core"
+  workflow_dispatch:
+
+jobs:
+  stability-core:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout stability branch
+        uses: actions/checkout@v4
+
+      - name: Verify release-priority source contract
+        run: python3 scripts/verify_0105_stability_priorities.py
+
+      - name: Verify removed runtime stays absent
+        run: python3 scripts/verify_0105_runtime_clean.py
+
+      - name: Verify sensitive-app scope remains isolated
+        run: python3 scripts/verify_0105_sensitive_scope.py
+
+      - name: Verify Tafsir source and typography contracts
+        run: |
+          python3 scripts/verify_0105_tafsir_update.py
+          python3 scripts/verify_0105_tafsir_typography_contract.py
+
+      - name: Verify Hikam translated corpus and terminology
+        run: |
+          python3 scripts/verify_0105_hikam_verified_only.py
+          python3 scripts/verify_hikam_translation_separation.py
+          python3 scripts/audit_hikam_technical_lexicon_0105.py
+
+      - name: Fetch and verify all 604 Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up Python Tafsir and translation-audit tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Cross-audit all 264 Hikam French translations
+        run: python3 scripts/audit_hikam_translation_against_islamicpearls.py
+
+      - name: Rebuild Qushayri and Qurtubi from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "${src}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+          python3 scripts/prepare_multitafsir_assets.py \
+            --source-dir "${src}" \
+            --assets-dir app/src/plus/assets/tafsir \
+            --work-dir "${RUNNER_TEMP}/tafsir-work"
+
+      - name: Audit rebuilt Tafsir databases
+        run: |
+          python3 scripts/audit_0105_tafsir_cleanup_strict.py app/src/plus/assets/tafsir
+          python3 scripts/verify_0105_tafsir_update.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Run full audit and Light/Plus unit tests
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:verifyReleaseAudit
+          gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Build Light and Plus release APKs
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
+
+      - name: Verify APK boundaries and critical Plus Tafsir payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          python3 scripts/verify_light_apk_no_tafsir.py "${light}"
+          python3 scripts/verify_plus_apk_multitafsir.py "${plus}"
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
+          python3 scripts/verify_0105_stability_priorities.py

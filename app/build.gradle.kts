@@ -18,6 +18,11 @@ val verifyHikam264 by tasks.registering(Exec::class) {
     commandLine("python3", "scripts/verify_hikam_264.py")
 }
 
+val verify0108ReaderContract by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("python3", "scripts/verify_0108_reader_contract.py")
+}
+
 val verifyEditionIsolation by tasks.registering {
     doLast {
         val mainAssets = file("src/main/assets")
@@ -192,8 +197,22 @@ val verifyPrivacyBoundary by tasks.registering {
         check(manifest.contains("android:name=\".QuranSafeguardApp\""))
         check(migrationSource.contains("class QuranSafeguardApp"))
         check(migrationSource.contains("AppMigrations.run(this)"))
-        check(!manifest.contains("android.permission.INTERNET")) {
-            "Quran Safeguard must remain offline."
+        check(manifest.contains("android.permission.INTERNET")) {
+            "Private local Al-Husary downloads require Android's normal INTERNET permission."
+        }
+        val audioController = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioController.kt"
+        ).readText()
+        val audioSource = file(
+            "src/main/java/com/quranunlock/guard/QuranAudioSource.kt"
+        ).readText()
+        check(
+            audioController.contains("QuranAudioSource.url") &&
+                audioController.contains("downloadSurah(") &&
+                audioController.contains("looksLikeMp3") &&
+                audioSource.contains("Husary_Muallim_128kbps")
+        ) {
+            "INTERNET may only support the explicit private local Quran-audio path."
         }
         check(!manifest.contains("android.permission.QUERY_ALL_PACKAGES")) {
             "Broad package visibility is forbidden."
@@ -275,10 +294,16 @@ val verifyPrivacyBoundary by tasks.registering {
         check(service.contains("TargetPresenceScopePolicy.requiresAnonymousExitSentinel"))
         check(service.contains("if (anonymousExitSentinel)"))
         check(service.contains("info.packageNames = if (anonymousExitSentinel)")) {
-            "Broad event delivery is allowed only for the one-shot anonymous exit sentinel."
+            "Broad event delivery must remain guarded by the privacy-first sentinel policy."
         }
         check(service.contains("ProtectedApps.eventScopePackages(this).toTypedArray()")) {
-            "Runtime accessibility scope must return immediately to the explicit target list."
+            "Runtime accessibility scope must remain on the explicit target list."
+        }
+        check(presenceScope.contains("): Boolean = false")) {
+            "0.10.5 must make broad Accessibility scope impossible in policy."
+        }
+        check(presenceScopeTests.contains("fun runningSelectedTargetNeverEnablesAnonymousExitSentinel(")) {
+            "Missing 0.10.5 privacy-first sentinel regression test."
         }
         check(service.contains("handleOutsideScopeForeground()"))
         val outsideHandler = service
@@ -287,21 +312,9 @@ val verifyPrivacyBoundary by tasks.registering {
         check(outsideHandler.indexOf("pauseForegroundBudget(clearForeground = true)") in
             0 until outsideHandler.indexOf("GuardRuntime.resetForeground()")
         ) {
-            "The first anonymous outside event must pause target presence before state is cleared."
+            "Any in-scope transition that proves exit must pause target presence before state is cleared."
         }
         check(service.contains("applyEventPackageScope(broad = false)"))
-        check(presenceScope.contains("foregroundPackage == runningBudgetPackage"))
-        check(presenceScope.contains("foregroundPackage in selectedTargets"))
-        listOf(
-            "runningSelectedTargetRequiresOneAnonymousExitSignal",
-            "noSentinelExistsWithoutAnActivelyRunningTargetBudget",
-            "outsideApplicationCanNeverOwnTheSharedBudgetScope",
-            "narrowScopeIsRestoredAfterTheExitSignal"
-        ).forEach { scenario ->
-            check(presenceScopeTests.contains("fun " + scenario + "(")) {
-                "Missing target-presence scope regression test: " + scenario
-            }
-        }
         check(protectedApps.contains("transitionSignalPackages"))
         check(protectedApps.contains("SYSTEM_UI_PACKAGE"))
         check(protectedApps.contains("launcherPackage(context)"))
@@ -385,11 +398,10 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(cycle.contains("INTERVAL_MINUTES = 15"))
         check(cycle.contains("CUMULATIVE_MINUTES = 90"))
         check(cycle.contains("CUMULATIVE_MS = CUMULATIVE_MINUTES * 60_000L"))
-        check(cycle.contains(
-            "INTERVALS_PER_HIZB = CUMULATIVE_MINUTES / INTERVAL_MINUTES"
-        ))
+        check(cycle.contains("INTERVALS_PER_NINETY_MINUTE_CYCLE ="))
+        check(cycle.contains("CUMULATIVE_MINUTES / INTERVAL_MINUTES"))
         check(cycle.contains("MORNING_PAGE_COUNT = 20"))
-        check(cycle.contains("HIZB_PAGE_COUNT = 10"))
+        check(cycle.contains("NINETY_MINUTE_PAGE_COUNT = 10"))
         check(cycle.contains("ChallengeLevel.HIZB"))
         check(prefs.contains("GLOBAL_USAGE_KEY = \"__all_protected_targets__\""))
         check(prefs.contains("val grantedMs = UsageCyclePolicy.INTERVAL_MS"))
@@ -397,12 +409,22 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(prefs.contains("currentCycleTargetPresenceMs"))
         check(!prefs.contains("getInt(UNLOCK_MINUTES"))
         check(cyclePrefs.contains("SafeguardCyclePrefs"))
-        check(cyclePrefs.contains("sequentialHizbPages"))
-        check(cyclePrefs.contains("hizbCount = 2"))
+        check(cyclePrefs.contains("val mode = GuardPrefs.selectionMode(context)"))
+        check(cyclePrefs.contains("GuardPrefs.selectedJuz(context)"))
+        check(cyclePrefs.contains("GuardPrefs.selectedHizb(context)"))
+        check(cyclePrefs.contains("QuranPageSelector.sequentialCanonicalQuotaPages"))
+        check(cyclePrefs.contains("plan.pages.distinct().size == plan.pages.size"))
+        check(cyclePrefs.contains("plan.pages.all { it in canonicalPool }"))
         check(gate.contains("Filtre matinal • 20 pages"))
         check(gate.contains("Palier de 90 minutes • 10 pages"))
         check(reader.contains("Valider et avancer"))
-        check(reader.contains("Balayez vers la droite pour avancer"))
+        check(
+            reader.contains("onSwipeNext = {") &&
+                reader.contains("ReaderSwipe.NEXT -> currentOnSwipeNext.value()") &&
+                reader.contains("ReaderSwipe.PREVIOUS -> currentOnSwipePrevious.value()")
+        ) {
+            "Quran reader must retain wired RTL page gestures after helper prose removal."
+        }
         check(
             gestureTests.contains("fun swipeRightAdvancesArabicBook(") &&
                 gestureTests.contains("fun swipeLeftReturnsToPreviousPage(") &&
@@ -411,7 +433,13 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "Arabic-book RTL navigation requires right-next/left-previous regression tests."
         }
         check(reader.contains("READING_QUOTA_REACHED"))
-        check(reader.contains("Quota atteint • sortie libre • lecture facultative"))
+        check(
+            reader.contains("quotaReached") &&
+                reader.contains("Quota atteint • sortie libre") &&
+                reader.contains("continueFreely")
+        ) {
+            "Quota completion must still enter optional free-reading state."
+        }
         check(reader.contains("Ouvrir l’application cible"))
         check(reader.contains("continueFreely"))
         check(reader.contains("Débloquer et ouvrir"))
@@ -436,12 +464,15 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
         check(selectionUi.contains("limites réelles des versets"))
         check(selectionUi.contains("QuranStructureMetadata.selectionSubtitle"))
         listOf(
-            "juzSixUsesItsExactVerseBoundary",
-            "pageElevenBelongsToBothAdjacentHizb",
-            "selectionIncludesSharedBoundaryPages",
-            "protectionQuotaRemainsTenPagesAndContinuationCanFollow",
-            "shortHizbKeepsTenPageQuotaWithoutHidingRealBoundary",
-            "everyJuzAndHizbHasOrderedValidBounds"
+            "allThirtyJuzStartsAndPagesMatchCanonicalMetadata",
+            "allSixtyHizbStartsAndPagesMatchCanonicalMetadata",
+            "everyCanonicalDivisionIsGaplessAndNonOverlappingByVerse",
+            "sharedBoundaryPagesRemainVisibleToBothCanonicalSections",
+            "canonicalSelectionIncludesSharedBoundaryPageButNeverOutsideRange",
+            "shortHizbQuotaNeverBorrowsFromNextHizb",
+            "longHizbQuotaMayBeTenPagesButNeverCrossesCanonicalBoundary",
+            "fixedQuotaHonoursJuzSelectionAsCanonicalPool",
+            "quotaNeverRepeatsPagesWhenSelectedPoolIsSmallerThanRequest"
         ).forEach { scenario ->
             check(structureTests.contains("fun " + scenario + "(")) {
                 "Missing Quran structure regression test: " + scenario
@@ -485,9 +516,9 @@ val verifyUnlockBudgetIntegrity by tasks.registering {
             "completingHizbResetsEntireNinetyMinuteCycle",
             "jokerCanSkipMorningMicroAndHizbLevels",
             "onlyCompletedEffectiveIntervalsCountTowardUsage",
-            "singleHizbPoolRepeatsToReachTwentyMorningPages",
-            "multiHizbPoolAdvancesSequentiallyFromSmallest",
-            "everyHizbChallengeUsesExactlyTenPages",
+            "canonicalQuotaDoesNotRepeatShortSelectedPool",
+            "canonicalQuotaAdvancesSequentiallyAcrossSelectedUnits",
+            "ninetyMinuteQuotaNeverCrossesSelectedCanonicalPool",
             "fifteenAndNinetyMinutesAreLiteralTargetPresenceThresholds",
             "livePresenceJoinsCompletedIntervalsWithoutWallClockTime",
             "ninetyMinutePendingHizbCannotOverflowTheCurrentCycle"
@@ -635,11 +666,16 @@ val verifyUpdateMigrationIntegrity by tasks.registering {
         check(buildFile.contains("applicationId = \"com.applicreation0.quransafeguard\"")) {
             "Application ID must remain unchanged for in-place update."
         }
-        check(buildFile.contains("versionCode = 22")) {
-            "0.10.3 must use versionCode 22 for an in-place update over 0.10.2."
-        }
-        check(buildFile.contains("versionName = \"0.10.3\"")) {
-            "Expected audited personal Plus update 0.10.3."
+        val auditedBaselineMetadata =
+            buildFile.contains("versionCode = 22") &&
+                buildFile.contains("versionName = \"0.10.3\"")
+        val preparedReleaseMetadata =
+            (buildFile.contains("versionCode = 28") &&
+                buildFile.contains("versionName = \"0.10.9\"")) ||
+            (buildFile.contains("versionCode = 29") &&
+                buildFile.contains("versionName = \"0.10.10\""))
+        check(auditedBaselineMetadata || preparedReleaseMetadata) {
+            "Expected the audited baseline or an explicitly prepared 0.10.9/0.10.10 release metadata set."
         }
         check(migrations.contains("CURRENT_SCHEMA = 8")) {
             "The protected-only shared-cycle model requires schema 8."
@@ -767,30 +803,31 @@ val verifyEditorialBoundary by tasks.registering {
         check(
             adhkarUi.contains("AdhkarPeriod.MORNING") &&
                 adhkarUi.contains("AdhkarPeriod.EVENING") &&
-                adhkarUi.contains("Text(\"Matin\")") &&
-                adhkarUi.contains("Text(\"Soir\")")
+                adhkarUi.contains("FilterChip(") &&
+                adhkarUi.contains("✓ Matin") &&
+                adhkarUi.contains("✓ Soir")
         ) {
-            "Morning and evening Adhkar must both be selectable in-app."
-        }
-        check(adhkarUi.contains("Crossfade(")) {
-            "Morning/evening changes require a calm in-app transition."
+            "Morning and evening Adhkar must both be visible and selectable in-app."
         }
         val safeguardDesign = file(
             "src/main/java/com/quranunlock/guard/SafeguardDesign.kt"
         ).readText()
         check(
-            safeguardDesign.contains("sahelianButtonOrnament") &&
-                safeguardDesign.contains("drawDiamond") &&
-                safeguardDesign.contains("chevron")
+            !safeguardDesign.contains("sahelianButtonOrnament") &&
+                !safeguardDesign.contains("drawDiamond") &&
+                !safeguardDesign.contains("chevron") &&
+                safeguardDesign.contains("SafeguardReadingSurface = Color(0xFFF7F2E8)") &&
+                !safeguardDesign.contains("#F4F0E6") &&
+                !safeguardDesign.contains("0xFFF4F0E6")
         ) {
-            "Safeguard buttons must retain their Sahelian/oriental contour."
+            "0.10.7 requires calm cream controls without ornamental button drawing."
         }
         val launcherIcon = file(
             "src/main/res/drawable/ic_launcher_foreground.xml"
         ).readText()
-        listOf("#214B3B", "#B9873E", "#FFFDF5").forEach { brandColor ->
-            check(launcherIcon.contains(brandColor)) {
-                "Launcher icon lost a required green/gold/cream brand color: " + brandColor
+        listOf("#2C5D49", "#D8BA73", "#7A5337", "#FFFDF5").forEach { baselineColor ->
+            check(launcherIcon.contains(baselineColor)) {
+                "Launcher icon no longer matches the exact 0.10.8 green/gold/brown/ivory baseline: " + baselineColor
             }
         }
         listOf(
@@ -1051,6 +1088,7 @@ val verifyReleaseAudit by tasks.registering {
     dependsOn(verifyThoughtOfDayBoundary)
     dependsOn(verifyExperienceBoundary)
     dependsOn(verifyEditionIsolation)
+    dependsOn(verify0108ReaderContract)
 }
 
 android {
@@ -1061,8 +1099,9 @@ android {
         applicationId = "com.applicreation0.quransafeguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 22
-        versionName = "0.10.3"
+        versionCode = 29
+        versionName = "0.10.10"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     flavorDimensions += "edition"
@@ -1094,6 +1133,7 @@ tasks.named("preBuild").configure {
     dependsOn(verifyThoughtOfDayBoundary)
     dependsOn(verifyExperienceBoundary)
     dependsOn(verifyEditionIsolation)
+    dependsOn(verify0108ReaderContract)
 }
 
 dependencies {
@@ -1111,6 +1151,9 @@ dependencies {
     implementation("com.batoulapps.adhan:adhan2:0.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:core-ktx:1.6.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit-ktx:1.2.1")
 }
 
 

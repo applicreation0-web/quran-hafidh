@@ -3,6 +3,11 @@ package com.applicreation0.quransafeguard
 enum class ChallengeLevel {
     MORNING,
     MICRO,
+    /**
+     * Historical persisted enum value. In 0.10.5 this means the challenge
+     * reached after 90 cumulative minutes; it does NOT mean "one canonical
+     * Hizb" and must not be used to derive Juz/Hizb boundaries.
+     */
     HIZB
 }
 
@@ -18,9 +23,15 @@ object UsageCyclePolicy {
     const val INTERVAL_MS = INTERVAL_MINUTES * 60_000L
     const val CUMULATIVE_MINUTES = 90
     const val CUMULATIVE_MS = CUMULATIVE_MINUTES * 60_000L
-    const val INTERVALS_PER_HIZB = CUMULATIVE_MINUTES / INTERVAL_MINUTES
+    const val INTERVALS_PER_NINETY_MINUTE_CYCLE =
+        CUMULATIVE_MINUTES / INTERVAL_MINUTES
     const val MORNING_PAGE_COUNT = 20
-    const val HIZB_PAGE_COUNT = 10
+    const val NINETY_MINUTE_PAGE_COUNT = 10
+
+    // Compatibility aliases for older call sites. Neither value defines the
+    // canonical size of a Hizb; canonical structure lives in QuranStructureMetadata.
+    const val INTERVALS_PER_HIZB = INTERVALS_PER_NINETY_MINUTE_CYCLE
+    const val HIZB_PAGE_COUNT = NINETY_MINUTE_PAGE_COUNT
 
     fun requiredLevel(state: UsageCycleState): ChallengeLevel? =
         when {
@@ -36,8 +47,9 @@ object UsageCyclePolicy {
         if (state.pendingLevel != null) return state
 
         val elapsedIntervals =
-            (state.completedIntervals + 1).coerceAtMost(INTERVALS_PER_HIZB)
-        val level = if (elapsedIntervals >= INTERVALS_PER_HIZB) {
+            (state.completedIntervals + 1)
+                .coerceAtMost(INTERVALS_PER_NINETY_MINUTE_CYCLE)
+        val level = if (elapsedIntervals >= INTERVALS_PER_NINETY_MINUTE_CYCLE) {
             ChallengeLevel.HIZB
         } else {
             ChallengeLevel.MICRO
@@ -80,8 +92,10 @@ object UsageCyclePolicy {
     fun completedUsageMs(state: UsageCycleState): Long =
         state.completedNinetyMinuteCycles.coerceAtLeast(0) *
             CUMULATIVE_MS +
-            state.completedIntervals.coerceIn(0, INTERVALS_PER_HIZB) *
-            INTERVAL_MS
+            state.completedIntervals.coerceIn(
+                0,
+                INTERVALS_PER_NINETY_MINUTE_CYCLE
+            ) * INTERVAL_MS
 
     /**
      * The current 90-minute cycle is a literal sum of foreground presence in
@@ -95,8 +109,10 @@ object UsageCyclePolicy {
         if (!state.morningCompleted) return 0L
 
         val completedIntervalsMs =
-            state.completedIntervals.coerceIn(0, INTERVALS_PER_HIZB) *
-                INTERVAL_MS
+            state.completedIntervals.coerceIn(
+                0,
+                INTERVALS_PER_NINETY_MINUTE_CYCLE
+            ) * INTERVAL_MS
         val livePresenceMs = if (state.pendingLevel == null) {
             currentIntervalPresenceMs.coerceIn(0L, INTERVAL_MS)
         } else {

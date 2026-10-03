@@ -1,0 +1,34 @@
+name: Quran Hifz 0.7.5 M1 B2 apply
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-final-blockers
+    paths:
+      - scripts/apply_hifz_075_final_blockers_m1_b2.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply M1 and B2 assertively
+        run: python3 scripts/apply_hifz_075_final_blockers_m1_b2.py
+      - name: Commit product correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java \
+                  hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java
+          git diff --cached --quiet && { echo 'Expected M1/B2 delta missing'; exit 1; }
+          git commit -m 'fix: expose consolidation recovery and quarantine exit'
+          git push origin HEAD:work/hifz-0.7.5-final-blockers

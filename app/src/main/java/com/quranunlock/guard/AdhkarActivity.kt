@@ -84,13 +84,21 @@ private fun AdhkarScreen(initialPeriod: AdhkarPeriod) {
                     modifier = Modifier.weight(1f),
                     selected = activePeriod == AdhkarPeriod.MORNING,
                     onClick = { activePeriod = AdhkarPeriod.MORNING },
-                    label = { Text("Matin") }
+                    label = {
+                        Text(
+                            if (activePeriod == AdhkarPeriod.MORNING) "✓ Matin" else "Matin"
+                        )
+                    }
                 )
                 FilterChip(
                     modifier = Modifier.weight(1f),
                     selected = activePeriod == AdhkarPeriod.EVENING,
                     onClick = { activePeriod = AdhkarPeriod.EVENING },
-                    label = { Text("Soir") }
+                    label = {
+                        Text(
+                            if (activePeriod == AdhkarPeriod.EVENING) "✓ Soir" else "Soir"
+                        )
+                    }
                 )
             }
             Text(

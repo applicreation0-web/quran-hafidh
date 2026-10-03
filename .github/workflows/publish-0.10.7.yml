@@ -1,0 +1,324 @@
+name: Publish Quran Safeguard 0.10.7 Light and Plus
+
+on:
+  push:
+    branches:
+      - "release/0.10.7-clean"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: startsWith(github.event.head_commit.message, 'Release Quran Safeguard 0.10.7')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LIGHT_KEYSTORE_B64: ${{ secrets.LIGHT_KEYSTORE_B64 }}
+      LIGHT_KEYSTORE_PASSWORD: ${{ secrets.LIGHT_KEYSTORE_PASSWORD }}
+      PLUS_KEYSTORE_B64: ${{ secrets.PLUS_KEYSTORE_B64 }}
+      PLUS_KEYSTORE_PASSWORD: ${{ secrets.PLUS_KEYSTORE_PASSWORD }}
+    steps:
+      - name: Checkout clean 0.10.7 release candidate
+        uses: actions/checkout@v4
+        with:
+          ref: release/0.10.7-clean
+          fetch-depth: 0
+
+      - name: Refuse an existing v0.10.7 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.10.7 --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release v0.10.7 already exists; refusing to overwrite it."
+            exit 1
+          fi
+
+      - name: Prepare exact 0.10.7 Android metadata
+        run: python3 scripts/prepare_0107_version.py
+
+      - name: Verify 0.10.7 visual and Tafsir contracts
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_0107_visual_contract.py
+          python3 scripts/verify_0107_tafsir_reading_contract.py
+          python3 scripts/verify_0105_stability_priorities.py
+          python3 scripts/verify_0105_runtime_clean.py
+          python3 scripts/verify_0105_sensitive_scope.py
+
+      - name: Fetch and verify all 604 Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up Python corpus tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Fetch pinned Qushayri and Qurtubi source PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "${src}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+
+      - name: Independently verify Qushayri note-call relations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/research_qushayri_note_superscripts.py \
+            "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
+            --report "${RUNNER_TEMP}/qushayri-note-crosscheck.json"
+          python3 scripts/verify_qushayri_note_crosscheck.py \
+            "${RUNNER_TEMP}/qushayri-note-crosscheck.json"
+
+      - name: Verify source-authoritative Qushayri poetry semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, fitz, sys
+          sys.path.insert(0, 'scripts')
+          import qushayri_source_semantics_0106 as base
+          from qushayri_source_semantics_0106_verified import (
+              EXPECTED_UNIQUE_POETRY_LINES,
+              build_qushayri_source_semantics,
+          )
+          path='${{ runner.temp }}/tafsir-src/lataif.pdf'
+          assert hashlib.sha256(open(path,'rb').read()).hexdigest() == base.EXPECTED_SOURCE_SHA256
+          semantics=build_qushayri_source_semantics(fitz.open(path))
+          assert semantics.verified_note_relation_count == 928
+          assert semantics.poetry_entry_count == 121
+          assert semantics.poetry_occurrence_count == 126
+          assert semantics.poetry_line_count == EXPECTED_UNIQUE_POETRY_LINES == 542
+          known=sorted(
+              [v for v in semantics.poetry_lines.values() if v.poem_id.startswith('35:We have not been firm')],
+              key=lambda v:v.line_index,
+          )
+          assert len(known) == 4
+          assert [v.stanza_break_before for v in known] == [False, False, True, False]
+          print('Qushayri source semantics PASS: 928 note relations; 121 poetry entries; 126 occurrences; 542 unique poetry lines')
+          PY
+
+      - name: Verify source-authoritative Qushayri honorific inventory
+        run: |
+          python3 scripts/research_qushayri_honorific_glyphs_0106.py \
+            "${RUNNER_TEMP}/tafsir-src/lataif.pdf" \
+            --json "${RUNNER_TEMP}/qushayri-honorific-glyphs.json"
+
+      - name: Rebuild Qushayri and Qurtubi from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_multitafsir_assets_0106.py \
+            --source-dir "${RUNNER_TEMP}/tafsir-src" \
+            --assets-dir app/src/plus/assets/tafsir \
+            --work-dir "${RUNNER_TEMP}/tafsir-work" \
+            2>&1 | tee "${RUNNER_TEMP}/tafsir-0107-rebuild.log"
+
+      - name: Contradictory Tafsir and editorial gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_0106_tafsir_honorifics.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_tafsir_presentation.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_qurtubi_unicode_labels.py app/src/plus/assets/tafsir
+          python3 scripts/verify_0107_tafsir_reading_contract.py
+          python3 scripts/verify_0107_visual_contract.py
+          python3 scripts/verify_0104_hikam_freeze.py
+          python3 scripts/verify_0105_hikam_verified_only.py
+          python3 scripts/verify_hikam_translation_separation.py
+          python3 scripts/audit_hikam_technical_lexicon_0105.py
+          python3 scripts/audit_hikam_translation_against_islamicpearls.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Full release audit and Light Plus tests
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:verifyReleaseAudit
+          gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest
+
+      - name: Build Light and Plus release APKs
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease
+
+      - name: Inspect unsigned APK edition boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          python3 scripts/verify_light_apk_no_tafsir.py "${light}"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "${plus}"
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
+
+      - name: Sign, verify and package Light and Plus 0.10.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${LIGHT_KEYSTORE_B64}"
+          test -n "${LIGHT_KEYSTORE_PASSWORD}"
+          test -n "${PLUS_KEYSTORE_B64}"
+          test -n "${PLUS_KEYSTORE_PASSWORD}"
+
+          release_dir="${RUNNER_TEMP}/quran-safeguard-0.10.7"
+          mkdir -p "${release_dir}"
+          printf '%s' "${LIGHT_KEYSTORE_B64}" | base64 --decode > "${RUNNER_TEMP}/light.p12"
+          printf '%s' "${PLUS_KEYSTORE_B64}" | base64 --decode > "${RUNNER_TEMP}/plus.p12"
+          tools="${ANDROID_HOME}/build-tools/36.0.0"
+          light_unsigned="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus_unsigned="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          light_aligned="${RUNNER_TEMP}/light-aligned.apk"
+          plus_aligned="${RUNNER_TEMP}/plus-aligned.apk"
+          light_apk="${release_dir}/Quran-Safeguard-0.10.7-Light-release.apk"
+          plus_apk="${release_dir}/Quran-Safeguard-Plus-0.10.7-release.apk"
+
+          "${tools}/zipalign" -p -f 4 "${light_unsigned}" "${light_aligned}"
+          "${tools}/zipalign" -p -f 4 "${plus_unsigned}" "${plus_aligned}"
+          "${tools}/apksigner" sign --ks "${RUNNER_TEMP}/light.p12" --ks-type PKCS12 --ks-key-alias quran-safeguard --ks-pass env:LIGHT_KEYSTORE_PASSWORD --key-pass env:LIGHT_KEYSTORE_PASSWORD --out "${light_apk}" "${light_aligned}"
+          "${tools}/apksigner" sign --ks "${RUNNER_TEMP}/plus.p12" --ks-type PKCS12 --ks-key-alias quran-safeguard-plus --ks-pass env:PLUS_KEYSTORE_PASSWORD --key-pass env:PLUS_KEYSTORE_PASSWORD --out "${plus_apk}" "${plus_aligned}"
+
+          "${tools}/zipalign" -c -p 4 "${light_apk}"
+          "${tools}/zipalign" -c -p 4 "${plus_apk}"
+          "${tools}/apksigner" verify --verbose --print-certs "${light_apk}" | tee "${release_dir}/light-signature.txt"
+          "${tools}/apksigner" verify --verbose --print-certs "${plus_apk}" | tee "${release_dir}/plus-signature.txt"
+
+          grep -Fq "Verified using v2 scheme (APK Signature Scheme v2): true" "${release_dir}/light-signature.txt"
+          grep -Fq "Verified using v3 scheme (APK Signature Scheme v3): true" "${release_dir}/light-signature.txt"
+          grep -Fq "Verified using v2 scheme (APK Signature Scheme v2): true" "${release_dir}/plus-signature.txt"
+          grep -Fq "Verified using v3 scheme (APK Signature Scheme v3): true" "${release_dir}/plus-signature.txt"
+          grep -Fq "Signer #1 certificate SHA-256 digest: 6c706f4ea44ef667d0b9698c07a39e929b1e286d2397665504411dedb37457ac" "${release_dir}/light-signature.txt"
+          grep -Fq "Signer #1 certificate SHA-256 digest: 1843d245832549afc6333ab77a587649a14fedb1f4acc9c08f367c3f0301d989" "${release_dir}/plus-signature.txt"
+
+          test "$(apkanalyzer manifest application-id "${light_apk}")" = "com.applicreation0.quransafeguard"
+          test "$(apkanalyzer manifest application-id "${plus_apk}")" = "com.applicreation0.quransafeguard.plus"
+          test "$(apkanalyzer manifest version-code "${light_apk}")" = "26"
+          test "$(apkanalyzer manifest version-code "${plus_apk}")" = "26"
+          test "$(apkanalyzer manifest version-name "${light_apk}")" = "0.10.7"
+          test "$(apkanalyzer manifest version-name "${plus_apk}")" = "0.10.7-plus.1"
+
+          python3 scripts/verify_light_apk_no_tafsir.py "${light_apk}"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "${plus_apk}"
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light_apk}" --apk "${plus_apk}"
+          sha256sum "${light_apk}" "${plus_apk}" > "${release_dir}/Quran-Safeguard-0.10.7-SHA256.txt"
+
+          cat > "${release_dir}/INSTALLATION-Light.txt" <<'GUIDE'
+          Quran Safeguard 0.10.7 Light
+          - Installer uniquement Quran-Safeguard-0.10.7-Light-release.apk.
+          - Vérifier le SHA-256 fourni avant partage/installation.
+          - Identifiant Android attendu : com.applicreation0.quransafeguard.
+          - La version Light ne contient aucun corpus Tafsir privé.
+          GUIDE
+          cat > "${release_dir}/INSTALLATION-Plus.txt" <<'GUIDE'
+          Quran Safeguard Plus 0.10.7
+          - Installer uniquement Quran-Safeguard-Plus-0.10.7-release.apk.
+          - Vérifier le SHA-256 fourni avant installation.
+          - Identifiant Android attendu : com.applicreation0.quransafeguard.plus.
+          - Edition privée : Jalalayn, Qurtubi et Qushayri intégrés selon les audits de source.
+          GUIDE
+
+          (cd "${release_dir}" && zip -9 "Quran-Safeguard-0.10.7-Light-backup.zip" \
+            "Quran-Safeguard-0.10.7-Light-release.apk" \
+            "Quran-Safeguard-0.10.7-SHA256.txt" \
+            "light-signature.txt" \
+            "INSTALLATION-Light.txt")
+          (cd "${release_dir}" && zip -9 "Quran-Safeguard-Plus-0.10.7-backup.zip" \
+            "Quran-Safeguard-Plus-0.10.7-release.apk" \
+            "Quran-Safeguard-0.10.7-SHA256.txt" \
+            "plus-signature.txt" \
+            "INSTALLATION-Plus.txt")
+
+      - name: Upload signed 0.10.7 release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.7-signed
+          path: ${{ runner.temp }}/quran-safeguard-0.10.7/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Freeze exact 0.10.7 metadata in release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/build.gradle.kts
+          if git diff --cached --quiet; then
+            echo "0.10.7 metadata already frozen in source history."
+          else
+            git commit -m "Finalize Quran Safeguard 0.10.7 version metadata [skip ci]"
+            git push origin HEAD:release/0.10.7-clean
+          fi
+          release_source_sha="$(git rev-parse HEAD)"
+          echo "RELEASE_SOURCE_SHA=${release_source_sha}" >> "${GITHUB_ENV}"
+
+      - name: Publish private GitHub release v0.10.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/quran-safeguard-0.10.7"
+          cat > "${release_dir}/release-notes.md" <<'NOTES'
+          ## Quran Safeguard 0.10.7 — Light & Plus
+
+          Release privée auditée, reconstruite depuis la base stable 0.10.6.
+
+          ### Lecture et ergonomie
+          - interface plus sobre : crème, tons neutres, vert-gris discret, suppression des ornements et des blocs visuels inutiles ;
+          - lecture libre : curseur permanent 1–604 juste au-dessus des commandes basses, aperçu de page pendant le glissement et chargement au relâchement ;
+          - navigation exacte par numéro de page conservée ;
+          - chrome de lecture rétractable pour laisser le Mushaf dominer l'écran ;
+          - respect des barres système Android et préparation d'un rendu compatible niveaux de gris / future liseuse e-ink ;
+          - hub Qur'an simplifié, sans accumulation de cartes élevées.
+
+          ### Tafsir Plus
+          - appellations principales conservées : Jalalayn, Qurtubi, Qushayri ;
+          - Tafsir conservé en anglais, sans traduction ou paraphrase générée ;
+          - Qushayri : 928 relations de notes vérifiées, sans suppression aveugle de nombres ;
+          - Qushayri : Poetry Index source — 121 entrées, 126 occurrences, 542 lignes poétiques uniques, strophes source préservées ;
+          - Qurtubi : labels/numéros éditoriaux techniques masqués sans casser les références utiles ;
+          - références coraniques interactives avec retour au commentaire ;
+          - panneau Tafsir compact puis extensible pour la lecture longue ;
+          - sélection de verset neutre, sans gros encadrement orange.
+
+          ### Non-régression et publication
+          - 604 pages du Mushaf de Médine contrôlées ;
+          - Light sans Tafsir privé ; Plus avec les corpus approuvés ;
+          - corpus Hikam et règles d'authenticité inchangés et recontrôlés ;
+          - audit Gradle complet, tests Light + Plus et builds Release validés ;
+          - signatures APK v2/v3 et certificats historiques vérifiés ;
+          - versionCode 26 ; versionName 0.10.7 / 0.10.7-plus.1 ;
+          - SHA-256 et deux ZIP de sauvegarde séparés fournis.
+
+          **Quran Safeguard Plus et ses corpus Tafsir restent réservés à l'usage privé du propriétaire du dépôt.**
+          NOTES
+
+          test -n "${RELEASE_SOURCE_SHA}"
+          gh release create v0.10.7 \
+            "${release_dir}/Quran-Safeguard-0.10.7-Light-release.apk" \
+            "${release_dir}/Quran-Safeguard-Plus-0.10.7-release.apk" \
+            "${release_dir}/Quran-Safeguard-0.10.7-SHA256.txt" \
+            "${release_dir}/Quran-Safeguard-0.10.7-Light-backup.zip" \
+            "${release_dir}/Quran-Safeguard-Plus-0.10.7-backup.zip" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${RELEASE_SOURCE_SHA}" \
+            --title "Quran Safeguard 0.10.7 — Light & Plus" \
+            --notes-file "${release_dir}/release-notes.md"

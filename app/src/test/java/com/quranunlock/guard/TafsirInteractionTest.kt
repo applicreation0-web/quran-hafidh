@@ -33,6 +33,26 @@ class TafsirInteractionTest {
     }
 
     @Test
+    fun explicitPoetryStaysSeparateFromJustifiedProse() {
+        val blocks = splitTafsirRenderBlocks(
+            listOf(
+                TafsirRun(TafsirRunStyle.REGULAR, "Prose A"),
+                TafsirRun(TafsirRunStyle.POETRY, "Line 1\nLine 2"),
+                TafsirRun(TafsirRunStyle.POETRY, "\nLine 3"),
+                TafsirRun(TafsirRunStyle.REGULAR, "Prose B")
+            )
+        )
+        assertEquals(
+            listOf(TafsirBlockKind.PROSE, TafsirBlockKind.POETRY, TafsirBlockKind.PROSE),
+            blocks.map { it.kind }
+        )
+        assertEquals(
+            "Line 1\nLine 2\nLine 3",
+            blocks[1].runs.joinToString(separator = "") { it.text }
+        )
+    }
+
+    @Test
     fun verticalMovementPinchCancelAndOpenPanelNeverNavigate() {
         val classifier = ReaderGestureClassifier(72f)
         classifier.onDown(100f, 100f, 1)
