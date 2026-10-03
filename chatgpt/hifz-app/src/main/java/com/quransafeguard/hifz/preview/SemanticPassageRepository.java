@@ -370,6 +370,13 @@ final class SemanticPassageRepository {
                 canonicalStart = new VerseRef(surah, Integer.parseInt(m.group(2)));
                 canonicalEnd = new VerseRef(surah, Integer.parseInt(m.group(3)));
                 titleAr = m.group(4) == null ? "" : m.group(4).trim();
+                // Al-Munir prints a surah-level heading for Al-Fatiha before the 1:1-7 block;
+                // older semantic metadata retained the exact range but omitted that heading.
+                if (canonicalStart.equals(new VerseRef(1, 1))
+                        && canonicalEnd.equals(new VerseRef(1, 7))
+                        && titleAr.isEmpty()) {
+                    titleAr = "سورة الفاتحة مكية وآياتها سبع نزلت بعد المدّثّر";
+                }
             }
 
             require(canonicalStart.compareTo(legacyStart) <= 0

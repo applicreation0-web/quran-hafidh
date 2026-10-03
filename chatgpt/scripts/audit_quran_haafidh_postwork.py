@@ -12,6 +12,7 @@ EXPECTED_GLOBAL = 1256
 EXPECTED_CANONICAL_MUNIR = 1243
 RANGE = re.compile(r"^(\d+):(\d+)[–-](\d+)(?:\s+(.*))?$")
 KNOWN = {
+    (1, 1, 7): "سورة الفاتحة مكية وآياتها سبع نزلت بعد المدّثّر",
     (2, 40, 43): "ما طلب من بني إسرائيل",
     (2, 44, 48): "نماذج من سوء أخلاق اليهود",
     (2, 67, 73): "قصة ذبح البقرة",
@@ -56,6 +57,8 @@ def main() -> None:
                 fail(f"{pid}: unparseable Al-Munir grouping {grouping!r}")
             key = tuple(int(match.group(i)) for i in (1, 2, 3))
             title = (match.group(4) or "").strip()
+            if not title and key in KNOWN:
+                title = KNOWN[key]
         s, a0, a1 = key
         if a0 < 1 or a1 < a0:
             fail(f"{pid}: invalid Al-Munir range {key}")
