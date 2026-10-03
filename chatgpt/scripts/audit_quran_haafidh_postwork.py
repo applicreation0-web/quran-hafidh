@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import unicodedata
 from collections import Counter
 from pathlib import Path
 
@@ -89,6 +90,14 @@ def fail(message: str) -> None:
     raise SystemExit("Post-Work Al-Munir audit rejected: " + message)
 
 
+def normalized_arabic_title(value: str) -> str:
+    # Printed editions/transports can differ only in harakat/tatweel composition.
+    # Preserve letters, words and order; ignore combining marks and presentation-only elongation.
+    text = unicodedata.normalize("NFKD", value)
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn" and ch != "ـ")
+    return " ".join(text.split())
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         fail("usage: audit_quran_haafidh_postwork.py SEMANTIC_V21_JSON")
@@ -165,7 +174,7 @@ def main() -> None:
         if not group:
             fail(f"known Al-Munir unit missing: {key}")
         actual = next(iter(group["titles"]))
-        if actual != expected_title:
+        if normalized_arabic_title(actual) != normalized_arabic_title(expected_title):
             fail(f"known Al-Munir heading mismatch for {key}: {actual!r}")
 
     page_records_by_id: dict[str, list[dict]] = {}
