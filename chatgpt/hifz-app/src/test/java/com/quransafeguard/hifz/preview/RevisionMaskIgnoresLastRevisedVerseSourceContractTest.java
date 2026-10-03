@@ -76,7 +76,8 @@ public final class RevisionMaskIgnoresLastRevisedVerseSourceContractTest {
                 + "        updateMurajaahProgress();\n"
                 + "        mushaf.setMaskFollowsSelection(false);"));
         int activeStart = session.indexOf("private void renderMurajaahActive(){");
-        int activeEnd = session.indexOf("private void advanceActiveRecallCue()", activeStart);
+        int activeEnd = session.indexOf("private void applyActiveRevisionPageCues()", activeStart);
+        assertTrue("active render block must be locatable", activeStart >= 0 && activeEnd > activeStart);
         String activeRender = session.substring(activeStart, activeEnd);
         assertTrue("active Révision must turn selection-clipped masking off before the page is first shown",
             activeRender.contains("mushaf.setMaskFollowsSelection(false);"));
