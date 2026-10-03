@@ -56,6 +56,8 @@ public final class SemanticCueSourceContractTest {
         assertFalse("Amorces control must stay icon-only", source.contains("setButtonIconWithText(semanticButton"));
         assertTrue(source.contains("toggleSemanticCues()"));
         assertTrue(source.contains("SemanticTitlePopup.show"));
+        assertTrue("tapping a grey amorce must open its title directly",
+            read("hifz-app/src/main/assets/hifzreader/reader.js").contains("N?.semanticCueTap?.(String(cue.id))"));
         assertTrue(source.contains("annotationButton = Ui.iconButton(this, \"\", \"Annoter\""));
         assertTrue(source.contains("Ui.iconButton(this, \"\", \"Annuler la note\""));
         assertTrue(source.contains("Ui.iconButton(this, \"\", \"Effacer les notes\""));
@@ -71,10 +73,16 @@ public final class SemanticCueSourceContractTest {
         assertFalse("active revision must not duplicate a Quranic amorce above the Mushaf",
             session.contains("activeCuePrompt"));
         assertTrue(session.contains("applyActiveRevisionPageCues()"));
-        assertTrue(session.contains("\"Suivant\""));
         assertTrue(session.contains("\"Révéler\""));
         assertTrue(session.contains("\"Terminer\""));
-        assertTrue(session.contains("advanceActiveRecallCue()"));
+        assertTrue(session.contains("\"Bloc précédent\""));
+        assertTrue(session.contains("\"Bloc suivant\""));
+        assertTrue(session.contains("recordActiveRevisionCurrentPage()"));
+        assertFalse("an amorce must never be a navigation step", session.contains("advanceActiveRecallCue()"));
+        assertFalse("active revision must not instruct amorce-by-amorce navigation",
+            session.contains("passez à l’Amorce suivante"));
+        assertTrue("active revision amorces stay on original paper, without grey overlay",
+            session.contains("setSemanticCues(semanticPassages.readerCuesForPage(currentPage), exact, false)"));
         assertTrue(session.contains("mushaf.setLandmarkLines(null, null)"));
         assertTrue(session.contains("Temps effectué : "));
         assertTrue("Al-Munir explicit grouping must be the canonical runtime structure",
@@ -96,6 +104,30 @@ public final class SemanticCueSourceContractTest {
         assertFalse("semantic opt-in must not be wired into Sabqi dispatch", dispatch.contains("setSemanticCues("));
     }
 
+    @Test public void memorizationMaskErasesInkOnPaperWithoutGreyTiles() throws Exception {
+        String html = read("hifz-app/src/main/assets/hifzreader/index.html");
+        String js = read("hifz-app/src/main/assets/hifzreader/reader.js");
+        assertTrue("masked ink must blend into the original Mushaf sheet",
+            html.contains(".maskcell{fill:var(--sheet)}"));
+        assertFalse("mask cells must not look like rounded grey pills",
+            js.contains("el.setAttribute('rx','2')") || js.contains("el.setAttribute('ry','2')"));
+    }
+
+    @Test public void tafsirPanelTracksTheLatestTappedVerse() throws Exception {
+        String source = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        assertTrue(source.contains("refreshOpenTafsir(verse);"));
+        assertTrue(source.contains("private void refreshOpenTafsir(VerseRef verse)"));
+        assertTrue(source.contains("tafsirDialog.setContentView(buildTafsirPanel(verse, tafsirDialog::dismiss))"));
+    }
+
+    @Test public void amorceIconIsARealKeyAndExactBoxesStayAudited() throws Exception {
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
+        assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_semantic_key"));
+        assertTrue(repository.contains("wordGeometry.anchorBoxes(page, cue.startVerse, cue.anchorWordCount)"));
+        assertTrue(repository.contains("!= cue.anchorWordCount"));
+    }
+
     @Test public void maskedSemanticRecallOnlyExemptsExactAuditedWordBoxes() throws Exception {
         String js = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue(js.contains("function protectedWordBoxes()"));
@@ -105,6 +137,8 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("rect.setAttribute('fill','var(--sel)')"));
         assertTrue(js.contains("fill-opacity','var(--sel-op)"));
         assertTrue(js.contains("rect.setAttribute('stroke','none')"));
+        assertTrue("normal reading amorce highlight itself must be tappable",
+            js.contains("rect.setAttribute('pointer-events','all')"));
         assertFalse("active recall must not derive word holes by proportional line arithmetic",
             js.contains("approximateWord") || js.contains("guessWord"));
     }
