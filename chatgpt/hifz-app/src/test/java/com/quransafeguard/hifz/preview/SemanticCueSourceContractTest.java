@@ -113,16 +113,24 @@ public final class SemanticCueSourceContractTest {
             html.contains(".maskcell{fill:var(--sheet)}"));
         assertFalse("mask cells must not look like rounded grey pills",
             js.contains("el.setAttribute('rx','2')") || js.contains("el.setAttribute('ry','2')"));
+        assertTrue("paper erasure must cover small diacritic fringes without changing mask order",
+            js.contains("const padX=eink?0.72:0.58,padY=eink?0.42:0.34"));
         assertTrue("generic verse selection may still use the quiet grey vocabulary",
             html.contains(".ayahPolygon.selected{fill-opacity:var(--sel-op)}"));
         assertTrue("Sabqi/Itqan work mode must suppress that large grey fill",
             js.contains("!workBlockMode&&shadeVerseSelection()"));
         assertTrue("Sabqi/Itqan boundaries must be shown as start/end brackets instead",
-            js.contains("function workBlockBoundaryLayer(lines)")
+            js.contains("function workBlockBoundaryLayer(lines,polys)")
                 && js.contains("draw(workBlockStart,'start')")
                 && js.contains("draw(workBlockEnd,'end')"));
-        assertTrue("BOOX bracket rendering must use a simple solid stroke",
-            js.contains("path.setAttribute('stroke-width',eink?'1.05':'0.85')"));
+        assertTrue("work brackets must use one fixed visual length at both ends",
+            js.contains("const span=eink?31:29"));
+        assertTrue("brackets must follow the selected part of a shared physical line",
+            js.contains("const relevant=polys&&polys.length")
+                && js.contains("insideSelection(polys"));
+        assertTrue("BOOX bracket rendering must use a strong simple solid stroke",
+            js.contains("path.setAttribute('stroke-width',eink?'1.70':'1.45')")
+                && js.contains("path.setAttribute('stroke','var(--ink)')"));
     }
 
     @Test public void amorcesUseAnEinkSafePatternNotTheSabqiSolidGrey() throws Exception {
@@ -133,6 +141,23 @@ public final class SemanticCueSourceContractTest {
         assertTrue(js.contains("rect.setAttribute('fill','url(#hifz-semantic-hatch)')"));
         assertTrue(js.contains("hatch.setAttribute('stroke-opacity',eink?'0.82':'0.46')"));
         assertTrue(js.contains("hatch.setAttribute('stroke-width',eink?'0.70':'0.54')"));
+        assertTrue("exact amorce words on one physical line must share one regular frame",
+            js.contains("function semanticExactRects(cue,svg)")
+                && js.contains("function semanticCueRect(rect,cue)")
+                && js.contains("rx','1.35'"));
+    }
+
+    @Test public void sourceCheckedFrenchAmorceTitlesReplaceUnsafeLiteralWording() throws Exception {
+        String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
+        assertTrue(repository.contains("SP0010"));
+        assertTrue(repository.contains("Récompense des croyants qui accomplissent de bonnes œuvres"));
+        assertTrue(repository.contains("SP0026"));
+        assertTrue(repository.contains("Altérations et calomnies des rabbins juifs"));
+        assertTrue(repository.contains("SP0159"));
+        assertTrue(repository.contains("récompense des croyants, hommes et femmes"));
+        assertTrue(repository.contains("SP0414"));
+        assertTrue(repository.contains("Conduite des rabbins et des moines dans leurs rapports avec les gens"));
+        assertTrue(repository.contains("VERIFIED_FRENCH_TITLE_OVERRIDES.getOrDefault"));
     }
 
     @Test public void tafsirPanelTracksTheLatestTappedVerse() throws Exception {
