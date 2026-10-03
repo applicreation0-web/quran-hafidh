@@ -138,6 +138,10 @@ public final class SemanticCueSourceContractTest {
                 && js.contains("trace.setAttribute('stroke-dasharray',eink?'1.4 7.6':'1.2 7.0')"));
         assertTrue("B+ must fail open if exact verse polygons are unavailable",
             js.contains("if(!polys||!polys.length)return g"));
+        assertTrue("B+ mask holes must override source ayahPolygon fill-opacity=0",
+            js.contains("'fill-opacity','stroke-opacity','opacity','mask','clip-path'")
+                && js.contains("hole.setAttribute('fill-opacity','1')")
+                && js.contains("hole.setAttribute('opacity','1')"));
         assertTrue("selection polygons must be shared by context, progressive mask and brackets",
             js.contains("const polys=maskFollowsSelection?selectedPolygons(svg):[]")
                 && js.contains("const cells=maskCandidates(lines,polys)")

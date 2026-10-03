@@ -439,8 +439,17 @@ function workContextLayer(svg,allLines,activeLines,polys){
   full.setAttribute('fill','white');contextMask.appendChild(full);
   polys.forEach(p=>{
     const hole=p.cloneNode(false);
-    hole.removeAttribute('class');hole.removeAttribute('style');hole.removeAttribute('id');
-    hole.setAttribute('fill','black');hole.setAttribute('stroke','black');
+    // Source ayah hit-polygons are invisible (fill-opacity=0). In an SVG mask that
+    // opacity must be removed and forced to 1, otherwise the paper layer also hides
+    // the ACTIVE Quran block and only the cloned verse rosettes remain visible.
+    ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
+      attr=>hole.removeAttribute(attr)
+    );
+    hole.setAttribute('fill','black');
+    hole.setAttribute('fill-opacity','1');
+    hole.setAttribute('stroke','black');
+    hole.setAttribute('stroke-opacity','1');
+    hole.setAttribute('opacity','1');
     contextMask.appendChild(hole);
   });
   defs.appendChild(contextMask);g.appendChild(defs);
