@@ -231,8 +231,12 @@ function maskCandidates(lines,polys){
 function maskRect(segment){
   const el=document.createElementNS(NS,'rect');
   el.setAttribute('class','maskcell');
-  el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-  el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
+  // Source-ink cells can leave tiny diacritic fringes at their exact geometric edge.
+  // Expand inside the physical line's existing safety gap so the result reads as erased paper,
+  // while multi-verse lines remain clipped to the selected ayah polygon.
+  const padX=eink?0.72:0.58,padY=eink?0.42:0.34;
+  el.setAttribute('x',segment.x-padX);el.setAttribute('y',segment.y-padY);
+  el.setAttribute('width',segment.width+padX*2);el.setAttribute('height',segment.height+padY*2);
   return el;
 }
 
@@ -413,20 +417,39 @@ function applyProtectedWordHoles(layer,svg){
   layer.setAttribute('mask','url(#hifz-exact-word-holes)');
 }
 
-function workBlockBoundaryLayer(lines){
+function workBlockBoundaryLayer(lines,polys){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','workbracketlayer');
   g.setAttribute('pointer-events','none');
+
+  const selectedExtent=(line)=>{
+    const cells=line.cells||[];
+    const cy=(Number(line.top)+Number(line.bottom))/2;
+    const relevant=polys&&polys.length
+      ? cells.filter(cell=>insideSelection(polys,(Number(cell[0])+Number(cell[1]))/2,cy))
+      : cells;
+    const source=relevant.length?relevant:cells;
+    let x0=Infinity,x1=-Infinity;
+    source.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+    return {x0,x1};
+  };
+  const fixedVerticalSpan=(line)=>{
+    const center=(Number(line.top)+Number(line.bottom))/2;
+    const span=eink?31:29;
+    let top=center-span/2,bottom=center+span/2;
+    if(top<2){bottom+=2-top;top=2;}
+    if(bottom>548){top-=bottom-548;bottom=548;}
+    return {top,bottom};
+  };
   const draw=(lineId,side)=>{
     if(!lineId)return;
     const line=(lines||[]).find(x=>String(x.id)===String(lineId));
     if(!line||!(line.cells||[]).length)return;
-    let x0=Infinity,x1=-Infinity;
-    line.cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-    const top=Number(line.top)+0.8,bottom=Number(line.bottom)-0.8;
+    const {x0,x1}=selectedExtent(line);
+    const {top,bottom}=fixedVerticalSpan(line);
     if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||bottom<=top)return;
     const path=document.createElementNS(NS,'path');
-    const arm=eink?4.2:3.6,offset=eink?2.4:2.0;
+    const arm=eink?6.8:6.2,offset=eink?2.8:2.5;
     let x,d;
     if(side==='start'){
       x=Math.min(343,x1+offset);
@@ -437,8 +460,8 @@ function workBlockBoundaryLayer(lines){
     }
     path.setAttribute('d',d);
     path.setAttribute('fill','none');
-    path.setAttribute('stroke','var(--sel)');
-    path.setAttribute('stroke-width',eink?'1.05':'0.85');
+    path.setAttribute('stroke','var(--ink)');
+    path.setAttribute('stroke-width',eink?'1.70':'1.45');
     path.setAttribute('stroke-linecap','square');
     path.setAttribute('stroke-linejoin','miter');
     path.setAttribute('vector-effect','non-scaling-stroke');
@@ -447,6 +470,35 @@ function workBlockBoundaryLayer(lines){
   draw(workBlockStart,'start');
   draw(workBlockEnd,'end');
   return g;
+}
+
+function semanticExactRects(cue,svg){
+  const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
+    .map(box=>wordBoxInSvgSpace(box,svg)).filter(Boolean);
+  if(!boxes.length)return[];
+  const groups=[];
+  boxes.forEach(box=>{
+    const cy=(box[1]+box[3])/2;
+    let group=groups.find(g=>Math.abs(g.cy-cy)<=5.5);
+    if(!group){group={cy,x0:box[0],x1:box[2],y0:box[1],y1:box[3],n:0};groups.push(group);}
+    group.x0=Math.min(group.x0,box[0]);group.x1=Math.max(group.x1,box[2]);
+    group.y0=Math.min(group.y0,box[1]);group.y1=Math.max(group.y1,box[3]);
+    group.cy=(group.cy*group.n+cy)/(group.n+1);group.n++;
+  });
+  return groups.map(g=>({
+    x:g.x0-1.0,y:g.y0-0.8,width:(g.x1-g.x0)+2.0,height:(g.y1-g.y0)+1.6
+  }));
+}
+
+function semanticCueRect(rect,cue){
+  const el=document.createElementNS(NS,'rect');
+  el.setAttribute('x',rect.x);el.setAttribute('y',rect.y);
+  el.setAttribute('width',rect.width);el.setAttribute('height',rect.height);
+  el.setAttribute('rx','1.35');el.setAttribute('ry','1.35');
+  el.setAttribute('fill','url(#hifz-semantic-hatch)');
+  el.setAttribute('stroke','none');el.setAttribute('pointer-events','all');
+  el.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
+  return el;
 }
 
 function semanticCueLayer(svg){
@@ -475,18 +527,9 @@ function semanticCueLayer(svg){
 
   semanticCues.forEach(cue=>{
     // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
-    const exact=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox);
-    if(exact.length){
-      exact.forEach(pageBox=>{
-        const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
-        const rect=document.createElementNS(NS,'rect');
-        rect.setAttribute('x',box[0]);rect.setAttribute('y',box[1]);
-        rect.setAttribute('width',box[2]-box[0]);rect.setAttribute('height',box[3]-box[1]);
-        rect.setAttribute('fill','url(#hifz-semantic-hatch)');
-        rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
-        rect.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
-        g.appendChild(rect);
-      });
+    const exactRects=semanticExactRects(cue,svg);
+    if(exactRects.length){
+      exactRects.forEach(rect=>g.appendChild(semanticCueRect(rect,cue)));
       return;
     }
 
@@ -498,13 +541,10 @@ function semanticCueLayer(svg){
       let x0=Infinity,x1=-Infinity;
       for(let i=from;i<to;i++){x0=Math.min(x0,Number(cells[i][0]));x1=Math.max(x1,Number(cells[i][1]));}
       if(!Number.isFinite(x0)||!Number.isFinite(x1)||x1<=x0)return;
-      const rect=document.createElementNS(NS,'rect');
-      rect.setAttribute('x',x0);rect.setAttribute('y',Number(rline.top)+0.25);
-      rect.setAttribute('width',x1-x0);rect.setAttribute('height',Math.max(1,Number(rline.bottom)-Number(rline.top)-0.5));
-      rect.setAttribute('fill','url(#hifz-semantic-hatch)');
-      rect.setAttribute('stroke','none');rect.setAttribute('pointer-events','all');
-      rect.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
-      g.appendChild(rect);
+      g.appendChild(semanticCueRect({
+        x:x0-1.0,y:Number(rline.top)-0.3,
+        width:(x1-x0)+2.0,height:Math.max(1,Number(rline.bottom)-Number(rline.top)+0.6)
+      },cue));
     });
   });
   return g;
@@ -576,7 +616,7 @@ function render(){
   }
 
   if(workBlockMode&&lines.length){
-    const brackets=workBlockBoundaryLayer(lines);
+    const brackets=workBlockBoundaryLayer(lines,polys);
     if(brackets.childNodes.length)svg.appendChild(brackets);
   }
 
