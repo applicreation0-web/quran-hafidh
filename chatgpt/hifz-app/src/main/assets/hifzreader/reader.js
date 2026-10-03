@@ -231,10 +231,13 @@ function maskCandidates(lines,polys){
 function maskRect(segment){
   const el=document.createElementNS(NS,'rect');
   el.setAttribute('class','maskcell');
-  // Source-ink cells can leave tiny diacritic fringes at their exact geometric edge.
-  // Expand inside the physical line's existing safety gap so the result reads as erased paper,
-  // while multi-verse lines remain clipped to the selected ayah polygon.
-  const padX=eink?0.72:0.58,padY=eink?0.42:0.34;
+  // Partial stages keep a safety gap between physical lines. At 100% the segment itself expands
+  // to almost the full audited line height, so only a tiny fringe pad is needed: this removes the
+  // residual dots/harakat visible on BOOX without allowing the paper mask to invade a neighbour line.
+  const fullErase=segment.fullErase===true;
+  const partialPadX=eink?0.72:0.58,partialPadY=eink?0.42:0.34;
+  const padX=fullErase?(eink?0.90:0.72):partialPadX;
+  const padY=fullErase?(eink?0.12:0.08):partialPadY;
   el.setAttribute('x',segment.x-padX);el.setAttribute('y',segment.y-padY);
   el.setAttribute('width',segment.width+padX*2);el.setAttribute('height',segment.height+padY*2);
   return el;
@@ -338,7 +341,12 @@ function randomSegmentsForCells(cells,percent,order){
     if(remaining<=0.0001)break;
     const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
+    const fullErase=fraction>=0.999999;
+    segments.push({
+      key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,
+      y:fullErase?cell.top+0.15:cell.top+0.6,width:hiddenWidth,
+      height:Math.max(0,(cell.bottom-cell.top)-(fullErase?0.30:1.2)),fullErase
+    });
     remaining-=hiddenWidth;
   }
   return segments;

@@ -113,8 +113,13 @@ public final class SemanticCueSourceContractTest {
             html.contains(".maskcell{fill:var(--sheet)}"));
         assertFalse("mask cells must not look like rounded grey pills",
             js.contains("el.setAttribute('rx','2')") || js.contains("el.setAttribute('ry','2')"));
-        assertTrue("paper erasure must cover small diacritic fringes without changing mask order",
-            js.contains("const padX=eink?0.72:0.58,padY=eink?0.42:0.34"));
+        assertTrue("partial paper erasure must keep the inter-line safety gap",
+            js.contains("const partialPadX=eink?0.72:0.58,partialPadY=eink?0.42:0.34"));
+        assertTrue("100% paper erasure must close residual BOOX diacritic fringes without broad line bleed",
+            js.contains("const fullErase=segment.fullErase===true")
+                && js.contains("const padY=fullErase?(eink?0.12:0.08):partialPadY")
+                && js.contains("y:fullErase?cell.top+0.15:cell.top+0.6")
+                && js.contains("fullErase"));
         assertTrue("generic verse selection may still use the quiet grey vocabulary",
             html.contains(".ayahPolygon.selected{fill-opacity:var(--sel-op)}"));
         assertTrue("Sabqi/Itqan work mode must suppress that large grey fill",
