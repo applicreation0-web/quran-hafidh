@@ -205,10 +205,10 @@ public final class SemanticCueSourceContractTest {
                 && source.contains("eink.local(sideTafsir, hifzPrefs)"));
     }
 
-    @Test public void amorceIconIsARealKeyAndExactBoxesStayAudited() throws Exception {
+    @Test public void amorceIconIsAnAnchorAndExactBoxesStayAudited() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String repository = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SemanticPassageRepository.java");
-        assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_semantic_key"));
+        assertTrue(ui.contains("if (s.contains(\"amorce\")) return R.drawable.ic_ui_semantic_anchor"));
         assertTrue(repository.contains("wordGeometry.anchorBoxes(page, cue.startVerse, cue.anchorWordCount)"));
         assertTrue(repository.contains("!= cue.anchorWordCount"));
     }
