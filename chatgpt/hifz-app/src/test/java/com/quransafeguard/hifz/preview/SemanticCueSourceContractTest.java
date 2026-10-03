@@ -135,7 +135,7 @@ public final class SemanticCueSourceContractTest {
             js.contains("function workContextLayer(svg,allLines,activeLines,polys)")
                 && js.contains("contextMask.id='hifz-work-context-mask'")
                 && js.contains("paper.setAttribute('fill','var(--sheet)')")
-                && js.contains("paper.setAttribute('fill-opacity',eink?'0.66':'0.60')"));
+                && js.contains("paper.setAttribute('fill-opacity',eink?'0.72':'0.65')"));
         assertTrue("B+ must avoid true blur/filter on E-Ink",
             js.contains("No SVG blur/filter"));
         assertTrue("B+ must fail open if exact verse polygons are unavailable",

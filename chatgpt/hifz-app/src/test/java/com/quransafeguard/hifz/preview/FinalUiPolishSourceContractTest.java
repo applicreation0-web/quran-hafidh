@@ -43,17 +43,41 @@ public final class FinalUiPolishSourceContractTest {
         assertFalse(study.contains("new GradientDrawable()"));
     }
 
-    @Test public void studyTafsirUsesOneCompactAlwaysClickableActionSeparatedFromPageSlider() throws Exception {
+    @Test public void activeReaderToolbarsUseIconOnlyAlignedActions() throws Exception {
+        String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertFalse("Study Tafsir must not use the vertical icon-over-caption action", study.contains("Ui.roundAction(this, \"\", \"Tafsir\""));
-        assertFalse("Study Tafsir must not use a boxed smallButton", study.contains("Ui.smallButton(this, \"Tafsir\""));
-        assertTrue("Tafsir must stay visually light", study.contains("button.setBackgroundColor(android.graphics.Color.TRANSPARENT)"));
-        assertTrue("Tafsir keeps a generous touch target without a heavy rectangle", study.contains("button.setMinHeight(Ui.dp(this, 48))"));
-        assertTrue("Tafsir needs a readable compact text size", study.contains("button.setTextSize(13.5f)"));
-        assertTrue("Tafsir must explain the missing selection instead of being disabled", study.contains("Touchez d’abord un verset pour ouvrir le Tafsir."));
+        String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
+        String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
+
+        assertTrue("all active action hit targets stay 48dp",
+            ui.contains("int size = dp(context, 48)"));
+        assertTrue("roundAction must be icon-only",
+            ui.contains("box.addView(iconButton(context, symbol, label, listener));"));
+        assertFalse("active action captions must not render below icons",
+            ui.contains("TextView caption = text(context, label, 11f, false)"));
+        assertTrue("icon-only actions retain long-press discoverability",
+            ui.contains("button.setTooltipText(value)"));
+
+        assertTrue("Lecture Tafsir uses the shared icon-button grammar",
+            study.contains("return Ui.iconButton(this, \"\", \"Tafsir · touchez un verset puis ouvrez le commentaire\""));
+        assertFalse("Lecture no longer renders permanent Tafsir text in the action row",
+            study.contains("button.setText(\"Tafsir\")"));
+        assertTrue("Lecture actions remain centered", study.contains("readerActions.setGravity(Gravity.CENTER)"));
+
+        assertTrue("Sabqi/Itqan/Revision use the shared icon-only action grammar",
+            session.contains("Ui.roundAction(this,symbol,label,listener)"));
+        assertTrue("Free memorisation already uses icon-only navigation",
+            free.contains("Ui.iconButton(this,\"›\",\"Page suivante\"")
+                && free.contains("Ui.iconButton(this,\"‹\",\"Page précédente\""));
+    }
+
+    @Test public void studyTafsirStaysAlwaysClickableAndSeparatedFromPageRail() throws Exception {
+        String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        assertTrue("Tafsir must explain a missing selection instead of being disabled",
+            study.contains("Touchez d’abord un verset pour ouvrir le Tafsir."));
         assertFalse("Tafsir action must never be disabled in Lecture", study.contains("tafsirButton.setEnabled(false)"));
-        assertTrue("page slider must be clearly separated from Tafsir action", study.contains("railParams.topMargin = Ui.dp(this, 20)"));
-        assertTrue("Lecture action row must preserve a BOOX-friendly touch height", study.contains("readerActions.setMinimumHeight(Ui.dp(this, 60))"));
+        assertTrue("page rail stays separated from icon actions", study.contains("railParams.topMargin = Ui.dp(this, 20)"));
+        assertTrue("Lecture action row preserves a BOOX-friendly height", study.contains("readerActions.setMinimumHeight(Ui.dp(this, 60))"));
     }
 
     @Test public void audioRemainsAvailableInHifzAndFreeMemOnly() throws Exception {
