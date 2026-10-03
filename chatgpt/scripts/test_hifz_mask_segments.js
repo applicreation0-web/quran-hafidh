@@ -55,9 +55,8 @@ for(const segment of s100){
 }
 
 const source=require('fs').readFileSync(require('path').join(__dirname,'../hifz-app/src/main/assets/hifzreader/reader.js'),'utf8');
-assert.ok(source.includes('markerLayer(svg,polys,lines)'),'verse-number rosette layer must receive masked-line geometry');
-assert.ok(source.includes('layer.appendChild(markerLayer(svg,polys,lines))'),'verse-number rosettes must always be redrawn above masks');
-assert.ok(source.includes('Verse-number rosettes are deliberately redrawn above the random masks'));
+// Exercise the real renderer and verify rosettes survive masking and reveal/remask.
+require('./test_hifz_rosette_render');
 assert.ok(source.includes('maskEntropy'),'native session entropy must participate in the random draw');
 assert.ok(!source.includes('line.words'),'random masking must not depend on linguistic word geometry');
 assert.ok(!source.includes('augment_hifz_word_geometry'),'word-mapping experiment must not leak into runtime');
