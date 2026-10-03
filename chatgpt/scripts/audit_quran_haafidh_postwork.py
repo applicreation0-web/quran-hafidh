@@ -78,12 +78,24 @@ def main() -> None:
     # Directly source-verified exceptional heading missing in older metadata.
     groups.setdefault((24, 11, 22), {"ids": [], "titles": set()})["titles"].add("الحكم الخامس قصة الإفك")
 
+    missing_titles = []
+    conflicting_titles = []
     for key, group in groups.items():
         titles = group["titles"]
         if not titles:
-            fail(f"Al-Munir unit {key} has no printed Arabic heading")
-        if len(titles) != 1:
-            fail(f"Al-Munir unit {key} has conflicting headings: {sorted(titles)}")
+            missing_titles.append(key)
+        elif len(titles) != 1:
+            conflicting_titles.append((key, sorted(titles)))
+    if missing_titles:
+        print("MUNIR_MISSING_TITLES count=" + str(len(missing_titles)))
+        for key in missing_titles:
+            print(f"MUNIR_MISSING range={key[0]}:{key[1]}-{key[2]}")
+    if conflicting_titles:
+        print("MUNIR_CONFLICTING_TITLES count=" + str(len(conflicting_titles)))
+        for key, titles in conflicting_titles:
+            print(f"MUNIR_CONFLICT range={key[0]}:{key[1]}-{key[2]} titles={titles}")
+    if missing_titles or conflicting_titles:
+        fail("Al-Munir heading coverage is incomplete or conflicting")
 
     for key, expected_title in KNOWN.items():
         group = groups.get(key)
