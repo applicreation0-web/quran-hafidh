@@ -40,3 +40,17 @@ verifyMaskedRosette();
 // Prove this test detects a regression in production rendering, independently of comments.
 assert.throws(()=>vm.runInNewContext(source.replace('layer.appendChild(markerLayer(svg,polys,lines));',''),{window:{HIFZ_BOOT:window.HIFZ_BOOT},document,requestAnimationFrame:fn=>fn(),module:{exports:{}}}) || verifyMaskedRosette(),/original rosette ink/);
 console.log('HIFZ_ROSETTE_RENDER_BEHAVIOR_OK');
+// The first two shipped SVGs retain their negative viewBox origin. Word-box data
+// is normalized to the page; exact holes and highlights must map into SVG coordinates.
+svg.viewBox.baseVal={x:-53.3109,y:-198.4777,width:345,height:550};
+window.HifzReader.setPageLandmarkBoxes([[100,220,120,240]]);
+window.HifzReader.setSemanticCues([{boxes:[[200,220,230,240]]}],true);
+const masked=svg.childNodes.find(n=>n.attrs.class==='masklayer');
+const holeMask=masked.childNodes.find(n=>n.tagName==='defs').childNodes[0];
+const hole=holeMask.childNodes[1];
+assert.ok(Math.abs(Number(hole.attrs.x)-(100-53.3109))<1e-8,'page landmarks must account for the actual SVG viewBox origin');
+assert.ok(Math.abs(Number(hole.attrs.y)-(220-198.4777))<1e-8,'page landmarks must stay on the real Quran ink');
+const cues=svg.childNodes.find(n=>n.attrs.class==='semanticcuelayer');
+assert.ok(Math.abs(Number(cues.childNodes[0].attrs.x)-(200-53.3109))<1e-8,'semantic highlight must share the Quran coordinate system');
+assert.ok(Math.abs(Number(cues.childNodes[0].attrs.y)-(220-198.4777))<1e-8,'semantic highlight must share the Quran coordinate system');
+console.log('HIFZ_NEGATIVE_VIEWBOX_WORD_MAPPING_OK');

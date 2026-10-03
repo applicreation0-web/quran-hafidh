@@ -367,6 +367,14 @@ function validWordBox(box){
     box[2]>box[0]&&box[3]>box[1];
 }
 
+// Sidecar boxes are normalized to the 345x550 page. Pages 1 and 2 keep their
+// original negative viewBox origin, so overlays must enter that SVG coordinate space.
+function wordBoxInSvgSpace(box,svg){
+  const vb=svg.viewBox&&svg.viewBox.baseVal;
+  if(!vb||!Number.isFinite(vb.x)||!Number.isFinite(vb.y))return null;
+  return [box[0]+vb.x,box[1]+vb.y,box[2]+vb.x,box[3]+vb.y];
+}
+
 function protectedWordBoxes(){
   if(!semanticAnchorMaskMode)return[];
   const out=[];
@@ -392,7 +400,8 @@ function applyProtectedWordHoles(layer,svg){
   full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
   full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
   full.setAttribute('fill','white');holeMask.appendChild(full);
-  boxes.forEach(box=>{
+  boxes.forEach(pageBox=>{
+    const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
     const hole=document.createElementNS(NS,'rect');
     hole.setAttribute('x',box[0]);hole.setAttribute('y',box[1]);
     hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',box[3]-box[1]);
@@ -412,7 +421,8 @@ function semanticCueLayer(svg){
     // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
     const exact=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox);
     if(exact.length){
-      exact.forEach(box=>{
+      exact.forEach(pageBox=>{
+        const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
         const rect=document.createElementNS(NS,'rect');
         rect.setAttribute('x',box[0]);rect.setAttribute('y',box[1]);
         rect.setAttribute('width',box[2]-box[0]);rect.setAttribute('height',box[3]-box[1]);
