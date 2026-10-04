@@ -280,6 +280,8 @@ dependencies {
     implementation(project(":hifz-core"))
     implementation("org.brotli:dec:0.1.2")
     testImplementation("junit:junit:4.13.2")
+    // JVM tests load the real KFQC geometry and V6 JSON state; android.jar's org.json is a stub.
+    testImplementation("org.json:json:20240303")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("junit:junit:4.13.2")

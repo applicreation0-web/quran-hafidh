@@ -77,6 +77,13 @@ public final class HifzPrefs {
         migrateLegacyGates(context);
     }
 
+    /** JVM tests only: wraps an already-populated store as-is (no schema bootstrap, no legacy
+     *  gate migration), so a test can reopen the same store to simulate a process restart. */
+    HifzPrefs(SharedPreferences store) {
+        if (store == null) throw new IllegalArgumentException("store required");
+        p = store;
+    }
+
     private void ensureSchema(Context context) {
         int schema = p.getInt("schema", 0);
         if (schema == 0) {
@@ -1663,6 +1670,57 @@ public final class HifzPrefs {
     }
 
     /**
+     * Post-An-Nās Itqān maintenance validation (one whole ≤15-line unit, ×20 = 10 visible + 10
+     * anchored). Only lines never credited anywhere become Stabilisé, and only they join the
+     * Stabilisation snowball — as StabilizationHalfPagePolicy half-page blocks Consolidation can
+     * re-verify. Stabilisé/Acquis lines are reinforcement only (no V6 change, no snowball entry),
+     * Appris lines stay in their Apprentissage chain, and no Sabqi key is ever written here.
+     */
+    boolean completeItqanMaintenanceUnitV6(List<String> lineIds, VerseRef unitStart, VerseRef unitEnd,
+                                           VerseRef nextCursor, String date, String label,
+                                           GeometryRepository geometry) {
+        if (lineIds == null || lineIds.isEmpty() || unitStart == null || unitEnd == null || geometry == null)
+            throw new IllegalArgumentException("Stabilisation maintenance unit required");
+        if (lineIds.size() > ItqanMaintenancePolicy.MAX_LINES)
+            throw new IllegalStateException("Post-An-Nās Itqān unit exceeds 15 physical lines");
+        synchronized (V6_STATE_LOCK) {
+            requireSchema6ProgressionState();
+            LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
+            LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
+            LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
+            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+            List<String> fresh = ItqanMaintenancePolicy.newlyCreditableLines(lineIds, learned, stabilized, acquired);
+            for (String lineId : fresh) {
+                if (quarantine.contains(lineId) || legacyPartial.contains(lineId))
+                    throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
+            }
+            SharedPreferences.Editor e = p.edit()
+                .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
+                .putInt("itqanBlockIndex", 0)
+                .putString("itqanUnitStart", "").putString("itqanUnitEnd", "")
+                .putLong("itqanElapsedMs", 0L)
+                .putString("lastItqanDate", date).putString("lastItqanLabel", label)
+                .putString("lastItqanCreditStart", unitStart.toString())
+                .putString("lastItqanCreditEnd", unitEnd.toString())
+                .putString("itqanConsumedBonusLineIds", "[]")
+                .putString("itqanTinyBlockDecisionValue", "")
+                .putString("itqanBonusSnapshotV1", "");
+            if (!fresh.isEmpty()) {
+                stabilized.addAll(fresh);
+                List<List<String>> enrolled = ItqanMaintenancePolicy.consolidationEnrollment(
+                    geometry.linesForExactIds(fresh));
+                java.util.Map<String, String> snowball = weeklySnowballAppendUnits(
+                    ConsolidationCycleEngine.Family.STABILIZATION, enrolled, safeDate(date, HifzClock.today()));
+                e.putString("v6StabilizedLineIds", lineIdsJson(stabilized));
+                for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
+            }
+            if (nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
+            return e.commit();
+        }
+    }
+
+    /**
      * P4 tiny-fragment fast path: an Itqān sub-block of only 1 or 2 physical lines (a leg-boundary
      * or Sabqi-frontier remnant too small for a real repeated session) is credited straight to
      * Acquis instead of Stabilisé — skipping both the repetition protocol and the Consolidation
@@ -1994,7 +2052,7 @@ public final class HifzPrefs {
                         boolean forced = !reconstruction && overlaps(forcedRanges, unit.start, unit.end);
                         expected.put(key, new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
                             AnchoringQueue.originFor(reconstruction, forced),
-                            reconstruction ? AnchoringQueue.ItqanProtocol.LIGHT : AnchoringQueue.ItqanProtocol.FULL, 0));
+                            ItqanMaintenancePolicy.protocolForNewSession(), 0));
                     }
                     VerseRef next = pendingCorpus.next(unit.end);
                     if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
@@ -2054,38 +2112,45 @@ public final class HifzPrefs {
      *  same leg from its own beginning — the closest safe reconstruction, since no material is
      *  ever skipped or lost by revisiting a leg's start once more on the very next upgrade. */
     ItqanRotationPolicy.State itqanRotationState() {
-        String cursorRaw = p.getString("p4ItqanRotationCursor", "");
-        if (!cursorRaw.isEmpty()) {
-            ItqanRotationPolicy.Leg leg = ItqanRotationPolicy.Leg.valueOf(
-                p.getString("p4ItqanRotationLeg", ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS.name()));
-            VerseRef cursor;
-            try {
-                cursor = GeometryRepository.parseVerse(cursorRaw);
-            } catch (RuntimeException malformed) {
-                cursor = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
-                    ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
-            }
-            boolean initialTailCompleted = p.getBoolean("p4ItqanRotationInitialTailCompleted", false);
-            return new ItqanRotationPolicy.State(leg, cursor, initialTailCompleted);
-        }
-        if (p.contains("p4AncrageLeg")) {
-            ItqanRotationPolicy.Leg leg = "FRONT_BAQARA_HUJURAT".equals(p.getString("p4AncrageLeg", ""))
-                ? ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT : ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
-            boolean initialTailCompleted = p.getBoolean("p4AncrageInitialTailCompleted", false);
-            VerseRef cursor = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
-                ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
-            return new ItqanRotationPolicy.State(leg, cursor, initialTailCompleted);
-        }
-        return ItqanRotationPolicy.State.startOfTail();
+        return ItqanRegimeStore.readRotationState(p);
     }
 
+    /** Synchronous; the post-An-Nās latch it carries is one-way (see ItqanRegimeStore). */
     boolean saveItqanRotationState(ItqanRotationPolicy.State state) {
-        if (state == null) throw new IllegalArgumentException("state required");
-        return p.edit()
-            .putString("p4ItqanRotationLeg", state.leg.name())
-            .putString("p4ItqanRotationCursor", state.cursor.toString())
-            .putBoolean("p4ItqanRotationInitialTailCompleted", state.initialTailCompleted)
-            .commit();
+        return ItqanRegimeStore.saveRotationState(p, state);
+    }
+
+    /** True once the first Itqān arrival at An-Nās 114:6 has been recorded — permanently. */
+    public boolean itqanPostNasMaintenance() {
+        return ItqanRegimeStore.postNasMaintenance(p);
+    }
+
+    /**
+     * Regime + protocol for the Itqān unit [entry.start, entry.end] about to be rendered — see
+     * ItqanRegimeStore.resolvePlan. The legacy protocol mirrors exactly what pre-decision code
+     * gave such a unit (its queue entry's own protocol, else LIGHT on the TAIL leg), and is only
+     * ever used to finish a unit that was already mid-repetition before this upgrade.
+     */
+    ItqanRegimeStore.UnitPlan itqanUnitPlan(AnchoringQueue.Entry entry) {
+        if (entry == null) throw new IllegalArgumentException("Itqān unit required");
+        AnchoringQueue.Entry queued = AnchoringQueue.findByRange(anchoringQueue(), entry.start, entry.end);
+        AnchoringQueue.ItqanProtocol legacy;
+        if (queued != null) legacy = queued.protocol;
+        else legacy = ordinalBetween(GeometryRepository.parseVerse(entry.start),
+                ItqanRotationPolicy.TAIL_START, ItqanRotationPolicy.TAIL_END)
+            ? AnchoringQueue.ItqanProtocol.LIGHT : AnchoringQueue.ItqanProtocol.FULL;
+        return ItqanRegimeStore.resolvePlan(p, entry.start, entry.end, legacy);
+    }
+
+    boolean stampItqanUnitPlan(AnchoringQueue.Entry entry, ItqanRegimeStore.UnitPlan plan) {
+        return ItqanRegimeStore.stampPlan(p, entry.start, entry.end, plan);
+    }
+
+    /** Lines of this unit that have never been credited anywhere (no Appris/Stabilisé/Acquis). */
+    List<String> itqanUncreditedLines(List<String> lineIds) {
+        return ItqanMaintenancePolicy.newlyCreditableLines(lineIds,
+            v6LineIdSet("v6LearnedLineIds"), v6LineIdSet("v6StabilizedLineIds"),
+            v6LineIdSet("v6AcquiredCreditLineIds"));
     }
 
     /** True only the very first time the perpetual rotation ever needs a position and none was
@@ -2175,33 +2240,44 @@ public final class HifzPrefs {
         return saveItqanRotationState(ItqanRotationPolicy.advancedPast(itqanRotationState(), unitEnd));
     }
 
-    /** P4: every physical Stabilisation-sized unit spanning a leg's own fixed bounds — all of
-     *  TAIL, or FRONT up to the Sabqi frontier — independent of unconsolidatedPromotedRanges,
-     *  since a perpetual Itqān lap keeps visiting a unit forever, long after it first graduates
-     *  out of "à stabiliser". Empty for FRONT before Sabqi has reached 2:1 at all. */
-    private List<AnchoringQueue.Entry> physicalUnitsInLeg(
-            ItqanRotationPolicy.Leg leg, VerseRef sabqiFrontier, GeometryRepository geometry) {
+    /** P4: every physical Itqān unit spanning a leg's own fixed bounds — all of TAIL, or FRONT
+     *  strictly before Sabqi's current not-yet-validated block (ItqanRotationPolicy.frontLegEnd)
+     *  — independent of unconsolidatedPromotedRanges, since a perpetual Itqān lap keeps visiting
+     *  a unit forever, long after it first graduates out of "à stabiliser". Empty for FRONT
+     *  before Sabqi has put anything behind it. Deep first-pass units keep the ~22-line weekly
+     *  size (8/7/7 sub-blocks); post-An-Nās maintenance units are capped at 15 owned physical
+     *  lines, single-surah, whole verses only. Every unit is planned FULL. */
+    static List<AnchoringQueue.Entry> physicalUnitsInLeg(
+            ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart, GeometryRepository geometry,
+            ItqanMaintenancePolicy.Regime regime) {
         boolean tail = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
         VerseRef legStart = tail ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
-        VerseRef legEnd = tail ? ItqanRotationPolicy.TAIL_END : ItqanRotationPolicy.FRONT_END;
-        if (!tail && GeometryRepository.ordinal(sabqiFrontier) < GeometryRepository.ordinal(legStart)) {
-            return Collections.emptyList();
-        }
-        VerseRef effectiveEnd = !tail && GeometryRepository.ordinal(sabqiFrontier) < GeometryRepository.ordinal(legEnd)
-            ? sabqiFrontier : legEnd;
+        VerseRef effectiveEnd = tail ? ItqanRotationPolicy.TAIL_END
+            : ItqanRotationPolicy.frontLegEnd(sabqiCurrentBlockStart);
+        if (effectiveEnd == null) return Collections.emptyList();
+        boolean maintenance = regime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+        int maxLines = maintenance ? ItqanMaintenancePolicy.MAX_LINES : PreviewConfig.STABILIZATION_WEEKLY_LINES;
         VerseRange range = new VerseRange(legStart, effectiveEnd);
         EligibleCorpus legCorpus = EligibleCorpus.Companion.of(Collections.singletonList(range));
         ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
         VerseRef cursor = legStart;
         while (range.contains(cursor)) {
-            GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(cursor, effectiveEnd, legCorpus);
-            if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unit.end, geometry).isEmpty()) {
-                out.add(new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
-                    AnchoringQueue.Origin.PROMOTED,
-                    tail ? AnchoringQueue.ItqanProtocol.LIGHT : AnchoringQueue.ItqanProtocol.FULL, 0));
+            GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(
+                cursor, effectiveEnd, legCorpus, maxLines);
+            VerseRef unitEnd = unit.end;
+            if (maintenance) {
+                final List<VerseRef> verses = unit.verses;
+                final VerseRef unitStart = unit.start;
+                int last = ItqanMaintenancePolicy.lastVerseIndexWithinBudget(verses.size(), maxLines,
+                    i -> CorpusLinePolicy.ownedLineIdsForRangeOnPage(unitStart, verses.get(i), geometry).size());
+                unitEnd = verses.get(last);
             }
-            VerseRef next = legCorpus.next(unit.end);
-            if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
+            if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unitEnd, geometry).isEmpty()) {
+                out.add(new AnchoringQueue.Entry(unit.start.toString(), unitEnd.toString(),
+                    AnchoringQueue.Origin.PROMOTED, ItqanMaintenancePolicy.protocolForNewSession(), 0));
+            }
+            VerseRef next = legCorpus.next(unitEnd);
+            if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unitEnd)) break;
             cursor = next;
         }
         return out;
@@ -2271,19 +2347,15 @@ public final class HifzPrefs {
         ItqanRotationPolicy.State original = itqanRotationState();
         ItqanRotationPolicy.State state = original;
         VerseRef sabqiFrontier = currentSabqiPosition(geometry);
-        AnchoringQueue.Entry selected = null;
-        for (int attempt = 0; attempt < 2 && selected == null; attempt++) {
-            for (AnchoringQueue.Entry unit : physicalUnitsInLeg(state.leg, sabqiFrontier, geometry)) {
-                if (GeometryRepository.ordinal(GeometryRepository.parseVerse(unit.start))
-                        >= GeometryRepository.ordinal(state.cursor)) {
-                    selected = unit;
-                    break;
-                }
-            }
-            if (selected == null) state = ItqanRotationPolicy.onLegExhausted(state);
-        }
-        if (selected == null) return null; // nothing physical yet (e.g. Sabqi hasn't reached 2:1)
-        if (state.leg != original.leg && !saveItqanRotationState(state)) {
+        ItqanMaintenancePolicy.Regime regime = ItqanRegimeStore.selectionRegime(p);
+        ItqanRotationPolicy.Pick pick = ItqanRotationPolicy.pick(original,
+            leg -> physicalUnitsInLeg(leg, sabqiFrontier, geometry, regime));
+        state = pick.state;
+        AnchoringQueue.Entry selected = pick.unit;
+        if (selected == null) return null; // nothing physical at all
+        boolean moved = state.leg != original.leg || !state.cursor.equals(original.cursor)
+            || state.initialTailCompleted != original.initialTailCompleted;
+        if (moved && !saveItqanRotationState(state)) {
             throw new IllegalStateException("Unable to persist Itqān rotation state");
         }
         return selected;
@@ -2361,14 +2433,23 @@ public final class HifzPrefs {
      */
     private java.util.Map<String, String> weeklySnowballAppendEntries(
             ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
+        return weeklySnowballAppendUnits(family, Collections.singletonList(unitLineIds), today);
+    }
+
+    /** Several frozen physical units enrolled by one commit (a post-An-Nās maintenance session
+     *  whose new lines re-plan as two half-page blocks), in order, under the same weekly cap. */
+    private java.util.Map<String, String> weeklySnowballAppendUnits(
+            ConsolidationCycleEngine.Family family, List<List<String>> units, LocalDate today) {
         JSONArray current = rolledSnowballUnits(family, today);
         int weeklyCap = family == ConsolidationCycleEngine.Family.LEARNING
             ? learningDaysPerWeek() : itqanDaysPerWeek();
-        if (current.length() < weeklyCap) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+        for (List<String> unitLineIds : units) {
+            if (current.length() < weeklyCap) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+        }
         java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
         out.put(snowballAnchorKey(family), mondayOf(today).toString());
         out.put(snowballUnitsKey(family), current.toString());
-        out.put(snowballHistoryKey(family), appendToSnowballHistory(family, unitLineIds, today).toString());
+        out.put(snowballHistoryKey(family), appendToSnowballHistory(family, units, today).toString());
         return out;
     }
 
@@ -2382,7 +2463,7 @@ public final class HifzPrefs {
      * block that was never actually promoted.
      */
     private JSONArray appendToSnowballHistory(
-            ConsolidationCycleEngine.Family family, List<String> unitLineIds, LocalDate today) {
+            ConsolidationCycleEngine.Family family, List<List<String>> units, LocalDate today) {
         String weekAnchor = mondayOf(today).toString();
         JSONArray history;
         try { history = new JSONArray(p.getString(snowballHistoryKey(family), "[]")); }
@@ -2398,7 +2479,9 @@ public final class HifzPrefs {
                 currentWeek = new JSONObject().put("week", weekAnchor).put("units", new JSONArray());
                 history.put(currentWeek);
             }
-            currentWeek.getJSONArray("units").put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+            for (List<String> unitLineIds : units) {
+                currentWeek.getJSONArray("units").put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
+            }
         } catch (Exception error) {
             throw new IllegalStateException("Unable to update the snowball's 8-week history", error);
         }

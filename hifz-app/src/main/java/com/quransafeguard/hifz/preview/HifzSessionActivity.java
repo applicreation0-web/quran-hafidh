@@ -63,6 +63,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private AnchoringQueue.Entry anchoringEntry;
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
     private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
+    private ItqanMaintenancePolicy.Regime itqanRegime = ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
     private boolean fractionatedItqan;
     private int itqanBlockIndex;
     private int itqanBlockCount = 1;
@@ -731,10 +732,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             currentPage=unitFirstPage;
         }
 
-        itqanSessionProtocol = anchoringEntry.protocol;
-        itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
-        List<StabilizationHalfPagePolicy.Unit> plannedUnits = StabilizationHalfPagePolicy.planPage(
-            geometry.linesForExactIds(itqanUnit.lineIds));
+        // Latest user decision: FULL only for every new unit; deep ×40 + progressive eraser until
+        // the first An-Nās arrival, then 15-line ×20 maintenance (10 visible + 10 anchored). A unit
+        // already mid-repetition keeps the plan it was started with (see ItqanRegimeStore).
+        ItqanRegimeStore.UnitPlan plan = prefs.itqanUnitPlan(anchoringEntry);
+        if (!prefs.stampItqanUnitPlan(anchoringEntry, plan)) {
+            onError("Impossible d’enregistrer le protocole de Stabilisation.");
+            return;
+        }
+        itqanRegime = plan.regime;
+        itqanSessionProtocol = plan.protocol;
+        itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanRegime, itqanSessionProtocol);
+        boolean maintenance = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+        List<GeometryRepository.LineMeta> unitLines = geometry.linesForExactIds(itqanUnit.lineIds);
+        List<StabilizationHalfPagePolicy.Unit> plannedUnits = maintenance
+            ? Collections.singletonList(new StabilizationHalfPagePolicy.Unit(unitLines.get(0).page,
+                unitLines.get(0).verses.get(0).getSurah(), itqanUnit.lineIds))
+            : StabilizationHalfPagePolicy.planPage(unitLines);
         itqanBlockCount = plannedUnits.size();
         itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
         StabilizationHalfPagePolicy.Unit workingUnit = plannedUnits.get(itqanBlockIndex);
@@ -754,8 +768,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // decided silently. Reinforcement laps are excluded: that material is already Acquired, so
         // "entering Acquis" is moot, and the existing full-protocol reinforcement pass already
         // applies to it.
+        boolean tinyFastPathEligible = maintenance
+            // Maintenance never moves Appris (Sabqi) or already-credited lines: only a fragment
+            // made entirely of never-credited lines may take the direct-to-Acquis fast path.
+            ? prefs.itqanUncreditedLines(workingUnit.lineIds).size() == workingUnit.lineIds.size()
+            : !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
         if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN
-                && !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)) {
+                && tinyFastPathEligible) {
             Boolean tinyBlockDecision = prefs.itqanTinyBlockDecisionFor(itqanUnit.start, itqanUnit.end, itqanBlockIndex);
             if (tinyBlockDecision == null) {
                 showItqanTinyBlockDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, workingUnit.lineIds.size());
@@ -779,8 +798,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             itqanBonusDecision = null;
         }
         if (rep == 0 && itqanBonusDecision == null) {
-            ItqanPageCompletionPolicy.Offer offer = computeItqanBonusOffer(plannedUnits, currentLineIds);
-            if (offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {
+            // Post-An-Nās units are already sized to the 15-line cap: never offer to extend them.
+            ItqanPageCompletionPolicy.Offer offer = maintenance ? null
+                : computeItqanBonusOffer(plannedUnits, currentLineIds);
+            if (offer == null || offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {
                 ItqanPlanSnapshot keep = ItqanPlanSnapshot.undecided(itqanUnit.start, itqanUnit.end, itqanBlockIndex).keep();
                 if (!prefs.saveItqanBonusDecision(keep)) {
                     onError("Impossible d’enregistrer la décision de Stabilisation.");
@@ -811,7 +832,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         sessionCompleted=false;
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);
+        currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
         program.setText(itqanProgramLabel());
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
@@ -829,6 +850,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return "Stabilisation · "+start+" → "+end+" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · ×"+itqanTargetReps;
         }
         return "Stabilisation · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+            +(itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+                ?" · entretien "+ItqanMaintenancePolicy.VISIBLE_REPS+" visible + "+ItqanMaintenancePolicy.ANCHOR_REPS+" ancrages":"")
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
     }
 
@@ -893,7 +916,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateItqanProgress(int rep,int reveals){
-        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · masque "+currentMask+"% · révélations "+reveals);
+        String stage=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)
+            ? "rappel avec ancrages" : "masque "+currentMask+"%";
+        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · "+stage+" · révélations "+reveals);
         eink.local(progress, prefs);
     }
 
@@ -903,14 +928,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.itqanRep();if(rep>=itqanTargetReps)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
-            + (revealed && PreviewConfig.isItqanValidationRep(rep - 1, itqanSessionProtocol) ? 1 : 0);
+            + (revealed && ItqanMaintenancePolicy.isValidationRep(itqanRegime, itqanSessionProtocol, rep - 1) ? 1 : 0);
         if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition de la Stabilisation.");return;}
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
+        if(ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)!=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep-1))
+            applyItqanAnchors();
+        if(currentMask!=oldMask)mushaf.setMask(currentMask);
         updateRevealButton();if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
@@ -1004,7 +1032,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // stabilised long ago), this is a perpetual reinforcement pass, not a first build — credit
         // it without re-touching progression state or the Consolidation snowball a second time.
         boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
-        boolean ok = reinforcementLap
+        boolean ok = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+            ? prefs.completeItqanMaintenanceUnitV6(currentLineIds, itqanUnit.start, itqanUnit.end, next,
+                sessionDate.toString(), label, geometry)
+            : reinforcementLap
             ? prefs.completeItqanReinforcementBlock(
                 nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, sessionDate.toString(), label)
             : prefs.completeStabilizationBlockV6(
@@ -1485,7 +1516,30 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
-    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
+    private void showCurrent(){hasShown=true;if(ITQAN.equals(mode))applyItqanAnchors();mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
+
+    /**
+     * Post-An-Nās maintenance recall (repetitions 11-20): the unit is masked at 100% except the
+     * project's existing audited synchronization anchors — the same Révision active landmark
+     * half-lines (reader.js landmarkCellIndices: the reading-first half of the unit's first
+     * physical line on this page and the reading-last half of its last one), on real KFQC line
+     * geometry, plus the permanent page cues. Nothing Quranic is invented or approximated. Every
+     * other Itqān repetition (visible, deep eraser, validation screen) clears them.
+     */
+    private void applyItqanAnchors() {
+        boolean anchored = !sessionCompleted && currentMask == 100 && itqanUnit != null
+            && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep());
+        if (!anchored || currentLineIds == null || currentLineIds.isEmpty()) {
+            mushaf.setLandmarkLines(null, null);
+            return;
+        }
+        ArrayList<String> onPage = new ArrayList<>();
+        for (GeometryRepository.LineMeta line : geometry.linesForExactIds(currentLineIds)) {
+            if (line.page == currentPage) onPage.add(line.id);
+        }
+        if (onPage.isEmpty()) { mushaf.setLandmarkLines(null, null); return; }
+        mushaf.setLandmarkLines(onPage.get(0), onPage.size() > 1 ? onPage.get(onPage.size() - 1) : null);
+    }
 
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));

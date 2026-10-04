@@ -77,11 +77,38 @@ final class ItqanRotationPolicy {
     }
 
     /** Advances the cursor to just past the verse that was just presented to the Itqān engine —
-     *  the leg never changes here, only nextInLeg's own scan start moves forward. */
+     *  the leg never changes here, only nextInLeg's own scan start moves forward. Completing the
+     *  unit that ends at An-Nās 114:6 on the TAIL leg is the first-arrival event of the latest
+     *  user decision: it latches initialTailCompleted (post-An-Nās maintenance) right here, in the
+     *  same commit as the cursor move, instead of waiting for a later leg flip that is only
+     *  persisted when the next leg happens to have a unit. */
     static State advancedPast(State state, VerseRef presented) {
         VerseRef next = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(presented);
         VerseRef cursor = next != null ? next : legEnd(state.leg);
-        return new State(state.leg, cursor, state.initialTailCompleted);
+        boolean reachedNas = state.leg == Leg.TAIL_HUJURAT_NAS
+            && GeometryRepository.ordinal(presented) >= GeometryRepository.ordinal(TAIL_END);
+        return new State(state.leg, cursor, state.initialTailCompleted || reachedNas);
+    }
+
+    /** One-way latch: once post-An-Nās maintenance was ever persisted, no later state write can
+     *  turn it back off (a stale in-memory state, a legacy key, a corrupt cursor). */
+    static State latched(State state, boolean everCompleted) {
+        if (state == null) throw new IllegalArgumentException("state required");
+        if (state.initialTailCompleted || !everCompleted) return state;
+        return new State(state.leg, state.cursor, true);
+    }
+
+    /**
+     * Last verse the FRONT leg may visit: strictly before the first verse of Sabqi's current,
+     * not-yet-validated block, capped at FRONT_END. Null when Sabqi has not yet put anything
+     * behind it inside FRONT. Itqān reads this frontier, never writes it.
+     */
+    static VerseRef frontLegEnd(VerseRef sabqiCurrentBlockStart) {
+        if (sabqiCurrentBlockStart == null) return null;
+        int frontier = GeometryRepository.ordinal(sabqiCurrentBlockStart);
+        if (frontier <= GeometryRepository.ordinal(FRONT_START)) return null;
+        if (frontier > GeometryRepository.ordinal(FRONT_END)) return FRONT_END;
+        return com.quransafeguard.hifz.core.QuranCanon.INSTANCE.fromOrdinal(frontier - 1);
     }
 
     private static VerseRef legStart(Leg leg) {
@@ -90,6 +117,38 @@ final class ItqanRotationPolicy {
 
     private static VerseRef legEnd(Leg leg) {
         return leg == Leg.TAIL_HUJURAT_NAS ? TAIL_END : FRONT_END;
+    }
+
+    /** The unit the rotation lands on, and the (possibly flipped) state it was found in. */
+    static final class Pick {
+        final AnchoringQueue.Entry unit;
+        final State state;
+
+        Pick(AnchoringQueue.Entry unit, State state) {
+            this.unit = unit;
+            this.state = state;
+        }
+    }
+
+    /**
+     * Picks the first unit starting at or after the cursor in the current leg. Three looks: the
+     * rest of this leg, the other leg from its start, then this leg again from its start — so
+     * reaching the Sabqi frontier on FRONT (or FRONT still being empty) always restarts the next
+     * tour at Al-Hujurāt 49:1 instead of returning nothing. Read-only on Sabqi: the frontier is
+     * baked into unitsInLeg by the caller and never written here.
+     */
+    static Pick pick(State original, java.util.function.Function<Leg, List<AnchoringQueue.Entry>> unitsInLeg) {
+        State state = original;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            for (AnchoringQueue.Entry unit : unitsInLeg.apply(state.leg)) {
+                if (GeometryRepository.ordinal(GeometryRepository.parseVerse(unit.start))
+                        >= GeometryRepository.ordinal(state.cursor)) {
+                    return new Pick(unit, state);
+                }
+            }
+            state = onLegExhausted(state);
+        }
+        return new Pick(null, original);
     }
 
     /** Display-only preview (WeeklyDashboardPlanner's 7-day projection): sorts candidates into

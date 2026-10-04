@@ -44,7 +44,9 @@ public final class ItqanBonusDialogSourceContractTest {
 
     @Test public void noOfferMeansKeepIsSavedImmediatelyWithoutEverShowingADialog() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("if (offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {"));
+        assertTrue(session.contains("if (offer == null || offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {"));
+        assertTrue("a post-An-Nās maintenance unit is already at its 15-line cap: never offered an extension",
+            session.contains("ItqanPageCompletionPolicy.Offer offer = maintenance ? null"));
         assertTrue(session.contains(".undecided(itqanUnit.start, itqanUnit.end, itqanBlockIndex).keep();"));
     }
 

@@ -28,9 +28,12 @@ public final class AncragePerpetualRotationWiringSourceContractTest {
 
     @Test public void rotationStateIsPersistedWithATailStartingDefault() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(prefs.contains("return ItqanRotationPolicy.State.startOfTail();"));
+        assertTrue("HifzPrefs must delegate rotation persistence to ItqanRegimeStore",
+            prefs.contains("return ItqanRegimeStore.readRotationState(p);"));
+        String store = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ItqanRegimeStore.java");
+        assertTrue(store.contains("ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, ItqanRotationPolicy.TAIL_START, everCompleted);"));
         assertTrue("an install upgrading from the older leg-only rotation must be migrated, not reset blind",
-            prefs.contains("if (p.contains(\"p4AncrageLeg\")) {"));
+            store.contains("if (p.contains(LEGACY_LEG)) {") && store.contains("LEGACY_LEG = \"p4AncrageLeg\""));
     }
 
     @Test public void currentAnchoringEntryNoLongerFiltersByStabilisationStatus() throws Exception {
@@ -41,14 +44,19 @@ public final class AncragePerpetualRotationWiringSourceContractTest {
             !prefs.contains("List<AnchoringQueue.Entry> notDone = new ArrayList<>();"));
         assertTrue("selection must walk ItqanRotationPolicy's own leg+cursor state",
             prefs.contains("ItqanRotationPolicy.State original = itqanRotationState();"));
+        assertTrue("selection must go through the pure rotation pick",
+            prefs.contains("ItqanRotationPolicy.pick(original,"));
+        String policy = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ItqanRotationPolicy.java");
         assertTrue("a leg boundary (not an empty not-done pool) is what triggers the flip",
-            prefs.contains("state = ItqanRotationPolicy.onLegExhausted(state);"));
+            policy.contains("state = onLegExhausted(state);"));
     }
 
     @Test public void aLegFlipIsPersistedButAStableLegIsNotRewrittenEveryCall() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue("only an actual leg change should trigger a write",
-            prefs.contains("if (state.leg != original.leg && !saveItqanRotationState(state)) {"));
+        assertTrue("only an actual state change (leg, cursor or the post-An-Nās latch) should trigger a write",
+            prefs.contains("boolean moved = state.leg != original.leg || !state.cursor.equals(original.cursor)\n"
+                + "            || state.initialTailCompleted != original.initialTailCompleted;\n"
+                + "        if (moved && !saveItqanRotationState(state)) {"));
     }
 
     @Test public void aUnitAlreadyAcquiredGetsAReinforcementPassInsteadOfARegularCredit() throws Exception {

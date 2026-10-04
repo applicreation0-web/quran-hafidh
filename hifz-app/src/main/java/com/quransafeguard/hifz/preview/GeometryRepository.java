@@ -115,7 +115,16 @@ public final class GeometryRepository {
     private final JSONObject pages;
 
     private GeometryRepository(Context context) throws Exception {
-        JSONObject root = new JSONObject(readAsset(context, "reader109/geometry.json"));
+        this(readAsset(context, "reader109/geometry.json"));
+    }
+
+    /** JVM tests only: the same canonical KFQC geometry, read from the repository file. */
+    static GeometryRepository fromJson(String geometryJson) throws Exception {
+        return new GeometryRepository(geometryJson);
+    }
+
+    private GeometryRepository(String geometryJson) throws Exception {
+        JSONObject root = new JSONObject(geometryJson);
         pages = root.getJSONObject("pages");
         ArrayList<LineMeta> result = new ArrayList<>();
         int index = 0;
@@ -332,6 +341,12 @@ public final class GeometryRepository {
      * source of truth and risk a shared boundary line being claimed by two consecutive units.
      */
     public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {
+        return eligibleWeeklyStabilizationUnit(cursor, rangeEnd, corpus, PreviewConfig.STABILIZATION_WEEKLY_LINES);
+    }
+
+    /** Same walk with an explicit physical-line target (post-An-Nās Itqān maintenance uses 15). */
+    public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus, int maxLines) {
+        if (maxLines <= 0) throw new IllegalArgumentException("maxLines must be positive");
         if (!corpus.contains(cursor)) throw new IllegalArgumentException("Itqan cursor is not eligible: " + cursor);
         int firstIndex = firstLineIndex(cursor);
         int page = lines.get(firstIndex).page;
@@ -340,7 +355,7 @@ public final class GeometryRepository {
         int rangeEndOrdinal = ordinal(rangeEnd);
         LinkedHashSet<VerseRef> selected = new LinkedHashSet<>();
         LinkedHashSet<String> ids = new LinkedHashSet<>();
-        for (int i = firstIndex; i < lines.size() && ids.size() < PreviewConfig.STABILIZATION_WEEKLY_LINES; i++) {
+        for (int i = firstIndex; i < lines.size() && ids.size() < maxLines; i++) {
             LineMeta line = lines.get(i);
             if (line.verses.get(0).getSurah() != startSurah) break;
             boolean lineUsed = false;

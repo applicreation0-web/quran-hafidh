@@ -671,15 +671,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
         assertTrue("a weekly Stabilisation unit builder must exist alongside the page-based one",
             geometry.contains("public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {"));
+        assertTrue("the historical 3-argument builder must keep the 22-line weekly target",
+            geometry.contains("return eligibleWeeklyStabilizationUnit(cursor, rangeEnd, corpus, PreviewConfig.STABILIZATION_WEEKLY_LINES);"));
         String weeklyUnit = method(geometry,
-            "public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {",
+            "public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus, int maxLines) {",
             "public EligibleLinePlan planEligibleLines(");
         assertTrue("it must hard-stop at a surah change, never spanning two surahs in one weekly unit",
             weeklyUnit.contains("if (line.verses.get(0).getSurah() != startSurah) break;"));
         assertTrue("it must respect the caller's own pending-range end, never spilling into an unrelated range",
             weeklyUnit.contains("refOrdinal <= rangeEndOrdinal"));
         assertTrue("it must cap at the weekly line target, not the old single-page target",
-            weeklyUnit.contains("ids.size() < PreviewConfig.STABILIZATION_WEEKLY_LINES"));
+            weeklyUnit.contains("ids.size() < maxLines"));
 
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue("the anchoring queue must chunk pending material into weekly units now, not page units",

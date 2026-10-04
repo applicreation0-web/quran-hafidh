@@ -433,8 +433,12 @@ public final class MainActivity extends android.app.Activity {
         if(entry==null)entry=prefs.currentAnchoringEntry(geometry);
         if(entry==null)return "Stabilisation · aucune unité à stabiliser";
         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
-        int reps=PreviewConfig.itqanTotalReps(entry.protocol);
+        ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(entry);
+        int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+        if(plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE){
+            return "Stabilisation · "+shortRange(start,end)+" · "+owned.size()+" lignes · ×"+reps+" entretien";
+        }
         List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
             geometry.linesForExactIds(owned));
         int blocks=Math.max(1,planned.size());

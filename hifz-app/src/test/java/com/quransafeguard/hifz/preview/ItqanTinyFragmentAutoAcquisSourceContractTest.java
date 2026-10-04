@@ -69,7 +69,7 @@ public final class ItqanTinyFragmentAutoAcquisSourceContractTest {
                 + "before the P3 finish-the-page bonus logic runs, and must ask (not decide silently) "
                 + "the first time this exact block is seen",
             session.contains("if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN\n"
-                + "                && !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)) {\n"
+                + "                && tinyFastPathEligible) {\n"
                 + "            Boolean tinyBlockDecision = prefs.itqanTinyBlockDecisionFor(itqanUnit.start, itqanUnit.end, itqanBlockIndex);\n"
                 + "            if (tinyBlockDecision == null) {\n"
                 + "                showItqanTinyBlockDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, workingUnit.lineIds.size());\n"
@@ -81,7 +81,10 @@ public final class ItqanTinyFragmentAutoAcquisSourceContractTest {
                 + "            }"));
         assertTrue("a reinforcement lap (already fully Acquired material) must keep the existing "
                 + "full-protocol reinforcement pass, never the tiny-fragment fast path or the dialog",
-            session.contains("!prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)"));
+            session.contains(": !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);"));
+        assertTrue("post-An-Nās maintenance only fast-paths a fragment made entirely of never-credited "
+                + "lines, so Appris (Sabqi) and already-credited lines are never moved by it",
+            session.contains("? prefs.itqanUncreditedLines(workingUnit.lineIds).size() == workingUnit.lineIds.size()"));
         assertTrue("the chain must be bounded so no pathological run of tiny fragments can recurse "
                 + "unboundedly",
             session.contains("private static final int MAX_ITQAN_AUTO_CHAIN = 5;"));

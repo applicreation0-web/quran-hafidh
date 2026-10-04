@@ -41,7 +41,7 @@ public final class StaleItqanUnitMismatchSourceContractTest {
 
     @Test public void renderItqanOnlyResumesASavedUnitThatMatchesTheCurrentEntry() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        String m = method(session, "private void renderItqan(int autoChainDepth) {", "itqanSessionProtocol = anchoringEntry.protocol;");
+        String m = method(session, "private void renderItqan(int autoChainDepth) {", "ItqanRegimeStore.UnitPlan plan = prefs.itqanUnitPlan(anchoringEntry);");
         assertTrue("must compare the saved unit against anchoringEntry's own bounds, not just check rep/blockIndex",
             m.contains("savedStart.toString().equals(anchoringEntry.start) && savedEnd.toString().equals(anchoringEntry.end)"));
         assertTrue("a mismatched saved unit must be discarded through HifzPrefs, not silently trusted",
