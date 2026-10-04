@@ -134,19 +134,19 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
-     * Live-confirmed: a fractionated Stabilisation block's boundary verse can straddle the split
-     * (CorpusLinePolicy assigns a line to its earliest verse, so a verse can start in block 1's
-     * lines and continue into lines actually owned by block 2). The default whole-verse shading
-     * then greys out more physical lines than the block's real 6-8 line working set (confirmed:
-     * 10 lines shaded for a block the split policy caps at 8). showCurrent() must request strict
-     * per-line shading whenever the current unit is fractionated.
+     * Stabilisation still uses the exact physical sub-block, but the old grey line shading is gone.
+     * The shared context focus keeps only those due lines at native contrast and clips a boundary
+     * verse to the physical lines actually in the block.
      */
-    @Test public void fractionatedStabilizationUsesStrictLineFocusNotWholeVerseShading() throws Exception {
+    @Test public void stabilizationUsesExactContextFocusNotWholeVerseGreyShading() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
-        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan)"));
-        assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus)"));
-        assertTrue(mushaf.contains("lastStrictLineFocus = strictLineFocus;"));
+        String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
+        assertTrue(session.contains("ITQAN.equals(mode)"));
+        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus)"));
+        assertTrue(mushaf.contains("boolean contextFocus"));
+        assertTrue(reader.contains("lineClip.id='hifz-focus-lines'"));
+        assertFalse(reader.contains("linefocuscell"));
     }
 
     /**
@@ -424,23 +424,21 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
-     * The Mushaf reader shades a verse by verse identity wherever it appears on the page (reader.js
-     * selectedPolygons/.ayahPolygon.selected), not by physical line. A grouped-cycle unit (e.g. a
-     * 5-line Renforcement block) is a fixed line window, not a verse boundary, so a verse that
-     * starts inside the unit but continues onto lines outside it would get shaded in full — making
-     * the highlighted region visibly span more physical lines than the unit's own declared count.
-     * fractionatedItqan is what showCurrent() forwards to MushafView as strictLineFocus, which
-     * swaps verse-based shading for a highlight confined to exactly the given line ids
-     * (lineFocusLayer) — renderGroupedCycle must set it, the same fix already used for a
-     * fractionated Itqan block, or it silently falls back to the stale value left by whichever mode
-     * last set it (false by default, reproducing the bug).
+     * Renforcement/Consolidation consume their frozen physical-line units unchanged. Visual focus is
+     * now selected centrally by mode in showCurrent(), so grouped cycles must not repurpose Itqan's
+     * functional fractionation flag or reconstruct a wider verse-based region.
      */
-    @Test public void groupedCycleUsesStrictLineFocusSoHighlightNeverSpillsPastTheUnit() throws Exception {
+    @Test public void groupedCycleUsesSharedExactContextFocusWithoutTouchingItqanState() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String renderGroupedCycle = method(session,
             "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
-        assertTrue("renderGroupedCycle must force strict line focus so a long verse can't over-shade past the unit's lines",
-            renderGroupedCycle.contains("fractionatedItqan = true;"));
+        String focusModes = method(session, "private boolean usesReadingFocus()", "private void showCurrent()");
+        assertTrue(renderGroupedCycle.contains("ConsolidationPhysicalUnitPolicy.decodeLineUnit"));
+        assertFalse(renderGroupedCycle.contains("fractionatedItqan = true;"));
+        assertTrue(focusModes.contains("RECENT_SABQI_REVIEW.equals(mode)"));
+        assertTrue(focusModes.contains("LEARNING_CONSOLIDATION.equals(mode)"));
+        assertTrue(focusModes.contains("CONSOLIDATION_FINAL.equals(mode)"));
+        assertTrue(focusModes.contains("LEARNING_FINAL.equals(mode)"));
     }
 
     /**

@@ -122,39 +122,32 @@ public final class SemanticCueSourceContractTest {
                 && js.contains("const padY=fullErase?(eink?0.12:0.08):partialPadY")
                 && js.contains("y:fullErase?cell.top+0.15:cell.top+0.6")
                 && js.contains("fullErase"));
-        assertTrue("generic verse selection may still use the quiet grey vocabulary",
+        assertTrue("generic verse selection may still use the quiet grey vocabulary outside focused Hifz modes",
             html.contains(".ayahPolygon.selected{fill-opacity:var(--sel-op)}"));
-        assertTrue("Sabqi/Itqan work mode must suppress that large grey fill",
-            js.contains("!workBlockMode&&shadeVerseSelection()"));
-        assertTrue("Sabqi/Itqan boundaries must be shown as start/end brackets instead",
-            js.contains("function workBlockBoundaryLayer(lines,polys)")
-                && js.contains("draw(workBlockStart,'start')")
-                && js.contains("draw(workBlockEnd,'end')"));
-        assertTrue("work brackets must use one fixed visual length at both ends",
-            js.contains("const span=eink?31:29"));
-        assertTrue("brackets must follow the selected part of a shared physical line",
-            js.contains("const relevant=polys&&polys.length")
-                && js.contains("insideSelection(polys"));
-        assertTrue("BOOX bracket rendering must use a strong simple solid stroke",
-            js.contains("path.setAttribute('stroke-width',eink?'1.70':'1.45')")
-                && js.contains("path.setAttribute('stroke','var(--ink)')"));
-        assertTrue("Sabqi/Itqan B+ must keep real surrounding Mushaf faintly readable for visual memory",
-            js.contains("function workContextLayer(svg,allLines,activeLines,polys)")
-                && js.contains("contextMask.id='hifz-work-context-mask'")
+        assertTrue("focused Hifz modes must suppress the old large grey verse fill",
+            js.contains("!contextFocus&&selected.includes(String(p.dataset.verse))"));
+        assertFalse("approved Sabqi/Itqan/Renforcement/Consolidation UI has no work-block brackets",
+            js.contains("workBlockBoundaryLayer") || js.contains("workbracketlayer"));
+        assertTrue("shared focus must preserve exact line boundaries for a boundary verse",
+            js.contains("function focusContextLayer(svg,activeLines,polys)")
+                && js.contains("lineClip.id='hifz-focus-lines'")
+                && js.contains("holes.setAttribute('clip-path','url(#hifz-focus-lines)')"));
+        assertTrue("BOOX focus keeps the real surrounding Mushaf at about 28 percent context",
+            js.contains("contextMask.id='hifz-focus-context-mask'")
                 && js.contains("paper.setAttribute('fill','var(--sheet)')")
                 && js.contains("paper.setAttribute('fill-opacity',eink?'0.72':'0.65')"));
-        assertTrue("B+ must avoid true blur/filter on E-Ink",
-            js.contains("No SVG blur/filter"));
-        assertTrue("B+ must fail open if exact verse polygons are unavailable",
-            js.contains("if(!polys||!polys.length)return g"));
-        assertTrue("B+ mask holes must override source ayahPolygon fill-opacity=0",
+        assertTrue("focus must avoid true blur/filter on E-Ink",
+            js.contains("No blur, no grey fill on the active Quran text"));
+        assertTrue("focus must fail open rather than guess Quran ink when exact verse polygons are unavailable",
+            js.contains("if(!activeLines||!activeLines.length||!polys||!polys.length)return g"));
+        assertTrue("focus mask holes must override source ayahPolygon fill-opacity=0",
             js.contains("'fill-opacity','stroke-opacity','opacity','mask','clip-path'")
                 && js.contains("hole.setAttribute('fill-opacity','1')")
                 && js.contains("hole.setAttribute('opacity','1')"));
-        assertTrue("selection polygons must be shared by context, progressive mask and brackets",
+        assertTrue("the same selected polygons drive focus and the progressive paper erasure",
             js.contains("const polys=maskFollowsSelection?selectedPolygons(svg):[]")
                 && js.contains("const cells=maskCandidates(lines,polys)")
-                && js.contains("workBlockBoundaryLayer(lines,polys)"));
+                && js.contains("focusContextLayer(svg,lines,polys)"));
     }
 
     @Test public void amorcesUseAnEinkSafePatternNotTheSabqiSolidGrey() throws Exception {

@@ -405,7 +405,7 @@ function focusContextLayer(svg,activeLines,polys){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','focuscontextlayer');
   g.setAttribute('pointer-events','none');
-  if(!activeLines||!activeLines.length)return g;
+  if(!activeLines||!activeLines.length||!polys||!polys.length)return g;
   const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return g;
 
   const defs=document.createElementNS(NS,'defs');
@@ -438,32 +438,18 @@ function focusContextLayer(svg,activeLines,polys){
 
   const holes=document.createElementNS(NS,'g');
   holes.setAttribute('clip-path','url(#hifz-focus-lines)');
-  if(polys&&polys.length){
-    polys.forEach(p=>{
-      const hole=p.cloneNode(false);
-      ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
-        attr=>hole.removeAttribute(attr)
-      );
-      hole.setAttribute('fill','black');
-      hole.setAttribute('fill-opacity','1');
-      hole.setAttribute('stroke','black');
-      hole.setAttribute('stroke-opacity','1');
-      hole.setAttribute('opacity','1');
-      holes.appendChild(hole);
-    });
-  }else{
-    (activeLines||[]).forEach(line=>{
-      const cells=line.cells||[];if(!cells.length)return;
-      let x0=Infinity,x1=-Infinity;
-      cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-      const top=Number(line.top),bottom=Number(line.bottom);
-      if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
-      const hole=document.createElementNS(NS,'rect');
-      hole.setAttribute('x',x0);hole.setAttribute('y',top);
-      hole.setAttribute('width',x1-x0);hole.setAttribute('height',bottom-top);
-      hole.setAttribute('fill','black');holes.appendChild(hole);
-    });
-  }
+  polys.forEach(p=>{
+    const hole=p.cloneNode(false);
+    ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
+      attr=>hole.removeAttribute(attr)
+    );
+    hole.setAttribute('fill','black');
+    hole.setAttribute('fill-opacity','1');
+    hole.setAttribute('stroke','black');
+    hole.setAttribute('stroke-opacity','1');
+    hole.setAttribute('opacity','1');
+    holes.appendChild(hole);
+  });
   contextMask.appendChild(holes);
   defs.appendChild(contextMask);
   g.appendChild(defs);
