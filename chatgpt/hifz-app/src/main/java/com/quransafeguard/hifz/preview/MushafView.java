@@ -69,6 +69,7 @@ public final class MushafView extends WebView {
     private boolean semanticAnchorMaskMode;
     private boolean semanticHighlightEnabled = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
+    private boolean preserveVerseMarkersOnMask = true;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -222,6 +223,7 @@ public final class MushafView extends WebView {
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
                 .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
+                .put("preserveVerseMarkersOnMask", preserveVerseMarkersOnMask)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -355,6 +357,14 @@ public final class MushafView extends WebView {
 
     public void clearPageLandmarkBoxes() {
         setPageLandmarkBoxes(new JSONArray());
+    }
+
+    public void setPreserveVerseMarkersOnMask(boolean value) {
+        preserveVerseMarkersOnMask = value;
+        if (requestedPage < 1 || requestedPage > 604) return;
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setPreserveVerseMarkersOnMask(" + value + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
     }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */

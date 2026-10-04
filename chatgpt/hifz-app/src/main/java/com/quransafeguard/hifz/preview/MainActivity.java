@@ -105,6 +105,11 @@ public final class MainActivity extends android.app.Activity {
         addWeighted(primary, progress, 1f);
         root.addView(primary);
 
+        LinearLayout quiz = Ui.settingRow(this, "Quiz", "Mémorisé · 10 questions", v ->
+            startActivity(new Intent(this, QuizActivity.class)));
+        geometryActions.add(quiz);
+        root.addView(quiz);
+
         TextView dashTitle = Ui.bookText(this, "Semaine", 17, true);
         dashTitle.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 3));
         root.addView(dashTitle);

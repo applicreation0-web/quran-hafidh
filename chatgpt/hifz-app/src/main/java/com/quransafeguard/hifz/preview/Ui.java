@@ -392,7 +392,10 @@ final class Ui {
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
         if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
         if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
-        if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
+        if (s.contains("répétition") || s.contains("répéter") || s.contains("réessayer")) return R.drawable.ic_ui_repeat;
+        if (s.contains("enregistrer")) return R.drawable.ic_ui_record;
+        if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;
+        if (s.contains("vérifier") || s.contains("verifier")) return R.drawable.ic_ui_validate;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
         if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
         if (s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;

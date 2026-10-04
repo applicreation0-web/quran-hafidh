@@ -100,23 +100,30 @@ final class WordGeometryRepository {
         return words == null ? Collections.emptyList() : words;
     }
 
+    synchronized JSONArray boxesForVerse(int page, VerseRef verse) {
+        JSONArray out = new JSONArray();
+        if (verse == null) return out;
+        for (WordBox word : wordsForPage(page)) {
+            if (word.surah == verse.getSurah() && word.ayah == verse.getAyah()) out.put(word.boxJson());
+        }
+        return out;
+    }
+
+    synchronized int wordCountForVerse(int page, VerseRef verse) {
+        if (verse == null) return 0;
+        int count = 0;
+        for (WordBox word : wordsForPage(page)) {
+            if (word.surah == verse.getSurah() && word.ayah == verse.getAyah()) count++;
+        }
+        return count;
+    }
+
     synchronized JSONArray anchorBoxes(int page, VerseRef start, int wordCount) {
         if (start == null || wordCount < 1) return new JSONArray();
-        List<WordBox> words = wordsForPage(page);
-        if (words.isEmpty()) return new JSONArray();
-
-        int at = -1;
-        for (int i = 0; i < words.size(); i++) {
-            WordBox word = words.get(i);
-            if (word.surah == start.getSurah() && word.ayah == start.getAyah() && word.word == 1) {
-                at = i;
-                break;
-            }
-        }
-        if (at < 0 || at + wordCount > words.size()) return new JSONArray();
-
+        JSONArray all = boxesForVerse(page, start);
+        if (all.length() < wordCount) return new JSONArray();
         JSONArray out = new JSONArray();
-        for (int i = 0; i < wordCount; i++) out.put(words.get(at + i).boxJson());
+        for (int i = 0; i < wordCount; i++) out.put(all.optJSONArray(i));
         return out;
     }
 
