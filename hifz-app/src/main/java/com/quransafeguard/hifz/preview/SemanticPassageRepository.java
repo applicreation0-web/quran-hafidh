@@ -231,7 +231,29 @@ final class SemanticPassageRepository {
     private final boolean available;
     private final WordGeometryRepository wordGeometry;
 
-    SemanticPassageRepository(Context context) {
+    private static volatile SemanticPassageRepository shared;
+
+    /** One verified, parsed corpus per process: the ~7 MB parse + SHA-256 runs once, not on
+     *  every Lecture/session opening. */
+    static SemanticPassageRepository shared(Context context) {
+        SemanticPassageRepository local = shared;
+        if (local != null) return local;
+        synchronized (SemanticPassageRepository.class) {
+            if (shared == null) shared = new SemanticPassageRepository(context.getApplicationContext());
+            return shared;
+        }
+    }
+
+    /** Warm the shared corpus off the UI thread (called from the home screen). */
+    static void preloadAsync(Context context) {
+        Context app = context.getApplicationContext();
+        Thread loader = new Thread(() -> shared(app), "al-munir-preload");
+        loader.setDaemon(true);
+        loader.setPriority(Thread.MIN_PRIORITY);
+        loader.start();
+    }
+
+    private SemanticPassageRepository(Context context) {
         wordGeometry = new WordGeometryRepository(context);
         boolean loaded = false;
         try {
@@ -271,6 +293,13 @@ final class SemanticPassageRepository {
         ParsedForTest out = new ParsedForTest();
         parseInto(raw, parseTitleOverlay(titleRaw), out.byPage, out.byId);
         return out;
+    }
+
+    /** Start verse of every canonical Al-Munīr unit (empty when the corpus failed closed). */
+    Set<VerseRef> canonicalStarts() {
+        HashSet<VerseRef> out = new HashSet<>();
+        for (Cue cue : orderedCues) out.add(cue.startVerse);
+        return Collections.unmodifiableSet(out);
     }
 
     boolean isAvailable() {

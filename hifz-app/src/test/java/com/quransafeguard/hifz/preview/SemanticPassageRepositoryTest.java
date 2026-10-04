@@ -91,21 +91,37 @@ public final class SemanticPassageRepositoryTest {
         assertTrue("the vast majority of amorces resolve to exact word boxes", exact >= 1200);
     }
 
-    @Test public void mostPostNasMaintenanceUnitsCarryAtLeastOneExactAmorce() throws Exception {
+    private static Set<VerseRef> starts() {
+        Set<VerseRef> out = new HashSet<>();
+        for (SemanticPassageRepository.Cue cue : parsed.byId.values()) out.add(cue.startVerse);
+        return out;
+    }
+
+    @Test public void postNasUnitsAreCutAtAlMunirBoundariesSoEachStartsOnAnAmorce() throws Exception {
         GeometryRepository geometry = GeometryRepository.fromJson(new String(read(
             "app/src/main/assets/reader109/geometry.json"), StandardCharsets.UTF_8));
-        int units = 0, anchoredUnits = 0;
-        for (AnchoringQueue.Entry unit : HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
-                new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE)) {
-            units++;
-            VerseRef start = GeometryRepository.parseVerse(unit.start), end = GeometryRepository.parseVerse(unit.end);
-            boolean any = false;
-            for (List<SemanticPassageRepository.Cue> cues : parsed.byPage.values())
-                for (SemanticPassageRepository.Cue cue : cues)
-                    if (cue.anchorOnCurrentPage && ItqanMaintenancePolicy.amorceInsideUnit(cue.startVerse, start, end)) any = true;
-            if (any) anchoredUnits++;
+        Set<VerseRef> starts = starts();
+        assertEquals(1243, starts.size());
+        int units = 0, onAmorce = 0;
+        for (ItqanRotationPolicy.Leg leg : ItqanRotationPolicy.Leg.values()) {
+            for (AnchoringQueue.Entry unit : HifzPrefs.physicalUnitsInLeg(leg, new VerseRef(49, 1), geometry,
+                    ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE, starts)) {
+                units++;
+                VerseRef start = GeometryRepository.parseVerse(unit.start), end = GeometryRepository.parseVerse(unit.end);
+                assertTrue(CorpusLinePolicy.ownedLineIdsForRangeOnPage(start, end, geometry).size() <= 15);
+                if (starts.contains(start)) onAmorce++;
+                else {
+                    // Only the continuation of an Al-Munīr unit longer than 15 lines may start mid-unit.
+                    SemanticPassageRepository.Cue containing = null;
+                    for (SemanticPassageRepository.Cue cue : parsed.byId.values())
+                        if (cue.startVerse.compareTo(start) < 0 && cue.endVerse.compareTo(start) >= 0) containing = cue;
+                    int length = CorpusLinePolicy.ownedLineIdsForRangeOnPage(containing.startVerse, containing.endVerse, geometry).size();
+                    assertTrue(unit.start + " starts mid Al-Munīr unit " + containing.startVerse + "–" + containing.endVerse
+                        + " of only " + length + " lines", length > 15);
+                }
+            }
         }
-        System.out.println("Post-Nas TAIL units: " + units + ", with >=1 amorce: " + anchoredUnits);
-        assertTrue(anchoredUnits * 10 >= units * 8);
+        System.out.println("Post-Nas units (both legs): " + units + ", starting on an amorce: " + onAmorce);
     }
+
 }

@@ -292,6 +292,39 @@ public final class ItqanPostNasMaintenanceTest {
         assertEquals(sabqiBefore, sabqiKeys(store));
     }
 
+    @Test public void legPlansArePersistedReusedAndRecomputedOnlyWhenTheFrontierMoves() {
+        InMemoryPrefs store = new InMemoryPrefs();
+        HifzPrefs prefs = new HifzPrefs(store);
+        ItqanMaintenancePolicy.Regime m = ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+        VerseRef sabqi = geometry.fiveLineBlock(geometry.firstLineIndex(new VerseRef(3, 1))).startVerse;
+        List<AnchoringQueue.Entry> fresh = prefs.cachedUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT,
+            sabqi, geometry, m, java.util.Collections.emptySet());
+        String saved = (String) store.disk.get(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT");
+        assertNotNull(saved);
+        List<AnchoringQueue.Entry> reused = new HifzPrefs(store).cachedUnitsInLeg(
+            ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, sabqi, geometry, m, java.util.Collections.emptySet());
+        assertEquals(ranges(fresh), ranges(reused));
+        assertEquals("reuse never rewrites the plan", saved, store.disk.get(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT"));
+
+        VerseRef moved = geometry.fiveLineBlock(geometry.firstLineIndex(new VerseRef(3, 30))).startVerse;
+        List<AnchoringQueue.Entry> longer = prefs.cachedUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT,
+            moved, geometry, m, java.util.Collections.emptySet());
+        assertEquals(ranges(HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, moved, geometry, m)),
+            ranges(longer));
+        assertTrue(longer.size() > fresh.size());
+
+        store.disk.put(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT",
+            ((String) store.disk.get(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT")).replaceFirst("\n.*", "\ngarbage line"));
+        assertEquals("a corrupt plan is recomputed, never trusted", ranges(longer), ranges(prefs.cachedUnitsInLeg(
+            ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, moved, geometry, m, java.util.Collections.emptySet())));
+    }
+
+    private static List<String> ranges(List<AnchoringQueue.Entry> units) {
+        List<String> out = new ArrayList<>();
+        for (AnchoringQueue.Entry unit : units) out.add(unit.start + "-" + unit.end);
+        return out;
+    }
+
     // ---- 6. post-Nas FULL target is exactly 20 reps = 10 visible + 10 anchors ----
 
     @Test public void postNasTargetIsExactlyTwentyRepsTenVisibleThenTenAnchored() {

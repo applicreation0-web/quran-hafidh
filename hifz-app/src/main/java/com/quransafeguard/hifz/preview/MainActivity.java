@@ -42,6 +42,7 @@ public final class MainActivity extends android.app.Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        SemanticPassageRepository.preloadAsync(this);
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);

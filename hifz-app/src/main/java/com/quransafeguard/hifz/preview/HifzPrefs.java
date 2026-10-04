@@ -55,6 +55,8 @@ public final class HifzPrefs {
     private static final Object V6_STATE_LOCK = new Object();
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
+    /** Null only in JVM tests (no Al-Munīr corpus: plain 15-line maintenance cuts). */
+    private final Context appContext;
 
     static void setMigrationFaultPointForTest(String point) {
         if (point != null
@@ -73,6 +75,7 @@ public final class HifzPrefs {
 
     public HifzPrefs(Context context) {
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
+        appContext = context.getApplicationContext();
         ensureSchema(context);
         migrateLegacyGates(context);
     }
@@ -82,6 +85,7 @@ public final class HifzPrefs {
     HifzPrefs(SharedPreferences store) {
         if (store == null) throw new IllegalArgumentException("store required");
         p = store;
+        appContext = null;
     }
 
     private void ensureSchema(Context context) {
@@ -2250,6 +2254,14 @@ public final class HifzPrefs {
     static List<AnchoringQueue.Entry> physicalUnitsInLeg(
             ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart, GeometryRepository geometry,
             ItqanMaintenancePolicy.Regime regime) {
+        return physicalUnitsInLeg(leg, sabqiCurrentBlockStart, geometry, regime, Collections.emptySet());
+    }
+
+    /** As above; in maintenance, units are cut at Al-Munīr unit boundaries (passageStarts) so each
+     *  session starts on a validated amorce. Empty passageStarts = plain 15-line cut. */
+    static List<AnchoringQueue.Entry> physicalUnitsInLeg(
+            ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart, GeometryRepository geometry,
+            ItqanMaintenancePolicy.Regime regime, java.util.Set<VerseRef> passageStarts) {
         boolean tail = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
         VerseRef legStart = tail ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
         VerseRef effectiveEnd = tail ? ItqanRotationPolicy.TAIL_END
@@ -2262,15 +2274,17 @@ public final class HifzPrefs {
         ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
         VerseRef cursor = legStart;
         while (range.contains(cursor)) {
+            // Maintenance gathers two extra touched lines (a shared first line belongs to the
+            // previous unit) and then enforces the strict 15 owned-line budget below.
             GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(
-                cursor, effectiveEnd, legCorpus, maxLines);
+                cursor, effectiveEnd, legCorpus, maintenance ? maxLines + 2 : maxLines);
             VerseRef unitEnd = unit.end;
             if (maintenance) {
                 final List<VerseRef> verses = unit.verses;
                 final VerseRef unitStart = unit.start;
                 int last = ItqanMaintenancePolicy.lastVerseIndexWithinBudget(verses.size(), maxLines,
                     i -> CorpusLinePolicy.ownedLineIdsForRangeOnPage(unitStart, verses.get(i), geometry).size());
-                unitEnd = verses.get(last);
+                unitEnd = verses.get(ItqanMaintenancePolicy.passageAlignedLastIndex(verses, last, passageStarts));
             }
             if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unitEnd, geometry).isEmpty()) {
                 out.add(new AnchoringQueue.Entry(unit.start.toString(), unitEnd.toString(),
@@ -2348,8 +2362,10 @@ public final class HifzPrefs {
         ItqanRotationPolicy.State state = original;
         VerseRef sabqiFrontier = currentSabqiPosition(geometry);
         ItqanMaintenancePolicy.Regime regime = ItqanRegimeStore.selectionRegime(p);
+        java.util.Set<VerseRef> passageStarts = regime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+            ? alMunirStarts() : Collections.emptySet();
         ItqanRotationPolicy.Pick pick = ItqanRotationPolicy.pick(original,
-            leg -> physicalUnitsInLeg(leg, sabqiFrontier, geometry, regime));
+            leg -> cachedUnitsInLeg(leg, sabqiFrontier, geometry, regime, passageStarts));
         state = pick.state;
         AnchoringQueue.Entry selected = pick.unit;
         if (selected == null) return null; // nothing physical at all
@@ -2359,6 +2375,51 @@ public final class HifzPrefs {
             throw new IllegalStateException("Unable to persist Itqān rotation state");
         }
         return selected;
+    }
+
+    private java.util.Set<VerseRef> alMunirStarts() {
+        if (appContext == null) return Collections.emptySet();
+        SemanticPassageRepository corpus = SemanticPassageRepository.shared(appContext);
+        return corpus.isAvailable() ? corpus.canonicalStarts() : Collections.emptySet();
+    }
+
+    static final String LEG_PLAN_PREFIX = "itqanLegPlanV1.";
+
+    /**
+     * A leg's physical units, persisted and reused until its inputs change: the leg, its real end
+     * (FRONT moves only when Sabqi validates a new block), the regime and the Al-Munīr boundary
+     * set. The plan is a pure function of those inputs, so reusing it is exact — it only spares
+     * re-walking the ~9 000 Mushaf lines on every screen.
+     */
+    List<AnchoringQueue.Entry> cachedUnitsInLeg(ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart,
+                                                GeometryRepository geometry, ItqanMaintenancePolicy.Regime regime,
+                                                java.util.Set<VerseRef> passageStarts) {
+        VerseRef end = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
+            ? ItqanRotationPolicy.TAIL_END : ItqanRotationPolicy.frontLegEnd(sabqiCurrentBlockStart);
+        if (end == null) return Collections.emptyList();
+        String signature = "v1|" + leg.name() + "|" + end + "|" + regime.name() + "|" + passageStarts.size();
+        String raw = p.getString(LEG_PLAN_PREFIX + leg.name(), "");
+        if (raw != null && raw.startsWith(signature + "\n")) {
+            try {
+                ArrayList<AnchoringQueue.Entry> cached = new ArrayList<>();
+                for (String row : raw.substring(signature.length() + 1).split("\n")) {
+                    if (row.isEmpty()) continue;
+                    String[] range = row.split(" ");
+                    GeometryRepository.parseVerse(range[0]);
+                    GeometryRepository.parseVerse(range[1]);
+                    cached.add(new AnchoringQueue.Entry(range[0], range[1], AnchoringQueue.Origin.PROMOTED,
+                        ItqanMaintenancePolicy.protocolForNewSession(), 0));
+                }
+                return Collections.unmodifiableList(cached);
+            } catch (RuntimeException corrupt) {
+                // fall through: recompute and overwrite
+            }
+        }
+        List<AnchoringQueue.Entry> units = physicalUnitsInLeg(leg, sabqiCurrentBlockStart, geometry, regime, passageStarts);
+        StringBuilder out = new StringBuilder(signature).append('\n');
+        for (AnchoringQueue.Entry unit : units) out.append(unit.start).append(' ').append(unit.end).append('\n');
+        p.edit().putString(LEG_PLAN_PREFIX + leg.name(), out.toString()).apply();
+        return units;
     }
 
     /** True only when every verse of [startText, endText] sits inside a declared Plage Acquise. */

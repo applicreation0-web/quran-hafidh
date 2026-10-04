@@ -116,6 +116,22 @@ final class ItqanMaintenancePolicy {
         return amorceStart.compareTo(unitStart) >= 0 && amorceStart.compareTo(unitEnd) <= 0;
     }
 
+    /**
+     * Latest verse index ≤ budgetLast after which a new Al-Munīr unit begins (or the Quran
+     * ends), so the next maintenance session also opens on a validated amorce. Whole Al-Munīr
+     * units are packed while they fit; a single unit longer than the line budget keeps the
+     * plain budget cut (never a fabricated split elsewhere). No boundary data = budget cut.
+     */
+    static int passageAlignedLastIndex(List<com.quransafeguard.hifz.core.VerseRef> verses, int budgetLast,
+                                       Set<com.quransafeguard.hifz.core.VerseRef> passageStarts) {
+        if (passageStarts == null || passageStarts.isEmpty()) return budgetLast;
+        for (int k = budgetLast; k >= 0; k--) {
+            com.quransafeguard.hifz.core.VerseRef next = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(verses.get(k));
+            if (next == null || passageStarts.contains(next)) return k;
+        }
+        return budgetLast;
+    }
+
     /** Owned-line lookup for a candidate unit ending at the given verse index. */
     interface OwnedLines {
         int count(int lastVerseIndex);

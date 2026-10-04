@@ -119,7 +119,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         metricsStore = new HifzSessionMetricsStore(this);
         try {
             geometry = GeometryRepository.get(this);
-            semanticPassages = new SemanticPassageRepository(this);
+            semanticPassages = SemanticPassageRepository.shared(this);
         } catch (Throwable error) {
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;

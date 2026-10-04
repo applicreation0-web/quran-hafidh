@@ -84,7 +84,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        semanticPassages = new SemanticPassageRepository(this);
+        semanticPassages = SemanticPassageRepository.shared(this);
         semanticCuesEnabled = semanticPassages.isAvailable()
             && getSharedPreferences("hifz_study", MODE_PRIVATE).getBoolean("semantic_cues_enabled", false);
 
