@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -24,21 +25,16 @@ public final class QuranRubNavigationSourceContractTest {
         throw new IllegalStateException("Missing repository file: " + repoPath);
     }
 
-    @Test public void studyReaderShowsAHizbPickerAndBadgeAlongsideTheExistingSurahPicker() throws Exception {
+    @Test public void studyReaderShowsAHizbPickerAlongsideTheSurahPickerWithoutDuplicatingTheBoundary() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         assertTrue("the rub' picker must sit beside the surah picker, not replace it",
             study.contains("private TextView surahPicker;") && study.contains("private TextView rubPicker;"));
-        assertTrue("the header badge must be backed by the plain, self-authored star drawable",
-            study.contains("rubBadge.setBackgroundResource(R.drawable.ic_ui_hizb);"));
-        assertTrue("the badge must hide on the ~364 pages that start no rub', never guess",
-            study.contains("int[] row = QuranRubBoundaries.boundaryOnPage(page);\n"
-                + "        if (row == null) { rubBadge.setVisibility(View.GONE); return; }"));
-        assertTrue("the picker's own status label must reflect the real current rub', not a static caption",
-            study.contains("rubPicker.setText(QuranRubNames.currentLabel(page) + \" ▾\");"));
-        assertTrue("every page-changing path (initial load, jump, swipe) must refresh both the "
-                + "picker label and the badge",
-            countOccurrences(study, "updateRubPickerLabel();") >= 3
-                && countOccurrences(study, "updateRubBadge();") >= 3);
+        assertFalse("the boundary is shown once, in the gutter écusson, never as a header badge",
+            study.contains("rubBadge"));
+        assertTrue("the picker stays a compact selector showing the real current hizb",
+            study.contains("rubPicker.setText(QuranRubNames.compactLabel(page) + \" ▾\");"));
+        assertTrue("every page-changing path must refresh the picker label",
+            countOccurrences(study, "updateRubPickerLabel();") >= 3);
     }
 
     @Test public void freeMemorizationOffersTheSameHizbPickerNextToItsOwnSurahPicker() throws Exception {

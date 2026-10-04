@@ -50,6 +50,9 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     private TextView counter;
     private TextView audioStatus;
     private LinearLayout assessmentRow;
+    private LinearLayout actionRow;
+    private Button retryButton;
+    private Button assessPlayButton;
     private Button recordButton;
     private Button playButton;
     private Button verifyButton;
@@ -77,6 +80,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
 
     private void showSetup() {
         releaseAudio(true);
+        purgeQuizRecordings();
+        actionRow = null;
         LinearLayout root = Ui.column(this);
         int side = Ui.dp(this, 18);
         root.setPadding(side, Ui.dp(this, 8), side, Ui.dp(this, 18));
@@ -92,96 +97,61 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         header.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         root.addView(header);
 
-        // What the Quiz is for, said once in plain words: it checks memory outside the sessions
-        // and never touches Progression.
-        TextView purpose = Ui.text(this,
-            "Vérifiez ce que vous avez déjà mémorisé, hors séance : un indice s’affiche, vous "
-                + "récitez de mémoire, puis vous comparez avec le Mushaf et vous vous notez. "
-                + "Votre progression n’est jamais modifiée.", 13f, false);
-        purpose.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 12));
-        purpose.setLineSpacing(0f, 1.15f);
-        root.addView(purpose);
+        // Spec UI pass 2 (23.9): one segmented type selector, one info line, one start icon.
+        LinearLayout modes = Ui.row(this);
+        modes.setGravity(Gravity.CENTER);
+        modes.setPadding(0, Ui.dp(this, 16), 0, Ui.dp(this, 4));
+        addSegment(modes, QuizCorpus.Mode.MIXED, "Mélangé");
+        addSegmentSeparator(modes);
+        addSegment(modes, QuizCorpus.Mode.CONTINUE, "Continuer");
+        addSegmentSeparator(modes);
+        addSegment(modes, QuizCorpus.Mode.PREVIOUS, "Précédent");
+        root.addView(modes);
 
-        TextView typeLabel = Ui.bookText(this, "Exercice", 14f, true);
-        typeLabel.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), 0, Ui.dp(this, 2));
-        root.addView(typeLabel);
-        root.addView(Ui.divider(this));
-        root.addView(modeChoice(QuizCorpus.Mode.CONTINUE, "Suite du verset",
-            "Les 3 premiers mots d’un verset s’affichent : récitez la suite."));
-        root.addView(Ui.divider(this));
-        root.addView(modeChoice(QuizCorpus.Mode.PREVIOUS, "Verset précédent",
-            "Un verset s’affiche : récitez celui qui le précède."));
-        root.addView(Ui.divider(this));
-        root.addView(modeChoice(QuizCorpus.Mode.MIXED, "Les deux, au hasard",
-            "Alterne les deux exercices."));
-        root.addView(Ui.divider(this));
+        TextView hint = Ui.text(this, selectedMode == QuizCorpus.Mode.CONTINUE
+            ? "Récitez la suite du verset."
+            : selectedMode == QuizCorpus.Mode.PREVIOUS
+                ? "Récitez le verset qui précède."
+                : "Suite du verset ou verset précédent.", 12f, false);
+        hint.setTextColor(Ui.MUTED);
+        hint.setGravity(Gravity.CENTER);
+        root.addView(hint);
 
-        TextView note = Ui.text(this, QUESTION_COUNT + " questions · versets entièrement mémorisés · "
-            + "enregistrement de votre voix facultatif, sur l’appareil", 11.5f, false);
-        note.setTextColor(Ui.MUTED);
-        note.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), Ui.dp(this, 12));
-        root.addView(note);
+        TextView info = Ui.text(this, QUESTION_COUNT + " questions · corpus mémorisé", 12.5f, false);
+        info.setTextColor(Ui.MUTED);
+        info.setGravity(Gravity.CENTER);
+        info.setPadding(0, Ui.dp(this, 16), 0, Ui.dp(this, 8));
+        root.addView(info);
 
-        root.addView(Ui.button(this, "Commencer", v -> startQuiz()));
+        LinearLayout startRow = Ui.row(this);
+        startRow.setGravity(Gravity.CENTER);
+        startRow.addView(Ui.iconButton(this, "▶", "Commencer", v -> startQuiz()));
+        root.addView(startRow);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
 
-    /** One plain selectable line (no boxed button): title, one-line explanation, check when chosen. */
-    private View modeChoice(QuizCorpus.Mode mode, String title, String explanation) {
+    /** Flat segmented choice: plain words, the chosen one in ink and bold, no box. */
+    private void addSegment(LinearLayout row, QuizCorpus.Mode mode, String label) {
         boolean chosen = selectedMode == mode;
-        LinearLayout row = Ui.row(this);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(Ui.dp(this, 4), Ui.dp(this, 9), Ui.dp(this, 4), Ui.dp(this, 9));
-        row.setMinimumHeight(Ui.dp(this, 56));
-        row.setClickable(true);
-        row.setFocusable(true);
-        row.setContentDescription(title + ". " + explanation + (chosen ? " Choisi." : ""));
-        row.setOnClickListener(v -> { selectedMode = mode; showSetup(); });
-        LinearLayout texts = Ui.column(this);
-        texts.setPadding(0, 0, 0, 0);
-        TextView name = Ui.bookText(this, title, 14.5f, chosen);
-        name.setTextColor(chosen ? Ui.INK : Ui.MUTED);
-        texts.addView(name);
-        TextView detail = Ui.text(this, explanation, 12f, false);
-        detail.setTextColor(Ui.MUTED);
-        texts.addView(detail);
-        Ui.weight(texts, 1f);
-        row.addView(texts);
-        TextView mark = Ui.text(this, "", 1f, false);
-        if (chosen) {
-            mark.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_ui_validate, 0, 0, 0);
-            mark.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
-        }
-        mark.setGravity(Gravity.CENTER);
-        row.addView(mark, new LinearLayout.LayoutParams(Ui.dp(this, 36), Ui.dp(this, 36)));
-        return row;
+        TextView item = Ui.bookText(this, label, 15f, chosen);
+        item.setTextColor(chosen ? Ui.INK : Ui.MUTED);
+        item.setGravity(Gravity.CENTER);
+        item.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+        item.setMinHeight(Ui.dp(this, 48));
+        item.setClickable(true);
+        item.setFocusable(true);
+        item.setSelected(chosen);
+        item.setContentDescription(label + (chosen ? ", choisi" : ""));
+        item.setOnClickListener(v -> { selectedMode = mode; showSetup(); });
+        if (chosen) item.setPaintFlags(item.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+        row.addView(item);
     }
 
-    /** Flat text action for the self-assessment: no box, ink fill only while pressed. */
-    private Button flatChoice(String label, View.OnClickListener listener) {
-        Button button = new Button(this);
-        button.setAllCaps(false);
-        button.setText(label);
-        button.setTextSize(14f);
-        button.setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD);
-        button.setStateListAnimator(null);
-        button.setElevation(0f);
-        android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
-        android.graphics.drawable.GradientDrawable pressed = new android.graphics.drawable.GradientDrawable();
-        pressed.setColor(Ui.INK);
-        pressed.setCornerRadius(Ui.dp(this, 8));
-        background.addState(new int[]{android.R.attr.state_pressed}, pressed);
-        background.addState(new int[]{}, new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-        button.setBackground(background);
-        button.setTextColor(new android.content.res.ColorStateList(
-            new int[][]{{android.R.attr.state_pressed}, {}}, new int[]{Ui.PAPER, Ui.INK}));
-        button.setMinHeight(Ui.dp(this, 48));
-        button.setPadding(Ui.dp(this, 8), 0, Ui.dp(this, 8), 0);
-        button.setOnClickListener(listener);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        button.setLayoutParams(params);
-        return button;
+    private void addSegmentSeparator(LinearLayout row) {
+        TextView bar = Ui.text(this, "|", 15f, false);
+        bar.setTextColor(Ui.LINE);
+        row.addView(bar);
     }
 
     private void startQuiz() {
@@ -212,52 +182,59 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         LinearLayout header = Ui.row(this);
         header.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), 0);
         Button back = Ui.iconButton(this, "‹", "Retour", v -> showSetup());
-        TextView title = Ui.bookText(this, "Quiz", 19f, true);
-        title.setGravity(Gravity.CENTER);
-        Ui.weight(title, 1f);
-        counter = Ui.text(this, "", 12f, false);
-        counter.setTextColor(Ui.MUTED);
-        counter.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        header.addView(back);
-        header.addView(title);
-        header.addView(counter, new LinearLayout.LayoutParams(Ui.dp(this, 72), Ui.dp(this, 48)));
-        root.addView(header);
-
-        instruction = Ui.text(this, "", 13f, false);
+        // Slim two-line header (spec 23.10): "Quiz 4/10" then the one short instruction.
+        LinearLayout titles = Ui.column(this);
+        titles.setPadding(0, 0, 0, 0);
+        titles.setGravity(Gravity.CENTER);
+        Ui.weight(titles, 1f);
+        counter = Ui.bookText(this, "Quiz", 15f, true);
+        counter.setGravity(Gravity.CENTER);
+        titles.addView(counter);
+        instruction = Ui.text(this, "", 12f, false);
+        instruction.setTextColor(Ui.MUTED);
         instruction.setGravity(Gravity.CENTER);
-        instruction.setPadding(Ui.dp(this, 12), Ui.dp(this, 2), Ui.dp(this, 12), Ui.dp(this, 5));
-        root.addView(instruction);
+        instruction.setSingleLine(true);
+        titles.addView(instruction);
+        header.addView(back);
+        header.addView(titles);
+        header.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        root.addView(header);
 
         mushaf = new MushafView(this);
         mushaf.setListener(this);
         root.addView(mushaf, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
+        // Recording status only takes a line while there is something to say.
         audioStatus = Ui.text(this, "", 11f, false);
         audioStatus.setTextColor(Ui.MUTED);
         audioStatus.setGravity(Gravity.CENTER);
-        audioStatus.setMinHeight(Ui.dp(this, 22));
+        audioStatus.setVisibility(View.GONE);
         root.addView(audioStatus);
 
-        LinearLayout actionRow = Ui.row(this);
+        // One footer row whose icons follow the state (spec 13): before a take [●][✓], after a
+        // take [▶][↻][✓], at correction [▶ if a take exists][✓][!][↻]. No captions.
+        actionRow = Ui.row(this);
         actionRow.setGravity(Gravity.CENTER);
-        actionRow.setMinimumHeight(Ui.dp(this, 58));
+        actionRow.setMinimumHeight(Ui.dp(this, 48));
         recordButton = Ui.iconButton(this, "●", "Enregistrer", v -> toggleRecording());
         playButton = Ui.iconButton(this, "▶", "Écouter l’enregistrement", v -> playRecording());
-        Button retry = Ui.iconButton(this, "↻", "Réessayer", v -> retryQuestion());
+        retryButton = Ui.iconButton(this, "↻", "Réessayer", v -> retryQuestion());
         verifyButton = Ui.iconButton(this, "✓", "Vérifier", v -> verifyAnswer());
         actionRow.addView(recordButton);
         actionRow.addView(playButton);
-        actionRow.addView(retry);
+        actionRow.addView(retryButton);
         actionRow.addView(verifyButton);
         root.addView(actionRow);
 
         assessmentRow = Ui.row(this);
         assessmentRow.setGravity(Gravity.CENTER);
-        assessmentRow.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), Ui.dp(this, 6));
-        assessmentRow.addView(flatChoice("Juste", v -> assess(QuizHistory.Result.CORRECT)));
-        assessmentRow.addView(flatChoice("Hésitant", v -> assess(QuizHistory.Result.HESITATION)));
-        assessmentRow.addView(flatChoice("À revoir", v -> assess(QuizHistory.Result.REVIEW)));
+        assessmentRow.setMinimumHeight(Ui.dp(this, 48));
+        assessPlayButton = Ui.iconButton(this, "▶", "Écouter l’enregistrement", v -> playRecording());
+        assessmentRow.addView(assessPlayButton);
+        assessmentRow.addView(Ui.iconButton(this, "✓", "Correct", v -> assess(QuizHistory.Result.CORRECT)));
+        assessmentRow.addView(Ui.iconButton(this, "!", "Hésitation", v -> assess(QuizHistory.Result.HESITATION)));
+        assessmentRow.addView(Ui.iconButton(this, "↻", "À revoir", v -> assess(QuizHistory.Result.REVIEW)));
         assessmentRow.setVisibility(View.GONE);
         root.addView(assessmentRow);
 
@@ -279,13 +256,10 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         retryCount = 0;
         recordUsed = false;
         verified = false;
-        counter.setText((questionIndex + 1) + "/" + questions.size());
+        counter.setText("Quiz " + (questionIndex + 1) + "/" + questions.size());
         instruction.setText(question.instruction());
-        assessmentRow.setVisibility(View.GONE);
-        verifyButton.setEnabled(true);
-        recordButton.setEnabled(true);
-        playButton.setEnabled(false);
-        audioStatus.setText("Récitez de mémoire, puis touchez ✓ pour voir la réponse.");
+        setAudioStatus("");
+        updateQuestionActions();
 
         JSONArray visible = promptBoxes(question);
         if (visible.length() == 0) {
@@ -303,20 +277,58 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             geometry.lineIdsOnPage(question.promptPage), 100, false);
     }
 
+    /**
+     * Visible words of a question: the prompt (first three words of the verse, or the whole verse
+     * for "Précédent") plus the page's real first three and last three words (spec 13 — page
+     * bounds, not verse bounds), all from exact quran-ws boxes. Missing geometry = no question.
+     */
     private JSONArray promptBoxes(QuizQuestion question) {
+        JSONArray pageBounds = words.pageLandmarkBoxes(question.promptPage);
+        if (pageBounds.length() != 6) return new JSONArray();
         JSONArray all = words.boxesForVerse(question.promptPage, question.prompt);
-        if (question.type == QuizQuestion.Type.PREVIOUS) return all;
-        if (all.length() < 3) return new JSONArray();
-        JSONArray firstThree = new JSONArray();
-        for (int i = 0; i < 3; i++) firstThree.put(all.optJSONArray(i));
-        return firstThree;
+        JSONArray out = new JSONArray();
+        if (question.type == QuizQuestion.Type.PREVIOUS) {
+            if (all.length() == 0) return new JSONArray();
+            for (int i = 0; i < all.length(); i++) out.put(all.optJSONArray(i));
+        } else {
+            if (all.length() < 3) return new JSONArray();
+            JSONArray firstThree = new JSONArray();
+            for (int i = 0; i < 3; i++) firstThree.put(all.optJSONArray(i));
+            for (int i = 0; i < firstThree.length(); i++) out.put(firstThree.optJSONArray(i));
+        }
+        for (int i = 0; i < pageBounds.length(); i++) out.put(pageBounds.optJSONArray(i));
+        return out;
+    }
+
+    private boolean hasTake() {
+        return recordingFile != null && recordingFile.isFile() && recordingFile.length() > 0L;
+    }
+
+    /** Shows only the actions useful in the current state. */
+    private void updateQuestionActions() {
+        if (actionRow == null) return;
+        boolean take = hasTake();
+        actionRow.setVisibility(verified ? View.GONE : View.VISIBLE);
+        assessmentRow.setVisibility(verified ? View.VISIBLE : View.GONE);
+        recordButton.setVisibility(!verified && (recording || !take) ? View.VISIBLE : View.GONE);
+        playButton.setVisibility(!verified && take && !recording ? View.VISIBLE : View.GONE);
+        retryButton.setVisibility(!verified && take && !recording ? View.VISIBLE : View.GONE);
+        verifyButton.setVisibility(verified ? View.GONE : View.VISIBLE);
+        assessPlayButton.setVisibility(verified && take ? View.VISIBLE : View.GONE);
+    }
+
+    private void setAudioStatus(String text) {
+        if (audioStatus == null) return;
+        audioStatus.setText(text == null ? "" : text);
+        audioStatus.setVisibility(text == null || text.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     private void retryQuestion() {
         if (verified) return;
         retryCount++;
         releaseAudio(true);
-        audioStatus.setText("");
+        setAudioStatus("");
+        updateQuestionActions();
         QuizQuestion question = currentQuestion();
         if (question == null) return;
         mushaf.setSemanticCues(new JSONArray(), true, false);
@@ -331,11 +343,9 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         if (question == null || verified) return;
         if (recording) stopRecording();
         verified = true;
-        verifyButton.setEnabled(false);
-        recordButton.setEnabled(false);
-        assessmentRow.setVisibility(View.VISIBLE);
-        instruction.setText("Réponse : " + question.expected + " — comment était votre récitation ?");
-        audioStatus.setText("");
+        updateQuestionActions();
+        instruction.setText("Correction · " + question.expected);
+        setAudioStatus("");
         mushaf.setSemanticCues(new JSONArray(), false, false);
         mushaf.clearPageLandmarkBoxes();
         mushaf.setMaskFollowsSelection(true);
@@ -356,16 +366,24 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
 
     private void showSummary() {
         releaseAudio(true);
+        purgeQuizRecordings();
+        actionRow = null;
         LinearLayout root = Ui.column(this);
         int side = Ui.dp(this, 20);
         root.setPadding(side, Ui.dp(this, 10), side, Ui.dp(this, 18));
-        TextView title = Ui.bookText(this, "Quiz", 22f, true);
+        TextView title = Ui.bookText(this, "Quiz", 19f, true);
         title.setGravity(Gravity.CENTER);
+        title.setMinHeight(Ui.dp(this, 48));
         root.addView(title);
-        root.addView(summaryRow("Juste", correctCount));
-        root.addView(summaryRow("Hésitant", hesitationCount));
+        root.addView(Ui.divider(this));
+        root.addView(summaryRow("Correct", correctCount));
+        root.addView(summaryRow("Hésitation", hesitationCount));
         root.addView(summaryRow("À revoir", reviewCount));
-        root.addView(Ui.button(this, "Terminer", v -> finish()));
+        root.addView(Ui.divider(this));
+        LinearLayout finishRow = Ui.row(this);
+        finishRow.setGravity(Gravity.CENTER);
+        finishRow.addView(Ui.iconButton(this, "✓", "Terminer", v -> finish()));
+        root.addView(finishRow);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
@@ -409,7 +427,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_stop);
             Ui.setIconDescription(recordButton, "Arrêter");
             playButton.setEnabled(false);
-            audioStatus.setText("Enregistrement…");
+            setAudioStatus("Enregistrement…");
+            updateQuestionActions();
         } catch (Exception error) {
             releaseAudio(true);
             Toast.makeText(this, "Enregistrement indisponible.", Toast.LENGTH_SHORT).show();
@@ -420,11 +439,11 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         if (!recording || recorder == null) return;
         try {
             recorder.stop();
-            audioStatus.setText("Enregistrement prêt.");
+            setAudioStatus("");
         } catch (RuntimeException tooShort) {
             if (recordingFile != null) recordingFile.delete();
             recordingFile = null;
-            audioStatus.setText("Enregistrement trop court.");
+            setAudioStatus("Enregistrement trop court.");
         } finally {
             try { recorder.reset(); } catch (RuntimeException ignored) {}
             recorder.release();
@@ -432,7 +451,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             recording = false;
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_record);
             Ui.setIconDescription(recordButton, "Enregistrer");
-            playButton.setEnabled(recordingFile != null && recordingFile.isFile() && recordingFile.length() > 0L);
+            updateQuestionActions();
         }
     }
 
@@ -449,11 +468,11 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             player.setOnCompletionListener(mp -> {
                 mp.release();
                 if (player == mp) player = null;
-                audioStatus.setText("Lecture terminée.");
+                setAudioStatus("");
             });
             player.prepare();
             player.start();
-            audioStatus.setText("Lecture…");
+            setAudioStatus("Lecture…");
         } catch (Exception error) {
             if (player != null) {
                 player.release();
@@ -483,7 +502,18 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_record);
             Ui.setIconDescription(recordButton, "Enregistrer");
         }
-        if (playButton != null) playButton.setEnabled(recordingFile != null && recordingFile.isFile());
+        updateQuestionActions();
+    }
+
+    /** Every take is temporary: wipe any quiz-*.m4a left in the cache (spec 29.5). */
+    private void purgeQuizRecordings() {
+        File[] stale = getCacheDir().listFiles((dir, name) -> name.startsWith("quiz-") && name.endsWith(".m4a"));
+        if (stale == null) return;
+        for (File file : stale) {
+            if (file.equals(recordingFile)) continue;
+            //noinspection ResultOfMethodCallIgnored
+            file.delete();
+        }
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -506,6 +536,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
 
     @Override protected void onDestroy() {
         releaseAudio(true);
+        purgeQuizRecordings();
         super.onDestroy();
     }
 

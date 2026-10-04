@@ -24,6 +24,11 @@ final class QuranRubNames {
         return "Hizb " + row[4] + " · " + POSITION_LABEL[row[5]];
     }
 
+    /** Selector caption only ("Hizb 12"): the ¼/½/¾ boundary itself lives in the gutter écusson. */
+    static String compactLabel(int page) {
+        return "Hizb " + QuranRubBoundaries.currentAt(page)[4];
+    }
+
     static void showPicker(Activity activity, IntConsumer onPageChosen) {
         String[] items = new String[60];
         for (int hizb = 1; hizb <= 60; hizb++) {

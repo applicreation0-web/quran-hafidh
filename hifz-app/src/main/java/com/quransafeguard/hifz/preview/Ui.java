@@ -389,8 +389,10 @@ final class Ui {
         if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
+        if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
+        if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
+        if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_jump_next;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
-        if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_rotation;
         if (s.contains("suivant")) return R.drawable.ic_ui_next;
         if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
@@ -406,6 +408,10 @@ final class Ui {
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
         if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
         if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
+        if (s.equals("commencer")) return R.drawable.ic_ui_play;
+        if (s.equals("correct")) return R.drawable.ic_ui_validate;
+        if (s.contains("hésitation") || s.contains("hesitation")) return R.drawable.ic_ui_info;
+        if (s.contains("à revoir") || s.contains("a revoir")) return R.drawable.ic_ui_repeat;
         if (s.contains("répétition") || s.contains("répéter") || s.contains("réessayer")) return R.drawable.ic_ui_repeat;
         if (s.contains("enregistrer")) return R.drawable.ic_ui_record;
         if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;

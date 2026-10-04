@@ -50,7 +50,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
     private Button annotationButton;
-    private boolean annotationEnabled = true;
+    private Button annotationUndoButton;
+    private Button annotationClearButton;
+    // The pen starts closed; its undo/erase tools only appear while it is open.
+    private boolean annotationEnabled = false;
     private int page = 1;
     private VerseRef selected;
     private VerseRef pendingJumpVerse;
@@ -65,7 +68,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private FrameLayout readerPane;
     private TextView surahPicker;
     private TextView rubPicker;
-    private TextView rubBadge;
     private boolean controlsVisible = true;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
@@ -120,13 +122,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         LinearLayout titleRow = Ui.row(this);
         Ui.weight(titleRow, 1f);
         titleRow.setGravity(Gravity.CENTER);
-        rubBadge = Ui.bookText(this, "", 20f, true);
-        rubBadge.setGravity(Gravity.CENTER);
-        rubBadge.setBackgroundResource(R.drawable.ic_ui_hizb);
-        rubBadge.setVisibility(View.GONE);
-        int badgeSize = Ui.dp(this, 44);
-        LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(badgeSize, badgeSize);
-        titleRow.addView(rubBadge, badgeParams);
+        // The rub'/hizb boundary is shown once, by the reader's right-gutter écusson; the header
+        // no longer repeats it.
         TextView balance = Ui.text(this, "", 1f, false);
         balance.setMinWidth(Ui.dp(this, 44));
         topControls.addView(back);
@@ -140,6 +137,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -151,7 +149,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions = Ui.row(this);
         readerActions.setGravity(Gravity.CENTER);
         readerActions.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
-        readerActions.setMinimumHeight(Ui.dp(this, 60));
+        readerActions.setMinimumHeight(Ui.dp(this, 48));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
         semanticButton = Ui.iconButton(this, "", "Afficher les amorces", v -> toggleSemanticCues());
@@ -161,10 +159,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
         annotationButton.setSelected(annotationEnabled);
         readerActions.addView(annotationButton);
-        readerActions.addView(Ui.iconButton(this, "", "Annuler la note",
-            v -> annotationOverlay.undoLastStroke()));
-        readerActions.addView(Ui.iconButton(this, "", "Effacer les notes",
-            v -> annotationOverlay.clearCurrentPage()));
+        annotationUndoButton = Ui.iconButton(this, "", "Annuler la note",
+            v -> annotationOverlay.undoLastStroke());
+        annotationClearButton = Ui.iconButton(this, "", "Effacer les notes",
+            v -> annotationOverlay.clearCurrentPage());
+        annotationUndoButton.setVisibility(View.GONE);
+        annotationClearButton.setVisibility(View.GONE);
+        readerActions.addView(annotationUndoButton);
+        readerActions.addView(annotationClearButton);
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -177,7 +179,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // identical size, but that's a much smaller defect than a broken baseline, so it stays.
         surahPicker = Ui.bookText(this, "Sourate", 13f, true);
         surahPicker.setGravity(Gravity.CENTER);
-        surahPicker.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        surahPicker.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
         surahPicker.setClickable(true);
         surahPicker.setFocusable(true);
         surahPicker.setEnabled(false);
@@ -186,17 +188,16 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         pageRail.addView(surahPicker, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         rubPicker = Ui.bookText(this, "", 13f, true);
         rubPicker.setGravity(Gravity.CENTER);
-        rubPicker.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 8));
+        rubPicker.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 4));
         rubPicker.setClickable(true);
         rubPicker.setFocusable(true);
         rubPicker.setContentDescription("Aller à un Hizb");
         rubPicker.setOnClickListener(v -> showRubPicker());
         pageRail.addView(rubPicker, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         updateRubPickerLabel();
-        updateRubBadge();
         LinearLayout.LayoutParams railParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        railParams.topMargin = Ui.dp(this, 20);
+        railParams.topMargin = 0;
         readerStack.addView(pageRail, railParams);
 
         if (!largeScreen) {
@@ -241,17 +242,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void updateRubPickerLabel() {
         if (rubPicker == null) return;
-        rubPicker.setText(QuranRubNames.currentLabel(page) + " ▾");
-    }
-
-    private static final String[] RUB_BADGE_LABEL = {"H", "¼", "½", "¾"};
-
-    private void updateRubBadge() {
-        if (rubBadge == null) return;
-        int[] row = QuranRubBoundaries.boundaryOnPage(page);
-        if (row == null) { rubBadge.setVisibility(View.GONE); return; }
-        rubBadge.setText(RUB_BADGE_LABEL[row[5]]);
-        rubBadge.setVisibility(View.VISIBLE);
+        rubPicker.setText(QuranRubNames.compactLabel(page) + " ▾");
     }
 
     private void showRubPicker() {
@@ -259,22 +250,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         QuranRubNames.showPicker(this, this::setPage);
     }
 
+    /** Same icon grammar as Amorces/Annoter; the hint stays in the description/tooltip. */
     private Button tafsirReaderAction() {
-        Button button = new Button(this);
-        button.setAllCaps(false);
-        button.setText("Tafsir");
-        button.setTextSize(14.5f);
-        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        button.setTextColor(Ui.INK);
-        button.setGravity(Gravity.CENTER);
+        Button button = Ui.iconButton(this, "", "Tafsir", v -> openTafsir());
         button.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
-        button.setOnClickListener(v -> openTafsir());
-        button.setStateListAnimator(null);
-        button.setElevation(0f);
-        button.setBackgroundColor(Color.TRANSPARENT);
-        button.setMinimumHeight(Ui.dp(this, 60));
-        button.setMinimumWidth(Ui.dp(this, 190));
-        button.setPadding(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
         return button;
     }
 
@@ -289,7 +268,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         updateSurahPickerLabel();
         updateRubPickerLabel();
-        updateRubBadge();
         mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
@@ -326,6 +304,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         annotationButton.setSelected(annotationEnabled);
         Ui.setIconDescription(annotationButton,
             annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+        annotationUndoButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
+        annotationClearButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
     }
 
     private void toggleSemanticCues() {
@@ -745,7 +725,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         annotationOverlay.setPage(shown);
         updateSurahPickerLabel();
         updateRubPickerLabel();
-        updateRubBadge();
         applySemanticCues();
     }
     @Override public void onBackPressed() {

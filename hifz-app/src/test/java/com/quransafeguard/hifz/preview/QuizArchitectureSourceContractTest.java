@@ -79,4 +79,14 @@ public final class QuizArchitectureSourceContractTest {
         assertTrue(history.contains("MAX_ATTEMPTS = 200"));
         assertFalse(history.contains("HifzPrefs"));
     }
+
+    /** Spec UI pass 2, §13: page bounds (not verse bounds), contextual icons, temp audio purge. */
+    @Test public void quizShowsRealPageBoundsAndOnlyContextualIconActions() throws Exception {
+        String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java");
+        assertTrue(activity.contains("JSONArray pageBounds = words.pageLandmarkBoxes(question.promptPage);"));
+        assertTrue("both page bounds are mandatory, else no question", activity.contains("if (pageBounds.length() != 6) return new JSONArray();"));
+        assertTrue(activity.contains("private void updateQuestionActions() {"));
+        assertFalse("no boxed buttons left in the Quiz", activity.contains("Ui.smallButton(") || activity.contains("Ui.button("));
+        assertTrue(activity.contains("private void purgeQuizRecordings() {"));
+    }
 }

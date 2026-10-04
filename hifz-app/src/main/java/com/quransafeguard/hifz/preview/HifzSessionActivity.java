@@ -49,7 +49,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
     private Button annotationButton;
-    private boolean annotationEnabled = true;
+    private Button annotationUndoButton;
+    private Button annotationClearButton;
+    // The pen starts closed; its undo/erase tools only appear while it is open.
+    private boolean annotationEnabled = false;
     private TextView program, progress, timerText;
     private LinearLayout actions, audioHost;
     private HifzAudioDialog audioPlayer;
@@ -183,10 +186,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
-        if (MURAJAAH_ACTIVE.equals(mode)) {
-            annotationEnabled = false;
-            annotationOverlay.setDrawingEnabled(false);
-        }
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -204,10 +204,15 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
             controlBar.addView(annotationButton);
-            controlBar.addView(Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke()));
-            controlBar.addView(Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage()));
+            annotationUndoButton = Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke());
+            annotationClearButton = Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage());
+            annotationUndoButton.setVisibility(View.GONE);
+            annotationClearButton.setVisibility(View.GONE);
+            controlBar.addView(annotationUndoButton);
+            controlBar.addView(annotationClearButton);
         }
-        controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
+        // Audio only when the recitation pack is actually installed.
+        if (new HifzAudioGate(this).installed()) controlBar.addView(Ui.iconButton(this, "", "Écouter", v -> openAudio()));
         root.addView(controlBar);
 
         setContentView(root);
@@ -220,6 +225,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationButton.setSelected(annotationEnabled);
         Ui.setIconDescription(annotationButton,
             annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+        annotationUndoButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
+        annotationClearButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
     }
 
     private void renderMode() {
@@ -1200,6 +1207,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         List<MurajaahSegment> segments = murajaahSegments();
         int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);
+        // Both corpus jumps stay available in Révision (passive and active): back to the start of
+        // the previous passage, forward to the next one. Navigation only — nothing is validated.
+        if (currentIndex > 0) {
+            VerseRef previousStart = segments.get(currentIndex - 1).start;
+            actions.addView(Ui.roundAction(this, "", "Passage précédent du corpus", v -> {
+                currentPage = geometry.pageForVerse(previousStart);
+                currentSelection = Collections.emptyList();
+                currentLineIds = active ? applyActiveLandmarks(currentPage) : Collections.emptyList();
+                showCurrent();
+                restoreMurajaahEndpointSelectionOnCurrentPage();
+                updateMurajaahActions();
+            }));
+        }
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
         if (nextSegment != null) {
             VerseRef jumpTarget = nextSegment;

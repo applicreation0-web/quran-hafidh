@@ -50,7 +50,8 @@ public final class UiIconMappingTest {
             {"Consolidation", R.drawable.ic_hifz_consolidation},
             {"Renforcement", R.drawable.ic_hifz_consolidation},
             {"Révision", R.drawable.ic_hifz_maintenance},
-            {"Passage suivant du corpus", R.drawable.ic_ui_rotation},
+            {"Passage suivant du corpus", R.drawable.ic_ui_jump_next},
+            {"Passage précédent du corpus", R.drawable.ic_ui_jump_prev},
             {"Leçon neuve", R.drawable.ic_hifz_new_lesson},
             {"Ancrage", R.drawable.ic_hifz_anchor},
             {"Entretien", R.drawable.ic_hifz_maintenance},
@@ -66,7 +67,13 @@ public final class UiIconMappingTest {
             {"Annoter", R.drawable.ic_ui_edit},
             {"Activer le crayon", R.drawable.ic_ui_edit},
             {"Désactiver le crayon", R.drawable.ic_ui_edit},
-            {"Quiz", R.drawable.ic_ui_quiz}
+            {"Quiz", R.drawable.ic_ui_quiz},
+            {"Tafsir", R.drawable.ic_ui_tafsir},
+            {"Commencer", R.drawable.ic_ui_play},
+            {"Correct", R.drawable.ic_ui_validate},
+            {"Hésitation", R.drawable.ic_ui_info},
+            {"À revoir", R.drawable.ic_ui_repeat},
+            {"Terminer", R.drawable.ic_ui_validate}
         });
     }
 

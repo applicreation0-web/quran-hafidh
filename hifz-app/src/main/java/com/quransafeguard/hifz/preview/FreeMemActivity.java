@@ -75,7 +75,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         // Explicit RTL navigation grammar, matching the main reader.
         LinearLayout nav=Ui.row(this);nav.setGravity(Gravity.CENTER);nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         nav.addView(Ui.iconButton(this,"›","Page suivante",v->go(1)));
-        if (new HifzAudioGate(this).available()) nav.addView(Ui.iconButton(this,"♪","Audio",v->openAudio()));
+        if (new HifzAudioGate(this).installed()) nav.addView(Ui.iconButton(this,"♪","Audio",v->openAudio()));
         nav.addView(Ui.iconButton(this,"‹","Page précédente",v->go(-1)));
         nav.addView(Ui.iconButton(this,"","Sourate",v->showSurahPicker()));
         nav.addView(Ui.iconButton(this,"","Hizb",v->showRubPicker()));
