@@ -232,7 +232,7 @@ val verifyHifzConvergenceRules by tasks.registering {
         check(settings.contains("Ajouter") && settings.contains("Début de rotation de stabilisation"))
         check(settings.contains("FLAG_GRANT_PERSISTABLE_URI_PERMISSION")) { "Audio picker should retain read permission for a long import." }
         check(prefs.contains("itqanRanges") && prefs.contains("promotedRanges"))
-        check(main.contains("todayAction.setOnClickListener") && !main.contains("\"Séance\", v -> openToday")) {
+        check(main.contains("Ui.settingRow(this, \"Aujourd’hui\", \"…\", v -> openToday())") && !main.contains("\"Séance\", v -> openToday")) {
             "Today card should be the single scheduled-session entry point."
         }
         check(ui.contains("ic_hifz_new_lesson")

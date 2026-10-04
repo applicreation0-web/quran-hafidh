@@ -83,6 +83,7 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
 
     @Test public void homeCardCueIsRefreshedOnEveryReturnToHome() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertEquals(2, count(main, "Ui.setModeCardCue(itqanCard, Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));"));
+        assertEquals(1, count(main, "navLine(path, \"Stabilisation\", Ui.stabilizationCue(prefs.itqanPostNasMaintenance()),"));
+        assertEquals(1, count(main, "if (itqanCue != null) itqanCue.setText(Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));"));
     }
 }

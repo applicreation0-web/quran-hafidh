@@ -131,7 +131,7 @@ public final class FinalUiPolishSourceContractTest {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(main.contains("\"Lecture\""));
-        assertTrue(main.contains("\"Mémoriser\""));
+        assertTrue(main.contains("\"Mémorisation libre\""));
         assertTrue(main.contains("\"Paramètres\""));
         assertTrue(free.contains("Retirer une répétition"));
         assertTrue(free.contains("Ajouter une répétition"));
