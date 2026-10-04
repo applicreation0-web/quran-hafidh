@@ -29,6 +29,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
     private HifzAudioDialog audioPlayer;
     private android.content.SharedPreferences state;
     private final List<Button> maskButtons = new ArrayList<>();
+    private Button resetButton;
 
     @Override protected void onCreate(Bundle savedState) {
         super.onCreate(savedState);
@@ -45,30 +46,45 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
         LinearLayout root = Ui.column(this); root.setPadding(0,0,0,0);
         LinearLayout top = Ui.row(this); top.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);
+        top.setGravity(Gravity.CENTER_VERTICAL);
         top.addView(Ui.iconButton(this,"‹","Retour",v->finish()));
-        TextView spacer=Ui.text(this,"",1,false);Ui.weight(spacer,1f);top.addView(spacer);
-        TextView balance=Ui.text(this,"",1,false);balance.setMinWidth(Ui.dp(this,44));top.addView(balance,new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,44)));
+        // Two-line header (spec 23.8): title, then "Passage … · masque X %".
+        LinearLayout titles=Ui.column(this);titles.setPadding(0,0,0,0);titles.setGravity(Gravity.CENTER);Ui.weight(titles,1f);
+        TextView title=Ui.bookText(this,"Mémorisation libre",15f,true);title.setGravity(Gravity.CENTER);titles.addView(title);
+        selection = Ui.text(this,"",11.5f,false); selection.setTextColor(Ui.MUTED); selection.setGravity(Gravity.CENTER); selection.setSingleLine(true); titles.addView(selection);
+        top.addView(titles);
+        top.addView(new View(this),new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(top);
 
         audioHost = Ui.column(this); audioHost.setPadding(0,0,0,0); audioHost.setVisibility(View.GONE);
         root.addView(audioHost,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        selection = Ui.text(this,"",11.5f,false); selection.setTextColor(Ui.MUTED); selection.setPadding(Ui.dp(this,10),0,Ui.dp(this,10),Ui.dp(this,2)); root.addView(selection);
         mushaf = new MushafView(this); mushaf.setListener(this); root.addView(mushaf,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
 
-        counter = Ui.text(this,"Répétitions · "+count,12,true); counter.setGravity(Gravity.CENTER); root.addView(counter);
+        // "−  12  +" with reset only once there is something to reset (spec 12).
         LinearLayout reps=Ui.row(this);reps.setGravity(Gravity.CENTER);
-        Button decrement=Ui.iconButton(this,"−","Retirer une répétition",v->{if(count==0)return;count--;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
+        Button decrement=Ui.iconButton(this,"−","Retirer une répétition",v->{if(count==0)return;count--;save();updateCounter();mushaf.localCounterChanged();});
         Ui.setButtonIcon(decrement,R.drawable.ic_ui_remove);reps.addView(decrement);
-        Button increment=Ui.iconButton(this,"+","Ajouter une répétition",v->{count++;save();counter.setText("Répétitions · "+count);mushaf.localCounterChanged();});
+        counter = Ui.bookText(this,"0",17,true); counter.setGravity(Gravity.CENTER); counter.setContentDescription("Répétitions");
+        reps.addView(counter,new LinearLayout.LayoutParams(Ui.dp(this,56),Ui.dp(this,48)));
+        Button increment=Ui.iconButton(this,"+","Ajouter une répétition",v->{count++;save();updateCounter();mushaf.localCounterChanged();});
         Ui.setButtonIcon(increment,R.drawable.ic_ui_add);reps.addView(increment);
-        reps.addView(Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();counter.setText("Répétitions · 0");mushaf.localCounterChanged();}));
+        resetButton=Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();updateCounter();mushaf.localCounterChanged();});
+        reps.addView(resetButton);
         root.addView(reps);
 
+        // Compact segmented mask selector "0 | 25 | 50 | 75 | 100": plain figures, no boxes.
         LinearLayout masks=Ui.row(this);masks.setGravity(Gravity.CENTER);
-        for(int value:new int[]{0,25,50,75,100}){
-            Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
-            b.setTag(value);maskButtons.add(b);Ui.weight(b,1);masks.addView(b);
+        int[] levels={0,25,50,75,100};
+        for(int k=0;k<levels.length;k++){
+            int value=levels[k];
+            if(k>0){TextView bar=Ui.text(this,"|",14,false);bar.setTextColor(Ui.LINE);masks.addView(bar);}
+            Button b=new Button(this);b.setAllCaps(false);b.setText(String.valueOf(value));b.setTextSize(14f);
+            b.setBackgroundColor(android.graphics.Color.TRANSPARENT);b.setStateListAnimator(null);b.setElevation(0f);
+            b.setMinWidth(Ui.dp(this,44));b.setMinimumWidth(Ui.dp(this,44));b.setMinHeight(Ui.dp(this,40));b.setMinimumHeight(Ui.dp(this,40));
+            b.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);b.setContentDescription("Masque "+value+" %");
+            b.setOnClickListener(v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
+            b.setTag(value);maskButtons.add(b);masks.addView(b,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,Ui.dp(this,40)));
         }
         root.addView(masks);
 
@@ -84,6 +100,12 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
         updateSelectionLabel();
         updateMaskButtons();
+        updateCounter();
+    }
+
+    private void updateCounter(){
+        counter.setText(String.valueOf(count));
+        resetButton.setVisibility(count>0?View.VISIBLE:View.INVISIBLE);
     }
 
     private VerseRef parseOptional(String value){
@@ -102,7 +124,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         page=requested;
         start=end=null; count=0; mask=0;
         save();
-        counter.setText("Répétitions · 0");
+        updateCounter();
         updateSelectionLabel();updateMaskButtons();
         mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
     }
@@ -125,14 +147,19 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
     private void updateSelectionLabel(){
         if(start==null||end==null) selection.setText("Touchez un verset pour choisir le passage.");
-        else selection.setText("Passage · "+start+" → "+end+" · masque "+mask+"% · indépendant du Parcours Hifz");
+        else selection.setText("Passage "+start+" → "+end+" · masque "+mask+" %");
     }
 
     private void updateMaskButtons() {
         boolean hasSelection = start != null && end != null;
         for (Button button : maskButtons) {
             int value = (Integer) button.getTag();
-            button.setEnabled(hasSelection);Ui.setChosen(button, hasSelection && value == mask);
+            boolean chosen = hasSelection && value == mask;
+            button.setEnabled(hasSelection);
+            button.setTextColor(!hasSelection ? Ui.LINE : chosen ? Ui.INK : Ui.MUTED);
+            button.setTypeface(android.graphics.Typeface.SERIF, chosen ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+            button.setPaintFlags(chosen ? (button.getPaintFlags() | android.graphics.Paint.UNDERLINE_TEXT_FLAG)
+                : (button.getPaintFlags() & ~android.graphics.Paint.UNDERLINE_TEXT_FLAG));
         }
     }
 
@@ -140,7 +167,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         closeAudio();
         if(start==null){start=end=verse;}
         else if(start.equals(end)){if(GeometryRepository.ordinal(verse)<GeometryRepository.ordinal(start)){end=start;start=verse;}else end=verse;}
-        else {start=end=verse;count=0;counter.setText("Répétitions · 0");}
+        else {start=end=verse;count=0;updateCounter();}
         List<VerseRef> refs=geometry.versesForRange(start,end);List<String> lines=geometry.lineIdsForVerseRange(start,end);
         mushaf.setSelection(refs,lines);mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();save();
     }

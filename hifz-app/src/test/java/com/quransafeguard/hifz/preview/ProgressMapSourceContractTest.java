@@ -128,8 +128,8 @@ public final class ProgressMapSourceContractTest {
     @Test public void liveEtaEstimatesSitAboveTheGridUsingTheSameBucketsDiagnosticUses() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
         assertTrue("the two estimates approved in the mockup must both be wired in, in that order",
-            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Estimation fin Apprentissage\");") <
-                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Estimation fin Stabilisation\");"));
+            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Fin Apprentissage\");") <
+                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Fin Stabilisation\");"));
         assertTrue("Apprentissage's estimate must use its own real weekly pace (SABQI_LINES × "
                 + "learningDaysPerWeek), never Stabilisation's fixed one",
             activity.contains("weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"

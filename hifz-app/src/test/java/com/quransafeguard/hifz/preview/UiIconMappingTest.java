@@ -74,7 +74,8 @@ public final class UiIconMappingTest {
             {"Hésitation", R.drawable.ic_ui_info},
             {"À revoir", R.drawable.ic_ui_repeat},
             {"Terminer", R.drawable.ic_ui_validate},
-            {"Référence · sauvegarde", R.drawable.ic_ui_info}
+            {"Référence · sauvegarde", R.drawable.ic_ui_info},
+            {"Retirer le repère", R.drawable.ic_ui_delete}
         });
     }
 

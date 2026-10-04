@@ -631,12 +631,22 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         target.removeAllViews();
         addRunBlocks(target, entry.commentaryRuns, fontSp, false);
         if (!entry.notes.isEmpty()) {
-            Button notesToggle = Ui.smallButton(this, "Notes (" + entry.notes.size() + ")", null);
+            // "Notes (n) ›" as a plain foldable line, not a boxed button (spec §8).
+            String closedLabel = "Notes (" + entry.notes.size() + ") ›";
+            String openLabel = "Notes (" + entry.notes.size() + ") ⌄";
+            TextView notesToggle = Ui.bookText(this, closedLabel, 13f, true);
+            notesToggle.setMinHeight(Ui.dp(this, 44));
+            notesToggle.setGravity(Gravity.CENTER_VERTICAL);
+            notesToggle.setClickable(true);
+            notesToggle.setFocusable(true);
             LinearLayout notes = Ui.column(this);
             notes.setPadding(0, 0, 0, 0);
             notes.setVisibility(View.GONE);
-            notesToggle.setOnClickListener(v ->
-                notes.setVisibility(notes.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
+            notesToggle.setOnClickListener(v -> {
+                boolean open = notes.getVisibility() != View.VISIBLE;
+                notes.setVisibility(open ? View.VISIBLE : View.GONE);
+                notesToggle.setText(open ? openLabel : closedLabel);
+            });
             target.addView(notesToggle);
             for (TafsirRepository.Note note : entry.notes) {
                 TextView label = tafsirText(Integer.toString(note.number) + ".", fontSp, true);
