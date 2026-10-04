@@ -61,6 +61,7 @@ function selectedPolygons(svg){return [...svg.querySelectorAll('.ayahPolygon')].
 function updateSideMarks(){
   const marks=document.getElementById('sidemarks');
   const mushafEl=document.getElementById('mushaf');
+  const rub=document.getElementById('rubmark');
   if(!marks||!mushafEl)return;
   const markWidth=eink?1.7:1.4,markGap=3,safety=3;
   const marksWidth=3*markWidth+2*markGap;
@@ -71,13 +72,89 @@ function updateSideMarks(){
   const leftGutter=rect.left;
   const onOuterRight=currentPage%2===1;
   const gutter=onOuterRight?rightGutter:leftGutter;
-  if(!(gutter>=minGutter)){marks.classList.remove('show');return}
+  if(!(gutter>=minGutter)){marks.classList.remove('show');if(rub)rub.classList.remove('show');return}
   const inset=(gutter-marksWidth)/2;
   marks.style.left=onOuterRight?'auto':inset+'px';
   marks.style.right=onOuterRight?inset+'px':'auto';
-  marks.style.top=(rect.top+rect.height*0.30)+'px';
-  marks.style.height=(rect.height*0.40)+'px';
+  marks.style.width=marksWidth+'px';
+  // The three lines run over the page's full useful height, stopping above the page badge.
+  const badge=pageBadgeDiameter(gutter);
+  const top=rect.top,bottom=rect.bottom-(badge?badge+6:0);
+  const span=Math.max(0,bottom-top);
+  marks.style.top=top+'px';
+  marks.style.height=span+'px';
+  const segs=marks.querySelectorAll('.seg');
+  const place=(seg,from,to)=>{if(!seg)return;seg.style.top=Math.max(0,from)+'px';seg.style.height=Math.max(0,to-from)+'px';seg.style.display=to-from>1?'flex':'none'};
+  const mark=rubMarkScreen(gutter);
+  if(!mark||!rub){
+    place(segs[0],0,span);place(segs[1],0,0);
+    if(rub)rub.classList.remove('show');
+  }else{
+    // Real interruption of the lines around the écusson — they never pass behind it.
+    const gapTop=mark.y-mark.size/2-3-top,gapBottom=mark.y+mark.size/2+3-top;
+    place(segs[0],0,Math.min(span,gapTop));place(segs[1],gapBottom,span);
+    const rubInset=(gutter-mark.size)/2;
+    rub.style.left=onOuterRight?'auto':rubInset+'px';
+    rub.style.right=onOuterRight?rubInset+'px':'auto';
+    rub.style.top=(mark.y-mark.size/2)+'px';
+    rub.style.width=mark.size+'px';
+    rub.style.height=mark.size+'px';
+    rub.innerHTML=rubEmblemSvg(mark.position,mark.hizb);
+    rub.classList.add('show');
+  }
   marks.classList.add('show');
+}
+
+/* Same diameter rule as updatePageBadge, so the gutter lines can stop just above the badge. */
+function pageBadgeDiameter(gutter){
+  const idealD=eink?50:46,floorD=32,safety=1;
+  if(!(gutter>=floorD+2*safety))return 0;
+  return Math.min(idealD,gutter-2*safety);
+}
+
+/*
+ * Canonical Hizb/Rubʿ boundary starting on this page (boot.rubMark from QuranRubBoundaries):
+ * vertical centre of its starting verse's first real word (quran-ws box), else of that verse's
+ * own canonical line band, mapped through the page SVG's real transform. No data = no écusson.
+ */
+const rubMark=boot.rubMark&&typeof boot.rubMark==='object'?boot.rubMark:null;
+function rubMarkScreen(gutter){
+  if(!rubMark)return null;
+  const position=Number(rubMark.position),hizb=Number(rubMark.hizb);
+  if(!(position>=0&&position<=3)||!(hizb>=1&&hizb<=60))return null;
+  const svg=document.querySelector('#mushaf svg');
+  const ctm=svg&&svg.getScreenCTM?svg.getScreenCTM():null;
+  if(!svg||!ctm)return null;
+  let yUser=null;
+  const raw=Array.isArray(rubMark.wordBox)?rubMark.wordBox.map(Number):null;
+  if(raw&&validWordBox(raw)){
+    const box=wordBoxInSvgSpace(raw,svg);
+    if(box)yUser=(box[1]+box[3])/2;
+  }
+  if(yUser===null){
+    const t=Number(rubMark.top),b=Number(rubMark.bottom);
+    if(!(Number.isFinite(t)&&Number.isFinite(b)&&b>t))return null;
+    yUser=(t+b)/2;
+  }
+  const pt=svg.createSVGPoint();pt.x=0;pt.y=yUser;
+  const y=pt.matrixTransform(ctm).y;
+  const size=Math.min(eink?30:28,gutter-4);
+  if(!(size>=16)||!Number.isFinite(y))return null;
+  return {y,size,position,hizb};
+}
+
+const ARABIC_DIGITS='٠١٢٣٤٥٦٧٨٩';
+const RUB_NAMES=['الحزب','ربع الحزب','نصف الحزب','ثلاثة أرباع الحزب'];
+function rubEmblemSvg(position,hizb){
+  const label=position===0?String(hizb).replace(/[0-9]/g,d=>ARABIC_DIGITS[Number(d)]):['','¼','½','¾'][position];
+  const name=position===0?'الحزب '+label:RUB_NAMES[position];
+  const stroke=eink?1.5:1.2,font=position===0?(label.length>1?10.5:12):12.5;
+  return '<svg viewBox="0 0 32 32" role="img" aria-label="'+name+'"><title>'+name+'</title>'
+    +'<g fill="var(--paper)" stroke="var(--sidemark)" stroke-width="'+stroke+'" stroke-linejoin="round">'
+    +'<rect x="7" y="7" width="18" height="18"/>'
+    +'<rect x="7" y="7" width="18" height="18" transform="rotate(45 16 16)"/>'
+    +'<rect x="7" y="7" width="18" height="18" stroke="none"/></g>'
+    +'<text x="16" y="16.5" text-anchor="middle" dominant-baseline="middle" font-size="'+font+'" font-weight="700" fill="var(--sidemark)" font-family="serif">'+label+'</text></svg>';
 }
 window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));
 
@@ -151,7 +228,15 @@ function updatePageBadge(){
   const inset=(gutter-d)/2;
   badge.style.left=onOuterRight?'auto':inset+'px';
   badge.style.right=onOuterRight?inset+'px':'auto';
-  badge.style.top=(rect.bottom-d)+'px';
+  // A boundary on the page's last lines keeps its canonical height: the badge steps just below the
+  // écusson instead (within the viewport), so neither covers the other.
+  let badgeTop=rect.bottom-d;
+  const mark=rubMarkScreen(gutter);
+  if(mark&&mark.y+mark.size/2+3>badgeTop){
+    const viewportHeight=document.documentElement.clientHeight||window.innerHeight||0;
+    badgeTop=Math.min(mark.y+mark.size/2+3,Math.max(badgeTop,viewportHeight-d));
+  }
+  badge.style.top=badgeTop+'px';
   badge.style.width=d+'px';
   badge.style.height=d+'px';
   badge.style.fontSize=font+'px';

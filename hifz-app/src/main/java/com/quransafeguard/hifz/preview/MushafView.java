@@ -223,7 +223,8 @@ public final class MushafView extends WebView {
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
                 .put("pageWordBoxes", lineIds.isEmpty() ? new JSONArray()
                     : WordGeometryRepository.shared(getContext()).pageBoxes(page))
-                .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
+                .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry))
+                .put("rubMark", rubMarkFor(page));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
             html = html.replace(SCRIPT_TAG, inline).replace(SVG_SLOT, svg);
@@ -395,6 +396,20 @@ public final class MushafView extends WebView {
     }
 
     private void runWhenReady(Runnable action) { if (ready) action.run(); else pending = action; }
+
+    /** Canonical Hizb/Rubʿ boundary on this page for the gutter écusson, or NULL (fail-closed). */
+    private Object rubMarkFor(int page) {
+        try {
+            int[] row = QuranRubBoundaries.boundaryOnPage(page);
+            if (row == null) return JSONObject.NULL;
+            JSONArray firstWords = WordGeometryRepository.shared(getContext())
+                .boxesForVerse(page, new VerseRef(row[1], row[2]));
+            JSONObject mark = RubGutterMark.forPage(GeometryRepository.get(getContext()), firstWords, page);
+            return mark == null ? JSONObject.NULL : mark;
+        } catch (Throwable unavailable) {
+            return JSONObject.NULL;
+        }
+    }
 
     private String readAssetText(String path) throws Exception {
         try (InputStream input = getContext().getAssets().open(path)) { return readUtf8(input); }

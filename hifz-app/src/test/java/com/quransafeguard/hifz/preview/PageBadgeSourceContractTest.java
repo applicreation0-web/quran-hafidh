@@ -66,7 +66,7 @@ public final class PageBadgeSourceContractTest {
         assertTrue("odd page = right-hand page, the same parity #sidemarks and #centermark use",
             fn.contains("const onOuterRight=currentPage%2===1;"));
         assertTrue("must sit at the bottom of the rendered page, not centered like #sidemarks",
-            fn.contains("badge.style.top=(rect.bottom-d)+'px';"));
+            fn.contains("let badgeTop=rect.bottom-d;") && fn.contains("badge.style.top=badgeTop+'px';"));
         assertTrue("the ideal disc size must stay generous enough that a real 3-digit page number "
                 + "(up to 604) stays legible when the gutter has room for it",
             fn.contains("const idealD=eink?50:46,floorD=32,safety=1;"));
