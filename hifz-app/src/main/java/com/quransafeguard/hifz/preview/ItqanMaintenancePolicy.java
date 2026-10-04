@@ -132,6 +132,36 @@ final class ItqanMaintenancePolicy {
         return budgetLast;
     }
 
+    /**
+     * Optimal grouping of consecutive atoms into maintenance sessions of at most maxLines owned
+     * lines: first the fewest sessions, then the most even sizes (sum of squared shortfall). A
+     * group may only cross into another surah by ending on a surah end, so every following surah
+     * in it is whole. Atoms are Al-Munīr units (or single verses of an Al-Munīr unit longer than
+     * maxLines). Returns [firstAtom, lastAtom] index pairs in order.
+     */
+    static List<int[]> optimalGroups(int[] lines, int[] surahOf, boolean[] endsSurah, int maxLines) {
+        int n = lines.length;
+        long[] best = new long[n + 1];
+        int[] from = new int[n + 1];
+        java.util.Arrays.fill(best, Long.MAX_VALUE);
+        best[0] = 0;
+        for (int j = 0; j < n; j++) {
+            int sum = 0;
+            for (int i = j; i >= 0; i--) {
+                sum += lines[i];
+                if (sum > maxLines && i < j) break;          // a lone oversize atom is still allowed
+                if (surahOf[i] != surahOf[j] && !endsSurah[j]) continue;
+                if (best[i] == Long.MAX_VALUE) continue;
+                long shortfall = Math.max(0, maxLines - sum);
+                long cost = best[i] + 1000L + shortfall * shortfall;
+                if (cost < best[j + 1]) { best[j + 1] = cost; from[j + 1] = i; }
+            }
+        }
+        ArrayList<int[]> out = new ArrayList<>();
+        for (int end = n; end > 0; end = from[end]) out.add(0, new int[]{from[end], end - 1});
+        return Collections.unmodifiableList(out);
+    }
+
     /** Owned-line lookup for a candidate unit ending at the given verse index. */
     interface OwnedLines {
         int count(int lastVerseIndex);

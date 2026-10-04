@@ -182,7 +182,7 @@ public final class ItqanPostNasMaintenanceTest {
             List<String> owned = owned(unit);
             assertTrue(unit.start + "→" + unit.end + " has " + owned.size() + " lines",
                 owned.size() <= ItqanMaintenancePolicy.MAX_LINES);
-            assertSingleSurah(owned);
+            assertOnlyWholeFollowingSurahs(unit);
             if (owned.size() >= 13) fifteen++;
         }
         assertTrue("long surahs must actually use the 15-line target, not stay at half pages", fifteen > 20);
@@ -468,6 +468,28 @@ public final class ItqanPostNasMaintenanceTest {
     private static List<String> owned(AnchoringQueue.Entry unit) {
         return CorpusLinePolicy.ownedLineIdsForRangeOnPage(GeometryRepository.parseVerse(unit.start),
             GeometryRepository.parseVerse(unit.end), geometry);
+    }
+
+    /** A unit may span surahs only by appending WHOLE following surahs. */
+    private static void assertOnlyWholeFollowingSurahs(AnchoringQueue.Entry unit) {
+        VerseRef start = GeometryRepository.parseVerse(unit.start), end = GeometryRepository.parseVerse(unit.end);
+        if (start.getSurah() == end.getSurah()) return;
+        VerseRef after = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(end);
+        assertTrue(unit.start + "→" + unit.end + " must end on a surah end", after == null || after.getAyah() == 1);
+    }
+
+    @Test public void shortSurahsAreGroupedWholeUpToFifteenLines() {
+        List<AnchoringQueue.Entry> units = HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
+            new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE);
+        AnchoringQueue.Entry last = units.get(units.size() - 1);
+        assertEquals("114:6", last.end);
+        assertTrue("An-Nās no longer stands alone", GeometryRepository.parseVerse(last.start).getSurah() < 114);
+        int tiny = 0;
+        for (AnchoringQueue.Entry unit : units) {
+            assertOnlyWholeFollowingSurahs(unit);
+            if (owned(unit).size() <= 6) tiny++;
+        }
+        System.out.println("Post-Nas TAIL sessions: " + units.size() + ", of 6 lines or fewer: " + tiny);
     }
 
     private static void assertSingleSurah(List<String> owned) {
