@@ -736,7 +736,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
 
         // Latest user decision: FULL only for every new unit; deep ×40 + progressive eraser until
-        // the first An-Nās arrival, then 15-line ×20 maintenance (10 visible + 10 anchored). A unit
+        // the first An-Nās arrival, then one hizb per session ×4 (2 visible + 2 anchored). A unit
         // already mid-repetition keeps the plan it was started with (see ItqanRegimeStore).
         ItqanRegimeStore.UnitPlan plan = prefs.itqanUnitPlan(anchoringEntry);
         if (!prefs.stampItqanUnitPlan(anchoringEntry, plan)) {
@@ -801,7 +801,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             itqanBonusDecision = null;
         }
         if (rep == 0 && itqanBonusDecision == null) {
-            // Post-An-Nās units are already sized to the 15-line cap: never offer to extend them.
+            // A post-An-Nās unit is already a whole hizb: never offer to extend it.
             ItqanPageCompletionPolicy.Offer offer = maintenance ? null
                 : computeItqanBonusOffer(plannedUnits, currentLineIds);
             if (offer == null || offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {
@@ -823,7 +823,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
 
         if(rep>=itqanTargetReps){
-            boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted());
+            // Post-An-Nās maintenance: reveals are recorded, never a reason to restart the hizb.
+            boolean assistancePassed = ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted());
             awaitingValidation=assistancePassed;sessionCompleted=true;clock.pause();currentMask=0;
             program.setText(itqanProgramLabel());
             progress.setText(assistancePassed
@@ -854,7 +855,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         return "Stabilisation · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
             +(itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
-                ?" · entretien "+ItqanMaintenancePolicy.VISIBLE_REPS+" visible + "+ItqanMaintenancePolicy.ANCHOR_REPS+" ancrages":"")
+                ?" · entretien 1 hizb · "+ItqanMaintenancePolicy.VISIBLE_REPS+" lectures + "+ItqanMaintenancePolicy.ANCHOR_REPS+" avec ancrages":"")
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
     }
 
@@ -1015,7 +1016,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void validateItqan(){
         if(itqanUnit==null||anchoringEntry==null||prefs.itqanRep()<itqanTargetReps)return;
-        if (!StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted())) {
+        if (!ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted())) {
             restartItqanAfterAssistance();
             return;
         }
@@ -1546,7 +1547,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private boolean itqanAnchorFailOpen;
 
     /**
-     * Post-An-Nās maintenance recall (repetitions 11-20): the unit disappears into the paper at
+     * Post-An-Nās maintenance recall (passes 3-4): the hizb disappears into the paper at
      * 100% except the project's existing validated anchors — the Al-Munīr amorces (audited V2.1
      * start words, SemanticPassageRepository) of every unit beginning inside this Itqān unit on
      * the shown page, cut as exact quran-ws word holes — plus the reader's permanent page cues.

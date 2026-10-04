@@ -223,10 +223,10 @@ final class Ui {
     }
 
     /** Stabilisation's cue: the deep first pass works in weekly units; after the first An-Nās
-     *  arrival every session is one 15-line maintenance unit. */
+     *  arrival every session is one hizb of maintenance. */
     static String stabilizationCue(boolean postNasMaintenance) {
         return postNasMaintenance
-            ? ItqanMaintenancePolicy.MAX_LINES + " lignes · entretien"
+            ? "1 hizb · entretien"
             : PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine";
     }
 

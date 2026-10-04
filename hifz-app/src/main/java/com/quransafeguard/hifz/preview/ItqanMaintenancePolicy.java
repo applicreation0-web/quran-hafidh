@@ -12,12 +12,14 @@ import java.util.Set;
  * progressive eraser 25/50/75/100, 8/7/7 half-page sub-blocks.
  *
  * <p>Phase 2 — once the first arrival at An-Nās is recorded (ItqanRotationPolicy's one-way
- * initialTailCompleted latch), every later Itqān session is a FULL maintenance session: at most
- * {@link #MAX_LINES} physical lines (never past the real Sabqi frontier, never a fabricated
- * cross-surah unit), FULL ×40 halved to ×{@link #TOTAL_REPS}, frozen as {@link #VISIBLE_REPS}
- * repetitions with the Mushaf fully visible then {@link #ANCHOR_REPS} recall repetitions with the
- * project's existing validated anchors (the unit's Al-Munīr amorces as exact word holes in the
- * paper mask, plus the permanent page cues). No 25/50/75 eraser in phase 2.
+ * initialTailCompleted latch), every later Itqān session is one maintenance session per HIZB
+ * (user decision, 2026-10-04: wider coverage, fewer passes): the hizb's real boundaries
+ * (QuranRubBoundaries), clipped to the rotation leg and never past the real Sabqi frontier,
+ * recited {@link #TOTAL_REPS} times — {@link #VISIBLE_REPS} passes with the Mushaf fully visible
+ * then {@link #ANCHOR_REPS} recall passes with the project's existing validated anchors (the
+ * hizb's Al-Munīr amorces as exact word holes in the paper mask, plus the permanent page cues).
+ * No 25/50/75 eraser and no early-review policy: reveals are recorded, never a reason to
+ * restart or reschedule the hizb.
  *
  * <p>LIGHT is never chosen for a new session. The enum value survives only so a legacy queue
  * entry or a unit already mid-repetition under LIGHT before this upgrade can be read and
@@ -26,10 +28,11 @@ import java.util.Set;
 final class ItqanMaintenancePolicy {
     enum Regime { DEEP_FIRST_PASS, POST_NAS_MAINTENANCE }
 
-    static final int MAX_LINES = 15;
-    static final int VISIBLE_REPS = 10;
-    static final int ANCHOR_REPS = 10;
-    static final int TOTAL_REPS = 20;
+    static final int VISIBLE_REPS = 2;
+    static final int ANCHOR_REPS = 2;
+    static final int TOTAL_REPS = 4;
+    /** Sanity bound for one maintenance unit (the longest hizb is ~11 pages ≈ 165 lines). */
+    static final int MAX_UNIT_LINES = 260;
 
     private ItqanMaintenancePolicy() {}
 
@@ -93,17 +96,64 @@ final class ItqanMaintenancePolicy {
         return Collections.unmodifiableList(out);
     }
 
+    /** Maintenance validation never depends on the reveal count (no restart, no rescheduling). */
+    static boolean validationAllowed(Regime regime, int reveals) {
+        return regime == Regime.POST_NAS_MAINTENANCE || StructuredSessionPolicy.assistancePasses(reveals);
+    }
+
     /**
      * Consolidation only accepts a frozen unit that re-plans as exactly one whole half-page block
-     * (≤11 lines, see StabilizationHalfPagePolicy / completeConsolidationSessionV6). A 15-line
-     * maintenance unit can exceed that, so its newly credited lines are enrolled as the same
-     * half-page blocks StabilizationHalfPagePolicy itself would plan — never as one oversized unit.
+     * (≤11 lines, see StabilizationHalfPagePolicy / completeConsolidationSessionV6). A hizb's
+     * newly credited lines are therefore cut into consecutive same-surah runs, each run into
+     * weekly-sized pieces, and each piece into the half-page blocks StabilizationHalfPagePolicy
+     * itself plans — never one oversized unit.
      */
     static List<List<String>> consolidationEnrollment(List<GeometryRepository.LineMeta> newlyCreditedLines) {
         if (newlyCreditedLines == null || newlyCreditedLines.isEmpty()) return Collections.emptyList();
         ArrayList<List<String>> out = new ArrayList<>();
-        for (StabilizationHalfPagePolicy.Unit unit : StabilizationHalfPagePolicy.planPage(newlyCreditedLines)) {
-            out.add(unit.lineIds);
+        ArrayList<GeometryRepository.LineMeta> piece = new ArrayList<>();
+        int surah = -1;
+        for (GeometryRepository.LineMeta line : newlyCreditedLines) {
+            int lineSurah = line.verses.get(0).getSurah();
+            boolean contiguous = piece.isEmpty() || line.globalIndex == piece.get(piece.size() - 1).globalIndex + 1;
+            if (!piece.isEmpty() && (lineSurah != surah || !contiguous
+                    || piece.size() >= PreviewConfig.STABILIZATION_WEEKLY_LINES)) {
+                for (StabilizationHalfPagePolicy.Unit unit : StabilizationHalfPagePolicy.planPage(piece)) out.add(unit.lineIds);
+                piece = new ArrayList<>();
+            }
+            surah = lineSurah;
+            piece.add(line);
+        }
+        for (StabilizationHalfPagePolicy.Unit unit : StabilizationHalfPagePolicy.planPage(piece)) out.add(unit.lineIds);
+        return Collections.unmodifiableList(out);
+    }
+
+    /** Start verse of each of the 60 hizb (QuranRubBoundaries rows at position 0), in order. */
+    static List<com.quransafeguard.hifz.core.VerseRef> hizbStarts() {
+        ArrayList<com.quransafeguard.hifz.core.VerseRef> out = new ArrayList<>();
+        for (int[] row : QuranRubBoundaries.TABLE) {
+            if (row[5] == 0) out.add(new com.quransafeguard.hifz.core.VerseRef(row[1], row[2]));
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    /**
+     * The hizb-sized maintenance units covering [legStart, legEnd], as [start, end] verse pairs:
+     * each hizb's real range clipped to the leg (49:1 falls inside hizb 52; FRONT stops before
+     * Sabqi's current block). Never crosses a hizb boundary, never fabricates one.
+     */
+    static List<com.quransafeguard.hifz.core.VerseRef[]> hizbUnits(com.quransafeguard.hifz.core.VerseRef legStart,
+                                                                  com.quransafeguard.hifz.core.VerseRef legEnd) {
+        ArrayList<com.quransafeguard.hifz.core.VerseRef[]> out = new ArrayList<>();
+        if (legStart == null || legEnd == null || legStart.compareTo(legEnd) > 0) return out;
+        List<com.quransafeguard.hifz.core.VerseRef> starts = hizbStarts();
+        for (int h = 0; h < starts.size(); h++) {
+            com.quransafeguard.hifz.core.VerseRef hizbStart = starts.get(h);
+            com.quransafeguard.hifz.core.VerseRef hizbEnd = h + 1 < starts.size()
+                ? GeometryRepository.previous(starts.get(h + 1)) : new com.quransafeguard.hifz.core.VerseRef(114, 6);
+            com.quransafeguard.hifz.core.VerseRef start = hizbStart.compareTo(legStart) < 0 ? legStart : hizbStart;
+            com.quransafeguard.hifz.core.VerseRef end = hizbEnd.compareTo(legEnd) > 0 ? legEnd : hizbEnd;
+            if (start.compareTo(end) <= 0) out.add(new com.quransafeguard.hifz.core.VerseRef[]{start, end});
         }
         return Collections.unmodifiableList(out);
     }
@@ -114,68 +164,5 @@ final class ItqanMaintenancePolicy {
                                     com.quransafeguard.hifz.core.VerseRef unitEnd) {
         if (amorceStart == null || unitStart == null || unitEnd == null) return false;
         return amorceStart.compareTo(unitStart) >= 0 && amorceStart.compareTo(unitEnd) <= 0;
-    }
-
-    /**
-     * Latest verse index ≤ budgetLast after which a new Al-Munīr unit begins (or the Quran
-     * ends), so the next maintenance session also opens on a validated amorce. Whole Al-Munīr
-     * units are packed while they fit; a single unit longer than the line budget keeps the
-     * plain budget cut (never a fabricated split elsewhere). No boundary data = budget cut.
-     */
-    static int passageAlignedLastIndex(List<com.quransafeguard.hifz.core.VerseRef> verses, int budgetLast,
-                                       Set<com.quransafeguard.hifz.core.VerseRef> passageStarts) {
-        if (passageStarts == null || passageStarts.isEmpty()) return budgetLast;
-        for (int k = budgetLast; k >= 0; k--) {
-            com.quransafeguard.hifz.core.VerseRef next = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(verses.get(k));
-            if (next == null || passageStarts.contains(next)) return k;
-        }
-        return budgetLast;
-    }
-
-    /**
-     * Optimal grouping of consecutive atoms into maintenance sessions of at most maxLines owned
-     * lines: first the fewest sessions, then the most even sizes (sum of squared shortfall). A
-     * group may only cross into another surah by ending on a surah end, so every following surah
-     * in it is whole. Atoms are Al-Munīr units (or single verses of an Al-Munīr unit longer than
-     * maxLines). Returns [firstAtom, lastAtom] index pairs in order.
-     */
-    static List<int[]> optimalGroups(int[] lines, int[] surahOf, boolean[] endsSurah, int maxLines) {
-        int n = lines.length;
-        long[] best = new long[n + 1];
-        int[] from = new int[n + 1];
-        java.util.Arrays.fill(best, Long.MAX_VALUE);
-        best[0] = 0;
-        for (int j = 0; j < n; j++) {
-            int sum = 0;
-            for (int i = j; i >= 0; i--) {
-                sum += lines[i];
-                if (sum > maxLines && i < j) break;          // a lone oversize atom is still allowed
-                if (surahOf[i] != surahOf[j] && !endsSurah[j]) continue;
-                if (best[i] == Long.MAX_VALUE) continue;
-                long shortfall = Math.max(0, maxLines - sum);
-                long cost = best[i] + 1000L + shortfall * shortfall;
-                if (cost < best[j + 1]) { best[j + 1] = cost; from[j + 1] = i; }
-            }
-        }
-        ArrayList<int[]> out = new ArrayList<>();
-        for (int end = n; end > 0; end = from[end]) out.add(0, new int[]{from[end], end - 1});
-        return Collections.unmodifiableList(out);
-    }
-
-    /** Owned-line lookup for a candidate unit ending at the given verse index. */
-    interface OwnedLines {
-        int count(int lastVerseIndex);
-    }
-
-    /**
-     * Largest prefix of a unit's ordered verses whose owned physical lines fit in maxLines. A
-     * verse is never split: the first verse is always kept even if, alone, it owns more lines
-     * (no Madani verse does at 15), so a unit is never empty and never cut mid-verse.
-     */
-    static int lastVerseIndexWithinBudget(int verseCount, int maxLines, OwnedLines owned) {
-        if (verseCount <= 0) throw new IllegalArgumentException("unit requires verses");
-        int last = verseCount - 1;
-        while (last > 0 && owned.count(last) > maxLines) last--;
-        return last;
     }
 }

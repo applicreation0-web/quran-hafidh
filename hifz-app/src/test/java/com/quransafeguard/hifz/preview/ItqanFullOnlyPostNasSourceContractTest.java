@@ -46,7 +46,7 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         assertFalse(session.contains("PreviewConfig.itqanMaskForNextRep("));
         assertFalse(session.contains("PreviewConfig.isItqanValidationRep("));
         assertTrue(session.contains("ItqanMaintenancePolicy.isValidationRep(itqanRegime, itqanSessionProtocol, rep - 1)"));
-        assertTrue("maintenance is one whole ≤15-line unit, never 8/7/7 sub-blocks",
+        assertTrue("maintenance is one whole hizb unit, never 8/7/7 sub-blocks",
             session.contains("? Collections.singletonList(new StabilizationHalfPagePolicy.Unit("));
         assertTrue(session.contains("? prefs.completeItqanMaintenanceUnitV6(currentLineIds, itqanUnit.start, itqanUnit.end, next,"));
     }

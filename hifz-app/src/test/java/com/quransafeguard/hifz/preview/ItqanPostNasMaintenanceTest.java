@@ -169,23 +169,44 @@ public final class ItqanPostNasMaintenanceTest {
             AnchoringQueue.ItqanProtocol.FULL, new HifzPrefs(store).itqanUnitPlan(entry).protocol);
     }
 
-    // ---- 4. post-Nas unit never exceeds 15 physical lines or the Sabqi frontier ----
+    // ---- 4. post-Nas unit never exceeds one hizb or the Sabqi frontier ----
 
-    @Test public void postNasTailUnitsAreAtMostFifteenOwnedLinesAndTileTheLegExactly() {
+    private static boolean insideOneHizb(AnchoringQueue.Entry unit) {
+        VerseRef start = GeometryRepository.parseVerse(unit.start), end = GeometryRepository.parseVerse(unit.end);
+        for (VerseRef[] hizb : ItqanMaintenancePolicy.hizbUnits(new VerseRef(1, 1), new VerseRef(114, 6))) {
+            if (start.compareTo(hizb[0]) >= 0 && end.compareTo(hizb[1]) <= 0) return true;
+        }
+        return false;
+    }
+
+    @Test public void thereAreSixtyHizbAndTheTailStartsMidHizb52() {
+        List<VerseRef> starts = ItqanMaintenancePolicy.hizbStarts();
+        assertEquals(60, starts.size());
+        assertEquals(new VerseRef(1, 1), starts.get(0));
+        assertEquals(new VerseRef(48, 18), starts.get(51));
+        assertTilesExactly(entries(ItqanMaintenancePolicy.hizbUnits(new VerseRef(1, 1), new VerseRef(114, 6))),
+            new VerseRef(1, 1), new VerseRef(114, 6));
+    }
+
+    private static List<AnchoringQueue.Entry> entries(List<VerseRef[]> ranges) {
+        List<AnchoringQueue.Entry> out = new ArrayList<>();
+        for (VerseRef[] r : ranges) out.add(new AnchoringQueue.Entry(r[0].toString(), r[1].toString(),
+            AnchoringQueue.Origin.PROMOTED, AnchoringQueue.ItqanProtocol.FULL, 0));
+        return out;
+    }
+
+    @Test public void postNasTailUnitsAreOneHizbEachAndTileTheLegExactly() {
         List<AnchoringQueue.Entry> units = HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
             new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE);
         assertEquals("49:1", units.get(0).start);
         assertEquals("114:6", units.get(units.size() - 1).end);
         assertTilesExactly(units, new VerseRef(49, 1), new VerseRef(114, 6));
-        int fifteen = 0;
+        assertEquals("49:1 → end of hizb 52, then hizb 53..60", 9, units.size());
         for (AnchoringQueue.Entry unit : units) {
-            List<String> owned = owned(unit);
-            assertTrue(unit.start + "→" + unit.end + " has " + owned.size() + " lines",
-                owned.size() <= ItqanMaintenancePolicy.MAX_LINES);
-            assertOnlyWholeFollowingSurahs(unit);
-            if (owned.size() >= 13) fifteen++;
+            assertTrue(unit.start + "→" + unit.end, insideOneHizb(unit));
+            assertTrue(owned(unit).size() <= ItqanMaintenancePolicy.MAX_UNIT_LINES);
         }
-        assertTrue("long surahs must actually use the 15-line target, not stay at half pages", fifteen > 20);
+        assertEquals("hizb 53 starts at 51:31", "51:31", units.get(1).start);
     }
 
     @Test public void postNasFrontUnitsNeverReachSabqisCurrentBlockOnAnyFrontierLine() {
@@ -201,7 +222,7 @@ public final class ItqanPostNasMaintenanceTest {
                 assertFalse(units.isEmpty());
                 for (AnchoringQueue.Entry unit : units) {
                     List<String> owned = owned(unit);
-                    assertTrue(owned.size() <= ItqanMaintenancePolicy.MAX_LINES);
+                    assertTrue(unit.start + "→" + unit.end, insideOneHizb(unit));
                     assertTrue(unit.end + " must stay before Sabqi's block " + sabqiBlockStart,
                         GeometryRepository.ordinal(GeometryRepository.parseVerse(unit.end))
                             < GeometryRepository.ordinal(sabqiBlockStart));
@@ -280,7 +301,7 @@ public final class ItqanPostNasMaintenanceTest {
         assertEquals("TAIL_HUJURAT_NAS", store.disk.get(ItqanRegimeStore.LEG));
         assertEquals("49:1", store.disk.get(ItqanRegimeStore.CURSOR));
         assertEquals(Boolean.TRUE, store.disk.get(ItqanRegimeStore.INITIAL_TAIL_COMPLETED));
-        assertTrue("a post-Nas TAIL unit is ≤15 lines", owned(selected).size() <= 15);
+        assertTrue("a post-Nas TAIL unit is one hizb at most", insideOneHizb(selected));
         assertEquals(sabqiBefore, sabqiKeys(store));
 
         // Completing that unit and advancing the rotation still never writes a Sabqi key.
@@ -298,17 +319,17 @@ public final class ItqanPostNasMaintenanceTest {
         ItqanMaintenancePolicy.Regime m = ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
         VerseRef sabqi = geometry.fiveLineBlock(geometry.firstLineIndex(new VerseRef(3, 1))).startVerse;
         List<AnchoringQueue.Entry> fresh = prefs.cachedUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT,
-            sabqi, geometry, m, java.util.Collections.emptySet());
+            sabqi, geometry, m);
         String saved = (String) store.disk.get(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT");
         assertNotNull(saved);
         List<AnchoringQueue.Entry> reused = new HifzPrefs(store).cachedUnitsInLeg(
-            ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, sabqi, geometry, m, java.util.Collections.emptySet());
+            ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, sabqi, geometry, m);
         assertEquals(ranges(fresh), ranges(reused));
         assertEquals("reuse never rewrites the plan", saved, store.disk.get(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT"));
 
-        VerseRef moved = geometry.fiveLineBlock(geometry.firstLineIndex(new VerseRef(3, 30))).startVerse;
+        VerseRef moved = geometry.fiveLineBlock(geometry.firstLineIndex(new VerseRef(4, 30))).startVerse;
         List<AnchoringQueue.Entry> longer = prefs.cachedUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT,
-            moved, geometry, m, java.util.Collections.emptySet());
+            moved, geometry, m);
         assertEquals(ranges(HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, moved, geometry, m)),
             ranges(longer));
         assertTrue(longer.size() > fresh.size());
@@ -316,7 +337,7 @@ public final class ItqanPostNasMaintenanceTest {
         store.disk.put(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT",
             ((String) store.disk.get(HifzPrefs.LEG_PLAN_PREFIX + "FRONT_BAQARA_HUJURAT")).replaceFirst("\n.*", "\ngarbage line"));
         assertEquals("a corrupt plan is recomputed, never trusted", ranges(longer), ranges(prefs.cachedUnitsInLeg(
-            ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, moved, geometry, m, java.util.Collections.emptySet())));
+            ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, moved, geometry, m)));
     }
 
     private static List<String> ranges(List<AnchoringQueue.Entry> units) {
@@ -327,31 +348,32 @@ public final class ItqanPostNasMaintenanceTest {
 
     @Test public void homeStabilisationCardFollowsTheRegime() {
         assertEquals("22 lignes/semaine", Ui.stabilizationCue(false));
-        assertEquals("15 lignes · entretien", Ui.stabilizationCue(true));
+        assertEquals("1 hizb · entretien", Ui.stabilizationCue(true));
     }
 
-    // ---- 6. post-Nas FULL target is exactly 20 reps = 10 visible + 10 anchors ----
+    // ---- 6. post-Nas target: 1 hizb × 4 passes = 2 visible + 2 with anchors (user decision) ----
 
-    @Test public void postNasTargetIsExactlyTwentyRepsTenVisibleThenTenAnchored() {
+    @Test public void postNasTargetIsFourPassesTwoVisibleThenTwoAnchored() {
         ItqanMaintenancePolicy.Regime m = ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
-        assertEquals("FULL ×40 halved, rounded up", (PreviewConfig.ITQAN_TOTAL_REPS + 1) / 2,
-            ItqanMaintenancePolicy.totalReps(m, AnchoringQueue.ItqanProtocol.FULL));
-        assertEquals(20, ItqanMaintenancePolicy.TOTAL_REPS);
-        assertEquals(10, ItqanMaintenancePolicy.VISIBLE_REPS);
-        assertEquals(10, ItqanMaintenancePolicy.ANCHOR_REPS);
-        int visible = 0, anchored = 0;
-        for (int completed = 0; completed < 20; completed++) {
+        assertEquals(4, ItqanMaintenancePolicy.totalReps(m, AnchoringQueue.ItqanProtocol.FULL));
+        assertEquals(2, ItqanMaintenancePolicy.VISIBLE_REPS);
+        assertEquals(2, ItqanMaintenancePolicy.ANCHOR_REPS);
+        for (int completed = 0; completed < 4; completed++) {
             int mask = ItqanMaintenancePolicy.maskForNextRep(m, AnchoringQueue.ItqanProtocol.FULL, completed);
             boolean anchor = ItqanMaintenancePolicy.anchoredRecallRep(m, completed);
-            if (completed < 10) { assertEquals(0, mask); assertFalse(anchor); visible++; }
-            else { assertEquals(100, mask); assertTrue(anchor); anchored++; }
+            if (completed < 2) { assertEquals(0, mask); assertFalse(anchor); }
+            else { assertEquals(100, mask); assertTrue(anchor); }
         }
-        assertEquals(10, visible);
-        assertEquals(10, anchored);
-        assertFalse(ItqanMaintenancePolicy.anchoredRecallRep(m, 20));
-        assertTrue(ItqanMaintenancePolicy.isValidationRep(m, AnchoringQueue.ItqanProtocol.FULL, 18));
-        assertTrue(ItqanMaintenancePolicy.isValidationRep(m, AnchoringQueue.ItqanProtocol.FULL, 19));
-        assertFalse(ItqanMaintenancePolicy.isValidationRep(m, AnchoringQueue.ItqanProtocol.FULL, 17));
+        assertFalse(ItqanMaintenancePolicy.anchoredRecallRep(m, 4));
+    }
+
+    @Test public void noEarlyReviewPolicyRevealsNeverBlockAMaintenanceValidation() {
+        ItqanMaintenancePolicy.Regime m = ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+        assertTrue(ItqanMaintenancePolicy.validationAllowed(m, 0));
+        assertTrue(ItqanMaintenancePolicy.validationAllowed(m, 25));
+        assertTrue("phase 1 keeps its assistance rule",
+            ItqanMaintenancePolicy.validationAllowed(ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS, 2));
+        assertFalse(ItqanMaintenancePolicy.validationAllowed(ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS, 3));
     }
 
     // ---- 7. no progressive mask after first Nas ----
@@ -398,12 +420,10 @@ public final class ItqanPostNasMaintenanceTest {
     }
 
     @Test public void newMaterialIsCreditedOnceInVerifiableBlocksAndApprisIsNeverTaken() throws Exception {
-        AnchoringQueue.Entry unit = null;
-        for (AnchoringQueue.Entry candidate : HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
-                new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE)) {
-            if (owned(candidate).size() >= 14) { unit = candidate; break; }
-        }
-        assertNotNull(unit);
+        // A whole hizb (hizb 53, 51:31 → 54:55) spanning several surahs.
+        AnchoringQueue.Entry unit = HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
+            new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE).get(1);
+        assertTrue(GeometryRepository.parseVerse(unit.start).getSurah() < GeometryRepository.parseVerse(unit.end).getSurah());
         List<String> lines = owned(unit);
         List<String> learned = lines.subList(0, 1);
         List<String> acquired = lines.subList(1, 2);
@@ -447,14 +467,14 @@ public final class ItqanPostNasMaintenanceTest {
     @Test public void maintenanceRefusesAnOversizedUnit() {
         InMemoryPrefs store = new InMemoryPrefs();
         seedSchema6(store, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
-        List<String> sixteen = new ArrayList<>();
-        for (int i = 0; i < 16; i++) sixteen.add(geometry.line(i).id);
+        List<String> tooMany = new ArrayList<>();
+        for (int i = 0; i <= ItqanMaintenancePolicy.MAX_UNIT_LINES; i++) tooMany.add(geometry.line(i).id);
         try {
-            new HifzPrefs(store).completeItqanMaintenanceUnitV6(sixteen, new VerseRef(1, 1), new VerseRef(2, 5),
+            new HifzPrefs(store).completeItqanMaintenanceUnitV6(tooMany, new VerseRef(1, 1), new VerseRef(2, 5),
                 null, "2026-10-04", "x", geometry);
-            throw new AssertionError("16 lines must be refused");
+            throw new AssertionError("more than a hizb must be refused");
         } catch (IllegalStateException expected) {
-            assertTrue(expected.getMessage().contains("15"));
+            assertTrue(expected.getMessage().contains("hizb"));
         }
     }
 
@@ -470,36 +490,6 @@ public final class ItqanPostNasMaintenanceTest {
             GeometryRepository.parseVerse(unit.end), geometry);
     }
 
-    /** A unit may span surahs only by appending WHOLE following surahs. */
-    private static void assertOnlyWholeFollowingSurahs(AnchoringQueue.Entry unit) {
-        VerseRef start = GeometryRepository.parseVerse(unit.start), end = GeometryRepository.parseVerse(unit.end);
-        if (start.getSurah() == end.getSurah()) return;
-        VerseRef after = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(end);
-        assertTrue(unit.start + "→" + unit.end + " must end on a surah end", after == null || after.getAyah() == 1);
-    }
-
-    @Test public void shortSurahsAreGroupedWholeUpToFifteenLines() {
-        List<AnchoringQueue.Entry> units = HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
-            new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE);
-        AnchoringQueue.Entry last = units.get(units.size() - 1);
-        assertEquals("114:6", last.end);
-        assertTrue("An-Nās no longer stands alone", GeometryRepository.parseVerse(last.start).getSurah() < 114);
-        int tiny = 0;
-        for (AnchoringQueue.Entry unit : units) {
-            assertOnlyWholeFollowingSurahs(unit);
-            if (owned(unit).size() <= 6) tiny++;
-        }
-        System.out.println("Post-Nas TAIL sessions: " + units.size() + ", of 6 lines or fewer: " + tiny);
-    }
-
-    private static void assertSingleSurah(List<String> owned) {
-        int surah = -1;
-        for (GeometryRepository.LineMeta line : geometry.linesForExactIds(owned)) {
-            int s = line.verses.get(0).getSurah();
-            if (surah < 0) surah = s;
-            assertEquals("a unit never crosses a surah", surah, s);
-        }
-    }
 
     /** Units cover [start, end]'s owned lines exactly once each, in order, with no gap. */
     private static void assertTilesExactly(List<AnchoringQueue.Entry> units, VerseRef start, VerseRef end) {

@@ -55,8 +55,6 @@ public final class HifzPrefs {
     private static final Object V6_STATE_LOCK = new Object();
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
-    /** Null only in JVM tests (no Al-Munīr corpus: plain 15-line maintenance cuts). */
-    private final Context appContext;
 
     static void setMigrationFaultPointForTest(String point) {
         if (point != null
@@ -75,7 +73,6 @@ public final class HifzPrefs {
 
     public HifzPrefs(Context context) {
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
-        appContext = context.getApplicationContext();
         ensureSchema(context);
         migrateLegacyGates(context);
     }
@@ -85,7 +82,6 @@ public final class HifzPrefs {
     HifzPrefs(SharedPreferences store) {
         if (store == null) throw new IllegalArgumentException("store required");
         p = store;
-        appContext = null;
     }
 
     private void ensureSchema(Context context) {
@@ -1674,8 +1670,7 @@ public final class HifzPrefs {
     }
 
     /**
-     * Post-An-Nās Itqān maintenance validation (one whole ≤15-line unit, ×20 = 10 visible + 10
-     * anchored). Only lines never credited anywhere become Stabilisé, and only they join the
+     * Post-An-Nās Itqān maintenance validation (one hizb, ×4 = 2 visible + 2 anchored passes). Only lines never credited anywhere become Stabilisé, and only they join the
      * Stabilisation snowball — as StabilizationHalfPagePolicy half-page blocks Consolidation can
      * re-verify. Stabilisé/Acquis lines are reinforcement only (no V6 change, no snowball entry),
      * Appris lines stay in their Apprentissage chain, and no Sabqi key is ever written here.
@@ -1685,8 +1680,8 @@ public final class HifzPrefs {
                                            GeometryRepository geometry) {
         if (lineIds == null || lineIds.isEmpty() || unitStart == null || unitEnd == null || geometry == null)
             throw new IllegalArgumentException("Stabilisation maintenance unit required");
-        if (lineIds.size() > ItqanMaintenancePolicy.MAX_LINES)
-            throw new IllegalStateException("Post-An-Nās Itqān unit exceeds 15 physical lines");
+        if (lineIds.size() > ItqanMaintenancePolicy.MAX_UNIT_LINES)
+            throw new IllegalStateException("Post-An-Nās Itqān unit exceeds one hizb");
         synchronized (V6_STATE_LOCK) {
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
@@ -2247,133 +2242,40 @@ public final class HifzPrefs {
     /** P4: every physical Itqān unit spanning a leg's own fixed bounds — all of TAIL, or FRONT
      *  strictly before Sabqi's current not-yet-validated block (ItqanRotationPolicy.frontLegEnd)
      *  — independent of unconsolidatedPromotedRanges, since a perpetual Itqān lap keeps visiting
-     *  a unit forever, long after it first graduates out of "à stabiliser". Empty for FRONT
-     *  before Sabqi has put anything behind it. Deep first-pass units keep the ~22-line weekly
-     *  size (8/7/7 sub-blocks); post-An-Nās maintenance units are capped at 15 owned physical
-     *  lines, single-surah, whole verses only. Every unit is planned FULL. */
+     *  a unit forever. Empty for FRONT before Sabqi has put anything behind it. Deep first-pass
+     *  units keep the ~22-line weekly size (8/7/7 sub-blocks); post-An-Nās maintenance units are
+     *  one hizb each (its real boundaries, clipped to the leg). Every unit is planned FULL. */
     static List<AnchoringQueue.Entry> physicalUnitsInLeg(
             ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart, GeometryRepository geometry,
             ItqanMaintenancePolicy.Regime regime) {
-        return physicalUnitsInLeg(leg, sabqiCurrentBlockStart, geometry, regime, Collections.emptySet());
-    }
-
-    /** As above; in maintenance, units are cut at Al-Munīr unit boundaries (passageStarts) so each
-     *  session starts on a validated amorce. Empty passageStarts = plain 15-line cut. */
-    static List<AnchoringQueue.Entry> physicalUnitsInLeg(
-            ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart, GeometryRepository geometry,
-            ItqanMaintenancePolicy.Regime regime, java.util.Set<VerseRef> passageStarts) {
         boolean tail = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS;
         VerseRef legStart = tail ? ItqanRotationPolicy.TAIL_START : ItqanRotationPolicy.FRONT_START;
         VerseRef effectiveEnd = tail ? ItqanRotationPolicy.TAIL_END
             : ItqanRotationPolicy.frontLegEnd(sabqiCurrentBlockStart);
         if (effectiveEnd == null) return Collections.emptyList();
-        boolean maintenance = regime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
-        int maxLines = maintenance ? ItqanMaintenancePolicy.MAX_LINES : PreviewConfig.STABILIZATION_WEEKLY_LINES;
-        VerseRange range = new VerseRange(legStart, effectiveEnd);
-        EligibleCorpus legCorpus = EligibleCorpus.Companion.of(Collections.singletonList(range));
         ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
-        VerseRef cursor = legStart;
-        if (maintenance && passageStarts != null && !passageStarts.isEmpty()) {
-            return optimalMaintenanceUnits(legStart, effectiveEnd, geometry, maxLines, passageStarts);
-        }
-        while (range.contains(cursor)) {
-            VerseRef unitStart = cursor;
-            VerseRef unitEnd = chunkEnd(cursor, effectiveEnd, legCorpus, geometry, maintenance, maxLines, passageStarts);
-            if (maintenance) {
-                // Short surahs (Juz ʿAmma…): while the chunk closes its surah, append the next
-                // surah if it fits WHOLE within the 15 owned-line budget, so a session is not a
-                // lone 3-6 line surah. Never a partial following surah, never past the leg end.
-                while (true) {
-                    VerseRef following = QuranCanon.INSTANCE.next(unitEnd);
-                    if (following == null || following.getAyah() != 1 || !range.contains(following)) break;
-                    VerseRef followingEnd = chunkEnd(following, effectiveEnd, legCorpus, geometry, true, maxLines, passageStarts);
-                    VerseRef afterFollowing = QuranCanon.INSTANCE.next(followingEnd);
-                    boolean wholeSurah = afterFollowing == null || afterFollowing.getAyah() == 1;
-                    if (!wholeSurah || CorpusLinePolicy.ownedLineIdsForRangeOnPage(
-                            unitStart, followingEnd, geometry).size() > maxLines) break;
-                    unitEnd = followingEnd;
-                }
-            }
-            if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unitStart, unitEnd, geometry).isEmpty()) {
-                out.add(new AnchoringQueue.Entry(unitStart.toString(), unitEnd.toString(),
+        if (regime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE) {
+            for (VerseRef[] hizb : ItqanMaintenancePolicy.hizbUnits(legStart, effectiveEnd)) {
+                if (CorpusLinePolicy.ownedLineIdsForRangeOnPage(hizb[0], hizb[1], geometry).isEmpty()) continue;
+                out.add(new AnchoringQueue.Entry(hizb[0].toString(), hizb[1].toString(),
                     AnchoringQueue.Origin.PROMOTED, ItqanMaintenancePolicy.protocolForNewSession(), 0));
             }
-            VerseRef next = legCorpus.next(unitEnd);
-            if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unitEnd)) break;
+            return out;
+        }
+        VerseRange range = new VerseRange(legStart, effectiveEnd);
+        EligibleCorpus legCorpus = EligibleCorpus.Companion.of(Collections.singletonList(range));
+        VerseRef cursor = legStart;
+        while (range.contains(cursor)) {
+            GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(cursor, effectiveEnd, legCorpus);
+            if (!CorpusLinePolicy.ownedLineIdsForRangeOnPage(unit.start, unit.end, geometry).isEmpty()) {
+                out.add(new AnchoringQueue.Entry(unit.start.toString(), unit.end.toString(),
+                    AnchoringQueue.Origin.PROMOTED, ItqanMaintenancePolicy.protocolForNewSession(), 0));
+            }
+            VerseRef next = legCorpus.next(unit.end);
+            if (GeometryRepository.ordinal(next) <= GeometryRepository.ordinal(unit.end)) break;
             cursor = next;
         }
         return out;
-    }
-
-    /**
-     * Post-An-Nās maintenance plan from exact line ownership: atoms are whole Al-Munīr units (a
-     * unit longer than maxLines contributes its verses as atoms, so only it can be cut, and only
-     * between verses), grouped by ItqanMaintenancePolicy.optimalGroups — fewest ≤15-line
-     * sessions, then the most even ones; whole short surahs are grouped together.
-     */
-    private static List<AnchoringQueue.Entry> optimalMaintenanceUnits(
-            VerseRef legStart, VerseRef legEnd, GeometryRepository geometry, int maxLines,
-            java.util.Set<VerseRef> passageStarts) {
-        java.util.HashMap<Integer, Integer> ownedByOrdinal = new java.util.HashMap<>();
-        for (int i = 0; i < geometry.lineCount(); i++) {
-            int owner = GeometryRepository.ordinal(CorpusLinePolicy.ownerVerse(geometry.line(i)));
-            ownedByOrdinal.merge(owner, 1, Integer::sum);
-        }
-        int first = GeometryRepository.ordinal(legStart), last = GeometryRepository.ordinal(legEnd);
-        // Al-Munīr units clipped to the leg: [startOrdinal, endOrdinal].
-        ArrayList<int[]> passages = new ArrayList<>();
-        int open = first;
-        for (int o = first + 1; o <= last; o++) {
-            VerseRef v = QuranCanon.INSTANCE.fromOrdinal(o);
-            if (passageStarts.contains(v) || v.getAyah() == 1) { passages.add(new int[]{open, o - 1}); open = o; }
-        }
-        passages.add(new int[]{open, last});
-        ArrayList<int[]> atoms = new ArrayList<>();
-        for (int[] passage : passages) {
-            int lines = 0;
-            for (int o = passage[0]; o <= passage[1]; o++) lines += ownedByOrdinal.getOrDefault(o, 0);
-            if (lines <= maxLines) atoms.add(passage);
-            else for (int o = passage[0]; o <= passage[1]; o++) atoms.add(new int[]{o, o});
-        }
-        int n = atoms.size();
-        int[] lines = new int[n], surah = new int[n];
-        boolean[] endsSurah = new boolean[n];
-        for (int k = 0; k < n; k++) {
-            int[] atom = atoms.get(k);
-            for (int o = atom[0]; o <= atom[1]; o++) lines[k] += ownedByOrdinal.getOrDefault(o, 0);
-            VerseRef end = QuranCanon.INSTANCE.fromOrdinal(atom[1]);
-            surah[k] = end.getSurah();
-            VerseRef after = QuranCanon.INSTANCE.next(end);
-            endsSurah[k] = after == null || after.getAyah() == 1;
-        }
-        ArrayList<AnchoringQueue.Entry> out = new ArrayList<>();
-        for (int[] group : ItqanMaintenancePolicy.optimalGroups(lines, surah, endsSurah, maxLines)) {
-            int total = 0;
-            for (int k = group[0]; k <= group[1]; k++) total += lines[k];
-            if (total == 0) continue;
-            out.add(new AnchoringQueue.Entry(
-                QuranCanon.INSTANCE.fromOrdinal(atoms.get(group[0])[0]).toString(),
-                QuranCanon.INSTANCE.fromOrdinal(atoms.get(group[1])[1]).toString(),
-                AnchoringQueue.Origin.PROMOTED, ItqanMaintenancePolicy.protocolForNewSession(), 0));
-        }
-        return out;
-    }
-
-    /** End of one single-surah chunk starting at cursor: the ~22-line weekly unit (deep), or the
-     *  ≤15 owned-line, Al-Munīr-aligned maintenance chunk. */
-    private static VerseRef chunkEnd(VerseRef cursor, VerseRef effectiveEnd, EligibleCorpus legCorpus,
-                                     GeometryRepository geometry, boolean maintenance, int maxLines,
-                                     java.util.Set<VerseRef> passageStarts) {
-        // Maintenance gathers two extra touched lines (a shared first line belongs to the
-        // previous unit) and then enforces the strict 15 owned-line budget below.
-        GeometryRepository.VerseUnit unit = geometry.eligibleWeeklyStabilizationUnit(
-            cursor, effectiveEnd, legCorpus, maintenance ? maxLines + 2 : maxLines);
-        if (!maintenance) return unit.end;
-        final List<VerseRef> verses = unit.verses;
-        final VerseRef unitStart = unit.start;
-        int last = ItqanMaintenancePolicy.lastVerseIndexWithinBudget(verses.size(), maxLines,
-            i -> CorpusLinePolicy.ownedLineIdsForRangeOnPage(unitStart, verses.get(i), geometry).size());
-        return verses.get(ItqanMaintenancePolicy.passageAlignedLastIndex(verses, last, passageStarts));
     }
 
     /** P4: perpetual Itqān reinforcement of a unit whose lines are already ACQUIRED/STABILIZED —
@@ -2441,10 +2343,8 @@ public final class HifzPrefs {
         ItqanRotationPolicy.State state = original;
         VerseRef sabqiFrontier = currentSabqiPosition(geometry);
         ItqanMaintenancePolicy.Regime regime = ItqanRegimeStore.selectionRegime(p);
-        java.util.Set<VerseRef> passageStarts = regime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
-            ? alMunirStarts() : Collections.emptySet();
         ItqanRotationPolicy.Pick pick = ItqanRotationPolicy.pick(original,
-            leg -> cachedUnitsInLeg(leg, sabqiFrontier, geometry, regime, passageStarts));
+            leg -> cachedUnitsInLeg(leg, sabqiFrontier, geometry, regime));
         state = pick.state;
         AnchoringQueue.Entry selected = pick.unit;
         if (selected == null) return null; // nothing physical at all
@@ -2456,27 +2356,19 @@ public final class HifzPrefs {
         return selected;
     }
 
-    private java.util.Set<VerseRef> alMunirStarts() {
-        if (appContext == null) return Collections.emptySet();
-        SemanticPassageRepository corpus = SemanticPassageRepository.shared(appContext);
-        return corpus.isAvailable() ? corpus.canonicalStarts() : Collections.emptySet();
-    }
-
     static final String LEG_PLAN_PREFIX = "itqanLegPlanV1.";
 
     /**
      * A leg's physical units, persisted and reused until its inputs change: the leg, its real end
-     * (FRONT moves only when Sabqi validates a new block), the regime and the Al-Munīr boundary
-     * set. The plan is a pure function of those inputs, so reusing it is exact — it only spares
+     * (FRONT moves only when Sabqi validates a new block) and the regime. The plan is a pure function of those inputs, so reusing it is exact — it only spares
      * re-walking the ~9 000 Mushaf lines on every screen.
      */
     List<AnchoringQueue.Entry> cachedUnitsInLeg(ItqanRotationPolicy.Leg leg, VerseRef sabqiCurrentBlockStart,
-                                                GeometryRepository geometry, ItqanMaintenancePolicy.Regime regime,
-                                                java.util.Set<VerseRef> passageStarts) {
+                                                GeometryRepository geometry, ItqanMaintenancePolicy.Regime regime) {
         VerseRef end = leg == ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS
             ? ItqanRotationPolicy.TAIL_END : ItqanRotationPolicy.frontLegEnd(sabqiCurrentBlockStart);
         if (end == null) return Collections.emptyList();
-        String signature = "v3|" + leg.name() + "|" + end + "|" + regime.name() + "|" + passageStarts.size();
+        String signature = "v4|" + leg.name() + "|" + end + "|" + regime.name();
         String raw = p.getString(LEG_PLAN_PREFIX + leg.name(), "");
         if (raw != null && raw.startsWith(signature + "\n")) {
             try {
@@ -2494,7 +2386,7 @@ public final class HifzPrefs {
                 // fall through: recompute and overwrite
             }
         }
-        List<AnchoringQueue.Entry> units = physicalUnitsInLeg(leg, sabqiCurrentBlockStart, geometry, regime, passageStarts);
+        List<AnchoringQueue.Entry> units = physicalUnitsInLeg(leg, sabqiCurrentBlockStart, geometry, regime);
         StringBuilder out = new StringBuilder(signature).append('\n');
         for (AnchoringQueue.Entry unit : units) out.append(unit.start).append(' ').append(unit.end).append('\n');
         p.edit().putString(LEG_PLAN_PREFIX + leg.name(), out.toString()).apply();

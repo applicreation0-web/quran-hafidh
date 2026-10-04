@@ -448,7 +448,9 @@ public final class MainActivity extends android.app.Activity {
         int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
         if(plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE){
-            return "Stabilisation · "+shortRange(start,end)+" · "+owned.size()+" lignes · ×"+reps+" entretien";
+            java.util.LinkedHashSet<Integer> pages=new java.util.LinkedHashSet<>();
+            for(GeometryRepository.LineMeta line:geometry.linesForExactIds(owned))pages.add(line.page);
+            return "Stabilisation · "+shortRange(start,end)+" · "+pages.size()+" pages · ×"+reps+" entretien";
         }
         List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
             geometry.linesForExactIds(owned));
