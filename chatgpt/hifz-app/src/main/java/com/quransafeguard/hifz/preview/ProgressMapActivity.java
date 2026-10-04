@@ -135,19 +135,19 @@ public final class ProgressMapActivity extends android.app.Activity {
         return box;
     }
 
-    /** A bordered panel holding a title and a value line, filled in once loadStatuses() finishes. */
+    /** Interface Progression — estimation en ligne sobre, sans carte/pavé bordé. */
     private TextView etaBox(LinearLayout root, String title) {
-        LinearLayout box = Ui.column(this);
-        Ui.panel(box);
-        box.addView(Ui.text(this, title, 13f, true));
-        TextView value = Ui.text(this, "Calcul en cours…", 12.5f, false);
+        LinearLayout row = Ui.row(this);
+        row.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
+        TextView label = Ui.text(this, title, 12.5f, true);
+        Ui.weight(label, 1f);
+        row.addView(label);
+        TextView value = Ui.text(this, "Calcul en cours…", 12f, false);
         value.setTextColor(Ui.MUTED);
-        value.setPadding(0, Ui.dp(this, 2), 0, 0);
-        box.addView(value);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.bottomMargin = Ui.dp(this, 8);
-        root.addView(box, params);
+        value.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        row.addView(value);
+        root.addView(row);
+        root.addView(Ui.divider(this));
         return value;
     }
 

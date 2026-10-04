@@ -53,7 +53,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private Button tafsirButton;
     private Button semanticButton;
     private Button annotationButton;
-    private boolean annotationEnabled = true;
+    private Button annotationUndoButton;
+    private Button annotationClearButton;
+    private boolean annotationEnabled = false;
     private SemanticPassageRepository semanticPassages;
     private boolean semanticCuesEnabled;
     private Dialog semanticTitleDialog;
@@ -137,6 +139,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -155,13 +158,19 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
+        // Interface Lecture — le crayon est une action secondaire : ses outils n'apparaissent
+        // que lorsqu'il est activé. Aucun titre n'est rendu sous les icônes.
         annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
         annotationButton.setSelected(annotationEnabled);
         readerActions.addView(annotationButton);
-        readerActions.addView(Ui.iconButton(this, "", "Annuler la note",
-            v -> annotationOverlay.undoLastStroke()));
-        readerActions.addView(Ui.iconButton(this, "", "Effacer les notes",
-            v -> annotationOverlay.clearCurrentPage()));
+        annotationUndoButton = Ui.iconButton(this, "", "Annuler la note",
+            v -> annotationOverlay.undoLastStroke());
+        annotationClearButton = Ui.iconButton(this, "", "Effacer les notes",
+            v -> annotationOverlay.clearCurrentPage());
+        annotationUndoButton.setVisibility(View.GONE);
+        annotationClearButton.setVisibility(View.GONE);
+        readerActions.addView(annotationUndoButton);
+        readerActions.addView(annotationClearButton);
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -267,6 +276,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         annotationEnabled = !annotationEnabled;
         annotationOverlay.setDrawingEnabled(annotationEnabled);
         annotationButton.setSelected(annotationEnabled);
+        annotationUndoButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
+        annotationClearButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
         Ui.setIconDescription(annotationButton,
             annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
         showControls();

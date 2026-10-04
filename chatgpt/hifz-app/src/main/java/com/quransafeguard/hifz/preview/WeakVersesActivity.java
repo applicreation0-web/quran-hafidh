@@ -108,16 +108,11 @@ public final class WeakVersesActivity extends android.app.Activity {
         tapArea.setOnClickListener(v -> openInMushaf(verse));
         row.addView(tapArea);
 
-        TextView unmark = Ui.text(this, "Démarquer", 12.5f, false);
-        unmark.setTextColor(Ui.MUTED);
-        unmark.setPadding(Ui.dp(this, 10), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6));
-        unmark.setClickable(true);
-        unmark.setFocusable(true);
-        unmark.setOnClickListener(v -> {
+        // Interface Repères faibles — action secondaire compacte, icône seule.
+        row.addView(Ui.iconButton(this, "", "Démarquer", v -> {
             prefs.toggleMurajaahWeakVerse(verse);
             refreshList();
-        });
-        row.addView(unmark);
+        }));
 
         return row;
     }

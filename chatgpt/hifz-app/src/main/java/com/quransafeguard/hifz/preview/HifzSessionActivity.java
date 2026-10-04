@@ -87,7 +87,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private Button revealButton;
     private Button murajaahFinishButton;
     private Button annotationButton;
-    private boolean annotationEnabled = true;
+    private Button annotationUndoButton;
+    private Button annotationClearButton;
+    private boolean annotationEnabled = false;
     /** Révision active only: armed by "Marquer", the next verse tap flags/unflags it instead of moving the cursor. */
     private boolean weakMarkMode;
     /** Pages revealed at least once during this Révision active session, for weak-spot streak decay. */
@@ -186,10 +188,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
-        if (MURAJAAH_ACTIVE.equals(mode)) {
-            annotationEnabled = false;
-            annotationOverlay.setDrawingEnabled(false);
-        }
+        // Interface séances Hifz uniquement : le moteur de Sabqi/Itqān/Consolidation/
+        // Renforcement reste strictement intact. Le crayon démarre simplement fermé.
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -204,12 +205,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
         if (!MURAJAAH_ACTIVE.equals(mode)) {
+            // Interface séances Hifz — commandes secondaires contextuelles, icônes seules.
             annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
             annotationButton.setSelected(annotationEnabled);
             controlBar.addView(annotationButton);
-            controlBar.addView(Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke()));
-            controlBar.addView(Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage()));
-            controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
+            annotationUndoButton = Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke());
+            annotationClearButton = Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage());
+            annotationUndoButton.setVisibility(View.GONE);
+            annotationClearButton.setVisibility(View.GONE);
+            controlBar.addView(annotationUndoButton);
+            controlBar.addView(annotationClearButton);
+            if (new HifzAudioGate(this).available()) {
+                controlBar.addView(Ui.iconButton(this, "", "Écouter", v -> openAudio()));
+            }
         }
         root.addView(controlBar);
 
@@ -221,6 +229,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationEnabled = !annotationEnabled;
         annotationOverlay.setDrawingEnabled(annotationEnabled);
         annotationButton.setSelected(annotationEnabled);
+        if (annotationUndoButton != null) annotationUndoButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
+        if (annotationClearButton != null) annotationClearButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
         Ui.setIconDescription(annotationButton,
             annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
     }

@@ -19,6 +19,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import org.json.JSONArray;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -52,11 +53,14 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     private LinearLayout assessmentRow;
     private Button recordButton;
     private Button playButton;
+    private Button retryButton;
     private Button verifyButton;
 
     private MediaRecorder recorder;
     private MediaPlayer player;
     private File recordingFile;
+    /** Interface Quiz: fichiers temporaires gardés pendant la série, jamais au-delà du Quiz. */
+    private final List<File> sessionRecordings = new ArrayList<>();
     private boolean recording;
     private boolean pendingRecordAfterPermission;
 
@@ -76,7 +80,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     }
 
     private void showSetup() {
-        releaseAudio(true);
+        // Interface Quiz — revenir au réglage signifie quitter la série en cours.
+        clearQuizAudio();
         LinearLayout root = Ui.column(this);
         int side = Ui.dp(this, 18);
         root.setPadding(side, Ui.dp(this, 8), side, Ui.dp(this, 18));
@@ -123,12 +128,17 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         note.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 10));
         root.addView(note);
 
-        root.addView(Ui.button(this, "Commencer", v -> startQuiz()));
+        // Interface Quiz — action principale compacte, icône seule (libellé via accessibilité/tooltip).
+        LinearLayout startRow = Ui.row(this);
+        startRow.setGravity(Gravity.CENTER);
+        startRow.addView(Ui.iconButton(this, "", "Commencer le Quiz", v -> startQuiz()));
+        root.addView(startRow);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
 
     private void startQuiz() {
+        clearQuizAudio();
         try {
             questions = corpus.questions(prefs.progressionSnapshotV6(), selectedMode, QUESTION_COUNT);
         } catch (Throwable error) {
@@ -188,20 +198,22 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         actionRow.setMinimumHeight(Ui.dp(this, 58));
         recordButton = Ui.iconButton(this, "●", "Enregistrer", v -> toggleRecording());
         playButton = Ui.iconButton(this, "▶", "Écouter l’enregistrement", v -> playRecording());
-        Button retry = Ui.iconButton(this, "↻", "Réessayer", v -> retryQuestion());
+        retryButton = Ui.iconButton(this, "↻", "Réessayer", v -> retryQuestion());
         verifyButton = Ui.iconButton(this, "✓", "Vérifier", v -> verifyAnswer());
         actionRow.addView(recordButton);
         actionRow.addView(playButton);
-        actionRow.addView(retry);
+        actionRow.addView(retryButton);
         actionRow.addView(verifyButton);
         root.addView(actionRow);
 
         assessmentRow = Ui.row(this);
         assessmentRow.setGravity(Gravity.CENTER);
         assessmentRow.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), Ui.dp(this, 6));
-        assessmentRow.addView(Ui.smallButton(this, "Correct", v -> assess(QuizHistory.Result.CORRECT)));
-        assessmentRow.addView(Ui.smallButton(this, "Hésitation", v -> assess(QuizHistory.Result.HESITATION)));
-        assessmentRow.addView(Ui.smallButton(this, "À revoir", v -> assess(QuizHistory.Result.REVIEW)));
+        // Interface Quiz — aucune légende sous les icônes : ✓ / hésitation / à revoir sont
+        // exposés par contentDescription et tooltip.
+        assessmentRow.addView(Ui.iconButton(this, "", "Correct", v -> assess(QuizHistory.Result.CORRECT)));
+        assessmentRow.addView(Ui.iconButton(this, "", "Hésitation", v -> assess(QuizHistory.Result.HESITATION)));
+        assessmentRow.addView(Ui.iconButton(this, "", "À revoir", v -> assess(QuizHistory.Result.REVIEW)));
         assessmentRow.setVisibility(View.GONE);
         root.addView(assessmentRow);
 
@@ -219,7 +231,10 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             showSummary();
             return;
         }
-        releaseAudio(true);
+        // Interface Quiz — l'audio de la question précédente reste dans le cache jusqu'à la fin
+        // de la série, mais n'est plus la piste active de la nouvelle question.
+        releaseAudio(false);
+        recordingFile = null;
         retryCount = 0;
         recordUsed = false;
         verified = false;
@@ -227,8 +242,12 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         instruction.setText(question.typeLabel() + " · " + question.instruction());
         assessmentRow.setVisibility(View.GONE);
         verifyButton.setEnabled(true);
+        verifyButton.setVisibility(View.VISIBLE);
         recordButton.setEnabled(true);
+        recordButton.setVisibility(View.VISIBLE);
         playButton.setEnabled(false);
+        playButton.setVisibility(View.GONE);
+        retryButton.setVisibility(View.GONE);
         audioStatus.setText("");
 
         JSONArray visible = promptBoxes(question);
@@ -260,7 +279,13 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     private void retryQuestion() {
         if (verified) return;
         retryCount++;
-        releaseAudio(true);
+        // Interface Quiz — Réessayer remplace seulement la prise courante; les autres questions
+        // restent temporaires jusqu'à la fin de la série.
+        releaseAudio(false);
+        discardCurrentRecording();
+        playButton.setEnabled(false);
+        playButton.setVisibility(View.GONE);
+        retryButton.setVisibility(View.GONE);
         audioStatus.setText("");
         QuizQuestion question = currentQuestion();
         if (question == null) return;
@@ -277,8 +302,14 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         if (question == null || verified) return;
         if (recording) stopRecording();
         verified = true;
-        verifyButton.setEnabled(false);
-        recordButton.setEnabled(false);
+        // Interface Quiz — pendant la correction, seule la réécoute éventuelle et
+        // l'auto-évaluation restent utiles.
+        verifyButton.setVisibility(View.GONE);
+        recordButton.setVisibility(View.GONE);
+        retryButton.setVisibility(View.GONE);
+        boolean hasRecording = hasCurrentRecording();
+        playButton.setEnabled(hasRecording);
+        playButton.setVisibility(hasRecording ? View.VISIBLE : View.GONE);
         assessmentRow.setVisibility(View.VISIBLE);
         instruction.setText("Réponse · " + question.expected);
         mushaf.setPreserveVerseMarkersOnMask(true);
@@ -301,7 +332,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     }
 
     private void showSummary() {
-        releaseAudio(true);
+        // Interface Quiz — la série est terminée : aucun enregistrement ne survit au résumé.
+        clearQuizAudio();
         LinearLayout root = Ui.column(this);
         int side = Ui.dp(this, 20);
         root.setPadding(side, Ui.dp(this, 10), side, Ui.dp(this, 18));
@@ -311,7 +343,10 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         root.addView(summaryRow("Correct", correctCount));
         root.addView(summaryRow("Hésitation", hesitationCount));
         root.addView(summaryRow("À revoir", reviewCount));
-        root.addView(Ui.button(this, "Terminer", v -> finish()));
+        LinearLayout finishRow = Ui.row(this);
+        finishRow.setGravity(Gravity.CENTER);
+        finishRow.addView(Ui.iconButton(this, "", "Terminer", v -> finish()));
+        root.addView(finishRow);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
@@ -338,9 +373,11 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
 
     @SuppressWarnings("deprecation")
     private void startRecording() {
-        releaseAudio(true);
+        releaseAudio(false);
+        discardCurrentRecording();
         try {
             recordingFile = new File(getCacheDir(), "quiz-" + System.nanoTime() + ".m4a");
+            sessionRecordings.add(recordingFile);
             recorder = new MediaRecorder();
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -355,9 +392,12 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_stop);
             Ui.setIconDescription(recordButton, "Arrêter");
             playButton.setEnabled(false);
+            playButton.setVisibility(View.GONE);
+            retryButton.setVisibility(View.GONE);
             audioStatus.setText("Enregistrement…");
         } catch (Exception error) {
-            releaseAudio(true);
+            releaseAudio(false);
+            discardCurrentRecording();
             Toast.makeText(this, "Enregistrement indisponible.", Toast.LENGTH_SHORT).show();
         }
     }
@@ -368,8 +408,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             recorder.stop();
             audioStatus.setText("Enregistrement prêt.");
         } catch (RuntimeException tooShort) {
-            if (recordingFile != null) recordingFile.delete();
-            recordingFile = null;
+            discardCurrentRecording();
             audioStatus.setText("Enregistrement trop court.");
         } finally {
             try { recorder.reset(); } catch (RuntimeException ignored) {}
@@ -378,7 +417,10 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             recording = false;
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_record);
             Ui.setIconDescription(recordButton, "Enregistrer");
-            playButton.setEnabled(recordingFile != null && recordingFile.isFile() && recordingFile.length() > 0L);
+            boolean ready = hasCurrentRecording();
+            playButton.setEnabled(ready);
+            playButton.setVisibility(ready ? View.VISIBLE : View.GONE);
+            retryButton.setVisibility(ready && !verified ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -409,6 +451,27 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         }
     }
 
+    private boolean hasCurrentRecording() {
+        return recordingFile != null && recordingFile.isFile() && recordingFile.length() > 0L;
+    }
+
+    private void discardCurrentRecording() {
+        if (recordingFile == null) return;
+        sessionRecordings.remove(recordingFile);
+        recordingFile.delete();
+        recordingFile = null;
+    }
+
+    /** Interface Quiz — purge unique de toutes les prises temporaires de la série. */
+    private void clearQuizAudio() {
+        releaseAudio(false);
+        for (File file : new ArrayList<>(sessionRecordings)) {
+            if (file != null) file.delete();
+        }
+        sessionRecordings.clear();
+        recordingFile = null;
+    }
+
     private void releaseAudio(boolean deleteFile) {
         if (recorder != null) {
             try { if (recording) recorder.stop(); } catch (RuntimeException ignored) {}
@@ -421,15 +484,12 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             player.release();
             player = null;
         }
-        if (deleteFile && recordingFile != null) {
-            recordingFile.delete();
-            recordingFile = null;
-        }
+        if (deleteFile) discardCurrentRecording();
         if (recordButton != null) {
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_record);
             Ui.setIconDescription(recordButton, "Enregistrer");
         }
-        if (playButton != null) playButton.setEnabled(recordingFile != null && recordingFile.isFile());
+        if (playButton != null) playButton.setEnabled(hasCurrentRecording());
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -451,7 +511,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     }
 
     @Override protected void onDestroy() {
-        releaseAudio(true);
+        clearQuizAudio();
         super.onDestroy();
     }
 

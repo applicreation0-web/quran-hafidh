@@ -50,6 +50,8 @@ public final class QuizArchitectureSourceContractTest {
         assertTrue(activity.contains("firstThree.put(all.optJSONArray(i))"));
         assertTrue(activity.contains("MediaRecorder"));
         assertTrue(activity.contains("getCacheDir()"));
+        assertTrue(activity.contains("sessionRecordings"));
+        assertTrue(activity.contains("clearQuizAudio()"));
         assertFalse(activity.contains("SpeechRecognizer"));
         assertFalse(activity.contains("RecognizerIntent"));
         assertFalse(activity.contains("EditText"));
@@ -71,6 +73,16 @@ public final class QuizArchitectureSourceContractTest {
         assertFalse(manifest.contains("WRITE_EXTERNAL_STORAGE"));
         assertFalse(manifest.contains("READ_EXTERNAL_STORAGE"));
         assertTrue(manifest.contains("android:name=\".QuizActivity\""));
+    }
+
+    @Test public void quizUiUsesContextualIconActionsWithoutFullWidthPavés() throws Exception {
+        String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java");
+        assertFalse(activity.contains("Ui.button(this, \"Commencer\""));
+        assertFalse(activity.contains("Ui.button(this, \"Terminer\""));
+        assertTrue(activity.contains("Ui.iconButton(this, \"\", \"Commencer le Quiz\""));
+        assertTrue(activity.contains("Ui.iconButton(this, \"\", \"Correct\""));
+        assertTrue(activity.contains("playButton.setVisibility(hasRecording ? View.VISIBLE : View.GONE)"));
+        assertTrue(activity.contains("clearQuizAudio();"));
     }
 
     @Test public void quizHistoryIsSeparateAndBounded() throws Exception {

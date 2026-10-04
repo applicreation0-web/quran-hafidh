@@ -65,10 +65,14 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         reps.addView(Ui.iconButton(this,"↺","Remettre à zéro",v->{count=0;save();counter.setText("Répétitions · 0");mushaf.localCounterChanged();}));
         root.addView(reps);
 
+        // Interface Mémoriser — valeurs compactes, sans cinq gros pavés étirés sur la largeur.
         LinearLayout masks=Ui.row(this);masks.setGravity(Gravity.CENTER);
         for(int value:new int[]{0,25,50,75,100}){
             Button b=Ui.smallButton(this,value+"%",v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
-            b.setTag(value);maskButtons.add(b);Ui.weight(b,1);masks.addView(b);
+            b.setTag(value);maskButtons.add(b);
+            LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(Ui.dp(this,52),Ui.dp(this,48));
+            mp.setMargins(Ui.dp(this,2),0,Ui.dp(this,2),0);
+            masks.addView(b,mp);
         }
         root.addView(masks);
 
