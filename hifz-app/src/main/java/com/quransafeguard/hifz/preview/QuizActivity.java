@@ -88,7 +88,6 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         actionRow = null;
         LinearLayout root = Ui.column(this);
         int side = Ui.dp(this, 18);
-        root.setPadding(side, Ui.dp(this, 8), side, Ui.dp(this, 18));
 
         LinearLayout header = Ui.row(this);
         Button back = Ui.iconButton(this, "‹", "Retour", v -> finish());
@@ -132,7 +131,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         startRow.addView(Ui.iconButton(this, "▶", "Commencer", v -> startQuiz()));
         root.addView(startRow);
         setContentView(root);
-        Ui.respectSystemBars(this, root, 0, 0, 0, 0);
+        Ui.respectSystemBars(this, root, side, Ui.dp(this, 8), side, Ui.dp(this, 18));
     }
 
     /** Flat segmented choice: plain words, the chosen one in ink and bold, no box. */
@@ -376,9 +375,13 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         releaseAudio(true);
         purgeQuizRecordings();
         actionRow = null;
+        // Scrollable: ten verses to review plus the add line and ✓ must all stay reachable.
+        android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(Ui.PAPER);
         LinearLayout root = Ui.column(this);
         int side = Ui.dp(this, 20);
-        root.setPadding(side, Ui.dp(this, 10), side, Ui.dp(this, 18));
+        scroll.addView(root);
         TextView title = Ui.bookText(this, "Quiz", 19f, true);
         title.setGravity(Gravity.CENTER);
         title.setMinHeight(Ui.dp(this, 48));
@@ -392,8 +395,13 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             // Each verse to review opens in Lecture; adding them to Repères faibles is offered,
             // never automatic (explicit confirmation, add-only, Progression untouched).
             for (VerseRef verse : reviewVerses) {
-                root.addView(Ui.settingRow(this, QuranSurahNames.name(verse.getSurah()) + " " + verse.getAyah(),
-                    verse.toString(), v -> openInLecture(verse)));
+                LinearLayout verseRow = Ui.settingRow(this, verse + " · " + QuranSurahNames.name(verse.getSurah()),
+                    "", v -> openInLecture(verse));
+                if (verseRow.getChildAt(0) instanceof TextView) {
+                    verseRow.getChildAt(0).setTextDirection(View.TEXT_DIRECTION_LTR);
+                    ((TextView) verseRow.getChildAt(0)).setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+                }
+                root.addView(verseRow);
                 root.addView(Ui.divider(this));
             }
             LinearLayout addRow = Ui.settingRow(this, "Ajouter aux Repères faibles",
@@ -408,8 +416,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         finishRow.setGravity(Gravity.CENTER);
         finishRow.addView(Ui.iconButton(this, "✓", "Terminer", v -> finish()));
         root.addView(finishRow);
-        setContentView(root);
-        Ui.respectSystemBars(this, root, 0, 0, 0, 0);
+        setContentView(scroll);
+        Ui.respectSystemBars(this, root, side, Ui.dp(this, 10), side, Ui.dp(this, 18));
     }
 
     private void openInLecture(VerseRef verse) {
