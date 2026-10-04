@@ -78,17 +78,16 @@ public final class SemanticPassageRepositoryTest {
                 if (!cue.anchorOnCurrentPage) continue;
                 assertEquals(cue.startPage, page.getKey().intValue());
                 assertTrue(cue.anchorWordCount >= 1);
-                int words = WordGeometryRepository.wordCount(WORDS, page.getKey(), cue.startVerse);
-                // An amorce longer than its start verse (e.g. 2:1 "الم") has no exact box set:
-                // anchorBoxes returns empty and that page fails closed (no anchor mask), never estimated.
-                if (words >= cue.anchorWordCount) exact++;
-                else failClosed++;
+                int boxes = WordGeometryRepository.amorceBoxes(WORDS.get(page.getKey()), cue.startVerse,
+                    cue.anchorWordCount).length();
+                if (boxes == cue.anchorWordCount) exact++;
+                else { failClosed++; System.out.println("fail-closed amorce " + cue.passageId + " " + cue.startVerse); }
                 checked++;
             }
         }
         System.out.println("Al-Munīr amorces with exact boxes: " + exact + ", fail-closed: " + failClosed);
         assertEquals(1243, checked);
-        assertTrue("the vast majority of amorces resolve to exact word boxes", exact >= 1200);
+        assertEquals("every amorce resolves to exact word boxes, multi-verse ones included", 1243, exact);
     }
 
     private static Set<VerseRef> starts() {

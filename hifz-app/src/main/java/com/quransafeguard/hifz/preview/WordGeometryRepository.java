@@ -118,13 +118,27 @@ final class WordGeometryRepository implements QuizCorpus.WordCounts {
         return count;
     }
 
-    /** First wordCount exact boxes of a verse on a page (an Al-Munīr amorce), or empty. */
+    /**
+     * Exact boxes of an Al-Munīr amorce: the wordCount real Quran words that follow, in canonical
+     * order on this page, from word 1 of its start verse — continuing into the next verse(s) when
+     * the amorce is longer than its start verse (e.g. "الٓمٓ ذَٰلِكَ ٱلْكِتَـٰبُ" = 2:1 + 2:2). The
+     * sidecar is verified canonical and gap-free (verify_quran_word_boxes.py); an amorce running
+     * past the page end returns empty (fail closed), never an estimate.
+     */
     synchronized JSONArray anchorBoxes(int page, VerseRef start, int wordCount) {
-        if (start == null || wordCount < 1) return new JSONArray();
-        JSONArray all = boxesForVerse(page, start);
-        if (all.length() < wordCount) return new JSONArray();
+        return amorceBoxes(wordsForPage(page), start, wordCount);
+    }
+
+    static JSONArray amorceBoxes(List<WordBox> pageWords, VerseRef start, int wordCount) {
         JSONArray out = new JSONArray();
-        for (int i = 0; i < wordCount; i++) out.put(all.optJSONArray(i));
+        if (pageWords == null || start == null || wordCount < 1) return out;
+        int at = -1;
+        for (int i = 0; i < pageWords.size(); i++) {
+            WordBox word = pageWords.get(i);
+            if (word.surah == start.getSurah() && word.ayah == start.getAyah() && word.word == 1) { at = i; break; }
+        }
+        if (at < 0 || at + wordCount > pageWords.size()) return out;
+        for (int i = at; i < at + wordCount; i++) out.put(pageWords.get(i).boxJson());
         return out;
     }
 
