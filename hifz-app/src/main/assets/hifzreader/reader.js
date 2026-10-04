@@ -539,19 +539,23 @@ function focusContextLayer(svg,activeLines,polys){
   return g;
 }
 
+const AMORCE_HIGHLIGHT_HEIGHT=31;
 function semanticExactRects(cue,svg){
   const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
     .map(box=>wordBoxInSvgSpace(box,svg)).filter(Boolean);
   if(!boxes.length)return[];
-  // One even rectangle per physical line: exact word extents horizontally, the line's own band
-  // vertically (slightly inset), so a multi-word amorce never renders as a staircase.
+  // One even rectangle per physical line: exact word extents horizontally, a fixed height
+  // vertically, so every amorce on every line has the same height (never a staircase).
   const bands=(pageGeo&&pageGeo.lines)||[];
   const groups=new Map();
   boxes.forEach(box=>{
     const cy=(box[1]+box[3])/2;
     const band=bands.find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));
     const key=band?String(band.id):'y'+Math.round(cy);
-    const g=groups.get(key)||{x0:box[0],x1:box[2],y0:band?Number(band.top)+1.2:box[1]-0.8,y1:band?Number(band.bottom)-1.2:box[3]+0.8};
+    // Same height on every line: a fixed band centred on the line's middle (bands differ by a
+    // few units from line to line, which made highlights look uneven).
+    const mid=band?(Number(band.top)+Number(band.bottom))/2:cy;
+    const g=groups.get(key)||{x0:box[0],x1:box[2],y0:mid-AMORCE_HIGHLIGHT_HEIGHT/2,y1:mid+AMORCE_HIGHLIGHT_HEIGHT/2};
     g.x0=Math.min(g.x0,box[0]);g.x1=Math.max(g.x1,box[2]);
     groups.set(key,g);
   });
