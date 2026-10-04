@@ -217,10 +217,45 @@ function semanticVisibleCellKeys(){
   return keys;
 }
 
+/*
+ * KFQC geometry folds the surah title band into the last text line above it, and the basmala band
+ * into the first text line below it (128 double-height lines). Erasing such a line by its whole
+ * band used to wipe the title or the basmala too. A double-height line is therefore narrowed to the
+ * exact ink of its own words (quran-ws boxes, harakat included) plus a small pad. Normal lines and
+ * lines without word geometry keep their audited band (fail closed: the verse text stays erased).
+ */
+let lineInkBands=new Map();
+function computeLineInkBands(lines,svg){
+  const bands=new Map();
+  const all=(pageGeo&&pageGeo.lines)||[];
+  const heights=all.map(l=>Number(l.bottom)-Number(l.top)).filter(h=>h>0).sort((a,b)=>a-b);
+  if(!heights.length||!pageWordBoxes.length)return bands;
+  const typical=heights[Math.floor(heights.length/2)];
+  const pad=2.5;
+  (lines||[]).forEach(line=>{
+    const top=Number(line.top),bottom=Number(line.bottom);
+    if(!(bottom-top>typical*1.5))return;
+    let inkTop=Infinity,inkBottom=-Infinity;
+    pageWordBoxes.forEach(raw=>{
+      const b=(raw||[]).map(Number);if(!validWordBox(b))return;
+      const box=wordBoxInSvgSpace(b,svg);if(!box)return;
+      const cy=(box[1]+box[3])/2;
+      if(cy<top||cy>bottom)return;
+      inkTop=Math.min(inkTop,box[1]);inkBottom=Math.max(inkBottom,box[3]);
+    });
+    if(!Number.isFinite(inkTop)||!Number.isFinite(inkBottom))return;
+    const t=Math.max(top,inkTop-pad),bo=Math.min(bottom,inkBottom+pad);
+    if(bo-t<1)return;
+    bands.set(String(line.id),{top:t,bottom:bo,clampedTop:t>top+0.5,clampedBottom:bo<bottom-0.5});
+  });
+  return bands;
+}
+
 function maskCandidates(lines,polys){
   const out=[],semanticVisible=semanticVisibleCellKeys();
   lines.forEach(line=>{
-    const top=Number(line.top),bottom=Number(line.bottom);
+    const band=lineInkBands.get(String(line.id));
+    const top=band?band.top:Number(line.top),bottom=band?band.bottom:Number(line.bottom);
     const cells=line.cells||[];
     const lineId=String(line.id);
     const role=lineId===landmarkStart?'start':(lineId===landmarkEnd?'end':null);
@@ -328,8 +363,11 @@ function sealFullEraseSeams(segments,maskedLines){
     const i=index.get(String(seg.lineId));if(i===undefined)return;
     const line=all[i],prev=all[i-1],next=all[i+1];
     let top=seg.y,bottom=seg.y+seg.height;
-    if(prev&&masked.has(String(prev.id))&&touching(prev,line)){top=Number(line.top)-0.25;seg.seamTop=true;}
-    if(next&&masked.has(String(next.id))&&touching(line,next)){bottom=Number(line.bottom)+0.25;seg.seamBottom=true;}
+    // Never seal across a title/basmala band that computeLineInkBands kept out of the eraser.
+    const band=lineInkBands.get(String(line.id))||{};
+    const prevBand=prev?(lineInkBands.get(String(prev.id))||{}):{},nextBand=next?(lineInkBands.get(String(next.id))||{}):{};
+    if(prev&&!band.clampedTop&&!prevBand.clampedBottom&&masked.has(String(prev.id))&&touching(prev,line)){top=Number(line.top)-0.25;seg.seamTop=true;}
+    if(next&&!band.clampedBottom&&!nextBand.clampedTop&&masked.has(String(next.id))&&touching(line,next)){bottom=Number(line.bottom)+0.25;seg.seamBottom=true;}
     seg.y=top;seg.height=Math.max(0,bottom-top);
   });
   return segments;
@@ -627,6 +665,7 @@ function render(){
   }
 
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
+  lineInkBands=clamped&&lines.length?computeLineInkBands(lines,svg):new Map();
   if(clamped&&pageGeo&&lineIds.length&&lines.length){
     const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);
     if(cells.length){

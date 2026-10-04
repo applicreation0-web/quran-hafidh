@@ -58,7 +58,7 @@ public final class PreBoox074SourceContractTest {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         assertTrue(ui.contains("state_pressed") && ui.contains("shape(INK, INK"));
         assertTrue(ui.contains("new int[]{MUTED,PAPER,PAPER,INK}"));
-        assertTrue(ui.contains("text(context, label, 11f"));
+        assertTrue("bar actions are icon-only", ui.contains("box.addView(iconButton(context, symbol, label, listener));"));
         assertTrue(study.contains("Ui.dp(this, 48)"));
         assertTrue(study.contains("eink.isEink(hifzPrefs)) return"));
         assertTrue(free.contains("setLayoutDirection(View.LAYOUT_DIRECTION_RTL)"));

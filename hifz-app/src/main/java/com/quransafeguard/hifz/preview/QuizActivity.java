@@ -92,40 +92,96 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         header.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         root.addView(header);
 
-        TextView corpusLabel = Ui.bookText(this, "Corpus", 14f, true);
-        corpusLabel.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 3));
-        root.addView(corpusLabel);
-        TextView corpusValue = Ui.text(this, "Mémorisé", 13f, false);
-        corpusValue.setTextColor(Ui.MUTED);
-        root.addView(corpusValue);
+        // What the Quiz is for, said once in plain words: it checks memory outside the sessions
+        // and never touches Progression.
+        TextView purpose = Ui.text(this,
+            "Vérifiez ce que vous avez déjà mémorisé, hors séance : un indice s’affiche, vous "
+                + "récitez de mémoire, puis vous comparez avec le Mushaf et vous vous notez. "
+                + "Votre progression n’est jamais modifiée.", 13f, false);
+        purpose.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 12));
+        purpose.setLineSpacing(0f, 1.15f);
+        root.addView(purpose);
 
-        TextView typeLabel = Ui.bookText(this, "Type", 14f, true);
-        typeLabel.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 4));
+        TextView typeLabel = Ui.bookText(this, "Exercice", 14f, true);
+        typeLabel.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), 0, Ui.dp(this, 2));
         root.addView(typeLabel);
+        root.addView(Ui.divider(this));
+        root.addView(modeChoice(QuizCorpus.Mode.CONTINUE, "Suite du verset",
+            "Les 3 premiers mots d’un verset s’affichent : récitez la suite."));
+        root.addView(Ui.divider(this));
+        root.addView(modeChoice(QuizCorpus.Mode.PREVIOUS, "Verset précédent",
+            "Un verset s’affiche : récitez celui qui le précède."));
+        root.addView(Ui.divider(this));
+        root.addView(modeChoice(QuizCorpus.Mode.MIXED, "Les deux, au hasard",
+            "Alterne les deux exercices."));
+        root.addView(Ui.divider(this));
 
-        LinearLayout modes = Ui.row(this);
-        modes.setGravity(Gravity.CENTER);
-        Button mixed = Ui.smallButton(this, "Mélangé", v -> { selectedMode = QuizCorpus.Mode.MIXED; showSetup(); });
-        Button continuation = Ui.smallButton(this, "Continuer", v -> { selectedMode = QuizCorpus.Mode.CONTINUE; showSetup(); });
-        Button previous = Ui.smallButton(this, "Précédent", v -> { selectedMode = QuizCorpus.Mode.PREVIOUS; showSetup(); });
-        Ui.setChosen(mixed, selectedMode == QuizCorpus.Mode.MIXED);
-        Ui.setChosen(continuation, selectedMode == QuizCorpus.Mode.CONTINUE);
-        Ui.setChosen(previous, selectedMode == QuizCorpus.Mode.PREVIOUS);
-        modes.addView(mixed);
-        modes.addView(continuation);
-        modes.addView(previous);
-        root.addView(modes);
-
-        root.addView(Ui.settingRow(this, "Questions", Integer.toString(QUESTION_COUNT), null));
-
-        TextView note = Ui.text(this, "Auto-évaluation · enregistrement local facultatif · aucune reconnaissance vocale", 11.5f, false);
+        TextView note = Ui.text(this, QUESTION_COUNT + " questions · versets entièrement mémorisés · "
+            + "enregistrement de votre voix facultatif, sur l’appareil", 11.5f, false);
         note.setTextColor(Ui.MUTED);
-        note.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 10));
+        note.setPadding(Ui.dp(this, 4), Ui.dp(this, 12), Ui.dp(this, 4), Ui.dp(this, 12));
         root.addView(note);
 
         root.addView(Ui.button(this, "Commencer", v -> startQuiz()));
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
+    }
+
+    /** One plain selectable line (no boxed button): title, one-line explanation, check when chosen. */
+    private View modeChoice(QuizCorpus.Mode mode, String title, String explanation) {
+        boolean chosen = selectedMode == mode;
+        LinearLayout row = Ui.row(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(Ui.dp(this, 4), Ui.dp(this, 9), Ui.dp(this, 4), Ui.dp(this, 9));
+        row.setMinimumHeight(Ui.dp(this, 56));
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setContentDescription(title + ". " + explanation + (chosen ? " Choisi." : ""));
+        row.setOnClickListener(v -> { selectedMode = mode; showSetup(); });
+        LinearLayout texts = Ui.column(this);
+        texts.setPadding(0, 0, 0, 0);
+        TextView name = Ui.bookText(this, title, 14.5f, chosen);
+        name.setTextColor(chosen ? Ui.INK : Ui.MUTED);
+        texts.addView(name);
+        TextView detail = Ui.text(this, explanation, 12f, false);
+        detail.setTextColor(Ui.MUTED);
+        texts.addView(detail);
+        Ui.weight(texts, 1f);
+        row.addView(texts);
+        TextView mark = Ui.text(this, "", 1f, false);
+        if (chosen) {
+            mark.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_ui_validate, 0, 0, 0);
+            mark.setCompoundDrawableTintList(android.content.res.ColorStateList.valueOf(Ui.INK));
+        }
+        mark.setGravity(Gravity.CENTER);
+        row.addView(mark, new LinearLayout.LayoutParams(Ui.dp(this, 36), Ui.dp(this, 36)));
+        return row;
+    }
+
+    /** Flat text action for the self-assessment: no box, ink fill only while pressed. */
+    private Button flatChoice(String label, View.OnClickListener listener) {
+        Button button = new Button(this);
+        button.setAllCaps(false);
+        button.setText(label);
+        button.setTextSize(14f);
+        button.setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD);
+        button.setStateListAnimator(null);
+        button.setElevation(0f);
+        android.graphics.drawable.StateListDrawable background = new android.graphics.drawable.StateListDrawable();
+        android.graphics.drawable.GradientDrawable pressed = new android.graphics.drawable.GradientDrawable();
+        pressed.setColor(Ui.INK);
+        pressed.setCornerRadius(Ui.dp(this, 8));
+        background.addState(new int[]{android.R.attr.state_pressed}, pressed);
+        background.addState(new int[]{}, new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        button.setBackground(background);
+        button.setTextColor(new android.content.res.ColorStateList(
+            new int[][]{{android.R.attr.state_pressed}, {}}, new int[]{Ui.PAPER, Ui.INK}));
+        button.setMinHeight(Ui.dp(this, 48));
+        button.setPadding(Ui.dp(this, 8), 0, Ui.dp(this, 8), 0);
+        button.setOnClickListener(listener);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        button.setLayoutParams(params);
+        return button;
     }
 
     private void startQuiz() {
@@ -199,9 +255,9 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         assessmentRow = Ui.row(this);
         assessmentRow.setGravity(Gravity.CENTER);
         assessmentRow.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 4), Ui.dp(this, 6));
-        assessmentRow.addView(Ui.smallButton(this, "Correct", v -> assess(QuizHistory.Result.CORRECT)));
-        assessmentRow.addView(Ui.smallButton(this, "Hésitation", v -> assess(QuizHistory.Result.HESITATION)));
-        assessmentRow.addView(Ui.smallButton(this, "À revoir", v -> assess(QuizHistory.Result.REVIEW)));
+        assessmentRow.addView(flatChoice("Juste", v -> assess(QuizHistory.Result.CORRECT)));
+        assessmentRow.addView(flatChoice("Hésitant", v -> assess(QuizHistory.Result.HESITATION)));
+        assessmentRow.addView(flatChoice("À revoir", v -> assess(QuizHistory.Result.REVIEW)));
         assessmentRow.setVisibility(View.GONE);
         root.addView(assessmentRow);
 
@@ -224,12 +280,12 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         recordUsed = false;
         verified = false;
         counter.setText((questionIndex + 1) + "/" + questions.size());
-        instruction.setText(question.typeLabel() + " · " + question.instruction());
+        instruction.setText(question.instruction());
         assessmentRow.setVisibility(View.GONE);
         verifyButton.setEnabled(true);
         recordButton.setEnabled(true);
         playButton.setEnabled(false);
-        audioStatus.setText("");
+        audioStatus.setText("Récitez de mémoire, puis touchez ✓ pour voir la réponse.");
 
         JSONArray visible = promptBoxes(question);
         if (visible.length() == 0) {
@@ -278,7 +334,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         verifyButton.setEnabled(false);
         recordButton.setEnabled(false);
         assessmentRow.setVisibility(View.VISIBLE);
-        instruction.setText("Réponse · " + question.expected);
+        instruction.setText("Réponse : " + question.expected + " — comment était votre récitation ?");
+        audioStatus.setText("");
         mushaf.setSemanticCues(new JSONArray(), false, false);
         mushaf.clearPageLandmarkBoxes();
         mushaf.setMaskFollowsSelection(true);
@@ -305,8 +362,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         TextView title = Ui.bookText(this, "Quiz", 22f, true);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
-        root.addView(summaryRow("Correct", correctCount));
-        root.addView(summaryRow("Hésitation", hesitationCount));
+        root.addView(summaryRow("Juste", correctCount));
+        root.addView(summaryRow("Hésitant", hesitationCount));
         root.addView(summaryRow("À revoir", reviewCount));
         root.addView(Ui.button(this, "Terminer", v -> finish()));
         setContentView(root);

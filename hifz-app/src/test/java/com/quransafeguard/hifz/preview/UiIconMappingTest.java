@@ -61,8 +61,12 @@ public final class UiIconMappingTest {
             {"Supprimer la plage", R.drawable.ic_ui_delete},
             {"Sourate", R.drawable.ic_ui_surah_list},
             {"Hizb", R.drawable.ic_ui_hizb},
-            {"Annuler la note", R.drawable.ic_ui_reset},
-            {"Effacer les notes", R.drawable.ic_ui_delete}
+            {"Annuler la note", R.drawable.ic_ui_undo},
+            {"Effacer les notes", R.drawable.ic_ui_annotation_erase},
+            {"Annoter", R.drawable.ic_ui_edit},
+            {"Activer le crayon", R.drawable.ic_ui_edit},
+            {"Désactiver le crayon", R.drawable.ic_ui_edit},
+            {"Quiz", R.drawable.ic_ui_quiz}
         });
     }
 

@@ -361,24 +361,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
-     * roundAction's caption used to be a single line clipped to the width of its 48dp icon button
-     * ("Passage suivant du corpus" rendered as "Passage s…"), and adjacent actions had only 2dp of
-     * side padding, reading as visually stuck together once three actions shared one row. The
-     * caption must be allowed to wrap onto a second line instead of truncating, and actions need
-     * more breathing room between them.
+     * roundAction's caption first clipped ("Passage s…"), then wrapped and crowded the session bar
+     * on device. Owner decision: the bars show the icon alone, exactly like the ChatGPT build; the
+     * label survives only as contentDescription + long-press tooltip (via iconButton).
      */
-    @Test public void roundActionCaptionWrapsInsteadOfClippingAndActionsHaveBreathingRoom() throws Exception {
+    @Test public void roundActionIsIconOnlyWithoutVisibleCaption() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String roundAction = method(ui,
             "static LinearLayout roundAction(", "static LinearLayout cardAction(");
-        assertFalse("caption must no longer be forced onto a single clipped line",
-            roundAction.contains("caption.setSingleLine(true)"));
-        assertTrue("caption must wrap onto up to two lines instead",
-            roundAction.contains("caption.setMaxLines(2)"));
-        assertTrue("caption width must no longer be squeezed to the icon button's own narrow width",
-            roundAction.contains("ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));"));
-        assertTrue("side padding between adjacent actions must be wider than the original 2dp",
-            roundAction.contains("box.setPadding(dp(context,6),0,dp(context,6),0);"));
+        assertFalse("no caption TextView under the icon", roundAction.contains("TextView caption"));
+        assertTrue("the label stays the icon's spoken description/tooltip",
+            roundAction.contains("iconButton(context, symbol, label, listener)"));
     }
 
     /**

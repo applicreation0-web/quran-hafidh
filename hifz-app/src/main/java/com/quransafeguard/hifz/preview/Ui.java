@@ -119,26 +119,15 @@ final class Ui {
     }
 
     /**
-     * Icon + short caption with one compact grammar across all Hifz modes. The caption wraps onto
-     * a second line (capped at 84dp) instead of clipping to one truncated line — a label like
-     * "Passage suivant du corpus" was being cut down to "Passage s…" when several actions shared
-     * the row (see roundAction's 6dp side padding, widened for the same reason: adjacent actions
-     * were rendering right up against each other).
+     * Action of the session/reader bars: the icon alone, exactly like the other icon buttons. The
+     * label is never printed under it (it crowded the bar on device); it stays available as the
+     * spoken description and the long-press tooltip.
      */
     static LinearLayout roundAction(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout box = column(context);
-        box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(dp(context,6),0,dp(context,6),0);
-        Button b = iconButton(context, symbol, label, listener);
-        box.addView(b);
-        TextView caption = text(context, label, 11f, false);
-        caption.setTextColor(MUTED);
-        caption.setGravity(Gravity.CENTER);
-        caption.setMaxLines(2);
-        caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        caption.setMaxWidth(dp(context, 84));
-        box.addView(caption, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(0, 0, 0, 0);
+        box.addView(iconButton(context, symbol, label, listener));
         return box;
     }
 
@@ -394,6 +383,10 @@ final class Ui {
 
     static int iconFor(String semantic, String fallbackSymbol) {
         String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
+        if (s.contains("quiz")) return R.drawable.ic_ui_quiz;
+        if (s.contains("annoter") || s.contains("crayon")) return R.drawable.ic_ui_edit;
+        if (s.contains("annuler la note")) return R.drawable.ic_ui_undo;
+        if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;

@@ -48,6 +48,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
+    private Button annotationButton;
+    private boolean annotationEnabled = true;
     private TextView program, progress, timerText;
     private LinearLayout actions, audioHost;
     private HifzAudioDialog audioPlayer;
@@ -181,6 +183,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
+        if (MURAJAAH_ACTIVE.equals(mode)) {
+            annotationEnabled = false;
+            annotationOverlay.setDrawingEnabled(false);
+        }
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -194,13 +200,26 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
-        controlBar.addView(Ui.roundAction(this,"↺","Annuler la note",v->annotationOverlay.undoLastStroke()));
-        controlBar.addView(Ui.roundAction(this,"⌫","Effacer les notes",v->annotationOverlay.clearCurrentPage()));
+        if (!MURAJAAH_ACTIVE.equals(mode)) {
+            annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+            annotationButton.setSelected(annotationEnabled);
+            controlBar.addView(annotationButton);
+            controlBar.addView(Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke()));
+            controlBar.addView(Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage()));
+        }
         controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
         root.addView(controlBar);
 
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
+    }
+
+    private void toggleAnnotationMode() {
+        annotationEnabled = !annotationEnabled;
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
+        annotationButton.setSelected(annotationEnabled);
+        Ui.setIconDescription(annotationButton,
+            annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
     }
 
     private void renderMode() {

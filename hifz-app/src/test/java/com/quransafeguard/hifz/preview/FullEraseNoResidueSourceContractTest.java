@@ -19,8 +19,8 @@ public final class FullEraseNoResidueSourceContractTest {
 
     @Test public void seamsCloseOnlyBetweenTwoErasedLinesAndErasedWordsKeepExactExtents() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        assertTrue(reader.contains("if(prev&&masked.has(String(prev.id))&&touching(prev,line))"));
-        assertTrue(reader.contains("if(next&&masked.has(String(next.id))&&touching(line,next))"));
+        assertTrue(reader.contains("masked.has(String(prev.id))&&touching(prev,line))"));
+        assertTrue(reader.contains("masked.has(String(next.id))&&touching(line,next))"));
         assertTrue("only 100% segments are sealed", reader.contains("if(!seg.fullErase)return;"));
         assertTrue("erased words also covered by their own exact quran-ws box",
             reader.contains("segments.push(...fullEraseWordSegments(segments,lines,svg));")

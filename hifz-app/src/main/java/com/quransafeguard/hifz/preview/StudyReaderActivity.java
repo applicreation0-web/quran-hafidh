@@ -49,6 +49,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
+    private Button annotationButton;
+    private boolean annotationEnabled = true;
     private int page = 1;
     private VerseRef selected;
     private VerseRef pendingJumpVerse;
@@ -156,9 +158,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
-        readerActions.addView(Ui.iconButton(this, "↺", "Annuler la note",
+        annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+        annotationButton.setSelected(annotationEnabled);
+        readerActions.addView(annotationButton);
+        readerActions.addView(Ui.iconButton(this, "", "Annuler la note",
             v -> annotationOverlay.undoLastStroke()));
-        readerActions.addView(Ui.iconButton(this, "⌫", "Effacer les notes",
+        readerActions.addView(Ui.iconButton(this, "", "Effacer les notes",
             v -> annotationOverlay.clearCurrentPage()));
         readerStack.addView(readerActions, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -315,6 +320,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     /** Lecture: discreet Al-Munīr amorces (exact word boxes, hatched, E-Ink safe), off by default. */
+    private void toggleAnnotationMode() {
+        annotationEnabled = !annotationEnabled;
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
+        annotationButton.setSelected(annotationEnabled);
+        Ui.setIconDescription(annotationButton,
+            annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+    }
+
     private void toggleSemanticCues() {
         if (semanticPassages == null || !semanticPassages.isAvailable()) return;
         semanticCuesEnabled = !semanticCuesEnabled;

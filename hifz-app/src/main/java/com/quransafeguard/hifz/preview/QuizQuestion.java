@@ -22,10 +22,10 @@ final class QuizQuestion {
     }
 
     String instruction() {
-        return type == Type.PREVIOUS ? "Récitez le verset précédent." : "Continuez après les trois premiers mots.";
+        return type == Type.PREVIOUS ? "Récitez le verset qui précède celui-ci." : "Récitez la suite de ce verset.";
     }
 
     String typeLabel() {
-        return type == Type.PREVIOUS ? "Précédent" : "Continuer";
+        return type == Type.PREVIOUS ? "Verset précédent" : "Suite du verset";
     }
 }

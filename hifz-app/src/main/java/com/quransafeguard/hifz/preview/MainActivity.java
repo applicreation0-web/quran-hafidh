@@ -99,22 +99,20 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         LinearLayout progress = Ui.cardAction(this, "", "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
+        // Révision works memory; Quiz only questions it — free, read-only on Progression.
+        LinearLayout quiz = Ui.cardAction(this, "", "Quiz", v -> startActivity(new Intent(this, QuizActivity.class)));
         LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
         geometryActions.add(progress);
+        geometryActions.add(quiz);
         geometryActions.add(settings);
         addWeighted(primary, study, 1f);
         addWeighted(primary, free, 1f);
         addWeighted(primary, progress, 1f);
+        addWeighted(primary, quiz, 1f);
         addWeighted(primary, settings, 1f);
         root.addView(primary);
-
-        // Révision works memory; Quiz only questions it — free, read-only on Progression.
-        LinearLayout quiz = Ui.settingRow(this, "Quiz", "Mémorisé · 10 questions", v ->
-            startActivity(new Intent(this, QuizActivity.class)));
-        geometryActions.add(quiz);
-        root.addView(quiz);
 
         TextView dashTitle = Ui.bookText(this, "Semaine", 17, true);
         dashTitle.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 3));
