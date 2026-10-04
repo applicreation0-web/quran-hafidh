@@ -72,7 +72,7 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(session.contains("return \"Stabilisation\""));
         assertTrue(session.contains("return \"Consolidation\""));
         assertTrue(session.contains("return \"Révision\""));
-        assertTrue(settings.contains("section(root,\"Schéma\")"));
+        assertTrue(settings.contains("subScreen(null, \"À propos du parcours\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("consolidationSchemaNote.setText(\"Consolidation · soir \"+stabilizationDays);"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
@@ -82,7 +82,7 @@ public final class FinalUiPolishSourceContractTest {
     @Test public void settingsExposeReadableSeparatedSpeeds() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         String speed = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
-        assertTrue(settings.contains("section(root,\"Vitesses\")"));
+        assertTrue(settings.contains("\"Vitesse · Révision\"") && settings.contains("\"Vitesse · Consolidation\""));
         assertTrue(settings.contains("speedStore.maintenanceSummary()"));
         assertTrue(settings.contains("speedStore.consolidationSummary()"));
         assertTrue(speed.contains("s/ligne"));

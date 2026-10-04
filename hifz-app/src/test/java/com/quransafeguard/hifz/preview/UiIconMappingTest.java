@@ -73,7 +73,8 @@ public final class UiIconMappingTest {
             {"Correct", R.drawable.ic_ui_validate},
             {"Hésitation", R.drawable.ic_ui_info},
             {"À revoir", R.drawable.ic_ui_repeat},
-            {"Terminer", R.drawable.ic_ui_validate}
+            {"Terminer", R.drawable.ic_ui_validate},
+            {"Référence · sauvegarde", R.drawable.ic_ui_info}
         });
     }
 

@@ -43,8 +43,8 @@ public final class CanonicalProgressUiSourceContractTest {
     @Test public void settingsExposeIndependentEditableMultiRangesForStabilizationAndAcquiredCorpus() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
-        assertTrue(settings.contains("section(root,\"Plages à stabiliser\")"));
-        assertTrue(settings.contains("section(root,\"Plages acquises\")"));
+        assertTrue(settings.contains("section(corpus,\"Plages à stabiliser\")"));
+        assertTrue(settings.contains("section(corpus,\"Plages acquises\")"));
         assertTrue(settings.contains("chooseStabilizationRange"));
         assertTrue(settings.contains("chooseAcquiredRange"));
         assertTrue(settings.contains("removeStabilizationRange"));
@@ -65,7 +65,7 @@ public final class CanonicalProgressUiSourceContractTest {
 
     @Test public void settingsShowCanonicalSchemaInsteadOfLexiconDefinitions() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(settings.contains("section(root,\"Schéma\")"));
+        assertTrue(settings.contains("subScreen(null, \"À propos du parcours\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("consolidationSchemaNote.setText(\"Consolidation · soir \"+stabilizationDays);"));
         assertFalse(settings.contains("section(root,\"Repères\")"));

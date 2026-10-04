@@ -56,21 +56,23 @@ public final class SettingsActivity extends android.app.Activity {
             return;
         }
 
-        ScrollView scroll = new ScrollView(this);scroll.setFillViewport(true);
-        LinearLayout root = Ui.column(this);scroll.addView(root);
-        LinearLayout top=Ui.row(this);top.setPadding(0,0,0,Ui.dp(this,2));
-        top.addView(Ui.iconButton(this,"","Retour",v->finish()));
-        TextView title=Ui.bookText(this,"Paramètres Hifz",18,true);Ui.weight(title,1);title.setGravity(Gravity.CENTER);top.addView(title);
-        TextView balance=Ui.text(this,"",1,false);top.addView(balance,new LinearLayout.LayoutParams(Ui.dp(this,44),Ui.dp(this,44)));
-        root.addView(top);
+        // Spec UI pass 2 (§6): a six-line root; each rubric opens its own short sub-screen. Every
+        // row below is the same as before — only where it is shown changed.
+        LinearLayout root = subScreen(null, "Paramètres");
+        LinearLayout parcours = subScreen(root, "Parcours");
+        LinearLayout corpus = subScreen(root, "Plages & corpus");
+        LinearLayout revision = subScreen(root, "Révision");
+        LinearLayout audioDisplay = subScreen(root, "Audio & affichage");
+        LinearLayout backup = subScreen(root, "Sauvegarde");
+        LinearLayout advanced = subScreen(root, "Avancé");
+        LinearLayout about = subScreen(null, "À propos du parcours");
 
-        section(root,"Parcours");
         protocol=Ui.text(this,weeklyCadenceSummary(),11f,false);
-        protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));root.addView(protocol);
+        protocol.setTextColor(Ui.MUTED);protocol.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4));parcours.addView(protocol);
         LinearLayout roadmapModeRow=Ui.row(this);roadmapModeRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));roadmapModeRow.setMinimumHeight(Ui.dp(this,48));
         TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",13f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
         Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Pilotage Roadmap automatique");
-        roadmapModeRow.addView(roadmapModeSwitch);root.addView(roadmapModeRow);
+        roadmapModeRow.addView(roadmapModeSwitch);parcours.addView(roadmapModeRow);parcours.addView(Ui.divider(this));
         learningDaysSetting=Ui.settingRow(this,"Séances d’Apprentissage par semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
         learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
         roadmapModeSwitch.setOnCheckedChangeListener((button,checked)->{
@@ -78,80 +80,117 @@ public final class SettingsActivity extends android.app.Activity {
             learningDaysSetting.setEnabled(!checked);
             refreshWeeklyCadence();
         });
-        root.addView(learningDaysSetting);root.addView(Ui.divider(this));
+        parcours.addView(learningDaysSetting);parcours.addView(Ui.divider(this));
 
         sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
-        root.addView(sabqiStartRow);root.addView(Ui.divider(this));
+        parcours.addView(sabqiStartRow);parcours.addView(Ui.divider(this));
         sabqiEndRow=Ui.settingRow(this,"Fin de la plage d’Apprentissage",prefs.sabqiEnd().toString(),v->chooseVerse("Fin de la plage d’Apprentissage",prefs.sabqiEnd(),verse->setSabqiBound(false,verse)));
-        root.addView(sabqiEndRow);
-        sabqiStatus=Ui.text(this,"",11f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));root.addView(sabqiStatus);
+        parcours.addView(sabqiEndRow);
+        sabqiStatus=Ui.text(this,"",11f,false);sabqiStatus.setTextColor(Ui.MUTED);sabqiStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,4));parcours.addView(sabqiStatus);
 
-        section(root,"Plages à stabiliser");
-        stabilizationRangesBox=Ui.column(this);stabilizationRangesBox.setPadding(0,0,0,0);root.addView(stabilizationRangesBox);
-        root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseStabilizationRange(null,-1)));
+        section(corpus,"Plages à stabiliser");
+        stabilizationRangesBox=Ui.column(this);stabilizationRangesBox.setPadding(0,0,0,0);corpus.addView(stabilizationRangesBox);
+        corpus.addView(Ui.divider(this));
+        corpus.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseStabilizationRange(null,-1)));
 
-        section(root,"Plages acquises");
-        acquiredRangesBox=Ui.column(this);acquiredRangesBox.setPadding(0,0,0,0);root.addView(acquiredRangesBox);
-        root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseAcquiredRange(null,-1)));
+        section(corpus,"Plages acquises");
+        acquiredRangesBox=Ui.column(this);acquiredRangesBox.setPadding(0,0,0,0);corpus.addView(acquiredRangesBox);
+        corpus.addView(Ui.divider(this));
+        corpus.addView(Ui.settingRow(this,"Ajouter","Nouvelle plage",v->chooseAcquiredRange(null,-1)));
 
-        itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));root.addView(itqanStatus);
+        section(corpus,"Rotation");
+        itqanStatus=Ui.text(this,"",11f,false);itqanStatus.setTextColor(Ui.MUTED);itqanStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,2));corpus.addView(itqanStatus);
         rotationSetting=Ui.settingRow(this,"Début de rotation de stabilisation",prefs.itqanRotationStart().toString(),
             v->chooseVerse("Début de rotation de stabilisation",prefs.itqanRotationStart(),this::setRotationStart));
-        root.addView(rotationSetting);
-        root.addView(Ui.divider(this));
+        corpus.addView(rotationSetting);
+        corpus.addView(Ui.divider(this));
         hardAnchoringSetting=Ui.settingRow(this,"Sourates difficiles à stabiliser","0 sourate",v->showHardAnchoringSelector());
-        root.addView(hardAnchoringSetting);
+        corpus.addView(hardAnchoringSetting);
 
-        section(root,"Corpus effectif");
+        section(corpus,"Corpus effectif");
         effectiveCorpusStatus=Ui.text(this,"",11f,false);
         effectiveCorpusStatus.setTextColor(Ui.MUTED);
         effectiveCorpusStatus.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,2));
-        root.addView(effectiveCorpusStatus);
+        corpus.addView(effectiveCorpusStatus);
 
-        section(root,"Révision");
-        murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),0,0,Ui.dp(this,2));root.addView(murajaahStatus);
+        murajaahStatus=Ui.text(this,"",12f,false);murajaahStatus.setPadding(Ui.dp(this,4),Ui.dp(this,4),0,Ui.dp(this,4));revision.addView(murajaahStatus);
+        revision.addView(Ui.divider(this));
+        revision.addView(Ui.settingRow(this,"Vitesse · Révision",speedStore.maintenanceSummary(),null));
+        revision.addView(Ui.divider(this));
+        revision.addView(Ui.settingRow(this,"Vitesse · Consolidation",speedStore.consolidationSummary(),null));
 
-        section(root,"Vitesses");
-        root.addView(Ui.settingRow(this,"Révision",speedStore.maintenanceSummary(),null));
-        root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Consolidation",speedStore.consolidationSummary(),null));
-
-        section(root,"Audio");
         audioSetting=Ui.settingRow(this,"Al-Husary Muʿallim","Choisir le pack",v->selectAudioZip());
-        audioStatus=Ui.settingValue(audioSetting);root.addView(audioSetting);
-
-        section(root,"Affichage");
+        audioStatus=Ui.settingValue(audioSetting);audioDisplay.addView(audioSetting);audioDisplay.addView(Ui.divider(this));
         LinearLayout einkRow=Ui.row(this);einkRow.setPadding(Ui.dp(this,2),Ui.dp(this,3),Ui.dp(this,2),Ui.dp(this,3));einkRow.setMinimumHeight(Ui.dp(this,48));
         TextView einkLabel=Ui.text(this,"Optimisation E‑Ink / BOOX",13f,false);Ui.weight(einkLabel,1);einkRow.addView(einkLabel);
-        Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);root.addView(einkRow);
+        Switch eink=new Switch(this);eink.setChecked(prefs.forceEink());eink.setContentDescription("Optimisation E‑Ink / BOOX");eink.setOnCheckedChangeListener((button,checked)->prefs.setForceEink(checked));einkRow.addView(eink);audioDisplay.addView(einkRow);
 
-        section(root,"Sauvegarde");
-        root.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));
-        TextView backupNote=Ui.text(this,"Sans compte ni serveur, la progression vit uniquement dans l’appli : désinstaller l’appli ou perdre l’appareil l’efface. Exportez régulièrement.",11f,false);
-        backupNote.setTextColor(Ui.MUTED);backupNote.setPadding(Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,4),0);root.addView(backupNote);
+        backup.addView(Ui.settingRow(this,"Exporter","Fichier à conserver hors de l’appareil",v->exportBackup()));backup.addView(Ui.divider(this));
+        backup.addView(Ui.settingRow(this,"Importer","Restaurer depuis un fichier exporté",v->confirmImportBackup()));backup.addView(Ui.divider(this));
+        LinearLayout backupNoteRow=Ui.row(this);backupNoteRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView backupNote=Ui.text(this,"Progression stockée uniquement sur cet appareil.",11.5f,false);
+        backupNote.setTextColor(Ui.MUTED);backupNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),0);Ui.weight(backupNote,1);backupNoteRow.addView(backupNote);
+        backupNoteRow.addView(Ui.iconButton(this,"i","Référence · sauvegarde",v->new AlertDialog.Builder(this)
+            .setTitle("Sauvegarde")
+            .setMessage("Sans compte ni serveur, la progression vit uniquement dans l’appli : désinstaller l’appli ou perdre l’appareil l’efface. Exportez régulièrement.")
+            .setPositiveButton("OK",null).show()));
+        backup.addView(backupNoteRow);
 
-        section(root,"Avancé");
-        root.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));root.addView(Ui.divider(this));
+        advanced.addView(Ui.settingRow(this,"Diagnostic","État Hifz",v->showDiagnostic()));advanced.addView(Ui.divider(this));
         weakVersesSetting=Ui.settingRow(this,"Repères faibles","",v->startActivity(new Intent(this,WeakVersesActivity.class)));
-        root.addView(weakVersesSetting);root.addView(Ui.divider(this));
-        root.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
+        advanced.addView(weakVersesSetting);advanced.addView(Ui.divider(this));
+        parents.put(about,advanced);
+        advanced.addView(Ui.settingRow(this,"À propos du parcours","",v->showScreen(about)));advanced.addView(Ui.divider(this));
+        advanced.addView(Ui.settingRow(this,"Réinitialiser","Progression Hifz",v->confirmReset()));
 
-        section(root,"Schéma");
         TextView schema=Ui.bookText(this,"Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision",12.5f,true);
-        schema.setPadding(Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,4),Ui.dp(this,5));root.addView(schema);
+        schema.setPadding(Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,5));about.addView(schema);
         consolidationSchemaNote=Ui.text(this,"",11f,false);
-        consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(consolidationSchemaNote);
+        consolidationSchemaNote.setTextColor(Ui.MUTED);consolidationSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));about.addView(consolidationSchemaNote);
         renforcementSchemaNote=Ui.text(this,"",11f,false);
-        renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));root.addView(renforcementSchemaNote);
+        renforcementSchemaNote.setTextColor(Ui.MUTED);renforcementSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,3));about.addView(renforcementSchemaNote);
         TextView carryoverSchemaNote=Ui.text(this,"Report souple · une séance manquée reste due au prochain créneau du même type — aucun jour n’est perdu.",11f,false);
-        carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));root.addView(carryoverSchemaNote);
+        carryoverSchemaNote.setTextColor(Ui.MUTED);carryoverSchemaNote.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));about.addView(carryoverSchemaNote);
 
-        setContentView(scroll);int inset=Ui.dp(this,12);Ui.respectSystemBars(this,root,inset,inset,inset,inset);
+        showScreen(root);
         refreshAll();
     }
+
+    private final java.util.Map<LinearLayout,ScrollView> screens=new java.util.HashMap<>();
+    private final java.util.Map<LinearLayout,LinearLayout> parents=new java.util.HashMap<>();
+    private LinearLayout rootScreen,currentScreen;
+
+    /** One short page with a back header; a non-null parent also gets a "title ›" line on it. */
+    private LinearLayout subScreen(LinearLayout parent,String title){
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Ui.PAPER);
+        LinearLayout page=Ui.column(this);scroll.addView(page);
+        LinearLayout top=Ui.row(this);top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(Ui.iconButton(this,"","Retour",v->goBack()));
+        TextView heading=Ui.bookText(this,title,18,true);Ui.weight(heading,1);heading.setGravity(Gravity.CENTER);top.addView(heading);
+        top.addView(new View(this),new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
+        page.addView(top);page.addView(Ui.divider(this));
+        int inset=Ui.dp(this,12);Ui.respectSystemBars(this,page,inset,0,inset,inset);
+        screens.put(page,scroll);
+        if(rootScreen==null)rootScreen=page;
+        if(parent!=null){
+            parents.put(page,parent);
+            parent.addView(Ui.settingRow(this,title,"",v->showScreen(page)));parent.addView(Ui.divider(this));
+        }else if(page!=rootScreen)parents.put(page,null);
+        return page;
+    }
+
+    private void showScreen(LinearLayout page){
+        currentScreen=page;
+        setContentView(screens.get(page));
+    }
+
+    private void goBack(){
+        if(currentScreen==null||currentScreen==rootScreen){finish();return;}
+        LinearLayout parent=parents.get(currentScreen);
+        showScreen(parent!=null?parent:rootScreen);
+    }
+
+    @Override public void onBackPressed(){goBack();}
 
     private void section(LinearLayout root,String title){
         TextView view=Ui.bookText(this,title,15,true);view.setPadding(0,Ui.dp(this,12),0,Ui.dp(this,3));root.addView(view);
