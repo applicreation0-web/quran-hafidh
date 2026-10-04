@@ -147,7 +147,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         // Superseded by the shared exact reading focus: every Hifz mode now focuses exactly the due
         // physical lines (contextFocus), so a straddling boundary verse can't widen the focus.
         assertTrue(session.contains("boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();"));
-        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus);"));
+        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);"));
         assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus)"));
         assertTrue(mushaf.contains("lastContextFocus = contextFocus;"));
     }

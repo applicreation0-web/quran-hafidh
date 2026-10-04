@@ -63,6 +63,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private AnchoringQueue.Entry anchoringEntry;
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
     private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
+    private SemanticPassageRepository semanticPassages;
+    private android.app.Dialog semanticTitleDialog;
     private ItqanMaintenancePolicy.Regime itqanRegime = ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
     private boolean fractionatedItqan;
     private int itqanBlockIndex;
@@ -117,6 +119,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         metricsStore = new HifzSessionMetricsStore(this);
         try {
             geometry = GeometryRepository.get(this);
+            semanticPassages = new SemanticPassageRepository(this);
         } catch (Throwable error) {
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;
@@ -202,6 +205,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void renderMode() {
         closeAudio();
+        // Amorces/page-word holes are never carried into another mode or a validation flow by
+        // accident: Révision active and post-An-Nās Itqān recall opt back in explicitly.
+        if (mushaf != null) { mushaf.clearSemanticCues(); mushaf.clearPageLandmarkBoxes(); }
         actions.removeAllViews();
         revealButton = null;
         murajaahFinishButton = null;
@@ -935,7 +941,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
         if(ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)!=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep-1))
             applyItqanAnchors();
-        if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        if(currentMask!=oldMask)mushaf.setMask(displayedMask());
         updateRevealButton();if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
@@ -1151,18 +1157,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /**
      * Révision active masks a whole page, but a learner rarely has every page's exact start/end
      * verse memorized — without some landmark, a page swipe leaves no way to confirm the recall is
-     * actually picking up at the right point, or where it should stop before turning the page.
-     * Half of the page's first physical line (its reading-first words) and half of its last
-     * physical line (its reading-last words, right before the turn) stay permanently visible as
-     * synchronization anchors — see reader.js's landmarkCellIndices for the reading-order-aware
-     * cell split; the other half of each of those two lines still masks normally, like every other
-     * line on the page.
+     * picking up at the right point, or where to stop before turning the page. The page's real
+     * first three and last three words, and each Al-Munīr amorce beginning on the page, stay
+     * visible as exact holes in the paper mask (see reader.js applyProtectedWordHoles).
      */
     private List<String> applyActiveLandmarks(int page) {
         List<String> all = geometry.lineIdsOnPage(page);
-        String first = all.isEmpty() ? null : all.get(0);
-        String last = all.isEmpty() ? null : all.get(all.size() - 1);
-        mushaf.setLandmarkLines(first, last);
+        // The old half-line heuristic is retired: the page's real first three and last three
+        // words plus every Al-Munīr amorce starting on it are exact holes in the paper mask —
+        // enabled only when every one of those boxes exists exactly (quran-ws word geometry).
+        // Otherwise no anchor hole at all: nothing approximated, Révéler still works.
+        mushaf.setLandmarkLines(null, null);
+        boolean exact = semanticPassages != null && semanticPassages.isAvailable()
+            && semanticPassages.hasCompleteExactGeometryForPage(page);
+        mushaf.setPageLandmarkBoxes(exact ? semanticPassages.pageLandmarkBoxes(page) : new org.json.JSONArray());
+        mushaf.setSemanticCues(exact ? semanticPassages.readerCuesForPage(page) : new org.json.JSONArray(), exact, false);
         return all;
     }
 
@@ -1513,6 +1522,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
+    @Override public void onSemanticCueTap(String passageId) {
+        if (semanticPassages == null) return;
+        SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
+        if (cue != null) semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+    }
     /** Apprentissage, Stabilisation, Renforcement and Consolidation share one reading focus. */
     private boolean usesReadingFocus() {
         return SABQI.equals(mode) || SABQI_TODAY_REVIEW.equals(mode) || ITQAN.equals(mode)
@@ -1524,30 +1538,59 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         hasShown=true;
         if(ITQAN.equals(mode))applyItqanAnchors();
         boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
-        mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus);
+        mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);
     }
 
+    /** True when an anchored post-An-Nās page has an amorce without exact geometry: that page
+     *  then stays visible (fail open) rather than hide Quran text behind an unverified anchor. */
+    private boolean itqanAnchorFailOpen;
+
     /**
-     * Post-An-Nās maintenance recall (repetitions 11-20): the unit is masked at 100% except the
-     * project's existing audited synchronization anchors — the same Révision active landmark
-     * half-lines (reader.js landmarkCellIndices: the reading-first half of the unit's first
-     * physical line on this page and the reading-last half of its last one), on real KFQC line
-     * geometry, plus the permanent page cues. Nothing Quranic is invented or approximated. Every
-     * other Itqān repetition (visible, deep eraser, validation screen) clears them.
+     * Post-An-Nās maintenance recall (repetitions 11-20): the unit disappears into the paper at
+     * 100% except the project's existing validated anchors — the Al-Munīr amorces (audited V2.1
+     * start words, SemanticPassageRepository) of every unit beginning inside this Itqān unit on
+     * the shown page, cut as exact quran-ws word holes — plus the reader's permanent page cues.
+     * The page's first/last three words (a Révision active aid) are deliberately not added.
+     * Nothing is invented or approximated: if one of those amorces has no exact boxes, the page
+     * fails open. Every other Itqān repetition (visible, deep eraser, validation) clears them.
      */
     private void applyItqanAnchors() {
+        itqanAnchorFailOpen = false;
+        mushaf.setLandmarkLines(null, null);
         boolean anchored = !sessionCompleted && currentMask == 100 && itqanUnit != null
-            && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep());
-        if (!anchored || currentLineIds == null || currentLineIds.isEmpty()) {
-            mushaf.setLandmarkLines(null, null);
+            && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep())
+            && currentLineIds != null && !currentLineIds.isEmpty();
+        if (!anchored || semanticPassages == null || !semanticPassages.isAvailable()) {
+            mushaf.clearSemanticCues();
+            mushaf.clearPageLandmarkBoxes();
+            if (anchored) itqanAnchorFailOpen = true; // anchors unavailable: never recall blind
             return;
         }
-        ArrayList<String> onPage = new ArrayList<>();
-        for (GeometryRepository.LineMeta line : geometry.linesForExactIds(currentLineIds)) {
-            if (line.page == currentPage) onPage.add(line.id);
+        org.json.JSONArray cues = new org.json.JSONArray();
+        try {
+            org.json.JSONArray page = semanticPassages.readerCuesForPage(currentPage);
+            for (int i = 0; i < page.length(); i++) {
+                org.json.JSONObject cue = page.getJSONObject(i);
+                SemanticPassageRepository.Cue meta = semanticPassages.cue(cue.getString("id"));
+                if (meta == null || !ItqanMaintenancePolicy.amorceInsideUnit(
+                        meta.startVerse, itqanUnit.start, itqanUnit.end)) continue;
+                if (cue.getJSONArray("boxes").length() != cue.getInt("anchorWordCount")) {
+                    itqanAnchorFailOpen = true;
+                    break;
+                }
+                cues.put(cue);
+            }
+        } catch (org.json.JSONException malformed) {
+            itqanAnchorFailOpen = true;
         }
-        if (onPage.isEmpty()) { mushaf.setLandmarkLines(null, null); return; }
-        mushaf.setLandmarkLines(onPage.get(0), onPage.size() > 1 ? onPage.get(onPage.size() - 1) : null);
+        mushaf.clearPageLandmarkBoxes();
+        if (itqanAnchorFailOpen) { mushaf.clearSemanticCues(); return; }
+        mushaf.setSemanticCues(cues, true, false);
+    }
+
+    /** The mask actually drawn: an anchored page without exact anchors stays readable. */
+    private int displayedMask() {
+        return ITQAN.equals(mode) && itqanAnchorFailOpen ? 0 : currentMask;
     }
 
     private void goPage(int delta) {
@@ -1697,6 +1740,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

@@ -400,6 +400,7 @@ final class Ui {
         if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;
         if (s.contains("vérifier") || s.contains("verifier")) return R.drawable.ic_ui_validate;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
+        if (s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;

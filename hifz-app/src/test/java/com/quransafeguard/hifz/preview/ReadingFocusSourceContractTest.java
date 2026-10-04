@@ -73,7 +73,7 @@ public final class ReadingFocusSourceContractTest {
         assertTrue(session.contains("if (fractionatedItqan)"));
         String show = method(session, "private void showCurrent()", "\n    private void goPage(");
         assertTrue(show.contains("boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();"));
-        assertTrue(show.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus);"));
+        assertTrue(show.contains("mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);"));
         assertFalse(show.contains("fractionatedItqan"));
     }
 }

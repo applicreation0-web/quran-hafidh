@@ -90,4 +90,22 @@ public final class SemanticPassageRepositoryTest {
         assertEquals(1243, checked);
         assertTrue("the vast majority of amorces resolve to exact word boxes", exact >= 1200);
     }
+
+    @Test public void mostPostNasMaintenanceUnitsCarryAtLeastOneExactAmorce() throws Exception {
+        GeometryRepository geometry = GeometryRepository.fromJson(new String(read(
+            "app/src/main/assets/reader109/geometry.json"), StandardCharsets.UTF_8));
+        int units = 0, anchoredUnits = 0;
+        for (AnchoringQueue.Entry unit : HifzPrefs.physicalUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,
+                new VerseRef(2, 1), geometry, ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE)) {
+            units++;
+            VerseRef start = GeometryRepository.parseVerse(unit.start), end = GeometryRepository.parseVerse(unit.end);
+            boolean any = false;
+            for (List<SemanticPassageRepository.Cue> cues : parsed.byPage.values())
+                for (SemanticPassageRepository.Cue cue : cues)
+                    if (cue.anchorOnCurrentPage && ItqanMaintenancePolicy.amorceInsideUnit(cue.startVerse, start, end)) any = true;
+            if (any) anchoredUnits++;
+        }
+        System.out.println("Post-Nas TAIL units: " + units + ", with >=1 amorce: " + anchoredUnits);
+        assertTrue(anchoredUnits * 10 >= units * 8);
+    }
 }

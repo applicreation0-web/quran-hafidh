@@ -41,6 +41,8 @@ public final class UiIconMappingTest {
             {"Arrêter", R.drawable.ic_ui_stop},
             {"Écouter l’enregistrement", R.drawable.ic_ui_audio},
             {"Vérifier", R.drawable.ic_ui_validate},
+            {"Afficher les amorces", R.drawable.ic_ui_semantic_anchor},
+            {"Masquer les amorces", R.drawable.ic_ui_semantic_anchor},
             {"Révéler", R.drawable.ic_ui_reveal},
             {"À renforcer", R.drawable.ic_hifz_strengthen},
             {"Apprentissage", R.drawable.ic_hifz_new_lesson},

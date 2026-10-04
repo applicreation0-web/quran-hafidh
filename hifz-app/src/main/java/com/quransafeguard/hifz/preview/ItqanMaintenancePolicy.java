@@ -16,8 +16,8 @@ import java.util.Set;
  * {@link #MAX_LINES} physical lines (never past the real Sabqi frontier, never a fabricated
  * cross-surah unit), FULL ×40 halved to ×{@link #TOTAL_REPS}, frozen as {@link #VISIBLE_REPS}
  * repetitions with the Mushaf fully visible then {@link #ANCHOR_REPS} recall repetitions with the
- * project's existing audited anchors (the Révision active start/end landmark half-lines — see
- * reader.js landmarkCellIndices — plus the permanent page cues). No 25/50/75 eraser in phase 2.
+ * project's existing validated anchors (the unit's Al-Munīr amorces as exact word holes in the
+ * paper mask, plus the permanent page cues). No 25/50/75 eraser in phase 2.
  *
  * <p>LIGHT is never chosen for a new session. The enum value survives only so a legacy queue
  * entry or a unit already mid-repetition under LIGHT before this upgrade can be read and
@@ -106,6 +106,14 @@ final class ItqanMaintenancePolicy {
             out.add(unit.lineIds);
         }
         return Collections.unmodifiableList(out);
+    }
+
+    /** An Al-Munīr amorce belongs to a maintenance unit when its unit starts inside it. */
+    static boolean amorceInsideUnit(com.quransafeguard.hifz.core.VerseRef amorceStart,
+                                    com.quransafeguard.hifz.core.VerseRef unitStart,
+                                    com.quransafeguard.hifz.core.VerseRef unitEnd) {
+        if (amorceStart == null || unitStart == null || unitEnd == null) return false;
+        return amorceStart.compareTo(unitStart) >= 0 && amorceStart.compareTo(unitEnd) <= 0;
     }
 
     /** Owned-line lookup for a candidate unit ending at the given verse index. */

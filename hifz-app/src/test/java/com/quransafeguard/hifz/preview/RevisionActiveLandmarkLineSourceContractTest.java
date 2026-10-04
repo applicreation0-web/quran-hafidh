@@ -56,10 +56,13 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
             "private List<String> applyActiveLandmarks(int page) {", "private void updateMurajaahActions()");
         assertTrue("must read the full page's lines, masking is now handled at cell granularity, not by dropping a whole line",
             helper.contains("geometry.lineIdsOnPage(page)"));
-        assertTrue("must push the page's first line as the start landmark", helper.contains("all.get(0)"));
-        assertTrue("must push the page's last line as the end landmark", helper.contains("all.get(all.size() - 1)"));
-        assertTrue("must actually tell the reader about both landmarks",
-            helper.contains("mushaf.setLandmarkLines(first, last);"));
+        // Master addendum: the half-line heuristic is retired in favour of exact word holes —
+        // the page's real first/last three words plus the page's Al-Munīr amorces.
+        assertTrue("no old half-line landmark fallback is used", helper.contains("mushaf.setLandmarkLines(null, null);"));
+        assertTrue("anchors only when every box on the page is exact",
+            helper.contains("semanticPassages.hasCompleteExactGeometryForPage(page)"));
+        assertTrue(helper.contains("semanticPassages.pageLandmarkBoxes(page)"));
+        assertTrue(helper.contains("mushaf.setSemanticCues(exact ? semanticPassages.readerCuesForPage(page) : new org.json.JSONArray(), exact, false);"));
         assertTrue("every page-entry/page-swipe path in active mode must route through this one helper",
             countOccurrences(session, "applyActiveLandmarks(") >= 5);
         assertTrue("no active-mode call site may bypass the helper with the raw page lookup",
