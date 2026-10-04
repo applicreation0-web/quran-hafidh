@@ -457,9 +457,11 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
 
     private void discardCurrentRecording() {
         if (recordingFile == null) return;
-        sessionRecordings.remove(recordingFile);
-        recordingFile.delete();
+        File doomed = recordingFile;
         recordingFile = null;
+        // Si Android garde encore brièvement le descripteur ouvert, conserver la référence afin
+        // que clearQuizAudio() retente la suppression à la fin du Quiz.
+        if (doomed.delete() || !doomed.exists()) sessionRecordings.remove(doomed);
     }
 
     /** Interface Quiz — purge unique de toutes les prises temporaires de la série. */
