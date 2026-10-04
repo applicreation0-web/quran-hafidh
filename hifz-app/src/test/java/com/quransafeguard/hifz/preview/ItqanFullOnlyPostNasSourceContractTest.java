@@ -80,4 +80,9 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         String store = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ItqanRegimeStore.java");
         assertFalse(store.toLowerCase(java.util.Locale.ROOT).contains("\"sabqi"));
     }
+
+    @Test public void homeCardCueIsRefreshedOnEveryReturnToHome() throws Exception {
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        assertEquals(2, count(main, "Ui.setModeCardCue(itqanCard, Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));"));
+    }
 }

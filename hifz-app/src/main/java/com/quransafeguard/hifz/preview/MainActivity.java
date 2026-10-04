@@ -38,6 +38,7 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout sabqiQuickAccess;
     private LinearLayout itqanQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
+    private LinearLayout itqanCard;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
@@ -128,7 +129,9 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout direct = Ui.row(this);
         direct.setGravity(Gravity.CENTER);
         LinearLayout sabqi = Ui.modeCard(this, "", "Apprentissage", v -> openMode(HifzSessionActivity.SABQI));
-        LinearLayout itqan = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
+        itqanCard = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout itqan = itqanCard;
+        Ui.setModeCardCue(itqanCard, Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));
         LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> showRevisionSelector());
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
@@ -186,6 +189,7 @@ public final class MainActivity extends android.app.Activity {
         speedStore = new HifzSpeedStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
+        Ui.setModeCardCue(itqanCard, Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));
         if (today != null && geometry != null) refreshAll();
     }
 

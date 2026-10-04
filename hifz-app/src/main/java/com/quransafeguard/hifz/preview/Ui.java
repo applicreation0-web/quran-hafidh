@@ -205,11 +205,29 @@ final class Ui {
             subtitle.setTextColor(MUTED);
             subtitle.setGravity(Gravity.CENTER);
             subtitle.setSingleLine(true);
+            subtitle.setTag(MODE_CARD_CUE_TAG);
             card.addView(subtitle, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         }
         card.setPadding(dp(context,7),dp(context,7),dp(context,7),dp(context,7));
         return card;
+    }
+
+    private static final String MODE_CARD_CUE_TAG = "modeCardCue";
+
+    /** Replaces a mode card's short protocol cue when it depends on live state. */
+    static void setModeCardCue(LinearLayout card, String cue) {
+        if (card == null || cue == null) return;
+        View subtitle = card.findViewWithTag(MODE_CARD_CUE_TAG);
+        if (subtitle instanceof TextView) ((TextView) subtitle).setText(cue);
+    }
+
+    /** Stabilisation's cue: the deep first pass works in weekly units; after the first An-Nās
+     *  arrival every session is one 15-line maintenance unit. */
+    static String stabilizationCue(boolean postNasMaintenance) {
+        return postNasMaintenance
+            ? ItqanMaintenancePolicy.MAX_LINES + " lignes · entretien"
+            : PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine";
     }
 
     /** Liseuse-style setting: label on the left, current value/action on the right. */

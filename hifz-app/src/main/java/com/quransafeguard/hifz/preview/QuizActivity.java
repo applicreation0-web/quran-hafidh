@@ -66,7 +66,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         history = new QuizHistory(this);
         try {
             geometry = GeometryRepository.get(this);
-            words = new WordGeometryRepository(this);
+            words = WordGeometryRepository.shared(this);
             corpus = new QuizCorpus(geometry, words);
         } catch (Throwable error) {
             Ui.showFatal(this, "Le Quiz ne peut pas charger la géométrie du Mushaf.");

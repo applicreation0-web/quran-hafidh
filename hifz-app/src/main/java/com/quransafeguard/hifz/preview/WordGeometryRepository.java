@@ -75,8 +75,32 @@ final class WordGeometryRepository implements QuizCorpus.WordCounts {
     private final Set<Integer> loadedChunks = new HashSet<>();
     private boolean failed;
 
+    private static volatile WordGeometryRepository shared;
+
+    /** One parsed sidecar per process (the four ~750 KB chunks are parsed at most once). */
+    static WordGeometryRepository shared(Context context) {
+        WordGeometryRepository local = shared;
+        if (local != null) return local;
+        synchronized (WordGeometryRepository.class) {
+            if (shared == null) shared = new WordGeometryRepository(context);
+            return shared;
+        }
+    }
+
+    /** Parses all four chunks off the UI thread. */
+    void preloadAll() {
+        for (int page : new int[]{1, 151, 301, 451}) wordsForPage(page);
+    }
+
     WordGeometryRepository(Context context) {
         this.context = context.getApplicationContext();
+    }
+
+    /** Every exact word box on the page, in canonical order (eraser glyph-extent cover). */
+    synchronized JSONArray pageBoxes(int page) {
+        JSONArray out = new JSONArray();
+        for (WordBox word : wordsForPage(page)) out.put(word.boxJson());
+        return out;
     }
 
     synchronized boolean isPageAvailable(int page) {

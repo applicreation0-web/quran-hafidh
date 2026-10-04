@@ -25,6 +25,9 @@ let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
 let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
+/* Exact quran-ws boxes of every word on the page: lets a 100% erase also cover the glyph parts
+ * (harakat, dots) that a word pushes outside its line band — exact extents, never estimated. */
+let pageWordBoxes=Array.isArray(boot.pageWordBoxes)?boot.pageWordBoxes:[];
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
@@ -244,8 +247,10 @@ function maskRect(segment){
   const partialPadX=eink?0.72:0.58,partialPadY=eink?0.42:0.34;
   const padX=fullErase?(eink?0.90:0.72):partialPadX;
   const padY=fullErase?(eink?0.12:0.08):partialPadY;
-  el.setAttribute('x',segment.x-padX);el.setAttribute('y',segment.y-padY);
-  el.setAttribute('width',segment.width+padX*2);el.setAttribute('height',segment.height+padY*2);
+  // A seamed edge already sits on the shared band boundary with an erased neighbour line.
+  const padTop=segment.seamTop?0:padY,padBottom=segment.seamBottom?0:padY;
+  el.setAttribute('x',segment.x-padX);el.setAttribute('y',segment.y-padTop);
+  el.setAttribute('width',segment.width+padX*2);el.setAttribute('height',segment.height+padTop+padBottom);
   return el;
 }
 
@@ -304,6 +309,52 @@ function currentRandomOrder(cells){
     maskOrder=randomOrderKeys(cells,seededRandom(maskEntropy+'|'+signature));
   }
   return maskOrder;
+}
+
+/*
+ * Full erase leaves no seam between two erased lines: physical line bands are contiguous, so a
+ * 100% segment whose adjacent line (above or below) is also being erased extends exactly to the
+ * shared band boundary (plus a hairline overlap), removing the dot/haraka remnants that sat in
+ * that seam. Next to a line that is NOT erased, the safety margin stays: the paper never
+ * invades a neighbour line.
+ */
+function sealFullEraseSeams(segments,maskedLines){
+  const all=((pageGeo&&pageGeo.lines)||[]).slice().sort((a,b)=>Number(a.top)-Number(b.top));
+  const index=new Map(all.map((l,i)=>[String(l.id),i]));
+  const masked=new Set((maskedLines||[]).map(l=>String(l.id)));
+  const touching=(a,b)=>Math.abs(Number(a.bottom)-Number(b.top))<1.5;
+  segments.forEach(seg=>{
+    if(!seg.fullErase)return;
+    const i=index.get(String(seg.lineId));if(i===undefined)return;
+    const line=all[i],prev=all[i-1],next=all[i+1];
+    let top=seg.y,bottom=seg.y+seg.height;
+    if(prev&&masked.has(String(prev.id))&&touching(prev,line)){top=Number(line.top)-0.25;seg.seamTop=true;}
+    if(next&&masked.has(String(next.id))&&touching(line,next)){bottom=Number(line.bottom)+0.25;seg.seamBottom=true;}
+    seg.y=top;seg.height=Math.max(0,bottom-top);
+  });
+  return segments;
+}
+
+/*
+ * At 100% only: every word whose centre lies in an erased segment of its own line is also
+ * covered by its own exact quran-ws box, which includes the harakat/dots it pushes above or
+ * below the line band. Glyph extents of erased words only — never a neighbour line's words,
+ * the surah title or the basmala (they are not erased words). No word geometry = no change.
+ */
+function fullEraseWordSegments(segments,lines,svg){
+  const full=segments.filter(s=>s.fullErase);
+  if(!full.length||!pageWordBoxes.length)return [];
+  const out=[];
+  pageWordBoxes.forEach((raw,i)=>{
+    const b=(raw||[]).map(Number);if(!validWordBox(b))return;
+    const box=wordBoxInSvgSpace(b,svg);if(!box)return;
+    const cx=(box[0]+box[2])/2,cy=(box[1]+box[3])/2;
+    const line=(lines||[]).find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));if(!line)return;
+    const lineId=String(line.id);
+    if(!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;
+    out.push({key:'w'+i,lineId,x:box[0],y:box[1],width:box[2]-box[0],height:box[3]-box[1],fullErase:true});
+  });
+  return out;
 }
 
 /* Random cumulative masking over real source-ink groups. 25% is a fresh draw for a
@@ -398,11 +449,18 @@ function applyProtectedWordHoles(layer,svg){
   full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
   full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
   full.setAttribute('fill','white');holeMask.appendChild(full);
+  const bands=(pageGeo&&pageGeo.lines)||[];
   boxes.forEach(pageBox=>{
     const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
+    // Exact word width; height = the word's own physical line band, so its harakat/dots that
+    // sit above or below the tight glyph box are not shaved off by that same line's eraser.
+    const cy=(box[1]+box[3])/2;
+    const band=bands.find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));
+    const y0=band?Math.min(box[1],Number(band.top)):box[1];
+    const y1=band?Math.max(box[3],Number(band.bottom)):box[3];
     const hole=document.createElementNS(NS,'rect');
-    hole.setAttribute('x',box[0]);hole.setAttribute('y',box[1]);
-    hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',box[3]-box[1]);
+    hole.setAttribute('x',box[0]);hole.setAttribute('y',y0);
+    hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',y1-y0);
     hole.setAttribute('fill','black');holeMask.appendChild(hole);
   });
   defs.appendChild(holeMask);layer.insertBefore(defs,layer.firstChild);
@@ -581,7 +639,8 @@ function render(){
   if(clamped&&pageGeo&&lineIds.length&&lines.length){
     const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);
     if(cells.length){
-      const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
+      const segments=sealFullEraseSeams(randomSegmentsForCells(cells,clamped,currentRandomOrder(cells)),lines);
+      segments.push(...fullEraseWordSegments(segments,lines,svg));
       const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
       if(polys.length){
         /*

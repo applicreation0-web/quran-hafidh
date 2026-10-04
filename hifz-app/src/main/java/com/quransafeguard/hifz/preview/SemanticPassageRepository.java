@@ -247,14 +247,17 @@ final class SemanticPassageRepository {
     /** Warm the shared corpus off the UI thread (called from the home screen). */
     static void preloadAsync(Context context) {
         Context app = context.getApplicationContext();
-        Thread loader = new Thread(() -> shared(app), "al-munir-preload");
+        Thread loader = new Thread(() -> {
+            shared(app);
+            WordGeometryRepository.shared(app).preloadAll();
+        }, "al-munir-preload");
         loader.setDaemon(true);
         loader.setPriority(Thread.MIN_PRIORITY);
         loader.start();
     }
 
     private SemanticPassageRepository(Context context) {
-        wordGeometry = new WordGeometryRepository(context);
+        wordGeometry = WordGeometryRepository.shared(context);
         boolean loaded = false;
         try {
             byte[] raw = readAsset(context, ASSET_PATH);

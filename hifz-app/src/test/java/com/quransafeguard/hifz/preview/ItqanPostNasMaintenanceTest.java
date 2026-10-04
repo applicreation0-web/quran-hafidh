@@ -325,6 +325,11 @@ public final class ItqanPostNasMaintenanceTest {
         return out;
     }
 
+    @Test public void homeStabilisationCardFollowsTheRegime() {
+        assertEquals("22 lignes/semaine", Ui.stabilizationCue(false));
+        assertEquals("15 lignes · entretien", Ui.stabilizationCue(true));
+    }
+
     // ---- 6. post-Nas FULL target is exactly 20 reps = 10 visible + 10 anchors ----
 
     @Test public void postNasTargetIsExactlyTwentyRepsTenVisibleThenTenAnchored() {
