@@ -34,6 +34,7 @@ public final class UiIconMappingTest {
             {"Écouter", R.drawable.ic_ui_audio},
             {"Remettre à zéro", R.drawable.ic_ui_reset},
             {"Retirer une répétition", R.drawable.ic_ui_delete},
+            {"Démarquer", R.drawable.ic_ui_delete},
             {"Ajouter une répétition", R.drawable.ic_ui_add},
             {"Répétition", R.drawable.ic_ui_repeat},
             {"Répéter le verset", R.drawable.ic_ui_repeat},
