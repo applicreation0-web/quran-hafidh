@@ -93,13 +93,6 @@ final class HifzAudioPack {
         return info.valid ? info.count : 0;
     }
 
-    String sourceLabel() {
-        if (localInstalled()) return "Pack local · Al-Husary Muʿallim";
-        EmbeddedInfo info = embedded();
-        if (info.valid) return info.source;
-        return "Aucun pack audio valide";
-    }
-
     void setDataSource(MediaPlayer player, VerseRef verse) throws Exception {
         String name = fileNameFor(verse);
         if (localInstalled()) {
@@ -130,8 +123,6 @@ final class HifzAudioPack {
         }
         return false;
     }
-
-    File fileFor(VerseRef verse) { return fileNamed(fileNameFor(verse)); }
 
     ImportResult importZip(Uri uri) {
         File parent = dir.getParentFile();

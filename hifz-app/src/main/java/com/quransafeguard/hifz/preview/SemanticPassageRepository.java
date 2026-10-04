@@ -165,9 +165,6 @@ final class SemanticPassageRepository {
             this.visualRanges = Collections.unmodifiableList(new ArrayList<>(visualRanges));
         }
 
-        boolean hasExactVisualRange() {
-            return !visualRanges.isEmpty();
-        }
     }
 
     private static final class PassageMeta {
@@ -298,13 +295,6 @@ final class SemanticPassageRepository {
         return out;
     }
 
-    /** Start verse of every canonical Al-Munīr unit (empty when the corpus failed closed). */
-    Set<VerseRef> canonicalStarts() {
-        HashSet<VerseRef> out = new HashSet<>();
-        for (Cue cue : orderedCues) out.add(cue.startVerse);
-        return Collections.unmodifiableSet(out);
-    }
-
     boolean isAvailable() {
         return available;
     }
@@ -324,40 +314,6 @@ final class SemanticPassageRepository {
         for (Cue cue : orderedCues) {
             if (verse.compareTo(cue.startVerse) < 0) return null;
             if (verse.compareTo(cue.endVerse) <= 0) return cue;
-        }
-        return null;
-    }
-
-    /** First complete semantic passage usable from this acquired-corpus cursor, with canonical wrap. */
-    Cue firstEligibleCueAtOrContaining(VerseRef cursor, EligibleCorpus corpus) {
-        if (cursor == null || corpus == null || orderedCues.isEmpty()) return null;
-        Cue containing = cueContaining(cursor);
-        if (fullyEligible(containing, corpus)) return containing;
-
-        int start = 0;
-        while (start < orderedCues.size()
-                && orderedCues.get(start).startVerse.compareTo(cursor) < 0) start++;
-        for (int offset = 0; offset < orderedCues.size(); offset++) {
-            Cue candidate = orderedCues.get((start + offset) % orderedCues.size());
-            if (fullyEligible(candidate, corpus)) return candidate;
-        }
-        return null;
-    }
-
-    /** Next complete acquired passage after the current semantic unit, wrapping canonically. */
-    Cue nextEligibleCue(Cue current, EligibleCorpus corpus) {
-        if (current == null || corpus == null || orderedCues.isEmpty()) return null;
-        int index = -1;
-        for (int i = 0; i < orderedCues.size(); i++) {
-            if (orderedCues.get(i).passageId.equals(current.passageId)) {
-                index = i;
-                break;
-            }
-        }
-        if (index < 0) return firstEligibleCueAtOrContaining(current.endVerse, corpus);
-        for (int offset = 1; offset <= orderedCues.size(); offset++) {
-            Cue candidate = orderedCues.get((index + offset) % orderedCues.size());
-            if (fullyEligible(candidate, corpus)) return candidate;
         }
         return null;
     }

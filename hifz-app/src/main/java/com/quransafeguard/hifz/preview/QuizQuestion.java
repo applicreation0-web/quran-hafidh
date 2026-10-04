@@ -25,7 +25,4 @@ final class QuizQuestion {
         return type == Type.PREVIOUS ? "Récitez le verset qui précède celui-ci." : "Récitez la suite de ce verset.";
     }
 
-    String typeLabel() {
-        return type == Type.PREVIOUS ? "Verset précédent" : "Suite du verset";
-    }
 }

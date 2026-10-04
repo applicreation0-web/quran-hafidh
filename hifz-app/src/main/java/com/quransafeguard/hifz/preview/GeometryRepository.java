@@ -200,20 +200,6 @@ public final class GeometryRepository {
         return pageObject.toString();
     }
 
-    /** The page's real SVG viewBox [x, y, width, height] — the exact coordinate space every
-     *  line's top/bottom/cells are already expressed in. */
-    public float[] viewBoxForPage(int page) {
-        if (page < 1 || page > 604) throw new IllegalArgumentException("page outside 1..604");
-        JSONObject pageObject = pages.optJSONObject(Integer.toString(page));
-        if (pageObject == null) throw new IllegalStateException("geometry missing for page " + page);
-        try {
-            JSONArray box = pageObject.getJSONArray("viewBox");
-            return new float[] { (float) box.getDouble(0), (float) box.getDouble(1), (float) box.getDouble(2), (float) box.getDouble(3) };
-        } catch (JSONException error) {
-            throw new IllegalStateException("malformed viewBox for page " + page, error);
-        }
-    }
-
     public int firstLineIndex(VerseRef verse) {
         for (LineMeta line : lines) if (line.verses.contains(verse)) return line.globalIndex;
         throw new IllegalArgumentException("Verse absent from geometry: " + verse);

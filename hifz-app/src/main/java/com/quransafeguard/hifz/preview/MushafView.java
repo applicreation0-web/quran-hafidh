@@ -173,13 +173,6 @@ public final class MushafView extends WebView {
         load(page, selection, lineIds, maskPercent);
     }
 
-    /** Compatibility entrypoint: exact-line context focus with no mask. */
-    public void showLineFocus(int page, List<VerseRef> selection, List<String> lineIds) {
-        lastContextFocus = true;
-        retried = false;
-        load(page, selection, lineIds, 0);
-    }
-
     private void load(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent) {
         removeCallbacks(watchdog);
         requestedPage = page;

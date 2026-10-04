@@ -368,7 +368,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void roundActionIsIconOnlyWithoutVisibleCaption() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String roundAction = method(ui,
-            "static LinearLayout roundAction(", "static LinearLayout cardAction(");
+            "static LinearLayout roundAction(", "static String stabilizationCue(");
         assertFalse("no caption TextView under the icon", roundAction.contains("TextView caption"));
         assertTrue("the label stays the icon's spoken description/tooltip",
             roundAction.contains("iconButton(context, symbol, label, listener)"));

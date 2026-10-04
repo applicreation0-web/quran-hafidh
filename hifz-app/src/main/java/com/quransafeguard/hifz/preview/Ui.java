@@ -98,11 +98,6 @@ final class Ui {
         return button;
     }
 
-    /** Legacy API retained for call sites; visual grammar is now the light icon hit-target. */
-    static Button roundButton(Context context, String symbol, String description, View.OnClickListener listener) {
-        return iconButton(context, symbol, description, listener);
-    }
-
     /** Icon-only buttons: spoken label plus the long-press tooltip where the platform has one. */
     static void setIconDescription(Button button, String description) {
         if (button == null) return;
@@ -131,85 +126,6 @@ final class Ui {
         return box;
     }
 
-    /** Ebook-style home action: large hit target, intentionally no card chrome. */
-    static LinearLayout cardAction(Context context, String symbol, String label, View.OnClickListener listener) {
-        LinearLayout card = column(context);
-        card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(context,8),dp(context,7),dp(context,8),dp(context,7));
-        card.setClickable(true);
-        card.setFocusable(true);
-        card.setContentDescription(label);
-        card.setOnClickListener(listener);
-
-        TextView icon = text(context, "", 19f, true);
-        int iconRes = iconFor(label, symbol);
-        if (iconRes != 0) {
-            icon.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            icon.setCompoundDrawableTintList(cardIconTint());
-            icon.setMinHeight(dp(context, 25));
-        } else {
-            icon.setText(symbol);
-        }
-        icon.setGravity(Gravity.CENTER);
-        icon.setDuplicateParentStateEnabled(true);
-        card.addView(icon, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView caption = text(context, label, 10.5f, false);
-        caption.setGravity(Gravity.CENTER);
-        caption.setSingleLine(true);
-        caption.setTextColor(cardIconTint());
-        caption.setDuplicateParentStateEnabled(true);
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cp.topMargin = dp(context,2);
-        card.addView(caption, cp);
-        return card;
-    }
-
-    /** Hifz mode entry: same icon family, same optical weight, only a short protocol cue. */
-    static LinearLayout modeCard(Context context, String symbol, String label, View.OnClickListener listener) {
-        LinearLayout card = cardAction(context, symbol, label, listener);
-        if (card.getChildCount() > 1 && card.getChildAt(1) instanceof TextView) {
-            TextView title = (TextView) card.getChildAt(1);
-            title.setTextSize(12.5f);
-            title.setTypeface(Typeface.SERIF, Typeface.BOLD);
-        }
-        String lower = label.toLowerCase(Locale.ROOT);
-        // Révision/Entretien deliberately never get a duration cue here: this single card opens a
-        // choice between Révision active (15 min) and Entretien (its own dynamic duration), so any
-        // one number shown on the card itself would only ever match one of the two — the
-        // RevisionSelector dialog already states both correctly once tapped. "Au choix" still fills
-        // the cue slot (rather than leaving it empty) so this card keeps the same three-line height
-        // as its siblings in the same row — an empty cue here recentres the whole row around a
-        // shorter card instead of leaving a blank gap under this one.
-        String cue = lower.contains("apprentissage") || lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
-            : lower.contains("reprise") ? "30 min"
-            : lower.contains("consolidation") || lower.contains("renforcement") ? "Boule de neige"
-            : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq")
-                ? PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine"
-            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur")
-                ? "Au choix" : "";
-        if (!cue.isEmpty()) {
-            TextView subtitle = text(context, cue, 11f, false);
-            subtitle.setTextColor(MUTED);
-            subtitle.setGravity(Gravity.CENTER);
-            subtitle.setSingleLine(true);
-            subtitle.setTag(MODE_CARD_CUE_TAG);
-            card.addView(subtitle, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        }
-        card.setPadding(dp(context,7),dp(context,7),dp(context,7),dp(context,7));
-        return card;
-    }
-
-    private static final String MODE_CARD_CUE_TAG = "modeCardCue";
-
-    /** Replaces a mode card's short protocol cue when it depends on live state. */
-    static void setModeCardCue(LinearLayout card, String cue) {
-        if (card == null || cue == null) return;
-        View subtitle = card.findViewWithTag(MODE_CARD_CUE_TAG);
-        if (subtitle instanceof TextView) ((TextView) subtitle).setText(cue);
-    }
 
     /** Stabilisation's cue: the deep first pass works in weekly units; after the first An-Nās
      *  arrival every session is one hizb of maintenance. */
@@ -259,8 +175,6 @@ final class Ui {
             ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
         return line;
     }
-
-    static void setChosen(Button button, boolean chosen) { button.setSelected(chosen); }
 
     static void panel(View view) {
         view.setBackground(shape(SURFACE, LINE, dp(view.getContext(), 12), Math.max(1, dp(view.getContext(), 1))));
@@ -368,11 +282,6 @@ final class Ui {
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
             new int[]{MUTED,PAPER,PAPER,INK});
-    }
-
-    /** cardAction icons have no ink background to invert against on press, unlike iconButton/roundAction. */
-    private static ColorStateList cardIconTint() {
-        return new ColorStateList(new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{MUTED, INK});
     }
 
     private static ColorStateList iconTintFlat() {

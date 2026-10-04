@@ -303,13 +303,6 @@ public final class MainActivity extends android.app.Activity {
         return ledger.find(date,mode)!=null;
     }
 
-    /** Whichever of the daily active/passive Révision pair is still due today comes first. */
-    private String murajaahQuickAccessMode(){
-        String today=HifzClock.today().toString();
-        return today.equals(prefs.lastActiveMurajaahDate())
-            ? HifzSessionActivity.MURAJAAH : HifzSessionActivity.MURAJAAH_ACTIVE;
-    }
-
     /**
      * Reported directly: these two direct-access tiles always opened the non-graduating evening
      * snowball review (LEARNING_CONSOLIDATION/RECENT_SABQI_REVIEW), even on the Sunday the real

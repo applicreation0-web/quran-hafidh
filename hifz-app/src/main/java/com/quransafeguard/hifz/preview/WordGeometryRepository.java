@@ -103,10 +103,6 @@ final class WordGeometryRepository implements QuizCorpus.WordCounts {
         return out;
     }
 
-    synchronized boolean isPageAvailable(int page) {
-        return !wordsForPage(page).isEmpty();
-    }
-
     synchronized List<WordBox> wordsForPage(int page) {
         if (failed || page < 1 || page > 604) return Collections.emptyList();
         int chunk = page <= 150 ? 0 : page <= 300 ? 1 : page <= 450 ? 2 : 3;

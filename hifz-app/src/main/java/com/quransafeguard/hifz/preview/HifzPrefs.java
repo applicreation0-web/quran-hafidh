@@ -56,15 +56,6 @@ public final class HifzPrefs {
     private static volatile String migrationFaultPointForTest;
     private final SharedPreferences p;
 
-    static void setMigrationFaultPointForTest(String point) {
-        if (point != null
-                && !"BEFORE_MAIN_COMMIT".equals(point)
-                && !"AFTER_MAIN_COMMIT".equals(point)) {
-            throw new IllegalArgumentException("Unknown migration fault point: " + point);
-        }
-        migrationFaultPointForTest = point;
-    }
-
     private static void maybeInterruptMigrationForTest(String point) {
         if (point != null && point.equals(migrationFaultPointForTest)) {
             throw new IllegalStateException("Injected Hifz migration interruption at " + point);
@@ -430,23 +421,6 @@ public final class HifzPrefs {
         CONSOLIDATION_COMPLETED
     }
 
-    ProgressState progressStateV6(String lineId) {
-        if (lineId == null || lineId.isEmpty()) throw new IllegalArgumentException("lineId required");
-        synchronized (V6_STATE_LOCK) {
-            requireSchema6ProgressionState();
-            LinkedHashSet<String> quarantine = v6LineIdSet("v6QuarantineLineIds");
-            LinkedHashSet<String> legacyPartial = v6LineIdSet("v6LegacyPartialAcquiredLineIds");
-            if (quarantine.contains(lineId) || legacyPartial.contains(lineId)) {
-                throw new IllegalStateException("Unresolved schema6 progression state for line " + lineId);
-            }
-            return progressStateFromSets(
-                lineId,
-                v6LineIdSet("v6LearnedLineIds"),
-                v6LineIdSet("v6StabilizedLineIds"),
-                v6LineIdSet("v6AcquiredCreditLineIds"));
-        }
-    }
-
     /**
      * Read-only snapshot of every line's real-time schema6 progression state, keyed by line id —
      * the exact same three sets every session-completion method already updates (learning,
@@ -471,17 +445,6 @@ public final class HifzPrefs {
             Collections.unmodifiableSet(v6LineIdSet("v6LearnedLineIds")),
             Collections.unmodifiableSet(v6LineIdSet("v6StabilizedLineIds")),
             Collections.unmodifiableSet(v6LineIdSet("v6AcquiredCreditLineIds")));
-    }
-
-    ProgressAction nextActionV6(String lineId) {
-        ProgressState state = progressStateV6(lineId);
-        switch (state) {
-            case NONE: return ProgressAction.LEARNING;
-            case LEARNED: return ProgressAction.STABILIZATION;
-            case STABILIZED: return ProgressAction.CONSOLIDATION;
-            case ACQUIRED: return ProgressAction.REVIEW;
-            default: throw new IllegalStateException("Unsupported schema6 progression state: " + state);
-        }
     }
 
     void transitionV6Lines(List<String> lineIds, ProgressEvent event) {
@@ -880,16 +843,6 @@ public final class HifzPrefs {
         if (!e.commit()) throw new IllegalStateException("Unable to migrate Hifz schema v4 to v5");
     }
 
-    private static boolean rangeTouchesHardAnchoringSurah(VerseRef start, VerseRef end, List<Integer> hardSurahs) {
-        if (start == null || end == null || hardSurahs == null || hardSurahs.isEmpty()) return false;
-        int low = Math.min(start.getSurah(), end.getSurah());
-        int high = Math.max(start.getSurah(), end.getSurah());
-        for (Integer surah : hardSurahs) {
-            if (surah != null && surah >= low && surah <= high) return true;
-        }
-        return false;
-    }
-
     private void migrateLegacyGates(Context context) {
         SharedPreferences legacy = context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE);
         if (legacy.getAll().isEmpty()) return;
@@ -911,7 +864,6 @@ public final class HifzPrefs {
 
     public int schema() { return p.getInt("schema", 0); }
     public LocalDate programStartDate() { return LocalDate.parse(required("programStartDate")); }
-    public void setProgramStartDate(LocalDate value) { p.edit().putString("programStartDate", value.toString()).apply(); }
     public LocalDate recentConsolidationActivatedOn() {
         String value = p.getString("recentConsolidationActivatedOn", "");
         return value == null || value.isEmpty() ? null : safeDate(value, null);
@@ -970,12 +922,6 @@ public final class HifzPrefs {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(promotedRanges());
         return Collections.unmodifiableList(normalizeRanges(all));
-    }
-
-    public boolean setItqanRanges(List<VerseRange> ranges) {
-        if (ranges == null || ranges.isEmpty()) return false;
-        List<VerseRange> normalized = sortRangesPreservingBoundaries(ranges);
-        return p.edit().putString("itqanRanges", rangesJson(normalized)).commit();
     }
 
     /** Schema-6 manual configuration: replace only the configured pending Stabilisation ranges. */
@@ -1568,10 +1514,6 @@ public final class HifzPrefs {
         return false;
     }
 
-    public boolean isFractionatedUnit(List<VerseRef> unitVerses) {
-        return containsHardAnchoringSurah(hardAnchoringSurahs(), unitVerses);
-    }
-
     /** Atomically closes one fractionated sub-block and advances the persisted block cursor. */
     public boolean advanceItqanBlock(int nextBlockIndex, String date, String label) {
         return p.edit()
@@ -1907,26 +1849,6 @@ public final class HifzPrefs {
             RoadmapPolicy.CruiseWeek.A_4_2, RoadmapPolicy.Regulator.NORMAL);
         RoadmapPolicy.Decision decision = RoadmapPolicy.decide(input);
         return decision.phase == RoadmapPolicy.Phase.CURRENT ? decision : null;
-    }
-
-    public boolean completeItqanUnit(VerseRef nextCursor, String date, String label) {
-        VerseRef completedStart = itqanUnitStart();
-        VerseRef completedEnd = itqanUnitEnd();
-        return p.edit()
-            .putString("itqanCursor", nextCursor.toString())
-            .putInt("itqanRep", 0)
-            .putInt("itqanBlockIndex", 0)
-            .putInt("itqanAssisted", 0)
-            .putInt("itqanFinalReveals", 0)
-            .putString("itqanUnitStart", "")
-            .putString("itqanUnitEnd", "")
-            .putLong("itqanElapsedMs", 0L)
-            .putString("lastItqanDate", date)
-            .putString("lastItqanLabel", label)
-            .putString("lastItqanCreditStart", completedStart == null ? "" : completedStart.toString())
-            .putString("lastItqanCreditEnd", completedEnd == null ? "" : completedEnd.toString())
-            .putInt("lastItqanCreditBlockIndex", -1)
-            .commit();
     }
 
     /** Atomically advances the natural Itqan cycle and consolidates the exact completed queue entry. */
@@ -2621,11 +2543,6 @@ public final class HifzPrefs {
         return Collections.unmodifiableList(out);
     }
 
-    /** Clears this week's snowball accumulator once its Sunday ×10 final review has graduated it. */
-    boolean clearWeeklySnowball(ConsolidationCycleEngine.Family family) {
-        return p.edit().putString(snowballUnitsKey(family), "[]").commit();
-    }
-
     /** Tonight's Consolidation snowball: this week's accumulated Stabilisation units, ×10 each. */
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
         return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
@@ -2719,31 +2636,6 @@ public final class HifzPrefs {
         return p.edit().putString(key, date).remove(consolidationStateKey(family)).commit();
     }
 
-    /** Fail and defer the exact page displayed, even when it is not the physical queue head. */
-    public boolean failAndDeferAnchoring(VerseRef displayedStart, VerseRef displayedEnd) {
-        List<AnchoringQueue.Entry> queue = anchoringQueue();
-        int displayedIndex = findAnchoringEntry(queue, displayedStart, displayedEnd);
-        if (displayedIndex < 0) return false;
-        AnchoringQueue.Deferral deferred = AnchoringQueue.failAndDefer(queue, displayedIndex, 3);
-        int storedIndex = deferred.nextIndex < 0 ? 0 : deferred.nextIndex;
-        VerseRef next = GeometryRepository.parseVerse(deferred.entries.get(storedIndex).start);
-        String retryAfter = deferred.nextIndex < 0 ? HifzClock.today().toString() : "";
-        return p.edit()
-            .putString("anchoringQueue", anchoringQueueJson(deferred.entries))
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", storedIndex)
-            .putString("anchoringRetryAfterDate", retryAfter)
-            .putString("itqanCursor", next.toString())
-            .putInt("itqanRep", 0)
-            .putInt("itqanBlockIndex", 0)
-            .putInt("itqanAssisted", 0)
-            .putInt("itqanFinalReveals", 0)
-            .putString("itqanUnitStart", "")
-            .putString("itqanUnitEnd", "")
-            .putLong("itqanElapsedMs", 0L)
-            .commit();
-    }
-
     public String sabqiTodayReviewDate() { return p.getString("sabqiTodayReviewDate", ""); }
     public int sabqiTodayReviewStartLine() { return p.getInt("sabqiTodayReviewStartLine", -1); }
     public int sabqiTodayReviewEndLine() { return p.getInt("sabqiTodayReviewEndLine", -1); }
@@ -2758,23 +2650,8 @@ public final class HifzPrefs {
     }
 
     public int recentSabqiReviewIndex() { return Math.max(0, p.getInt("recentSabqiReviewIndex", 0)); }
-    public void setRecentSabqiReviewIndex(int value) {
-        p.edit().putInt("recentSabqiReviewIndex", Math.max(0, value)).apply();
-    }
     public String lastRecentSabqiReviewDate() { return p.getString("lastRecentSabqiReviewDate", ""); }
     public String lastRecentSabqiReviewLabel() { return p.getString("lastRecentSabqiReviewLabel", ""); }
-    public boolean completeRecentSabqiReview(String date, int nextIndex, String label) {
-        LocalDate completed = safeDate(date, null);
-        if (completed == null) completed = HifzClock.today();
-        List<LocalDate> attendance = ConsolidationAttendance.add(consolidationAttendanceDates(), completed);
-        return p.edit()
-            .putLong("recent_sabqi_reviewElapsedMs", 0L)
-            .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
-            .putString("lastRecentSabqiReviewDate", date)
-            .putString("lastRecentSabqiReviewLabel", label)
-            .putString("consolidationAttendanceDates", attendanceJson(attendance))
-            .commit();
-    }
 
     public VerseRef murajaahActualEnd() { return optionalRef("murajaahActualEnd"); }
     public void setMurajaahActualEnd(VerseRef value) {
@@ -3136,9 +3013,6 @@ public final class HifzPrefs {
     public void setElapsedFor(String mode, long value) { p.edit().putLong(elapsedKey(mode), Math.max(0L, value)).apply(); }
 
     public double murajaahSecondsPerLine() { return p.getFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING); }
-    public void setMurajaahSecondsPerLine(double value) {
-        if (value > 0.0 && Double.isFinite(value)) p.edit().putFloat("murajaahSecPerLine", (float) value).apply();
-    }
 
     public boolean forceEink() { return p.getBoolean("forceEink", false); }
     public void setForceEink(boolean value) { p.edit().putBoolean("forceEink", value).apply(); }
@@ -3187,21 +3061,6 @@ public final class HifzPrefs {
         return out;
     }
 
-    public void addRecentSabqi(int start, int end) {
-        List<RecentSabqi> queue = recentSabqi();
-        LocalDate now = HifzClock.today();
-        queue.add(new RecentSabqi(start, end, now, 0));
-        p.edit()
-            .putString("recentSabqi", recentJson(queue))
-            .apply();
-    }
-
-    public void removeFirstRecentSabqi() {
-        List<RecentSabqi> queue = recentSabqi();
-        if (!queue.isEmpty()) queue.remove(0);
-        saveRecent(queue);
-    }
-
     static List<RecentSabqi> markReviewed(List<RecentSabqi> source, int index) {
         ArrayList<RecentSabqi> out = new ArrayList<>(source == null ? Collections.emptyList() : source);
         if (out.isEmpty()) return out;
@@ -3244,50 +3103,10 @@ static List<RecentSabqi> withoutRecentBlocks(List<RecentSabqi> source, List<Rece
     return out;
 }
 
-public boolean removeRecentBlocks(List<RecentSabqi> removed) {
-    List<RecentSabqi> source = recentSabqi();
-    if (source.isEmpty()) return true;
-    int currentAt = Math.floorMod(p.getInt("recentSabqiReviewIndex", 0), source.size());
-    RecentSabqi displayed = source.get(currentAt);
-    List<RecentSabqi> next = withoutRecentBlocks(source, removed);
-    int nextIndex = 0;
-    for (int i = 0; i < next.size(); i++) {
-        if (sameRecentBlock(next.get(i), displayed)) { nextIndex = i; break; }
-    }
-    return p.edit()
-        .putString("recentSabqi", recentJson(next))
-        .putInt("recentSabqiReviewIndex", next.isEmpty() ? 0 : nextIndex)
-        .commit();
-}
-
     static int indexAfterDeferral(int index, int size) {
         if (size <= 0) return 0;
         int at = Math.floorMod(index, size);
         return at >= size - 1 ? 0 : at;
-    }
-
-    public boolean markRecentReviewed(int index) {
-        List<RecentSabqi> source = recentSabqi();
-        if (source.isEmpty()) return false;
-        int at = Math.floorMod(index, source.size());
-        List<RecentSabqi> next = markReviewed(source, at);
-        int nextIndex = PreviewConfig.nextRecentReviewIndex(at, next.size());
-        return p.edit()
-            .putString("recentSabqi", recentJson(next))
-            .putInt("recentSabqiReviewIndex", Math.max(0, nextIndex))
-            .commit();
-    }
-
-    public boolean deferRecentBlock(int index) {
-        List<RecentSabqi> source = recentSabqi();
-        if (source.isEmpty()) return false;
-        int at = Math.floorMod(index, source.size());
-        List<RecentSabqi> next = deferRecent(source, at);
-        int nextIndex = indexAfterDeferral(at, next.size());
-        return p.edit()
-            .putString("recentSabqi", recentJson(next))
-            .putInt("recentSabqiReviewIndex", nextIndex)
-            .commit();
     }
 
     /**
@@ -3330,10 +3149,6 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
         return false;
     }
 
-    private void saveRecent(List<RecentSabqi> queue) {
-        p.edit().putString("recentSabqi", recentJson(queue)).apply();
-    }
-
     private String recentJson(List<RecentSabqi> queue) {
         JSONArray array = new JSONArray();
         try {
@@ -3368,11 +3183,6 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
             throw new IllegalStateException("Corrupt recent Sabqi queue", error);
         }
         return out.toString();
-    }
-
-    private static int recentCount(String raw) {
-        try { return new JSONArray(raw == null ? "[]" : raw).length(); }
-        catch (Exception error) { throw new IllegalStateException("Corrupt recent Sabqi queue", error); }
     }
 
     private List<VerseRange> parseRanges(String key) {
@@ -3493,12 +3303,6 @@ public boolean removeRecentBlocks(List<RecentSabqi> removed) {
     private static boolean ordinalBetween(VerseRef value, VerseRef start, VerseRef endInclusive) {
         int ordinal = GeometryRepository.ordinal(value);
         return ordinal >= GeometryRepository.ordinal(start) && ordinal <= GeometryRepository.ordinal(endInclusive);
-    }
-
-    private static String attendanceJson(List<LocalDate> dates) {
-        JSONArray array = new JSONArray();
-        for (LocalDate date : ConsolidationAttendance.add(dates, null)) array.put(date.toString());
-        return array.toString();
     }
 
     private static String rangesJson(List<VerseRange> ranges) {
