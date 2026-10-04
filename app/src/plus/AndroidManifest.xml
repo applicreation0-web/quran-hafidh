@@ -1,9 +1,3 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
-        <activity
-            android:name=".TaddaburActivity"
-            android:excludeFromRecents="false"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-    </application>
+    <application />
 </manifest>

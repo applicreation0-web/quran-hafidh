@@ -11,22 +11,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,9 +40,7 @@ class ReadingSelectionActivity : ComponentActivity() {
 
     @Composable
     private fun ReadingSelectionScreen() {
-        var mode by remember {
-            mutableStateOf(GuardPrefs.selectionMode(this@ReadingSelectionActivity))
-        }
+        var mode by remember { mutableStateOf(GuardPrefs.selectionMode(this@ReadingSelectionActivity)) }
         val selectedJuz = remember {
             mutableStateListOf<Int>().apply {
                 addAll(GuardPrefs.selectedJuz(this@ReadingSelectionActivity).sorted())
@@ -61,14 +58,9 @@ class ReadingSelectionActivity : ComponentActivity() {
             bottomBar = {
                 Surface(shadowElevation = 8.dp) {
                     SafeguardButton(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 12.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
                         onClick = { finish() }
-                    ) {
-                        Text("OK")
-                    }
+                    ) { Text("OK") }
                 }
             }
         ) { innerPadding ->
@@ -87,58 +79,46 @@ class ReadingSelectionActivity : ComponentActivity() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Choisissez avec les limites réelles des versets. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Mushaf.",
+                    "Choisissez selon les limites réelles des versets et les repères canoniques. Un début ou une fin de Juz/Hizb peut se trouver au milieu d’une page du Muṣḥaf ; cette page de frontière appartient alors visuellement aux deux sections voisines.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                if (TafsirEdition.isEnabled) {
-                    ElevatedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = SafeguardShapes.large,
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                "Qur’an & Tafsîr",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Ouvrez librement le Mushaf de Médine et le Tafsîr al-Jalalayn, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            SafeguardButton(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp),
-                                onClick = {
-                                    startActivity(
-                                        Intent(
-                                            this@ReadingSelectionActivity,
-                                            FreeQuranReaderActivity::class.java
-                                        )
-                                    )
-                                }
-                            ) {
-                                Text("Ouvrir le Qur’an & Tafsîr")
-                            }
-                        }
+                        Text(
+                            if (TafsirEdition.isEnabled) "Qur’an & Tafsîr" else "Lecture du Qur’an",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (TafsirEdition.isEnabled) {
+                                "Ouvrez librement le Muṣḥaf de Médine et le Tafsîr disponible, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard."
+                            } else {
+                                "Ouvrez librement le Muṣḥaf de Médine, sans attendre un événement de déblocage. Cette lecture ne crédite aucun quota Safeguard."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        SafeguardButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = { startActivity(Intent(this@ReadingSelectionActivity, FreeQuranReaderActivity::class.java)) }
+                        ) { Text(if (TafsirEdition.isEnabled) "Lecture / Étude" else "Lecture") }
                     }
                 }
 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
+                    shape = SafeguardShapes.large,
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
@@ -147,10 +127,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                                 selected = mode == QuranSelectionMode.JUZ,
                                 onClick = {
                                     mode = QuranSelectionMode.JUZ
-                                    GuardPrefs.saveSelectionMode(
-                                        this@ReadingSelectionActivity,
-                                        mode
-                                    )
+                                    GuardPrefs.saveSelectionMode(this@ReadingSelectionActivity, mode)
                                 }
                             )
                             Text("Choisir par Juz")
@@ -160,16 +137,13 @@ class ReadingSelectionActivity : ComponentActivity() {
                                 selected = mode == QuranSelectionMode.HIZB,
                                 onClick = {
                                     mode = QuranSelectionMode.HIZB
-                                    GuardPrefs.saveSelectionMode(
-                                        this@ReadingSelectionActivity,
-                                        mode
-                                    )
+                                    GuardPrefs.saveSelectionMode(this@ReadingSelectionActivity, mode)
                                 }
                             )
                             Text("Choisir par Hizb")
                         }
                         Text(
-                            "Les pages de frontière peuvent appartenir à deux sections voisines. Le quota reste de 20 pages le matin et 10 pages au palier de 90 minutes ; une lecture libre est ensuite proposée.",
+                            "Safeguard demande jusqu’à 20 pages le matin et jusqu’à 10 pages au palier de 90 minutes, sans sortir d’une section sélectionnée ni répéter une page si le pool canonique choisi est plus court.",
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -177,28 +151,24 @@ class ReadingSelectionActivity : ComponentActivity() {
                     }
                 }
 
-                val current =
-                    if (mode == QuranSelectionMode.JUZ) selectedJuz else selectedHizb
+                val current = if (mode == QuranSelectionMode.JUZ) selectedJuz else selectedHizb
                 val maxUnit = if (mode == QuranSelectionMode.JUZ) 30 else 60
                 val unitLabel = if (mode == QuranSelectionMode.JUZ) "Juz" else "Hizb"
 
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SafeguardOutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         onClick = {
                             current.clear()
                             current.addAll(1..maxUnit)
                             persistReadingSelection(mode, selectedJuz, selectedHizb)
                         }
                     ) { Text("Tout sélectionner") }
-
                     SafeguardOutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         onClick = {
                             current.clear()
                             persistReadingSelection(mode, selectedJuz, selectedHizb)
@@ -208,10 +178,8 @@ class ReadingSelectionActivity : ComponentActivity() {
 
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.elevatedCardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
+                    shape = SafeguardShapes.large,
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp)
                 ) {
                     Column(
@@ -219,18 +187,13 @@ class ReadingSelectionActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         (1..maxUnit).forEach { unit ->
-                            val division = QuranStructureMetadata.division(
-                                mode,
-                                unit
-                            )
+                            val division = QuranStructureMetadata.division(mode, unit)
                             OutlinedCard(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp)
+                                shape = SafeguardShapes.small
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Checkbox(
@@ -238,14 +201,8 @@ class ReadingSelectionActivity : ComponentActivity() {
                                         onCheckedChange = { checked ->
                                             if (checked) {
                                                 if (unit !in current) current.add(unit)
-                                            } else {
-                                                current.remove(unit)
-                                            }
-                                            persistReadingSelection(
-                                                mode,
-                                                selectedJuz,
-                                                selectedHizb
-                                            )
+                                            } else current.remove(unit)
+                                            persistReadingSelection(mode, selectedJuz, selectedHizb)
                                         }
                                     )
                                     Column(modifier = Modifier.weight(1f)) {
@@ -255,10 +212,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            QuranStructureMetadata.selectionSubtitle(
-                                                mode,
-                                                division.number
-                                            ),
+                                            QuranStructureMetadata.selectionSubtitle(mode, division.number),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -267,8 +221,7 @@ class ReadingSelectionActivity : ComponentActivity() {
                             }
                         }
                         Text(
-                            "Repères : " + QuranStructureMetadata.SOURCE_LABEL +
-                                " • pagination du Mushaf de Médine (604 pages).",
+                            "Repères : ${QuranStructureMetadata.SOURCE_LABEL} • pagination du Muṣḥaf de Médine (604 pages).",
                             modifier = Modifier.padding(8.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -285,10 +238,8 @@ class ReadingSelectionActivity : ComponentActivity() {
         selectedHizb: List<Int>
     ) {
         when (mode) {
-            QuranSelectionMode.JUZ ->
-                GuardPrefs.saveSelectedJuz(this, selectedJuz.toSet())
-            QuranSelectionMode.HIZB ->
-                GuardPrefs.saveSelectedHizb(this, selectedHizb.toSet())
+            QuranSelectionMode.JUZ -> GuardPrefs.saveSelectedJuz(this, selectedJuz.toSet())
+            QuranSelectionMode.HIZB -> GuardPrefs.saveSelectedHizb(this, selectedHizb.toSet())
         }
     }
 }

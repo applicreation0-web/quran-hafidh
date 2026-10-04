@@ -1,0 +1,74 @@
+name: Quran Hifz visual audit
+
+# Runs only when the audit script or this workflow changes (or on demand): boots an Android
+# emulator, installs the debug APK and captures every screen at phone and BOOX-like geometries.
+on:
+  push:
+    branches:
+      - ccr-d3ad7de9-4i3zfm
+    paths:
+      - scripts/hifz_visual_audit.sh
+      - .github/workflows/hifz-visual-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hifz-visual-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Assemble debug APK
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Capture screens on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: bash scripts/hifz_visual_audit.sh "$(find hifz-app/build/outputs/apk/debug -name '*.apk' | head -n1)" audit-out
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-hifz-visual-audit-${{ github.sha }}
+          path: audit-out
+          if-no-files-found: warn
+          retention-days: 14

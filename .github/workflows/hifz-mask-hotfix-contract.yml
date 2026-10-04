@@ -1,0 +1,26 @@
+name: Quran Hifz mask hotfix contract
+
+on:
+  push:
+    branches:
+      - release/hifz-0.7.2-mask-hotfix
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mask-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify mask anti-slab source contract
+        run: python3 scripts/verify_hifz_mask_hotfix.py
+      - name: Verify mask segment numeric behavior
+        run: node scripts/test_hifz_mask_segments.js

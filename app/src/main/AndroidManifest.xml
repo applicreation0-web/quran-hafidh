@@ -1,8 +1,15 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Fail closed against any transitive library that tries to add direct-call access. -->
+    <uses-permission
+        android:name="android.permission.CALL_PHONE"
+        tools:node="remove" />
 
     <queries>
         <package android:name="com.whatsapp" />
@@ -49,7 +56,25 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".HifzJourneyActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
             android:name=".FreeQuranReaderActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".QuranHubActivity"
+            android:excludeFromRecents="false"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".SettingsHubActivity"
             android:excludeFromRecents="false"
             android:exported="false"
             android:screenOrientation="portrait" />
@@ -71,7 +96,6 @@
             android:excludeFromRecents="false"
             android:exported="false"
             android:screenOrientation="portrait" />
-
 
         <activity
             android:name=".HikamDetailActivity"

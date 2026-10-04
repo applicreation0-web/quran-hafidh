@@ -10,6 +10,7 @@ def require(condition, message):
 
 build = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
 dashboard = (ROOT / "app/src/main/java/com/quranunlock/guard/DashboardActivity.kt").read_text(encoding="utf-8")
+quran_hub = (ROOT / "app/src/main/java/com/quranunlock/guard/QuranHubActivity.kt").read_text(encoding="utf-8")
 reader = (ROOT / "app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt").read_text(encoding="utf-8")
 gesture = (ROOT / "app/src/main/java/com/quranunlock/guard/ReaderGestureClassifier.kt").read_text(encoding="utf-8")
 hikam_ui = (ROOT / "app/src/main/java/com/quranunlock/guard/HikamDetailActivity.kt").read_text(encoding="utf-8")
@@ -17,7 +18,9 @@ light_sharh = (ROOT / "app/src/light/java/com/quranunlock/guard/HikamSharhEditio
 plus_sharh = (ROOT / "app/src/plus/java/com/quranunlock/guard/HikamSharhEdition.kt").read_text(encoding="utf-8")
 entries = json.loads((ROOT / "app/src/main/assets/hikam/al_hikam_verified.json").read_text(encoding="utf-8"))
 
-require('versionCode = 22' in build and 'versionName = "0.10.3"' in build, "version must be 0.10.3 / code 22")
+# Historical 0.10.3 guarantees are retained inside newer releases; the current
+# release audit owns the active version number.
+require('versionCode = 22' in build and 'versionName = "0.10.3"' in build, "0.10.3 compatibility markers must remain auditable")
 require(len(entries) == 264, "Hikam corpus must contain exactly 264 entries")
 require({int(x["source_number"]) for x in entries} == set(range(1, 265)), "Hikam numbering must be exactly 1..264")
 for item in entries:
@@ -31,7 +34,12 @@ require(by_number[174]["french"] == "La survenue des privations est une fête po
 require(by_number[175]["french"] == "Il se peut que tu trouves dans les privations un surcroît que tu ne trouves ni dans le jeûne ni dans la prière.", "Hikma 175 correction missing")
 require(by_number[176]["french"] == "Les privations sont les tapis des dons.", "Hikma 176 correction missing")
 
-require('if (TafsirEdition.isEnabled) {' in dashboard and 'FreeQuranReaderActivity::class.java' in dashboard, "Plus must expose direct voluntary Quran/Tafsir access")
+# 0.10.7 routes voluntary Qur'an access through the dedicated Qur'an hub.
+# Plus must still reach FreeQuranReaderActivity when Tafsir is enabled, and
+# this path must remain separate from challenge/unlock credit.
+require('QuranHubActivity::class.java' in dashboard, "dashboard must expose direct voluntary Quran access")
+require('if (TafsirEdition.isEnabled)' in quran_hub and 'FreeQuranReaderActivity::class.java' in quran_hub,
+        "Plus Qur'an hub must expose voluntary Quran/Tafsir access")
 require('challenge_key' not in reader.lower(), "free reader must not depend on a challenge key")
 for forbidden in ["completeReadingAndUnlock", "consumeJokerAndUnlock", "markUnlocked"]:
     require(forbidden not in reader, f"free reader must never call {forbidden}")
@@ -45,6 +53,6 @@ print("0.10.3 contradictory update audit: PASS")
 print("- 264 Hikam cross-audit metadata present")
 print("- 174/175/176 corrected")
 print("- Arabic RTL navigation guarded")
-print("- voluntary Quran/Tafsir isolated from unlock credit")
+print("- voluntary Quran/Tafsir isolated from unlock credit via Quran hub")
 print("- Light/Plus sharh isolation guarded")
 print("- dual-commentator selector guarded; empty data is not fabricated")

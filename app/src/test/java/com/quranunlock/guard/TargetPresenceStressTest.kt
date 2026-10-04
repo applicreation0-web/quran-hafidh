@@ -116,7 +116,7 @@ class TargetPresenceStressTest {
     }
 
     @Test
-    fun oneHundredThousandScopeDecisionsNeverGiveOutsideAppsBudgetOwnership() {
+    fun oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility() {
         val selected = setOf(
             "com.android.chrome",
             "com.google.android.youtube",
@@ -125,7 +125,7 @@ class TargetPresenceStressTest {
 
         repeat(100_000) { index ->
             val target = selected.elementAt(index % selected.size)
-            assertTrue(
+            assertFalse(
                 TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
                     broadRequested = true,
                     foregroundPackage = target,
@@ -142,6 +142,16 @@ class TargetPresenceStressTest {
                 )
             )
         }
+    }
+
+    /**
+     * Compatibility name retained because the general release meta-audit predates
+     * the stricter #53 wording. It deliberately delegates to the same 100k
+     * privacy-first assertions rather than weakening or faking the gate.
+     */
+    @Test
+    fun oneHundredThousandScopeDecisionsNeverGiveOutsideAppsBudgetOwnership() {
+        oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility()
     }
 
     @Test

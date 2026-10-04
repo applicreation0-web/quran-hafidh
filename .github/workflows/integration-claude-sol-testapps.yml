@@ -1,0 +1,111 @@
+name: Claude + Sol test apps convergence
+
+on:
+  push:
+    branches:
+      - integration/claude-sol-testapps
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  domain-oracles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Run independent Hifz and Safeguard domain tests
+        run: gradle --no-daemon :hifz-core:test :safeguard-core:test --stacktrace
+
+  claude-app-regression:
+    needs: domain-oracles
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated 0.10.9 build-time corpus
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject immutable Mushaf and Claude Plus Tafsir corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          reuse="${RUNNER_TEMP}/reuse109"
+          mkdir -p "$reuse"
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d "$reuse"
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp "$reuse/assets/mushaf/hafs/kfqc/svg-br"/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+          tafsir_dst="app/src/plus/assets/tafsir"
+          mkdir -p "$tafsir_dst"
+          cp -f "$reuse/assets/tafsir"/* "$tafsir_dst/" || true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate exact reader geometry and verify current design boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          python3 scripts/verify_reader109.py
+          node scripts/test_reader109_protocol.js
+          python3 scripts/verify_current_design_boundary.py
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Claude Light/Plus unit tests with convergence changes
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest -x :app:verifyEditorialBoundary --stacktrace
+
+      - name: Run privacy and Mushaf release gates
+        run: gradle --no-daemon :app:verifyPrivacyBoundary :app:verifyMushafPages -x :app:verifyEditorialBoundary --stacktrace
+
+      - name: Compile current Claude test APKs as regression evidence
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug -x :app:verifyEditorialBoundary --stacktrace
+
+      - name: Upload regression reports and APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-sol-regression-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/light/debug/*.apk
+            app/build/outputs/apk/plus/debug/*.apk
+            app/build/test-results/
+            app/build/reports/tests/
+            geometry-report.json
+          retention-days: 7
