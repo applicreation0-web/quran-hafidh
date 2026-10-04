@@ -47,6 +47,8 @@ public final class UiIconMappingTest {
             {"Hésitation", R.drawable.ic_ui_info},
             {"À revoir", R.drawable.ic_ui_repeat},
             {"Révéler", R.drawable.ic_ui_reveal},
+            {"Marquer", R.drawable.ic_ui_flag},
+            {"Touchez le verset…", R.drawable.ic_ui_flag},
             {"Tafsir", R.drawable.ic_ui_tafsir},
             {"Tafsir · touchez un verset puis ouvrez le commentaire", R.drawable.ic_ui_tafsir},
             {"Repères", R.drawable.ic_ui_semantic_cues},

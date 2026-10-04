@@ -399,6 +399,7 @@ final class Ui {
         if (s.contains("hésitation") || s.contains("hesitation")) return R.drawable.ic_ui_info;
         if (s.contains("à revoir") || s.contains("a revoir")) return R.drawable.ic_ui_repeat;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
+        if (s.contains("marquer") || s.contains("touchez le verset")) return R.drawable.ic_ui_flag;
         if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
         if (s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;
         if (s.contains("masquer les repères") || s.contains("masquer les reperes")) return R.drawable.ic_ui_semantic_cues_off;
