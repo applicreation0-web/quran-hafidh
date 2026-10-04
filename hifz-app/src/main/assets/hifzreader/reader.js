@@ -29,7 +29,6 @@ let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
  * (harakat, dots) that a word pushes outside its line band — exact extents, never estimated. */
 let pageWordBoxes=Array.isArray(boot.pageWordBoxes)?boot.pageWordBoxes:[];
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
-let blurMasked=!!boot.blurMasked;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -560,49 +559,6 @@ function protectedWordBoxes(){
 }
 
 
-/*
- * Quiz: the erased rest of the page stays "apparent mais flou" — a strongly blurred, faded copy
- * of the page's own glyphs, clipped to exactly the erased segments, so the layout of the page
- * is visible while no word can be read. Lives inside the mask layer, so the exact word holes
- * (prompt, page bounds) stay sharp and rosettes are still drawn above it.
- */
-function appendBlurredContext(layer,svg,segments){
-  const content=svg.querySelector('#content');
-  if(!content||!segments.length)return;
-  const parent=content.parentNode;
-  const defs=document.createElementNS(NS,'defs');
-  const filter=document.createElementNS(NS,'filter');
-  filter.id='hifz-quiz-blur';
-  filter.setAttribute('x','-5%');filter.setAttribute('y','-5%');
-  filter.setAttribute('width','110%');filter.setAttribute('height','110%');
-  const blur=document.createElementNS(NS,'feGaussianBlur');
-  blur.setAttribute('stdDeviation',eink?'3.2':'3');
-  filter.appendChild(blur);defs.appendChild(filter);
-  const clip=document.createElementNS(NS,'clipPath');
-  clip.id='hifz-quiz-blur-clip';
-  segments.forEach(seg=>{
-    const r=document.createElementNS(NS,'rect');
-    r.setAttribute('x',seg.x);r.setAttribute('y',seg.y);
-    r.setAttribute('width',seg.width);r.setAttribute('height',seg.height);
-    clip.appendChild(r);
-  });
-  defs.appendChild(clip);
-  layer.appendChild(defs);
-  const ghost=document.createElementNS(NS,'g');
-  ghost.setAttribute('clip-path','url(#hifz-quiz-blur-clip)');
-  ghost.setAttribute('opacity',eink?'0.38':'0.32');
-  ghost.setAttribute('pointer-events','none');
-  const blurred=document.createElementNS(NS,'g');
-  blurred.setAttribute('filter','url(#hifz-quiz-blur)');
-  const frame=document.createElementNS(NS,'g');
-  if(parent&&parent.getAttribute&&parent.getAttribute('transform'))frame.setAttribute('transform',parent.getAttribute('transform'));
-  const copy=content.cloneNode(true);
-  copy.removeAttribute('id');
-  copy.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));
-  frame.appendChild(copy);blurred.appendChild(frame);ghost.appendChild(blurred);
-  layer.appendChild(ghost);
-}
-
 /** Axis-aligned rectangles [x0,y0,x1,y1] minus every cutter rectangle (up to 4 pieces each). */
 function rectMinus(rects,cutters){
   let out=rects;
@@ -875,7 +831,6 @@ function render(){
       }
       // Exact anchor words are holes in the mask itself. Verse-number rosettes are never erased:
       // they are always redrawn above the paper eraser, in every mode (user decision).
-      if(blurMasked)appendBlurredContext(layer,svg,segments);
       applyProtectedWordHoles(layer,svg);
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
@@ -939,7 +894,6 @@ window.HifzReader={
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
   setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
-  setBlurMasked(value){blurMasked=!!value;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},

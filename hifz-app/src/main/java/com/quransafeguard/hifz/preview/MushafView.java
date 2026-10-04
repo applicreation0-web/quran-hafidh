@@ -65,7 +65,6 @@ public final class MushafView extends WebView {
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
-    private boolean blurMasked;
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
     private boolean semanticHighlightEnabled = true;
@@ -215,7 +214,6 @@ public final class MushafView extends WebView {
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
                 .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
-                .put("blurMasked", blurMasked)
                 .put("pageWordBoxes", lineIds.isEmpty() ? new JSONArray()
                     : WordGeometryRepository.shared(getContext()).pageBoxes(page))
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry))
@@ -333,14 +331,6 @@ public final class MushafView extends WebView {
 
     public void clearSemanticCues() {
         setSemanticCues(new JSONArray(), false, false);
-    }
-
-    /** Quiz only: the erased rest of the page is shown as a faded, unreadable blur of itself. */
-    public void setBlurMasked(boolean value) {
-        blurMasked = value;
-        runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setBlurMasked(" + value + ");",
-            ignored -> post(() -> eink.local(this, prefs))));
     }
 
     /** Exact Quran-word boxes (Quiz prompt words, Révision active page landmarks) kept as mask holes. */

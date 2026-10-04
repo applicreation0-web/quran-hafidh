@@ -95,14 +95,12 @@ public final class QuizArchitectureSourceContractTest {
         assertTrue(activity.contains("private void purgeQuizRecordings() {"));
     }
 
-    /** Device feedback: prompt, verse to recite and the rest of the page must read apart. */
-    @Test public void quizSeparatesPromptAnswerAndBlurredRestOfPage() throws Exception {
+    /** User decision: the Quiz reads like Apprentissage/Stabilisation (masked unit + faded context). */
+    @Test public void quizUsesTheSessionsReadingGrammar() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java");
-        String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        assertTrue("prompt underlaid like an amorce", activity.contains("mushaf.setSemanticCues(cues, true, true);"));
-        assertTrue("verse to recite framed when on this page", activity.contains("mushaf.setHighlightVerses(question.expectedPage == question.promptPage"));
-        assertTrue("rest of the page faded and blurred", activity.contains("mushaf.setBlurMasked(true);"));
-        assertTrue("never blurred once the answer is shown", activity.contains("mushaf.setBlurMasked(false);"));
-        assertTrue(reader.contains("if(blurMasked)appendBlurredContext(layer,svg,segments);"));
+        assertTrue("prompt underlaid like an amorce, kept as a hole", activity.contains("mushaf.setSemanticCues(cues, true, true);"));
+        assertTrue("masked unit + faded context veil, as in sessions",
+            activity.contains("mushaf.show(question.promptPage, unit, new ArrayList<>(unitLines), 100, true);"));
+        assertFalse("no blur", activity.contains("setBlurMasked"));
     }
 }
