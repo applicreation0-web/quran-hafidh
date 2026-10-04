@@ -60,7 +60,7 @@ public final class MushafView extends WebView {
     private List<VerseRef> lastSelection;
     private List<String> lastLineIds;
     private int lastMask;
-    private boolean lastStrictLineFocus;
+    private boolean lastContextFocus;
     private List<VerseRef> currentHighlights = Collections.emptyList();
     private String landmarkStartLineId;
     private String landmarkEndLineId;
@@ -69,8 +69,6 @@ public final class MushafView extends WebView {
     private boolean semanticAnchorMaskMode;
     private boolean semanticHighlightEnabled = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
-    private String workBlockStartLineId;
-    private String workBlockEndLineId;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -165,21 +163,20 @@ public final class MushafView extends WebView {
     }
 
     /**
-     * A fractionated Stabilisation block's lineIds can include a boundary verse whose own
-     * physical lines straddle the split (CorpusLinePolicy assigns each line to its earliest
-     * verse, so a verse can start in one block and continue into lines owned by the next).
-     * The default whole-verse shading then greys out lines beyond the block's real 6-8 line
-     * working set. strictLineFocus=true shades exactly lineIds instead, like J10's view.
+     * contextFocus=true keeps exactly the requested physical Quran lines at native contrast while
+     * the rest of the real Mushaf page remains faintly visible. It never adds a grey selection fill.
+     * The line geometry also clips boundary verses, so a verse crossing outside the due block cannot
+     * expand the visual focus beyond the lines the learner is actually asked to read.
      */
-    public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus) {
-        lastStrictLineFocus = strictLineFocus;
+    public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus) {
+        lastContextFocus = contextFocus;
         retried = false;
         load(page, selection, lineIds, maskPercent);
     }
 
-    /** J10-only view: shade exactly the requested physical lines, never whole verse polygons. */
+    /** Compatibility entrypoint: exact-line context focus with no mask. */
     public void showLineFocus(int page, List<VerseRef> selection, List<String> lineIds) {
-        lastStrictLineFocus = true;
+        lastContextFocus = true;
         retried = false;
         load(page, selection, lineIds, 0);
     }
@@ -194,7 +191,7 @@ public final class MushafView extends WebView {
         lastSelection = selection;
         lastLineIds = lineIds;
         lastMask = maskPercent;
-        boolean strictLineFocus = lastStrictLineFocus;
+        boolean contextFocus = lastContextFocus;
         try {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
@@ -216,7 +213,7 @@ public final class MushafView extends WebView {
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
                 .put("maskEntropy", maskEntropy)
                 .put("eink", eink.isEink(prefs))
-                .put("strictLineFocus", strictLineFocus)
+                .put("contextFocus", contextFocus)
                 .put("highlights", highlights)
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
@@ -225,8 +222,6 @@ public final class MushafView extends WebView {
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
                 .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
-                .put("workBlockStart", workBlockStartLineId)
-                .put("workBlockEnd", workBlockEndLineId)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -297,16 +292,6 @@ public final class MushafView extends WebView {
             ignored -> post(() -> eink.local(this, prefs))));
     }
 
-    /** Sabqi/Itqan visual boundary cue. State is consumed on the next page load. */
-    public void setWorkBlockBounds(String startLineId, String endLineId) {
-        workBlockStartLineId = startLineId;
-        workBlockEndLineId = endLineId;
-    }
-
-    public void clearWorkBlockBounds() {
-        workBlockStartLineId = null;
-        workBlockEndLineId = null;
-    }
 
     /**
      * Sabqi/Itqan's selection IS the memorization block sharing physical lines with un-selected

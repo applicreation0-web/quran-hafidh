@@ -494,12 +494,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = new ArrayList<>(exactLineIds);
         currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;
-        // A grouped-cycle unit is a fixed physical-line window (e.g. 5 lines), not a verse
-        // boundary: shading by verse (the default) would highlight a whole verse wherever it
-        // appears on the page, spilling well past the declared line count whenever a verse in the
-        // unit continues onto lines outside it. Strict line focus confines the highlight to
-        // exactly these lines, the same fix already used for a fractionated Itqan block.
-        fractionatedItqan = true;
+        // A grouped-cycle unit is a frozen physical-line window, never a freshly reconstructed
+        // verse range. showCurrent() applies the same exact-line context focus as Sabqi/Itqan,
+        // clipped to these persisted line ids, without changing the unit or progression logic.
         sessionCompleted = false;
         program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
@@ -591,7 +588,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Dimanche matin : ×10 final de la boule de neige de la semaine — graduate vers Acquis. */
+    /** Dimanche : revue étendue glissante (semaine courante + 7 précédentes), ×3 par unité
+     *  physique + passe continue ×3 ; les unités non graduées plus anciennes restent dues. */
     private void renderConsolidationFinalReview() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastRecentSabqiReviewDate())) {
@@ -619,7 +617,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         renderMode();
     }
 
-    /** Dimanche matin : ×10 final de la boule de neige de la semaine — graduate vers Acquis. */
+    /** Dimanche : revue étendue glissante (semaine courante + 7 précédentes), ×3 par bloc
+     *  physique + passe continue ×3 ; les unités non graduées plus anciennes restent dues. */
     private void renderLearningFinalReview() {
         String today = sessionDate.toString();
         if (today.equals(prefs.lastLearningConsolidationDate())) {
@@ -1635,15 +1634,16 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (cue == null) return;
         semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
     }
+    private boolean usesReadingFocus() {
+        return SABQI.equals(mode) || SABQI_TODAY_REVIEW.equals(mode) || ITQAN.equals(mode)
+            || RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)
+            || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode);
+    }
+
     private void showCurrent(){
         hasShown=true;
-        boolean workBounds=(SABQI.equals(mode)||ITQAN.equals(mode))&&!currentLineIds.isEmpty();
-        if(workBounds){
-            mushaf.setWorkBlockBounds(currentLineIds.get(0),currentLineIds.get(currentLineIds.size()-1));
-        }else{
-            mushaf.clearWorkBlockBounds();
-        }
-        mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);
+        boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
+        mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus);
     }
 
     private void goPage(int delta) {

@@ -9,7 +9,7 @@ let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
 const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
-let strictLineFocus=!!boot.strictLineFocus;
+let contextFocus=!!boot.contextFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
@@ -17,8 +17,6 @@ let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
 let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
-let workBlockStart=boot.workBlockStart?String(boot.workBlockStart):null;
-let workBlockEnd=boot.workBlockEnd?String(boot.workBlockEnd):null;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -37,7 +35,6 @@ const mushaf=document.getElementById('mushaf');
 function currentSvg(){return mushaf.querySelector('svg')}
 function verseOf(p){return p.getAttribute('surah')+':'+p.getAttribute('ayah')}
 function selectedPolygons(svg){return [...svg.querySelectorAll('.ayahPolygon')].filter(p=>selected.includes(String(p.dataset.verse)))}
-function shadeVerseSelection(){if(strictLineFocus)return false;return true}
 
 /*
  * Right/left-page memory cue (odd page number = right-hand page, even = left-hand page, the same
@@ -243,30 +240,6 @@ function maskRect(segment){
   return el;
 }
 
-function lineFocusLayer(lines){
-  const layer=document.createElementNS(NS,'g');
-  layer.setAttribute('class','linefocuslayer');
-  (lines||[]).forEach(line=>{
-    const cells=line.cells||[];if(!cells.length)return;
-    let x0=Infinity,x1=-Infinity;
-    cells.forEach(cell=>{
-      x0=Math.min(x0,Number(cell[0]));
-      x1=Math.max(x1,Number(cell[1]));
-    });
-    const top=Number(line.top),bottom=Number(line.bottom);
-    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
-    const rect=document.createElementNS(NS,'rect');
-    rect.setAttribute('class','linefocuscell');
-    rect.setAttribute('x',x0);
-    rect.setAttribute('y',top+0.25);
-    rect.setAttribute('width',x1-x0);
-    rect.setAttribute('height',Math.max(0,bottom-top-0.5));
-    rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
-    layer.appendChild(rect);
-  });
-  return layer;
-}
-
 /* Personal weak-spot flags: a thin dashed outline cloned above every layer (including any
  * active mask), never a filled shade — deliberately the lightest possible mark to avoid E-Ink
  * ghosting from a shape that can stay on screen for many page views. */
@@ -363,9 +336,10 @@ function markerLayer(svg,polys,lines){
     const full=inv.multiply(ctm),b=m.getBBox();
     const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
     const c=pt.matrixTransform(full);
-    const visible=polys.length
-      ? insideSelection(polys,c.x,c.y)
-      : (lines||[]).some(line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    const inSelection=!polys.length||insideSelection(polys,c.x,c.y);
+    const inLines=!(lines||[]).length||(lines||[]).some(
+      line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    const visible=inSelection&&inLines;
     if(!visible)return;
     const wrap=document.createElementNS(NS,'g');
     wrap.setAttribute('transform',`matrix(${full.a} ${full.b} ${full.c} ${full.d} ${full.e} ${full.f})`);
@@ -426,17 +400,32 @@ function applyProtectedWordHoles(layer,svg){
 }
 
 
-function workContextLayer(svg,allLines,activeLines,polys){
+function focusContextLayer(svg,activeLines,polys){
   const g=document.createElementNS(NS,'g');
-  g.setAttribute('class','workcontextlayer');
+  g.setAttribute('class','focuscontextlayer');
   g.setAttribute('pointer-events','none');
-  // Fail open rather than hide Quran text if exact selected-verse polygons are unavailable.
-  if(!polys||!polys.length)return g;
+  if(!activeLines||!activeLines.length)return g;
   const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return g;
 
   const defs=document.createElementNS(NS,'defs');
+  const lineClip=document.createElementNS(NS,'clipPath');
+  lineClip.id='hifz-focus-lines';
+  (activeLines||[]).forEach(line=>{
+    const cells=line.cells||[];if(!cells.length)return;
+    let x0=Infinity,x1=-Infinity;
+    cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+    const top=Number(line.top),bottom=Number(line.bottom);
+    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
+    const rect=document.createElementNS(NS,'rect');
+    rect.setAttribute('x',x0);rect.setAttribute('y',top);
+    rect.setAttribute('width',x1-x0);rect.setAttribute('height',bottom-top);
+    lineClip.appendChild(rect);
+  });
+  if(!lineClip.childNodes.length)return g;
+  defs.appendChild(lineClip);
+
   const contextMask=document.createElementNS(NS,'mask');
-  contextMask.id='hifz-work-context-mask';
+  contextMask.id='hifz-focus-context-mask';
   contextMask.setAttribute('maskUnits','userSpaceOnUse');
   contextMask.setAttribute('maskContentUnits','userSpaceOnUse');
   contextMask.setAttribute('x',vb.x);contextMask.setAttribute('y',vb.y);
@@ -445,93 +434,53 @@ function workContextLayer(svg,allLines,activeLines,polys){
   full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
   full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
   full.setAttribute('fill','white');contextMask.appendChild(full);
-  polys.forEach(p=>{
-    const hole=p.cloneNode(false);
-    // Source ayah hit-polygons are invisible (fill-opacity=0). In an SVG mask that
-    // opacity must be removed and forced to 1, otherwise the paper layer also hides
-    // the ACTIVE Quran block and only the cloned verse rosettes remain visible.
-    ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
-      attr=>hole.removeAttribute(attr)
-    );
-    hole.setAttribute('fill','black');
-    hole.setAttribute('fill-opacity','1');
-    hole.setAttribute('stroke','black');
-    hole.setAttribute('stroke-opacity','1');
-    hole.setAttribute('opacity','1');
-    contextMask.appendChild(hole);
-  });
-  defs.appendChild(contextMask);g.appendChild(defs);
+
+  const holes=document.createElementNS(NS,'g');
+  holes.setAttribute('clip-path','url(#hifz-focus-lines)');
+  if(polys&&polys.length){
+    polys.forEach(p=>{
+      const hole=p.cloneNode(false);
+      ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
+        attr=>hole.removeAttribute(attr)
+      );
+      hole.setAttribute('fill','black');
+      hole.setAttribute('fill-opacity','1');
+      hole.setAttribute('stroke','black');
+      hole.setAttribute('stroke-opacity','1');
+      hole.setAttribute('opacity','1');
+      holes.appendChild(hole);
+    });
+  }else{
+    (activeLines||[]).forEach(line=>{
+      const cells=line.cells||[];if(!cells.length)return;
+      let x0=Infinity,x1=-Infinity;
+      cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+      const top=Number(line.top),bottom=Number(line.bottom);
+      if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
+      const hole=document.createElementNS(NS,'rect');
+      hole.setAttribute('x',x0);hole.setAttribute('y',top);
+      hole.setAttribute('width',x1-x0);hole.setAttribute('height',bottom-top);
+      hole.setAttribute('fill','black');holes.appendChild(hole);
+    });
+  }
+  contextMask.appendChild(holes);
+  defs.appendChild(contextMask);
+  g.appendChild(defs);
 
   const paper=document.createElementNS(NS,'rect');
   paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);
   paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);
   paper.setAttribute('fill','var(--sheet)');
   /*
-   * B+ visual-memory context: keep the REAL surrounding Mushaf faintly readable instead of
-   * replacing it with blank paper or synthetic line traces. A semi-opaque paper veil lowers
-   * contrast while preserving exact words, line lengths, rosettes and page topology.
-   * No SVG blur/filter: that is deliberately avoided on E-Ink to limit grey smearing/ghosting.
+   * Reading focus: the exact lines being read stay at native 100% contrast. The real surrounding
+   * Mushaf stays spatially present under a paper veil: 72% on E-Ink (~28% visible context),
+   * 65% on LCD/OLED (~35% visible context). No blur, no grey fill on the active Quran text.
    */
   paper.setAttribute('fill-opacity',eink?'0.72':'0.65');
-  paper.setAttribute('mask','url(#hifz-work-context-mask)');
+  paper.setAttribute('mask','url(#hifz-focus-context-mask)');
   g.appendChild(paper);
-  const markers=markerLayer(svg,polys,activeLines);
+  const markers=markerLayer(svg,polys||[],activeLines);
   if(markers.childNodes.length)g.appendChild(markers);
-  return g;
-}
-
-function workBlockBoundaryLayer(lines,polys){
-  const g=document.createElementNS(NS,'g');
-  g.setAttribute('class','workbracketlayer');
-  g.setAttribute('pointer-events','none');
-
-  const selectedExtent=(line)=>{
-    const cells=line.cells||[];
-    const cy=(Number(line.top)+Number(line.bottom))/2;
-    const relevant=polys&&polys.length
-      ? cells.filter(cell=>insideSelection(polys,(Number(cell[0])+Number(cell[1]))/2,cy))
-      : cells;
-    const source=relevant.length?relevant:cells;
-    let x0=Infinity,x1=-Infinity;
-    source.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-    return {x0,x1};
-  };
-  const fixedVerticalSpan=(line)=>{
-    const center=(Number(line.top)+Number(line.bottom))/2;
-    const span=eink?31:29;
-    let top=center-span/2,bottom=center+span/2;
-    if(top<2){bottom+=2-top;top=2;}
-    if(bottom>548){top-=bottom-548;bottom=548;}
-    return {top,bottom};
-  };
-  const draw=(lineId,side)=>{
-    if(!lineId)return;
-    const line=(lines||[]).find(x=>String(x.id)===String(lineId));
-    if(!line||!(line.cells||[]).length)return;
-    const {x0,x1}=selectedExtent(line);
-    const {top,bottom}=fixedVerticalSpan(line);
-    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||bottom<=top)return;
-    const path=document.createElementNS(NS,'path');
-    const arm=eink?6.8:6.2,offset=eink?2.8:2.5;
-    let x,d;
-    if(side==='start'){
-      x=Math.min(343,x1+offset);
-      d='M '+(x-arm)+' '+top+' H '+x+' V '+bottom+' H '+(x-arm);
-    }else{
-      x=Math.max(2,x0-offset);
-      d='M '+(x+arm)+' '+top+' H '+x+' V '+bottom+' H '+(x+arm);
-    }
-    path.setAttribute('d',d);
-    path.setAttribute('fill','none');
-    path.setAttribute('stroke','var(--ink)');
-    path.setAttribute('stroke-width',eink?'1.70':'1.45');
-    path.setAttribute('stroke-linecap','square');
-    path.setAttribute('stroke-linejoin','miter');
-    path.setAttribute('vector-effect','non-scaling-stroke');
-    g.appendChild(path);
-  };
-  draw(workBlockStart,'start');
-  draw(workBlockEnd,'end');
   return g;
 }
 
@@ -617,26 +566,18 @@ function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
-    const workBlockMode=!!(workBlockStart||workBlockEnd);
-    p.classList.toggle('selected',!workBlockMode&&shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
+    p.classList.toggle('selected',!contextFocus&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer,.semanticcuelayer,.workcontextlayer,.workbracketlayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.weaklayer,.semanticcuelayer,.focuscontextlayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
     ? (pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)))
     : [];
-  const workBlockMode=!!(workBlockStart||workBlockEnd);
-  const allLines=pageGeo?(pageGeo.lines||[]):[];
   const polys=maskFollowsSelection?selectedPolygons(svg):[];
-  if(strictLineFocus&&lines.length&&!workBlockMode){
-    const focus=lineFocusLayer(lines);
-    if(focus.childNodes.length)svg.appendChild(focus);
-  }
-
-  if(workBlockMode&&lines.length){
-    const context=workContextLayer(svg,allLines,lines,polys);
+  if(contextFocus&&lines.length){
+    const context=focusContextLayer(svg,lines,polys);
     if(context.childNodes.length)svg.appendChild(context);
   }
 
@@ -685,10 +626,6 @@ function render(){
     }
   }
 
-  if(workBlockMode&&lines.length){
-    const brackets=workBlockBoundaryLayer(lines,polys);
-    if(brackets.childNodes.length)svg.appendChild(brackets);
-  }
 
   // Weak-spot outlines always draw last, on top of any mask, so a flagged verse stays
   // recognizable (as a bare outline, revealing no text) even while its content is hidden.
@@ -754,6 +691,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,validWordBox,protectedWordBoxes};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,validWordBox,protectedWordBoxes};
 prepare();
 N?.ready();
