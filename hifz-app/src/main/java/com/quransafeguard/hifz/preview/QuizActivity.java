@@ -197,7 +197,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         instruction = Ui.text(this, "", 12f, false);
         instruction.setTextColor(Ui.MUTED);
         instruction.setGravity(Gravity.CENTER);
-        instruction.setSingleLine(true);
+        instruction.setMaxLines(2);
         titles.addView(instruction);
         header.addView(back);
         header.addView(titles);
@@ -273,12 +273,42 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             return;
         }
 
-        mushaf.setMaskFollowsSelection(false);
-        mushaf.setSemanticCues(new JSONArray(), true, false);
-        mushaf.setPageLandmarkBoxes(visible);
         mushaf.setMaskEntropy("quiz-" + questionIndex + "-" + question.prompt);
+        presentQuestion(question);
+    }
+
+    /**
+     * Device feedback: the three roles must read apart at a glance —
+     *  - the designated verse (the prompt) is underlaid in grey, exactly like an amorce;
+     *  - the verse to recite is framed by a dashed outline when it is on this page;
+     *  - the page's first/last three words stay plain ink as orientation only;
+     *  - everything else is "apparent mais flou": a faded blur, layout visible, unreadable.
+     */
+    private void presentQuestion(QuizQuestion question) {
+        JSONArray prompt = promptOnlyBoxes(question);
+        JSONArray cues = new JSONArray();
+        try {
+            cues.put(new org.json.JSONObject().put("id", "quiz-prompt").put("boxes", prompt).put("ranges", new JSONArray()));
+        } catch (org.json.JSONException impossible) {
+            cues = new JSONArray();
+        }
+        mushaf.setMaskFollowsSelection(false);
+        mushaf.setSemanticCues(cues, true, true);
+        mushaf.setPageLandmarkBoxes(words.pageLandmarkBoxes(question.promptPage));
+        mushaf.setHighlightVerses(question.expectedPage == question.promptPage
+            ? Collections.singletonList(question.expected) : Collections.emptyList());
+        mushaf.setBlurMasked(true);
         mushaf.show(question.promptPage, Collections.emptyList(),
             geometry.lineIdsOnPage(question.promptPage), 100, false);
+    }
+
+    /** The designated verse's own visible words only (no page bounds). */
+    private JSONArray promptOnlyBoxes(QuizQuestion question) {
+        JSONArray all = words.boxesForVerse(question.promptPage, question.prompt);
+        if (question.type == QuizQuestion.Type.PREVIOUS) return all;
+        JSONArray firstThree = new JSONArray();
+        for (int i = 0; i < Math.min(3, all.length()); i++) firstThree.put(all.optJSONArray(i));
+        return firstThree;
     }
 
     /**
@@ -335,11 +365,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         updateQuestionActions();
         QuizQuestion question = currentQuestion();
         if (question == null) return;
-        mushaf.setSemanticCues(new JSONArray(), true, false);
-        mushaf.setPageLandmarkBoxes(promptBoxes(question));
-        mushaf.setMaskFollowsSelection(false);
-        mushaf.show(question.promptPage, Collections.emptyList(),
-            geometry.lineIdsOnPage(question.promptPage), 100, false);
+        presentQuestion(question);
     }
 
     private void verifyAnswer() {
@@ -352,6 +378,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         setAudioStatus("");
         mushaf.setSemanticCues(new JSONArray(), false, false);
         mushaf.clearPageLandmarkBoxes();
+        mushaf.setHighlightVerses(Collections.emptyList());
+        mushaf.setBlurMasked(false);
         mushaf.setMaskFollowsSelection(true);
         List<String> exact = geometry.lineIdsForVerseRange(question.expected, question.expected);
         mushaf.show(question.expectedPage, Collections.singletonList(question.expected), exact, 0, true);

@@ -22,7 +22,12 @@ final class QuizQuestion {
     }
 
     String instruction() {
-        return type == Type.PREVIOUS ? "Récitez le verset qui précède celui-ci." : "Récitez la suite de ce verset.";
+        if (type == Type.PREVIOUS) {
+            return expectedPage == promptPage
+                ? "Récitez le verset qui précède le verset surligné."
+                : "Récitez le verset qui précède le verset surligné (page précédente).";
+        }
+        return "Récitez la suite du verset surligné.";
     }
 
 }
