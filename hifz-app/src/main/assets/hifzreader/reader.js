@@ -557,6 +557,24 @@ function protectedWordBoxes(){
 }
 
 
+/** Axis-aligned rectangles [x0,y0,x1,y1] minus every cutter rectangle (up to 4 pieces each). */
+function rectMinus(rects,cutters){
+  let out=rects;
+  cutters.forEach(c=>{
+    const next=[];
+    out.forEach(r=>{
+      if(c[2]<=r[0]||c[0]>=r[2]||c[3]<=r[1]||c[1]>=r[3]){next.push(r);return}
+      if(c[1]>r[1])next.push([r[0],r[1],r[2],c[1]]);
+      if(c[3]<r[3])next.push([r[0],c[3],r[2],r[3]]);
+      const y0=Math.max(r[1],c[1]),y1=Math.min(r[3],c[3]);
+      if(c[0]>r[0])next.push([r[0],y0,c[0],y1]);
+      if(c[2]<r[2])next.push([c[2],y0,r[2],y1]);
+    });
+    out=next.filter(p=>p[2]-p[0]>0.05&&p[3]-p[1]>0.05);
+  });
+  return out;
+}
+
 /** Cut exact Quran-word holes out of the opaque mask layer; never estimate from line cells. */
 function applyProtectedWordHoles(layer,svg){
   const boxes=protectedWordBoxes();if(!boxes.length)return;
@@ -573,6 +591,7 @@ function applyProtectedWordHoles(layer,svg){
   full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
   full.setAttribute('fill','white');holeMask.appendChild(full);
   const bands=(pageGeo&&pageGeo.lines)||[];
+  const holes=[];
   boxes.forEach(pageBox=>{
     const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
     // Exact word width; height = the word's own physical line band, so its harakat/dots that
@@ -585,6 +604,26 @@ function applyProtectedWordHoles(layer,svg){
     hole.setAttribute('x',box[0]);hole.setAttribute('y',y0);
     hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',y1-y0);
     hole.setAttribute('fill','black');holeMask.appendChild(hole);
+    holes.push([box[0],y0,box[2],y1]);
+  });
+  // A band-tall hole must not re-expose a neighbouring erased word whose harakat reach into the
+  // band: inside every hole, the other words' own exact boxes stay covered — never over any
+  // protected word's own box.
+  const shown=boxes.map(b=>wordBoxInSvgSpace(b,svg)).filter(Boolean);
+  const same=(p,q)=>Math.abs(p[0]-q[0])<0.01&&Math.abs(p[1]-q[1])<0.01&&Math.abs(p[2]-q[2])<0.01&&Math.abs(p[3]-q[3])<0.01;
+  pageWordBoxes.forEach(raw=>{
+    const b=(raw||[]).map(Number);if(!validWordBox(b))return;
+    const word=wordBoxInSvgSpace(b,svg);if(!word||shown.some(p=>same(p,word)))return;
+    holes.forEach(h=>{
+      const r=[Math.max(h[0],word[0]),Math.max(h[1],word[1]),Math.min(h[2],word[2]),Math.min(h[3],word[3])];
+      if(r[2]-r[0]<=0.05||r[3]-r[1]<=0.05)return;
+      rectMinus([r],shown).forEach(piece=>{
+        const cover=document.createElementNS(NS,'rect');
+        cover.setAttribute('x',piece[0]);cover.setAttribute('y',piece[1]);
+        cover.setAttribute('width',piece[2]-piece[0]);cover.setAttribute('height',piece[3]-piece[1]);
+        cover.setAttribute('fill','white');holeMask.appendChild(cover);
+      });
+    });
   });
   defs.appendChild(holeMask);layer.insertBefore(defs,layer.firstChild);
   layer.setAttribute('mask','url(#hifz-exact-word-holes)');

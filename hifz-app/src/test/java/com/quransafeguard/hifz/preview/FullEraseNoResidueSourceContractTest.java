@@ -30,4 +30,12 @@ public final class FullEraseNoResidueSourceContractTest {
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
         assertTrue(mushaf.contains("WordGeometryRepository.shared(getContext()).pageBoxes(page)"));
     }
+
+    /** Visual audit (Quiz p.6): a band-tall hole must not re-expose neighbouring erased words. */
+    @Test public void wordHolesKeepOtherErasedWordsCovered() throws Exception {
+        String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
+        assertTrue(reader.contains("function rectMinus(rects,cutters){"));
+        assertTrue(reader.contains("rectMinus([r],shown).forEach(piece=>{"));
+        assertTrue(reader.contains("if(!word||shown.some(p=>same(p,word)))return;"));
+    }
 }

@@ -75,8 +75,22 @@ launch_home() {
 
 set_lecture_page() {
   adb shell am force-stop "$pkg"
-  adb shell "run-as $pkg sh -c 'mkdir -p shared_prefs && printf \"<?xml version=\\\"1.0\\\" encoding=\\\"utf-8\\\" standalone=\\\"yes\\\" ?>\\n<map>\\n    <int name=\\\"page\\\" value=\\\"$1\\\" />\\n</map>\\n\" > shared_prefs/hifz_study.xml'" \
+  printf '<?xml version="1.0" encoding="utf-8" standalone="yes" ?>\n<map>\n    <int name="page" value="%s" />\n</map>\n' "$1" > /tmp/hifz_study.xml
+  adb push /tmp/hifz_study.xml /data/local/tmp/hifz_study.xml >/dev/null
+  adb shell chmod 644 /data/local/tmp/hifz_study.xml
+  adb shell run-as "$pkg" mkdir -p shared_prefs
+  adb shell run-as "$pkg" cp /data/local/tmp/hifz_study.xml shared_prefs/hifz_study.xml \
     || note "  ! could not preset Lecture page $1"
+}
+
+resumed() { adb shell dumpsys activity activities | grep -m1 -E 'mResumedActivity|topResumedActivity' | tr -d '\r'; }
+
+# Opens a Parcours line; screenshots the session and comes back only if one really opened
+# (Apprentissage/Stabilisation are greyed out on the other cadence days).
+open_mode() {
+  launch_home; tap text "Parcours Hifz" || return
+  tap text "$1" 6 || return
+  if resumed | grep -q HifzSessionActivity; then shot "session-$2"; else note "  - $1 not open today (cadence)"; shot "parcours-$2-closed"; fi
 }
 
 tap_mushaf_center() {
@@ -99,18 +113,21 @@ audit_profile() {
   fi
 
   launch_home; shot home
-  tap text "Parcours Hifz" && shot parcours && {
-    for mode in Apprentissage Stabilisation Renforcement Consolidation; do
-      tap text "$mode" 6 && { shot "session-$mode" 2; back; }
-    done
-    tap text "Révision" && { shot revision-selector; tap textprefix "Révision active" 6 && { shot session-revision-active; back; }; }
-    launch_home; tap text "Parcours Hifz"
-    tap text "Révision" && { tap textprefix "Révision passive" 6 || tap textprefix "Entretien" 6; } && { shot session-revision-passive; back; }
+  tap text "Parcours Hifz" && shot parcours
+  open_mode Apprentissage apprentissage
+  open_mode Stabilisation stabilisation
+  open_mode Renforcement renforcement
+  open_mode Consolidation consolidation
+  launch_home; tap text "Parcours Hifz" && tap text "Révision" && {
+    shot revision-selector
+    tap textprefix "Révision active" 6 && shot session-revision-active
   }
+  launch_home; tap text "Parcours Hifz" && tap text "Révision" && tap textprefix "Entretien" 6 && shot session-revision-passive
 
   set_lecture_page 106
   launch_home
   tap text "Lecture" 6 && {
+    find_node desc "Annoter" >/dev/null || tap_mushaf_center
     shot lecture-106-half-rub
     tap desc "Annoter" && shot lecture-pen-open && tap descprefix "Désactiver le crayon"
     tap_mushaf_center
