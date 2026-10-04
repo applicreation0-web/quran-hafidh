@@ -26,7 +26,6 @@ let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
 let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
 let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
-let preserveVerseMarkersOnMask=boot.preserveVerseMarkersOnMask!==false;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -477,10 +476,8 @@ function focusContextLayer(svg,activeLines,polys){
   paper.setAttribute('fill-opacity',eink?'0.72':'0.65');
   paper.setAttribute('mask','url(#hifz-focus-context-mask)');
   g.appendChild(paper);
-  if(preserveVerseMarkersOnMask){
-    const markers=markerLayer(svg,polys||[],activeLines);
-    if(markers.childNodes.length)g.appendChild(markers);
-  }
+  const markers=markerLayer(svg,polys||[],activeLines);
+  if(markers.childNodes.length)g.appendChild(markers);
   return g;
 }
 
@@ -617,10 +614,10 @@ function render(){
         segments.forEach(segment=>group.appendChild(maskRect(segment)));
         layer.appendChild(group);
       }
-      // Exact Quiz prompt words are holes in the mask itself; verse-number rosettes are redrawn
-      // above the random masks unless the caller hides them (Quiz prompt: no free hint).
+      // Exact anchor words are holes in the mask itself. Verse-number rosettes are never erased:
+      // they are always redrawn above the paper eraser, in every mode (user decision).
       applyProtectedWordHoles(layer,svg);
-      if(preserveVerseMarkersOnMask)layer.appendChild(markerLayer(svg,polys,lines));
+      layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
     }
   }
@@ -682,7 +679,6 @@ window.HifzReader={
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
   setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
-  setPreserveVerseMarkersOnMask(value){preserveVerseMarkersOnMask=value!==false;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},

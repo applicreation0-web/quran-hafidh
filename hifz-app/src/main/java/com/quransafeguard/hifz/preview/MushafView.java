@@ -68,7 +68,6 @@ public final class MushafView extends WebView {
     private JSONArray semanticCues = new JSONArray();
     private boolean semanticAnchorMaskMode;
     private boolean semanticHighlightEnabled = true;
-    private boolean preserveVerseMarkersOnMask = true;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -222,7 +221,6 @@ public final class MushafView extends WebView {
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
                 .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
-                .put("preserveVerseMarkersOnMask", preserveVerseMarkersOnMask)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -352,13 +350,6 @@ public final class MushafView extends WebView {
         setPageLandmarkBoxes(new JSONArray());
     }
 
-    /** Quiz prompt hides verse-number rosettes too, so they never hint at the answer's extent. */
-    public void setPreserveVerseMarkersOnMask(boolean value) {
-        preserveVerseMarkersOnMask = value;
-        runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setPreserveVerseMarkersOnMask(" + value + ");",
-            ignored -> post(() -> eink.local(this, prefs))));
-    }
 
     /** Independent whole-verse audio highlight; it never changes the Hifz selection/mask. */
     public void setAudioVerse(VerseRef verse) {

@@ -240,7 +240,6 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         }
 
         mushaf.setMaskFollowsSelection(false);
-        mushaf.setPreserveVerseMarkersOnMask(false);
         mushaf.setSemanticCues(new JSONArray(), true, false);
         mushaf.setPageLandmarkBoxes(visible);
         mushaf.setMaskEntropy("quiz-" + questionIndex + "-" + question.prompt);
@@ -264,7 +263,6 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         audioStatus.setText("");
         QuizQuestion question = currentQuestion();
         if (question == null) return;
-        mushaf.setPreserveVerseMarkersOnMask(false);
         mushaf.setSemanticCues(new JSONArray(), true, false);
         mushaf.setPageLandmarkBoxes(promptBoxes(question));
         mushaf.setMaskFollowsSelection(false);
@@ -281,7 +279,6 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         recordButton.setEnabled(false);
         assessmentRow.setVisibility(View.VISIBLE);
         instruction.setText("Réponse · " + question.expected);
-        mushaf.setPreserveVerseMarkersOnMask(true);
         mushaf.setSemanticCues(new JSONArray(), false, false);
         mushaf.clearPageLandmarkBoxes();
         mushaf.setMaskFollowsSelection(true);
