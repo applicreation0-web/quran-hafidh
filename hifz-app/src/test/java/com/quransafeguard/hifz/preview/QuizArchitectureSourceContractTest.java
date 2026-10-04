@@ -39,7 +39,12 @@ public final class QuizArchitectureSourceContractTest {
         assertFalse(combined.contains("completeItqan"));
         assertFalse(combined.contains("completeConsolidation"));
         assertFalse(combined.contains("toggleMurajaahWeakVerse"));
-        assertFalse(combined.contains("murajaahWeakVerses"));
+        assertFalse(combined.contains("advanceWeakVerseStreaks"));
+        // Option 6C: "À revoir" verses may join Repères faibles only after explicit confirmation,
+        // add-only, from the bilan dialog.
+        assertTrue(activity.contains(".setPositiveButton(\"Ajouter\", (dialog, which) -> {\n"
+            + "                int added = prefs.addMurajaahWeakVerses(new ArrayList<>(reviewVerses));"));
+        assertTrue(activity.split("addMurajaahWeakVerses", -1).length == 2);
         assertTrue(activity.contains("prefs.progressionSnapshotV6()"));
     }
 

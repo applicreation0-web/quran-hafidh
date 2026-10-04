@@ -245,7 +245,20 @@ public final class MainActivity extends android.app.Activity {
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
+    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); refreshStabilizationPosition(); }
+
+    /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
+    private void refreshStabilizationPosition() {
+        TextView cue = Ui.settingValue(itqanCard);
+        if (cue == null || geometry == null) return;
+        boolean postNas = prefs.itqanPostNasMaintenance();
+        String base = Ui.stabilizationCue(postNas);
+        HifzPrefs.ItqanRotationProgress position = prefs.itqanRotationProgress(geometry);
+        if (position == null) { cue.setText(base); return; }
+        cue.setText(postNas
+            ? "Hizb " + QuranRubBoundaries.hizbOf(position.start) + " · " + position.index + "/" + position.total + " séances"
+            : base + " · " + position.index + "/" + position.total);
+    }
 
     /**
      * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Settings'

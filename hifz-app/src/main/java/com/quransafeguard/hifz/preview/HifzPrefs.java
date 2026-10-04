@@ -1323,6 +1323,21 @@ public final class HifzPrefs {
         return editor.commit();
     }
 
+    /**
+     * Add-only flagging (Quiz bilan, after explicit confirmation): never unflags, never touches a
+     * streak, never writes Progression. Returns how many verses were newly flagged.
+     */
+    public int addMurajaahWeakVerses(java.util.Collection<VerseRef> verses) {
+        if (verses == null || verses.isEmpty()) return 0;
+        LinkedHashSet<VerseRef> current = new LinkedHashSet<>(murajaahWeakVerses());
+        int added = 0;
+        for (VerseRef verse : verses) if (verse != null && current.add(verse)) added++;
+        if (added == 0) return 0;
+        JSONArray array = new JSONArray();
+        for (VerseRef flagged : current) array.put(flagged.toString());
+        return p.edit().putString("murajaahWeakVerses", array.toString()).commit() ? added : 0;
+    }
+
     /** How many clean active recalls in a row auto-clear a weak-spot flag (see advanceWeakVerseStreaks). */
     public static final int WEAK_VERSE_CLEAN_STREAK_TO_CLEAR = 3;
 
@@ -2354,6 +2369,43 @@ public final class HifzPrefs {
             throw new IllegalStateException("Unable to persist Itqān rotation state");
         }
         return selected;
+    }
+
+    /** Read-only position of the current Stabilisation unit in the whole rotation (TAIL then FRONT). */
+    static final class ItqanRotationProgress {
+        final int index;
+        final int total;
+        final VerseRef start;
+        ItqanRotationProgress(int index, int total, VerseRef start) {
+            this.index = index; this.total = total; this.start = start;
+        }
+    }
+
+    /**
+     * Display only (Parcours Hifz › Stabilisation): where today's unit sits among the persisted
+     * leg plans. Never moves the cursor or rewrites anything beyond the plan cache those plans
+     * already use; null when the unit cannot be located exactly.
+     */
+    ItqanRotationProgress itqanRotationProgress(GeometryRepository geometry) {
+        try {
+            AnchoringQueue.Entry entry = inProgressAnchoringEntry();
+            if (entry == null) entry = currentAnchoringEntry(geometry);
+            if (entry == null) return null;
+            VerseRef sabqi = currentSabqiPosition(geometry);
+            ItqanMaintenancePolicy.Regime regime = ItqanRegimeStore.selectionRegime(p);
+            List<AnchoringQueue.Entry> tail = cachedUnitsInLeg(ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS, sabqi, geometry, regime);
+            List<AnchoringQueue.Entry> front = cachedUnitsInLeg(ItqanRotationPolicy.Leg.FRONT_BAQARA_HUJURAT, sabqi, geometry, regime);
+            int total = tail.size() + front.size();
+            for (int i = 0; i < tail.size(); i++) {
+                if (tail.get(i).start.equals(entry.start)) return new ItqanRotationProgress(i + 1, total, GeometryRepository.parseVerse(entry.start));
+            }
+            for (int i = 0; i < front.size(); i++) {
+                if (front.get(i).start.equals(entry.start)) return new ItqanRotationProgress(tail.size() + i + 1, total, GeometryRepository.parseVerse(entry.start));
+            }
+            return null;
+        } catch (RuntimeException unavailable) {
+            return null;
+        }
     }
 
     static final String LEG_PLAN_PREFIX = "itqanLegPlanV1.";

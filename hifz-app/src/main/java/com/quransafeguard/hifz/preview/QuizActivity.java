@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import org.json.JSONArray;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -41,6 +43,8 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
     private int correctCount;
     private int hesitationCount;
     private int reviewCount;
+    /** Verses the learner rated "À revoir" in this series (the verse they had to recite). */
+    private final java.util.LinkedHashSet<VerseRef> reviewVerses = new java.util.LinkedHashSet<>();
     private int retryCount;
     private boolean recordUsed;
     private boolean verified;
@@ -167,6 +171,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         }
         questionIndex = 0;
         correctCount = hesitationCount = reviewCount = 0;
+        reviewVerses.clear();
         buildQuestionScreen();
         showQuestion();
     }
@@ -359,7 +364,10 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         history.record(question, result, retryCount, recordUsed);
         if (result == QuizHistory.Result.CORRECT) correctCount++;
         else if (result == QuizHistory.Result.HESITATION) hesitationCount++;
-        else reviewCount++;
+        else {
+            reviewCount++;
+            reviewVerses.add(question.expected);
+        }
         questionIndex++;
         showQuestion();
     }
@@ -380,12 +388,52 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         root.addView(summaryRow("Hésitation", hesitationCount));
         root.addView(summaryRow("À revoir", reviewCount));
         root.addView(Ui.divider(this));
+        if (!reviewVerses.isEmpty()) {
+            // Each verse to review opens in Lecture; adding them to Repères faibles is offered,
+            // never automatic (explicit confirmation, add-only, Progression untouched).
+            for (VerseRef verse : reviewVerses) {
+                root.addView(Ui.settingRow(this, QuranSurahNames.name(verse.getSurah()) + " " + verse.getAyah(),
+                    verse.toString(), v -> openInLecture(verse)));
+                root.addView(Ui.divider(this));
+            }
+            LinearLayout addRow = Ui.settingRow(this, "Ajouter aux Repères faibles",
+                reviewVerses.size() + " verset" + (reviewVerses.size() > 1 ? "s" : ""), null);
+            addRow.setClickable(true);
+            addRow.setFocusable(true);
+            addRow.setOnClickListener(v -> confirmAddToWeakSpots(addRow));
+            root.addView(addRow);
+            root.addView(Ui.divider(this));
+        }
         LinearLayout finishRow = Ui.row(this);
         finishRow.setGravity(Gravity.CENTER);
         finishRow.addView(Ui.iconButton(this, "✓", "Terminer", v -> finish()));
         root.addView(finishRow);
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
+    }
+
+    private void openInLecture(VerseRef verse) {
+        Intent intent = new Intent(this, StudyReaderActivity.class);
+        intent.putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE, geometry.pageForVerse(verse));
+        intent.putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE, verse.toString());
+        startActivity(intent);
+    }
+
+    private void confirmAddToWeakSpots(LinearLayout addRow) {
+        int count = reviewVerses.size();
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Repères faibles")
+            .setMessage("Ajouter " + count + " verset" + (count > 1 ? "s" : "") + " à revoir aux Repères faibles ? "
+                + "Ils seront proposés en Révision active. Votre progression n’est pas modifiée.")
+            .setNegativeButton("Annuler", null)
+            .setPositiveButton("Ajouter", (dialog, which) -> {
+                int added = prefs.addMurajaahWeakVerses(new ArrayList<>(reviewVerses));
+                TextView value = Ui.settingValue(addRow);
+                if (value != null) value.setText(added > 0 ? "Ajoutés" : "Déjà marqués");
+                addRow.setEnabled(false);
+                addRow.setAlpha(0.6f);
+            })
+            .show();
     }
 
     private View summaryRow(String label, int value) {
