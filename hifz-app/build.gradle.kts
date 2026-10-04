@@ -5,6 +5,13 @@ plugins {
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
+val generatedSemanticAssetsDir = layout.buildDirectory.dir("generated/semanticAssets").get().asFile
+// Frozen audited semantic corpus (V2.1 boundaries + V2.3 integrity overlay) behind the Al-Munīr
+// amorces; SemanticPassageRepository re-checks both SHA-256 values at runtime and fails closed.
+val semanticV21SourceDir = file("src/main/semantic-source/v2_1")
+val semanticV21Output = generatedSemanticAssetsDir.resolve("semantic/semantic_passages_v2_1.json")
+val semanticV23TitleSourceDir = file("src/main/semantic-source/v2_3_titles")
+val semanticV23TitleOutput = generatedSemanticAssetsDir.resolve("semantic/semantic_titles_v2_3.json")
 // Exact Quran-word boxes (quran-ws/quran-svg-elements v1.1.2) used only by the Quiz prompt.
 val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
@@ -21,6 +28,33 @@ val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     )
 }
 
+val prepareSemanticV21 by tasks.registering(Exec::class) {
+    inputs.dir(semanticV21SourceDir)
+    inputs.file(rootProject.file("scripts/materialize_semantic_v2_1.py"))
+    outputs.file(semanticV21Output)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/materialize_semantic_v2_1.py").absolutePath,
+        semanticV21SourceDir.absolutePath,
+        semanticV21Output.absolutePath
+    )
+}
+
+val prepareSemanticV23Titles by tasks.registering(Exec::class) {
+    dependsOn(prepareSemanticV21)
+    inputs.file(semanticV21Output)
+    inputs.dir(semanticV23TitleSourceDir)
+    inputs.file(rootProject.file("scripts/materialize_semantic_v2_3_titles.py"))
+    outputs.file(semanticV23TitleOutput)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/materialize_semantic_v2_3_titles.py").absolutePath,
+        semanticV21Output.absolutePath,
+        semanticV23TitleSourceDir.absolutePath,
+        semanticV23TitleOutput.absolutePath
+    )
+}
+
 val verifyQuranWordGeometry by tasks.registering(Exec::class) {
     inputs.dir(quranWordGeometrySourceDir)
     inputs.file(rootProject.file("scripts/verify_quran_word_boxes.py"))
@@ -32,13 +66,14 @@ val verifyQuranWordGeometry by tasks.registering(Exec::class) {
 }
 
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease, verifyQuranWordGeometry)
+    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21, prepareSemanticV23Titles, verifyQuranWordGeometry)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
     from(quranWordGeometrySourceDir) { into("reader109/word-boxes") }
     from(generatedHifzTafsirDir) { into("tafsir") }
+    from(generatedSemanticAssetsDir)
 }
 
 val verifyHifzProductBoundary by tasks.registering {

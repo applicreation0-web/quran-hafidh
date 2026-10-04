@@ -241,6 +241,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
 
         mushaf.setMaskFollowsSelection(false);
         mushaf.setPreserveVerseMarkersOnMask(false);
+        mushaf.setSemanticCues(new JSONArray(), true, false);
         mushaf.setPageLandmarkBoxes(visible);
         mushaf.setMaskEntropy("quiz-" + questionIndex + "-" + question.prompt);
         mushaf.show(question.promptPage, Collections.emptyList(),
@@ -264,6 +265,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         QuizQuestion question = currentQuestion();
         if (question == null) return;
         mushaf.setPreserveVerseMarkersOnMask(false);
+        mushaf.setSemanticCues(new JSONArray(), true, false);
         mushaf.setPageLandmarkBoxes(promptBoxes(question));
         mushaf.setMaskFollowsSelection(false);
         mushaf.show(question.promptPage, Collections.emptyList(),
@@ -280,6 +282,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         assessmentRow.setVisibility(View.VISIBLE);
         instruction.setText("Réponse · " + question.expected);
         mushaf.setPreserveVerseMarkersOnMask(true);
+        mushaf.setSemanticCues(new JSONArray(), false, false);
         mushaf.clearPageLandmarkBoxes();
         mushaf.setMaskFollowsSelection(true);
         List<String> exact = geometry.lineIdsForVerseRange(question.expected, question.expected);
@@ -350,7 +353,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             recording = true;
             recordUsed = true;
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_stop);
-            recordButton.setContentDescription("Arrêter");
+            Ui.setIconDescription(recordButton, "Arrêter");
             playButton.setEnabled(false);
             audioStatus.setText("Enregistrement…");
         } catch (Exception error) {
@@ -374,7 +377,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
             recorder = null;
             recording = false;
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_record);
-            recordButton.setContentDescription("Enregistrer");
+            Ui.setIconDescription(recordButton, "Enregistrer");
             playButton.setEnabled(recordingFile != null && recordingFile.isFile() && recordingFile.length() > 0L);
         }
     }
@@ -424,7 +427,7 @@ public final class QuizActivity extends android.app.Activity implements MushafVi
         }
         if (recordButton != null) {
             Ui.setButtonIcon(recordButton, R.drawable.ic_ui_record);
-            recordButton.setContentDescription("Enregistrer");
+            Ui.setIconDescription(recordButton, "Enregistrer");
         }
         if (playButton != null) playButton.setEnabled(recordingFile != null && recordingFile.isFile());
     }

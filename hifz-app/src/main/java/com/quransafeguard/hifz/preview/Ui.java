@@ -66,7 +66,7 @@ final class Ui {
         Button button = new Button(context);
         button.setAllCaps(false);
         button.setGravity(Gravity.CENTER);
-        button.setContentDescription(description);
+        setIconDescription(button, description);
         button.setOnClickListener(listener);
         button.setStateListAnimator(null);
         button.setElevation(0f);
@@ -101,6 +101,14 @@ final class Ui {
     /** Legacy API retained for call sites; visual grammar is now the light icon hit-target. */
     static Button roundButton(Context context, String symbol, String description, View.OnClickListener listener) {
         return iconButton(context, symbol, description, listener);
+    }
+
+    /** Icon-only buttons: spoken label plus the long-press tooltip where the platform has one. */
+    static void setIconDescription(Button button, String description) {
+        if (button == null) return;
+        String value = description == null ? "" : description;
+        button.setContentDescription(value);
+        if (Build.VERSION.SDK_INT >= 26) button.setTooltipText(value);
     }
 
     static void setButtonIcon(Button button, int iconRes) {

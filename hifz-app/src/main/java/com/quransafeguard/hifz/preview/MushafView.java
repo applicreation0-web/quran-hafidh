@@ -33,6 +33,8 @@ public final class MushafView extends WebView {
         void onError(String message);
         void onPageShown(int page);
         default void onSurfaceTap() {}
+        /** Tapping an Al-Munīr amorce never masquerades as a Quran verse tap. */
+        default void onSemanticCueTap(String passageId) {}
         /** Arabic-book semantics: +1 means next canonical page and is triggered by a right swipe. */
         default void onPageSwipe(int delta) {}
     }
@@ -63,6 +65,9 @@ public final class MushafView extends WebView {
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
+    private JSONArray semanticCues = new JSONArray();
+    private boolean semanticAnchorMaskMode;
+    private boolean semanticHighlightEnabled = true;
     private boolean preserveVerseMarkersOnMask = true;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
@@ -191,7 +196,8 @@ public final class MushafView extends WebView {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
             String svg = readPageSvg(page);
-            String geometry = lineIds.isEmpty() ? null : GeometryRepository.get(getContext()).pageGeometryJson(page);
+            boolean needsGeometry = !lineIds.isEmpty() || semanticCues.length() > 0;
+            String geometry = needsGeometry ? GeometryRepository.get(getContext()).pageGeometryJson(page) : null;
             if (!html.contains(SCRIPT_TAG) || !html.contains(SVG_SLOT)) throw new IllegalStateException("reader template incomplete");
             if (!html.contains("'nonce-" + INLINE_NONCE + "'")) throw new IllegalStateException("reader CSP nonce missing");
             JSONArray verses = new JSONArray();
@@ -212,6 +218,9 @@ public final class MushafView extends WebView {
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
                 .put("maskFollowsSelection", maskFollowsSelection)
+                .put("semanticCues", semanticCues)
+                .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
+                .put("semanticHighlightEnabled", semanticHighlightEnabled)
                 .put("pageLandmarkBoxes", pageLandmarkBoxes)
                 .put("preserveVerseMarkersOnMask", preserveVerseMarkersOnMask)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
@@ -297,7 +306,40 @@ public final class MushafView extends WebView {
             ignored -> post(() -> eink.local(this, prefs))));
     }
 
-    /** Quiz only: exact Quran-word boxes (WordGeometryRepository) kept visible through a mask. */
+    /**
+     * Al-Munīr amorces: optional, read-only overlay metadata whose exact Quran-word boxes come
+     * from the pinned quran-ws sidecar (no cell-count approximation). anchorMaskMode turns the
+     * amorce and page-landmark boxes into holes of an active mask; it is only enabled once the
+     * caller has confirmed complete exact geometry for the page.
+     */
+    public void setSemanticCues(JSONArray cues, boolean anchorMaskMode, boolean highlightEnabled) {
+        semanticCues = cues == null ? new JSONArray() : cues;
+        semanticAnchorMaskMode = anchorMaskMode;
+        semanticHighlightEnabled = highlightEnabled;
+        if (requestedPage < 1 || requestedPage > 604) return; // the next boot payload carries them
+        final String geometry;
+        try {
+            geometry = semanticCues.length() == 0 ? null : GeometryRepository.get(getContext()).pageGeometryJson(requestedPage);
+        } catch (Throwable error) {
+            report("Géométrie des repères indisponible : " + safeMessage(error));
+            return;
+        }
+        String payload = semanticCues.toString();
+        runWhenReady(() -> {
+            StringBuilder script = new StringBuilder("window.HifzReader&&(");
+            if (geometry != null) script.append("window.HifzReader.setGeometry(").append(geometry).append("),");
+            script.append("window.HifzReader.setSemanticCues(")
+                .append(payload).append(',').append(anchorMaskMode).append(',')
+                .append(highlightEnabled).append("));");
+            evaluateJavascript(script.toString(), ignored -> post(() -> eink.local(this, prefs)));
+        });
+    }
+
+    public void clearSemanticCues() {
+        setSemanticCues(new JSONArray(), false, false);
+    }
+
+    /** Exact Quran-word boxes (Quiz prompt words, Révision active page landmarks) kept as mask holes. */
     public void setPageLandmarkBoxes(JSONArray boxes) {
         pageLandmarkBoxes = boxes == null ? new JSONArray() : boxes;
         String payload = pageLandmarkBoxes.toString();
@@ -432,6 +474,9 @@ public final class MushafView extends WebView {
             });
         }
 
+        @JavascriptInterface public void semanticCueTap(String passageId) {
+            post(() -> { if (listener != null && passageId != null) listener.onSemanticCueTap(passageId); });
+        }
         @JavascriptInterface public void surfaceTap() { post(() -> { if (listener != null) listener.onSurfaceTap(); }); }
         @JavascriptInterface public void error(String message) { showFailure("Erreur d’affichage Mushaf : " + message); }
         @JavascriptInterface public void pageShown(int page) {

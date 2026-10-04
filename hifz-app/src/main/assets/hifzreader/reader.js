@@ -20,6 +20,11 @@ let highlighted=new Set((boot.highlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 /* Exact Quran-word boxes (Quiz prompt words) cut as holes in an active mask; never estimated. */
+/* Al-Munīr amorces: exact word boxes of each canonical unit's start (SemanticPassageRepository).
+ * semanticAnchorMaskMode turns them (and pageLandmarkBoxes) into holes of an active mask. */
+let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
+let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
+let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
 let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
 let preserveVerseMarkersOnMask=boot.preserveVerseMarkersOnMask!==false;
 /*
@@ -197,8 +202,21 @@ function landmarkCellIndices(cellCount,role){
     : {from:reveal,to:cellCount};    // mask candidates: the tail half only
 }
 
+function semanticVisibleCellKeys(){
+  const keys=new Set();
+  if(!semanticAnchorMaskMode)return keys;
+  (semanticCues||[]).forEach(cue=>{
+    (cue.ranges||[]).forEach(range=>{
+      const lineId=String(range.lineId||'');
+      const from=Math.max(0,Number(range.fromCell)||0),to=Math.max(from,Number(range.toCell)||0);
+      for(let i=from;i<to;i++)keys.add(lineId+':'+i);
+    });
+  });
+  return keys;
+}
+
 function maskCandidates(lines,polys){
-  const out=[];
+  const out=[],semanticVisible=semanticVisibleCellKeys();
   lines.forEach(line=>{
     const top=Number(line.top),bottom=Number(line.bottom);
     const cells=line.cells||[];
@@ -207,9 +225,11 @@ function maskCandidates(lines,polys){
     const range=role?landmarkCellIndices(cells.length,role):null;
     cells.forEach((cell,ci)=>{
       if(range&&(ci<range.from||ci>=range.to))return;
+      const key=lineId+':'+ci;
+      if(semanticVisible.has(key))return;
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      out.push({key:lineId+':'+ci,lineId,index:ci,x0,x1,top,bottom});
+      out.push({key,lineId,index:ci,x0,x1,top,bottom});
     });
   });
   return out;
@@ -218,9 +238,15 @@ function maskCandidates(lines,polys){
 function maskRect(segment){
   const el=document.createElementNS(NS,'rect');
   el.setAttribute('class','maskcell');
-  el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-  el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-  el.setAttribute('rx','2');el.setAttribute('ry','2');
+  // Paper eraser: partial stages keep a safety gap between physical lines. At 100% the segment
+  // itself spans almost the full audited line height, so only a tiny fringe pad is needed: this
+  // removes residual dots/harakat on BOOX without the paper mask invading a neighbour line.
+  const fullErase=segment.fullErase===true;
+  const partialPadX=eink?0.72:0.58,partialPadY=eink?0.42:0.34;
+  const padX=fullErase?(eink?0.90:0.72):partialPadX;
+  const padY=fullErase?(eink?0.12:0.08):partialPadY;
+  el.setAttribute('x',segment.x-padX);el.setAttribute('y',segment.y-padY);
+  el.setAttribute('width',segment.width+padX*2);el.setAttribute('height',segment.height+padY*2);
   return el;
 }
 
@@ -298,7 +324,12 @@ function randomSegmentsForCells(cells,percent,order){
     if(remaining<=0.0001)break;
     const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
+    const fullErase=fraction>=0.999999;
+    segments.push({
+      key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,
+      y:fullErase?cell.top+0.15:cell.top+0.6,width:hiddenWidth,
+      height:Math.max(0,(cell.bottom-cell.top)-(fullErase?0.30:1.2)),fullErase
+    });
     remaining-=hiddenWidth;
   }
   return segments;
@@ -343,10 +374,15 @@ function wordBoxInSvgSpace(box,svg){
 }
 
 function protectedWordBoxes(){
+  if(!semanticAnchorMaskMode)return[];
   const out=[];
   (pageLandmarkBoxes||[]).forEach(box=>{const b=(box||[]).map(Number);if(validWordBox(b))out.push(b)});
+  (semanticCues||[]).forEach(cue=>(cue.boxes||[]).forEach(box=>{
+    const b=(box||[]).map(Number);if(validWordBox(b))out.push(b);
+  }));
   return out;
 }
+
 
 /** Cut exact Quran-word holes out of the opaque mask layer; never estimate from line cells. */
 function applyProtectedWordHoles(layer,svg){
@@ -448,6 +484,84 @@ function focusContextLayer(svg,activeLines,polys){
   return g;
 }
 
+function semanticExactRects(cue,svg){
+  const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
+    .map(box=>wordBoxInSvgSpace(box,svg)).filter(Boolean);
+  if(!boxes.length)return[];
+  const groups=[];
+  boxes.forEach(box=>{
+    const cy=(box[1]+box[3])/2;
+    let group=groups.find(g=>Math.abs(g.cy-cy)<=5.5);
+    if(!group){group={cy,x0:box[0],x1:box[2],y0:box[1],y1:box[3],n:0};groups.push(group);}
+    group.x0=Math.min(group.x0,box[0]);group.x1=Math.max(group.x1,box[2]);
+    group.y0=Math.min(group.y0,box[1]);group.y1=Math.max(group.y1,box[3]);
+    group.cy=(group.cy*group.n+cy)/(group.n+1);group.n++;
+  });
+  return groups.map(g=>({
+    x:g.x0-1.0,y:g.y0-0.8,width:(g.x1-g.x0)+2.0,height:(g.y1-g.y0)+1.6
+  }));
+}
+
+function semanticCueRect(rect,cue){
+  const el=document.createElementNS(NS,'rect');
+  el.setAttribute('x',rect.x);el.setAttribute('y',rect.y);
+  el.setAttribute('width',rect.width);el.setAttribute('height',rect.height);
+  el.setAttribute('rx','1.35');el.setAttribute('ry','1.35');
+  el.setAttribute('fill','url(#hifz-semantic-hatch)');
+  el.setAttribute('stroke','none');el.setAttribute('pointer-events','all');
+  el.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
+  return el;
+}
+
+function semanticCueLayer(svg){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','semanticcuelayer');
+  if(!semanticHighlightEnabled||!Array.isArray(semanticCues)||!semanticCues.length)return g;
+  const allLines=pageGeo?(pageGeo.lines||[]):[];
+
+  // Amorces must never look like the solid-grey Sabqi/Itqan work selection.
+  // A sparse diagonal hatch stays distinguishable on monochrome E-Ink without adding heavy ink.
+  const defs=document.createElementNS(NS,'defs');
+  const pattern=document.createElementNS(NS,'pattern');
+  pattern.id='hifz-semantic-hatch';
+  pattern.setAttribute('patternUnits','userSpaceOnUse');
+  pattern.setAttribute('width','7');
+  pattern.setAttribute('height','7');
+  const hatch=document.createElementNS(NS,'path');
+  hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5');
+  hatch.setAttribute('fill','none');
+  hatch.setAttribute('stroke','var(--sel)');
+  hatch.setAttribute('stroke-opacity',eink?'0.82':'0.46');
+  hatch.setAttribute('stroke-width',eink?'0.70':'0.54');
+  pattern.appendChild(hatch);
+  defs.appendChild(pattern);
+  g.appendChild(defs);
+
+  semanticCues.forEach(cue=>{
+    // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
+    const exactRects=semanticExactRects(cue,svg);
+    if(exactRects.length){
+      exactRects.forEach(rect=>g.appendChild(semanticCueRect(rect,cue)));
+      return;
+    }
+
+    // Legacy exact-cell range path retained only for old audited sidecars. Never infer a range.
+    (cue.ranges||[]).forEach(range=>{
+      const rline=allLines.find(x=>String(x.id)===String(range.lineId));if(!rline)return;
+      const cells=rline.cells||[],from=Math.max(0,Number(range.fromCell)||0),to=Math.min(cells.length,Math.max(from,Number(range.toCell)||0));
+      if(to<=from)return;
+      let x0=Infinity,x1=-Infinity;
+      for(let i=from;i<to;i++){x0=Math.min(x0,Number(cells[i][0]));x1=Math.max(x1,Number(cells[i][1]));}
+      if(!Number.isFinite(x0)||!Number.isFinite(x1)||x1<=x0)return;
+      g.appendChild(semanticCueRect({
+        x:x0-1.0,y:Number(rline.top)-0.3,
+        width:(x1-x0)+2.0,height:Math.max(1,Number(rline.bottom)-Number(rline.top)+0.6)
+      },cue));
+    });
+  });
+  return g;
+}
+
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
@@ -455,7 +569,7 @@ function render(){
     p.classList.toggle('selected',!contextFocus&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.weaklayer,.focuscontextlayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.weaklayer,.semanticcuelayer,.focuscontextlayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
@@ -517,6 +631,12 @@ function render(){
     const weak=weakLayer(svg,highlighted);
     if(weak.childNodes.length)svg.appendChild(weak);
   }
+
+  // Semantic amorce highlights are always a final, non-destructive overlay.
+  if(semanticCues.length){
+    const cues=semanticCueLayer(svg);
+    if(cues.childNodes.length)svg.appendChild(cues);
+  }
 }
 
 /* Move only when the selected passage would actually be hidden by the Tafsir panel. */
@@ -560,6 +680,7 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
+  setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
   setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
   setPreserveVerseMarkersOnMask(value){preserveVerseMarkersOnMask=value!==false;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
@@ -569,6 +690,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,landmarkCellIndices,maskCandidates,validWordBox,protectedWordBoxes};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,validWordBox,protectedWordBoxes};
 prepare();
 N?.ready();

@@ -118,6 +118,26 @@ final class WordGeometryRepository implements QuizCorpus.WordCounts {
         return count;
     }
 
+    /** First wordCount exact boxes of a verse on a page (an Al-Munīr amorce), or empty. */
+    synchronized JSONArray anchorBoxes(int page, VerseRef start, int wordCount) {
+        if (start == null || wordCount < 1) return new JSONArray();
+        JSONArray all = boxesForVerse(page, start);
+        if (all.length() < wordCount) return new JSONArray();
+        JSONArray out = new JSONArray();
+        for (int i = 0; i < wordCount; i++) out.put(all.optJSONArray(i));
+        return out;
+    }
+
+    /** Révision active page landmarks: the page's first three and last three real words. */
+    synchronized JSONArray pageLandmarkBoxes(int page) {
+        List<WordBox> words = wordsForPage(page);
+        if (words.size() < 6) return new JSONArray();
+        JSONArray out = new JSONArray();
+        for (int i = 0; i < 3; i++) out.put(words.get(i).boxJson());
+        for (int i = words.size() - 3; i < words.size(); i++) out.put(words.get(i).boxJson());
+        return out;
+    }
+
     private void loadChunk(int chunk) throws Exception {
         byte[] raw = readAsset(ASSET_DIR + CHUNKS[chunk]);
         pages.putAll(parseChunk(new String(raw, StandardCharsets.UTF_8)));
