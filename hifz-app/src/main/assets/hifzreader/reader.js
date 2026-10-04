@@ -703,49 +703,6 @@ function focusContextLayer(svg,activeLines,polys){
   return g;
 }
 
-/*
- * User decision: a thin hairline around the zone of interest. Per active line, the exact
- * horizontal extent of its cells that belong to the selected verses (a double-height
- * title/basmala line is narrowed to its own words' ink first); vertically contiguous lines are
- * joined into one stepped outline, so the frame follows the block without crossing any text.
- */
-function focusOutline(svg,activeLines,polys){
-  const bands=computeLineInkBands(activeLines,svg);
-  const rects=[];
-  (activeLines||[]).forEach(line=>{
-    const band=bands.get(String(line.id));
-    const top=band?band.top:Number(line.top),bottom=band?band.bottom:Number(line.bottom);
-    let x0=Infinity,x1=-Infinity;
-    (line.cells||[]).forEach(cell=>{
-      const a=Number(cell[0]),b=Number(cell[1]);
-      if(!insideSelection(polys,(a+b)/2,(top+bottom)/2))return;
-      x0=Math.min(x0,a);x1=Math.max(x1,b);
-    });
-    if(Number.isFinite(x0)&&Number.isFinite(x1)&&x1>x0&&bottom>top)rects.push({x0:x0-2,x1:x1+2,top,bottom});
-  });
-  if(!rects.length)return null;
-  rects.sort((a,b)=>a.top-b.top);
-  const groups=[];
-  rects.forEach(r=>{
-    const g=groups[groups.length-1];
-    // Consecutive lines (a narrowed title/basmala line leaves a few units of paper) are one block.
-    const last=g&&g[g.length-1];
-    if(last&&r.top-last.bottom>-1.5&&r.top-last.bottom<12){last.bottom=r.top;g.push(r);}else groups.push([r]);
-  });
-  let d='';
-  groups.forEach(g=>{
-    d+='M'+g[0].x1+' '+g[0].top;
-    g.forEach((r,i)=>{d+=' V'+r.bottom;if(i+1<g.length)d+=' H'+g[i+1].x1;});
-    d+=' H'+g[g.length-1].x0;
-    for(let i=g.length-1;i>=0;i--){d+=' V'+g[i].top;if(i>0)d+=' H'+g[i-1].x0;}
-    d+=' Z ';
-  });
-  const path=document.createElementNS(NS,'path');
-  path.setAttribute('class','focusoutline');
-  path.setAttribute('d',d.trim());
-  return path;
-}
-
 const AMORCE_HIGHLIGHT_HEIGHT=31;
 function semanticExactRects(cue,svg){
   const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
@@ -877,17 +834,6 @@ function render(){
       applyProtectedWordHoles(layer,svg);
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
-    }
-  }
-
-  // The zone-of-interest hairline sits above the paper eraser so the mask never nicks it.
-  if(contextFocus&&lines.length){
-    const outline=focusOutline(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);
-    if(outline){
-      const frame=document.createElementNS(NS,'g');
-      frame.setAttribute('class','focuscontextlayer');
-      frame.setAttribute('pointer-events','none');
-      frame.appendChild(outline);svg.appendChild(frame);
     }
   }
 

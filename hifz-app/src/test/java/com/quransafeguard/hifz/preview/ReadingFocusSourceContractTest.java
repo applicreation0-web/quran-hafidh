@@ -76,13 +76,4 @@ public final class ReadingFocusSourceContractTest {
         assertTrue(show.contains("mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);"));
         assertFalse(show.contains("fractionatedItqan"));
     }
-
-    /** User decision: a thin hairline frames the zone of interest, above the paper eraser. */
-    @Test public void zoneOfInterestHasAThinHairlineFrame() throws Exception {
-        String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
-        String index = read("hifz-app/src/main/assets/hifzreader/index.html");
-        assertTrue(reader.contains("function focusOutline(svg,activeLines,polys){"));
-        assertTrue(reader.contains("const outline=focusOutline(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);"));
-        assertTrue(index.contains(".focusoutline{fill:none;stroke:var(--sidemark);stroke-width:.7;"));
-    }
 }
