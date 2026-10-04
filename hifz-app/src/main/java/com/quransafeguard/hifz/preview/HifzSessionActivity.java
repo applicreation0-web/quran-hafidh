@@ -465,12 +465,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = new ArrayList<>(exactLineIds);
         currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;
-        // A grouped-cycle unit is a fixed physical-line window (e.g. 5 lines), not a verse
-        // boundary: shading by verse (the default) would highlight a whole verse wherever it
-        // appears on the page, spilling well past the declared line count whenever a verse in the
-        // unit continues onto lines outside it. Strict line focus confines the highlight to
-        // exactly these lines, the same fix already used for a fractionated Itqan block.
-        fractionatedItqan = true;
+        // A grouped-cycle unit is a frozen physical-line window, never a freshly reconstructed
+        // verse range. showCurrent() applies the same exact-line reading focus as Sabqi/Itqān,
+        // clipped to these persisted line ids, without changing the unit or progression logic.
         sessionCompleted = false;
         program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
@@ -1516,7 +1513,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
-    private void showCurrent(){hasShown=true;if(ITQAN.equals(mode))applyItqanAnchors();mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
+    /** Apprentissage, Stabilisation, Renforcement and Consolidation share one reading focus. */
+    private boolean usesReadingFocus() {
+        return SABQI.equals(mode) || SABQI_TODAY_REVIEW.equals(mode) || ITQAN.equals(mode)
+            || RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)
+            || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode);
+    }
+
+    private void showCurrent(){
+        hasShown=true;
+        if(ITQAN.equals(mode))applyItqanAnchors();
+        boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
+        mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus);
+    }
 
     /**
      * Post-An-Nās maintenance recall (repetitions 11-20): the unit is masked at 100% except the

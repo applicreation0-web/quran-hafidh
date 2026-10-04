@@ -56,7 +56,7 @@ public final class RevisionWeakSpotSourceContractTest {
         assertTrue("outline must never fill, only stroke, to minimize E-Ink ink coverage",
             index.contains(".weakoutline{fill:none;stroke:var(--weak)"));
         assertTrue("outline layer must not intercept taps meant for the underlying verse polygons",
-            index.contains(".weaklayer{pointer-events:none}"));
+            index.contains(".masklayer,.weaklayer,.focuscontextlayer{pointer-events:none}"));
     }
 
     private static int countOccurrences(String haystack, String needle) {

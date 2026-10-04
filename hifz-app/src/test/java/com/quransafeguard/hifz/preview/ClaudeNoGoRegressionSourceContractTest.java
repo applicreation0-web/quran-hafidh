@@ -144,9 +144,12 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void fractionatedStabilizationUsesStrictLineFocusNotWholeVerseShading() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
-        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan)"));
-        assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus)"));
-        assertTrue(mushaf.contains("lastStrictLineFocus = strictLineFocus;"));
+        // Superseded by the shared exact reading focus: every Hifz mode now focuses exactly the due
+        // physical lines (contextFocus), so a straddling boundary verse can't widen the focus.
+        assertTrue(session.contains("boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();"));
+        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,contextFocus);"));
+        assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus)"));
+        assertTrue(mushaf.contains("lastContextFocus = contextFocus;"));
     }
 
     /**
@@ -441,8 +444,11 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String renderGroupedCycle = method(session,
             "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
-        assertTrue("renderGroupedCycle must force strict line focus so a long verse can't over-shade past the unit's lines",
-            renderGroupedCycle.contains("fractionatedItqan = true;"));
+        assertTrue("the grouped cycle shows its frozen lines through the shared exact-line reading focus",
+            renderGroupedCycle.contains("showCurrent();"));
+        String usesFocus = method(session, "private boolean usesReadingFocus() {", "private void showCurrent(){");
+        assertTrue(usesFocus.contains("RECENT_SABQI_REVIEW.equals(mode)") && usesFocus.contains("LEARNING_CONSOLIDATION.equals(mode)")
+            && usesFocus.contains("CONSOLIDATION_FINAL.equals(mode)") && usesFocus.contains("LEARNING_FINAL.equals(mode)"));
     }
 
     /**

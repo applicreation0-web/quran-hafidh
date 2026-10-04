@@ -57,11 +57,13 @@ public final class MushafView extends WebView {
     private List<VerseRef> lastSelection;
     private List<String> lastLineIds;
     private int lastMask;
-    private boolean lastStrictLineFocus;
+    private boolean lastContextFocus;
     private List<VerseRef> currentHighlights = Collections.emptyList();
     private String landmarkStartLineId;
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
+    private JSONArray pageLandmarkBoxes = new JSONArray();
+    private boolean preserveVerseMarkersOnMask = true;
     private float touchDownX, touchDownY;
     private long loadStartedAtMs;
     private long observedRenderMs;
@@ -156,21 +158,20 @@ public final class MushafView extends WebView {
     }
 
     /**
-     * A fractionated Stabilisation block's lineIds can include a boundary verse whose own
-     * physical lines straddle the split (CorpusLinePolicy assigns each line to its earliest
-     * verse, so a verse can start in one block and continue into lines owned by the next).
-     * The default whole-verse shading then greys out lines beyond the block's real 6-8 line
-     * working set. strictLineFocus=true shades exactly lineIds instead, like J10's view.
+     * contextFocus=true keeps exactly the requested physical Quran lines at native contrast while
+     * the rest of the real Mushaf page stays faintly visible (paper veil 72% E-Ink / 65% LCD). It
+     * never adds a grey selection fill, and the line geometry clips boundary verses, so a verse
+     * crossing outside the due block cannot widen the focus beyond the lines actually due.
      */
-    public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus) {
-        lastStrictLineFocus = strictLineFocus;
+    public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus) {
+        lastContextFocus = contextFocus;
         retried = false;
         load(page, selection, lineIds, maskPercent);
     }
 
-    /** J10-only view: shade exactly the requested physical lines, never whole verse polygons. */
+    /** Compatibility entrypoint: exact-line context focus with no mask. */
     public void showLineFocus(int page, List<VerseRef> selection, List<String> lineIds) {
-        lastStrictLineFocus = true;
+        lastContextFocus = true;
         retried = false;
         load(page, selection, lineIds, 0);
     }
@@ -185,7 +186,7 @@ public final class MushafView extends WebView {
         lastSelection = selection;
         lastLineIds = lineIds;
         lastMask = maskPercent;
-        boolean strictLineFocus = lastStrictLineFocus;
+        boolean contextFocus = lastContextFocus;
         try {
             String html = readAssetText("hifzreader/index.html");
             String javascript = readAssetText("hifzreader/reader.js");
@@ -206,11 +207,13 @@ public final class MushafView extends WebView {
                 .put("mask", Math.max(0, Math.min(100, maskPercent)))
                 .put("maskEntropy", maskEntropy)
                 .put("eink", eink.isEink(prefs))
-                .put("strictLineFocus", strictLineFocus)
+                .put("contextFocus", contextFocus)
                 .put("highlights", highlights)
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
                 .put("maskFollowsSelection", maskFollowsSelection)
+                .put("pageLandmarkBoxes", pageLandmarkBoxes)
+                .put("preserveVerseMarkersOnMask", preserveVerseMarkersOnMask)
                 .put("geometry", geometry == null ? JSONObject.NULL : new JSONObject(geometry));
             String inline = "<script nonce=\"" + INLINE_NONCE + "\">window.HIFZ_BOOT=" +
                 boot.toString().replace("</", "<\\/") + ";\n" + javascript + "</script>";
@@ -291,6 +294,27 @@ public final class MushafView extends WebView {
         maskFollowsSelection = value;
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setMaskFollowsSelection(" + value + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    /** Quiz only: exact Quran-word boxes (WordGeometryRepository) kept visible through a mask. */
+    public void setPageLandmarkBoxes(JSONArray boxes) {
+        pageLandmarkBoxes = boxes == null ? new JSONArray() : boxes;
+        String payload = pageLandmarkBoxes.toString();
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setPageLandmarkBoxes(" + payload + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    public void clearPageLandmarkBoxes() {
+        setPageLandmarkBoxes(new JSONArray());
+    }
+
+    /** Quiz prompt hides verse-number rosettes too, so they never hint at the answer's extent. */
+    public void setPreserveVerseMarkersOnMask(boolean value) {
+        preserveVerseMarkersOnMask = value;
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setPreserveVerseMarkersOnMask(" + value + ");",
             ignored -> post(() -> eink.local(this, prefs))));
     }
 

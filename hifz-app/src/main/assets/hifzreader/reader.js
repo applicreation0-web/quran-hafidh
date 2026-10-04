@@ -9,10 +9,19 @@ let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
 const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
-let strictLineFocus=!!boot.strictLineFocus;
+/*
+ * Reading focus shared by Apprentissage, Stabilisation, Renforcement and Consolidation: the exact
+ * physical lines due stay at native 100% contrast, the real surrounding Mushaf stays faintly
+ * visible under a paper veil (72% on E-Ink, 65% on LCD/OLED). No blur, no grey fill on the active
+ * block, no brackets. It never changes what is masked or validated.
+ */
+let contextFocus=!!boot.contextFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
+/* Exact Quran-word boxes (Quiz prompt words) cut as holes in an active mask; never estimated. */
+let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
+let preserveVerseMarkersOnMask=boot.preserveVerseMarkersOnMask!==false;
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -31,7 +40,6 @@ const mushaf=document.getElementById('mushaf');
 function currentSvg(){return mushaf.querySelector('svg')}
 function verseOf(p){return p.getAttribute('surah')+':'+p.getAttribute('ayah')}
 function selectedPolygons(svg){return [...svg.querySelectorAll('.ayahPolygon')].filter(p=>selected.includes(String(p.dataset.verse)))}
-function shadeVerseSelection(){if(strictLineFocus)return false;return true}
 
 /*
  * Right/left-page memory cue (odd page number = right-hand page, even = left-hand page, the same
@@ -216,30 +224,6 @@ function maskRect(segment){
   return el;
 }
 
-function lineFocusLayer(lines){
-  const layer=document.createElementNS(NS,'g');
-  layer.setAttribute('class','linefocuslayer');
-  (lines||[]).forEach(line=>{
-    const cells=line.cells||[];if(!cells.length)return;
-    let x0=Infinity,x1=-Infinity;
-    cells.forEach(cell=>{
-      x0=Math.min(x0,Number(cell[0]));
-      x1=Math.max(x1,Number(cell[1]));
-    });
-    const top=Number(line.top),bottom=Number(line.bottom);
-    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
-    const rect=document.createElementNS(NS,'rect');
-    rect.setAttribute('class','linefocuscell');
-    rect.setAttribute('x',x0);
-    rect.setAttribute('y',top+0.25);
-    rect.setAttribute('width',x1-x0);
-    rect.setAttribute('height',Math.max(0,bottom-top-0.5));
-    rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
-    layer.appendChild(rect);
-  });
-  return layer;
-}
-
 /* Personal weak-spot flags: a thin dashed outline cloned above every layer (including any
  * active mask), never a filled shade — deliberately the lightest possible mark to avoid E-Ink
  * ghosting from a shape that can stay on screen for many page views. */
@@ -331,9 +315,10 @@ function markerLayer(svg,polys,lines){
     const full=inv.multiply(ctm),b=m.getBBox();
     const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
     const c=pt.matrixTransform(full);
-    const visible=polys.length
-      ? insideSelection(polys,c.x,c.y)
-      : (lines||[]).some(line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    const inSelection=!polys.length||insideSelection(polys,c.x,c.y);
+    const inLines=!(lines||[]).length||(lines||[]).some(
+      line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    const visible=inSelection&&inLines;
     if(!visible)return;
     const wrap=document.createElementNS(NS,'g');
     wrap.setAttribute('transform',`matrix(${full.a} ${full.b} ${full.c} ${full.d} ${full.e} ${full.f})`);
@@ -343,22 +328,142 @@ function markerLayer(svg,polys,lines){
   return g;
 }
 
+function validWordBox(box){
+  return Array.isArray(box)&&box.length===4&&
+    box.every(Number.isFinite)&&box[0]>=0&&box[1]>=0&&box[2]<=345&&box[3]<=550&&
+    box[2]>box[0]&&box[3]>box[1];
+}
+
+// Sidecar boxes are normalized to the 345x550 page. Pages 1 and 2 keep their
+// original negative viewBox origin, so overlays must enter that SVG coordinate space.
+function wordBoxInSvgSpace(box,svg){
+  const vb=svg.viewBox&&svg.viewBox.baseVal;
+  if(!vb||!Number.isFinite(vb.x)||!Number.isFinite(vb.y))return null;
+  return [box[0]+vb.x,box[1]+vb.y,box[2]+vb.x,box[3]+vb.y];
+}
+
+function protectedWordBoxes(){
+  const out=[];
+  (pageLandmarkBoxes||[]).forEach(box=>{const b=(box||[]).map(Number);if(validWordBox(b))out.push(b)});
+  return out;
+}
+
+/** Cut exact Quran-word holes out of the opaque mask layer; never estimate from line cells. */
+function applyProtectedWordHoles(layer,svg){
+  const boxes=protectedWordBoxes();if(!boxes.length)return;
+  const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return;
+  const defs=document.createElementNS(NS,'defs');
+  const holeMask=document.createElementNS(NS,'mask');
+  holeMask.id='hifz-exact-word-holes';
+  holeMask.setAttribute('maskUnits','userSpaceOnUse');
+  holeMask.setAttribute('maskContentUnits','userSpaceOnUse');
+  holeMask.setAttribute('x',vb.x);holeMask.setAttribute('y',vb.y);
+  holeMask.setAttribute('width',vb.width);holeMask.setAttribute('height',vb.height);
+  const full=document.createElementNS(NS,'rect');
+  full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
+  full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
+  full.setAttribute('fill','white');holeMask.appendChild(full);
+  boxes.forEach(pageBox=>{
+    const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
+    const hole=document.createElementNS(NS,'rect');
+    hole.setAttribute('x',box[0]);hole.setAttribute('y',box[1]);
+    hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',box[3]-box[1]);
+    hole.setAttribute('fill','black');holeMask.appendChild(hole);
+  });
+  defs.appendChild(holeMask);layer.insertBefore(defs,layer.firstChild);
+  layer.setAttribute('mask','url(#hifz-exact-word-holes)');
+}
+
+/*
+ * Exact reading focus: a paper veil over the whole page with holes for the due lines only. The
+ * holes are the selected verses' own polygons clipped to the due physical lines, so a boundary
+ * verse crossing outside the block can never widen the focus. Fails open (no veil) when exact
+ * polygons or line geometry are missing, so Quran text is never hidden by accident.
+ */
+function focusContextLayer(svg,activeLines,polys){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','focuscontextlayer');
+  g.setAttribute('pointer-events','none');
+  if(!activeLines||!activeLines.length||!polys||!polys.length)return g;
+  const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return g;
+
+  const defs=document.createElementNS(NS,'defs');
+  const lineClip=document.createElementNS(NS,'clipPath');
+  lineClip.id='hifz-focus-lines';
+  (activeLines||[]).forEach(line=>{
+    const cells=line.cells||[];if(!cells.length)return;
+    let x0=Infinity,x1=-Infinity;
+    cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+    const top=Number(line.top),bottom=Number(line.bottom);
+    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
+    const rect=document.createElementNS(NS,'rect');
+    rect.setAttribute('x',x0);rect.setAttribute('y',top);
+    rect.setAttribute('width',x1-x0);rect.setAttribute('height',bottom-top);
+    lineClip.appendChild(rect);
+  });
+  if(!lineClip.childNodes.length)return g;
+  defs.appendChild(lineClip);
+
+  const contextMask=document.createElementNS(NS,'mask');
+  contextMask.id='hifz-focus-context-mask';
+  contextMask.setAttribute('maskUnits','userSpaceOnUse');
+  contextMask.setAttribute('maskContentUnits','userSpaceOnUse');
+  contextMask.setAttribute('x',vb.x);contextMask.setAttribute('y',vb.y);
+  contextMask.setAttribute('width',vb.width);contextMask.setAttribute('height',vb.height);
+  const full=document.createElementNS(NS,'rect');
+  full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
+  full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
+  full.setAttribute('fill','white');contextMask.appendChild(full);
+
+  const holes=document.createElementNS(NS,'g');
+  holes.setAttribute('clip-path','url(#hifz-focus-lines)');
+  polys.forEach(p=>{
+    const hole=p.cloneNode(false);
+    // Source ayah hit-polygons are invisible (fill-opacity=0): force them opaque in the mask.
+    ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
+      attr=>hole.removeAttribute(attr)
+    );
+    hole.setAttribute('fill','black');
+    hole.setAttribute('fill-opacity','1');
+    hole.setAttribute('stroke','black');
+    hole.setAttribute('stroke-opacity','1');
+    hole.setAttribute('opacity','1');
+    holes.appendChild(hole);
+  });
+  contextMask.appendChild(holes);
+  defs.appendChild(contextMask);
+  g.appendChild(defs);
+
+  const paper=document.createElementNS(NS,'rect');
+  paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);
+  paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);
+  paper.setAttribute('fill','var(--sheet)');
+  paper.setAttribute('fill-opacity',eink?'0.72':'0.65');
+  paper.setAttribute('mask','url(#hifz-focus-context-mask)');
+  g.appendChild(paper);
+  if(preserveVerseMarkersOnMask){
+    const markers=markerLayer(svg,polys||[],activeLines);
+    if(markers.childNodes.length)g.appendChild(markers);
+  }
+  return g;
+}
+
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
-    p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
+    p.classList.toggle('selected',!contextFocus&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.weaklayer,.focuscontextlayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
     ? (pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)))
     : [];
-  if(strictLineFocus&&lines.length){
-    const focus=lineFocusLayer(lines);
-    if(focus.childNodes.length)svg.appendChild(focus);
+  if(contextFocus&&lines.length){
+    const context=focusContextLayer(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);
+    if(context.childNodes.length)svg.appendChild(context);
   }
 
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
@@ -398,8 +503,10 @@ function render(){
         segments.forEach(segment=>group.appendChild(maskRect(segment)));
         layer.appendChild(group);
       }
-      // Verse-number rosettes are deliberately redrawn above the random masks.
-      layer.appendChild(markerLayer(svg,polys,lines));
+      // Exact Quiz prompt words are holes in the mask itself; verse-number rosettes are redrawn
+      // above the random masks unless the caller hides them (Quiz prompt: no free hint).
+      applyProtectedWordHoles(layer,svg);
+      if(preserveVerseMarkersOnMask)layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
     }
   }
@@ -453,6 +560,8 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
+  setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
+  setPreserveVerseMarkersOnMask(value){preserveVerseMarkersOnMask=value!==false;render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
@@ -460,6 +569,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,landmarkCellIndices,maskCandidates,validWordBox,protectedWordBoxes};
 prepare();
 N?.ready();

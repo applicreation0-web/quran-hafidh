@@ -5,6 +5,8 @@ plugins {
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
+// Exact Quran-word boxes (quran-ws/quran-svg-elements v1.1.2) used only by the Quiz prompt.
+val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
@@ -19,12 +21,23 @@ val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     )
 }
 
+val verifyQuranWordGeometry by tasks.registering(Exec::class) {
+    inputs.dir(quranWordGeometrySourceDir)
+    inputs.file(rootProject.file("scripts/verify_quran_word_boxes.py"))
+    commandLine(
+        "python3",
+        rootProject.file("scripts/verify_quran_word_boxes.py").absolutePath,
+        quranWordGeometrySourceDir.absolutePath
+    )
+}
+
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease)
+    dependsOn(prepareHifzTafsirRelease, verifyQuranWordGeometry)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
     from(rootProject.file("app/src/main/assets/reader109/waqf.json")) { into("reader109") }
+    from(quranWordGeometrySourceDir) { into("reader109/word-boxes") }
     from(generatedHifzTafsirDir) { into("tafsir") }
 }
 
