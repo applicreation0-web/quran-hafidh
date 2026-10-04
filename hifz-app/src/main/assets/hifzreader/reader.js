@@ -9,10 +9,26 @@ let lineIds=(boot.lines||[]).map(String);
 let mask=Number(boot.mask||0);
 const maskEntropy=String(boot.maskEntropy||'hifz-test');
 let eink=!!boot.eink;
-let strictLineFocus=!!boot.strictLineFocus;
+/*
+ * Reading focus shared by Apprentissage, Stabilisation, Renforcement and Consolidation: the exact
+ * physical lines due stay at native 100% contrast, the real surrounding Mushaf stays faintly
+ * visible under a paper veil (72% on E-Ink, 65% on LCD/OLED). No blur, no grey fill on the active
+ * block, no brackets. It never changes what is masked or validated.
+ */
+let contextFocus=!!boot.contextFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
+/* Exact Quran-word boxes (Quiz prompt words) cut as holes in an active mask; never estimated. */
+/* Al-Munīr amorces: exact word boxes of each canonical unit's start (SemanticPassageRepository).
+ * semanticAnchorMaskMode turns them (and pageLandmarkBoxes) into holes of an active mask. */
+let semanticCues=Array.isArray(boot.semanticCues)?boot.semanticCues:[];
+let semanticAnchorMaskMode=!!boot.semanticAnchorMaskMode;
+let semanticHighlightEnabled=boot.semanticHighlightEnabled!==false;
+/* Exact quran-ws boxes of every word on the page: lets a 100% erase also cover the glyph parts
+ * (harakat, dots) that a word pushes outside its line band — exact extents, never estimated. */
+let pageWordBoxes=Array.isArray(boot.pageWordBoxes)?boot.pageWordBoxes:[];
+let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBoxes:[];
 /*
  * Sabqi/Itqan's `selected` verses ARE the memorization block, and can share a physical line with
  * un-selected neighbor verses (a rep's block may start or end mid-line) — for those modes, masking
@@ -31,7 +47,6 @@ const mushaf=document.getElementById('mushaf');
 function currentSvg(){return mushaf.querySelector('svg')}
 function verseOf(p){return p.getAttribute('surah')+':'+p.getAttribute('ayah')}
 function selectedPolygons(svg){return [...svg.querySelectorAll('.ayahPolygon')].filter(p=>selected.includes(String(p.dataset.verse)))}
-function shadeVerseSelection(){if(strictLineFocus)return false;return true}
 
 /*
  * Right/left-page memory cue (odd page number = right-hand page, even = left-hand page, the same
@@ -46,6 +61,7 @@ function shadeVerseSelection(){if(strictLineFocus)return false;return true}
 function updateSideMarks(){
   const marks=document.getElementById('sidemarks');
   const mushafEl=document.getElementById('mushaf');
+  const rub=document.getElementById('rubmark');
   if(!marks||!mushafEl)return;
   const markWidth=eink?1.7:1.4,markGap=3,safety=3;
   const marksWidth=3*markWidth+2*markGap;
@@ -56,13 +72,89 @@ function updateSideMarks(){
   const leftGutter=rect.left;
   const onOuterRight=currentPage%2===1;
   const gutter=onOuterRight?rightGutter:leftGutter;
-  if(!(gutter>=minGutter)){marks.classList.remove('show');return}
+  if(!(gutter>=minGutter)){marks.classList.remove('show');if(rub)rub.classList.remove('show');return}
   const inset=(gutter-marksWidth)/2;
   marks.style.left=onOuterRight?'auto':inset+'px';
   marks.style.right=onOuterRight?inset+'px':'auto';
-  marks.style.top=(rect.top+rect.height*0.30)+'px';
-  marks.style.height=(rect.height*0.40)+'px';
+  marks.style.width=marksWidth+'px';
+  // The three lines run over the page's full useful height, stopping above the page badge.
+  const badge=pageBadgeDiameter(gutter);
+  const top=rect.top,bottom=rect.bottom-(badge?badge+6:0);
+  const span=Math.max(0,bottom-top);
+  marks.style.top=top+'px';
+  marks.style.height=span+'px';
+  const segs=marks.querySelectorAll('.seg');
+  const place=(seg,from,to)=>{if(!seg)return;seg.style.top=Math.max(0,from)+'px';seg.style.height=Math.max(0,to-from)+'px';seg.style.display=to-from>1?'flex':'none'};
+  const mark=rubMarkScreen(gutter);
+  if(!mark||!rub){
+    place(segs[0],0,span);place(segs[1],0,0);
+    if(rub)rub.classList.remove('show');
+  }else{
+    // Real interruption of the lines around the écusson — they never pass behind it.
+    const gapTop=mark.y-mark.size/2-3-top,gapBottom=mark.y+mark.size/2+3-top;
+    place(segs[0],0,Math.min(span,gapTop));place(segs[1],gapBottom,span);
+    const rubInset=(gutter-mark.size)/2;
+    rub.style.left=onOuterRight?'auto':rubInset+'px';
+    rub.style.right=onOuterRight?rubInset+'px':'auto';
+    rub.style.top=(mark.y-mark.size/2)+'px';
+    rub.style.width=mark.size+'px';
+    rub.style.height=mark.size+'px';
+    rub.innerHTML=rubEmblemSvg(mark.position,mark.hizb);
+    rub.classList.add('show');
+  }
   marks.classList.add('show');
+}
+
+/* Same diameter rule as updatePageBadge, so the gutter lines can stop just above the badge. */
+function pageBadgeDiameter(gutter){
+  const idealD=eink?50:46,floorD=32,safety=1;
+  if(!(gutter>=floorD+2*safety))return 0;
+  return Math.min(idealD,gutter-2*safety);
+}
+
+/*
+ * Canonical Hizb/Rubʿ boundary starting on this page (boot.rubMark from QuranRubBoundaries):
+ * vertical centre of its starting verse's first real word (quran-ws box), else of that verse's
+ * own canonical line band, mapped through the page SVG's real transform. No data = no écusson.
+ */
+const rubMark=boot.rubMark&&typeof boot.rubMark==='object'?boot.rubMark:null;
+function rubMarkScreen(gutter){
+  if(!rubMark)return null;
+  const position=Number(rubMark.position),hizb=Number(rubMark.hizb);
+  if(!(position>=0&&position<=3)||!(hizb>=1&&hizb<=60))return null;
+  const svg=document.querySelector('#mushaf svg');
+  const ctm=svg&&svg.getScreenCTM?svg.getScreenCTM():null;
+  if(!svg||!ctm)return null;
+  let yUser=null;
+  const raw=Array.isArray(rubMark.wordBox)?rubMark.wordBox.map(Number):null;
+  if(raw&&validWordBox(raw)){
+    const box=wordBoxInSvgSpace(raw,svg);
+    if(box)yUser=(box[1]+box[3])/2;
+  }
+  if(yUser===null){
+    const t=Number(rubMark.top),b=Number(rubMark.bottom);
+    if(!(Number.isFinite(t)&&Number.isFinite(b)&&b>t))return null;
+    yUser=(t+b)/2;
+  }
+  const pt=svg.createSVGPoint();pt.x=0;pt.y=yUser;
+  const y=pt.matrixTransform(ctm).y;
+  const size=Math.min(eink?30:28,gutter-4);
+  if(!(size>=16)||!Number.isFinite(y))return null;
+  return {y,size,position,hizb};
+}
+
+const ARABIC_DIGITS='٠١٢٣٤٥٦٧٨٩';
+const RUB_NAMES=['الحزب','ربع الحزب','نصف الحزب','ثلاثة أرباع الحزب'];
+function rubEmblemSvg(position,hizb){
+  const label=position===0?String(hizb).replace(/[0-9]/g,d=>ARABIC_DIGITS[Number(d)]):['','¼','½','¾'][position];
+  const name=position===0?'الحزب '+label:RUB_NAMES[position];
+  const stroke=eink?1.5:1.2,font=position===0?(label.length>1?10.5:12):12.5;
+  return '<svg viewBox="0 0 32 32" role="img" aria-label="'+name+'"><title>'+name+'</title>'
+    +'<g fill="var(--paper)" stroke="var(--sidemark)" stroke-width="'+stroke+'" stroke-linejoin="round">'
+    +'<rect x="7" y="7" width="18" height="18"/>'
+    +'<rect x="7" y="7" width="18" height="18" transform="rotate(45 16 16)"/>'
+    +'<rect x="7" y="7" width="18" height="18" stroke="none"/></g>'
+    +'<text x="16" y="16.5" text-anchor="middle" dominant-baseline="middle" font-size="'+font+'" font-weight="700" fill="var(--sidemark)" font-family="serif">'+label+'</text></svg>';
 }
 window.addEventListener('resize',()=>requestAnimationFrame(updateSideMarks));
 
@@ -136,7 +228,15 @@ function updatePageBadge(){
   const inset=(gutter-d)/2;
   badge.style.left=onOuterRight?'auto':inset+'px';
   badge.style.right=onOuterRight?inset+'px':'auto';
-  badge.style.top=(rect.bottom-d)+'px';
+  // A boundary on the page's last lines keeps its canonical height: the badge steps just below the
+  // écusson instead (within the viewport), so neither covers the other.
+  let badgeTop=rect.bottom-d;
+  const mark=rubMarkScreen(gutter);
+  if(mark&&mark.y+mark.size/2+3>badgeTop){
+    const viewportHeight=document.documentElement.clientHeight||window.innerHeight||0;
+    badgeTop=Math.min(mark.y+mark.size/2+3,Math.max(badgeTop,viewportHeight-d));
+  }
+  badge.style.top=badgeTop+'px';
   badge.style.width=d+'px';
   badge.style.height=d+'px';
   badge.style.fontSize=font+'px';
@@ -189,19 +289,69 @@ function landmarkCellIndices(cellCount,role){
     : {from:reveal,to:cellCount};    // mask candidates: the tail half only
 }
 
-function maskCandidates(lines,polys){
-  const out=[];
-  lines.forEach(line=>{
+function semanticVisibleCellKeys(){
+  const keys=new Set();
+  if(!semanticAnchorMaskMode)return keys;
+  (semanticCues||[]).forEach(cue=>{
+    (cue.ranges||[]).forEach(range=>{
+      const lineId=String(range.lineId||'');
+      const from=Math.max(0,Number(range.fromCell)||0),to=Math.max(from,Number(range.toCell)||0);
+      for(let i=from;i<to;i++)keys.add(lineId+':'+i);
+    });
+  });
+  return keys;
+}
+
+/*
+ * KFQC geometry folds the surah title band into the last text line above it, and the basmala band
+ * into the first text line below it (128 double-height lines). Erasing such a line by its whole
+ * band used to wipe the title or the basmala too. A double-height line is therefore narrowed to the
+ * exact ink of its own words (quran-ws boxes, harakat included) plus a small pad. Normal lines and
+ * lines without word geometry keep their audited band (fail closed: the verse text stays erased).
+ */
+let lineInkBands=new Map();
+function computeLineInkBands(lines,svg){
+  const bands=new Map();
+  const all=(pageGeo&&pageGeo.lines)||[];
+  const heights=all.map(l=>Number(l.bottom)-Number(l.top)).filter(h=>h>0).sort((a,b)=>a-b);
+  if(!heights.length||!pageWordBoxes.length)return bands;
+  const typical=heights[Math.floor(heights.length/2)];
+  const pad=2.5;
+  (lines||[]).forEach(line=>{
     const top=Number(line.top),bottom=Number(line.bottom);
+    if(!(bottom-top>typical*1.5))return;
+    let inkTop=Infinity,inkBottom=-Infinity;
+    pageWordBoxes.forEach(raw=>{
+      const b=(raw||[]).map(Number);if(!validWordBox(b))return;
+      const box=wordBoxInSvgSpace(b,svg);if(!box)return;
+      const cy=(box[1]+box[3])/2;
+      if(cy<top||cy>bottom)return;
+      inkTop=Math.min(inkTop,box[1]);inkBottom=Math.max(inkBottom,box[3]);
+    });
+    if(!Number.isFinite(inkTop)||!Number.isFinite(inkBottom))return;
+    const t=Math.max(top,inkTop-pad),bo=Math.min(bottom,inkBottom+pad);
+    if(bo-t<1)return;
+    bands.set(String(line.id),{top:t,bottom:bo,clampedTop:t>top+0.5,clampedBottom:bo<bottom-0.5});
+  });
+  return bands;
+}
+
+function maskCandidates(lines,polys){
+  const out=[],semanticVisible=semanticVisibleCellKeys();
+  lines.forEach(line=>{
+    const band=lineInkBands.get(String(line.id));
+    const top=band?band.top:Number(line.top),bottom=band?band.bottom:Number(line.bottom);
     const cells=line.cells||[];
     const lineId=String(line.id);
     const role=lineId===landmarkStart?'start':(lineId===landmarkEnd?'end':null);
     const range=role?landmarkCellIndices(cells.length,role):null;
     cells.forEach((cell,ci)=>{
       if(range&&(ci<range.from||ci>=range.to))return;
+      const key=lineId+':'+ci;
+      if(semanticVisible.has(key))return;
       const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
-      out.push({key:lineId+':'+ci,lineId,index:ci,x0,x1,top,bottom});
+      out.push({key,lineId,index:ci,x0,x1,top,bottom});
     });
   });
   return out;
@@ -210,34 +360,18 @@ function maskCandidates(lines,polys){
 function maskRect(segment){
   const el=document.createElementNS(NS,'rect');
   el.setAttribute('class','maskcell');
-  el.setAttribute('x',segment.x);el.setAttribute('y',segment.y);
-  el.setAttribute('width',segment.width);el.setAttribute('height',segment.height);
-  el.setAttribute('rx','2');el.setAttribute('ry','2');
+  // Paper eraser: partial stages keep a safety gap between physical lines. At 100% the segment
+  // itself spans almost the full audited line height, so only a tiny fringe pad is needed: this
+  // removes residual dots/harakat on BOOX without the paper mask invading a neighbour line.
+  const fullErase=segment.fullErase===true;
+  const partialPadX=eink?0.72:0.58,partialPadY=eink?0.42:0.34;
+  const padX=fullErase?(eink?0.90:0.72):partialPadX;
+  const padY=fullErase?(eink?0.12:0.08):partialPadY;
+  // A seamed edge already sits on the shared band boundary with an erased neighbour line.
+  const padTop=segment.seamTop?0:padY,padBottom=segment.seamBottom?0:padY;
+  el.setAttribute('x',segment.x-padX);el.setAttribute('y',segment.y-padTop);
+  el.setAttribute('width',segment.width+padX*2);el.setAttribute('height',segment.height+padTop+padBottom);
   return el;
-}
-
-function lineFocusLayer(lines){
-  const layer=document.createElementNS(NS,'g');
-  layer.setAttribute('class','linefocuslayer');
-  (lines||[]).forEach(line=>{
-    const cells=line.cells||[];if(!cells.length)return;
-    let x0=Infinity,x1=-Infinity;
-    cells.forEach(cell=>{
-      x0=Math.min(x0,Number(cell[0]));
-      x1=Math.max(x1,Number(cell[1]));
-    });
-    const top=Number(line.top),bottom=Number(line.bottom);
-    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
-    const rect=document.createElementNS(NS,'rect');
-    rect.setAttribute('class','linefocuscell');
-    rect.setAttribute('x',x0);
-    rect.setAttribute('y',top+0.25);
-    rect.setAttribute('width',x1-x0);
-    rect.setAttribute('height',Math.max(0,bottom-top-0.5));
-    rect.setAttribute('rx','1.5');rect.setAttribute('ry','1.5');
-    layer.appendChild(rect);
-  });
-  return layer;
 }
 
 /* Personal weak-spot flags: a thin dashed outline cloned above every layer (including any
@@ -297,6 +431,57 @@ function currentRandomOrder(cells){
   return maskOrder;
 }
 
+/*
+ * Full erase leaves no seam between two erased lines: physical line bands are contiguous, so a
+ * 100% segment whose adjacent line (above or below) is also being erased extends exactly to the
+ * shared band boundary (plus a hairline overlap), removing the dot/haraka remnants that sat in
+ * that seam. Next to a line that is NOT erased, the safety margin stays: the paper never
+ * invades a neighbour line.
+ */
+function sealFullEraseSeams(segments,maskedLines){
+  const all=((pageGeo&&pageGeo.lines)||[]).slice().sort((a,b)=>Number(a.top)-Number(b.top));
+  const index=new Map(all.map((l,i)=>[String(l.id),i]));
+  const masked=new Set((maskedLines||[]).map(l=>String(l.id)));
+  const touching=(a,b)=>Math.abs(Number(a.bottom)-Number(b.top))<1.5;
+  segments.forEach(seg=>{
+    if(!seg.fullErase)return;
+    const i=index.get(String(seg.lineId));if(i===undefined)return;
+    const line=all[i],prev=all[i-1],next=all[i+1];
+    let top=seg.y,bottom=seg.y+seg.height;
+    // Never seal across a title/basmala band that computeLineInkBands kept out of the eraser.
+    const band=lineInkBands.get(String(line.id))||{};
+    const prevBand=prev?(lineInkBands.get(String(prev.id))||{}):{},nextBand=next?(lineInkBands.get(String(next.id))||{}):{};
+    if(prev&&!band.clampedTop&&!prevBand.clampedBottom&&masked.has(String(prev.id))&&touching(prev,line)){top=Number(line.top)-0.25;seg.seamTop=true;}
+    if(next&&!band.clampedBottom&&!nextBand.clampedTop&&masked.has(String(next.id))&&touching(line,next)){bottom=Number(line.bottom)+0.25;seg.seamBottom=true;}
+    seg.y=top;seg.height=Math.max(0,bottom-top);
+  });
+  return segments;
+}
+
+/*
+ * At every stage (25/50/75/100%): every word whose centre lies in an erased segment of its own line is also
+ * covered by its own exact quran-ws box, which includes the harakat/dots it pushes above or
+ * below the line band. Glyph extents of erased words only — never a neighbour line's words,
+ * the surah title or the basmala (they are not erased words). No word geometry = no change.
+ */
+function fullEraseWordSegments(segments,lines,svg){
+  // Partial stages too (device report, page 515 at 25%): an erased word's harakat poke out of
+  // its line band, so the word's own exact box is covered whatever the stage.
+  const full=segments.slice();
+  if(!full.length||!pageWordBoxes.length)return [];
+  const out=[];
+  pageWordBoxes.forEach((raw,i)=>{
+    const b=(raw||[]).map(Number);if(!validWordBox(b))return;
+    const box=wordBoxInSvgSpace(b,svg);if(!box)return;
+    const cx=(box[0]+box[2])/2,cy=(box[1]+box[3])/2;
+    const line=(lines||[]).find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));if(!line)return;
+    const lineId=String(line.id);
+    if(!full.some(s=>s.lineId===lineId&&cx>=s.x&&cx<=s.x+s.width))return;
+    out.push({key:'w'+i,lineId,x:box[0],y:box[1],width:box[2]-box[0],height:box[3]-box[1],fullErase:true});
+  });
+  return out;
+}
+
 /* Random cumulative masking over real source-ink groups. 25% is a fresh draw for a
  * new passage; 50/75/100 extend that same draw. Whitespace is never bridged. */
 function randomSegmentsForCells(cells,percent,order){
@@ -314,7 +499,12 @@ function randomSegmentsForCells(cells,percent,order){
     if(remaining<=0.0001)break;
     const cellWidth=Math.max(0,cell.x1-cell.x0);if(!cellWidth)continue;
     const hiddenWidth=Math.min(cellWidth,remaining);
-    segments.push({key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,y:cell.top+0.6,width:hiddenWidth,height:Math.max(0,(cell.bottom-cell.top)-1.2)});
+    const fullErase=fraction>=0.999999;
+    segments.push({
+      key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,
+      y:fullErase?cell.top+0.15:cell.top+0.6,width:hiddenWidth,
+      height:Math.max(0,(cell.bottom-cell.top)-(fullErase?0.30:1.2)),fullErase
+    });
     remaining-=hiddenWidth;
   }
   return segments;
@@ -331,9 +521,10 @@ function markerLayer(svg,polys,lines){
     const full=inv.multiply(ctm),b=m.getBBox();
     const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
     const c=pt.matrixTransform(full);
-    const visible=polys.length
-      ? insideSelection(polys,c.x,c.y)
-      : (lines||[]).some(line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    const inSelection=!polys.length||insideSelection(polys,c.x,c.y);
+    const inLines=!(lines||[]).length||(lines||[]).some(
+      line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
+    const visible=inSelection&&inLines;
     if(!visible)return;
     const wrap=document.createElementNS(NS,'g');
     wrap.setAttribute('transform',`matrix(${full.a} ${full.b} ${full.c} ${full.d} ${full.e} ${full.f})`);
@@ -343,29 +534,269 @@ function markerLayer(svg,polys,lines){
   return g;
 }
 
+function validWordBox(box){
+  return Array.isArray(box)&&box.length===4&&
+    box.every(Number.isFinite)&&box[0]>=0&&box[1]>=0&&box[2]<=345&&box[3]<=550&&
+    box[2]>box[0]&&box[3]>box[1];
+}
+
+// Sidecar boxes are normalized to the 345x550 page. Pages 1 and 2 keep their
+// original negative viewBox origin, so overlays must enter that SVG coordinate space.
+function wordBoxInSvgSpace(box,svg){
+  const vb=svg.viewBox&&svg.viewBox.baseVal;
+  if(!vb||!Number.isFinite(vb.x)||!Number.isFinite(vb.y))return null;
+  return [box[0]+vb.x,box[1]+vb.y,box[2]+vb.x,box[3]+vb.y];
+}
+
+function protectedWordBoxes(){
+  if(!semanticAnchorMaskMode)return[];
+  const out=[];
+  (pageLandmarkBoxes||[]).forEach(box=>{const b=(box||[]).map(Number);if(validWordBox(b))out.push(b)});
+  (semanticCues||[]).forEach(cue=>(cue.boxes||[]).forEach(box=>{
+    const b=(box||[]).map(Number);if(validWordBox(b))out.push(b);
+  }));
+  return out;
+}
+
+
+/** Axis-aligned rectangles [x0,y0,x1,y1] minus every cutter rectangle (up to 4 pieces each). */
+function rectMinus(rects,cutters){
+  let out=rects;
+  cutters.forEach(c=>{
+    const next=[];
+    out.forEach(r=>{
+      if(c[2]<=r[0]||c[0]>=r[2]||c[3]<=r[1]||c[1]>=r[3]){next.push(r);return}
+      if(c[1]>r[1])next.push([r[0],r[1],r[2],c[1]]);
+      if(c[3]<r[3])next.push([r[0],c[3],r[2],r[3]]);
+      const y0=Math.max(r[1],c[1]),y1=Math.min(r[3],c[3]);
+      if(c[0]>r[0])next.push([r[0],y0,c[0],y1]);
+      if(c[2]<r[2])next.push([c[2],y0,r[2],y1]);
+    });
+    out=next.filter(p=>p[2]-p[0]>0.05&&p[3]-p[1]>0.05);
+  });
+  return out;
+}
+
+/** Cut exact Quran-word holes out of the opaque mask layer; never estimate from line cells. */
+function applyProtectedWordHoles(layer,svg){
+  const boxes=protectedWordBoxes();if(!boxes.length)return;
+  const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return;
+  const defs=document.createElementNS(NS,'defs');
+  const holeMask=document.createElementNS(NS,'mask');
+  holeMask.id='hifz-exact-word-holes';
+  holeMask.setAttribute('maskUnits','userSpaceOnUse');
+  holeMask.setAttribute('maskContentUnits','userSpaceOnUse');
+  holeMask.setAttribute('x',vb.x);holeMask.setAttribute('y',vb.y);
+  holeMask.setAttribute('width',vb.width);holeMask.setAttribute('height',vb.height);
+  const full=document.createElementNS(NS,'rect');
+  full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
+  full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
+  full.setAttribute('fill','white');holeMask.appendChild(full);
+  const bands=(pageGeo&&pageGeo.lines)||[];
+  const holes=[];
+  boxes.forEach(pageBox=>{
+    const box=wordBoxInSvgSpace(pageBox,svg);if(!box)return;
+    // Exact word width; height = the word's own physical line band, so its harakat/dots that
+    // sit above or below the tight glyph box are not shaved off by that same line's eraser.
+    const cy=(box[1]+box[3])/2;
+    const band=bands.find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));
+    const y0=band?Math.min(box[1],Number(band.top)):box[1];
+    const y1=band?Math.max(box[3],Number(band.bottom)):box[3];
+    const hole=document.createElementNS(NS,'rect');
+    hole.setAttribute('x',box[0]);hole.setAttribute('y',y0);
+    hole.setAttribute('width',box[2]-box[0]);hole.setAttribute('height',y1-y0);
+    hole.setAttribute('fill','black');holeMask.appendChild(hole);
+    holes.push([box[0],y0,box[2],y1]);
+  });
+  // A band-tall hole must not re-expose a neighbouring erased word whose harakat reach into the
+  // band: inside every hole, the other words' own exact boxes stay covered — never over any
+  // protected word's own box.
+  const shown=boxes.map(b=>wordBoxInSvgSpace(b,svg)).filter(Boolean);
+  const same=(p,q)=>Math.abs(p[0]-q[0])<0.01&&Math.abs(p[1]-q[1])<0.01&&Math.abs(p[2]-q[2])<0.01&&Math.abs(p[3]-q[3])<0.01;
+  pageWordBoxes.forEach(raw=>{
+    const b=(raw||[]).map(Number);if(!validWordBox(b))return;
+    const word=wordBoxInSvgSpace(b,svg);if(!word||shown.some(p=>same(p,word)))return;
+    holes.forEach(h=>{
+      const r=[Math.max(h[0],word[0]),Math.max(h[1],word[1]),Math.min(h[2],word[2]),Math.min(h[3],word[3])];
+      if(r[2]-r[0]<=0.05||r[3]-r[1]<=0.05)return;
+      rectMinus([r],shown).forEach(piece=>{
+        const cover=document.createElementNS(NS,'rect');
+        cover.setAttribute('x',piece[0]);cover.setAttribute('y',piece[1]);
+        cover.setAttribute('width',piece[2]-piece[0]);cover.setAttribute('height',piece[3]-piece[1]);
+        cover.setAttribute('fill','white');holeMask.appendChild(cover);
+      });
+    });
+  });
+  defs.appendChild(holeMask);layer.insertBefore(defs,layer.firstChild);
+  layer.setAttribute('mask','url(#hifz-exact-word-holes)');
+}
+
+/*
+ * Exact reading focus: a paper veil over the whole page with holes for the due lines only. The
+ * holes are the selected verses' own polygons clipped to the due physical lines, so a boundary
+ * verse crossing outside the block can never widen the focus. Fails open (no veil) when exact
+ * polygons or line geometry are missing, so Quran text is never hidden by accident.
+ */
+function focusContextLayer(svg,activeLines,polys){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','focuscontextlayer');
+  g.setAttribute('pointer-events','none');
+  if(!activeLines||!activeLines.length||!polys||!polys.length)return g;
+  const vb=svg.viewBox&&svg.viewBox.baseVal;if(!vb)return g;
+
+  const defs=document.createElementNS(NS,'defs');
+  const lineClip=document.createElementNS(NS,'clipPath');
+  lineClip.id='hifz-focus-lines';
+  (activeLines||[]).forEach(line=>{
+    const cells=line.cells||[];if(!cells.length)return;
+    let x0=Infinity,x1=-Infinity;
+    cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
+    const top=Number(line.top),bottom=Number(line.bottom);
+    if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
+    const rect=document.createElementNS(NS,'rect');
+    rect.setAttribute('x',x0);rect.setAttribute('y',top);
+    rect.setAttribute('width',x1-x0);rect.setAttribute('height',bottom-top);
+    lineClip.appendChild(rect);
+  });
+  if(!lineClip.childNodes.length)return g;
+  defs.appendChild(lineClip);
+
+  const contextMask=document.createElementNS(NS,'mask');
+  contextMask.id='hifz-focus-context-mask';
+  contextMask.setAttribute('maskUnits','userSpaceOnUse');
+  contextMask.setAttribute('maskContentUnits','userSpaceOnUse');
+  contextMask.setAttribute('x',vb.x);contextMask.setAttribute('y',vb.y);
+  contextMask.setAttribute('width',vb.width);contextMask.setAttribute('height',vb.height);
+  const full=document.createElementNS(NS,'rect');
+  full.setAttribute('x',vb.x);full.setAttribute('y',vb.y);
+  full.setAttribute('width',vb.width);full.setAttribute('height',vb.height);
+  full.setAttribute('fill','white');contextMask.appendChild(full);
+
+  const holes=document.createElementNS(NS,'g');
+  holes.setAttribute('clip-path','url(#hifz-focus-lines)');
+  polys.forEach(p=>{
+    const hole=p.cloneNode(false);
+    // Source ayah hit-polygons are invisible (fill-opacity=0): force them opaque in the mask.
+    ['class','style','id','fill-opacity','stroke-opacity','opacity','mask','clip-path'].forEach(
+      attr=>hole.removeAttribute(attr)
+    );
+    hole.setAttribute('fill','black');
+    hole.setAttribute('fill-opacity','1');
+    hole.setAttribute('stroke','black');
+    hole.setAttribute('stroke-opacity','1');
+    hole.setAttribute('opacity','1');
+    holes.appendChild(hole);
+  });
+  contextMask.appendChild(holes);
+  defs.appendChild(contextMask);
+  g.appendChild(defs);
+
+  const paper=document.createElementNS(NS,'rect');
+  paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);
+  paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);
+  paper.setAttribute('fill','var(--sheet)');
+  paper.setAttribute('fill-opacity',eink?'0.72':'0.65');
+  paper.setAttribute('mask','url(#hifz-focus-context-mask)');
+  g.appendChild(paper);
+  const markers=markerLayer(svg,polys||[],activeLines);
+  if(markers.childNodes.length)g.appendChild(markers);
+  return g;
+}
+
+const AMORCE_HIGHLIGHT_HEIGHT=31;
+function semanticExactRects(cue,svg){
+  const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
+    .map(box=>wordBoxInSvgSpace(box,svg)).filter(Boolean);
+  if(!boxes.length)return[];
+  // One even rectangle per physical line: exact word extents horizontally, a fixed height
+  // vertically, so every amorce on every line has the same height (never a staircase).
+  const bands=(pageGeo&&pageGeo.lines)||[];
+  const groups=new Map();
+  boxes.forEach(box=>{
+    const cy=(box[1]+box[3])/2;
+    const band=bands.find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));
+    const key=band?String(band.id):'y'+Math.round(cy);
+    // Same height on every line: a fixed band centred on the line's middle (bands differ by a
+    // few units from line to line, which made highlights look uneven).
+    const mid=band?(Number(band.top)+Number(band.bottom))/2:cy;
+    const g=groups.get(key)||{x0:box[0],x1:box[2],y0:mid-AMORCE_HIGHLIGHT_HEIGHT/2,y1:mid+AMORCE_HIGHLIGHT_HEIGHT/2};
+    g.x0=Math.min(g.x0,box[0]);g.x1=Math.max(g.x1,box[2]);
+    groups.set(key,g);
+  });
+  return [...groups.values()].map(g=>({x:g.x0-1.0,y:g.y0,width:(g.x1-g.x0)+2.0,height:Math.max(1,g.y1-g.y0)}));
+}
+
+function semanticCueRect(rect,cue){
+  const el=document.createElementNS(NS,'rect');
+  el.setAttribute('x',rect.x);el.setAttribute('y',rect.y);
+  el.setAttribute('width',rect.width);el.setAttribute('height',rect.height);
+  el.setAttribute('rx','1.35');el.setAttribute('ry','1.35');
+  // User decision: a light grey highlight behind the amorce words — never over the glyphs as a
+  // pattern. Lighter than any reading-mask tile, and only ever drawn in Lecture (Révision
+  // active and post-An-Nās Itqān use the amorces as mask holes with highlighting disabled).
+  el.setAttribute('fill','var(--sel)');
+  el.setAttribute('fill-opacity',eink?'0.16':'0.10');
+  el.setAttribute('stroke','none');el.setAttribute('pointer-events','all');
+  el.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
+  return el;
+}
+
+function semanticCueLayer(svg){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','semanticcuelayer');
+  if(!semanticHighlightEnabled||!Array.isArray(semanticCues)||!semanticCues.length)return g;
+  const allLines=pageGeo?(pageGeo.lines||[]):[];
+
+  semanticCues.forEach(cue=>{
+    // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
+    const exactRects=semanticExactRects(cue,svg);
+    if(exactRects.length){
+      exactRects.forEach(rect=>g.appendChild(semanticCueRect(rect,cue)));
+      return;
+    }
+
+    // Legacy exact-cell range path retained only for old audited sidecars. Never infer a range.
+    (cue.ranges||[]).forEach(range=>{
+      const rline=allLines.find(x=>String(x.id)===String(range.lineId));if(!rline)return;
+      const cells=rline.cells||[],from=Math.max(0,Number(range.fromCell)||0),to=Math.min(cells.length,Math.max(from,Number(range.toCell)||0));
+      if(to<=from)return;
+      let x0=Infinity,x1=-Infinity;
+      for(let i=from;i<to;i++){x0=Math.min(x0,Number(cells[i][0]));x1=Math.max(x1,Number(cells[i][1]));}
+      if(!Number.isFinite(x0)||!Number.isFinite(x1)||x1<=x0)return;
+      g.appendChild(semanticCueRect({
+        x:x0-1.0,y:Number(rline.top)-0.3,
+        width:(x1-x0)+2.0,height:Math.max(1,Number(rline.bottom)-Number(rline.top)+0.6)
+      },cue));
+    });
+  });
+  return g;
+}
+
 function render(){
   document.body.classList.toggle('eink',eink);
   const svg=currentSvg();if(!svg)return;
   svg.querySelectorAll('.ayahPolygon').forEach(p=>{
-    p.classList.toggle('selected',shadeVerseSelection()&&selected.includes(String(p.dataset.verse)));
+    p.classList.toggle('selected',!contextFocus&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.linefocuslayer,.weaklayer').forEach(n=>n.remove());
+  svg.querySelectorAll('.masklayer,.weaklayer,.semanticcuelayer,.focuscontextlayer').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
     ? (pageGeo.lines||[]).filter(l=>wanted.has(String(l.id)))
     : [];
-  if(strictLineFocus&&lines.length){
-    const focus=lineFocusLayer(lines);
-    if(focus.childNodes.length)svg.appendChild(focus);
+  if(contextFocus&&lines.length){
+    const context=focusContextLayer(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);
+    if(context.childNodes.length)svg.appendChild(context);
   }
 
   const clamped=Math.max(0,Math.min(100,Number(mask)||0));
+  lineInkBands=clamped&&lines.length?computeLineInkBands(lines,svg):new Map();
   if(clamped&&pageGeo&&lineIds.length&&lines.length){
     const polys=maskFollowsSelection?selectedPolygons(svg):[],cells=maskCandidates(lines,polys);
     if(cells.length){
-      const segments=randomSegmentsForCells(cells,clamped,currentRandomOrder(cells));
+      const segments=sealFullEraseSeams(randomSegmentsForCells(cells,clamped,currentRandomOrder(cells)),lines);
+      segments.push(...fullEraseWordSegments(segments,lines,svg));
       const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
       if(polys.length){
         /*
@@ -398,7 +829,9 @@ function render(){
         segments.forEach(segment=>group.appendChild(maskRect(segment)));
         layer.appendChild(group);
       }
-      // Verse-number rosettes are deliberately redrawn above the random masks.
+      // Exact anchor words are holes in the mask itself. Verse-number rosettes are never erased:
+      // they are always redrawn above the paper eraser, in every mode (user decision).
+      applyProtectedWordHoles(layer,svg);
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
     }
@@ -409,6 +842,12 @@ function render(){
   if(highlighted.size){
     const weak=weakLayer(svg,highlighted);
     if(weak.childNodes.length)svg.appendChild(weak);
+  }
+
+  // Semantic amorce highlights are always a final, non-destructive overlay.
+  if(semanticCues.length){
+    const cues=semanticCueLayer(svg);
+    if(cues.childNodes.length)svg.appendChild(cues);
   }
 }
 
@@ -453,6 +892,8 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
+  setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
+  setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},
   setEink(value){eink=!!value;render();updateSideMarks();updateCenterMark();updatePageBadge()},
   revealSelection(visibleFraction){revealSelection(visibleFraction)},
@@ -460,6 +901,6 @@ window.HifzReader={
   page(){return currentPage}
 };
 
-if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,lineFocusLayer,landmarkCellIndices,maskCandidates};
+if(typeof module!=='undefined'&&module.exports)module.exports={randomOrderKeys,randomSegmentsForCells,seededRandom,landmarkCellIndices,maskCandidates,semanticVisibleCellKeys,validWordBox,protectedWordBoxes};
 prepare();
 N?.ready();

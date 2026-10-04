@@ -1,0 +1,9 @@
+<resources>
+    <color name="launcher_background">#FBF7EF</color>
+    <color name="safeguard_ivory">#FBF7EF</color>
+    <color name="safeguard_ink">#171715</color>
+    <color name="safeguard_secondary">#5C5C58</color>
+    <!-- Compatibility names kept monochrome for older resource references. -->
+    <color name="safeguard_green">#171715</color>
+    <color name="safeguard_gold">#171715</color>
+</resources>

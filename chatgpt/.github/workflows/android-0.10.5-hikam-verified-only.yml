@@ -1,0 +1,41 @@
+name: Android 0.10.5 Hikam verified-only audit
+
+on:
+  push:
+    branches:
+      - "work/0.10.5-hikam-verified-only"
+  workflow_dispatch:
+
+jobs:
+  hikam-verified-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install translation audit tools
+        run: python -m pip install --disable-pip-version-check beautifulsoup4 sentence-transformers
+      - name: Verify maxims-only production scope
+        run: python scripts/verify_0105_hikam_verified_only.py
+      - name: Preserve canonical 264 corpus contract
+        run: |
+          python scripts/verify_0104_hikam_freeze.py
+          python scripts/verify_hikam_translation_separation.py
+      - name: Cross-audit French against English secondary control
+        run: python scripts/audit_hikam_translation_against_islamicpearls.py | tee "${RUNNER_TEMP}/hikam-english-audit.json"
+      - name: Rank cross-lingual semantic divergences
+        run: python scripts/audit_hikam_crosslingual_semantics.py | tee "${RUNNER_TEMP}/hikam-semantic-audit.json"
+      - name: Audit technical Sufi lexicon against Arabic
+        run: python scripts/audit_hikam_technical_lexicon_0105.py | tee "${RUNNER_TEMP}/hikam-lexicon-audit.json"
+      - name: Upload review reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hikam-verified-only-review
+          path: |
+            ${{ runner.temp }}/hikam-english-audit.json
+            ${{ runner.temp }}/hikam-semantic-audit.json
+            ${{ runner.temp }}/hikam-lexicon-audit.json
+          if-no-files-found: warn
+          retention-days: 7

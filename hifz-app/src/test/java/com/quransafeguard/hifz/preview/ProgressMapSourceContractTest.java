@@ -51,7 +51,7 @@ public final class ProgressMapSourceContractTest {
 
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("Home must offer a direct way in, alongside Lecture/Mémoriser/Paramètres",
-            main.contains("Ui.cardAction(this, \"\", \"Progression\", v -> startActivity(new Intent(this, ProgressMapActivity.class)));"));
+            main.contains("navLine(root, \"Progression\", \"\", v -> startActivity(new Intent(this, ProgressMapActivity.class)));"));
         assertTrue("it must gate behind geometry loading like the other three home cards",
             main.contains("geometryActions.add(progress);"));
 
@@ -128,8 +128,8 @@ public final class ProgressMapSourceContractTest {
     @Test public void liveEtaEstimatesSitAboveTheGridUsingTheSameBucketsDiagnosticUses() throws Exception {
         String activity = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ProgressMapActivity.java");
         assertTrue("the two estimates approved in the mockup must both be wired in, in that order",
-            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Estimation fin Apprentissage\");") <
-                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Estimation fin Stabilisation\");"));
+            activity.indexOf("apprentissageEtaValue = etaBox(root, \"Fin Apprentissage\");") <
+                activity.indexOf("stabilisationEtaValue = etaBox(root, \"Fin Stabilisation\");"));
         assertTrue("Apprentissage's estimate must use its own real weekly pace (SABQI_LINES × "
                 + "learningDaysPerWeek), never Stabilisation's fixed one",
             activity.contains("weeksEtaSummary(prefs.sabqiLinesRemaining(geometry),\n"

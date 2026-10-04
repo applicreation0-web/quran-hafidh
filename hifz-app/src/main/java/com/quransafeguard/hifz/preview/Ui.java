@@ -66,7 +66,7 @@ final class Ui {
         Button button = new Button(context);
         button.setAllCaps(false);
         button.setGravity(Gravity.CENTER);
-        button.setContentDescription(description);
+        setIconDescription(button, description);
         button.setOnClickListener(listener);
         button.setStateListAnimator(null);
         button.setElevation(0f);
@@ -98,9 +98,12 @@ final class Ui {
         return button;
     }
 
-    /** Legacy API retained for call sites; visual grammar is now the light icon hit-target. */
-    static Button roundButton(Context context, String symbol, String description, View.OnClickListener listener) {
-        return iconButton(context, symbol, description, listener);
+    /** Icon-only buttons: spoken label plus the long-press tooltip where the platform has one. */
+    static void setIconDescription(Button button, String description) {
+        if (button == null) return;
+        String value = description == null ? "" : description;
+        button.setContentDescription(value);
+        if (Build.VERSION.SDK_INT >= 26) button.setTooltipText(value);
     }
 
     static void setButtonIcon(Button button, int iconRes) {
@@ -111,97 +114,25 @@ final class Ui {
     }
 
     /**
-     * Icon + short caption with one compact grammar across all Hifz modes. The caption wraps onto
-     * a second line (capped at 84dp) instead of clipping to one truncated line — a label like
-     * "Passage suivant du corpus" was being cut down to "Passage s…" when several actions shared
-     * the row (see roundAction's 6dp side padding, widened for the same reason: adjacent actions
-     * were rendering right up against each other).
+     * Action of the session/reader bars: the icon alone, exactly like the other icon buttons. The
+     * label is never printed under it (it crowded the bar on device); it stays available as the
+     * spoken description and the long-press tooltip.
      */
     static LinearLayout roundAction(Context context, String symbol, String label, View.OnClickListener listener) {
         LinearLayout box = column(context);
-        box.setGravity(Gravity.CENTER_HORIZONTAL);
-        box.setPadding(dp(context,6),0,dp(context,6),0);
-        Button b = iconButton(context, symbol, label, listener);
-        box.addView(b);
-        TextView caption = text(context, label, 11f, false);
-        caption.setTextColor(MUTED);
-        caption.setGravity(Gravity.CENTER);
-        caption.setMaxLines(2);
-        caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        caption.setMaxWidth(dp(context, 84));
-        box.addView(caption, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(0, 0, 0, 0);
+        box.addView(iconButton(context, symbol, label, listener));
         return box;
     }
 
-    /** Ebook-style home action: large hit target, intentionally no card chrome. */
-    static LinearLayout cardAction(Context context, String symbol, String label, View.OnClickListener listener) {
-        LinearLayout card = column(context);
-        card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(context,8),dp(context,7),dp(context,8),dp(context,7));
-        card.setClickable(true);
-        card.setFocusable(true);
-        card.setContentDescription(label);
-        card.setOnClickListener(listener);
 
-        TextView icon = text(context, "", 19f, true);
-        int iconRes = iconFor(label, symbol);
-        if (iconRes != 0) {
-            icon.setCompoundDrawablesWithIntrinsicBounds(iconRes, 0, 0, 0);
-            icon.setCompoundDrawableTintList(cardIconTint());
-            icon.setMinHeight(dp(context, 25));
-        } else {
-            icon.setText(symbol);
-        }
-        icon.setGravity(Gravity.CENTER);
-        icon.setDuplicateParentStateEnabled(true);
-        card.addView(icon, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView caption = text(context, label, 10.5f, false);
-        caption.setGravity(Gravity.CENTER);
-        caption.setSingleLine(true);
-        caption.setTextColor(cardIconTint());
-        caption.setDuplicateParentStateEnabled(true);
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        cp.topMargin = dp(context,2);
-        card.addView(caption, cp);
-        return card;
-    }
-
-    /** Hifz mode entry: same icon family, same optical weight, only a short protocol cue. */
-    static LinearLayout modeCard(Context context, String symbol, String label, View.OnClickListener listener) {
-        LinearLayout card = cardAction(context, symbol, label, listener);
-        if (card.getChildCount() > 1 && card.getChildAt(1) instanceof TextView) {
-            TextView title = (TextView) card.getChildAt(1);
-            title.setTextSize(12.5f);
-            title.setTypeface(Typeface.SERIF, Typeface.BOLD);
-        }
-        String lower = label.toLowerCase(Locale.ROOT);
-        // Révision/Entretien deliberately never get a duration cue here: this single card opens a
-        // choice between Révision active (15 min) and Entretien (its own dynamic duration), so any
-        // one number shown on the card itself would only ever match one of the two — the
-        // RevisionSelector dialog already states both correctly once tapped. "Au choix" still fills
-        // the cue slot (rather than leaving it empty) so this card keeps the same three-line height
-        // as its siblings in the same row — an empty cue here recentres the whole row around a
-        // shorter card instead of leaving a blank gap under this one.
-        String cue = lower.contains("apprentissage") || lower.contains("leçon") || lower.contains("lecon") || lower.contains("sabqi") ? "5 lignes"
-            : lower.contains("reprise") ? "30 min"
-            : lower.contains("consolidation") || lower.contains("renforcement") ? "Boule de neige"
-            : lower.contains("stabilisation") || lower.contains("ancrage") || lower.contains("itq")
-                ? PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine"
-            : lower.contains("révision") || lower.contains("revision") || lower.contains("entretien") || lower.contains("mur")
-                ? "Au choix" : "";
-        if (!cue.isEmpty()) {
-            TextView subtitle = text(context, cue, 11f, false);
-            subtitle.setTextColor(MUTED);
-            subtitle.setGravity(Gravity.CENTER);
-            subtitle.setSingleLine(true);
-            card.addView(subtitle, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        }
-        card.setPadding(dp(context,7),dp(context,7),dp(context,7),dp(context,7));
-        return card;
+    /** Stabilisation's cue: the deep first pass works in weekly units; after the first An-Nās
+     *  arrival every session is one hizb of maintenance. */
+    static String stabilizationCue(boolean postNasMaintenance) {
+        return postNasMaintenance
+            ? "1 hizb · entretien"
+            : PreviewConfig.STABILIZATION_WEEKLY_LINES + " lignes/semaine";
     }
 
     /** Liseuse-style setting: label on the left, current value/action on the right. */
@@ -244,8 +175,6 @@ final class Ui {
             ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
         return line;
     }
-
-    static void setChosen(Button button, boolean chosen) { button.setSelected(chosen); }
 
     static void panel(View view) {
         view.setBackground(shape(SURFACE, LINE, dp(view.getContext(), 12), Math.max(1, dp(view.getContext(), 1))));
@@ -355,11 +284,6 @@ final class Ui {
             new int[]{MUTED,PAPER,PAPER,INK});
     }
 
-    /** cardAction icons have no ink background to invert against on press, unlike iconButton/roundAction. */
-    private static ColorStateList cardIconTint() {
-        return new ColorStateList(new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{MUTED, INK});
-    }
-
     private static ColorStateList iconTintFlat() {
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
@@ -368,10 +292,16 @@ final class Ui {
 
     static int iconFor(String semantic, String fallbackSymbol) {
         String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
+        if (s.contains("quiz")) return R.drawable.ic_ui_quiz;
+        if (s.contains("annoter") || s.contains("crayon")) return R.drawable.ic_ui_edit;
+        if (s.contains("annuler la note")) return R.drawable.ic_ui_undo;
+        if (s.contains("effacer les notes")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("retour")) return R.drawable.ic_ui_back;
         if (s.contains("fermer") || s.contains("plus tard")) return R.drawable.ic_ui_close;
+        if (s.contains("tafsir")) return R.drawable.ic_ui_tafsir;
+        if (s.contains("passage précédent du corpus")) return R.drawable.ic_ui_jump_prev;
+        if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_jump_next;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
-        if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_rotation;
         if (s.contains("suivant")) return R.drawable.ic_ui_next;
         if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
@@ -387,8 +317,16 @@ final class Ui {
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
         if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
         if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
-        if (s.contains("répétition") || s.contains("répéter")) return R.drawable.ic_ui_repeat;
+        if (s.equals("commencer")) return R.drawable.ic_ui_play;
+        if (s.equals("correct")) return R.drawable.ic_ui_validate;
+        if (s.contains("hésitation") || s.contains("hesitation")) return R.drawable.ic_ui_info;
+        if (s.contains("à revoir") || s.contains("a revoir")) return R.drawable.ic_ui_repeat;
+        if (s.contains("répétition") || s.contains("répéter") || s.contains("réessayer")) return R.drawable.ic_ui_repeat;
+        if (s.contains("enregistrer")) return R.drawable.ic_ui_record;
+        if (s.contains("arrêter") || s.contains("arreter")) return R.drawable.ic_ui_stop;
+        if (s.contains("vérifier") || s.contains("verifier")) return R.drawable.ic_ui_validate;
         if (s.contains("révéler")) return R.drawable.ic_ui_reveal;
+        if (s.contains("amorce")) return R.drawable.ic_ui_semantic_anchor;
         if (s.contains("à renforcer") || s.contains("a renforcer")) return R.drawable.ic_hifz_strengthen;
         if (s.contains("en attente")) return R.drawable.ic_hifz_waiting;
         if (s.equals("acquis") || s.contains("page acquise")) return R.drawable.ic_hifz_acquired;

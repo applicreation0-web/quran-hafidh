@@ -64,7 +64,7 @@ public final class ProgressMapActivity extends android.app.Activity {
         LinearLayout top = Ui.row(this);
         top.setPadding(0, 0, 0, Ui.dp(this, 2));
         top.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
-        TextView title = Ui.bookText(this, "Carte de progression", 18, true);
+        TextView title = Ui.bookText(this, "Progression", 18, true);
         Ui.weight(title, 1f);
         title.setGravity(Gravity.CENTER);
         top.addView(title);
@@ -72,16 +72,6 @@ public final class ProgressMapActivity extends android.app.Activity {
         balance.setMinWidth(Ui.dp(this, 44));
         top.addView(balance, new LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44)));
         root.addView(top);
-
-        TextView subtitle = Ui.text(this, "604 pages du Mushaf, dans l’ordre canonique.", 12.5f, false);
-        subtitle.setTextColor(Ui.MUTED);
-        subtitle.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 14));
-        root.addView(subtitle);
-
-        root.addView(legend());
-
-        apprentissageEtaValue = etaBox(root, "Estimation fin Apprentissage");
-        stabilisationEtaValue = etaBox(root, "Estimation fin Stabilisation");
 
         grid = new ProgressGridView(this);
         grid.setOnPageTapped(page -> {
@@ -93,13 +83,13 @@ public final class ProgressMapActivity extends android.app.Activity {
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         gridParams.topMargin = Ui.dp(this, 4);
         root.addView(grid, gridParams);
+        grid.setContentDescription("604 pages du Mushaf · touchez une page pour l’ouvrir en Lecture");
 
-        TextView caption = Ui.text(this,
-            "Chaque case reste identifiable par sa trame, jamais par une teinte — lisible sans ghosting en niveaux de gris purs. Touchez une page pour l’ouvrir en Lecture.",
-            11.5f, false);
-        caption.setTextColor(Ui.MUTED);
-        caption.setPadding(0, Ui.dp(this, 12), 0, 0);
-        root.addView(caption);
+        // The grid dominates; estimates are two plain lines under it, then a one-line legend.
+        root.addView(Ui.divider(this));
+        apprentissageEtaValue = etaBox(root, "Fin Apprentissage");
+        stabilisationEtaValue = etaBox(root, "Fin Stabilisation");
+        root.addView(legend());
 
         setContentView(scroll);
         Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
@@ -108,12 +98,14 @@ public final class ProgressMapActivity extends android.app.Activity {
 
     private LinearLayout legend() {
         LinearLayout box = Ui.column(this);
-        box.setPadding(0, 0, 0, Ui.dp(this, 10));
+        box.setPadding(0, Ui.dp(this, 8), 0, Ui.dp(this, 4));
+        LinearLayout line = null;
         int[] statuses = {ProgressGridView.ACQUIS, ProgressGridView.STABILISER, ProgressGridView.APPRENTISSAGE, ProgressGridView.VIDE};
         String[] labels = {"Acquis", "À stabiliser", "En apprentissage", "Pas commencé"};
         for (int i = 0; i < statuses.length; i++) {
             LinearLayout row = Ui.row(this);
-            row.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 2));
+            row.setPadding(Ui.dp(this, 4), 0, Ui.dp(this, 8), 0);
+            row.setGravity(Gravity.CENTER_VERTICAL);
             final int status = statuses[i];
             View swatch = new View(this) {
                 @Override protected void onDraw(Canvas canvas) {
@@ -125,29 +117,35 @@ public final class ProgressMapActivity extends android.app.Activity {
                     ProgressGridView.drawCell(canvas, new RectF(1, 1, getWidth() - 1, getHeight() - 1), status, fill, stroke);
                 }
             };
-            int size = Ui.dp(this, 20);
+            int size = Ui.dp(this, 14);
             row.addView(swatch, new LinearLayout.LayoutParams(size, size));
-            TextView label = Ui.text(this, labels[i], 12.5f, false);
-            label.setPadding(Ui.dp(this, 8), 0, 0, 0);
+            TextView label = Ui.text(this, labels[i], 11f, false);
+            label.setTextColor(Ui.MUTED);
+            label.setPadding(Ui.dp(this, 4), 0, 0, 0);
             row.addView(label);
-            box.addView(row);
+            if (i % 2 == 0) {
+                line = Ui.row(this);
+                line.setGravity(Gravity.CENTER);
+                box.addView(line);
+            }
+            line.addView(row, new LinearLayout.LayoutParams(0, Ui.dp(this, 24), 1f));
         }
         return box;
     }
 
-    /** A bordered panel holding a title and a value line, filled in once loadStatuses() finishes. */
+    /** "Fin Apprentissage ········ value": a plain line under a hairline, never a bordered panel. */
     private TextView etaBox(LinearLayout root, String title) {
-        LinearLayout box = Ui.column(this);
-        Ui.panel(box);
-        box.addView(Ui.text(this, title, 13f, true));
-        TextView value = Ui.text(this, "Calcul en cours…", 12.5f, false);
+        LinearLayout row = Ui.row(this);
+        row.setPadding(Ui.dp(this, 2), Ui.dp(this, 6), Ui.dp(this, 2), Ui.dp(this, 6));
+        TextView label = Ui.text(this, title, 12.5f, true);
+        Ui.weight(label, 1f);
+        row.addView(label);
+        TextView value = Ui.text(this, "Calcul en cours…", 12f, false);
         value.setTextColor(Ui.MUTED);
-        value.setPadding(0, Ui.dp(this, 2), 0, 0);
-        box.addView(value);
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.bottomMargin = Ui.dp(this, 8);
-        root.addView(box, params);
+        value.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        row.addView(value);
+        root.addView(row);
+        root.addView(Ui.divider(this));
         return value;
     }
 

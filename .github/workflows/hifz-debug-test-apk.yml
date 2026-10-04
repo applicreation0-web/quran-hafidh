@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/app-dernier-chat-c19bfs
+      - ccr-d3ad7de9-4i3zfm
   workflow_dispatch:
 
 permissions:
@@ -66,6 +67,9 @@ jobs:
           retention-days: 14
 
       - name: Publish debug APK as a release asset
+        # Integration branches only upload the workflow artifact: no GitHub release without
+        # explicit user validation.
+        if: github.ref_name == 'claude/app-dernier-chat-c19bfs'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

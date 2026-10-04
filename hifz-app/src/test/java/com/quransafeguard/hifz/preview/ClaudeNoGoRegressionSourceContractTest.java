@@ -144,9 +144,12 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     @Test public void fractionatedStabilizationUsesStrictLineFocusNotWholeVerseShading() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String mushaf = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
-        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan)"));
-        assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean strictLineFocus)"));
-        assertTrue(mushaf.contains("lastStrictLineFocus = strictLineFocus;"));
+        // Superseded by the shared exact reading focus: every Hifz mode now focuses exactly the due
+        // physical lines (contextFocus), so a straddling boundary verse can't widen the focus.
+        assertTrue(session.contains("boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();"));
+        assertTrue(session.contains("mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);"));
+        assertTrue(mushaf.contains("public void show(int page, List<VerseRef> selection, List<String> lineIds, int maskPercent, boolean contextFocus)"));
+        assertTrue(mushaf.contains("lastContextFocus = contextFocus;"));
     }
 
     /**
@@ -358,24 +361,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
     }
 
     /**
-     * roundAction's caption used to be a single line clipped to the width of its 48dp icon button
-     * ("Passage suivant du corpus" rendered as "Passage s…"), and adjacent actions had only 2dp of
-     * side padding, reading as visually stuck together once three actions shared one row. The
-     * caption must be allowed to wrap onto a second line instead of truncating, and actions need
-     * more breathing room between them.
+     * roundAction's caption first clipped ("Passage s…"), then wrapped and crowded the session bar
+     * on device. Owner decision: the bars show the icon alone, exactly like the ChatGPT build; the
+     * label survives only as contentDescription + long-press tooltip (via iconButton).
      */
-    @Test public void roundActionCaptionWrapsInsteadOfClippingAndActionsHaveBreathingRoom() throws Exception {
+    @Test public void roundActionIsIconOnlyWithoutVisibleCaption() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String roundAction = method(ui,
-            "static LinearLayout roundAction(", "static LinearLayout cardAction(");
-        assertFalse("caption must no longer be forced onto a single clipped line",
-            roundAction.contains("caption.setSingleLine(true)"));
-        assertTrue("caption must wrap onto up to two lines instead",
-            roundAction.contains("caption.setMaxLines(2)"));
-        assertTrue("caption width must no longer be squeezed to the icon button's own narrow width",
-            roundAction.contains("ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));"));
-        assertTrue("side padding between adjacent actions must be wider than the original 2dp",
-            roundAction.contains("box.setPadding(dp(context,6),0,dp(context,6),0);"));
+            "static LinearLayout roundAction(", "static String stabilizationCue(");
+        assertFalse("no caption TextView under the icon", roundAction.contains("TextView caption"));
+        assertTrue("the label stays the icon's spoken description/tooltip",
+            roundAction.contains("iconButton(context, symbol, label, listener)"));
     }
 
     /**
@@ -441,8 +437,11 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String renderGroupedCycle = method(session,
             "private void renderGroupedCycle(", "private void completeGroupedCycleRep() {");
-        assertTrue("renderGroupedCycle must force strict line focus so a long verse can't over-shade past the unit's lines",
-            renderGroupedCycle.contains("fractionatedItqan = true;"));
+        assertTrue("the grouped cycle shows its frozen lines through the shared exact-line reading focus",
+            renderGroupedCycle.contains("showCurrent();"));
+        String usesFocus = method(session, "private boolean usesReadingFocus() {", "private void showCurrent(){");
+        assertTrue(usesFocus.contains("RECENT_SABQI_REVIEW.equals(mode)") && usesFocus.contains("LEARNING_CONSOLIDATION.equals(mode)")
+            && usesFocus.contains("CONSOLIDATION_FINAL.equals(mode)") && usesFocus.contains("LEARNING_FINAL.equals(mode)"));
     }
 
     /**
@@ -671,15 +670,17 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String geometry = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/GeometryRepository.java");
         assertTrue("a weekly Stabilisation unit builder must exist alongside the page-based one",
             geometry.contains("public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {"));
+        assertTrue("the historical 3-argument builder must keep the 22-line weekly target",
+            geometry.contains("return eligibleWeeklyStabilizationUnit(cursor, rangeEnd, corpus, PreviewConfig.STABILIZATION_WEEKLY_LINES);"));
         String weeklyUnit = method(geometry,
-            "public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus) {",
+            "public VerseUnit eligibleWeeklyStabilizationUnit(VerseRef cursor, VerseRef rangeEnd, EligibleCorpus corpus, int maxLines) {",
             "public EligibleLinePlan planEligibleLines(");
         assertTrue("it must hard-stop at a surah change, never spanning two surahs in one weekly unit",
             weeklyUnit.contains("if (line.verses.get(0).getSurah() != startSurah) break;"));
         assertTrue("it must respect the caller's own pending-range end, never spilling into an unrelated range",
             weeklyUnit.contains("refOrdinal <= rangeEndOrdinal"));
         assertTrue("it must cap at the weekly line target, not the old single-page target",
-            weeklyUnit.contains("ids.size() < PreviewConfig.STABILIZATION_WEEKLY_LINES"));
+            weeklyUnit.contains("ids.size() < maxLines"));
 
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue("the anchoring queue must chunk pending material into weekly units now, not page units",
@@ -798,7 +799,10 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             session.contains("\"Passage suivant du corpus\""));
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertTrue("it must resolve to its own icon before the generic pagination fallback",
-            ui.contains("if (s.contains(\"passage suivant du corpus\")) return R.drawable.ic_ui_rotation;"));
+            ui.contains("if (s.contains(\"passage suivant du corpus\")) return R.drawable.ic_ui_jump_next;"));
+        assertTrue("Révision keeps both corpus jumps (spec UI pass 2: previous AND next)",
+            session.contains("\"Passage précédent du corpus\"")
+                && ui.contains("if (s.contains(\"passage précédent du corpus\")) return R.drawable.ic_ui_jump_prev;"));
     }
 
     /**

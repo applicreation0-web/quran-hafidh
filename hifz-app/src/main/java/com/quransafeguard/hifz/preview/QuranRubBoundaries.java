@@ -91,4 +91,16 @@ final class QuranRubBoundaries {
         }
         return current;
     }
+
+    /** The Hizb (1..60) containing the given verse: the last Hizb start not after it. */
+    static int hizbOf(com.quransafeguard.hifz.core.VerseRef verse) {
+        int ordinal = GeometryRepository.ordinal(verse);
+        int hizb = 1;
+        for (int[] row : TABLE) {
+            if (row[5] != 0) continue;
+            if (GeometryRepository.ordinal(new com.quransafeguard.hifz.core.VerseRef(row[1], row[2])) > ordinal) break;
+            hizb = row[4];
+        }
+        return hizb;
+    }
 }

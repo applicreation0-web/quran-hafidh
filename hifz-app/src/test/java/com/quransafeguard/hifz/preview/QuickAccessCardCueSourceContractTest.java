@@ -29,10 +29,11 @@ public final class QuickAccessCardCueSourceContractTest {
 
     @Test public void stabilisationCueStatesAConcreteQuantityLikeApprentissageDoes() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
+        String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue("Apprentissage's cue must keep stating its frozen constant",
-            ui.contains("? \"5 lignes\""));
+            main.contains("navLine(path, \"Apprentissage\", \"5 lignes\""));
         assertTrue("Stabilisation's cue must state its own fixed weekly line target, not a vague word",
-            ui.contains("? PreviewConfig.STABILIZATION_WEEKLY_LINES + \" lignes/semaine\""));
+            ui.contains(": PreviewConfig.STABILIZATION_WEEKLY_LINES + \" lignes/semaine\""));
         assertFalse("the old unquantified label must not remain", ui.contains("? \"Répétitions\""));
     }
 }

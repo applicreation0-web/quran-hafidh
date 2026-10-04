@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="false"
+        android:icon="@drawable/ic_quran_hifz_logo"
+        android:roundIcon="@drawable/ic_quran_hifz_logo"
+        android:label="Quran Haafidh"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="false">
+        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".WeakVersesActivity" android:exported="false" />
+        <activity android:name=".ProgressMapActivity" android:exported="false" />
+        <activity
+            android:name=".HifzSessionActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".FreeMemActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".StudyReaderActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

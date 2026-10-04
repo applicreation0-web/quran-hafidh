@@ -1,0 +1,182 @@
+name: Quran Safeguard 0.10.8 reader regression
+
+on:
+  push:
+    branches:
+      - "release/0.10.8-reader"
+  pull_request:
+    branches:
+      - "work/0.10.7-visual-finalization"
+
+permissions:
+  contents: write
+
+jobs:
+  reader-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 0.10.8 reader branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Pin reader cream to the existing 0.10.7 reading-surface token
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed -i 's/#F4F0E6/#F7F2E8/g' scripts/apply_0108_reader_changes.py
+
+      - name: Apply idempotent 0.10.8 reader migration
+        run: python3 scripts/apply_0108_reader_changes.py
+
+      - name: Adapt legacy audit from helper prose to actual gesture wiring
+        run: python3 scripts/fix_0108_release_audit.py
+
+      - name: Rewrite syntax-safe generated verifier
+        run: python3 scripts/fix_0108_reader_verifier.py
+
+      - name: Verify strict 0.10.8 reader contract
+        run: python3 scripts/verify_0108_reader_contract.py
+
+      - name: Refuse scope creep outside the approved 0.10.8 reader files
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(git diff --name-only | grep -Ev '^($|scripts/apply_0108_reader_changes.py|scripts/verify_0108_reader_contract.py|app/build.gradle.kts|app/src/main/java/com/quranunlock/guard/ReaderComfortPrefs.kt|app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt|app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt|app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt|app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt|app/src/plus/java/com/quranunlock/guard/JalalaynHonorificPresentation.kt|app/src/test/java/com/quranunlock/guard/ReaderComfortPrefsTest.kt|app/src/testPlus/java/com/quranunlock/guard/JalalaynHonorificPresentationTest.kt)$' || true)"
+          if [ -n "${unexpected}" ]; then
+            echo "Unexpected 0.10.8 migration changes:"
+            echo "${unexpected}"
+            exit 1
+          fi
+
+      - name: Fetch and verify all 604 Medina Mushaf pages
+        run: bash scripts/fetch_mushaf_pages.sh
+
+      - name: Set up Python corpus tools
+        run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7 beautifulsoup4
+
+      - name: Fetch pinned Qushayri and Qurtubi source PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="${RUNNER_TEMP}/tafsir-src"
+          mkdir -p "${src}"
+          curl --fail --location --retry 3 -o "${src}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+          base="https://archive.org/download/tafsir-al-qurtubi-4.-Volumes/Tafseer%20Al-Qurtubi"
+          for n in 1 2 3 4; do
+            curl --fail --location --retry 3 -o "${src}/qurtubi-v${n}.pdf" "${base}/Tafsir%20al-Qurtubi%20Vol.%20${n}.pdf"
+          done
+
+      - name: Rebuild Plus Tafsir assets from pinned sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_multitafsir_assets_0106.py \
+            --source-dir "${RUNNER_TEMP}/tafsir-src" \
+            --assets-dir app/src/plus/assets/tafsir \
+            --work-dir "${RUNNER_TEMP}/tafsir-work"
+
+      - name: Contradictory Tafsir corpus gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_0106_tafsir_honorifics.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_tafsir_presentation.py app/src/plus/assets/tafsir
+          python3 scripts/audit_0106_qurtubi_unicode_labels.py app/src/plus/assets/tafsir
+          python3 scripts/verify_0107_tafsir_reading_contract.py
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 37
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Existing full release audit
+        run: gradle --no-daemon :app:verifyReleaseAudit --stacktrace
+
+      - name: Light and Plus unit regression suites
+        run: gradle --no-daemon :app:testLightDebugUnitTest :app:testPlusDebugUnitTest --stacktrace
+
+      - name: Compile both editions
+        run: gradle --no-daemon :app:assembleLightDebug :app:assemblePlusDebug --stacktrace
+
+      - name: Prove edition boundaries on compiled APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_light_apk_no_tafsir.py app/build/outputs/apk/light/debug/app-light-debug.apk
+          python3 scripts/verify_plus_apk_multitafsir_0106.py app/build/outputs/apk/plus/debug/app-plus-debug.apk
+          python3 scripts/verify_0105_runtime_clean.py \
+            --apk app/build/outputs/apk/light/debug/app-light-debug.apk \
+            --apk app/build/outputs/apk/plus/debug/app-plus-debug.apk
+
+      - name: Prepare exact 0.10.8 release metadata
+        if: github.event_name == 'push'
+        run: python3 scripts/prepare_0108_version.py
+
+      - name: Build audited unsigned Light and Plus release APKs
+        if: github.event_name == 'push'
+        run: gradle --no-daemon :app:assembleLightRelease :app:assemblePlusRelease --stacktrace
+
+      - name: Verify audited unsigned release edition boundaries
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          light="app/build/outputs/apk/light/release/app-light-release-unsigned.apk"
+          plus="app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk"
+          python3 scripts/verify_light_apk_no_tafsir.py "${light}"
+          python3 scripts/verify_plus_apk_multitafsir_0106.py "${plus}"
+          python3 scripts/verify_0105_runtime_clean.py --apk "${light}" --apk "${plus}"
+
+      - name: Upload audited unsigned 0.10.8 release APKs
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-safeguard-0.10.8-unsigned
+          path: |
+            app/build/outputs/apk/light/release/app-light-release-unsigned.apk
+            app/build/outputs/apk/plus/release/app-plus-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Preserve generated 0.10.8 source only after all gates pass
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            scripts/apply_0108_reader_changes.py \
+            scripts/verify_0108_reader_contract.py \
+            app/build.gradle.kts \
+            app/src/main/java/com/quranunlock/guard/ReaderComfortPrefs.kt \
+            app/src/main/java/com/quranunlock/guard/FreeQuranReaderActivity.kt \
+            app/src/main/java/com/quranunlock/guard/MushafReaderActivity.kt \
+            app/src/plus/java/com/quranunlock/guard/TafsirPanel.kt \
+            app/src/plus/java/com/quranunlock/guard/TafsirRepository.kt \
+            app/src/plus/java/com/quranunlock/guard/JalalaynHonorificPresentation.kt \
+            app/src/test/java/com/quranunlock/guard/ReaderComfortPrefsTest.kt \
+            app/src/testPlus/java/com/quranunlock/guard/JalalaynHonorificPresentationTest.kt
+          if git diff --cached --quiet; then
+            echo "0.10.8 reader source already committed."
+          else
+            git commit -m "Implement Quran Safeguard 0.10.8 reader contract [generated]"
+            git push origin HEAD:release/0.10.8-reader
+          fi

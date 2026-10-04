@@ -38,50 +38,39 @@ public final class MainActivity extends android.app.Activity {
     private LinearLayout sabqiQuickAccess;
     private LinearLayout itqanQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
+    private LinearLayout itqanCard;
+    private ScrollView homeScroll;
+    private ScrollView parcoursScroll;
+    private boolean showingParcours;
+    private LinearLayout parcoursTodayAction;
+    private TextView parcoursToday;
     private final ExecutorService localLoader = Executors.newSingleThreadExecutor();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        SemanticPassageRepository.preloadAsync(this);
         prefs = new HifzPrefs(this);
         speedStore = new HifzSpeedStore(this);
         ledger = new DashboardLedger(this);
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        FrameLayout holder = new FrameLayout(this);
-        holder.setBackgroundColor(Ui.PAPER);
-        scroll.addView(holder, new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // Spec UI pass 2 (§4/§5): a short home — header with the Settings icon, "Aujourd’hui",
+        // then five plain lines. The five Hifz paths and the week live one level down, in
+        // "Parcours Hifz" (same activity, so every cadence/routing rule below stays untouched).
+        LinearLayout root = page();
+        homeScroll = scrollOf(root);
+        LinearLayout header = Ui.row(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        TextView title = Ui.bookText(this, "Quran Haafidh", 21, true);
+        title.setGravity(Gravity.CENTER);
+        Ui.weight(title, 1f);
+        header.addView(title);
+        header.addView(Ui.iconButton(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class))));
+        root.addView(header);
+        root.addView(Ui.divider(this));
 
-        LinearLayout root = Ui.column(this);
-        int side = Ui.dp(this, 18), bottom = Ui.dp(this, 22);
-        root.setPadding(side, Ui.dp(this, 8), side, bottom);
-        int screen = getResources().getDisplayMetrics().widthPixels;
-        int contentWidth = Math.max(Ui.dp(this, 300), Math.min(screen - Ui.dp(this, 18), Ui.dp(this, 900)));
-        holder.addView(root, new FrameLayout.LayoutParams(
-            contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
-
-        TextView title = Ui.bookText(this, "Quran Haafidh", 24, true);
-        title.setGravity(Gravity.CENTER_HORIZONTAL);
-        title.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 5));
-        root.addView(title);
-
-        todayAction = Ui.column(this);
-        todayAction.setPadding(Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 6));
-        todayAction.setClickable(true);
-        todayAction.setFocusable(true);
-        todayAction.setEnabled(false);
-        todayAction.setContentDescription("Ouvrir la séance du jour");
-        todayAction.setOnClickListener(v -> openToday());
-        LinearLayout todayRow = Ui.row(this);
-        TextView todayCaption = Ui.bookText(this, "Aujourd’hui", 13, true);
-        Ui.weight(todayCaption, 1f);
-        todayRow.addView(todayCaption);
-        today = Ui.text(this, "…", 12, false);
-        today.setTextColor(Ui.MUTED);
-        today.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        todayRow.addView(today);
-        todayAction.addView(todayRow);
+        todayAction = todayLine();
+        today = Ui.settingValue(todayAction);
         root.addView(todayAction);
         root.addView(Ui.divider(this));
 
@@ -91,61 +80,60 @@ public final class MainActivity extends android.app.Activity {
         recentSabqiAdvisory.setVisibility(View.GONE);
         root.addView(recentSabqiAdvisory);
 
-        LinearLayout primary = Ui.row(this);
-        primary.setGravity(Gravity.CENTER);
-        primary.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 3));
-        LinearLayout study = Ui.cardAction(this, "", "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout free = Ui.cardAction(this, "", "Mémoriser", v -> startActivity(new Intent(this, FreeMemActivity.class)));
-        LinearLayout progress = Ui.cardAction(this, "", "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
-        LinearLayout settings = Ui.cardAction(this, "", "Paramètres", v -> startActivity(new Intent(this, SettingsActivity.class)));
+        LinearLayout study = navLine(root, "Lecture", "", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
+        LinearLayout free = navLine(root, "Mémorisation libre", "", v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        // Révision works memory; Quiz only questions it — free, read-only on Progression.
+        LinearLayout quiz = navLine(root, "Quiz", "", v -> startActivity(new Intent(this, QuizActivity.class)));
+        LinearLayout parcours = navLine(root, "Parcours Hifz", "", v -> showParcours());
+        LinearLayout progress = navLine(root, "Progression", "", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
+        geometryActions.add(quiz);
         geometryActions.add(progress);
-        geometryActions.add(settings);
-        addWeighted(primary, study, 1f);
-        addWeighted(primary, free, 1f);
-        addWeighted(primary, progress, 1f);
-        addWeighted(primary, settings, 1f);
-        root.addView(primary);
 
-        TextView dashTitle = Ui.bookText(this, "Semaine", 17, true);
-        dashTitle.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 3));
-        root.addView(dashTitle);
-        dashboard = Ui.column(this);
-        dashboard.setPadding(0, 0, 0, 0);
-        root.addView(dashboard);
+        // --- Parcours Hifz: the five paths, one line each, then this week.
+        LinearLayout path = page();
+        parcoursScroll = scrollOf(path);
+        LinearLayout pathHeader = Ui.row(this);
+        pathHeader.setGravity(Gravity.CENTER_VERTICAL);
+        pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
+        TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 19, true);
+        pathTitle.setGravity(Gravity.CENTER);
+        Ui.weight(pathTitle, 1f);
+        pathHeader.addView(pathTitle);
+        pathHeader.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        path.addView(pathHeader);
+        path.addView(Ui.divider(this));
+        parcoursTodayAction = todayLine();
+        parcoursToday = Ui.settingValue(parcoursTodayAction);
+        path.addView(parcoursTodayAction);
+        path.addView(Ui.divider(this));
 
-        TextView directTitle = Ui.bookText(this, "Accès rapide", 15, true);
-        directTitle.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 2));
-        root.addView(directTitle);
-        LinearLayout direct = Ui.row(this);
-        direct.setGravity(Gravity.CENTER);
-        LinearLayout sabqi = Ui.modeCard(this, "", "Apprentissage", v -> openMode(HifzSessionActivity.SABQI));
-        LinearLayout itqan = Ui.modeCard(this, "", "Stabilisation", v -> openMode(HifzSessionActivity.ITQAN));
-        LinearLayout murajaah = Ui.modeCard(this, "", "Révision", v -> showRevisionSelector());
+        LinearLayout sabqi = navLine(path, "Apprentissage", "5 lignes", v -> openMode(HifzSessionActivity.SABQI));
+        itqanCard = navLine(path, "Stabilisation", Ui.stabilizationCue(prefs.itqanPostNasMaintenance()),
+            v -> openMode(HifzSessionActivity.ITQAN));
+        LinearLayout itqan = itqanCard;
+        LinearLayout murajaah = navLine(path, "Révision", "Au choix", v -> showRevisionSelector());
+        LinearLayout renforcement = navLine(path, "Renforcement", "Boule de neige", v -> openMode(renforcementQuickAccessMode()));
+        LinearLayout consolidation = navLine(path, "Consolidation", "Boule de neige", v -> openMode(consolidationQuickAccessMode()));
         sabqiQuickAccess = sabqi;
         itqanQuickAccess = itqan;
+        geometryActions.add(parcours);
         geometryActions.add(sabqi);
         geometryActions.add(itqan);
         geometryActions.add(murajaah);
-        addWeighted(direct, sabqi, 1f);
-        addWeighted(direct, itqan, 1f);
-        addWeighted(direct, murajaah, 1f);
-        root.addView(direct);
-
-        LinearLayout directEvening = Ui.row(this);
-        directEvening.setGravity(Gravity.CENTER);
-        LinearLayout renforcement = Ui.modeCard(this, "", "Renforcement", v -> openMode(renforcementQuickAccessMode()));
-        LinearLayout consolidation = Ui.modeCard(this, "", "Consolidation", v -> openMode(consolidationQuickAccessMode()));
         geometryActions.add(renforcement);
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
-        addWeighted(directEvening, renforcement, 1f);
-        addWeighted(directEvening, consolidation, 1f);
-        root.addView(directEvening);
 
-        setContentView(scroll);
-        Ui.respectSystemBars(this, holder, 0, 0, 0, 0);
+        TextView dashTitle = Ui.bookText(this, "Cette semaine", 15, true);
+        dashTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
+        path.addView(dashTitle);
+        dashboard = Ui.column(this);
+        dashboard.setPadding(0, 0, 0, 0);
+        path.addView(dashboard);
+
+        showHome();
 
         localLoader.execute(() -> {
             try {
@@ -154,15 +142,14 @@ public final class MainActivity extends android.app.Activity {
                 prefs.currentAnchoringEntry(loaded);
                 geometry = loaded;
                 runOnUiThread(() -> {
-                    todayAction.setEnabled(true);
+                    setTodayEnabled(true);
                     setGeometryActionsEnabled(true);
                     ledger.capture(prefs);
                     refreshAll();
                 });
             } catch (Throwable error) {
                 runOnUiThread(() -> {
-                    today.setText("Parcours indisponible");
-                    todayAction.setEnabled(false);
+                    setToday("Parcours indisponible", false);
                     setGeometryActionsEnabled(false);
                 });
             }
@@ -170,7 +157,81 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void setGeometryActionsEnabled(boolean enabled) {
-        for (View action : geometryActions) if (action != null) action.setEnabled(enabled);
+        for (View action : geometryActions) setLineEnabled(action, enabled);
+    }
+
+    /** A plain line greys out when it cannot be opened (no card to dim). */
+    private static void setLineEnabled(View line, boolean enabled) {
+        if (line == null) return;
+        line.setEnabled(enabled);
+        line.setAlpha(enabled ? 1f : 0.42f);
+    }
+
+    private LinearLayout page() {
+        LinearLayout root = Ui.column(this);
+        int side = Ui.dp(this, 16);
+        root.setPadding(side, Ui.dp(this, 4), side, Ui.dp(this, 16));
+        return root;
+    }
+
+    private ScrollView scrollOf(LinearLayout root) {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        FrameLayout holder = new FrameLayout(this);
+        holder.setBackgroundColor(Ui.PAPER);
+        scroll.addView(holder, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        int screen = getResources().getDisplayMetrics().widthPixels;
+        int contentWidth = Math.max(Ui.dp(this, 300), Math.min(screen, Ui.dp(this, 720)));
+        holder.addView(root, new FrameLayout.LayoutParams(
+            contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        Ui.respectSystemBars(this, holder, 0, 0, 0, 0);
+        return scroll;
+    }
+
+    /** "Aujourd’hui ··· next session ›" — the main destination, a line, never a card. */
+    private LinearLayout todayLine() {
+        LinearLayout line = Ui.settingRow(this, "Aujourd’hui", "…", v -> openToday());
+        if (line.getChildAt(0) instanceof TextView) {
+            ((TextView) line.getChildAt(0)).setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD);
+        }
+        line.setContentDescription("Ouvrir la séance du jour");
+        setLineEnabled(line, false);
+        return line;
+    }
+
+    private LinearLayout navLine(LinearLayout parent, String label, String state, View.OnClickListener listener) {
+        LinearLayout line = Ui.settingRow(this, label, state, listener);
+        parent.addView(line);
+        parent.addView(Ui.divider(this));
+        return line;
+    }
+
+    /** "Aujourd’hui" is shown on the home and atop Parcours Hifz: both lines stay identical. */
+    private void setToday(String text, boolean enabled) {
+        today.setText(text);
+        if (parcoursToday != null) parcoursToday.setText(text);
+        setTodayEnabled(enabled);
+    }
+
+    private void setTodayEnabled(boolean enabled) {
+        setLineEnabled(todayAction, enabled);
+        setLineEnabled(parcoursTodayAction, enabled);
+    }
+
+    private void showHome() {
+        showingParcours = false;
+        setContentView(homeScroll);
+    }
+
+    private void showParcours() {
+        showingParcours = true;
+        setContentView(parcoursScroll);
+    }
+
+    @Override public void onBackPressed() {
+        if (showingParcours) { showHome(); return; }
+        super.onBackPressed();
     }
 
     @Override protected void onResume() {
@@ -179,10 +240,25 @@ public final class MainActivity extends android.app.Activity {
         speedStore = new HifzSpeedStore(this);
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
+        TextView itqanCue = Ui.settingValue(itqanCard);
+        if (itqanCue != null) itqanCue.setText(Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); }
+    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); refreshStabilizationPosition(); }
+
+    /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
+    private void refreshStabilizationPosition() {
+        TextView cue = Ui.settingValue(itqanCard);
+        if (cue == null || geometry == null) return;
+        boolean postNas = prefs.itqanPostNasMaintenance();
+        String base = Ui.stabilizationCue(postNas);
+        HifzPrefs.ItqanRotationProgress position = prefs.itqanRotationProgress(geometry);
+        if (position == null) { cue.setText(base); return; }
+        cue.setText(postNas
+            ? "Hizb " + QuranRubBoundaries.hizbOf(position.start) + " · " + position.index + "/" + position.total + " séances"
+            : base + " · " + position.index + "/" + position.total);
+    }
 
     /**
      * Apprentissage/Stabilisation quick-access must respect the weekday-pinned cadence (Settings'
@@ -202,8 +278,8 @@ public final class MainActivity extends android.app.Activity {
     private void refreshQuickAccessCadenceGating() {
         if (geometry == null) return;
         CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), effectiveLearningDaysPerWeek());
-        if (sabqiQuickAccess != null) sabqiQuickAccess.setEnabled(action == CadenceAction.LEARNING);
-        if (itqanQuickAccess != null) itqanQuickAccess.setEnabled(action == CadenceAction.STABILIZATION);
+        setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING);
+        setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION);
     }
 
     /** The Révision card opens this compact selector rather than jumping straight to a mode:
@@ -225,13 +301,6 @@ public final class MainActivity extends android.app.Activity {
 
     private boolean modeComplete(LocalDate date,String mode){
         return ledger.find(date,mode)!=null;
-    }
-
-    /** Whichever of the daily active/passive Révision pair is still due today comes first. */
-    private String murajaahQuickAccessMode(){
-        String today=HifzClock.today().toString();
-        return today.equals(prefs.lastActiveMurajaahDate())
-            ? HifzSessionActivity.MURAJAAH : HifzSessionActivity.MURAJAAH_ACTIVE;
     }
 
     /**
@@ -385,19 +454,18 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshToday() {
         GeometryRepository g=geometry;
-        if(g==null){today.setText("…");return;}
+        if(g==null){setToday("…",todayAction.isEnabled());return;}
         LocalDate current=HifzClock.today();
         if(current.isBefore(prefs.programStartDate())){
-            today.setText("Parcours non démarré");todayAction.setEnabled(false);return;
+            setToday("Parcours non démarré",false);return;
         }
         ScheduledCadence due=nextDueCadence(current);
         String mode=nextMode(due);
         if(consolidationNeedsAttention||learningConsolidationNeedsAttention){
-            today.setText("Consolidation · état à vérifier");
-            todayAction.setEnabled(true);
+            setToday("Consolidation · état à vérifier",true);
             return;
         }
-        if(mode==null){today.setText("Programme à jour");todayAction.setEnabled(false);return;}
+        if(mode==null){setToday("Programme à jour",false);return;}
         String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         String detail;
         try{
@@ -425,7 +493,7 @@ public final class MainActivity extends android.app.Activity {
                 detail="Révision · "+maintenanceMinutes+" min";
             }else detail="Parcours à vérifier";
         }catch(RuntimeException error){detail="Parcours à vérifier";}
-        today.setText(prefix+detail);todayAction.setEnabled(true);
+        setToday(prefix+detail,true);
     }
 
     static String anchoringTodayDetail(HifzPrefs prefs,GeometryRepository geometry){
@@ -433,8 +501,14 @@ public final class MainActivity extends android.app.Activity {
         if(entry==null)entry=prefs.currentAnchoringEntry(geometry);
         if(entry==null)return "Stabilisation · aucune unité à stabiliser";
         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
-        int reps=PreviewConfig.itqanTotalReps(entry.protocol);
+        ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(entry);
+        int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+        if(plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE){
+            java.util.LinkedHashSet<Integer> pages=new java.util.LinkedHashSet<>();
+            for(GeometryRepository.LineMeta line:geometry.linesForExactIds(owned))pages.add(line.page);
+            return "Stabilisation · "+shortRange(start,end)+" · "+pages.size()+" pages · ×"+reps+" entretien";
+        }
         List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
             geometry.linesForExactIds(owned));
         int blocks=Math.max(1,planned.size());
@@ -495,13 +569,6 @@ public final class MainActivity extends android.app.Activity {
         cell.setSingleLine(singleLine);
         cell.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight));
         row.addView(cell);
-    }
-
-    private void addWeighted(LinearLayout row, View view, float weight) {
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight);
-        int gap = Ui.dp(this, 2);
-        lp.setMargins(gap, gap, gap, gap);
-        row.addView(view, lp);
     }
 
     private static String compactState(String state) {

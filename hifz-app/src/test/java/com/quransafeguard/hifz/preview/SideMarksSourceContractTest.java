@@ -45,16 +45,12 @@ public final class SideMarksSourceContractTest {
             index.contains("#mushaf{width:min(calc(100vw - 72px),calc((100vh - 4px) * 345 / 550));flex:none;background:var(--sheet);"
                 + "transform:translateY(var(--reveal-shift));transform-origin:center center}"));
         assertTrue("the bars must be hidden by default, appearing only once JS confirms a safe gutter",
-            index.contains("#sidemarks{position:absolute;display:none;flex-direction:row;align-items:center;"
-                + "justify-content:center;gap:3px;pointer-events:none}"));
-        assertTrue("a calligraphic taper — the two flanking bars shorter than the center one, "
-                + "rounded ends — rather than three identical ticks",
-            index.contains("#sidemarks span{width:1.4px;height:100%;background:var(--sidemark);border-radius:1px}")
-                && index.contains("#sidemarks span:first-child,#sidemarks span:last-child{height:72%}"));
-        assertTrue("e-ink must get a slightly thicker stroke, like every other mark in this reader "
-                + "(.ayahPolygon.audio, .weakoutline) — thin/low-contrast marks risk vanishing under "
-                + "a fast 1-bit e-ink refresh",
-            index.contains("body.eink #sidemarks span{width:1.7px}"));
+            index.contains("#sidemarks{position:absolute;display:none;pointer-events:none}"));
+        assertTrue("three thin continuous lines over the page's useful height (spec §28), in two "
+                + "segments so a canonical boundary can really interrupt them",
+            index.contains("#sidemarks .seg span{width:1.4px;height:100%;background:var(--sidemark);border-radius:1px}"));
+        assertTrue("e-ink must get a slightly thicker stroke",
+            index.contains("body.eink #sidemarks .seg span{width:1.7px}"));
         assertTrue("must never intercept touches — it's a passive memory cue, not a control",
             index.contains("aria-hidden=\"true\""));
     }
@@ -71,7 +67,7 @@ public final class SideMarksSourceContractTest {
         assertTrue("must hide rather than risk clipping into the Quran text when the gutter is too "
                 + "narrow — real per-page margins inside the image are too thin to rely on instead "
                 + "(measured as low as ~4px on some of the 604 pages)",
-            fn.contains("if(!(gutter>=minGutter)){marks.classList.remove('show');return}"));
+            fn.contains("if(!(gutter>=minGutter)){marks.classList.remove('show');if(rub)rub.classList.remove('show');return}"));
         assertTrue("the safety threshold must be derived from the actual bar geometry, never a "
                 + "disconnected magic number",
             fn.contains("const minGutter=marksWidth+2*safety;"));

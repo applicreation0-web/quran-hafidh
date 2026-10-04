@@ -46,7 +46,7 @@ public final class SabqiItqanMaskCleanRectangleOnSingleVerseLinesSourceContractT
     @Test public void segmentsCarryTheirLineIdSoTheSplitCanBeDoneByLineVerseCount() throws Exception {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue("each rendered segment must carry which physical line it came from",
-            reader.contains("segments.push({key:String(cell.key),lineId:String(cell.lineId),"));
+            reader.contains("key:String(cell.key),lineId:String(cell.lineId),x:cell.x1-hiddenWidth,"));
     }
 
     @Test public void renderOnlyClipsSegmentsFromLinesThatActuallyShareInkWithAnotherVerse() throws Exception {

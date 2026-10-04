@@ -53,8 +53,8 @@ public final class Lot2SourceContractTest {
     @Test public void schema6ExposesTwoIndependentEditableRangeLists() throws Exception {
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
-        assertTrue(settings.contains("section(root,\"Plages à stabiliser\")"));
-        assertTrue(settings.contains("section(root,\"Plages acquises\")"));
+        assertTrue(settings.contains("section(corpus,\"Plages à stabiliser\")"));
+        assertTrue(settings.contains("section(corpus,\"Plages acquises\")"));
         assertTrue(settings.contains("chooseStabilizationRange"));
         assertTrue(settings.contains("chooseAcquiredRange"));
         assertTrue(settings.contains("removeStabilizationRange"));

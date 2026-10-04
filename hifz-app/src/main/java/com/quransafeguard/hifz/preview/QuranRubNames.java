@@ -18,10 +18,9 @@ final class QuranRubNames {
 
     private static final String[] POSITION_LABEL = {"Début du Hizb", "¼", "½", "¾"};
 
-    /** Which rub' the given page currently sits in, for a status label — e.g. "Hizb 2 · ¼". */
-    static String currentLabel(int page) {
-        int[] row = QuranRubBoundaries.currentAt(page);
-        return "Hizb " + row[4] + " · " + POSITION_LABEL[row[5]];
+    /** Selector caption only ("Hizb 12"): the ¼/½/¾ boundary itself lives in the gutter écusson. */
+    static String compactLabel(int page) {
+        return "Hizb " + QuranRubBoundaries.currentAt(page)[4];
     }
 
     static void showPicker(Activity activity, IntConsumer onPageChosen) {

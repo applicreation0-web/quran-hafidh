@@ -48,6 +48,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
     private AnnotationStore annotationStore;
+    private Button annotationButton;
+    private Button annotationUndoButton;
+    private Button annotationClearButton;
+    // The pen starts closed; its undo/erase tools only appear while it is open.
+    private boolean annotationEnabled = false;
     private TextView program, progress, timerText;
     private LinearLayout actions, audioHost;
     private HifzAudioDialog audioPlayer;
@@ -63,6 +68,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private AnchoringQueue.Entry anchoringEntry;
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
     private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
+    private SemanticPassageRepository semanticPassages;
+    private android.app.Dialog semanticTitleDialog;
+    private ItqanMaintenancePolicy.Regime itqanRegime = ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
     private boolean fractionatedItqan;
     private int itqanBlockIndex;
     private int itqanBlockCount = 1;
@@ -116,6 +124,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         metricsStore = new HifzSessionMetricsStore(this);
         try {
             geometry = GeometryRepository.get(this);
+            semanticPassages = SemanticPassageRepository.shared(this);
         } catch (Throwable error) {
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;
@@ -177,6 +186,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         annotationStore = new AnnotationStore(this);
         annotationOverlay = new AnnotationOverlayView(this);
         annotationOverlay.setStore(annotationStore);
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
         FrameLayout mushafContainer = new FrameLayout(this);
         mushafContainer.addView(mushaf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -190,17 +200,40 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         actions = Ui.row(this);
         actions.setGravity(Gravity.CENTER);
         controlBar.addView(actions);
-        controlBar.addView(Ui.roundAction(this,"↺","Annuler la note",v->annotationOverlay.undoLastStroke()));
-        controlBar.addView(Ui.roundAction(this,"⌫","Effacer les notes",v->annotationOverlay.clearCurrentPage()));
-        controlBar.addView(Ui.roundAction(this,"","Écouter",v->openAudio()));
+        if (!MURAJAAH_ACTIVE.equals(mode)) {
+            annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
+            annotationButton.setSelected(annotationEnabled);
+            controlBar.addView(annotationButton);
+            annotationUndoButton = Ui.iconButton(this, "", "Annuler la note", v -> annotationOverlay.undoLastStroke());
+            annotationClearButton = Ui.iconButton(this, "", "Effacer les notes", v -> annotationOverlay.clearCurrentPage());
+            annotationUndoButton.setVisibility(View.GONE);
+            annotationClearButton.setVisibility(View.GONE);
+            controlBar.addView(annotationUndoButton);
+            controlBar.addView(annotationClearButton);
+        }
+        // Audio only when the recitation pack is actually installed.
+        if (new HifzAudioGate(this).installed()) controlBar.addView(Ui.iconButton(this, "", "Écouter", v -> openAudio()));
         root.addView(controlBar);
 
         setContentView(root);
         Ui.respectSystemBars(this, root, 0, 0, 0, 0);
     }
 
+    private void toggleAnnotationMode() {
+        annotationEnabled = !annotationEnabled;
+        annotationOverlay.setDrawingEnabled(annotationEnabled);
+        annotationButton.setSelected(annotationEnabled);
+        Ui.setIconDescription(annotationButton,
+            annotationEnabled ? "Désactiver le crayon" : "Activer le crayon");
+        annotationUndoButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
+        annotationClearButton.setVisibility(annotationEnabled ? View.VISIBLE : View.GONE);
+    }
+
     private void renderMode() {
         closeAudio();
+        // Amorces/page-word holes are never carried into another mode or a validation flow by
+        // accident: Révision active and post-An-Nās Itqān recall opt back in explicitly.
+        if (mushaf != null) { mushaf.clearSemanticCues(); mushaf.clearPageLandmarkBoxes(); }
         actions.removeAllViews();
         revealButton = null;
         murajaahFinishButton = null;
@@ -464,12 +497,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         currentLineIds = new ArrayList<>(exactLineIds);
         currentSelection = geometry.versesOnLines(currentLineIds);
         currentMask = 0;
-        // A grouped-cycle unit is a fixed physical-line window (e.g. 5 lines), not a verse
-        // boundary: shading by verse (the default) would highlight a whole verse wherever it
-        // appears on the page, spilling well past the declared line count whenever a verse in the
-        // unit continues onto lines outside it. Strict line focus confines the highlight to
-        // exactly these lines, the same fix already used for a fractionated Itqan block.
-        fractionatedItqan = true;
+        // A grouped-cycle unit is a frozen physical-line window, never a freshly reconstructed
+        // verse range. showCurrent() applies the same exact-line reading focus as Sabqi/Itqān,
+        // clipped to these persisted line ids, without changing the unit or progression logic.
         sessionCompleted = false;
         program.setText(displayName + " · " + currentLineIds.size() + " lignes · unité "
             + (position + 1) + "/" + consolidationSession.sessionGroupSize());
@@ -731,10 +761,23 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             currentPage=unitFirstPage;
         }
 
-        itqanSessionProtocol = anchoringEntry.protocol;
-        itqanTargetReps = PreviewConfig.itqanTotalReps(itqanSessionProtocol);
-        List<StabilizationHalfPagePolicy.Unit> plannedUnits = StabilizationHalfPagePolicy.planPage(
-            geometry.linesForExactIds(itqanUnit.lineIds));
+        // Latest user decision: FULL only for every new unit; deep ×40 + progressive eraser until
+        // the first An-Nās arrival, then one hizb per session ×4 (2 visible + 2 anchored). A unit
+        // already mid-repetition keeps the plan it was started with (see ItqanRegimeStore).
+        ItqanRegimeStore.UnitPlan plan = prefs.itqanUnitPlan(anchoringEntry);
+        if (!prefs.stampItqanUnitPlan(anchoringEntry, plan)) {
+            onError("Impossible d’enregistrer le protocole de Stabilisation.");
+            return;
+        }
+        itqanRegime = plan.regime;
+        itqanSessionProtocol = plan.protocol;
+        itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanRegime, itqanSessionProtocol);
+        boolean maintenance = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+        List<GeometryRepository.LineMeta> unitLines = geometry.linesForExactIds(itqanUnit.lineIds);
+        List<StabilizationHalfPagePolicy.Unit> plannedUnits = maintenance
+            ? Collections.singletonList(new StabilizationHalfPagePolicy.Unit(unitLines.get(0).page,
+                unitLines.get(0).verses.get(0).getSurah(), itqanUnit.lineIds))
+            : StabilizationHalfPagePolicy.planPage(unitLines);
         itqanBlockCount = plannedUnits.size();
         itqanBlockIndex = Math.max(0, Math.min(prefs.itqanBlockIndex(), itqanBlockCount - 1));
         StabilizationHalfPagePolicy.Unit workingUnit = plannedUnits.get(itqanBlockIndex);
@@ -754,8 +797,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // decided silently. Reinforcement laps are excluded: that material is already Acquired, so
         // "entering Acquis" is moot, and the existing full-protocol reinforcement pass already
         // applies to it.
+        boolean tinyFastPathEligible = maintenance
+            // Maintenance never moves Appris (Sabqi) or already-credited lines: only a fragment
+            // made entirely of never-credited lines may take the direct-to-Acquis fast path.
+            ? prefs.itqanUncreditedLines(workingUnit.lineIds).size() == workingUnit.lineIds.size()
+            : !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
         if (rep == 0 && workingUnit.lineIds.size() <= 2 && autoChainDepth < MAX_ITQAN_AUTO_CHAIN
-                && !prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry)) {
+                && tinyFastPathEligible) {
             Boolean tinyBlockDecision = prefs.itqanTinyBlockDecisionFor(itqanUnit.start, itqanUnit.end, itqanBlockIndex);
             if (tinyBlockDecision == null) {
                 showItqanTinyBlockDialog(itqanUnit.start, itqanUnit.end, itqanBlockIndex, workingUnit.lineIds.size());
@@ -779,8 +827,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             itqanBonusDecision = null;
         }
         if (rep == 0 && itqanBonusDecision == null) {
-            ItqanPageCompletionPolicy.Offer offer = computeItqanBonusOffer(plannedUnits, currentLineIds);
-            if (offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {
+            // A post-An-Nās unit is already a whole hizb: never offer to extend it.
+            ItqanPageCompletionPolicy.Offer offer = maintenance ? null
+                : computeItqanBonusOffer(plannedUnits, currentLineIds);
+            if (offer == null || offer.choice == ItqanPageCompletionPolicy.Choice.NONE) {
                 ItqanPlanSnapshot keep = ItqanPlanSnapshot.undecided(itqanUnit.start, itqanUnit.end, itqanBlockIndex).keep();
                 if (!prefs.saveItqanBonusDecision(keep)) {
                     onError("Impossible d’enregistrer la décision de Stabilisation.");
@@ -799,7 +849,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
 
         if(rep>=itqanTargetReps){
-            boolean assistancePassed = StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted());
+            // Post-An-Nās maintenance: reveals are recorded, never a reason to restart the hizb.
+            boolean assistancePassed = ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted());
             awaitingValidation=assistancePassed;sessionCompleted=true;clock.pause();currentMask=0;
             program.setText(itqanProgramLabel());
             progress.setText(assistancePassed
@@ -811,7 +862,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         sessionCompleted=false;
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);
+        currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
         program.setText(itqanProgramLabel());
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
@@ -829,6 +880,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return "Stabilisation · "+start+" → "+end+" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · ×"+itqanTargetReps;
         }
         return "Stabilisation · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+            +(itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+                ?" · entretien 1 hizb · "+ItqanMaintenancePolicy.VISIBLE_REPS+" lectures + "+ItqanMaintenancePolicy.ANCHOR_REPS+" avec ancrages":"")
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
     }
 
@@ -893,7 +946,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void updateItqanProgress(int rep,int reveals){
-        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · masque "+currentMask+"% · révélations "+reveals);
+        String stage=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)
+            ? "rappel avec ancrages" : "masque "+currentMask+"%";
+        progress.setText(Math.min(rep+1,itqanTargetReps)+"/"+itqanTargetReps+" · "+stage+" · révélations "+reveals);
         eink.local(progress, prefs);
     }
 
@@ -903,14 +958,17 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         int rep=prefs.itqanRep();if(rep>=itqanTargetReps)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
-            + (revealed && PreviewConfig.isItqanValidationRep(rep - 1, itqanSessionProtocol) ? 1 : 0);
+            + (revealed && ItqanMaintenancePolicy.isValidationRep(itqanRegime, itqanSessionProtocol, rep - 1) ? 1 : 0);
         if(!prefs.setItqanProgress(rep,reveals,finalReveals,itqanUnit.start,itqanUnit.end)){onError("Impossible d’enregistrer la répétition de la Stabilisation.");return;}
         if(rep>=itqanTargetReps){
             currentMask=0;mushaf.setMask(0);
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
-        currentMask=PreviewConfig.itqanMaskForNextRep(rep, itqanSessionProtocol);if(currentMask!=oldMask)mushaf.setMask(currentMask);
+        currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
+        if(ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)!=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep-1))
+            applyItqanAnchors();
+        if(currentMask!=oldMask)mushaf.setMask(displayedMask());
         updateRevealButton();if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}
         updateItqanProgress(rep,reveals);
     }
@@ -984,7 +1042,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     private void validateItqan(){
         if(itqanUnit==null||anchoringEntry==null||prefs.itqanRep()<itqanTargetReps)return;
-        if (!StructuredSessionPolicy.assistancePasses(prefs.itqanAssisted())) {
+        if (!ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted())) {
             restartItqanAfterAssistance();
             return;
         }
@@ -1004,7 +1062,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         // stabilised long ago), this is a perpetual reinforcement pass, not a first build — credit
         // it without re-touching progression state or the Consolidation snowball a second time.
         boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);
-        boolean ok = reinforcementLap
+        boolean ok = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+            ? prefs.completeItqanMaintenanceUnitV6(currentLineIds, itqanUnit.start, itqanUnit.end, next,
+                sessionDate.toString(), label, geometry)
+            : reinforcementLap
             ? prefs.completeItqanReinforcementBlock(
                 nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, sessionDate.toString(), label)
             : prefs.completeStabilizationBlockV6(
@@ -1123,18 +1184,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /**
      * Révision active masks a whole page, but a learner rarely has every page's exact start/end
      * verse memorized — without some landmark, a page swipe leaves no way to confirm the recall is
-     * actually picking up at the right point, or where it should stop before turning the page.
-     * Half of the page's first physical line (its reading-first words) and half of its last
-     * physical line (its reading-last words, right before the turn) stay permanently visible as
-     * synchronization anchors — see reader.js's landmarkCellIndices for the reading-order-aware
-     * cell split; the other half of each of those two lines still masks normally, like every other
-     * line on the page.
+     * picking up at the right point, or where to stop before turning the page. The page's real
+     * first three and last three words, and each Al-Munīr amorce beginning on the page, stay
+     * visible as exact holes in the paper mask (see reader.js applyProtectedWordHoles).
      */
     private List<String> applyActiveLandmarks(int page) {
         List<String> all = geometry.lineIdsOnPage(page);
-        String first = all.isEmpty() ? null : all.get(0);
-        String last = all.isEmpty() ? null : all.get(all.size() - 1);
-        mushaf.setLandmarkLines(first, last);
+        // The old half-line heuristic is retired: the page's real first three and last three
+        // words plus every Al-Munīr amorce starting on it are exact holes in the paper mask —
+        // enabled only when every one of those boxes exists exactly (quran-ws word geometry).
+        // Otherwise no anchor hole at all: nothing approximated, Révéler still works.
+        mushaf.setLandmarkLines(null, null);
+        boolean exact = semanticPassages != null && semanticPassages.isAvailable()
+            && semanticPassages.hasCompleteExactGeometryForPage(page);
+        mushaf.setPageLandmarkBoxes(exact ? semanticPassages.pageLandmarkBoxes(page) : new org.json.JSONArray());
+        mushaf.setSemanticCues(exact ? semanticPassages.readerCuesForPage(page) : new org.json.JSONArray(), exact, false);
         return all;
     }
 
@@ -1143,6 +1207,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         List<MurajaahSegment> segments = murajaahSegments();
         int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);
+        // Both corpus jumps stay available in Révision (passive and active): back to the start of
+        // the previous passage, forward to the next one. Navigation only — nothing is validated.
+        if (currentIndex > 0) {
+            VerseRef previousStart = segments.get(currentIndex - 1).start;
+            actions.addView(Ui.roundAction(this, "", "Passage précédent du corpus", v -> {
+                currentPage = geometry.pageForVerse(previousStart);
+                currentSelection = Collections.emptyList();
+                currentLineIds = active ? applyActiveLandmarks(currentPage) : Collections.emptyList();
+                showCurrent();
+                restoreMurajaahEndpointSelectionOnCurrentPage();
+                updateMurajaahActions();
+            }));
+        }
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
         if (nextSegment != null) {
             VerseRef jumpTarget = nextSegment;
@@ -1485,7 +1562,76 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
-    private void showCurrent(){hasShown=true;mushaf.show(currentPage,currentSelection,currentLineIds,currentMask,fractionatedItqan);}
+    @Override public void onSemanticCueTap(String passageId) {
+        if (semanticPassages == null) return;
+        SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
+        if (cue != null) semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+    }
+    /** Apprentissage, Stabilisation, Renforcement and Consolidation share one reading focus. */
+    private boolean usesReadingFocus() {
+        return SABQI.equals(mode) || SABQI_TODAY_REVIEW.equals(mode) || ITQAN.equals(mode)
+            || RECENT_SABQI_REVIEW.equals(mode) || LEARNING_CONSOLIDATION.equals(mode)
+            || CONSOLIDATION_FINAL.equals(mode) || LEARNING_FINAL.equals(mode);
+    }
+
+    private void showCurrent(){
+        hasShown=true;
+        if(ITQAN.equals(mode))applyItqanAnchors();
+        boolean contextFocus=usesReadingFocus()&&!currentLineIds.isEmpty();
+        mushaf.show(currentPage,currentSelection,currentLineIds,displayedMask(),contextFocus);
+    }
+
+    /** True when an anchored post-An-Nās page has an amorce without exact geometry: that page
+     *  then stays visible (fail open) rather than hide Quran text behind an unverified anchor. */
+    private boolean itqanAnchorFailOpen;
+
+    /**
+     * Post-An-Nās maintenance recall (passes 3-4): the hizb disappears into the paper at
+     * 100% except the project's existing validated anchors — the Al-Munīr amorces (audited V2.1
+     * start words, SemanticPassageRepository) of every unit beginning inside this Itqān unit on
+     * the shown page, cut as exact quran-ws word holes — plus the reader's permanent page cues.
+     * The page's first/last three words (a Révision active aid) are deliberately not added.
+     * Nothing is invented or approximated: if one of those amorces has no exact boxes, the page
+     * fails open. Every other Itqān repetition (visible, deep eraser, validation) clears them.
+     */
+    private void applyItqanAnchors() {
+        itqanAnchorFailOpen = false;
+        mushaf.setLandmarkLines(null, null);
+        boolean anchored = !sessionCompleted && currentMask == 100 && itqanUnit != null
+            && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep())
+            && currentLineIds != null && !currentLineIds.isEmpty();
+        if (!anchored || semanticPassages == null || !semanticPassages.isAvailable()) {
+            mushaf.clearSemanticCues();
+            mushaf.clearPageLandmarkBoxes();
+            if (anchored) itqanAnchorFailOpen = true; // anchors unavailable: never recall blind
+            return;
+        }
+        org.json.JSONArray cues = new org.json.JSONArray();
+        try {
+            org.json.JSONArray page = semanticPassages.readerCuesForPage(currentPage);
+            for (int i = 0; i < page.length(); i++) {
+                org.json.JSONObject cue = page.getJSONObject(i);
+                SemanticPassageRepository.Cue meta = semanticPassages.cue(cue.getString("id"));
+                if (meta == null || !ItqanMaintenancePolicy.amorceInsideUnit(
+                        meta.startVerse, itqanUnit.start, itqanUnit.end)) continue;
+                if (cue.getJSONArray("boxes").length() != cue.getInt("anchorWordCount")) {
+                    itqanAnchorFailOpen = true;
+                    break;
+                }
+                cues.put(cue);
+            }
+        } catch (org.json.JSONException malformed) {
+            itqanAnchorFailOpen = true;
+        }
+        mushaf.clearPageLandmarkBoxes();
+        if (itqanAnchorFailOpen) { mushaf.clearSemanticCues(); return; }
+        mushaf.setSemanticCues(cues, true, false);
+    }
+
+    /** The mask actually drawn: an anchored page without exact anchors stays readable. */
+    private int displayedMask() {
+        return ITQAN.equals(mode) && itqanAnchorFailOpen ? 0 : currentMask;
+    }
 
     private void goPage(int delta) {
         int target=Math.max(1,Math.min(604,currentPage+delta));
@@ -1634,6 +1780,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         else{prefs.setElapsedFor(mode,elapsed);checkpointMurajaah(elapsed);}
         super.onPause();
     }
-    @Override protected void onDestroy(){closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
+    @Override protected void onDestroy(){if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();closeAudio();if(clock!=null)clock.dispose();if(mushaf!=null)mushaf.destroySafely();super.onDestroy();}
     @Override public boolean onKeyDown(int code,KeyEvent e){if(clock==null)return super.onKeyDown(code,e);if(code==KeyEvent.KEYCODE_PAGE_UP){goPage(-1);return true;}if(code==KeyEvent.KEYCODE_PAGE_DOWN){goPage(1);return true;}return super.onKeyDown(code,e);}
 }

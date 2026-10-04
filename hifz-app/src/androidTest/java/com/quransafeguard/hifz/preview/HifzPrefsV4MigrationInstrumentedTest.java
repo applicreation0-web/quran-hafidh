@@ -48,7 +48,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.forcedPromotedRanges().isEmpty());
         AnchoringQueue.Entry first = prefs.currentAnchoringEntry(GeometryRepository.get(context));
         assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, first.origin);
-        assertEquals(AnchoringQueue.ItqanProtocol.LIGHT, first.protocol);
+        assertEquals("FULL only: LIGHT is never planned for a new session", AnchoringQueue.ItqanProtocol.FULL, first.protocol);
     }
 
     @Test public void alreadyV4InstallPurgesObsoleteStableRecentLinesAndRepairsNewOptionalKeys() {

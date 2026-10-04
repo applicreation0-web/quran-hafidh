@@ -111,11 +111,11 @@ final class WeeklyDashboardPlanner {
                     else{
                         AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex);
                         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
-                        int reps=PreviewConfig.itqanTotalReps(entry.protocol);
+                        ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(entry);
+                        int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
                         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
-                        List<StabilizationHalfPagePolicy.Unit> planned=StabilizationHalfPagePolicy.planPage(
-                            geometry.linesForExactIds(owned));
-                        int blocks=Math.max(1,planned.size());
+                        int blocks=plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE?1
+                            :Math.max(1,StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(owned)).size());
                         int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
                         if(blocks>1){
                             morning="Stabilisation · "+range(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;

@@ -1,0 +1,18 @@
+name: Research 0.10.6 Qushayri poetry boundaries
+on:
+  push:
+    branches: ["research/0.10.6-qushayri-poetry"]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check pymupdf==1.26.7
+      - run: curl --fail --location --retry 3 -o "${RUNNER_TEMP}/lataif.pdf" "https://www.altafsir.com/Books/lataif.pdf"
+      - run: python3 scripts/research_qushayri_poetry_boundaries_0106.py "${RUNNER_TEMP}/lataif.pdf" --report "${RUNNER_TEMP}/boundaries.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qushayri-poetry-boundaries-0106
+          path: ${{ runner.temp }}/boundaries.json
+          retention-days: 7

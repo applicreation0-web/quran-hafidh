@@ -1,0 +1,45 @@
+{
+  "collection": "al_hikam_al_ataiyya",
+  "reference_numbering": "1-264",
+  "reference_count": 264,
+  "verified_and_translated": 264,
+  "pending_verification": 0,
+  "missing_french_translation": 0,
+  "substantive_textual_variants_detected_in_primary_extraction": 0,
+  "duplicate_or_extended_extraction_candidates_eliminated": 38,
+  "boundary_contaminations_cleaned": 18,
+  "special_recovery_numbers": [
+    233
+  ],
+  "primary_source": {
+    "title": "Al-Lata'if al-Ilahiyya fi Sharh Mukhtarat min al-Hikam al-'Ata'iyya",
+    "edition": "Dar al-Kutub al-'Ilmiyya, Beirut, 1426/2005, ed. 'Asim Ibrahim al-Kayyali",
+    "matn_digital_pages": "95-114",
+    "base_url": "https://ablibrary.net/book_content/8787/"
+  },
+  "secondary_controls": [
+    {
+      "title": "Al-Hikam — independently numbered Arabic PDF",
+      "url": "https://data.nur.nu/Kutub/Arabic/Ibn3AtaAllah_Hikam_000802_al-mostafa.pdf",
+      "use": "independent numbering and textual spot-check; automated RTL extraction was not reliable enough to alter the primary matn"
+    },
+    {
+      "title": "Jamalyyat al-Badi' fi al-Hikam al-'Ata'iyya — academic appendix Matn al-Hikam",
+      "institution": "University of Ghardaia",
+      "url": "https://dspace.univ-ghardaia.edu.dz/jspui/bitstream/123456789/4884/1/408.04.106.pdf",
+      "use": "academic corpus/order control and independent confirmation of difficult entries such as 233"
+    }
+  ],
+  "french_translation_method": "Original editorial French translation produced from the verified Arabic matn and reviewed line-by-line. Published French editions are used as bibliographic/terminological controls and are not copied.",
+  "french_bibliographic_controls": [
+    "Paul Nwyia, critical edition and French translation, Dar el-Machreq",
+    "Hassan Boutaleb, Sagesses et confidences, Albouraq"
+  ],
+  "memory_generated_arabic": false,
+  "notes": [
+    "No entry is active without both Arabic and French.",
+    "No Hikma carries a hadith authenticity grade.",
+    "The reference edition numbering is retained in source_number.",
+    "Letters, munajat and post-Hikam sections are not counted as Hikam al-kubra."
+  ]
+}

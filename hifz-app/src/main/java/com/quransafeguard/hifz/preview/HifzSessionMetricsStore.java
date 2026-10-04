@@ -27,5 +27,4 @@ final class HifzSessionMetricsStore {
         p.edit().putString(LAST_ANCHORING, metrics == null ? "" : metrics).apply();
     }
 
-    String lastAnchoring() { return p.getString(LAST_ANCHORING, ""); }
 }

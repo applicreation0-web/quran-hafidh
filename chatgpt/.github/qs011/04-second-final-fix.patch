@@ -1,0 +1,96 @@
+diff --git a/app/src/main/java/com/quranunlock/guard/HifzTrainingPolicy.kt b/app/src/main/java/com/quranunlock/guard/HifzTrainingPolicy.kt
+index bf135eb..9e59b80 100644
+--- a/app/src/main/java/com/quranunlock/guard/HifzTrainingPolicy.kt
++++ b/app/src/main/java/com/quranunlock/guard/HifzTrainingPolicy.kt
+@@ -88,7 +88,7 @@ object HifzTrainingPolicy {
+         HifzTrainingStep("sabqi-mask-25", "Masquage 25 %", HifzTrainingKind.MASKED, 5, 25),
+         HifzTrainingStep("sabqi-mask-50", "Masquage 50 %", HifzTrainingKind.MASKED, 5, 50),
+         HifzTrainingStep("sabqi-mask-75", "Masquage 75 %", HifzTrainingKind.MASKED, 5, 75),
+-        HifzTrainingStep("sabqi-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 7, 100)
++        HifzTrainingStep("sabqi-mask-100", "Masquage 100 %", HifzTrainingKind.MASKED, 7, 100, requiresConsecutiveSuccesses = 3)
+     )
+ 
+     private fun itqanSteps(): List<HifzTrainingStep> = listOf(
+diff --git a/app/src/test/java/com/quranunlock/guard/HifzDailyPlannerTest.kt b/app/src/test/java/com/quranunlock/guard/HifzDailyPlannerTest.kt
+index a17dd42..30bcb35 100644
+--- a/app/src/test/java/com/quranunlock/guard/HifzDailyPlannerTest.kt
++++ b/app/src/test/java/com/quranunlock/guard/HifzDailyPlannerTest.kt
+@@ -53,7 +53,7 @@ class HifzDailyPlannerTest {
+     }
+ 
+     @Test
+-    fun itqanPlansOnePhysicalPageAndProtocolRequiresThirtyVisibleRepetitions() {
++    fun itqanPlansOnePhysicalPageAndProtocolRequiresThirtyTotalRepetitions() {
+         val tuesday = LocalDate.of(2026, 9, 8)
+         val planned = HifzDailyPlanner.planDate(configuredState(), tuesday, basicGeometry())
+         val task = planned.tasks.single()
+@@ -61,8 +61,11 @@ class HifzDailyPlannerTest {
+         assertEquals(HifzTrack.ITQAN, task.track)
+         assertEquals(task.cursor.startPage, task.cursor.endPage)
+         assertEquals(2, task.cursor.startPage)
+-        assertEquals(30, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).first().repetitions)
+-        assertEquals(0, HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN).first().maskPercent)
++        val steps = HifzTrainingPolicy.stepsFor(HifzTrack.ITQAN)
++        assertEquals(20, steps.first().repetitions)
++        assertEquals(0, steps.first().maskPercent)
++        assertEquals(30, steps.sumOf { it.repetitions })
++        assertEquals(10, steps.filter { it.maskPercent > 0 }.sumOf { it.repetitions })
+     }
+ 
+     @Test
+diff --git a/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt b/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt
+index b6cb19a..9fcfcd5 100644
+--- a/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt
++++ b/app/src/test/java/com/quranunlock/guard/HifzTrainingProgressTest.kt
+@@ -41,11 +41,18 @@ class HifzTrainingProgressTest {
+     }
+ 
+     @Test
+-    fun finalSabqiValidationRequiresThreeUnassistedConsecutiveSuccesses() {
++    fun finalSabqiValidationRequiresFullQuotaAndThreeUnassistedConsecutiveSuccesses() {
+         val step = HifzTrainingPolicy.stepsFor(HifzTrack.SABQI).last()
+         var progress = HifzStepProgress(stepId = step.id)
+-        repeat(3) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
++        repeat(4) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
++        progress = HifzTrainingProgressPolicy.reveal(progress)
++        repeat(2) { progress = HifzTrainingProgressPolicy.attempt(progress, correct = true) }
+ 
++        assertFalse(HifzTrainingProgressPolicy.canValidate(step, progress))
++
++        progress = HifzTrainingProgressPolicy.attempt(progress, correct = true)
++        assertEquals(7, progress.repetitions)
++        assertEquals(3, progress.consecutiveSuccesses)
+         assertTrue(HifzTrainingProgressPolicy.canValidate(step, progress))
+     }
+ 
+diff --git a/app/src/test/java/com/quranunlock/guard/TargetPresenceStressTest.kt b/app/src/test/java/com/quranunlock/guard/TargetPresenceStressTest.kt
+index f754e24..13c42de 100644
+--- a/app/src/test/java/com/quranunlock/guard/TargetPresenceStressTest.kt
++++ b/app/src/test/java/com/quranunlock/guard/TargetPresenceStressTest.kt
+@@ -116,7 +116,7 @@ class TargetPresenceStressTest {
+     }
+ 
+     @Test
+-    fun oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility() {
++    fun oneHundredThousandScopeDecisionsArmSentinelOnlyForRunningSelectedTarget() {
+         val selected = setOf(
+             "com.android.chrome",
+             "com.google.android.youtube",
+@@ -125,7 +125,7 @@ class TargetPresenceStressTest {
+ 
+         repeat(100_000) { index ->
+             val target = selected.elementAt(index % selected.size)
+-            assertFalse(
++            assertTrue(
+                 TargetPresenceScopePolicy.requiresAnonymousExitSentinel(
+                     broadRequested = true,
+                     foregroundPackage = target,
+@@ -151,7 +151,7 @@ class TargetPresenceStressTest {
+      */
+     @Test
+     fun oneHundredThousandScopeDecisionsNeverGiveOutsideAppsBudgetOwnership() {
+-        oneHundredThousandScopeDecisionsNeverEnableUnfilteredAccessibility()
++        oneHundredThousandScopeDecisionsArmSentinelOnlyForRunningSelectedTarget()
+     }
+ 
+     @Test

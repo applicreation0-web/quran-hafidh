@@ -213,7 +213,8 @@ final class HifzAudioDialog {
     private void updateIdentity() {
         if (title == null || queue.isEmpty()) return;
         VerseRef verse = queue.get(index);
-        title.setText("Al-Husary Muʿallim · " + verse + " · " + (index + 1) + "/" + queue.size());
+        // Spec §16: the verse reference is what matters here; the reciter is not repeated.
+        title.setText(QuranSurahNames.name(verse.getSurah()) + " " + verse + " · " + (index + 1) + "/" + queue.size());
         if (host != null) eink.local(host, prefs);
     }
 

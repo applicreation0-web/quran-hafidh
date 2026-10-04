@@ -1,0 +1,205 @@
+name: Quran Hifz 0.7.5 TDD
+
+on:
+  push:
+    branches:
+      - work/hifz-0.7.5-retention-j10
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: quran-hifz-0.7.5-tdd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jvm-and-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject validated baseline assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+
+          mushaf_dst="app/src/main/assets/mushaf/hafs/kfqc/svg-br"
+          rm -rf "$mushaf_dst" && mkdir -p "$mushaf_dst"
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br "$mushaf_dst/"
+          test "$(find "$mushaf_dst" -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+
+          tafsir_dst="app/src/plus/assets/tafsir"
+          rm -rf "$tafsir_dst" && mkdir -p "$tafsir_dst"
+          cp baseline109/extracted/assets/tafsir/* "$tafsir_dst/"
+          test "$(find "$tafsir_dst" -maxdepth 1 -type f -name 'al_jalalayn_en.sqlite.gz.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$tafsir_dst" -maxdepth 1 -type f -name 'qurtubi_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 4
+          test "$(find "$tafsir_dst" -maxdepth 1 -type f -name 'qushayri_en.sqlite.gz.b64.part*' | wc -l | tr -d ' ')" = 2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK compile dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Run Hifz JVM and Android-test compilation gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon \
+            :hifz-core:test \
+            :hifz-app:testDebugUnitTest \
+            :hifz-app:compileDebugAndroidTestSources \
+            :hifz-app:verifyHifzProductBoundary \
+            :hifz-app:verifyHifzCosmeticContract \
+            :hifz-app:verifyHifzConvergenceRules \
+            --stacktrace
+
+      - name: Run source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+
+      - name: Record honest test counts
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for label, pattern in [
+              ('BEHAVIOR_JVM','hifz-app/build/test-results/testDebugUnitTest/**/*.xml'),
+              ('SOURCE_CONTRACT','hifz-app/build/test-results/sourceContractTest/**/*.xml'),
+              ('CORE_JVM','hifz-core/build/test-results/test/**/*.xml'),
+          ]:
+              t=f=e=s=0
+              for file in glob.glob(pattern, recursive=True):
+                  root=ET.parse(file).getroot()
+                  t+=int(root.attrib.get('tests',0)); f+=int(root.attrib.get('failures',0)); e+=int(root.attrib.get('errors',0)); s+=int(root.attrib.get('skipped',0))
+              print(f'{label} tests={t} failures={f} errors={e} skipped={s}')
+          PY
+
+  migration-instrumented:
+    needs: jvm-and-compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore validated Mushaf and Tafsir baseline
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-safeguard-0.10.9-astra-re-audit
+          run-id: 34336797351
+          github-token: ${{ github.token }}
+          path: baseline109
+
+      - name: Verify and inject validated baseline assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          old_plus="$(find baseline109 -type f -name 'app-plus-release-unsigned.apk' -print -quit)"
+          test -n "$old_plus" && test -s "$old_plus"
+          echo 'f826d06da88ee9411d275a34a2fa17d7d7686c6cef4151ce4d15b433848c1e66  '"$old_plus" | sha256sum -c -
+          rm -rf baseline109/extracted && mkdir -p baseline109/extracted
+          unzip -q "$old_plus" 'assets/mushaf/hafs/kfqc/svg-br/*.svg.br' 'assets/tafsir/*' -d baseline109/extracted
+          mkdir -p app/src/main/assets/mushaf/hafs/kfqc/svg-br app/src/plus/assets/tafsir
+          rm -f app/src/main/assets/mushaf/hafs/kfqc/svg-br/*.svg.br app/src/plus/assets/tafsir/*
+          cp baseline109/extracted/assets/mushaf/hafs/kfqc/svg-br/*.svg.br app/src/main/assets/mushaf/hafs/kfqc/svg-br/
+          cp baseline109/extracted/assets/tafsir/* app/src/plus/assets/tafsir/
+          test "$(find app/src/main/assets/mushaf/hafs/kfqc/svg-br -maxdepth 1 -type f -name '[0-9][0-9][0-9].svg.br' | wc -l | tr -d ' ')" = 604
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate exact Hifz geometry for runtime migration tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install --disable-pip-version-check pymupdf==1.26.7 numpy scipy
+          python3 scripts/build_reader109_geometry.py
+          python3 scripts/verify_hifz_geometry_edges.py
+          test -s app/src/main/assets/reader109/geometry.json
+          python3 - <<'PY'
+          import json
+          report=json.load(open('geometry-report.json'))
+          assert report.get('page_count') == 604, report
+          assert report.get('unique_line_count') == 8820, report
+          assert report.get('multi_page_verse_count') == 0, report
+          print('GEOMETRY_COUNTS_OK 604 8820 MULTI_PAGE_VERSES=0')
+          PY
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+
+      - name: Install Android SDK compile dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+
+      - name: Set up Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run schema 5 to 6 migration on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: >-
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.HifzPrefsV6MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6LegacyJ10MigrationInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6MigrationRecoveryInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6PersistentStateInstrumentedTest,com.quransafeguard.hifz.preview.ConsolidationPersistenceInstrumentedTest,com.quransafeguard.hifz.preview.StabilizationHalfPageInstrumentedTest,com.quransafeguard.hifz.preview.PhysicalConsolidationRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.HifzV6StateTransitionsInstrumentedTest,com.quransafeguard.hifz.preview.HifzCarryoverDateInstrumentedTest
+            --stacktrace

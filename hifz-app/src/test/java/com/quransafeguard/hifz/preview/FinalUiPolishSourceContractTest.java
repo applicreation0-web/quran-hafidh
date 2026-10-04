@@ -43,17 +43,15 @@ public final class FinalUiPolishSourceContractTest {
         assertFalse(study.contains("new GradientDrawable()"));
     }
 
-    @Test public void studyTafsirUsesOneLargeAlwaysClickableFlatActionSeparatedFromPageSlider() throws Exception {
+    /** Spec UI pass 2: Lecture footer is [Tafsir] [Amorces] [Annoter], icons only, slim bars. */
+    @Test public void studyTafsirIsAnIconActionInASlimAlwaysClickableBar() throws Exception {
         String study = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertFalse("Study Tafsir must not use the vertical icon-over-caption action", study.contains("Ui.roundAction(this, \"\", \"Tafsir\""));
-        assertTrue("Study Tafsir must use a dedicated flat action", study.contains("tafsirReaderAction()"));
-        assertTrue("Tafsir needs the final BOOX-friendly hit height", study.contains("button.setMinimumHeight(Ui.dp(this, 60))"));
-        assertTrue("Tafsir needs the final BOOX-friendly hit width", study.contains("button.setMinimumWidth(Ui.dp(this, 190))"));
-        assertTrue("Tafsir needs a readable final text size", study.contains("button.setTextSize(14.5f)"));
+        assertFalse("no caption-under-icon action", study.contains("Ui.roundAction(this, \"\", \"Tafsir\""));
+        assertTrue("Tafsir uses the shared icon grammar", study.contains("Ui.iconButton(this, \"\", \"Tafsir\", v -> openTafsir())"));
         assertTrue("Tafsir must explain the missing selection instead of being disabled", study.contains("Touchez d’abord un verset pour ouvrir le Tafsir."));
         assertFalse("Tafsir action must never be disabled in Lecture", study.contains("tafsirButton.setEnabled(false)"));
-        assertTrue("page slider must be clearly separated from Tafsir action", study.contains("railParams.topMargin = Ui.dp(this, 20)"));
-        assertTrue("Tafsir action row itself must preserve the final touch height", study.contains("readerActions.setMinimumHeight(Ui.dp(this, 60))"));
+        assertTrue("action bar keeps the 48dp touch height only", study.contains("readerActions.setMinimumHeight(Ui.dp(this, 48))"));
+        assertTrue("no blank band between actions and the surah/hizb rail", study.contains("railParams.topMargin = 0;"));
     }
 
     @Test public void audioRemainsAvailableInHifzAndFreeMemOnly() throws Exception {
@@ -74,7 +72,7 @@ public final class FinalUiPolishSourceContractTest {
         assertTrue(session.contains("return \"Stabilisation\""));
         assertTrue(session.contains("return \"Consolidation\""));
         assertTrue(session.contains("return \"Révision\""));
-        assertTrue(settings.contains("section(root,\"Schéma\")"));
+        assertTrue(settings.contains("subScreen(null, \"À propos du parcours\")"));
         assertTrue(settings.contains("Apprentissage → Appris → Stabilisation → Stabilisé → Consolidation → Acquis → Révision"));
         assertTrue(settings.contains("consolidationSchemaNote.setText(\"Consolidation · soir \"+stabilizationDays);"));
         assertFalse(settings.contains("section(root,\"Repères\")"));
@@ -84,7 +82,7 @@ public final class FinalUiPolishSourceContractTest {
     @Test public void settingsExposeReadableSeparatedSpeeds() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         String speed = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSpeedStore.java");
-        assertTrue(settings.contains("section(root,\"Vitesses\")"));
+        assertTrue(settings.contains("\"Vitesse · Révision\"") && settings.contains("\"Vitesse · Consolidation\""));
         assertTrue(settings.contains("speedStore.maintenanceSummary()"));
         assertTrue(settings.contains("speedStore.consolidationSummary()"));
         assertTrue(speed.contains("s/ligne"));
@@ -133,7 +131,7 @@ public final class FinalUiPolishSourceContractTest {
         String free = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/FreeMemActivity.java");
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(main.contains("\"Lecture\""));
-        assertTrue(main.contains("\"Mémoriser\""));
+        assertTrue(main.contains("\"Mémorisation libre\""));
         assertTrue(main.contains("\"Paramètres\""));
         assertTrue(free.contains("Retirer une répétition"));
         assertTrue(free.contains("Ajouter une répétition"));
