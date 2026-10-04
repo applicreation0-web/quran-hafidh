@@ -543,18 +543,19 @@ function semanticExactRects(cue,svg){
   const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
     .map(box=>wordBoxInSvgSpace(box,svg)).filter(Boolean);
   if(!boxes.length)return[];
-  const groups=[];
+  // One even rectangle per physical line: exact word extents horizontally, the line's own band
+  // vertically (slightly inset), so a multi-word amorce never renders as a staircase.
+  const bands=(pageGeo&&pageGeo.lines)||[];
+  const groups=new Map();
   boxes.forEach(box=>{
     const cy=(box[1]+box[3])/2;
-    let group=groups.find(g=>Math.abs(g.cy-cy)<=5.5);
-    if(!group){group={cy,x0:box[0],x1:box[2],y0:box[1],y1:box[3],n:0};groups.push(group);}
-    group.x0=Math.min(group.x0,box[0]);group.x1=Math.max(group.x1,box[2]);
-    group.y0=Math.min(group.y0,box[1]);group.y1=Math.max(group.y1,box[3]);
-    group.cy=(group.cy*group.n+cy)/(group.n+1);group.n++;
+    const band=bands.find(l=>cy>=Number(l.top)&&cy<=Number(l.bottom));
+    const key=band?String(band.id):'y'+Math.round(cy);
+    const g=groups.get(key)||{x0:box[0],x1:box[2],y0:band?Number(band.top)+1.2:box[1]-0.8,y1:band?Number(band.bottom)-1.2:box[3]+0.8};
+    g.x0=Math.min(g.x0,box[0]);g.x1=Math.max(g.x1,box[2]);
+    groups.set(key,g);
   });
-  return groups.map(g=>({
-    x:g.x0-1.0,y:g.y0-0.8,width:(g.x1-g.x0)+2.0,height:(g.y1-g.y0)+1.6
-  }));
+  return [...groups.values()].map(g=>({x:g.x0-1.0,y:g.y0,width:(g.x1-g.x0)+2.0,height:Math.max(1,g.y1-g.y0)}));
 }
 
 function semanticCueRect(rect,cue){
@@ -562,7 +563,11 @@ function semanticCueRect(rect,cue){
   el.setAttribute('x',rect.x);el.setAttribute('y',rect.y);
   el.setAttribute('width',rect.width);el.setAttribute('height',rect.height);
   el.setAttribute('rx','1.35');el.setAttribute('ry','1.35');
-  el.setAttribute('fill','url(#hifz-semantic-hatch)');
+  // User decision: a light grey highlight behind the amorce words — never over the glyphs as a
+  // pattern. Lighter than any reading-mask tile, and only ever drawn in Lecture (Révision
+  // active and post-An-Nās Itqān use the amorces as mask holes with highlighting disabled).
+  el.setAttribute('fill','var(--sel)');
+  el.setAttribute('fill-opacity',eink?'0.16':'0.10');
   el.setAttribute('stroke','none');el.setAttribute('pointer-events','all');
   el.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
   return el;
@@ -573,24 +578,6 @@ function semanticCueLayer(svg){
   g.setAttribute('class','semanticcuelayer');
   if(!semanticHighlightEnabled||!Array.isArray(semanticCues)||!semanticCues.length)return g;
   const allLines=pageGeo?(pageGeo.lines||[]):[];
-
-  // Amorces must never look like the solid-grey Sabqi/Itqan work selection.
-  // A sparse diagonal hatch stays distinguishable on monochrome E-Ink without adding heavy ink.
-  const defs=document.createElementNS(NS,'defs');
-  const pattern=document.createElementNS(NS,'pattern');
-  pattern.id='hifz-semantic-hatch';
-  pattern.setAttribute('patternUnits','userSpaceOnUse');
-  pattern.setAttribute('width','7');
-  pattern.setAttribute('height','7');
-  const hatch=document.createElementNS(NS,'path');
-  hatch.setAttribute('d','M-2,7 L7,-2 M5,9 L9,5');
-  hatch.setAttribute('fill','none');
-  hatch.setAttribute('stroke','var(--sel)');
-  hatch.setAttribute('stroke-opacity',eink?'0.82':'0.46');
-  hatch.setAttribute('stroke-width',eink?'0.70':'0.54');
-  pattern.appendChild(hatch);
-  defs.appendChild(pattern);
-  g.appendChild(defs);
 
   semanticCues.forEach(cue=>{
     // Primary path: exact word boxes in the same 345x550 viewBox as the shipped Mushaf.
