@@ -12,7 +12,7 @@ object TafsirEdition {
     fun prepareHtml(svgContent: String, pageNumber: Int): String =
         svgContent + """
             <style>
-              html, body, svg { background: #F4F0E6 !important; }
+              html, body, svg { background: ${ReaderComfortPrefs.pageBackground()} !important; }
             </style>
         """.trimIndent()
 
@@ -31,12 +31,21 @@ object TafsirEdition {
 
     suspend fun load(context: Context, verse: VerseRef): TafsirEntry? = null
 
+    suspend fun referencePage(
+        context: Context,
+        reference: QuranReferenceRef
+    ): Int? = null
+
     @Composable
     fun Panel(
         verse: VerseRef,
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
-        onPanelTopInWindow: (Int) -> Unit
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
+        onPanelTopInWindow: (Int) -> Unit,
+        onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) = Unit
 }
+

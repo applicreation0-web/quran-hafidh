@@ -1,0 +1,16 @@
+{
+  "version": "husary-muallim-everyayah-personal-v1",
+  "reciter": "Mahmoud Khalil Al-Husary — Muʿallim (Hafṣ)",
+  "upstream": "EveryAyah / VerseByVerseQuran",
+  "landingPage": "https://everyayah.com/recitations_ayat.html",
+  "baseUrl": "https://everyayah.com/data/Husary_Muallim_128kbps",
+  "zipBaseUrl": "https://everyayah.com/data/Husary_Muallim_128kbps/zips",
+  "filePattern": "SSSAAA.mp3",
+  "expectedVerseFiles": 6236,
+  "delivery": "user-initiated-local-import",
+  "bundledInApk": false,
+  "runtimeNetwork": false,
+  "personalUseOnly": true,
+  "redistributionApproved": false,
+  "rightsNote": "The upstream recordings are referenced for this strictly personal Quran Hifz installation. No public redistribution permission has been established; do not publish or redistribute the audio pack without permission from the relevant rightsholder/producer."
+}

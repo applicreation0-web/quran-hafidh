@@ -19,7 +19,7 @@ object TafsirEdition {
     fun prepareHtml(svgContent: String, pageNumber: Int): String {
         val styledSvg = svgContent + """
             <style>
-              html, body, svg { background: #F4F0E6 !important; }
+              html, body, svg { background: ${ReaderComfortPrefs.pageBackground()} !important; }
             </style>
         """.trimIndent()
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
@@ -32,8 +32,9 @@ object TafsirEdition {
                 <style>
                   .ayahPolygon { pointer-events: all; cursor: pointer; }
                   .ayahPolygon.qsg-selected {
-                    fill: #BFE8C8 !important;
-                    fill-opacity: .48 !important;
+                    fill: #C8CEC8 !important;
+                    fill-opacity: .44 !important;
+                    stroke: none !important;
                   }
                 </style>
                 <script>
@@ -187,6 +188,11 @@ object TafsirEdition {
         )
     }
 
+    suspend fun referencePage(
+        context: Context,
+        reference: QuranReferenceRef
+    ): Int? = TafsirReferenceNavigation.pageFor(context.applicationContext, reference)
+
     // Compatibility hook used by the shared reader. Plus data loading is owned
     // exclusively by MultiTafsirPanel so opening Qurtubi/Qushayri cannot trigger
     // an obsolete parallel Jalalayn database read.
@@ -198,13 +204,19 @@ object TafsirEdition {
         state: TafsirLoadState,
         modifier: Modifier,
         maxPanelHeight: Dp,
-        onPanelTopInWindow: (Int) -> Unit
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
+        onPanelTopInWindow: (Int) -> Unit,
+        onQuranReferenceSelected: ((QuranReferenceRef) -> Unit)? = null
     ) {
         MultiTafsirPanel(
             verse = verse,
             modifier = modifier,
             maxPanelHeight = maxPanelHeight,
-            onPanelTopInWindow = onPanelTopInWindow
+            expanded = expanded,
+            onExpandedChange = onExpandedChange,
+            onPanelTopInWindow = onPanelTopInWindow,
+            onQuranReferenceSelected = onQuranReferenceSelected
         )
     }
 
@@ -213,3 +225,4 @@ object TafsirEdition {
         return get(name) as? Int
     }
 }
+

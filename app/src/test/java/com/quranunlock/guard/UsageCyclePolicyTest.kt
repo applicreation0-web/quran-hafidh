@@ -1,6 +1,7 @@
 package com.applicreation0.quransafeguard
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,43 +102,63 @@ class UsageCyclePolicyTest {
     }
 
     @Test
-    fun singleHizbPoolRepeatsToReachTwentyMorningPages() {
-        val plan = QuranPageSelector.sequentialHizbPages(
-            selectedHizb = setOf(7),
+    fun canonicalQuotaDoesNotRepeatShortSelectedPool() {
+        val plan = QuranPageSelector.sequentialCanonicalQuotaPages(
+            mode = QuranSelectionMode.HIZB,
+            selectedUnits = setOf(15),
             cursor = 0,
-            hizbCount = 2
+            pageCount = UsageCyclePolicy.MORNING_PAGE_COUNT
         )
 
-        assertEquals(20, plan.pages.size)
-        assertEquals(listOf(7, 7), plan.hizbNumbers)
-        assertEquals(plan.pages.take(10), plan.pages.drop(10))
-        assertEquals(0, plan.nextCursor)
+        assertEquals((142..150).toList(), plan.pages)
+        assertEquals(9, plan.pages.size)
+        assertEquals(plan.pages.size, plan.pages.distinct().size)
+        assertFalse(151 in plan.pages)
     }
 
     @Test
-    fun multiHizbPoolAdvancesSequentiallyFromSmallest() {
-        val dayOne = QuranPageSelector.sequentialHizbPages(
-            selectedHizb = setOf(9, 2, 5),
-            cursor = 0,
-            hizbCount = 2
+    fun canonicalQuotaAdvancesSequentiallyAcrossSelectedUnits() {
+        val pool = QuranPageSelector.availablePages(
+            QuranSelectionMode.HIZB,
+            setOf(2, 5, 9)
         )
-        val dayTwo = QuranPageSelector.sequentialHizbPages(
-            selectedHizb = setOf(9, 2, 5),
-            cursor = dayOne.nextCursor,
-            hizbCount = 2
+        val first = QuranPageSelector.sequentialCanonicalQuotaPages(
+            mode = QuranSelectionMode.HIZB,
+            selectedUnits = setOf(9, 2, 5),
+            cursor = 0,
+            pageCount = UsageCyclePolicy.NINETY_MINUTE_PAGE_COUNT
+        )
+        val second = QuranPageSelector.sequentialCanonicalQuotaPages(
+            mode = QuranSelectionMode.HIZB,
+            selectedUnits = setOf(9, 2, 5),
+            cursor = first.nextCursor,
+            pageCount = UsageCyclePolicy.NINETY_MINUTE_PAGE_COUNT
         )
 
-        assertEquals(listOf(2, 5), dayOne.hizbNumbers)
-        assertEquals(listOf(9, 2), dayTwo.hizbNumbers)
-        assertEquals(20, dayOne.pages.size)
-        assertEquals(20, dayTwo.pages.size)
+        assertEquals(pool.take(10), first.pages)
+        assertEquals(pool.drop(10).take(10), second.pages)
+        assertTrue(first.pages.zipWithNext().all { (a, b) -> a < b })
+        assertTrue(second.pages.zipWithNext().all { (a, b) -> a < b })
+        assertTrue((first.pages + second.pages).all { it in pool })
     }
 
     @Test
-    fun everyHizbChallengeUsesExactlyTenPages() {
-        (1..60).forEach { hizb ->
-            assertEquals(10, QuranPageSelector.tenPageQuotaFromHizb(hizb).size)
-        }
+    fun ninetyMinuteQuotaNeverCrossesSelectedCanonicalPool() {
+        val selected = setOf(15)
+        val canonical = QuranPageSelector.availablePages(
+            QuranSelectionMode.HIZB,
+            selected
+        ).toSet()
+        val plan = QuranPageSelector.sequentialCanonicalQuotaPages(
+            mode = QuranSelectionMode.HIZB,
+            selectedUnits = selected,
+            cursor = 0,
+            pageCount = UsageCyclePolicy.NINETY_MINUTE_PAGE_COUNT
+        )
+
+        assertTrue(plan.pages.all { it in canonical })
+        assertEquals((142..150).toList(), plan.pages)
+        assertFalse(151 in plan.pages)
     }
 
     @Test
@@ -145,7 +166,8 @@ class UsageCyclePolicyTest {
         assertEquals(15L * 60_000L, UsageCyclePolicy.INTERVAL_MS)
         assertEquals(90, UsageCyclePolicy.CUMULATIVE_MINUTES)
         assertEquals(90L * 60_000L, UsageCyclePolicy.CUMULATIVE_MS)
-        assertEquals(6, UsageCyclePolicy.INTERVALS_PER_HIZB)
+        assertEquals(6, UsageCyclePolicy.INTERVALS_PER_NINETY_MINUTE_CYCLE)
+        assertEquals(10, UsageCyclePolicy.NINETY_MINUTE_PAGE_COUNT)
     }
 
     @Test
