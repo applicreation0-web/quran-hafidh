@@ -189,6 +189,37 @@ final class StopCutPolicy {
         return new Stop((int) lineEnd - 1, null, 0, Kind.LINE_END, lineEnd, Double.NEGATIVE_INFINITY);
     }
 
+    /**
+     * User decision (bounds): a block holds between {@code min} and {@code max} lines (Apprentissage
+     * 4–6, Stabilisation 6–8) and aims at {@code target}. Inside that window: the rosette nearest the
+     * target, else مـ/قلى, else ج, else the line end nearest the target. A block that would reach
+     * {@code hardEnd} (the surah's end) by {@code max} lines simply ends there: the last block of a
+     * surah is the only one allowed outside the bounds.
+     */
+    Stop cutWithin(double start, double min, double target, double max, double hardEnd) {
+        if (hardEnd - start <= max + 1e-9) {
+            return new Stop((int) Math.ceil(hardEnd) - 1, null, 0, Kind.LINE_END, hardEnd, Double.NEGATIVE_INFINITY);
+        }
+        double lo = start + min, hi = Math.min(start + max, hardEnd), aim = start + target;
+        for (Kind kind : new Kind[]{Kind.ROSETTE, Kind.RECOMMENDED, Kind.PERMITTED}) {
+            Stop best = null;
+            double bestDistance = Double.POSITIVE_INFINITY;
+            for (int i = firstAtOrAfter(lo - 1e-9); i < stops.size(); i++) {
+                Stop stop = stops.get(i);
+                if (stop.position > hi + 1e-9) break;
+                if (stop.kind != kind) continue;
+                double distance = Math.abs(stop.position - aim);
+                if (distance < bestDistance) { best = stop; bestDistance = distance; }
+            }
+            if (best != null) return best;
+        }
+        double lineEnd = Math.round(aim);
+        if (lineEnd < lo - 1e-9) lineEnd = Math.ceil(lo - 1e-9);
+        if (lineEnd > hi + 1e-9) lineEnd = Math.floor(hi + 1e-9);
+        if (lineEnd <= start) lineEnd = Math.min(hardEnd, Math.floor(start) + 1);
+        return new Stop((int) lineEnd - 1, null, 0, Kind.LINE_END, lineEnd, Double.NEGATIVE_INFINITY);
+    }
+
     private Stop pick(Kind kind, double start, double aim, double hardEnd, double within) {
         Stop best = null;
         double bestDistance = Double.POSITIVE_INFINITY;

@@ -106,6 +106,29 @@ public final class StopCutPolicyTest {
         write();
     }
 
+    /** User decision: Apprentissage 4–6 lines, Stabilisation 6–8, except a surah's last block. */
+    @Test public void boundedBlocksStayInsideTheirWindowExceptASurahsLast() {
+        double[][] windows = {{4, 5, 6}, {6, 7, 8}};
+        for (double[] window : windows) {
+            for (int surah = 2; surah <= 114; surah++) {
+                double start = geometry.firstLineIndex(new VerseRef(surah, 1));
+                double end = geometry.lastLineIndex(lastVerse(surah)) + 1;
+                int guard = 0;
+                while (end - start > 1e-6) {
+                    StopCutPolicy.Stop cut = policy.cutWithin(start, window[0], window[1], window[2], end);
+                    double size = cut.position - start;
+                    assertTrue("progress", size > 0);
+                    if (cut.position < end - 1e-9) {
+                        assertTrue(surah + ": " + size + " lines outside " + window[0] + "–" + window[2],
+                            size >= window[0] - 1e-6 && size <= window[2] + 1e-6);
+                    }
+                    start = cut.position;
+                    assertTrue(++guard < 1000);
+                }
+            }
+        }
+    }
+
     private static VerseRef lastVerse(int surah) {
         VerseRef v = new VerseRef(surah, 1);
         while (true) {
