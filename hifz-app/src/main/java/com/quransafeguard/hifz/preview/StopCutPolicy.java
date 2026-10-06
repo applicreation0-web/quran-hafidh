@@ -201,6 +201,13 @@ final class StopCutPolicy {
             return new Stop((int) Math.ceil(hardEnd) - 1, null, 0, Kind.LINE_END, hardEnd, Double.NEGATIVE_INFINITY);
         }
         double lo = start + min, hi = Math.min(start + max, hardEnd), aim = start + target;
+        // A surah's end inside the window always wins: a block never spills into the next surah
+        // when it can close the current one within its bounds.
+        for (int i = firstAtOrAfter(lo - 1e-9); i < stops.size(); i++) {
+            Stop stop = stops.get(i);
+            if (stop.position > hi + 1e-9) break;
+            if (stop.kind == Kind.ROSETTE && isSurahEnd(stop.verse)) return stop;
+        }
         for (Kind kind : new Kind[]{Kind.ROSETTE, Kind.RECOMMENDED, Kind.PERMITTED}) {
             Stop best = null;
             double bestDistance = Double.POSITIVE_INFINITY;
@@ -232,6 +239,12 @@ final class StopCutPolicy {
             if (distance < bestDistance) { best = stop; bestDistance = distance; }
         }
         return best;
+    }
+
+    private static boolean isSurahEnd(VerseRef verse) {
+        if (verse == null) return false;
+        VerseRef next = com.quransafeguard.hifz.core.QuranCanon.INSTANCE.next(verse);
+        return next == null || next.getSurah() != verse.getSurah();
     }
 
     private int firstAtOrAfter(double position) {
