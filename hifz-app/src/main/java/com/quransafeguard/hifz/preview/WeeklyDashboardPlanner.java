@@ -114,13 +114,17 @@ final class WeeklyDashboardPlanner {
                         ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(entry);
                         int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
                         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
-                        int blocks=plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE?1
-                            :Math.max(1,StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(owned)).size());
+                        boolean postNas=plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
+                        List<StabilizationHalfPagePolicy.Unit> planned=postNas||owned.isEmpty()
+                            ?Collections.<StabilizationHalfPagePolicy.Unit>emptyList()
+                            :StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(owned));
+                        int blocks=Math.max(1,planned.size());
                         int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                        String where=planned.isEmpty()?range(start,end):QuranSurahNames.block(geometry,planned.get(block).lineIds,range(start,end));
                         if(blocks>1){
-                            morning="Stabilisation · "+range(start,end)+" · bloc "+(block+1)+"/"+blocks+" · ×"+reps;
+                            morning="Stabilisation · bloc "+(block+1)+"/"+blocks+" · "+where+" · ×"+reps;
                         }else{
-                            morning="Stabilisation · "+range(start,end)+" · ×"+reps;
+                            morning="Stabilisation · "+where+" · ×"+reps;
                         }
                         block++;
                         if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}

@@ -56,6 +56,60 @@ final class QuranSurahNames {
             + name(start.getSurah()) + NBSP + start.getAyah() + "\u2069";
     }
 
+    /**
+     * Same Mushaf order, with a note glued to a partial end: "8 (début) ← 1 ق" when a block stops
+     * inside verse 8, "15 ← 8 (suite) ق" when it resumes one. A block inside a single verse is
+     * "282 البقرة (partie)".
+     */
+    static String range(com.quransafeguard.hifz.core.VerseRef start, boolean startIsContinuation,
+                        com.quransafeguard.hifz.core.VerseRef end, boolean endIsPartial) {
+        String startNote = startIsContinuation ? NBSP + "(suite)" : "";
+        String endNote = endIsPartial ? NBSP + "(début)" : "";
+        if (start.equals(end)) {
+            return startIsContinuation || endIsPartial ? verse(start) + NBSP + "(partie)" : verse(start);
+        }
+        if (start.getSurah() == end.getSurah()) {
+            return "\u2066" + end.getAyah() + endNote + NBSP + "←" + NBSP + start.getAyah() + startNote
+                + NBSP + name(start.getSurah()) + "\u2069";
+        }
+        return "\u2066" + name(end.getSurah()) + NBSP + end.getAyah() + endNote + NBSP + "←" + NBSP
+            + name(start.getSurah()) + NBSP + start.getAyah() + startNote + "\u2069";
+    }
+
+    /**
+     * User decision (option A): a Stabilisation block shows where it sits and what it holds —
+     * printed page and lines, then its verses with (début)/(suite) when a cut falls inside a
+     * verse: "p. 515 l. 9–15 · 4 ← 1 الحجرات". Lines unknown (pages 1–2) → page only.
+     */
+    static String block(GeometryRepository geometry, java.util.List<String> lineIds, String fallback) {
+        try {
+            return block(geometry, lineIds);
+        } catch (RuntimeException unavailable) {
+            return fallback;
+        }
+    }
+
+    static String block(GeometryRepository geometry, java.util.List<String> lineIds) {
+        java.util.List<GeometryRepository.LineMeta> lines = geometry.linesForExactIds(lineIds);
+        GeometryRepository.LineMeta first = lines.get(0), last = lines.get(lines.size() - 1);
+        com.quransafeguard.hifz.core.VerseRef from = first.verses.get(0);
+        com.quransafeguard.hifz.core.VerseRef to = last.verses.get(last.verses.size() - 1);
+        boolean continuation = geometry.firstLineIndex(from) < first.globalIndex;
+        boolean partial = geometry.lastLineIndex(to) > last.globalIndex;
+        return location(geometry, first, last) + " · " + range(from, continuation, to, partial);
+    }
+
+    private static String location(GeometryRepository geometry, GeometryRepository.LineMeta first,
+                                   GeometryRepository.LineMeta last) {
+        int a = geometry.printedLineNumber(first), b = geometry.printedLineNumber(last);
+        if (first.page == last.page) {
+            if (a < 0 || b < 0) return "p." + NBSP + first.page;
+            return "p." + NBSP + first.page + " l." + NBSP + (a == b ? "" + a : a + "–" + b);
+        }
+        if (a < 0 || b < 0) return "p." + NBSP + first.page + "–" + last.page;
+        return "p." + NBSP + first.page + " l." + NBSP + a + " – p." + NBSP + last.page + " l." + NBSP + b;
+    }
+
     /** One verse, Mushaf style: "16 البقرة". */
     static String verse(com.quransafeguard.hifz.core.VerseRef ref) {
         return "\u2066" + ref.getAyah() + NBSP + name(ref.getSurah()) + "\u2069";

@@ -211,6 +211,43 @@ public final class GeometryRepository {
 
     public int pageForVerse(VerseRef verse) { return lines.get(firstLineIndex(verse)).page; }
 
+    private final java.util.concurrent.ConcurrentHashMap<Integer, int[]> printedLines = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The line's number (1–15) on the printed 15-line Madani page, surah titles and basmala
+     * counted — the geometry stretches the line next to a title/basmala over that blank slot.
+     * Pages 1–2 (special layout) and any page whose slots do not check out (1..15, strictly
+     * increasing, ending at 15) return -1: the caller then shows the page alone.
+     */
+    public int printedLineNumber(LineMeta line) {
+        if (line == null || line.page < 3) return -1;
+        int[] slots = printedLines.computeIfAbsent(line.page, this::computePrintedLines);
+        return line.lineIndexOnPage < slots.length ? slots[line.lineIndexOnPage] : -1;
+    }
+
+    private int[] computePrintedLines(int page) {
+        final double top = 12.0, slot = (550.0 - top) / 15.0;
+        ArrayList<LineMeta> onPage = new ArrayList<>();
+        for (LineMeta line : lines) if (line.page == page) onPage.add(line);
+        int[] out = new int[onPage.size()];
+        int previous = 0;
+        for (int i = 0; i < onPage.size(); i++) {
+            LineMeta line = onPage.get(i);
+            if (line.lineIndexOnPage != i || line.verses.isEmpty()) return new int[0];
+            long span = Math.round((line.bottom - line.top) / slot);
+            VerseRef first = line.verses.get(0);
+            boolean startsSurah = first.getAyah() == 1
+                && (line.globalIndex == 0 || !lines.get(line.globalIndex - 1).verses.contains(first));
+            long number = span > 1 && startsSurah
+                ? Math.round((line.bottom - top) / slot)
+                : Math.round((line.top - top) / slot) + 1;
+            if (number <= previous || number > 15) return new int[0];
+            out[i] = (int) number;
+            previous = (int) number;
+        }
+        return previous == 15 ? out : new int[0];
+    }
+
     /** The surah printed at the top of the given page (its first physical line's surah). */
     public int firstSurahOnPage(int page) {
         for (LineMeta line : lines) if (line.page == page) return line.verses.get(0).getSurah();

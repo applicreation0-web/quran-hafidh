@@ -903,9 +903,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (fractionatedItqan) {
             VerseRef start = currentSelection.isEmpty() ? itqanUnit.start : currentSelection.get(0);
             VerseRef end = currentSelection.isEmpty() ? itqanUnit.end : currentSelection.get(currentSelection.size() - 1);
-            return "Stabilisation · "+QuranSurahNames.range(start,end)+" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · ×"+itqanTargetReps;
+            String where=QuranSurahNames.block(geometry,currentLineIds,QuranSurahNames.range(start,end));
+            return "Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+where+" · ×"+itqanTargetReps;
         }
-        return "Stabilisation · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)+" · ×"+itqanTargetReps
+        String unitRange=QuranSurahNames.range(itqanUnit.start,itqanUnit.end);
+        String where=itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
+            ?unitRange:QuranSurahNames.block(geometry,currentLineIds,unitRange);
+        return "Stabilisation · "+where+" · ×"+itqanTargetReps
             +(itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
                 ?" · entretien 1 hizb · "+ItqanMaintenancePolicy.VISIBLE_REPS+" lectures + "+ItqanMaintenancePolicy.ANCHOR_REPS+" avec ancrages":"")
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
