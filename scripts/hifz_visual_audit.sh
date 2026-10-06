@@ -113,6 +113,7 @@ audit_profile() {
   fi
 
   launch_home; shot home
+  tap text "Aujourd’hui" && { shot today-window; back; }
   tap text "Parcours Hifz" && shot parcours
   open_mode Apprentissage apprentissage
   open_mode Stabilisation stabilisation

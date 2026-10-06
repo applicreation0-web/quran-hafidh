@@ -29,6 +29,7 @@ public final class MainActivity extends android.app.Activity {
     private HifzSpeedStore speedStore;
     private DashboardLedger ledger;
     private volatile GeometryRepository geometry;
+    private WeeklyDashboardPlanner.Row todayRow;
     private boolean consolidationNeedsAttention;
     private boolean learningConsolidationNeedsAttention;
     private TextView today;
@@ -451,7 +452,93 @@ public final class MainActivity extends android.app.Activity {
         }
         if(mode==null)return;
         LocalDate scheduled=isTodayAnchoredMode(mode)?current:due.getScheduledDate();
-        openMode(mode,scheduled);
+        List<TodaySession> sessions;
+        try{ sessions=todaySessions(current,mode,scheduled); }
+        catch(RuntimeException error){ sessions=new ArrayList<>(); }
+        if(sessions.size()<=1){ openMode(mode,scheduled); return; }
+        showTodayWindow(sessions);
+    }
+
+    /** One session expected today, as the "Aujourd’hui" window lists it. */
+    static final class TodaySession {
+        final String label; final String mode; final LocalDate scheduled; final boolean done; final boolean next;
+        TodaySession(String label,String mode,LocalDate scheduled,boolean done,boolean next){
+            this.label=label;this.mode=mode;this.scheduled=scheduled;this.done=done;this.next=next;
+        }
+    }
+
+    /**
+     * User decision: "Aujourd’hui" usually holds several expected sessions (morning, evening
+     * snowball, Révision active, Entretien), so it opens a window listing all of them, in the
+     * order the day sequences them, each with its state; the next one due is marked. Only
+     * today's own cadence is listed (plus an overdue morning, if "Aujourd’hui" points to one).
+     */
+    private List<TodaySession> todaySessions(LocalDate today,String nextMode,LocalDate nextScheduled){
+        ArrayList<TodaySession> out=new ArrayList<>();
+        String todayStr=today.toString();
+        String morningDetail=todayRow!=null?stripDone(compactSession(todayRow.morning)):null;
+        if(nextScheduled!=null&&nextScheduled.isBefore(today)&&!isTodayAnchoredMode(nextMode)){
+            out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
+        }
+        CadenceAction action=HifzSchedule.INSTANCE.actionFor(today.getDayOfWeek(),effectiveLearningDaysPerWeek());
+        switch(action){
+            case LEARNING:
+                addToday(out,morningDetail!=null?morningDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
+                if(!prefs.learningConsolidationUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningSnowballEveningDate()))
+                    addToday(out,"Renforcement · boule de neige du soir",HifzSessionActivity.LEARNING_CONSOLIDATION,today,todayStr.equals(prefs.lastLearningSnowballEveningDate()),nextMode);
+                break;
+            case STABILIZATION:
+                addToday(out,morningDetail!=null?morningDetail:"Stabilisation",HifzSessionActivity.ITQAN,today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
+                if(!prefs.stabilizedConsolidationUnits(today).isEmpty()||todayStr.equals(prefs.lastStabilizationSnowballEveningDate()))
+                    addToday(out,"Consolidation · boule de neige du soir",HifzSessionActivity.RECENT_SABQI_REVIEW,today,todayStr.equals(prefs.lastStabilizationSnowballEveningDate()),nextMode);
+                break;
+            case REVISION:
+                if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
+                    addToday(out,"Renforcement · révision finale ×3",HifzSessionActivity.LEARNING_FINAL,today,learningFinalResolved(today),nextMode);
+                if(!prefs.stabilizationSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastRecentSabqiReviewDate()))
+                    addToday(out,"Consolidation · révision finale ×3",HifzSessionActivity.CONSOLIDATION_FINAL,today,consolidationFinalResolved(today),nextMode);
+                break;
+            default:break;
+        }
+        addToday(out,"Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
+        addToday(out,"Entretien"+entretienDetail(),HifzSessionActivity.MURAJAAH,today,todayStr.equals(prefs.lastMurajaahDate()),nextMode);
+        return out;
+    }
+
+    private void addToday(List<TodaySession> out,String label,String mode,LocalDate scheduled,boolean done,String nextMode){
+        for(TodaySession existing:out)if(existing.mode.equals(mode))return;
+        out.add(new TodaySession(label,mode,scheduled,done,!done&&mode.equals(nextMode)));
+    }
+
+    private String entretienDetail(){
+        if(todayRow==null||todayRow.evening==null)return "";
+        int at=todayRow.evening.indexOf("Entretien · ");
+        return at<0?"":" · "+todayRow.evening.substring(at+"Entretien · ".length());
+    }
+
+    private static String stripDone(String label){
+        return label!=null&&label.startsWith("✓ ")?label.substring(2):label;
+    }
+
+    private static String modeTitle(String mode){
+        if(HifzSessionActivity.SABQI.equals(mode))return "Apprentissage";
+        if(HifzSessionActivity.ITQAN.equals(mode))return "Stabilisation";
+        return "séance";
+    }
+
+    private void showTodayWindow(List<TodaySession> sessions){
+        String[] items=new String[sessions.size()];
+        for(int i=0;i<items.length;i++){
+            TodaySession s=sessions.get(i);
+            items[i]=(s.done?"✓ ":s.next?"▸ ":"   ")+s.label+" · "+(s.done?"fait":"à faire");
+        }
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Aujourd’hui")
+            .setItems(items,(dialog,which)->{
+                TodaySession s=sessions.get(which);
+                openMode(s.mode,s.scheduled);
+            })
+            .show();
     }
 
     private void refreshToday() {
@@ -544,7 +631,9 @@ public final class MainActivity extends android.app.Activity {
         List<WeeklyDashboardPlanner.Row> rows;
         try {
             rows = new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());
+            todayRow = rows.isEmpty() ? null : rows.get(0);
         } catch (RuntimeException error) {
+            todayRow = null;
             dashboard.removeAllViews();
             TextView unavailable = Ui.text(this, "Semaine indisponible", 10.8f, false);
             unavailable.setTextColor(Ui.MUTED);
