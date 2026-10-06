@@ -1501,7 +1501,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (start.getSurah() == end.getSurah()) {
             return "\u2067" + QuranSurahNames.name(start.getSurah()) + " " + start.getAyah() + " ← " + end.getAyah() + "\u2069";
         }
-        return "\u2067" + murajaahVerseLabel(start) + " ← " + murajaahVerseLabel(end) + "\u2069";
+        // User decision (option B): across surahs each end stays grouped as "name n°" (LRI … PDI).
+        return "\u2067\u2066" + murajaahVerseLabel(start) + "\u2069 ← \u2066" + murajaahVerseLabel(end) + "\u2069\u2069";
     }
 
     private String murajaahVerseLabel(VerseRef ref) {
