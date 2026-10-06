@@ -1207,19 +1207,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         List<MurajaahSegment> segments = murajaahSegments();
         int currentIndex = murajaahSegmentIndexForPage(segments, currentPage);
-        // Both corpus jumps stay available in Révision (passive and active): back to the start of
-        // the previous passage, forward to the next one. Navigation only — nothing is validated.
-        if (currentIndex > 0) {
-            VerseRef previousStart = segments.get(currentIndex - 1).start;
-            actions.addView(Ui.roundAction(this, "", "Passage précédent du corpus", v -> {
-                currentPage = geometry.pageForVerse(previousStart);
-                currentSelection = Collections.emptyList();
-                currentLineIds = active ? applyActiveLandmarks(currentPage) : Collections.emptyList();
-                showCurrent();
-                restoreMurajaahEndpointSelectionOnCurrentPage();
-                updateMurajaahActions();
-            }));
-        }
         VerseRef nextSegment = murajaahNextSegmentAfterPage(currentPage);
         if (nextSegment != null) {
             VerseRef jumpTarget = nextSegment;
@@ -1242,6 +1229,19 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             if (current != null && !validated && geometry.pageForVerse(current.end) == currentPage) {
                 mushaf.setSelection(Collections.singletonList(current.end), currentLineIds);
             }
+        }
+        // Both corpus jumps stay available in Révision (passive and active). Arabic-book order:
+        // "suivant" sits left, pointing left; "précédent" right, pointing right. Navigation only.
+        if (currentIndex > 0) {
+            VerseRef previousStart = segments.get(currentIndex - 1).start;
+            actions.addView(Ui.roundAction(this, "", "Passage précédent du corpus", v -> {
+                currentPage = geometry.pageForVerse(previousStart);
+                currentSelection = Collections.emptyList();
+                currentLineIds = active ? applyActiveLandmarks(currentPage) : Collections.emptyList();
+                showCurrent();
+                restoreMurajaahEndpointSelectionOnCurrentPage();
+                updateMurajaahActions();
+            }));
         }
         LinearLayout validateAction = Ui.roundAction(this, "", "Valider jusqu’ici", v -> finishMurajaah());
         murajaahFinishButton = (Button) validateAction.getChildAt(0);
@@ -1321,8 +1321,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef previous = segmentStart;
         for (int i = 1; i <= traversal.size(); i++) {
             VerseRef current = i < traversal.size() ? traversal.get(i) : null;
-            boolean contiguous = current != null
-                && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
+            boolean contiguous = current != null && MurajaahSegmentPolicy.continues(previous, current);
             if (!contiguous) {
                 segments.add(new MurajaahSegment(segmentStart, previous,
                     geometry.pageForVerse(segmentStart), geometry.pageForVerse(previous)));
@@ -1481,8 +1480,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef previous = segmentStart;
         for (int i = 1; i <= traversal.size(); i++) {
             VerseRef current = i < traversal.size() ? traversal.get(i) : null;
-            boolean contiguous = current != null
-                && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
+            boolean contiguous = current != null && MurajaahSegmentPolicy.continues(previous, current);
             if (!contiguous) {
                 if (label.length() > 0) label.append(" · puis ");
                 label.append(murajaahRangeLabel(segmentStart, previous));

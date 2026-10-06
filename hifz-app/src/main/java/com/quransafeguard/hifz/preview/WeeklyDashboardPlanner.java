@@ -188,7 +188,7 @@ final class WeeklyDashboardPlanner {
         VerseRef previous=segmentStart;
         for(int i=1;i<=traversal.size();i++){
             VerseRef current=i<traversal.size()?traversal.get(i):null;
-            boolean contiguous=current!=null&&GeometryRepository.ordinal(current)==GeometryRepository.ordinal(previous)+1;
+            boolean contiguous=current!=null&&MurajaahSegmentPolicy.continues(previous,current);
             if(!contiguous){
                 if(out.length()>0)out.append(" · puis ");
                 out.append(range(segmentStart,previous));

@@ -800,6 +800,8 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         assertTrue("it must resolve to its own icon before the generic pagination fallback",
             ui.contains("if (s.contains(\"passage suivant du corpus\")) return R.drawable.ic_ui_jump_next;"));
+        assertTrue("Arabic-book order: 'suivant' left of 'précédent'",
+            session.indexOf("\"Passage suivant du corpus\"") < session.indexOf("\"Passage précédent du corpus\""));
         assertTrue("Révision keeps both corpus jumps (spec UI pass 2: previous AND next)",
             session.contains("\"Passage précédent du corpus\"")
                 && ui.contains("if (s.contains(\"passage précédent du corpus\")) return R.drawable.ic_ui_jump_prev;"));
