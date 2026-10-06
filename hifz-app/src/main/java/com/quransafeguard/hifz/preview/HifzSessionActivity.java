@@ -259,6 +259,32 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             program.setText(displayModeName() + " · état à vérifier");
             progress.setText("La séance ne peut pas être affichée. Ouvrez Diagnostic si nécessaire.");
         }
+        if (sessionCompleted && !awaitingValidation) showClosingFatiha();
+    }
+
+    /**
+     * User decision: Al-Fātiḥa, whole and unmasked, is the default screen at the end of every
+     * session — read to close it, never part of the Révision loop. Shown only when its page holds
+     * exactly 1:1–1:7 (fail closed: otherwise the reader keeps its previous state).
+     */
+    private void showClosingFatiha() {
+        if (mushaf == null) return;
+        try {
+            int page = geometry.pageForVerse(new VerseRef(1, 1));
+            if (geometry.pageForVerse(new VerseRef(1, 7)) != page
+                    || geometry.pageForVerse(new VerseRef(2, 1)) == page) return;
+            hasShown = true;
+            currentPage = page;
+            currentSelection = Collections.emptyList();
+            currentLineIds = Collections.emptyList();
+            currentMask = 0;
+            mushaf.setLandmarkLines(null, null);
+            mushaf.clearSemanticCues();
+            mushaf.clearPageLandmarkBoxes();
+            mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0, false);
+        } catch (RuntimeException unavailable) {
+            android.util.Log.w("QuranHifz", "Closing Al-Fatiha unavailable", unavailable);
+        }
     }
 
     private void renderSabqi() {
@@ -1536,7 +1562,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     @Override public void onVerseTap(VerseRef verse){
-        if (!isMurajaahMode() || murajaahPlan == null) return;
+        if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted) return;
         if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
         EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
         if (!corpus.contains(verse)) {
@@ -1752,6 +1778,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
     @Override public void onReady(){
         if(StructuredSessionPolicy.shouldInitialReaderShow(hasShown, sessionCompleted))showCurrent();
+        else if(!hasShown&&sessionCompleted&&!awaitingValidation)showClosingFatiha();
     }
     @Override public void onError(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
     @Override public void onPageShown(int page){

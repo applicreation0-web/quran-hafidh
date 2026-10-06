@@ -1181,20 +1181,10 @@ public final class HifzPrefs {
      * from the daily Entretien / weekly Révision finale reading pool.
      */
     public EligibleCorpus murajaahCorpus() {
-        ArrayList<VerseRange> all = new ArrayList<>(progressionMurajaahRanges());
-        all.add(AL_FATIHA);
-        return EligibleCorpus.Companion.of(all);
+        return EligibleCorpus.Companion.of(progressionMurajaahRanges());
     }
 
-    /**
-     * User decision: the Révision cycle (passive and active) always opens with Al-Fātiḥa, so the
-     * wrap after the corpus's last verse comes back to 1:1, not to Al-Baqara. Al-Fātiḥa is read in
-     * Révision only: it is never Apprentissage/Stabilisation/Itqān material, never counted as
-     * progression and never used by the migration or the straddling-verse repair.
-     */
-    static final VerseRange AL_FATIHA = new VerseRange(new VerseRef(1, 1), new VerseRef(1, 7));
-
-    /** The Révision corpus as the progression engine built it, without the Al-Fātiḥa opening. */
+    /** The Révision corpus as the progression engine builds it. */
     private List<VerseRange> progressionMurajaahRanges() {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
@@ -1249,6 +1239,32 @@ public final class HifzPrefs {
         }
     }
 
+    /**
+     * User decision: Al-Fātiḥa is no longer part of the Révision loop (it is read whole at the end
+     * of every session instead). A passive or active cursor that 1.14/1.15 left inside Al-Fātiḥa
+     * moves to the corpus start — exactly where the loop would have continued — unless the
+     * learner's own ranges include Al-Fātiḥa. Idempotent; any failure leaves the data untouched.
+     */
+    public void releaseRevisionCursorsFromFatiha() {
+        try {
+            EligibleCorpus passive = murajaahCorpus();
+            VerseRef cursor = optionalRef("murajaahCursor");
+            if (cursor != null && cursor.getSurah() == 1 && !passive.contains(cursor)) {
+                setMurajaahCursor(passive.getRanges().get(0).getStart());
+            }
+            EligibleCorpus active = activeMurajaahCorpus();
+            String raw = p.getString("activeMurajaahCursor", "");
+            if (!raw.isEmpty()) {
+                VerseRef activeCursor = GeometryRepository.parseVerse(raw);
+                if (activeCursor.getSurah() == 1 && !active.contains(activeCursor)) {
+                    setActiveMurajaahCursor(active.getRanges().get(0).getStart());
+                }
+            }
+        } catch (RuntimeException unavailable) {
+            // leave the cursors as they are; the session screen already reports an invalid one
+        }
+    }
+
     /** Every promoted range that has already cleared Consolidation — "Pages promues" minus "À stabiliser". */
     public List<VerseRange> consolidatedPromotedRanges() {
         List<VerseRange> settled = new ArrayList<>(promotedRanges());
@@ -1269,7 +1285,6 @@ public final class HifzPrefs {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
         all.addAll(consolidatedPromotedRanges());
-        all.add(AL_FATIHA);
         return EligibleCorpus.Companion.of(all);
     }
 

@@ -52,6 +52,7 @@ public final class V6AcquiredBootstrapSourceContractTest {
             main.contains("GeometryRepository loaded = GeometryRepository.get(getApplicationContext());\n"
                 + "                prefs.reconcileV6AcquiredBootstrap(loaded);\n"
                 + "                prefs.repairStraddlingAcquiredVerses(loaded);\n"
+                + "                prefs.releaseRevisionCursorsFromFatiha();\n"
                 + "                prefs.currentAnchoringEntry(loaded);"));
     }
 }
