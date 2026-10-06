@@ -22,7 +22,17 @@ final class QuranSurahNames {
 
     private QuranSurahNames() {}
 
+    /**
+     * The Arabic name wrapped in Unicode bidi isolates (FSI … PDI). Device report: in the
+     * French (LTR) labels the verse numbers following an Arabic name were pulled into its
+     * right-to-left run ("objectif 81 → 1 البقرة" instead of "البقرة 1 → 81"). Isolated, the
+     * name stays right-to-left inside while the numbers around it keep their own order.
+     */
     static String name(int surah) {
+        return "\u2068" + rawName(surah) + "\u2069";
+    }
+
+    static String rawName(int surah) {
         if (surah < 1 || surah > 114) throw new IllegalArgumentException("invalid surah " + surah);
         return NAMES[surah - 1];
     }
