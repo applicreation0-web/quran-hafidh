@@ -412,7 +412,9 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String rangeLabel = method(session,
             "private String murajaahRangeLabel(", "private String murajaahVerseLabel(");
         assertTrue("a same-surah range must name the surah once, not repeat it for both ends",
-            rangeLabel.contains("QuranSurahNames.name(start.getSurah()) + \" \" + start.getAyah() + \" → \" + end.getAyah();"));
+            rangeLabel.contains("QuranSurahNames.name(start.getSurah()) + \" \" + start.getAyah() + \" ← \" + end.getAyah()"));
+        assertTrue("each passage reads right-to-left like the Mushaf (RLI … PDI, arrow toward An-Nās)",
+            rangeLabel.contains("return \"\\u2067\" + QuranSurahNames.name(start.getSurah())"));
         String objective = method(session,
             "private String murajaahObjectiveLabel() {", "/** \"2:1 → 2:74\"");
         assertFalse("must no longer build the label from bare VerseRef.toString() (\"2:74\")",
