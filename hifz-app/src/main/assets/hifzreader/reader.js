@@ -38,20 +38,6 @@ let pageLandmarkBoxes=Array.isArray(boot.pageLandmarkBoxes)?boot.pageLandmarkBox
  * it must NOT also narrow the mask pool down to that one verse's own shape.
  */
 let maskFollowsSelection=boot.maskFollowsSelection!==false;
-/*
- * Stop-aware cutting (user decision, step 2): a block may start or end inside a line, right after
- * a rosette or a waqf mark. lineCuts.start keeps, on its line, only the words read after the cut
- * (x <= start.x, Arabic reads right to left); lineCuts.end keeps only the words read before it
- * (x >= end.x). Absent cuts = whole lines, exactly as before.
- */
-let lineCuts=boot.lineCuts&&typeof boot.lineCuts==='object'?boot.lineCuts:null;
-function lineSpan(lineId){
-  let lo=-Infinity,hi=Infinity;
-  const id=String(lineId);
-  if(lineCuts&&lineCuts.start&&String(lineCuts.start.lineId)===id&&Number.isFinite(Number(lineCuts.start.x)))hi=Number(lineCuts.start.x);
-  if(lineCuts&&lineCuts.end&&String(lineCuts.end.lineId)===id&&Number.isFinite(Number(lineCuts.end.x)))lo=Number(lineCuts.end.x);
-  return {lo,hi};
-}
 let audioVerse=null;
 let maskOrderSignature='';
 let maskOrder=[];
@@ -363,9 +349,7 @@ function maskCandidates(lines,polys){
       if(range&&(ci<range.from||ci>=range.to))return;
       const key=lineId+':'+ci;
       if(semanticVisible.has(key))return;
-      const span=lineSpan(lineId);
-      const x0=Math.max(Number(cell[0]),span.lo),x1=Math.min(Number(cell[1]),span.hi);
-      if(!(x1>x0))return;
+      const x0=Number(cell[0]),x1=Number(cell[1]);
       if(polys.length&&!insideSelection(polys,(x0+x1)/2,(top+bottom)/2))return;
       out.push({key,lineId,index:ci,x0,x1,top,bottom});
     });
@@ -538,10 +522,8 @@ function markerLayer(svg,polys,lines){
     const pt=svg.createSVGPoint();pt.x=b.x+b.width/2;pt.y=b.y+b.height/2;
     const c=pt.matrixTransform(full);
     const inSelection=!polys.length||insideSelection(polys,c.x,c.y);
-    const inLines=!(lines||[]).length||(lines||[]).some(line=>{
-      if(!(c.y>=Number(line.top)&&c.y<=Number(line.bottom)))return false;
-      const span=lineSpan(line.id);return c.x>=span.lo&&c.x<=span.hi;
-    });
+    const inLines=!(lines||[]).length||(lines||[]).some(
+      line=>c.y>=Number(line.top)&&c.y<=Number(line.bottom));
     const visible=inSelection&&inLines;
     if(!visible)return;
     const wrap=document.createElementNS(NS,'g');
@@ -669,7 +651,6 @@ function focusContextLayer(svg,activeLines,polys){
     const cells=line.cells||[];if(!cells.length)return;
     let x0=Infinity,x1=-Infinity;
     cells.forEach(cell=>{x0=Math.min(x0,Number(cell[0]));x1=Math.max(x1,Number(cell[1]));});
-    const span=lineSpan(line.id);x0=Math.max(x0,span.lo);x1=Math.min(x1,span.hi);
     const top=Number(line.top),bottom=Number(line.bottom);
     if(!Number.isFinite(x0)||!Number.isFinite(x1)||!Number.isFinite(top)||!Number.isFinite(bottom)||x1<=x0||bottom<=top)return;
     const rect=document.createElementNS(NS,'rect');
@@ -911,7 +892,6 @@ window.HifzReader={
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
-  setLineCuts(cuts){lineCuts=cuts&&typeof cuts==='object'?cuts:null;render()},
   setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
   setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
   setMaskFollowsSelection(value){maskFollowsSelection=!!value;render()},

@@ -41,12 +41,9 @@ final class StopCutPolicy {
         final int afterWord;
         final Kind kind;
         final double position;
-        /** Page x where the line is cut (step 2): everything right of it is read before the stop. */
-        final double x;
 
-        Stop(int line, VerseRef verse, int afterWord, Kind kind, double position, double x) {
+        Stop(int line, VerseRef verse, int afterWord, Kind kind, double position) {
             this.line = line; this.verse = verse; this.afterWord = afterWord; this.kind = kind; this.position = position;
-            this.x = x;
         }
 
         @Override public String toString() { return kind + "@" + verse + ":" + afterWord + "(" + position + ")"; }
@@ -134,16 +131,7 @@ final class StopCutPolicy {
             if (width <= 0) continue;
             boolean lastOnLine = w.x0 <= left[i] + 0.5;
             double share = lastOnLine ? 1.0 : Math.max(0.0, Math.min(1.0, (right[i] - w.x0) / width));
-            // The cut sits just right of the next word read on this line, so a rosette or waqf
-            // sign drawn between the two words stays with the block that ends here.
-            double nextRight = Double.NEGATIVE_INFINITY;
-            for (WordGeometryRepository.WordBox other : pageWords) {
-                Integer otherLine = lineOf.get(other.key);
-                if (otherLine == null || otherLine != i || other == w || other.x1 > w.x0 + 0.5) continue;
-                nextRight = Math.max(nextRight, other.x1);
-            }
-            double cutX = lastOnLine || nextRight == Double.NEGATIVE_INFINITY ? left[i] - 1.0 : nextRight + 0.6;
-            out.add(new Stop(firstLine + i, verse, w.word, kind, firstLine + i + share, cutX));
+            out.add(new Stop(firstLine + i, verse, w.word, kind, firstLine + i + share));
         }
         return out;
     }
@@ -186,7 +174,7 @@ final class StopCutPolicy {
         if (best == null) best = pick(Kind.ROSETTE, start, aim, hardEnd, MAX_DEVIATION);
         if (best != null) return best;
         double lineEnd = Math.min(hardEnd, Math.max(Math.floor(start) + 1, Math.round(aim)));
-        return new Stop((int) lineEnd - 1, null, 0, Kind.LINE_END, lineEnd, Double.NEGATIVE_INFINITY);
+        return new Stop((int) lineEnd - 1, null, 0, Kind.LINE_END, lineEnd);
     }
 
     private Stop pick(Kind kind, double start, double aim, double hardEnd, double within) {

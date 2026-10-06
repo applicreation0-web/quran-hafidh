@@ -62,8 +62,6 @@ public final class MushafView extends WebView {
     private boolean lastContextFocus;
     private List<VerseRef> currentHighlights = Collections.emptyList();
     private String landmarkStartLineId;
-    /** Stop-aware cutting (step 2): {start:{lineId,x}, end:{lineId,x}} or null for whole lines. */
-    private JSONObject lineCuts;
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
     private JSONArray pageLandmarkBoxes = new JSONArray();
@@ -211,7 +209,6 @@ public final class MushafView extends WebView {
                 .put("highlights", highlights)
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
-                .put("lineCuts", lineCuts == null ? JSONObject.NULL : lineCuts)
                 .put("maskFollowsSelection", maskFollowsSelection)
                 .put("semanticCues", semanticCues)
                 .put("semanticAnchorMaskMode", semanticAnchorMaskMode)
@@ -280,30 +277,6 @@ public final class MushafView extends WebView {
      * the other half of that same line still masks normally. Pass null for either id to clear it
      * (e.g. a single-line page has no separate start/end).
      */
-    /**
-     * Stop-aware cutting (user decision, step 2): the block starts and/or ends inside a line, right
-     * after a rosette or a waqf mark. On {@code startLineId} only the words left of {@code startX}
-     * (read after the cut) belong to the block; on {@code endLineId} only the words right of
-     * {@code endX}. Null ids clear that side; both null = whole lines, as before.
-     */
-    public void setLineCuts(String startLineId, double startX, String endLineId, double endX) {
-        JSONObject cuts = null;
-        try {
-            if (startLineId != null || endLineId != null) {
-                cuts = new JSONObject();
-                if (startLineId != null) cuts.put("start", new JSONObject().put("lineId", startLineId).put("x", startX));
-                if (endLineId != null) cuts.put("end", new JSONObject().put("lineId", endLineId).put("x", endX));
-            }
-        } catch (org.json.JSONException impossible) {
-            cuts = null;
-        }
-        lineCuts = cuts;
-        String arg = cuts == null ? "null" : cuts.toString();
-        runWhenReady(() -> evaluateJavascript(
-            "window.HifzReader&&window.HifzReader.setLineCuts(" + arg + ");",
-            ignored -> post(() -> eink.local(this, prefs))));
-    }
-
     public void setLandmarkLines(String startLineId, String endLineId) {
         landmarkStartLineId = startLineId;
         landmarkEndLineId = endLineId;
