@@ -51,6 +51,7 @@ public final class V6AcquiredBootstrapSourceContractTest {
         assertTrue("must run before the anchoring selection that also needs this same geometry",
             main.contains("GeometryRepository loaded = GeometryRepository.get(getApplicationContext());\n"
                 + "                prefs.reconcileV6AcquiredBootstrap(loaded);\n"
+                + "                prefs.repairStraddlingAcquiredVerses(loaded);\n"
                 + "                prefs.currentAnchoringEntry(loaded);"));
     }
 }

@@ -1321,7 +1321,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef previous = segmentStart;
         for (int i = 1; i <= traversal.size(); i++) {
             VerseRef current = i < traversal.size() ? traversal.get(i) : null;
-            boolean contiguous = current != null && MurajaahSegmentPolicy.continues(previous, current);
+            boolean contiguous = current != null
+                && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
             if (!contiguous) {
                 segments.add(new MurajaahSegment(segmentStart, previous,
                     geometry.pageForVerse(segmentStart), geometry.pageForVerse(previous)));
@@ -1480,7 +1481,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef previous = segmentStart;
         for (int i = 1; i <= traversal.size(); i++) {
             VerseRef current = i < traversal.size() ? traversal.get(i) : null;
-            boolean contiguous = current != null && MurajaahSegmentPolicy.continues(previous, current);
+            boolean contiguous = current != null
+                && GeometryRepository.ordinal(current) == GeometryRepository.ordinal(previous) + 1;
             if (!contiguous) {
                 if (label.length() > 0) label.append(" · puis ");
                 label.append(murajaahRangeLabel(segmentStart, previous));

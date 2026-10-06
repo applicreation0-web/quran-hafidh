@@ -271,6 +271,47 @@ public final class GeometryRepository {
         return complete;
     }
 
+    /**
+     * Every verse touching lines [startLineIndex..endLineIndex] whose whole physical extent lies on
+     * credited lines — including a verse that straddles into an earlier, already credited block.
+     */
+    public List<VerseRef> versesFullyCredited(int startLineIndex, int endLineIndex, java.util.Set<String> credited) {
+        if (startLineIndex < 0 || endLineIndex >= lines.size() || endLineIndex < startLineIndex) {
+            throw new IllegalArgumentException("Invalid credited line interval " + startLineIndex + ".." + endLineIndex);
+        }
+        LinkedHashSet<VerseRef> candidates = new LinkedHashSet<>();
+        for (int i = startLineIndex; i <= endLineIndex; i++) candidates.addAll(lines.get(i).verses);
+        ArrayList<VerseRef> complete = new ArrayList<>();
+        for (VerseRef verse : candidates) {
+            if (allLinesCredited(firstLineIndex(verse), lastLineIndex(verse), credited)) complete.add(verse);
+        }
+        complete.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return complete;
+    }
+
+    /** Every verse of the Mushaf whose whole physical extent lies on credited lines (one pass). */
+    public List<VerseRef> allVersesFullyCredited(java.util.Set<String> credited) {
+        java.util.LinkedHashMap<VerseRef, int[]> extent = new java.util.LinkedHashMap<>();
+        for (LineMeta line : lines) {
+            for (VerseRef verse : line.verses) {
+                int[] span = extent.get(verse);
+                if (span == null) extent.put(verse, new int[] {line.globalIndex, line.globalIndex});
+                else span[1] = line.globalIndex;
+            }
+        }
+        ArrayList<VerseRef> complete = new ArrayList<>();
+        for (java.util.Map.Entry<VerseRef, int[]> entry : extent.entrySet()) {
+            if (allLinesCredited(entry.getValue()[0], entry.getValue()[1], credited)) complete.add(entry.getKey());
+        }
+        complete.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return complete;
+    }
+
+    private boolean allLinesCredited(int first, int last, java.util.Set<String> credited) {
+        for (int i = first; i <= last; i++) if (!credited.contains(lines.get(i).id)) return false;
+        return true;
+    }
+
     /** Count physical Mushaf lines touched by a non-wrapping canonical verse interval. */
     public int lineCountForVerseRange(VerseRef start, VerseRef end) {
         if (ordinal(end) < ordinal(start)) throw new IllegalArgumentException("Wrapped range not supported for calibration");

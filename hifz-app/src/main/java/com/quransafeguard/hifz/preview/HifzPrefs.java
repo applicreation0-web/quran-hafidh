@@ -1191,6 +1191,35 @@ public final class HifzPrefs {
     public boolean isMurajaahCursorValid() { try { return murajaahCorpus().contains(murajaahCursor()); } catch (RuntimeException e) { return false; } }
     public boolean isRotationStartValid() { try { return itqanWorkCorpus().contains(itqanRotationStart()); } catch (RuntimeException e) { return false; } }
 
+    /**
+     * One-time-safe repair (idempotent) for data written before straddling verses were promoted:
+     * every verse whose lines are all ACQUIRED but which is missing from the Révision corpus joins
+     * the promoted (already consolidated) ranges. Never removes or downgrades anything.
+     */
+    public boolean repairStraddlingAcquiredVerses(GeometryRepository geometry) {
+        if (geometry == null) return false;
+        synchronized (V6_STATE_LOCK) {
+            LinkedHashSet<String> acquired;
+            EligibleCorpus corpus;
+            try {
+                acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+                corpus = murajaahCorpus();
+            } catch (RuntimeException unavailable) {
+                return false;
+            }
+            if (acquired.isEmpty()) return true;
+            ArrayList<VerseRef> missing = new ArrayList<>();
+            for (VerseRef verse : geometry.allVersesFullyCredited(acquired)) if (!corpus.contains(verse)) missing.add(verse);
+            if (missing.isEmpty()) return true;
+            ArrayList<VerseRange> all = new ArrayList<>(promotedRanges());
+            all.addAll(rangesFromVerses(missing));
+            return p.edit()
+                .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(all)))
+                .putBoolean("anchoringQueueInitialized", false)
+                .commit();
+        }
+    }
+
     /** Every promoted range that has already cleared Consolidation — "Pages promues" minus "À stabiliser". */
     public List<VerseRange> consolidatedPromotedRanges() {
         List<VerseRange> settled = new ArrayList<>(promotedRanges());
@@ -2955,8 +2984,16 @@ public final class HifzPrefs {
                 int startLine = physical.get(0).globalIndex;
                 int endLine = physical.get(physical.size() - 1).globalIndex;
                 processed.add(new RecentSabqi(startLine, endLine));
-                versesToPromote.addAll(geometry.versesFullyCoveredByLines(startLine, endLine));
             }
+            // Device report (2:82, 2:85 missing from Révision although acquired): a verse that
+            // straddles two Renforcement units was fully covered by neither, so it was never
+            // promoted. Promote every verse touching these units whose lines are all acquired now,
+            // the earlier unit's lines included.
+            LinkedHashSet<VerseRef> promotable = new LinkedHashSet<>();
+            for (RecentSabqi unit : processed) {
+                promotable.addAll(geometry.versesFullyCredited(unit.startLine, unit.endLine, acquired));
+            }
+            versesToPromote.addAll(promotable);
 
             List<RecentSabqi> remaining = withoutRecentBlocks(recentSabqi(), processed);
 
