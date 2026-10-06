@@ -140,16 +140,19 @@ final class Ui {
         LinearLayout row = row(context);
         row.setPadding(dp(context, 2), dp(context, 5), dp(context, 2), dp(context, 5));
         row.setMinimumHeight(dp(context, 48));
+        // Device report (phone): a long value ("Stabilisation · bloc 1/3 · p. 515 …") took the
+        // whole width and squeezed the label into one letter-column ("Auj/our/d'h/ui"). The label
+        // keeps its natural width (up to half the screen); the value takes the rest and wraps.
         TextView name = text(context, label, 13f, false);
-        Ui.weight(name, 1f);
         name.setPadding(dp(context, 4), 0, dp(context, 6), 0);
-        row.addView(name);
+        name.setMaxWidth(context.getResources().getDisplayMetrics().widthPixels / 2);
+        row.addView(name, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView current = text(context, value == null ? "" : value, 12f, false);
         current.setTextColor(MUTED);
         current.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        current.setMaxLines(2);
-        row.addView(current, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        current.setMaxLines(3);
+        row.addView(current, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         if (listener != null) {
             TextView chevron = text(context, "›", 20f, false);
             chevron.setTextColor(MUTED);

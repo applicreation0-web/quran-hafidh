@@ -642,7 +642,7 @@ public final class MainActivity extends android.app.Activity {
             WeeklyDashboardPlanner.Row item = rows.get(i);
             LinearLayout row = Ui.row(this);
             row.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
-            addCell(row, item.day, 0.62f, true, true);
+            addCell(row, "Aujourd’hui".equals(item.day) ? "Auj." : item.day, 0.62f, true, true);
             addCell(row, compactSession(item.morning), 2.05f, false, false);
             addCell(row, compactSession(item.evening), 2.05f, false, false);
             addCell(row, compactState(item.state), 1.05f, false, false);
