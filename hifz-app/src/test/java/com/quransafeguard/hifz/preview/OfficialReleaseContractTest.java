@@ -138,7 +138,7 @@ public final class OfficialReleaseContractTest {
 
     @Test public void officialVersionIsIncremented() throws Exception {
         String gradle = read("hifz-app/build.gradle.kts");
-        assertTrue("1.13 must increment versionCode beyond published 1.12 (33)", gradle.contains("versionCode = 34"));
-        assertTrue("official candidate must identify the Quran Haafidh 1.13 release", gradle.contains("versionName = \"1.13\""));
+        assertTrue("1.14 must increment versionCode beyond published 1.13 (34)", gradle.contains("versionCode = 35"));
+        assertTrue("official candidate must identify the Quran Haafidh 1.14 release", gradle.contains("versionName = \"1.14\""));
     }
 }
