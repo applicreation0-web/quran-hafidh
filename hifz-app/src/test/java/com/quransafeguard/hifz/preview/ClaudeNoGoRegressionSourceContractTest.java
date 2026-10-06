@@ -416,7 +416,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("each passage reads right-to-left like the Mushaf (RLI … PDI, arrow toward An-Nās)",
             rangeLabel.contains("return \"\\u2067\" + QuranSurahNames.name(start.getSurah())"));
         String objective = method(session,
-            "private String murajaahObjectiveLabel() {", "/** \"2:1 → 2:74\"");
+            "private String murajaahObjectiveLabel() {", "private String murajaahRangeLabel(");
         assertFalse("must no longer build the label from bare VerseRef.toString() (\"2:74\")",
             objective.contains("label.append(segmentStart).append(\" → \").append(previous);"));
         assertTrue("must delegate every segment's range to the surah-name-aware formatter",

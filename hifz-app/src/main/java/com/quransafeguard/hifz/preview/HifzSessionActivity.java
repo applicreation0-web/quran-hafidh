@@ -1493,7 +1493,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         return label.toString();
     }
 
-    /** "2:1 → 2:74" read as surah numbers; the surah name is clearer and only needs repeating when it changes. */
     /**
      * User decision: each passage reads right-to-left like the Mushaf ("88 ← 1 البقرة"): the
      * range is a right-to-left isolate (RLI … PDI) and the arrow points left, toward An-Nās.
