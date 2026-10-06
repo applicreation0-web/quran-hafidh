@@ -147,7 +147,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
 
     private void updateSelectionLabel(){
         if(start==null||end==null) selection.setText("Touchez un verset pour choisir le passage.");
-        else selection.setText("Passage "+start+" → "+end+" · masque "+mask+" %");
+        else selection.setText("Passage "+QuranSurahNames.range(start,end)+" · masque "+mask+" %");
     }
 
     private void updateMaskButtons() {

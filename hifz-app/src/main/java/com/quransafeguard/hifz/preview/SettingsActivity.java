@@ -339,7 +339,7 @@ public final class SettingsActivity extends android.app.Activity {
         for(int i=0;i<ranges.size();i++){
             final int index=i;VerseRange range=ranges.get(i);LinearLayout row=Ui.row(this);row.setMinimumHeight(Ui.dp(this,46));
             TextView label=Ui.text(this,"Plage "+(i+1),12.5f,true);label.setPadding(Ui.dp(this,4),0,Ui.dp(this,6),0);row.addView(label);
-            TextView value=Ui.text(this,range.getStart()+" → "+range.getEndInclusive(),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
+            TextView value=Ui.text(this,QuranSurahNames.range(range.getStart(),range.getEndInclusive()),11.5f,false);value.setTextColor(Ui.MUTED);Ui.weight(value,1);row.addView(value);
             row.addView(Ui.iconButton(this,"","Modifier la plage",v->{if(stabilization)chooseStabilizationRange(range,index);else chooseAcquiredRange(range,index);}));
             row.addView(Ui.iconButton(this,"","Supprimer la plage",v->{if(stabilization)removeStabilizationRange(index);else removeAcquiredRange(index);}));box.addView(row);
             if(i+1<ranges.size())box.addView(Ui.divider(this));
@@ -365,7 +365,7 @@ public final class SettingsActivity extends android.app.Activity {
     private void removeStabilizationRange(int index){
         ArrayList<VerseRange> ranges=new ArrayList<>(prefs.unconsolidatedPromotedRanges());
         VerseRange target=ranges.get(index);
-        new AlertDialog.Builder(this).setTitle("Supprimer cette plage à stabiliser ?").setMessage(target.getStart()+" → "+target.getEndInclusive())
+        new AlertDialog.Builder(this).setTitle("Supprimer cette plage à stabiliser ?").setMessage(QuranSurahNames.range(target.getStart(),target.getEndInclusive()))
             .setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{ranges.remove(index);saveV6Ranges(ranges,true);}).show();
     }
 
@@ -373,7 +373,7 @@ public final class SettingsActivity extends android.app.Activity {
         ArrayList<VerseRange> ranges=new ArrayList<>(prefs.itqanRanges());
         if(ranges.size()<=1){Toast.makeText(this,"Au moins une plage Acquise doit rester définie.",Toast.LENGTH_LONG).show();return;}
         VerseRange target=ranges.get(index);
-        new AlertDialog.Builder(this).setTitle("Supprimer cette plage Acquise ?").setMessage(target.getStart()+" → "+target.getEndInclusive())
+        new AlertDialog.Builder(this).setTitle("Supprimer cette plage Acquise ?").setMessage(QuranSurahNames.range(target.getStart(),target.getEndInclusive()))
             .setNegativeButton("Annuler",null).setPositiveButton("Supprimer",(d,w)->{ranges.remove(index);saveV6Ranges(ranges,false);}).show();
     }
 
@@ -480,7 +480,7 @@ public final class SettingsActivity extends android.app.Activity {
         for(int i=0;i<ranges.size();i++){
             if(i>0)out.append("  ·  ");
             VerseRange r=ranges.get(i);
-            out.append(r.getStart()).append(" → ").append(r.getEndInclusive());
+            out.append(QuranSurahNames.range(r.getStart(),r.getEndInclusive()));
         }
         return out.toString();
     }

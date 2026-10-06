@@ -411,12 +411,13 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String rangeLabel = method(session,
             "private String murajaahRangeLabel(", "private String murajaahVerseLabel(");
-        assertTrue("a same-surah range must name the surah once, not repeat it for both ends",
-            rangeLabel.contains("QuranSurahNames.name(start.getSurah()) + \" \" + start.getAyah() + \" ← \" + end.getAyah()"));
-        assertTrue("each passage reads right-to-left like the Mushaf (RLI … PDI, arrow toward An-Nās)",
-            rangeLabel.contains("return \"\\u2067\" + QuranSurahNames.name(start.getSurah())"));
+        assertTrue("every range goes through the shared Mushaf-style formatter",
+            rangeLabel.contains("return QuranSurahNames.range(start, end);"));
+        String names = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranSurahNames.java");
+        assertTrue("a same-surah range names the surah once and reads right-to-left (RLI, arrow toward An-Nās)",
+            names.contains("return \"\\u2067\" + name(start.getSurah()) + \" \" + start.getAyah() + \" ← \" + end.getAyah() + \"\\u2069\";"));
         assertTrue("across surahs each end stays grouped as \"name n°\" (option B: LRI per end inside the RLI)",
-            rangeLabel.contains("return \"\\u2067\\u2066\" + murajaahVerseLabel(start) + \"\\u2069 ← \\u2066\" + murajaahVerseLabel(end) + \"\\u2069\\u2069\";"));
+            names.contains("return \"\\u2067\\u2066\" + name(start.getSurah()) + \" \" + start.getAyah() + \"\\u2069 ← \\u2066\""));
         String objective = method(session,
             "private String murajaahObjectiveLabel() {", "private String murajaahRangeLabel(");
         assertFalse("must no longer build the label from bare VerseRef.toString() (\"2:74\")",

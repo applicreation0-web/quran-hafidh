@@ -37,6 +37,26 @@ final class QuranSurahNames {
         return NAMES[surah - 1];
     }
 
+    /**
+     * User decision ("tout en arabe"): every verse range reads like the Mushaf, right-to-left
+     * with the arrow toward An-Nās — "88 ← 1 البقرة" inside one surah, and across surahs each
+     * end grouped "name n°" ("الذاريات 37 ← الحجرات 1", option B). RLI … PDI keeps the whole
+     * range right-to-left inside French text; LRI … PDI keeps each cross-surah end together.
+     */
+    static String range(com.quransafeguard.hifz.core.VerseRef start, com.quransafeguard.hifz.core.VerseRef end) {
+        if (start.getSurah() == end.getSurah()) {
+            if (start.getAyah() == end.getAyah()) return verse(start);
+            return "\u2067" + name(start.getSurah()) + " " + start.getAyah() + " ← " + end.getAyah() + "\u2069";
+        }
+        return "\u2067\u2066" + name(start.getSurah()) + " " + start.getAyah() + "\u2069 ← \u2066"
+            + name(end.getSurah()) + " " + end.getAyah() + "\u2069\u2069";
+    }
+
+    /** One verse, Mushaf style: "16 البقرة" (right-to-left isolate). */
+    static String verse(com.quransafeguard.hifz.core.VerseRef ref) {
+        return "\u2067" + name(ref.getSurah()) + " " + ref.getAyah() + "\u2069";
+    }
+
     static String labelFor(int surah) {
         return surah + " · " + name(surah);
     }

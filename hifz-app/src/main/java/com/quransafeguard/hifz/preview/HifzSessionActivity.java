@@ -276,7 +276,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (cursor < startLimit || cursor > endLimit) {
             sessionCompleted = true;
             program.setText("Apprentissage · curseur à repositionner");
-            progress.setText(prefs.sabqiStart() + " → " + prefs.sabqiEnd());
+            progress.setText(QuranSurahNames.range(prefs.sabqiStart(), prefs.sabqiEnd()));
             return;
         }
         if (cursor + PreviewConfig.SABQI_LINES - 1 > endLimit) {
@@ -877,9 +877,9 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (fractionatedItqan) {
             VerseRef start = currentSelection.isEmpty() ? itqanUnit.start : currentSelection.get(0);
             VerseRef end = currentSelection.isEmpty() ? itqanUnit.end : currentSelection.get(currentSelection.size() - 1);
-            return "Stabilisation · "+start+" → "+end+" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · ×"+itqanTargetReps;
+            return "Stabilisation · "+QuranSurahNames.range(start,end)+" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · ×"+itqanTargetReps;
         }
-        return "Stabilisation · "+itqanUnit.start+" → "+itqanUnit.end+" · ×"+itqanTargetReps
+        return "Stabilisation · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)+" · ×"+itqanTargetReps
             +(itqanRegime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE
                 ?" · entretien 1 hizb · "+ItqanMaintenancePolicy.VISIBLE_REPS+" lectures + "+ItqanMaintenancePolicy.ANCHOR_REPS+" avec ancrages":"")
             +(anchoringEntry.origin==AnchoringQueue.Origin.FORCED_PROMOTION?" · promotion de sécurité":"");
@@ -1027,7 +1027,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean finalBlock = nextBlock >= itqanBlockCount;
         EligibleCorpus corpus = prefs.itqanWorkCorpus();
         VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart());
-        metricsStore.recordAnchoring("Stabilisation fragment auto-validé · "+itqanUnit.start+" → "+itqanUnit.end
+        metricsStore.recordAnchoring("Stabilisation fragment auto-validé · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
             +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+anchoringInstrumentation());
         if (!prefs.completeItqanTinyBlockV6(currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next)) {
             onError("Impossible de créditer directement ce fragment de Stabilisation.");
@@ -1053,7 +1053,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef next = corpus.nextAnchored(itqanUnit.end, prefs.repairedItqanRotationStart());
         String label="Stabilisation · bloc "+(itqanBlockIndex+1)+"/"+itqanBlockCount
             +" validé · révélations "+prefs.itqanAssisted()+" · "+metrics;
-        metricsStore.recordAnchoring("Stabilisation réussie · "+itqanUnit.start+" → "+itqanUnit.end
+        metricsStore.recordAnchoring("Stabilisation réussie · "+QuranSurahNames.range(itqanUnit.start,itqanUnit.end)
             +" · "+(itqanBlockIndex+1)+"/"+itqanBlockCount+" · "+metrics);
         List<String> bonusLineIds = itqanBonusDecision != null
                 && itqanBonusDecision.decision == ItqanPlanSnapshot.Decision.EXTEND
@@ -1395,8 +1395,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         VerseRef next = corpus.next(murajaahActualEnd);
         if (active) {
             advanceWeakVerseStreaksForActiveSession(corpus);
-            String label = "Révision active · testé : " + murajaahPlan.start + " → " + murajaahActualEnd
-                + " · prochain curseur " + next + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
+            String label = "Révision active · testé : " + QuranSurahNames.range(murajaahPlan.start, murajaahActualEnd)
+                + " · prochain curseur " + QuranSurahNames.verse(next) + " · " + lines + "L/" + Math.max(0L, elapsed / 1000L) + "s";
             if (!prefs.completeActiveMurajaah(next, sessionDate.toString(), label)) {
                 onError("Impossible d’enregistrer la validation de la Révision active.");
                 return;
@@ -1405,8 +1405,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             SpeedCalibration.Result calibration = speedStore.calibrateMaintenance(lines, elapsed);
             String raw = HifzSpeedStore.instrumentationLabel(lines, elapsed, calibration);
             if (calibration.status == SpeedCalibration.Status.ATYPICAL) raw += "·atyp";
-            String label = "Révision · réel : " + murajaahPlan.start + " → " + murajaahActualEnd
-                + " · prochain curseur " + next + " · " + raw;
+            String label = "Révision · réel : " + QuranSurahNames.range(murajaahPlan.start, murajaahActualEnd)
+                + " · prochain curseur " + QuranSurahNames.verse(next) + " · " + raw;
             if (!prefs.completeMurajaah(next, murajaahPlan.start, murajaahActualEnd, sessionDate.toString(), label)) {
                 onError("Impossible d’enregistrer la validation de la Révision.");
                 return;
@@ -1498,11 +1498,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      * range is a right-to-left isolate (RLI … PDI) and the arrow points left, toward An-Nās.
      */
     private String murajaahRangeLabel(VerseRef start, VerseRef end) {
-        if (start.getSurah() == end.getSurah()) {
-            return "\u2067" + QuranSurahNames.name(start.getSurah()) + " " + start.getAyah() + " ← " + end.getAyah() + "\u2069";
-        }
-        // User decision (option B): across surahs each end stays grouped as "name n°" (LRI … PDI).
-        return "\u2067\u2066" + murajaahVerseLabel(start) + "\u2069 ← \u2066" + murajaahVerseLabel(end) + "\u2069\u2069";
+        return QuranSurahNames.range(start, end);
     }
 
     private String murajaahVerseLabel(VerseRef ref) {

@@ -213,8 +213,7 @@ final class WeeklyDashboardPlanner {
     }
 
     private static String range(VerseRef a,VerseRef b){
-        if(a.getSurah()==b.getSurah())return "Sourate "+a.getSurah()+" · v."+a.getAyah()+"–"+b.getAyah();
-        return "Sourate "+a.getSurah()+" v."+a.getAyah()+" → Sourate "+b.getSurah()+" v."+b.getAyah();
+        return QuranSurahNames.range(a,b);
     }
 
     private static String compact(String label){

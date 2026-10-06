@@ -585,8 +585,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private static String shortRange(VerseRef a, VerseRef b) {
-        if (a.getSurah() == b.getSurah()) return a.getSurah() + ":" + a.getAyah() + "–" + b.getAyah();
-        return a.getSurah() + ":" + a.getAyah() + " → " + b.getSurah() + ":" + b.getAyah();
+        return QuranSurahNames.range(a, b);
     }
 
     @Override protected void onDestroy() {

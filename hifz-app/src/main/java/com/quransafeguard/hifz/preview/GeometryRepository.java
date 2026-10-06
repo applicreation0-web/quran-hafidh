@@ -74,8 +74,7 @@ public final class GeometryRepository {
 
         public String verseLabel() {
             String prefix = startsInsideVerse ? "suite de " : "";
-            String end = endVerse.toString() + (endsInsideVerse ? " (partiel)" : "");
-            return prefix + startVerse + " → " + end;
+            return prefix + QuranSurahNames.range(startVerse, endVerse) + (endsInsideVerse ? " (partiel)" : "");
         }
     }
 
