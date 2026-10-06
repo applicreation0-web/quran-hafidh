@@ -37,6 +37,7 @@ lines = SOURCE.read_text(encoding='utf-8').splitlines()
 assert len(lines) == 6236, f'expected 6236 verse lines, got {len(lines)}'
 
 waqf = {}
+word_counts = {}
 i = 0
 for surah, verse_count in enumerate(COUNTS, start=1):
     for ayah in range(1, verse_count + 1):
@@ -46,7 +47,10 @@ for surah, verse_count in enumerate(COUNTS, start=1):
                  for wi, w in enumerate(words) for ch in w if ch in MARK_TYPES]
         if marks:
             waqf[f'{surah}:{ayah}'] = marks
+            # Tanzil's own word count for this verse: a consumer must only trust afterWord where
+            # it equals the KFQC/quran-ws word count (327 verses split words differently).
+            word_counts[f'{surah}:{ayah}'] = len([w for w in words if w])
 
-OUT.write_text(json.dumps({'schema': 1, 'source': 'tanzil-uthmani', 'marks': waqf},
+OUT.write_text(json.dumps({'schema': 1, 'source': 'tanzil-uthmani', 'marks': waqf, 'wordCounts': word_counts},
                            ensure_ascii=False, separators=(',', ':')))
 print('verses with marks:', len(waqf), 'total marks:', sum(len(v) for v in waqf.values()))
