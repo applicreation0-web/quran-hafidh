@@ -223,7 +223,7 @@ public final class HifzPrefs {
             CorpusLinePolicy.ownedLineIds(unconsolidatedPromotedRanges(), allLines));
 
         LinkedHashSet<String> legacyStableLineIds = new LinkedHashSet<>();
-        EligibleCorpus legacyStableCorpus = murajaahCorpus();
+        EligibleCorpus legacyStableCorpus = EligibleCorpus.Companion.of(progressionMurajaahRanges());
         for (GeometryRepository.LineMeta line : allLines) {
             if (legacyStableCorpus.contains(CorpusLinePolicy.ownerVerse(line))) {
                 legacyStableLineIds.add(line.id);
@@ -1181,10 +1181,25 @@ public final class HifzPrefs {
      * from the daily Entretien / weekly Révision finale reading pool.
      */
     public EligibleCorpus murajaahCorpus() {
+        ArrayList<VerseRange> all = new ArrayList<>(progressionMurajaahRanges());
+        all.add(AL_FATIHA);
+        return EligibleCorpus.Companion.of(all);
+    }
+
+    /**
+     * User decision: the Révision cycle (passive and active) always opens with Al-Fātiḥa, so the
+     * wrap after the corpus's last verse comes back to 1:1, not to Al-Baqara. Al-Fātiḥa is read in
+     * Révision only: it is never Apprentissage/Stabilisation/Itqān material, never counted as
+     * progression and never used by the migration or the straddling-verse repair.
+     */
+    static final VerseRange AL_FATIHA = new VerseRange(new VerseRef(1, 1), new VerseRef(1, 7));
+
+    /** The Révision corpus as the progression engine built it, without the Al-Fātiḥa opening. */
+    private List<VerseRange> progressionMurajaahRanges() {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
         all.addAll(promotedRanges());
-        return EligibleCorpus.Companion.of(all);
+        return all;
     }
 
     public boolean isItqanCursorValid() { try { return itqanWorkCorpus().contains(itqanCursor()); } catch (RuntimeException e) { return false; } }
@@ -1205,7 +1220,7 @@ public final class HifzPrefs {
             try {
                 LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
                 if (acquired.isEmpty()) return true;
-                EligibleCorpus corpus = murajaahCorpus();
+                EligibleCorpus corpus = EligibleCorpus.Companion.of(progressionMurajaahRanges());
                 java.util.Set<VerseRef> credited = new java.util.HashSet<>(geometry.allVersesFullyCredited(acquired));
                 ArrayList<VerseRef> missing = new ArrayList<>();
                 ArrayList<VerseRef> run = new ArrayList<>();
@@ -1254,6 +1269,7 @@ public final class HifzPrefs {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
         all.addAll(legacyMurajaahPromotedRanges());
         all.addAll(consolidatedPromotedRanges());
+        all.add(AL_FATIHA);
         return EligibleCorpus.Companion.of(all);
     }
 

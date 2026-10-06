@@ -76,9 +76,10 @@ public final class StraddlingVersePromotionTest {
 
     /** No regression: a declared range's trailing edge is never extended by the repair. */
     @Test public void repairNeverExtendsADeclaredRangesTrailingEdge() {
-        // Find a verse Y wholly on a line owned by the verse X just before it.
+        // Find a verse Y wholly on a line owned by the verse X just before it (past Al-Fātiḥa,
+        // which Révision always contains).
         VerseRef x = null, y = null;
-        for (int i = 0; i < geometry.lineCount() && y == null; i++) {
+        for (int i = geometry.firstLineIndex(new VerseRef(2, 1)); i < geometry.lineCount() && y == null; i++) {
             GeometryRepository.LineMeta line = geometry.line(i);
             for (int k = 1; k < line.verses.size(); k++) {
                 VerseRef v = line.verses.get(k);
