@@ -307,6 +307,15 @@ public final class GeometryRepository {
         return complete;
     }
 
+    /** Every verse of the Mushaf once, in canonical order. */
+    public List<VerseRef> allVersesInOrder() {
+        LinkedHashSet<VerseRef> all = new LinkedHashSet<>();
+        for (LineMeta line : lines) all.addAll(line.verses);
+        ArrayList<VerseRef> out = new ArrayList<>(all);
+        out.sort(Comparator.comparingInt(GeometryRepository::ordinal));
+        return out;
+    }
+
     private boolean allLinesCredited(int first, int last, java.util.Set<String> credited) {
         for (int i = first; i <= last; i++) if (!credited.contains(lines.get(i).id)) return false;
         return true;

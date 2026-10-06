@@ -1192,31 +1192,45 @@ public final class HifzPrefs {
     public boolean isRotationStartValid() { try { return itqanWorkCorpus().contains(itqanRotationStart()); } catch (RuntimeException e) { return false; } }
 
     /**
-     * One-time-safe repair (idempotent) for data written before straddling verses were promoted:
-     * every verse whose lines are all ACQUIRED but which is missing from the Révision corpus joins
-     * the promoted (already consolidated) ranges. Never removes or downgrades anything.
+     * Idempotent, add-only repair for data written before straddling verses were promoted: a run
+     * of verses missing from the Révision corpus is added only when every one of its verses lies
+     * wholly on ACQUIRED lines AND the run is enclosed on both sides by verses already in the
+     * corpus — a real hole such as 2:82 between 2:81 and 2:83. A declared range's trailing edge
+     * (a short next verse sharing its last, credited line) is never extended. Touches nothing
+     * else (no queue reset); any failure leaves the data untouched.
      */
     public boolean repairStraddlingAcquiredVerses(GeometryRepository geometry) {
         if (geometry == null) return false;
         synchronized (V6_STATE_LOCK) {
-            LinkedHashSet<String> acquired;
-            EligibleCorpus corpus;
             try {
-                acquired = v6LineIdSet("v6AcquiredCreditLineIds");
-                corpus = murajaahCorpus();
+                LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+                if (acquired.isEmpty()) return true;
+                EligibleCorpus corpus = murajaahCorpus();
+                java.util.Set<VerseRef> credited = new java.util.HashSet<>(geometry.allVersesFullyCredited(acquired));
+                ArrayList<VerseRef> missing = new ArrayList<>();
+                ArrayList<VerseRef> run = new ArrayList<>();
+                boolean openedByCorpus = false;
+                for (VerseRef verse : geometry.allVersesInOrder()) {
+                    if (corpus.contains(verse)) {
+                        if (openedByCorpus && !run.isEmpty()) missing.addAll(run);
+                        run.clear();
+                        openedByCorpus = true;
+                    } else if (openedByCorpus && credited.contains(verse)) {
+                        run.add(verse);
+                    } else {
+                        run.clear();
+                        openedByCorpus = false;
+                    }
+                }
+                if (missing.isEmpty()) return true;
+                ArrayList<VerseRange> all = new ArrayList<>(promotedRanges());
+                all.addAll(rangesFromVerses(missing));
+                return p.edit()
+                    .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(all)))
+                    .commit();
             } catch (RuntimeException unavailable) {
                 return false;
             }
-            if (acquired.isEmpty()) return true;
-            ArrayList<VerseRef> missing = new ArrayList<>();
-            for (VerseRef verse : geometry.allVersesFullyCredited(acquired)) if (!corpus.contains(verse)) missing.add(verse);
-            if (missing.isEmpty()) return true;
-            ArrayList<VerseRange> all = new ArrayList<>(promotedRanges());
-            all.addAll(rangesFromVerses(missing));
-            return p.edit()
-                .putString("promotedRanges", rangesJson(sortRangesPreservingBoundaries(all)))
-                .putBoolean("anchoringQueueInitialized", false)
-                .commit();
         }
     }
 

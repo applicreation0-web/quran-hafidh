@@ -73,4 +73,37 @@ public final class StraddlingVersePromotionTest {
         assertTrue(fromLaterBlock.contains(straddling));
         assertFalse(geometry.versesFullyCoveredByLines(last, last).contains(straddling));
     }
+
+    /** No regression: a declared range's trailing edge is never extended by the repair. */
+    @Test public void repairNeverExtendsADeclaredRangesTrailingEdge() {
+        // Find a verse Y wholly on a line owned by the verse X just before it.
+        VerseRef x = null, y = null;
+        for (int i = 0; i < geometry.lineCount() && y == null; i++) {
+            GeometryRepository.LineMeta line = geometry.line(i);
+            for (int k = 1; k < line.verses.size(); k++) {
+                VerseRef v = line.verses.get(k);
+                if (geometry.firstLineIndex(v) == i && geometry.lastLineIndex(v) == i
+                        && line.verses.get(k - 1).getSurah() == v.getSurah()) {
+                    x = line.verses.get(k - 1); y = v; break;
+                }
+            }
+        }
+        LinkedHashSet<String> acquired = new LinkedHashSet<>();
+        VerseRef start = new VerseRef(x.getSurah(), 1);
+        for (int i = geometry.firstLineIndex(start); i <= geometry.lastLineIndex(x); i++) acquired.add(geometry.line(i).id);
+        InMemoryPrefs store = new InMemoryPrefs();
+        store.disk.put("schema", 6);
+        store.disk.put("v6LearnedLineIds", "[]");
+        store.disk.put("v6StabilizedLineIds", "[]");
+        store.disk.put("v6AcquiredCreditLineIds", new JSONArray(acquired).toString());
+        store.disk.put("v6QuarantineLineIds", "[]");
+        store.disk.put("v6LegacyPartialAcquiredLineIds", "[]");
+        store.disk.put("itqanRanges", "[" + range(start.toString(), x.toString()) + "]");
+        store.disk.put("promotedRanges", "[]");
+        HifzPrefs prefs = new HifzPrefs(store);
+        assertTrue(prefs.repairStraddlingAcquiredVerses(geometry));
+        assertFalse(y + " sits on " + x + "'s credited line but beyond the declared range",
+            prefs.murajaahCorpus().contains(y));
+        assertTrue(prefs.murajaahCorpus().contains(x));
+    }
 }
