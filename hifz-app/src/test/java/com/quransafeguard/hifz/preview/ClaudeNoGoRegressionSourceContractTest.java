@@ -414,10 +414,10 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("every range goes through the shared Mushaf-style formatter",
             rangeLabel.contains("return QuranSurahNames.range(start, end);"));
         String names = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuranSurahNames.java");
-        assertTrue("a same-surah range names the surah once and reads right-to-left (RLI, arrow toward An-Nās)",
-            names.contains("return \"\\u2067\" + name(start.getSurah()) + \" \" + start.getAyah() + \" ← \" + end.getAyah() + \"\\u2069\";"));
-        assertTrue("across surahs each end stays grouped as \"name n°\" (option B: LRI per end inside the RLI)",
-            names.contains("return \"\\u2067\\u2066\" + name(start.getSurah()) + \" \" + start.getAyah() + \"\\u2069 ← \\u2066\""));
+        assertTrue("a same-surah range names the surah once, in Mushaf visual order (\"88 ← 1 البقرة\")",
+            names.contains("return \"\\u2066\" + end.getAyah() + NBSP + \"←\" + NBSP + start.getAyah() + NBSP + name(start.getSurah()) + \"\\u2069\";"));
+        assertTrue("across surahs each end stays grouped as \"name n°\", end on the left (option B)",
+            names.contains("return \"\\u2066\" + name(end.getSurah()) + NBSP + end.getAyah() + NBSP + \"←\" + NBSP"));
         String objective = method(session,
             "private String murajaahObjectiveLabel() {", "private String murajaahRangeLabel(");
         assertFalse("must no longer build the label from bare VerseRef.toString() (\"2:74\")",

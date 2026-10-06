@@ -14,13 +14,18 @@ public final class QuranSurahNamesBidiTest {
         assertEquals("⁨البقرة⁩", name);
     }
 
-    /** User decision "tout en arabe": every range reads like the Mushaf, arrow toward An-Nās. */
-    @Test public void rangesReadRightToLeftLikeTheMushaf() {
+    /**
+     * User decision "tout en arabe": every range reads like the Mushaf, start on the right, arrow
+     * toward An-Nās. Written in visual order inside a left-to-right isolate (device report: a
+     * right-to-left isolate was not honoured in a wrapped Parcours cell).
+     */
+    @Test public void rangesAreWrittenInMushafVisualOrder() {
         com.quransafeguard.hifz.core.VerseRef a = new com.quransafeguard.hifz.core.VerseRef(2, 1);
-        assertEquals("\u2067⁨البقرة⁩ 1 ← 88\u2069",
+        assertEquals("\u206688\u00A0←\u00A01\u00A0⁨البقرة⁩\u2069",
             QuranSurahNames.range(a, new com.quransafeguard.hifz.core.VerseRef(2, 88)));
-        assertEquals("\u2067\u2066⁨الحجرات⁩ 1\u2069 ← \u2066⁨الذاريات⁩ 37\u2069\u2069",
+        assertEquals("\u2066⁨الذاريات⁩\u00A037\u00A0←\u00A0⁨الحجرات⁩\u00A01\u2069",
             QuranSurahNames.range(new com.quransafeguard.hifz.core.VerseRef(49, 1), new com.quransafeguard.hifz.core.VerseRef(51, 37)));
         assertEquals("a one-verse range is just the verse", QuranSurahNames.verse(a), QuranSurahNames.range(a, a));
+        assertTrue("no right-to-left isolate the device could drop", !QuranSurahNames.range(a, new com.quransafeguard.hifz.core.VerseRef(3, 5)).contains("\u2067"));
     }
 }

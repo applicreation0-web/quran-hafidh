@@ -38,24 +38,30 @@ final class QuranSurahNames {
     }
 
     /**
-     * User decision ("tout en arabe"): every verse range reads like the Mushaf, right-to-left
-     * with the arrow toward An-Nās — "88 ← 1 البقرة" inside one surah, and across surahs each
-     * end grouped "name n°" ("الذاريات 37 ← الحجرات 1", option B). RLI … PDI keeps the whole
-     * range right-to-left inside French text; LRI … PDI keeps each cross-surah end together.
+     * User decision ("tout en arabe"): every verse range reads like the Mushaf, start on the
+     * right and the arrow toward An-Nās — "88 ← 1 البقرة" inside one surah, and across surahs
+     * each end grouped "name n°" ("الذاريات 37 ← الحجرات 1", option B).
+     *
+     * <p>Built directly in that visual order inside a left-to-right isolate (LRI … PDI), with
+     * no-break spaces: on the device a right-to-left isolate was not honoured once a Parcours
+     * cell wrapped ("2 ← 1 الفاتحة" came out reversed), whereas a left-to-right run never
+     * reorders. Only the surah names themselves stay right-to-left (FSI … PDI).
      */
     static String range(com.quransafeguard.hifz.core.VerseRef start, com.quransafeguard.hifz.core.VerseRef end) {
         if (start.getSurah() == end.getSurah()) {
             if (start.getAyah() == end.getAyah()) return verse(start);
-            return "\u2067" + name(start.getSurah()) + " " + start.getAyah() + " ← " + end.getAyah() + "\u2069";
+            return "\u2066" + end.getAyah() + NBSP + "←" + NBSP + start.getAyah() + NBSP + name(start.getSurah()) + "\u2069";
         }
-        return "\u2067\u2066" + name(start.getSurah()) + " " + start.getAyah() + "\u2069 ← \u2066"
-            + name(end.getSurah()) + " " + end.getAyah() + "\u2069\u2069";
+        return "\u2066" + name(end.getSurah()) + NBSP + end.getAyah() + NBSP + "←" + NBSP
+            + name(start.getSurah()) + NBSP + start.getAyah() + "\u2069";
     }
 
-    /** One verse, Mushaf style: "16 البقرة" (right-to-left isolate). */
+    /** One verse, Mushaf style: "16 البقرة". */
     static String verse(com.quransafeguard.hifz.core.VerseRef ref) {
-        return "\u2067" + name(ref.getSurah()) + " " + ref.getAyah() + "\u2069";
+        return "\u2066" + ref.getAyah() + NBSP + name(ref.getSurah()) + "\u2069";
     }
+
+    private static final String NBSP = "\u00A0";
 
     static String labelFor(int surah) {
         return surah + " · " + name(surah);
