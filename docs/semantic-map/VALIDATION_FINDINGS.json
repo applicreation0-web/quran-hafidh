@@ -1,0 +1,230 @@
+{
+  "schema": 1,
+  "publishable": false,
+  "findings": [
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[0]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[0]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[0]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[0]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[0]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[1]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[1]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[1]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[1]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[1]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[2]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[2]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[2]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[2]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[2]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[3]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[3]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[3]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[3]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[3]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[4]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[4]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[4]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[4]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[4]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[5]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[5]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[5]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[5].sections[0]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[5].sections[0]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[5].sections[1]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[5].sections[1]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[5].sections[2]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[5].sections[2]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[5].sections[3]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[5].sections[3]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[6]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[6]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[6]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[6]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[6]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[7]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[7]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[7]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[7]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[7]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[8]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[8]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[8]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[8]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[8]"
+    },
+    {
+      "code": "MISSING_ARABIC",
+      "path": "surahs[9]"
+    },
+    {
+      "code": "UNRESOLVED_ENGLISH",
+      "path": "surahs[9]"
+    },
+    {
+      "code": "MISSING_ENGLISH",
+      "path": "surahs[9]"
+    },
+    {
+      "code": "NO_SECTIONS",
+      "path": "surahs[9]"
+    },
+    {
+      "code": "GAP",
+      "path": "surahs[9]"
+    }
+  ]
+}

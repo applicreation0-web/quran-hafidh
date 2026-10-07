@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "stage": "PREPARATORY_CHECKPOINT_NOT_VALIDATED_PILOT",
+  "baseCommit": "82658bde0ef80be5d521c5838d19139aa63c80e4",
+  "primarySource": {
+    "title": "التفسير الموضوعي لسور القرآن الكريم",
+    "publisher": "Université de Sharjah",
+    "year": 2010,
+    "supervisor": "Muṣṭafā Muslim",
+    "authorPage": "https://cp.alukah.net/web/muslim/11409/"
+  },
+  "surahs": [
+    {
+      "number": 1,
+      "nameAr": "الفاتحة",
+      "nameEn": "Al-Fatihah",
+      "pilotReason": "Très courte ; présentation de plusieurs axes possibles",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 1,
+        "page": 15,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40498/15",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 2,
+      "nameAr": "البقرة",
+      "nameEn": "Al-Baqarah",
+      "pilotReason": "Très longue, médinoise ; hiérarchie introduction / deux axes / conclusion",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 1,
+        "page": 28,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40498/28",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 4,
+      "nameAr": "النساء",
+      "nameEn": "An-Nisa",
+      "pilotReason": "Longue, médinoise ; titres longs et subdivisions",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 2,
+        "page": 2,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40500/2",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 36,
+      "nameAr": "يس",
+      "nameEn": "Ya-Sin",
+      "pilotReason": "Moyenne, mecquoise ; sections non numérotées",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 6,
+        "page": 295,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40508/295",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 37,
+      "nameAr": "الصافات",
+      "nameEn": "As-Saffat",
+      "pilotReason": "Moyenne, mecquoise ; nombreuses sections narratives",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 6,
+        "page": 341,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40508/341",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 50,
+      "nameAr": "ق",
+      "nameEn": "Qaf",
+      "pilotReason": "Courte, mecquoise ; introduction, deux sections, conclusion",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 7,
+        "page": 391,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40510/391",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [
+        {
+          "id": "sharjah-050-01",
+          "order": 1,
+          "titleAr": "افتتاحية السورة",
+          "titleEn": null,
+          "englishStatus": "SOURCE_UNRESOLVED",
+          "editorialDraftEn": "Opening of the surah",
+          "source": {
+            "volume": 7,
+            "page": 396,
+            "scanFile": "07_0114139.pdf",
+            "scanSha256": "2e2d5af9b161b2b06ab2c3b726dc53833be729d95e34d21869d0470489e016b7",
+            "transcriptionUrl": "https://aljam3.com/ar/18618/40510/396",
+            "verification": "VISUAL_SCAN_CHECKED"
+          },
+          "startAyah": 1,
+          "endAyah": 5,
+          "startPage": 518,
+          "endPage": 518,
+          "boundsStatus": "VISUAL_SCAN_CHECKED",
+          "notes": [
+            "English draft is not a verified translation."
+          ]
+        },
+        {
+          "id": "sharjah-050-02",
+          "order": 2,
+          "titleAr": "التأمل في الآفاق",
+          "titleEn": null,
+          "englishStatus": "SOURCE_UNRESOLVED",
+          "editorialDraftEn": "Reflection on the horizons",
+          "source": {
+            "volume": 7,
+            "page": 402,
+            "scanFile": "07_0114139.pdf",
+            "scanSha256": "2e2d5af9b161b2b06ab2c3b726dc53833be729d95e34d21869d0470489e016b7",
+            "transcriptionUrl": "https://aljam3.com/ar/18618/40510/402",
+            "verification": "VISUAL_SCAN_CHECKED"
+          },
+          "startAyah": 6,
+          "endAyah": 15,
+          "startPage": 518,
+          "endPage": 518,
+          "boundsStatus": "VISUAL_SCAN_CHECKED",
+          "notes": [
+            "English draft is not a verified translation."
+          ]
+        },
+        {
+          "id": "sharjah-050-03",
+          "order": 3,
+          "titleAr": "التأمل في الأنفس: خلقاً ومآلاً",
+          "titleEn": null,
+          "englishStatus": "SOURCE_UNRESOLVED",
+          "editorialDraftEn": "Reflection on human selves: creation and final outcome",
+          "source": {
+            "volume": 7,
+            "page": 411,
+            "scanFile": "07_0114139.pdf",
+            "scanSha256": "2e2d5af9b161b2b06ab2c3b726dc53833be729d95e34d21869d0470489e016b7",
+            "transcriptionUrl": "https://aljam3.com/ar/18618/40510/411",
+            "verification": "VISUAL_SCAN_CHECKED"
+          },
+          "startAyah": 16,
+          "endAyah": 38,
+          "startPage": 519,
+          "endPage": 520,
+          "boundsStatus": "VISUAL_SCAN_CHECKED",
+          "notes": [
+            "English draft is not a verified translation."
+          ]
+        },
+        {
+          "id": "sharjah-050-04",
+          "order": 4,
+          "titleAr": "الخاتمة",
+          "titleEn": null,
+          "englishStatus": "SOURCE_UNRESOLVED",
+          "editorialDraftEn": "Conclusion",
+          "source": {
+            "volume": 7,
+            "page": 428,
+            "scanFile": "07_0114139.pdf",
+            "scanSha256": "2e2d5af9b161b2b06ab2c3b726dc53833be729d95e34d21869d0470489e016b7",
+            "transcriptionUrl": "https://aljam3.com/ar/18618/40510/428",
+            "verification": "VISUAL_SCAN_CHECKED"
+          },
+          "startAyah": 39,
+          "endAyah": 45,
+          "startPage": 520,
+          "endPage": 520,
+          "boundsStatus": "VISUAL_SCAN_CHECKED",
+          "notes": [
+            "English draft is not a verified translation."
+          ]
+        }
+      ],
+      "notes": [
+        "Quatre unités sources, dont deux nommées مقطع ; ne pas renuméroter la source en quatre مقاطع.",
+        "Axe : long développement pages 391–393 ; aucun titre compact créé.",
+        "Les quatre bornes et quatre titres ont été vérifiés visuellement sur les scans."
+      ]
+    },
+    {
+      "number": 67,
+      "nameAr": "الملك",
+      "nameEn": "Al-Mulk",
+      "pilotReason": "Courte, mecquoise ; divergence entre présentation et commentaire",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 8,
+        "page": 264,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40512/264",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 103,
+      "nameAr": "العصر",
+      "nameEn": "Al-Asr",
+      "pilotReason": "Très courte ; ne pas fabriquer plusieurs sections",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 9,
+        "page": 326,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40514/326",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 108,
+      "nameAr": "الكوثر",
+      "nameEn": "Al-Kawthar",
+      "pilotReason": "Très courte ; article secondaire spécifique retrouvé",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 9,
+        "page": 390,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40514/390",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    },
+    {
+      "number": 112,
+      "nameAr": "الإخلاص",
+      "nameEn": "Al-Ikhlas",
+      "pilotReason": "Très courte ; axe développé sur plusieurs pages",
+      "readiness": "SOURCE_UNRESOLVED",
+      "axisAr": null,
+      "axisEn": null,
+      "axisEnglishStatus": "SOURCE_UNRESOLVED",
+      "axisSource": {
+        "volume": 9,
+        "page": 449,
+        "transcriptionUrl": "https://aljam3.com/ar/18618/40514/449",
+        "verification": "LOCATED_NOT_FULLY_VALIDATED"
+      },
+      "sections": [],
+      "notes": [
+        "Corpus de travail incomplet ; ne pas charger dans une interface publiée."
+      ]
+    }
+  ]
+}
