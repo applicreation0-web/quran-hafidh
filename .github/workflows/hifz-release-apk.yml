@@ -2,6 +2,13 @@ name: Quran Hifz signed release APK
 
 on:
   workflow_dispatch:
+  # One-shot release build for this corrective branch. Future source commits
+  # do NOT launch a release: only a change to this workflow file can.
+  push:
+    branches:
+      - work/chatgpt-semantic-map-v1-17
+    paths:
+      - .github/workflows/hifz-release-apk.yml
 
 permissions:
   contents: write
