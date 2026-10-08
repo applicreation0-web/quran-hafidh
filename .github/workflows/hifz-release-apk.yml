@@ -2,7 +2,7 @@ name: Quran Hifz signed release APK
 
 on:
   workflow_dispatch:
-  # One-shot release build for this corrective branch. Future source commits
+  # Corrected 1.17.1 release build after JVM/source-contract alignment. Future source commits
   # do NOT launch a release: only a change to this workflow file can.
   push:
     branches:
