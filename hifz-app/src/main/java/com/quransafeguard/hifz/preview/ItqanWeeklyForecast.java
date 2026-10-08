@@ -8,7 +8,7 @@ import java.util.List;
  * Read-only cursor for the dashboard's Itqān forecast.
  *
  * Uses the live rotation's pick/advance rules, never the legacy anchoring queue.
- * Advancing this object never writes SharedPreferences or credits any repetitions.
+ * Advancing this object never writes stored progress or credits any repetitions.
  */
 final class ItqanWeeklyForecast {
     interface UnitSource {
