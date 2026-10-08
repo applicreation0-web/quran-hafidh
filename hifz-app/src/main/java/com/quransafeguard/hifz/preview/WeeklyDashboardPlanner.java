@@ -58,19 +58,15 @@ final class WeeklyDashboardPlanner {
         VerseRef murajaahCursor=prefs.murajaahCursor();
         EligibleCorpus murajaahCorpus=prefs.murajaahCorpus();
 
-        prefs.currentAnchoringEntry(geometry);
-        List<AnchoringQueue.Entry> candidateAnchoring=new ArrayList<>();
-        for(AnchoringQueue.Entry entry:prefs.anchoringQueue()){
-            VerseRef entryStart=GeometryRepository.parseVerse(entry.start),entryEnd=GeometryRepository.parseVerse(entry.end);
-            if(!CorpusLinePolicy.ownedLineIdsForRangeOnPage(entryStart,entryEnd,geometry).isEmpty())candidateAnchoring.add(entry);
-        }
-        // P4: preview must walk the same perpetual TAIL(Hujurāt→Nās)/FRONT(Baqara→Sabqi) macro
-        // order HifzPrefs.currentAnchoringEntry actually selects from now on — not the old cyclic
-        // list-index visit order — see ItqanRotationPolicy.
-        List<AnchoringQueue.Entry> projectedAnchoring=ItqanRotationPolicy.projectedOrder(
-            prefs.itqanRotationState(), candidateAnchoring);
-        int projectedAnchoringIndex=0;
-        int projectedItqanBlockIndex=prefs.itqanBlockIndex();
+        // Forecast from the SAME cursor and physical units as the live Itqān engine.
+        // The legacy anchoringQueue is not the perpetual rotation, and sorting it from
+        // position zero repeated already validated material in future calendar rows.
+        AnchoringQueue.Entry currentItqan=prefs.currentAnchoringEntry(geometry);
+        VerseRef sabqiFrontier=prefs.currentSabqiPosition(geometry);
+        ItqanWeeklyForecast itqanForecast=new ItqanWeeklyForecast(
+            prefs.itqanRotationState(),currentItqan,prefs.itqanBlockIndex(),
+            (leg,postNas)->prefs.cachedUnitsInLeg(leg,sabqiFrontier,geometry,
+                ItqanMaintenancePolicy.regimeFor(postNas)));
 
         for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
@@ -107,11 +103,16 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.ITQAN);
                     if(actual!=null)morning="✓ "+compact(actual.label);
                     else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
-                    else if(projectedAnchoringIndex>=projectedAnchoring.size())morning="Stabilisation · aucune unité à stabiliser";
+                    else if(itqanForecast.entry()==null)morning="Stabilisation · aucune unité à stabiliser";
                     else{
-                        AnchoringQueue.Entry entry=projectedAnchoring.get(projectedAnchoringIndex);
+                        AnchoringQueue.Entry entry=itqanForecast.entry();
                         VerseRef start=GeometryRepository.parseVerse(entry.start),end=GeometryRepository.parseVerse(entry.end);
-                        ItqanRegimeStore.UnitPlan plan=prefs.itqanUnitPlan(entry);
+                        // An already-open session keeps its frozen plan; future units use
+                        // the regime projected after any An-Nās crossing, not stale prefs.
+                        ItqanRegimeStore.UnitPlan plan=itqanForecast.isInitialUnit()
+                            ?prefs.itqanUnitPlan(entry)
+                            :new ItqanRegimeStore.UnitPlan(itqanForecast.regime(),
+                                ItqanMaintenancePolicy.protocolForNewSession());
                         int reps=ItqanMaintenancePolicy.totalReps(plan.regime,plan.protocol);
                         List<String> owned=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
                         boolean postNas=plan.regime==ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
@@ -119,16 +120,15 @@ final class WeeklyDashboardPlanner {
                             ?Collections.<StabilizationHalfPagePolicy.Unit>emptyList()
                             :StabilizationHalfPagePolicy.planPage(geometry.linesForExactIds(owned));
                         int blocks=Math.max(1,planned.size());
-                        int block=Math.max(0,Math.min(projectedItqanBlockIndex,blocks-1));
+                        int block=Math.max(0,Math.min(itqanForecast.blockIndex(),blocks-1));
                         String where=planned.isEmpty()?range(start,end):QuranSurahNames.block(geometry,planned.get(block).lineIds,range(start,end));
                         if(blocks>1){
                             morning="Stabilisation · bloc "+(block+1)+"/"+blocks+" · "+where+" · ×"+reps;
                         }else{
                             morning="Stabilisation · "+where+" · ×"+reps;
                         }
-                        block++;
-                        if(block>=blocks){projectedItqanBlockIndex=0;projectedAnchoringIndex++;}
-                        else projectedItqanBlockIndex=block;
+                        // This advances the *forecast only*, never the user's saved state.
+                        itqanForecast.completedBlock(blocks);
                     }
                     boolean morningDone=actual!=null;
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
