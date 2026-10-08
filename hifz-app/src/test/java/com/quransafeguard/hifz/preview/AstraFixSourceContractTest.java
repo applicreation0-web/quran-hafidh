@@ -20,7 +20,8 @@ public final class AstraFixSourceContractTest {
 
     @Test public void weeklyProjectionMustTrackFractionatedSubBlocks() throws Exception {
         String src = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue(src.contains("projectedItqanBlockIndex"));
+        assertTrue("Forecast must retain persisted sub-block index", src.contains("itqanForecast.blockIndex()"));
+        assertTrue("Advance the forecast after a projected sub-block", src.contains("itqanForecast.completedBlock(blocks);"));
         assertTrue(src.contains("bloc "));
     }
 }
