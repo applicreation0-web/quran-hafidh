@@ -59,8 +59,11 @@ public final class IslahiP1ReadingFlowTest {
         assertTrue(study.contains("private void persistReaderPageUnlessTemporaryIslahi()"));
         assertTrue(study.contains("if (islahiSurah != 0) return;"));
         assertTrue(study.contains("MultiTafsirRepository.Edition.JALALAYN.storageValue"));
-        assertEquals("Regular reader bookmark should only be written through guarded helper", 1,
-            study.split("getSharedPreferences(\\\"hifz_study\\\", MODE_PRIVATE).edit().putInt(\\\"page\\\", page).apply();", -1).length-1);
+        String persistedPageWrite = "getSharedPreferences(\\\"hifz_study\\\", MODE_PRIVATE)"
+            + ".edit().putInt(\\\"page\\\", page).apply();";
+        assertTrue(study.contains(persistedPageWrite));
+        assertEquals("Page writes must stay in the guarded helper",
+            study.indexOf(persistedPageWrite), study.lastIndexOf(persistedPageWrite));
     }
 
     @Test public void hatchOverlayMustBeSeparateVisibleAndRecreated() throws Exception {
