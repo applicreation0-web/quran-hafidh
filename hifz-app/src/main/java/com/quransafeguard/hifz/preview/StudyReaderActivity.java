@@ -93,7 +93,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (jumpVerse != null) {
             try { pendingJumpVerse = GeometryRepository.parseVerse(jumpVerse); } catch (RuntimeException malformed) { /* ignore */ }
         }
-        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
+        persistReaderPageUnlessTemporaryIslahi();
         hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         semanticPassages = SemanticPassageRepository.shared(this);
@@ -223,6 +223,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         loadGeometryForSurahPicker();
     }
 
+    /** Iṣlāḥī consultation must not overwrite the user's ordinary Reading bookmark. */
+    private void persistReaderPageUnlessTemporaryIslahi() {
+        if (islahiSurah != 0) return;
+        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
+    }
+
     private void loadGeometryForSurahPicker() {
         io.execute(() -> {
             try {
@@ -230,6 +236,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 runOnUiThread(() -> {
                     geometry = loaded;
                     if (surahPicker != null) { surahPicker.setEnabled(true); updateSurahPickerLabel(); }
+                    // The first page can render before geometry finishes loading.
+                    // Retry the Iṣlāḥī overlay when coordinates become available.
+                    if (islahiSurah > 0) applyIslahiHighlight();
                 });
             } catch (Throwable ignored) {
                 // Surah picker stays disabled; page swipe/back navigation still works without it.
@@ -273,7 +282,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         page = next;
         selected = null;
         tafsirButton.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
-        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
+        persistReaderPageUnlessTemporaryIslahi();
         updateSurahPickerLabel();
         updateRubPickerLabel();
         mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
@@ -389,10 +398,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                             final VerseRef verse = selected;
                             if (verse == null) {
                                 Toast.makeText(this, "Tap a verse to open Jalalayn.", Toast.LENGTH_LONG).show();
-                            } else if (largeScreen) {
-                                openSideTafsir(verse);
                             } else {
-                                openBottomTafsir(verse);
+                                // The label explicitly says Jalalayn: honor it even if
+                                // a different compact commentary was selected previously.
+                                getSharedPreferences(TAFSIR_PREFS, MODE_PRIVATE).edit()
+                                    .putString(TAFSIR_EDITION_KEY,
+                                        MultiTafsirRepository.Edition.JALALAYN.storageValue).apply();
+                                if (largeScreen) openSideTafsir(verse);
+                                else openBottomTafsir(verse);
                             }
                         }
                     }).show();
@@ -778,7 +791,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     /** Read-only map context; preserved across page swipes without writing Hifz progress. */
     private void applyIslahiHighlight() {
-        if (islahiSurah == 0 || mushaf == null) return;
+        // Loaded asynchronously for the surah picker; do not crash on the first page.
+        if (islahiSurah == 0 || mushaf == null || geometry == null) return;
         java.util.ArrayList<VerseRef> verses = new java.util.ArrayList<>();
         for (int ayah = islahiStart; ayah <= islahiEnd; ayah++) {
             VerseRef ref = new VerseRef(islahiSurah, ayah);
