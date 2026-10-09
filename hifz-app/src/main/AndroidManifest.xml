@@ -7,13 +7,14 @@
         android:allowBackup="false"
         android:icon="@drawable/ic_quran_hifz_logo"
         android:roundIcon="@drawable/ic_quran_hifz_logo"
-        android:label="Quran Haafidh"
+        android:label="${appDisplayName}"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false">
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".WeakVersesActivity" android:exported="false" />
         <activity android:name=".ProgressMapActivity" android:exported="false" />
+        <activity android:name=".IslahiMapActivity" android:exported="false" />
         <activity
             android:name=".QuizActivity"
             android:exported="false"
