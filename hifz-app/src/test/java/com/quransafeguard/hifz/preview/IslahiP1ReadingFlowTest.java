@@ -52,6 +52,17 @@ public final class IslahiP1ReadingFlowTest {
         assertTrue(map.contains("#595959"));
     }
 
+    @Test public void temporaryIslahiMushafWaitsForGeometryAndDoesNotStealReadingBookmark() throws Exception {
+        String study = source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
+        assertTrue(study.contains("if (islahiSurah == 0 || mushaf == null || geometry == null) return;"));
+        assertTrue(study.contains("if (islahiSurah > 0) applyIslahiHighlight();"));
+        assertTrue(study.contains("private void persistReaderPageUnlessTemporaryIslahi()"));
+        assertTrue(study.contains("if (islahiSurah != 0) return;"));
+        assertTrue(study.contains("MultiTafsirRepository.Edition.JALALAYN.storageValue"));
+        assertEquals("Regular reader bookmark should only be written through guarded helper", 1,
+            study.split("getSharedPreferences(\\\"hifz_study\\\", MODE_PRIVATE).edit().putInt(\\\"page\\\", page).apply();", -1).length-1);
+    }
+
     @Test public void hatchOverlayMustBeSeparateVisibleAndRecreated() throws Exception {
         String js=source("hifz-app/src/main/assets/hifzreader/reader.js");
         String mushaf=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
