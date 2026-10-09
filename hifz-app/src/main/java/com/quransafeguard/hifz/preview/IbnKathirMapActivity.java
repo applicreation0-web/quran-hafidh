@@ -2,6 +2,8 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.os.Handler;
+import android.os.Looper;
 import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Typeface;
@@ -12,6 +14,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.AbsListView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -31,6 +34,15 @@ public final class IbnKathirMapActivity extends Activity {
     private int highlightedAyah = 1;
     private ListView groupsList;
     private TextView header;
+    private TextView previewCaption;
+    private MushafView pagePreview;
+    private GeometryRepository geometry;
+    private IbnKathirGroupIndex.Group previewGroup;
+    private int previewPage;
+    private int selectedGroupIndex=-1;
+    private boolean previewReady;
+    private final Handler previewHandler=new Handler(Looper.getMainLooper());
+    private final Runnable changePreview=this::previewFirstVisibleGroup;
     private int scrollIndex;
     private int scrollTop;
 
@@ -46,6 +58,8 @@ public final class IbnKathirMapActivity extends Activity {
         highlightedAyah = saved != null ? saved.getInt("ayah",1) : getIntent().getIntExtra(EXTRA_AYAH,1);
         scrollIndex = saved == null ? -1 : saved.getInt("firstVisible",-1);
         scrollTop = saved == null ? 0 : saved.getInt("topOffset",0);
+        selectedGroupIndex=saved==null?-1:saved.getInt("selectedGroupIndex",-1);
+        previewPage=saved==null?0:saved.getInt("previewPage",0);
         surah = Math.max(1,Math.min(114,surah));
 
         LinearLayout root = Ui.column(this);
@@ -67,10 +81,43 @@ public final class IbnKathirMapActivity extends Activity {
         groupsList.setBackgroundColor(Ui.PAPER);
         groupsList.setDividerHeight(Math.max(1,Ui.dp(this,1)));
         groupsList.setFastScrollEnabled(true);
-        root.addView(groupsList,new LinearLayout.LayoutParams(
+        // One true KFQC renderer, instead of a costly WebView for every map card.
+        LinearLayout body=Ui.row(this);
+        boolean spacious=getResources().getConfiguration().smallestScreenWidthDp>=600;
+        if(!spacious)body.setOrientation(LinearLayout.VERTICAL);
+        body.addView(groupsList,spacious
+            ? new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,0.47f)
+            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.57f));
+        LinearLayout miniature=Ui.column(this);
+        miniature.setPadding(Ui.dp(this,3),Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,3));
+        previewCaption=Ui.bookText(this,"",13,false);
+        previewCaption.setGravity(Gravity.CENTER);
+        miniature.addView(previewCaption,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        pagePreview=new MushafView(this);
+        pagePreview.setContentDescription("Miniature authentique du Mushaf · toucher pour lire");
+        miniature.addView(pagePreview,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        body.addView(miniature,spacious
+            ? new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,0.53f)
+            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.43f));
+        root.addView(body,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
         setContentView(root);
         Ui.respectSystemBars(this,root,0,0,0,0);
+        pagePreview.setListener(new MushafView.Listener() {
+            @Override public void onReady() {
+                previewReady=true;
+                if(previewGroup!=null)renderPreview();
+            }
+            @Override public void onError(String message) {
+                previewCaption.setText("Miniature indisponible · ouvrir depuis la liste");
+            }
+            @Override public void onPageShown(int page) {}
+            @Override public void onVerseTap(VerseRef verse) {openPreviewInMushaf();}
+            @Override public void onSurfaceTap() {openPreviewInMushaf();}
+            @Override public void onPageSwipe(int delta) {turnPreviewPage(delta);}
+        });
         showSurah();
     }
 
@@ -83,6 +130,8 @@ public final class IbnKathirMapActivity extends Activity {
                 highlightedAyah = 1;
                 scrollIndex = 0;
                 scrollTop = 0;
+                selectedGroupIndex = -1;
+                previewPage = 0;
                 showSurah();
             }).show();
     }
@@ -113,8 +162,18 @@ public final class IbnKathirMapActivity extends Activity {
             }
         };
         groupsList.setAdapter(adapter);
-        groupsList.setOnItemClickListener((parent,view,position,id) ->
-            openMushaf(groups.get(position)));
+        groupsList.setOnItemClickListener((parent,view,position,id) -> {
+            selectedGroupIndex=position;
+            previewGroup=groups.get(position);
+            openMushaf(previewGroup);
+        });
+        groupsList.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override public void onScrollStateChanged(AbsListView view,int state) {
+                previewHandler.removeCallbacks(changePreview);
+                if(state==SCROLL_STATE_IDLE)previewHandler.postDelayed(changePreview,250);
+            }
+            @Override public void onScroll(AbsListView view,int firstVisible,int visible,int total) {}
+        });
         int initial=0;
         if(scrollIndex>=0) initial=Math.min(groups.size()-1,scrollIndex);
         else for (int i=0;i<groups.size();i++) {
@@ -122,6 +181,8 @@ public final class IbnKathirMapActivity extends Activity {
             if(highlightedAyah>=g.startAyah&&highlightedAyah<=g.endAyah){ initial=i;break; }
         }
         final int target=initial,offset=scrollTop;
+        if(selectedGroupIndex<0 || selectedGroupIndex>=groups.size())selectedGroupIndex=initial;
+        setPreviewGroup(groups.get(selectedGroupIndex),previewPage);
         groupsList.post(() -> groupsList.setSelectionFromTop(target,offset));
     }
 
