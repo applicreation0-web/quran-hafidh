@@ -17,6 +17,8 @@ let eink=!!boot.eink;
  */
 let contextFocus=!!boot.contextFocus;
 let highlighted=new Set((boot.highlights||[]).map(String));
+/* Isolated Iṣlāḥī pilot layer: never changes Hifz weak highlights. */
+let islahiHighlighted=new Set((boot.islahiHighlights||[]).map(String));
 let landmarkStart=boot.landmarkStart?String(boot.landmarkStart):null;
 let landmarkEnd=boot.landmarkEnd?String(boot.landmarkEnd):null;
 /* Exact Quran-word boxes (Quiz prompt words) cut as holes in an active mask; never estimated. */
@@ -377,6 +379,40 @@ function maskRect(segment){
 /* Personal weak-spot flags: a thin dashed outline cloned above every layer (including any
  * active mask), never a filled shade — deliberately the lightest possible mark to avoid E-Ink
  * ghosting from a shape that can stay on screen for many page views. */
+function islahiHatchLayer(svg, verses) {
+  const group = document.createElementNS(NS, 'g');
+  group.setAttribute('class', 'islahi-p1-hatching');
+  group.setAttribute('pointer-events', 'none');
+  if(!verses || !verses.size) return group;
+  const patterns = document.createElementNS(NS, 'defs');
+  const pattern = document.createElementNS(NS, 'pattern');
+  pattern.setAttribute('id', 'islahi-p1-diagonal');
+  pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+  pattern.setAttribute('width', '8');
+  pattern.setAttribute('height', '8');
+  const diagonal = document.createElementNS(NS, 'path');
+  diagonal.setAttribute('d', 'M-2 10 L10 -2');
+  diagonal.setAttribute('stroke', '#222');
+  diagonal.setAttribute('stroke-opacity', '0.19');
+  diagonal.setAttribute('stroke-width', '0.6');
+  diagonal.setAttribute('fill', 'none');
+  pattern.appendChild(diagonal);
+  patterns.appendChild(pattern);
+  group.appendChild(patterns);
+  svg.querySelectorAll('.ayahPolygon').forEach(p => {
+    if(!verses.has(String(p.dataset.verse))) return;
+    const shape = p.cloneNode(false);
+    shape.removeAttribute('class');
+    shape.removeAttribute('style');
+    shape.removeAttribute('id');
+    shape.setAttribute('fill', 'url(#islahi-p1-diagonal)');
+    shape.setAttribute('stroke', 'none');
+    shape.setAttribute('opacity', '1');
+    group.appendChild(shape);
+  });
+  return group;
+}
+
 function weakLayer(svg,weakSet){
   const g=document.createElementNS(NS,'g');
   g.setAttribute('class','weaklayer');
@@ -844,6 +880,13 @@ function render(){
     if(weak.childNodes.length)svg.appendChild(weak);
   }
 
+  // The Iṣlāḥī overlay has a sparse diagonal motif, only for explicit map context.
+  // It does not consume or mutate Hifz's weak-outline set.
+  if(islahiHighlighted.size){
+    const hatch=islahiHatchLayer(svg,islahiHighlighted);
+    if(hatch.childNodes.length)svg.appendChild(hatch);
+  }
+
   // Semantic amorce highlights are always a final, non-destructive overlay.
   if(semanticCues.length){
     const cues=semanticCueLayer(svg);
@@ -891,6 +934,7 @@ window.HifzReader={
   },
   setAudioVerse(value){audioVerse=value==null?null:String(value);render()},
   setHighlights(list){highlighted=new Set((list||[]).map(String));render()},
+  setIslahiHighlights(list){islahiHighlighted=new Set((list||[]).map(String));render()},
   setLandmarks(startId,endId){landmarkStart=startId?String(startId):null;landmarkEnd=endId?String(endId):null;render()},
   setSemanticCues(cues,anchorMaskMode,highlightEnabled=true){semanticCues=Array.isArray(cues)?cues:[];semanticAnchorMaskMode=!!anchorMaskMode;semanticHighlightEnabled=highlightEnabled!==false;render()},
   setPageLandmarkBoxes(boxes){pageLandmarkBoxes=Array.isArray(boxes)?boxes:[];render()},
