@@ -14,6 +14,7 @@
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".WeakVersesActivity" android:exported="false" />
         <activity android:name=".ProgressMapActivity" android:exported="false" />
+        <activity android:name=".IbnKathirMapActivity" android:exported="false" />
         <activity
             android:name=".QuizActivity"
             android:exported="false"
