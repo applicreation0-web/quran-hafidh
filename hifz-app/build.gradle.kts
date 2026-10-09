@@ -308,6 +308,9 @@ android {
     buildTypes {
         getByName("debug") {
             isDebuggable = false
+            // Isolated personal test install; never overwrites the official 1.17.1 package.
+            applicationIdSuffix = ".ibnkathirtest"
+            versionNameSuffix = "-IbnKathir-DEBUG"
         }
         getByName("release") {
             isMinifyEnabled = false
