@@ -1,0 +1,61 @@
+name: Quran Haafidh Islahi P1 private debug
+on:
+  push:
+    branches:
+      - work/islahi-prototype-p1-from-1-17-1
+    paths:
+      - hifz-app/**
+      - hifz-core/**
+      - .github/workflows/islahi-prototype-p1-debug.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: islahi-p1-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Core and JVM tests
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
+      - name: Source contract tests
+        run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+      - name: Assemble private P1 debug
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+      - name: Verify prototype identity and SHA256
+        run: |
+          set -eu
+          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
+          test -n "$apk" && test -s "$apk"
+          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt -print -quit)"
+          "$aapt" dump badging "$apk" | grep -F 'com.quransafeguard.hifz.islahitest'
+          "$aapt" dump badging "$apk" | grep -F '1.17.1-islahi-p1'
+          sha256sum "$apk" | tee islahi-p1-sha256.txt
+          cp "$apk" "Quran-Haafidh-Islahi-Prototype-P1.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Quran-Haafidh-Islahi-Prototype-P1
+          path: |
+            Quran-Haafidh-Islahi-Prototype-P1.apk
+            islahi-p1-sha256.txt
+          retention-days: 14
