@@ -15,6 +15,7 @@
         <activity android:name=".WeakVersesActivity" android:exported="false" />
         <activity android:name=".ProgressMapActivity" android:exported="false" />
         <activity android:name=".IslahiMapActivity" android:exported="false" />
+        <activity android:name=".IslahiTafsirActivity" android:exported="false" />
         <activity
             android:name=".QuizActivity"
             android:exported="false"
