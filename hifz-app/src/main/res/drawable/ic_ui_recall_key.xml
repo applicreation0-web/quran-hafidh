@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Fixed V3 mnemonic amorce is a key, never the Itqan anchoring pictogram. -->
+    <path android:fillColor="@android:color/transparent"
+        android:strokeColor="#121211" android:strokeWidth="1.8"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M10.5,9.5
+                          A5.5,5.5 0,1 1,21.5 9.5
+                          A5.5,5.5 0,1 1,10.5 9.5
+                          M11.7,13.3 L3,22 L2,22 L2,18 L5,15 L7,17 L9.7,14.3
+                          M17.5,7.5 L17.5,7.6" />
+</vector>
