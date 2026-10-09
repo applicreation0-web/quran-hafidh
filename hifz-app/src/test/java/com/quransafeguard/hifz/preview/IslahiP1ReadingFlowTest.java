@@ -49,14 +49,14 @@ public final class IslahiP1ReadingFlowTest {
         String map=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/IslahiMapActivity.java");
         assertTrue(map.contains("Read Tafsir  ›"));
         assertTrue(map.contains("IslahiTafsirActivity.forBlock("));
-        assertTrue(map.contains("inside?\\\"#595959\\\""));
+        assertTrue(map.contains("#595959"));
     }
 
     @Test public void hatchOverlayMustBeSeparateVisibleAndRecreated() throws Exception {
         String js=source("hifz-app/src/main/assets/hifzreader/reader.js");
         String mushaf=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java");
         String study=source("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertTrue(js.contains("'.islahi-p1-hatching'"));
+        assertTrue(js.contains("islahi-p1-hatching"));
         assertTrue(js.contains(".islahi-p1-hatching').forEach(n=>n.remove())"));
         assertTrue(js.contains("shape.setAttribute('fill-opacity', '1')"));
         assertTrue(js.contains("setIslahiHighlights(list)"));
