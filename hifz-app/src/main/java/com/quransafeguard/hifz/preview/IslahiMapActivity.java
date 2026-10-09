@@ -135,7 +135,7 @@ public final class IslahiMapActivity extends Activity {
             String name = QuranSurahNames.rawName(s);
             if (!q.isEmpty() && !name.contains(q) && !Integer.toString(s).contains(q)) continue;
             int id = s;
-            String badge = (s == 9 || s == 114) ? " · Work03" :
+            String badge = s == 114 ? " · English pilot" : s == 9 ? " · Work03" :
                 (s == 2 || s == 50 || s == 7) ? " · Démo" : " · À certifier";
             TextView row = text(s + "  " + QuranSurahNames.name(s) + badge + "  ›", 15, false);
             row.setMinHeight(Ui.dp(this, 50));
@@ -171,7 +171,7 @@ public final class IslahiMapActivity extends Activity {
             ? "DÉMONSTRATION — ces frontières ne sont pas certifiées comme celles d'Iṣlāḥī."
             : blocks.isEmpty()
             ? "Carte non vérifiée. Aucun bloc ni commentaire inventé."
-            : "Work03 — frontières documentées ; texte de l'analyse non disponible dans le livrable.",14,false);
+            : surah==114 ? "Verified block 114:1–6 · source-checked English pilot commentary." : "Work03 — frontières documentées ; texte de l'analyse non disponible dans le livrable.",14,false);
         intro.setTextColor(Ui.MUTED);
         root.addView(intro);
         LinearLayout list = Ui.column(this);
@@ -201,26 +201,69 @@ public final class IslahiMapActivity extends Activity {
         if(selected<0||selected>=blocks.size()) {selected=-1;showBlocks();return;}
         Block b=blocks.get(selected);
         header(b.label(), () -> {selected=-1;render();});
-        TextView state=text(b.certified
-             ? "Frontières consignées par Work03. Vérification indépendante du fac-similé encore requise."
+        final boolean nasPilot = b.surah == 114 && b.first == 1 && b.last == 6;
+        // Only the verified pilot gets a long, vertically scrollable source-backed detail.
+        // Other map blocks keep the original P1 layout and honest availability labels.
+        LinearLayout contentHost = root;
+        if (nasPilot) {
+            scroll = new ScrollView(this);
+            scroll.setFillViewport(false);
+            contentHost = Ui.column(this);
+            scroll.addView(contentHost);
+            root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        }
+        TextView state=text(nasPilot
+             ? "English editorial pilot · 114:1–6 passage and English source correspondence checked. Not certified against the Urdu original."
+             : b.certified ? "Frontières consignées par Work03. Vérification indépendante du fac-similé encore requise."
              : "DÉMONSTRATION TECHNIQUE — découpage Iṣlāḥī non certifié.",13,false);
-        state.setTextColor(Ui.MUTED);root.addView(state);
-        TextView analysis=text("ANALYSE GLOBALE\nTexte original non fourni. Aucun résumé inventé.",16,false);
-        root.addView(analysis);
+        state.setTextColor(Ui.MUTED);contentHost.addView(state);
+        String summary = "ANALYSE GLOBALE\nTexte original non fourni. Aucun résumé inventé.";
+        if (nasPilot) summary =
+            "BLOCK SUMMARY  ·  English editorial digest\n"
+            + "Seeking Refuge from Satan's Deceptive Suggestions\n\n"
+            + "Paired with al-Falaq, al-Nas is a prayer for God's protection. "
+            + "Whereas al-Falaq seeks refuge from several evils, this surah focuses on Satan, "
+            + "whose deceptive suggestions threaten people. It names God as mankind's Lord, "
+            + "Sovereign and God, and exposes the enemy's tactics and his accomplices "
+            + "among human beings and jinn.\n\n"
+            + "Source: Tadabbur-i Qur'an, vol. 9, Central Theme, printed p. 1. "
+            + "Title and summary are editorial, not quotations.";
+        TextView analysis=text(summary,16,false);
+        contentHost.addView(analysis);
         int p1=page(b.surah,b.first,true), p2=page(b.surah,b.last,false);
         TextView indication=text("Mushaf · pages "+p1+(p1==p2?"":" à "+p2)
             +" · toucher une miniature pour ouvrir Lecture",13,true);
-        root.addView(indication);
+        contentHost.addView(indication);
         preview=new WebView(this);
         preview.setBackgroundColor(Ui.PAPER);
         preview.getSettings().setJavaScriptEnabled(true);
         preview.getSettings().setAllowFileAccess(false);
         preview.getSettings().setAllowContentAccess(false);
         preview.addJavascriptInterface(new PreviewBridge(),"IslahiBridge");
-        root.addView(preview,new LinearLayout.LayoutParams(-1,0,1f));
-        TextView notes=text("Gris soutenu : bloc choisi. Gris clair : versets voisins sur les mêmes pages. "
-            +"Le tafsīr détaillé d'Iṣlāḥī n'est pas encore embarqué.",12,false);
-        root.addView(notes);
+        contentHost.addView(preview,nasPilot
+            ? new LinearLayout.LayoutParams(-1,Ui.dp(this,350))
+            : new LinearLayout.LayoutParams(-1,0,1f));
+        if (nasPilot) {
+            addNasReadingNotes(contentHost);
+        }
+        TextView notes=text(nasPilot
+            ? "Gray in the miniature = selected verses. Full source commentary is NOT bundled. "
+              + "Read the original English tafsir through the external links below."
+            : "Gris soutenu : bloc choisi. Gris clair : versets voisins sur les mêmes pages. "
+              + "Le tafsīr détaillé d'Iṣlāḥī n'est pas encore embarqué.",12,false);
+        contentHost.addView(notes);
+        if (nasPilot) {
+            addNasSourceLink(contentHost, "Read full English tafsir online  ↗",
+                "https://www.monthly-renaissance.com/issue/content.aspx?id=650");
+            addNasSourceLink(contentHost, "Open original English PDF  ↗",
+                "https://amin-ahsan-islahi.org/pdfs/tadabbur-e-quran-vol-9-english.pdf");
+            TextView ref = text("Amīn Aḥsan Iṣlāḥī · Tadabbur-i Qur'an, vol. 9, English translation by Dr Shehzad Saleem. "
+                + "Commentary: printed pp. 2–6 (PDF viewer pp. 536–540). "
+                + "Source-checked editorial summaries; full source text opens externally. "
+                + "No offline reproduction permission established.", 12, false);
+            ref.setTextColor(Ui.MUTED);
+            contentHost.addView(ref);
+        }
         int token=generation;
         preview.loadDataWithBaseURL(null,"<html><body style='font-family:sans-serif;background:#faf8f0;color:#333'>Chargement des pages réelles…</body></html>","text/html","UTF-8",null);
         executor.execute(() -> {
@@ -239,6 +282,41 @@ public final class IslahiMapActivity extends Activity {
                 });
             }
         });
+    }
+
+    /** English editorial summaries, checked against the translated source, never verbatim tafsir. */
+    private void addNasReadingNotes(LinearLayout host) {
+        host.addView(text("TAFSIR — ENGLISH READING NOTES", 17, true));
+        host.addView(text("114:1–3 · The One in whom refuge is sought\n"
+            + "The three divine titles form a connected argument: the One who cares for "
+            + "humanity is its rightful Sovereign, and He alone deserves worship and reliance.\n"
+            + "Source: printed p. 2.", 15, false));
+        host.addView(Ui.divider(this));
+        host.addView(text("114:4 · How the deceiver withdraws\n"
+            + "Iṣlāḥī explains al-khannās as the deceiver who retreats after misleading "
+            + "others and abandons them to the consequences. Satan influences through "
+            + "persuasion and false promises, not irresistible power.\n"
+            + "Source: printed pp. 3–5.", 15, false));
+        host.addView(Ui.divider(this));
+        host.addView(text("114:5–6 · The targets and agents of suggestion\n"
+            + "The suggestions target the human heart. Iṣlāḥī identifies those who "
+            + "entice others towards evil among both human beings and jinn.\n"
+            + "Source: printed p. 5.", 15, false));
+        host.addView(Ui.divider(this));
+    }
+
+    private void addNasSourceLink(LinearLayout host, String title, String url) {
+        TextView link = text(title, 15, true);
+        link.setContentDescription(title);
+        link.setMinHeight(Ui.dp(this, 48));
+        link.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+            } catch (android.content.ActivityNotFoundException | SecurityException error) {
+                android.widget.Toast.makeText(this, "No browser available to open source.", android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+        host.addView(link);
     }
 
     private final class PreviewBridge {
