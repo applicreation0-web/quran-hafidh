@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Fixed V3 "Carte" network symbol; monochrome BOOX geometry. -->
+    <path android:fillColor="@android:color/transparent"
+        android:strokeColor="#121211" android:strokeWidth="1.8"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M9,3.5 L15,3.5 L15,8.5 L9,8.5 Z
+                          M3,16 L9,16 L9,21 L3,21 Z
+                          M15,16 L21,16 L21,21 L15,21 Z
+                          M12,8.5 L12,12.5 M6,12.5 L18,12.5
+                          M6,12.5 L6,16 M18,12.5 L18,16" />
+</vector>
