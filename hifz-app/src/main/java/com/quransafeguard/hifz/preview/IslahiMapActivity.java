@@ -218,12 +218,12 @@ public final class IslahiMapActivity extends Activity {
              : "DÉMONSTRATION TECHNIQUE — découpage Iṣlāḥī non certifié.",13,false);
         state.setTextColor(Ui.MUTED);contentHost.addView(state);
         TextView analysis = text(nasPilot
-            ? "BLOCK SUMMARY  ·  English editorial digest\\n"
-              + IslahiPilotContent.NAS_TITLE + "\\n\\n"
-              + IslahiPilotContent.NAS_SUMMARY + "\\n\\n"
+            ? "BLOCK SUMMARY  ·  English editorial digest\n"
+              + IslahiPilotContent.NAS_TITLE + "\n\n"
+              + IslahiPilotContent.NAS_SUMMARY + "\n\n"
               + "Source: Tadabbur-i Qur'an, vol. 9, Central Theme, printed p. 1. "
               + "Editorial summary, not original quotation."
-            : "ANALYSE GLOBALE\\nTexte original non fourni. Aucun résumé inventé.", 15, false);
+            : "ANALYSE GLOBALE\nTexte original non fourni. Aucun résumé inventé.", 15, false);
         if (!nasPilot) contentHost.addView(analysis);
         int p1=page(b.surah,b.first,true), p2=page(b.surah,b.last,false);
         TextView indication=text("Mushaf · pages "+p1+(p1==p2?"":" à "+p2)
