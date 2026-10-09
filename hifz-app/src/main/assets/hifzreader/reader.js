@@ -388,13 +388,13 @@ function islahiHatchLayer(svg, verses) {
   const pattern = document.createElementNS(NS, 'pattern');
   pattern.setAttribute('id', 'islahi-p1-diagonal');
   pattern.setAttribute('patternUnits', 'userSpaceOnUse');
-  pattern.setAttribute('width', '8');
-  pattern.setAttribute('height', '8');
+  pattern.setAttribute('width', '9');
+  pattern.setAttribute('height', '9');
   const diagonal = document.createElementNS(NS, 'path');
-  diagonal.setAttribute('d', 'M-2 10 L10 -2');
-  diagonal.setAttribute('stroke', '#222');
-  diagonal.setAttribute('stroke-opacity', '0.19');
-  diagonal.setAttribute('stroke-width', '0.6');
+  diagonal.setAttribute('d', 'M-2 11 L11 -2');
+  diagonal.setAttribute('stroke', '#161616');
+  diagonal.setAttribute('stroke-opacity', eink ? '0.36' : '0.28');
+  diagonal.setAttribute('stroke-width', eink ? '1.0' : '0.9');
   diagonal.setAttribute('fill', 'none');
   pattern.appendChild(diagonal);
   patterns.appendChild(pattern);
@@ -405,9 +405,12 @@ function islahiHatchLayer(svg, verses) {
     shape.removeAttribute('class');
     shape.removeAttribute('style');
     shape.removeAttribute('id');
+    shape.removeAttribute('fill-opacity');
     shape.setAttribute('fill', 'url(#islahi-p1-diagonal)');
+    shape.setAttribute('fill-opacity', '1');
     shape.setAttribute('stroke', 'none');
     shape.setAttribute('opacity', '1');
+    shape.style.setProperty('fill-opacity','1','important');
     group.appendChild(shape);
   });
   return group;
@@ -815,7 +818,8 @@ function render(){
     p.classList.toggle('selected',!contextFocus&&selected.includes(String(p.dataset.verse)));
     p.classList.toggle('audio',audioVerse!==null&&String(p.dataset.verse)===audioVerse);
   });
-  svg.querySelectorAll('.masklayer,.weaklayer,.semanticcuelayer,.focuscontextlayer').forEach(n=>n.remove());
+  // Avoid accumulating hatch layers on every redraw (page, focus or zoom).
+  svg.querySelectorAll('.masklayer,.weaklayer,.semanticcuelayer,.focuscontextlayer,.islahi-p1-hatching').forEach(n=>n.remove());
 
   const wanted=new Set(lineIds.map(String));
   const lines=pageGeo&&lineIds.length
