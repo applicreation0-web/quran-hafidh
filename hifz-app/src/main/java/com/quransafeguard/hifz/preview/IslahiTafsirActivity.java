@@ -56,12 +56,16 @@ public final class IslahiTafsirActivity extends Activity {
         root.setBackgroundColor(Ui.PAPER);
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.addView(Ui.iconButton(this, "‹", "Retour au bloc", v -> finish()));
+        header.addView(Ui.iconButton(this, "‹", "Retour", v -> finish()));
         TextView title = Ui.bookText(this, "Iṣlāḥī  " + surah + ":" + first + "–" + last, 18f, true);
         title.setGravity(Gravity.CENTER);
         header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        header.addView(Ui.iconButton(this, "−", "Smaller tafsir text", v -> resize(-1f)));
-        header.addView(Ui.iconButton(this, "+", "Larger tafsir text", v -> resize(1f)));
+        Button smaller = Ui.smallButton(this, "A−", v -> resize(-1f));
+        smaller.setContentDescription("Smaller tafsir text");
+        Button larger = Ui.smallButton(this, "A+", v -> resize(1f));
+        larger.setContentDescription("Larger tafsir text");
+        header.addView(smaller);
+        header.addView(larger);
         root.addView(header);
         root.addView(Ui.divider(this));
 
