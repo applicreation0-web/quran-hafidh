@@ -1,0 +1,26 @@
+name: V3 source purity
+
+on:
+  push:
+    branches:
+      - work/haafidh-v3-ibn-kathir-from-1-17-1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-experimental-tafsir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout isolated V3 source
+        uses: actions/checkout@v4
+      - name: Reject obsolete experimental tafsir in Hifz app
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -i -E 'islah[iy]|iṣlāḥī|tadabbur-i.qur.an|shehzad[[:space:]]+saleem' -- hifz-app hifz-core; then
+            echo "::error::Obsolete experimental source detected. V3 must only use the approved documentary source."
+            exit 1
+          fi
+          echo "PASS: no obsolete experimental source in Hifz application or core"
