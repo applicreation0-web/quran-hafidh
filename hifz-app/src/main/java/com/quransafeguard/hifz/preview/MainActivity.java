@@ -87,10 +87,12 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout quiz = navLine(root, "Quiz", "", v -> startActivity(new Intent(this, QuizActivity.class)));
         LinearLayout parcours = navLine(root, "Parcours Hifz", "", v -> showParcours());
         LinearLayout progress = navLine(root, "Progression", "", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
+        LinearLayout islahi = navLine(root, "Carte Iṣlāḥī · TEST", "", v -> startActivity(new Intent(this, IslahiMapActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
         geometryActions.add(quiz);
         geometryActions.add(progress);
+        geometryActions.add(islahi);
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
         LinearLayout path = page();
