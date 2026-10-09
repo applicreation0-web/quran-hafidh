@@ -369,6 +369,35 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private void openTafsir() {
+        // Jalalayn remains compact. Only explicit Iṣlāḥī map context enables
+        // a separate, scroll-preserving long-reading mode.
+        if (islahiSurah > 0) {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Tafsir")
+                .setItems(new String[]{"Jalalayn · short commentary", "Iṣlāḥī · block reader"},
+                    (dialog, which) -> {
+                        if (which == 1) {
+                            if (IslahiPilotContent.hasEnglishReadingNotes(islahiSurah, islahiStart, islahiEnd)
+                                || IslahiPilotContent.isMultiPageNavigationPilot(islahiSurah, islahiStart, islahiEnd)) {
+                                startActivity(IslahiTafsirActivity.forBlock(this,
+                                    islahiSurah, islahiStart, islahiEnd));
+                            } else {
+                                Toast.makeText(this, "Iṣlāḥī English tafsir not verified for this block yet.",
+                                    Toast.LENGTH_LONG).show();
+                            }
+                        } else {
+                            final VerseRef verse = selected;
+                            if (verse == null) {
+                                Toast.makeText(this, "Tap a verse to open Jalalayn.", Toast.LENGTH_LONG).show();
+                            } else if (largeScreen) {
+                                openSideTafsir(verse);
+                            } else {
+                                openBottomTafsir(verse);
+                            }
+                        }
+                    }).show();
+            return;
+        }
         final VerseRef verse = selected;
         if (verse == null) {
             Toast.makeText(this, "Touchez d’abord un verset pour ouvrir le Tafsir.", Toast.LENGTH_LONG).show();
