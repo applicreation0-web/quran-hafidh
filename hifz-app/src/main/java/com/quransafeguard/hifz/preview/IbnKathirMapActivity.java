@@ -186,14 +186,84 @@ public final class IbnKathirMapActivity extends Activity {
         groupsList.post(() -> groupsList.setSelectionFromTop(target,offset));
     }
 
+    private void previewFirstVisibleGroup() {
+        if(groupsList==null||index==null)return;
+        int at=groupsList.getFirstVisiblePosition();
+        List<IbnKathirGroupIndex.Group> groups=index.groupsForSurah(surah);
+        if(at<0||at>=groups.size())return;
+        selectedGroupIndex=at;
+        setPreviewGroup(groups.get(at),0);
+    }
+
+    private void setPreviewGroup(IbnKathirGroupIndex.Group group,int preferredPage) {
+        if(group==null)return;
+        previewGroup=group;
+        try {
+            if(geometry==null)geometry=GeometryRepository.get(this);
+            int first=geometry.pageForVerse(new VerseRef(group.surah,group.startAyah));
+            int last=geometry.pageForVerse(new VerseRef(group.surah,group.endAyah));
+            previewPage=preferredPage>=first&&preferredPage<=last?preferredPage:first;
+            renderPreview();
+        } catch(RuntimeException error) {
+            previewCaption.setText(group.navigationRange()+" · aperçu indisponible");
+        }
+    }
+
+    private void renderPreview() {
+        if(!previewReady||previewGroup==null||geometry==null)return;
+        int first=geometry.pageForVerse(new VerseRef(previewGroup.surah,previewGroup.startAyah));
+        int last=geometry.pageForVerse(new VerseRef(previewGroup.surah,previewGroup.endAyah));
+        previewCaption.setText(previewGroup.navigationRange()+" · p. "+previewPage
+            +(first==last?"":" / "+first+"–"+last));
+        List<VerseRef> exact=new ArrayList<>();
+        for(VerseRef v:geometry.versesOnLines(geometry.lineIdsOnPage(previewPage))) {
+            if(v.getSurah()==previewGroup.surah
+                && v.getAyah()>=previewGroup.startAyah
+                && v.getAyah()<=previewGroup.endAyah
+                && !exact.contains(v))exact.add(v);
+        }
+        pagePreview.setHighlightVerses(exact);
+        pagePreview.show(previewPage,java.util.Collections.emptyList(),
+            java.util.Collections.emptyList(),0);
+    }
+
+    private void turnPreviewPage(int delta) {
+        if(previewGroup==null||geometry==null)return;
+        int first=geometry.pageForVerse(new VerseRef(previewGroup.surah,previewGroup.startAyah));
+        int last=geometry.pageForVerse(new VerseRef(previewGroup.surah,previewGroup.endAyah));
+        int next=Math.max(first,Math.min(last,previewPage+delta));
+        if(next!=previewPage) {
+            previewPage=next;
+            renderPreview();
+        }
+    }
+
+    private void openPreviewInMushaf() {
+        if(previewGroup!=null)openMushaf(previewGroup,previewPage);
+    }
+
     private void openMushaf(IbnKathirGroupIndex.Group group) {
+        openMushaf(group,0);
+    }
+
+    private void openMushaf(IbnKathirGroupIndex.Group group,int preferredPage) {
         try {
             VerseRef begin = new VerseRef(group.surah,group.startAyah);
-            int page = GeometryRepository.get(this).pageForVerse(begin);
+            GeometryRepository g=GeometryRepository.get(this);
+            int page=g.pageForVerse(begin);
+            int last=g.pageForVerse(new VerseRef(group.surah,group.endAyah));
+            if(preferredPage>=page&&preferredPage<=last)page=preferredPage;
+            VerseRef selectedVerse=begin;
+            if(page!=g.pageForVerse(begin)) {
+                for(VerseRef v:g.versesOnLines(g.lineIdsOnPage(page))) {
+                    if(v.getSurah()==group.surah&&v.getAyah()>=group.startAyah
+                        &&v.getAyah()<=group.endAyah) {selectedVerse=v;break;}
+                }
+            }
             // Open a temporary reader: no Hifz cursor or persisted Lecture bookmark changes.
             Intent intent = new Intent(this,StudyReaderActivity.class);
             intent.putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page);
-            intent.putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,begin.toString());
+            intent.putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,selectedVerse.toString());
             intent.putExtra(StudyReaderActivity.EXTRA_MAP_PREVIEW,true);
             startActivity(intent);
         } catch (RuntimeException invalidGeometry) {
@@ -220,6 +290,14 @@ public final class IbnKathirMapActivity extends Activity {
         }
         out.putInt("surah",surah);
         out.putInt("ayah",highlightedAyah);
+        out.putInt("selectedGroupIndex",selectedGroupIndex);
+        out.putInt("previewPage",previewPage);
         super.onSaveInstanceState(out);
+    }
+
+    @Override protected void onDestroy() {
+        previewHandler.removeCallbacks(changePreview);
+        if(pagePreview!=null)pagePreview.destroySafely();
+        super.onDestroy();
     }
 }
