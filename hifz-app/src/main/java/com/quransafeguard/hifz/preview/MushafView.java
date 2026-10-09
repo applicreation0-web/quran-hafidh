@@ -61,6 +61,8 @@ public final class MushafView extends WebView {
     private int lastMask;
     private boolean lastContextFocus;
     private List<VerseRef> currentHighlights = Collections.emptyList();
+    // Isolated, read-only Iṣlāḥī map overlay: never reuses personal Hifz weak spots.
+    private List<VerseRef> currentIslahiHighlights = Collections.emptyList();
     private String landmarkStartLineId;
     private String landmarkEndLineId;
     private boolean maskFollowsSelection = true;
@@ -207,6 +209,7 @@ public final class MushafView extends WebView {
                 .put("eink", eink.isEink(prefs))
                 .put("contextFocus", contextFocus)
                 .put("highlights", highlights)
+                .put("islahiHighlights", islahiHighlightIds())
                 .put("landmarkStart", landmarkStartLineId)
                 .put("landmarkEnd", landmarkEndLineId)
                 .put("maskFollowsSelection", maskFollowsSelection)
@@ -269,6 +272,20 @@ public final class MushafView extends WebView {
         runWhenReady(() -> evaluateJavascript(
             "window.HifzReader&&window.HifzReader.setHighlights(" + array.toString() + ");",
             ignored -> post(() -> eink.local(this, prefs))));
+    }
+
+    /** A separate P1-only hatch layer; weak spots, masks and semantic cues are unaffected. */
+    public void setIslahiHighlightVerses(List<VerseRef> verses) {
+        currentIslahiHighlights = verses == null ? Collections.emptyList() : verses;
+        JSONArray array = islahiHighlightIds();
+        runWhenReady(() -> evaluateJavascript(
+            "window.HifzReader&&window.HifzReader.setIslahiHighlights(" + array.toString() + ");",
+            ignored -> post(() -> eink.local(this, prefs))));
+    }
+    private JSONArray islahiHighlightIds() {
+        JSONArray array = new JSONArray();
+        for (VerseRef ref : currentIslahiHighlights) array.put(ref.toString());
+        return array;
     }
 
     /**
