@@ -45,6 +45,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     /** Jump straight to a page (int extra) and, optionally, highlight one verse on it (string extra, e.g. "2:255"). */
     public static final String EXTRA_JUMP_PAGE = "jumpPage";
     public static final String EXTRA_JUMP_VERSE = "jumpVerse";
+    public static final String EXTRA_ISLAHI_SURAH = "islahiSurah";
+    public static final String EXTRA_ISLAHI_START = "islahiStart";
+    public static final String EXTRA_ISLAHI_END = "islahiEnd";
 
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
@@ -55,6 +58,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     // The pen starts closed; its undo/erase tools only appear while it is open.
     private boolean annotationEnabled = false;
     private int page = 1;
+    private int islahiSurah, islahiStart, islahiEnd;
     private VerseRef selected;
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
@@ -78,6 +82,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        islahiSurah = getIntent().getIntExtra(EXTRA_ISLAHI_SURAH, 0);
+        islahiStart = getIntent().getIntExtra(EXTRA_ISLAHI_START, 0);
+        islahiEnd = getIntent().getIntExtra(EXTRA_ISLAHI_END, 0);
+        if (islahiSurah < 1 || islahiSurah > 114 || islahiStart < 1 || islahiEnd < islahiStart) islahiSurah = 0;
         int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
         page = jumpPage >= 1 && jumpPage <= 604
             ? jumpPage : getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
@@ -736,6 +744,22 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         updateSurahPickerLabel();
         updateRubPickerLabel();
         applySemanticCues();
+        applyIslahiHighlight();
+    }
+
+    /** Read-only map context; preserved across page swipes without writing Hifz progress. */
+    private void applyIslahiHighlight() {
+        if (islahiSurah == 0 || mushaf == null) return;
+        java.util.ArrayList<VerseRef> verses = new java.util.ArrayList<>();
+        for (int ayah = islahiStart; ayah <= islahiEnd; ayah++) {
+            VerseRef ref = new VerseRef(islahiSurah, ayah);
+            try {
+                int firstPage = geometry.line(geometry.firstLineIndex(ref)).page;
+                int lastPage = geometry.line(geometry.lastLineIndex(ref)).page;
+                if (page >= firstPage && page <= lastPage) verses.add(ref);
+            } catch (IllegalArgumentException missing) { /* fail closed on absent verse */ }
+        }
+        mushaf.setHighlightVerses(verses);
     }
     @Override public void onBackPressed() {
         if (isTafsirOpen()) { closeTafsirPanels(); return; }
