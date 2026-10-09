@@ -1,6 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 import android.app.Dialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -45,6 +46,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     /** Jump straight to a page (int extra) and, optionally, highlight one verse on it (string extra, e.g. "2:255"). */
     public static final String EXTRA_JUMP_PAGE = "jumpPage";
     public static final String EXTRA_JUMP_VERSE = "jumpVerse";
+    public static final String EXTRA_MAP_PREVIEW = "ibnKathirMapPreview";
 
     private MushafView mushaf;
     private AnnotationOverlayView annotationOverlay;
@@ -69,6 +71,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private TextView surahPicker;
     private TextView rubPicker;
     private boolean controlsVisible = true;
+    private boolean mapPreview;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
     private GeometryRepository geometry;
@@ -78,6 +81,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        mapPreview = getIntent().getBooleanExtra(EXTRA_MAP_PREVIEW, false);
         int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
         page = jumpPage >= 1 && jumpPage <= 604
             ? jumpPage : getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
@@ -85,7 +89,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (jumpVerse != null) {
             try { pendingJumpVerse = GeometryRepository.parseVerse(jumpVerse); } catch (RuntimeException malformed) { /* ignore */ }
         }
-        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
+        if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         semanticPassages = SemanticPassageRepository.shared(this);
@@ -152,6 +156,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 48));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
+        readerActions.addView(Ui.iconButton(this, "", "Carte", v -> openIbnKathirMap()));
         semanticButton = Ui.iconButton(this, "", "Afficher les amorces", v -> toggleSemanticCues());
         semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
         readerActions.addView(semanticButton);
@@ -257,6 +262,18 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return button;
     }
 
+    private void openIbnKathirMap() {
+        // A temporary Mushaf consultation returns to its existing Carte, never nests another one.
+        if (mapPreview) { finish(); return; }
+        int currentSurah = selected != null ? selected.getSurah()
+            : (geometry == null ? 1 : geometry.firstSurahOnPage(page));
+        int currentAyah = selected == null ? 1 : selected.getAyah();
+        Intent map = new Intent(this, IbnKathirMapActivity.class);
+        map.putExtra(IbnKathirMapActivity.EXTRA_SURAH, currentSurah);
+        map.putExtra(IbnKathirMapActivity.EXTRA_AYAH, currentAyah);
+        startActivity(map);
+    }
+
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
@@ -265,7 +282,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         page = next;
         selected = null;
         tafsirButton.setContentDescription("Tafsir · touchez un verset puis ouvrez le commentaire");
-        getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
+        if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         updateSurahPickerLabel();
         updateRubPickerLabel();
         mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
