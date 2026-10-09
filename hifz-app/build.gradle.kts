@@ -288,6 +288,7 @@ android {
         targetSdk = 36
         versionCode = 39
         versionName = "1.17.1"
+        manifestPlaceholders["appDisplayName"] = "Quran Haafidh"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -307,6 +308,9 @@ android {
 
     buildTypes {
         getByName("debug") {
+            applicationIdSuffix = ".islahitest"
+            versionNameSuffix = "-islahi-p1"
+            manifestPlaceholders["appDisplayName"] = "Quran Haafidh - Islahi TEST"
             isDebuggable = false
         }
         getByName("release") {
