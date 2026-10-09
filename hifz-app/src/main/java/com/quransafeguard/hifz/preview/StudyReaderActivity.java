@@ -759,7 +759,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
                 if (page >= firstPage && page <= lastPage) verses.add(ref);
             } catch (IllegalArgumentException missing) { /* fail closed on absent verse */ }
         }
-        mushaf.setHighlightVerses(verses);
+        mushaf.setIslahiHighlightVerses(verses);
     }
     @Override public void onBackPressed() {
         if (isTafsirOpen()) { closeTafsirPanels(); return; }
