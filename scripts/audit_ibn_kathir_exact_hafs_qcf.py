@@ -40,7 +40,7 @@ def run(index,source,output):
         qcf.extend(tuple(map(int,row[0].split(":"))) for row in pages[page])
     page_offsets.append(len(qcf))
     require(len(qcf)==77432 and doc["page_starts"]==page_offsets[:604],"word/page alignment failed")
-    offsets={key:index for index,key in enumerate(qcf) if key[2]==1}
+    offsets={key[:2]:index for index,key in enumerate(qcf) if key[2]==1}
     require(len(offsets)==6236,"missing Quran first word")
     metadata=doc["surahs"]
     require(len(metadata)==114,"wrong surah count")
