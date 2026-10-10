@@ -72,6 +72,9 @@ jobs:
                      and x["selection_status"]=="NOT_REVIEWED" for x in d["candidates"])
           print("PASS: exact geometry, no invented mnemonic lengths or runtime activation")
           PY
+      - name: Audit icon usage on every Android screen (no Hifz logic changes)
+        shell: bash
+        run: python3 scripts/audit_all_screen_icons.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
