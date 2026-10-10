@@ -111,7 +111,8 @@ public final class CanonicalProgressUiSourceContractTest {
         // comes before Entretien, so none of these evening labels may ever go bare.
         assertTrue(week.contains("evening=\"Renforcement + Révision active ("));
         assertTrue(week.contains("evening=\"Consolidation + Révision active ("));
-        assertTrue(week.contains("evening=\"Révision active ("));
+        assertTrue("Sunday final-only planning must never schedule a generic passive cursor",
+            week.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
     }
 
     @Test public void localHusaryImportContractRemainsUntouched() throws Exception {
