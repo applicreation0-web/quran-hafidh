@@ -88,7 +88,7 @@ public final class Lot2SourceContractTest {
 
     @Test public void maintenanceEndpointMayExtendBeyondPlanButMustStayInsideAcquiredCorpus() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus()"));
+        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus(geometry)") && session.contains("prefs.activeMurajaahCorpus()"));
         assertTrue(session.contains("if (!corpus.contains(verse))"));
         assertTrue(session.contains("if (!corpus.contains(through))"));
         assertTrue(session.contains("countMurajaahLinesThrough(murajaahActualEnd)"));
