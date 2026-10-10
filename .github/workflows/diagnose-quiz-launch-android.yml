@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/diagnose-quiz-launch-android.yml
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/QuizLaunchRegressionInstrumentedTest.java
+      - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzAndMapRuntimeSmokeInstrumentedTest.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
       - hifz-app/src/main/res/drawable/ic_ui_play.xml
       - hifz-app/src/main/res/drawable/ic_ui_close.xml
   workflow_dispatch:
@@ -41,8 +43,8 @@ jobs:
           # The full legacy androidTest source set does not compile on 1.17.1 (obsolete
           # HifzPrefs APIs). Do not change/delete those tests in the repository:
           # isolate only this diagnostic test in the ephemeral CI checkout.
-          find hifz-app/src/androidTest/java -type f -name '*.java' ! -name 'QuizLaunchRegressionInstrumentedTest.java' -delete
-          test "$(find hifz-app/src/androidTest/java -type f -name '*.java' | wc -l)" -eq 1
+          find hifz-app/src/androidTest/java -type f -name '*.java' ! -name 'QuizLaunchRegressionInstrumentedTest.java' ! -name 'HifzAndMapRuntimeSmokeInstrumentedTest.java' -delete
+          test "$(find hifz-app/src/androidTest/java -type f -name '*.java' | wc -l)" -eq 2
       - name: Enable KVM for genuine Android execution
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -59,7 +61,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             adb logcat -c
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.QuizLaunchRegressionInstrumentedTest --stacktrace
+            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.QuizLaunchRegressionInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest --stacktrace
       - name: Keep instrumented failures and context only
         if: always()
         uses: actions/upload-artifact@v4
