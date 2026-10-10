@@ -1,0 +1,327 @@
+{
+  "schema": "IK_QAF_QURANCOM_EDITORIAL_EVIDENCE_V1",
+  "date": "2026-10-10",
+  "source_repository": "applicreation0-web/quran-hafidh",
+  "corpus": "Ibn Kathir (Abridged) Quran.com 50:1–45, Hafs QCF V2 Mushaf",
+  "output_purpose": "Source-backed editorial review only; never an active amorce manifest",
+  "group_count": 8,
+  "approved_keys": 0,
+  "runtime_ready": false,
+  "excerpt_warning": "Short identifiable title excerpts only, no reproduced commentary, and some headings omitted. Do not treat this as a complete anthology of printed titles.",
+  "transition_warning": "Verse-start review positions refer to Quranic words only; a title appearing later inside an identical commentary does not create another documentary boundary.",
+  "group_entries": [
+    {
+      "id": "IKEN050_001_005",
+      "surah": 50,
+      "start_ayah": 1,
+      "end_ayah": 5,
+      "verified_qcf_page": 518,
+      "quran_com_url": "https://quran.com/qaf/1/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "The Beginning of the Mufassal Section of the Qur'an",
+        "The Disbelievers wonder at the Message and Resurrection Allah said,"
+      ],
+      "source_notes": "The source also opens with introductory material about the surah, not automatically a mnemonic segment.",
+      "review_start_word_keys": [
+        {
+          "key": "50:2:1",
+          "why_consider": "Denial of the prophetic warning and resurrection",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_006_011",
+      "surah": 50,
+      "start_ayah": 6,
+      "end_ayah": 11,
+      "verified_qcf_page": 518,
+      "quran_com_url": "https://quran.com/qaf/6/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "Allah's Power and Ability over what is Greater than Resurrection"
+      ],
+      "source_notes": "One source heading covers several images of creation; no artificial verse split.",
+      "review_start_word_keys": [
+        {
+          "key": "50:6:1",
+          "why_consider": "Creation as an argument for resurrection",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_012_015",
+      "surah": 50,
+      "start_ayah": 12,
+      "end_ayah": 15,
+      "verified_qcf_page": 518,
+      "quran_com_url": "https://quran.com/qaf/12/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "Reminding the Quraysh of the Destruction of earlier Disbelieving Nations",
+        "Repeating the Creation is Easier than originating It"
+      ],
+      "source_notes": "The second original heading begins at the discussion of 50:15; documentary group remains 50:12–15.",
+      "review_start_word_keys": [
+        {
+          "key": "50:12:1",
+          "why_consider": "Earlier nations denied their messengers",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        },
+        {
+          "key": "50:15:1",
+          "why_consider": "The first creation and re-creation",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_016_022",
+      "surah": 50,
+      "start_ayah": 16,
+      "end_ayah": 22,
+      "verified_qcf_page": 519,
+      "quran_com_url": "https://quran.com/qaf/16/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "Allah encompasses and watches all of Man's Activity",
+        "Reminding Mankind of the Stupor of Death"
+      ],
+      "source_notes": "Second heading excerpt is intentionally shortened; the exact full original heading is on Quran.com.",
+      "review_start_word_keys": [
+        {
+          "key": "50:16:1",
+          "why_consider": "Knowledge of mankind and the recording angels",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        },
+        {
+          "key": "50:19:1",
+          "why_consider": "Stupor of death and the gathering",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_023_029",
+      "surah": 50,
+      "start_ayah": 23,
+      "end_ayah": 29,
+      "verified_qcf_page": 519,
+      "quran_com_url": "https://quran.com/qaf/23/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "The Angel will bear Witness; Allah commands that the Disbeliever be thrown into the Fire",
+        "Man and Devil dispute before Allah"
+      ],
+      "source_notes": "The companion of 50:23 and companion of 50:27 are explained differently by Ibn Kathir; do not conflate.",
+      "review_start_word_keys": [
+        {
+          "key": "50:23:1",
+          "why_consider": "Angel's testimony and reckoning",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        },
+        {
+          "key": "50:27:1",
+          "why_consider": "Dispute with the companion before Allah",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_030_035",
+      "surah": 50,
+      "start_ayah": 30,
+      "end_ayah": 35,
+      "verified_qcf_page": 519,
+      "quran_com_url": "https://quran.com/qaf/30/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "Jahannam and Paradise and their Dwellers"
+      ],
+      "source_notes": "One heading covers the contrasting scenes; possible second recall transition is a review candidate only.",
+      "review_start_word_keys": [
+        {
+          "key": "50:30:1",
+          "why_consider": "Hellfire on the Day of Resurrection",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        },
+        {
+          "key": "50:31:1",
+          "why_consider": "Paradise for the God-conscious",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_036_040",
+      "surah": 50,
+      "start_ayah": 36,
+      "end_ayah": 40,
+      "verified_qcf_page": 520,
+      "quran_com_url": "https://quran.com/qaf/36/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "Warning the Disbelievers of the imminent Torment; commanding the Prophet to pray and have Patience"
+      ],
+      "source_notes": "One original heading encompasses both warnings and commands; no false title added.",
+      "review_start_word_keys": [
+        {
+          "key": "50:36:1",
+          "why_consider": "Fate of stronger earlier peoples",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        },
+        {
+          "key": "50:39:1",
+          "why_consider": "Command to patience and praise",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    },
+    {
+      "id": "IKEN050_041_045",
+      "surah": 50,
+      "start_ayah": 41,
+      "end_ayah": 45,
+      "verified_qcf_page": 520,
+      "quran_com_url": "https://quran.com/qaf/41/tafsirs/en-tafisr-ibn-kathir",
+      "source_tafsir": "English Ibn Kathir (Abridged)",
+      "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+      "title_evidence": "EXCERPTS_FROM_VISIBLE_HEADINGS_NOT_FULL_COMMENTARY",
+      "observed_english_heading_excerpts": [
+        "Admonition from Some Scenes of the Day of Resurrection",
+        "Comforting the Prophet"
+      ],
+      "source_notes": "Two original source headings within one identical-commentary group.",
+      "review_start_word_keys": [
+        {
+          "key": "50:41:1",
+          "why_consider": "The call and coming forth from the graves",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        },
+        {
+          "key": "50:45:1",
+          "why_consider": "Comfort and reminder by the Quran",
+          "exact_qcf_word_exists": null,
+          "selected_arabic_text": null,
+          "selected_length_words": null,
+          "editorial_status": "UNREVIEWED",
+          "mnemonic_approval": false,
+          "runtime_enabled": false
+        }
+      ],
+      "exact_qcf_geometry_status": "TO_BE_CHECKED_BY_CI",
+      "group_boundary_authority": "PINNED_EQUAL_COMMENTARY_RUN_NOT_EDITORIAL_UNIT",
+      "editorial_status": "SOURCE_HEADINGS_READ_KEY_NOT_APPROVED",
+      "rights_status": "TEXT_NOT_REDISTRIBUTED"
+    }
+  ]
+}

@@ -135,6 +135,8 @@ jobs:
             "$RUNNER_TEMP/ik-amorce-approval-gate.json" \
             "$RUNNER_TEMP/ik-j2-review.json" \
             "$RUNNER_TEMP"
+      - name: J2 Quran.com Qaf source-heading and exact QCF review checkpoint
+        run: python3 scripts/verify_ibn_kathir_qaf_qurancom.py --negative-tests
       - name: J6 Verify all compact icon roles use the frozen 23-vector contract
         run: python3 scripts/verify_j6_icon_roles.py
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
