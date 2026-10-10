@@ -31,8 +31,10 @@
             android:name=".StudyReaderActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
+        <!-- Portrait is restricted to home. Other screens retain landscape support. -->
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
