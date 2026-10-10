@@ -2721,11 +2721,49 @@ public final class HifzPrefs {
     public String lastLearningSnowballEveningDate() { return p.getString("lastLearningSnowballEveningDate", ""); }
     public String lastStabilizationSnowballEveningDate() { return p.getString("lastStabilizationSnowballEveningDate", ""); }
 
-    /** Closes tonight's evening snowball repetitions without graduating anything (Sunday does that). */
+    /**
+     * J5: an evening review is due ONLY for a NEW weekly cumulative set. Calendar dates
+     * alone are insufficient: reopening the exact same units after midnight must not
+     * re-credit them. A changed list (new Sabqi/Itqan block) is legitimately due.
+     *
+     * The original YYYY-MM-DD keys are kept untouched for pre-existing histories.
+     */
+    private static String snowballCompletedSnapshotKey(ConsolidationCycleEngine.Family family) {
+        return family == ConsolidationCycleEngine.Family.LEARNING
+            ? "v6LastLearningSnowballCompletedSnapshotV1"
+            : "v6LastStabilizationSnowballCompletedSnapshotV1";
+    }
+
+    private String snowballSnapshot(ConsolidationCycleEngine.Family family, LocalDate date) {
+        JSONArray current = rolledSnowballUnits(family,date);
+        if(current.length()==0)return "";
+        return mondayOf(date).toString()+"|"+current.toString();
+    }
+
+    boolean snowballEveningPending(ConsolidationCycleEngine.Family family,LocalDate date) {
+        if(family==null||date==null)throw new IllegalArgumentException("evening review required");
+        String marker=family==ConsolidationCycleEngine.Family.LEARNING
+            ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
+        if(date.toString().equals(marker))return false;
+        String snapshot=snowballSnapshot(family,date);
+        return !snapshot.isEmpty()
+            && !snapshot.equals(p.getString(snowballCompletedSnapshotKey(family),""));
+    }
+
+    /** Idempotent, single atomic close: validation date + consumed cumulative units + session. */
     boolean completeSnowballEvening(ConsolidationCycleEngine.Family family, String date) {
-        String key = family == ConsolidationCycleEngine.Family.LEARNING
-            ? "lastLearningSnowballEveningDate" : "lastStabilizationSnowballEveningDate";
-        return p.edit().putString(key, date).remove(consolidationStateKey(family)).commit();
+        if(family==null||date==null)return false;
+        LocalDate day;
+        try {day=LocalDate.parse(date);}catch(RuntimeException badDate){return false;}
+        synchronized(V6_STATE_LOCK) {
+            if(!snowballEveningPending(family,day))return false; // cannot credit same set twice
+            String key=family==ConsolidationCycleEngine.Family.LEARNING
+                ?"lastLearningSnowballEveningDate":"lastStabilizationSnowballEveningDate";
+            String snapshot=snowballSnapshot(family,day);
+            return p.edit().putString(key,date)
+                .putString(snowballCompletedSnapshotKey(family),snapshot)
+                .remove(consolidationStateKey(family)).commit();
+        }
     }
 
     public String sabqiTodayReviewDate() { return p.getString("sabqiTodayReviewDate", ""); }
