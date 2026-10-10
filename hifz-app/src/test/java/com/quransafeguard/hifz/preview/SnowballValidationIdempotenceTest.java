@@ -75,4 +75,41 @@ public final class SnowballValidationIdempotenceTest {
         assertFalse(disk.disk.containsKey("v6ConsolidationStabilizationState"));
         assertFalse(new HifzPrefs(disk).snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date));
     }
+    @Test public void pausedTuesdaySessionResumesWednesdayWithFrozenUnitsAndLeavesNewBlockDue() {
+        LocalDate tue=LocalDate.of(2026,10,6);
+        InMemoryPrefs disk=new InMemoryPrefs();
+        HifzPrefs prefs=prepare(disk,tue,ConsolidationCycleEngine.Family.STABILIZATION);
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        String originalUnit=unit("p520-l01","p520-l02");
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("stabilization-"+tue,
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit(originalUnit,
+                ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        ConsolidationCycleEngine.Session open=engine.openSession(cycle,"session-"+tue);
+        assertTrue(prefs.persistConsolidationSession(open));
+        String fingerprint=prefs.frozenConsolidationSnapshot(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tue);
+        assertTrue(fingerprint.contains(originalUnit));
+        disk.disk.put("stabilizationSnowballUnitIds","[\\""+originalUnit+"\\",\\""+unit("p521-l03")+"\\"]");
+        HifzPrefs reboot=new HifzPrefs(disk);
+        assertEquals(tue.toString(),reboot.unfinishedConsolidationSessionDate(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"));
+        ConsolidationCycleEngine.Session resumed=reboot.restoreConsolidationSession(
+            engine,ConsolidationCycleEngine.Family.STABILIZATION);
+        assertEquals(open.unitIds(),resumed.unitIds());
+        assertTrue(reboot.persistConsolidationSession(resumed)); // repeated checkpoint
+        assertEquals(fingerprint,reboot.frozenConsolidationSnapshot(
+            ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tue));
+        assertTrue(reboot.completeSnowballEvening(
+            ConsolidationCycleEngine.Family.STABILIZATION,tue.toString()));
+        assertFalse(reboot.completeSnowballEvening(
+            ConsolidationCycleEngine.Family.STABILIZATION,tue.toString()));
+        assertTrue("Wednesday new cumulative set MUST remain due after old session closes",
+            reboot.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,
+                tue.plusDays(1)));
+        assertNull("Completed session must not be OPEN after validation",
+            reboot.unfinishedConsolidationSessionDate(
+                ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"));
+    }
+
 }
