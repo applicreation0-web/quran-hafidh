@@ -90,7 +90,7 @@ public final class SnowballValidationIdempotenceTest {
         String fingerprint=prefs.frozenConsolidationSnapshot(
             ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"+tue);
         assertTrue(fingerprint.contains(originalUnit));
-        disk.disk.put("stabilizationSnowballUnitIds","[\\""+originalUnit+"\\",\\""+unit("p521-l03")+"\\"]");
+        disk.disk.put("stabilizationSnowballUnitIds",new org.json.JSONArray().put(originalUnit).put(unit("p521-l03")).toString());
         HifzPrefs reboot=new HifzPrefs(disk);
         assertEquals(tue.toString(),reboot.unfinishedConsolidationSessionDate(
             ConsolidationCycleEngine.Family.STABILIZATION,"stabilization-"));
