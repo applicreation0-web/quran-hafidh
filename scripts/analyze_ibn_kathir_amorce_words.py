@@ -17,8 +17,8 @@ from pathlib import Path
 from build_ibn_kathir_amorce_review import CHUNKS, WORDS, build, require
 
 QURAN_VERSES = 6236
-TASHKIL = re.compile(r"[\\u064b-\\u065f\\u0670\\u06d6-\\u06ed]")
-FORMAT = re.compile(r"^\\s*(\\d+)\\|(\\d+)\\|(.*)$")
+TASHKIL = re.compile(r"[\u064b-\u065f\u0670\u06d6-\u06ed]")
+FORMAT = re.compile(r"^\s*(\d+)\|(\d+)\|(.*)$")
 
 def normalized_word(raw):
     cleaned = unicodedata.normalize("NFC", TASHKIL.sub("", raw))
@@ -124,7 +124,7 @@ def main():
     args=parser.parse_args()
     data=draft(args.index_java,args.word_dir,args.tanzil)
     args.output.parent.mkdir(parents=True,exist_ok=True)
-    args.output.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+    args.output.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     assert data["groups"]==1903 and len(data["candidates"])==1903
     assert data["approved_semantic_amorces"]==0 and not data["runtime_ready"]
     print(f"IBN KATHIR CUE AUDIT: 1903 groups; "
