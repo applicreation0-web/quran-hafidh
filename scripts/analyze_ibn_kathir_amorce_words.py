@@ -14,7 +14,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from build_ibn_kathir_amorce_review import CHUNKS, WORDS, build, require
+from build_ibn_kathir_amorce_review import CHUNKS, WORDS, build, require, read_groups, load_verified_verse_text
 
 QURAN_VERSES = 6236
 TASHKIL = re.compile(r"[\u064b-\u065f\u0670\u06d6-\u06ed]")
@@ -24,23 +24,9 @@ def normalized_word(raw):
     cleaned = unicodedata.normalize("NFC", TASHKIL.sub("", raw))
     return cleaned.replace("ٱ", "ا").replace("أ", "ا").replace("إ", "ا")
 
-def load_verses(path):
-    text = path.read_text(encoding="utf-8-sig")
-    result = {}
-    for line in text.splitlines():
-        matched = FORMAT.match(line)
-        if matched is None:
-            if line.strip() and not line.lstrip().startswith("#"):
-                raise ValueError("Unexpected Quran source line (missing chapter|verse|text)")
-            continue
-        surah, ayah, arabic = matched.groups()
-        key = (int(surah), int(ayah))
-        require(key not in result, f"repeated Quran verse {key}")
-        require(arabic.strip(), f"empty Quran verse {key}")
-        result[key] = arabic.split()
-    require(len(result) == QURAN_VERSES, f"Tanzil source contains {len(result)} verses")
-    require(len(set(k[0] for k in result)) == 114, "Tanzil 114-surah coverage failure")
-    return result
+def load_verses(path, groups):
+    verses, _ = load_verified_verse_text(path, groups)
+    return {key: value.split() for key, value in verses.items()}
 
 def box_word_counts(folder):
     by_verse = collections.Counter()
@@ -66,8 +52,8 @@ def shortest_distinct_prefix(tokens, rivals):
     return None
 
 def draft(index_java, word_dir, tanzil_path):
-    validated = build(index_java, word_dir)
-    ayahs = load_verses(tanzil_path)
+    validated = build(index_java, word_dir, tanzil_path)
+    ayahs = load_verses(tanzil_path, read_groups(index_java)[0])
     box_counts, page_starts = box_word_counts(word_dir)
     wrong=[]
     for verse,words in ayahs.items():
