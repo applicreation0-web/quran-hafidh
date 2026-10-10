@@ -19,6 +19,6 @@ secondaire	Effacer	trash-2	ic_ui_annotation_erase.xml	ec92daacd2803f4c98b8f516af
 secondaire	Information	info	ic_ui_info.xml	669d62e945a78a317275a0ee8a2e782b306c5d9a	lucide:info
 secondaire	Révéler	eye	ic_ui_reveal.xml	c97fd1d2640291a8671b87d60f64c6c4d650def7	lucide:eye
 secondaire	Enregistrer	mic	ic_ui_record.xml	3f6b7e1dcba46b98dc7323583edaaec25b3172df	lucide:mic
-secondaire	Lire	play	ic_ui_play.xml	2cb65e29757bd946daff84d5db6723b836c18b9b	lucide:play
+secondaire	Lire	play	ic_ui_play.xml	9153d0f470b7aec36d8bfd972e56c76c730728dd	lucide:play
 secondaire	Pause	pause	ic_ui_pause.xml	6edfcc5e2dcbae9a50cdb84dfffe122bbb262126	lucide:pause
 secondaire	Autres options	ellipsis	ic_ui_more.xml	469f3456af11f153466b8a9ffc26ad596c8c6419	lucide:ellipsis
