@@ -82,22 +82,21 @@ jobs:
                      and x["selection_status"]=="NOT_REVIEWED" for x in d["candidates"])
           print("PASS: exact geometry, no invented mnemonic lengths or runtime activation")
           PY
-      - name: Build draft Quran-word minimal prefixes for all 1903 Ibn Kathir groups (NO RUNTIME)
+      - name: Verify Quran.ws Hafs 77432 words align with QCF and draft Ibn Kathir keys
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/analyze_ibn_kathir_amorce_words.py \
+          python3 scripts/audit_ibn_kathir_exact_hafs_qcf.py \
             hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java \
             hifz-app/src/main/word-source/quran-ws-v1.1.2 \
-            scripts/data/quran-uthmani-tanzil.txt \
-            "$RUNNER_TEMP/ik-draft-1903-words.json"
-          python3 - "$RUNNER_TEMP/ik-draft-1903-words.json" <<'PY'
+            "$RUNNER_TEMP/ik-1903-verified-draft-only.json"
+          python3 - "$RUNNER_TEMP/ik-1903-verified-draft-only.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1],encoding="utf-8"))
-          assert d["groups"]==1903
+          assert d["words_exactly_aligned"]==77432 and d["ayahs_exactly_aligned"]==6236
+          assert d["pages_exactly_aligned"]==604 and d["ibn_kathir_groups"]==1903
           assert d["approved_semantic_amorces"]==0 and d["runtime_ready"] is False
-          assert all(c["candidate_anchor_word_count"] is None for c in d["candidates"])
-          print("PASS: all Quran word proposals are evidence-only and cannot affect Hifz")
+          print("PASS: source-exact candidate evidence; Hifz and Quiz still frozen")
           PY
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
         shell: bash
