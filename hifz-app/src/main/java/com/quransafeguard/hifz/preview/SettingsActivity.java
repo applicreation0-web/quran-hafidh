@@ -35,7 +35,7 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, weakVersesSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, morningTimeSetting, eveningTimeSetting, weakVersesSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
     private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
@@ -85,6 +85,15 @@ public final class SettingsActivity extends android.app.Activity {
             refreshWeeklyCadence();
         });
         parcours.addView(learningDaysSetting);parcours.addView(Ui.divider(this));
+        morningTimeSetting=Ui.settingRow(this,"Horaire proposé · matin",
+            suggestedTimeLabel(true),v->chooseSuggestedTime(true));
+        parcours.addView(morningTimeSetting);parcours.addView(Ui.divider(this));
+        eveningTimeSetting=Ui.settingRow(this,"Horaire proposé · soir",
+            suggestedTimeLabel(false),v->chooseSuggestedTime(false));
+        parcours.addView(eveningTimeSetting);parcours.addView(Ui.divider(this));
+        TextView noLock=Ui.text(this,"Horaires indicatifs : aucune séance bloquée. Le dimanche matin peut être prolongé.",11f,false);
+        parcours.addView(noLock);
+
 
         sabqiStartRow=Ui.settingRow(this,"Début de la plage d’Apprentissage",prefs.sabqiStart().toString(),v->chooseVerse("Début de la plage d’Apprentissage",prefs.sabqiStart(),verse->setSabqiBound(true,verse)));
         parcours.addView(sabqiStartRow);parcours.addView(Ui.divider(this));
@@ -250,6 +259,10 @@ public final class SettingsActivity extends android.app.Activity {
         protocol.setText(weeklyCadenceSummary());
         TextView modeValue=Ui.settingValue(weeklyProgramSetting);
         if(modeValue!=null)modeValue.setText(weeklyProgramSummary());
+        TextView morningValue=Ui.settingValue(morningTimeSetting);
+        if(morningValue!=null)morningValue.setText(suggestedTimeLabel(true));
+        TextView eveningValue=Ui.settingValue(eveningTimeSetting);
+        if(eveningValue!=null)eveningValue.setText(suggestedTimeLabel(false));
         TextView value=Ui.settingValue(learningDaysSetting);
         if(value!=null)value.setText(learningDaysSummary());
         String stabilizationDays=daysFor(CadenceAction.STABILIZATION),learningDays=daysFor(CadenceAction.LEARNING);
@@ -258,6 +271,27 @@ public final class SettingsActivity extends android.app.Activity {
             +"\\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
             +"\\n2. Dimanche matin : finale Renforcement Sabqi, distincte de l’Itqān recommandé. Dimanche soir : finale Consolidation Itqān. Seules ces finales permettent les promotions Acquis."
             +"\\n3. Révision active 15 min et Entretien passif "+maintenanceMinutes()+" min les jours de semaine. Aucune Révision le dimanche.");
+    }
+
+    private String suggestedTimeLabel(boolean morning) {
+        String time=morning?prefs.suggestedMorningTime():prefs.suggestedEveningTime();
+        String[] parts=time.split(":");
+        int end=(Integer.parseInt(parts[0])+1)%24;
+        return time+" – "+String.format(java.util.Locale.ROOT,"%02d:%s",end,parts[1])
+            +(morning?" (dimanche extensible)":"");
+    }
+
+    private void chooseSuggestedTime(boolean morning) {
+        String original=morning?prefs.suggestedMorningTime():prefs.suggestedEveningTime();
+        int hour=Integer.parseInt(original.substring(0,2));
+        int minute=Integer.parseInt(original.substring(3,5));
+        new android.app.TimePickerDialog(this,(view,h,m)->{
+            String selected=String.format(java.util.Locale.ROOT,"%02d:%02d",h,m);
+            boolean saved=morning?prefs.setSuggestedMorningTime(selected)
+                :prefs.setSuggestedEveningTime(selected);
+            if(!saved){Ui.showFatal(this,"Impossible d’enregistrer l’horaire.");return;}
+            refreshWeeklyCadence();
+        },hour,minute,true).show();
     }
 
     private String weeklyProgramSummary() {
