@@ -1,71 +1,105 @@
-name: Quran Haafidh 1.17.1 Ibn Kathir DEBUG
+name: Quran Haafidh 1.17.1 - Second Audit DEBUG (APK only)
 
 on:
   push:
     branches:
-      - work/haafidh-v3-ibn-kathir-from-1-17-1
+      - work/haafidh-1171-ibn-kathir-integration-independent
+    paths:
+      - .github/workflows/haafidh-ibn-kathir-debug.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: haafidh-ibn-kathir-debug-${{ github.ref }}
-  cancel-in-progress: true
+  group: haafidh-1171-ik-audit2-debug-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-verified-debug:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout EXACT tested branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce official 1.17.1 Hifz and Quiz freeze, with exact audited exceptions
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/guard_frozen_hifz_engines.sh
+          bash scripts/audit_hifz_quiz_against_1171.sh
+      - name: Second contradictory audit, exact 23 icons and BOOX screen inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_j5_j7_contradictory.py
+          python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_j6_icon_roles.py
+          python3 scripts/audit_all_screen_icons.py
+      - name: Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
         with:
           packages: ''
-      - name: Prepare Android SDK
+      - name: Prepare Android compileSdk 37 and build-tools
+        shell: bash
         run: |
           yes | sdkmanager --licenses > /dev/null || true
           sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - name: Gradle 9.5
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Test Hifz logic and documentary index
-        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
-      - name: Verify original source contracts
-        run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
-      - name: Assemble isolated test APK
+      - name: Run full Hifz/Quiz behavioural tests and all original BOOX source contracts
+        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
+      - name: Assemble exactly ONE isolated DEBUG APK (never release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
-      - name: Verify package and stage APK
+      - name: Verify identity, signature, packed corpus and cryptographic checksum
         id: apk
         shell: bash
         run: |
           set -euo pipefail
-          apk="$(find hifz-app/build/outputs/apk/debug -name '*.apk' -type f -print -quit)"
-          test -n "$apk" && test -s "$apk"
-          "$ANDROID_HOME"/build-tools/36.0.0/aapt dump badging "$apk" > /tmp/ibn-kathir-badging.txt
-          grep -q "name='com.quransafeguard.hifz.ibnkathirtest'" /tmp/ibn-kathir-badging.txt
-          grep -q "versionName='1.17.1-IbnKathir-DEBUG'" /tmp/ibn-kathir-badging.txt
-          cp "$apk" "$RUNNER_TEMP/Quran-Haafidh-1.17.1-IbnKathir-DEBUG.apk"
-          echo "path=$RUNNER_TEMP/Quran-Haafidh-1.17.1-IbnKathir-DEBUG.apk" >> "$GITHUB_OUTPUT"
-          sha256sum "$RUNNER_TEMP/Quran-Haafidh-1.17.1-IbnKathir-DEBUG.apk"
-      - name: Upload private debug test artifact only
+          mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | sort)
+          test "${#apks[@]}" -eq 1
+          apk="${apks[0]}"
+          test -s "$apk"
+          test "$(stat -c %s "$apk")" -gt 1000000
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/apk-badging.txt"
+          grep -Fq "name='com.quransafeguard.hifz.ibnkathirtest'" "$RUNNER_TEMP/apk-badging.txt"
+          grep -Fq "versionName='1.17.1-IbnKathir-DEBUG'" "$RUNNER_TEMP/apk-badging.txt"
+          unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-files.txt"
+          grep -Fxq 'assets/reader109/geometry.json' "$RUNNER_TEMP/apk-files.txt"
+          grep -Eq '^assets/reader109/word-boxes/' "$RUNNER_TEMP/apk-files.txt"
+          mkdir -p "$RUNNER_TEMP/haafidh-audit2-debug"
+          output="Quran-Haafidh-1.17.1-IbnKathir-AUDIT2-DEBUG.apk"
+          cp "$apk" "$RUNNER_TEMP/haafidh-audit2-debug/$output"
+          (cd "$RUNNER_TEMP/haafidh-audit2-debug" && sha256sum "$output" > "$output.sha256")
+          echo "SHA256 and signed package:"
+          cat "$RUNNER_TEMP/haafidh-audit2-debug/$output.sha256"
+          grep '^package:' "$RUNNER_TEMP/apk-badging.txt"
+          echo "verified_debug_apk=$RUNNER_TEMP/haafidh-audit2-debug/$output" >> "$GITHUB_OUTPUT"
+      - name: Publish ONLY the final APK debug + SHA256, no release
         uses: actions/upload-artifact@v4
         with:
-          name: quran-haafidh-1-17-1-ibn-kathir-debug-${{ github.sha }}
-          path: ${{ steps.apk.outputs.path }}
+          name: Quran-Haafidh-1.17.1-IbnKathir-AUDIT2-DEBUG-${{ github.sha }}
+          path: ${{ runner.temp }}/haafidh-audit2-debug/
+          retention-days: 30
           if-no-files-found: error
-          retention-days: 14
-      - name: Preserve test reports if blocked
+      - name: Failure logs (never an APK)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ibn-kathir-test-failures-${{ github.sha }}
+          name: Quran-Haafidh-AUDIT2-BLOCKERS-${{ github.sha }}
           path: |
-            hifz-core/build/reports/tests/
             hifz-app/build/reports/tests/
             hifz-app/build/test-results/
+            hifz-core/build/reports/tests/
+          retention-days: 14
           if-no-files-found: warn
