@@ -59,6 +59,11 @@ replacements.extend([
 ])
 # J6: passive-only corpus enlargement; active remains frozen.
 replacements.append(("prefs.murajaahCorpus()","prefs.murajaahCorpus(geometry)"))
+# J5 resumed previous date, with frozen set rather than silent recalibration.
+replacements.extend([
+    ("        speedStore = new HifzSpeedStore(this);","        // Resume the original frozen evening/final session, including its calendar date,\n        // instead of assigning yesterday's repetitions to today's new cumulative set.\n        ConsolidationCycleEngine.Family resumeFamily =\n            LEARNING_CONSOLIDATION.equals(mode)||LEARNING_FINAL.equals(mode)\n            ? ConsolidationCycleEngine.Family.LEARNING\n            : RECENT_SABQI_REVIEW.equals(mode)||CONSOLIDATION_FINAL.equals(mode)\n              ? ConsolidationCycleEngine.Family.STABILIZATION : null;\n        if(resumeFamily!=null) {\n            String prefix=LEARNING_FINAL.equals(mode)?\"learning-final-\"\n                : CONSOLIDATION_FINAL.equals(mode)?\"stabilization-final-\"\n                : LEARNING_CONSOLIDATION.equals(mode)?\"learning-\":\"stabilization-\";\n            String original=prefs.unfinishedConsolidationSessionDate(resumeFamily,prefix);\n            if(original!=null)sessionDate=LocalDate.parse(original);\n        }\n        speedStore = new HifzSpeedStore(this);"),
+    ("if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()) {","if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()\n                && prefs.frozenConsolidationSnapshot(family,cycleIdPrefix+today).isEmpty()) {"),
+])
 for before,after in replacements:
     expected=4 if before=="prefs.murajaahCorpus()" else (2 if before.startswith("currentMask=ItqanMaintenancePolicy.maskForNextRep(") else 1)
     assert baseline.count(before)==expected,"Official 1.17.1 source no longer matches expected Hifz code."
