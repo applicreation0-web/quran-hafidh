@@ -6,6 +6,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -58,6 +59,7 @@ public final class MainActivity extends android.app.Activity {
         // then five plain lines. The five Hifz paths and the week live one level down, in
         // "Parcours Hifz" (same activity, so every cadence/routing rule below stays untouched).
         LinearLayout root = page();
+        // BOOX portrait home: fill the viewport without a centered 720dp tablet inset.
         homeScroll = scrollOf(root);
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -81,12 +83,12 @@ public final class MainActivity extends android.app.Activity {
         recentSabqiAdvisory.setVisibility(View.GONE);
         root.addView(recentSabqiAdvisory);
 
-        LinearLayout study = navLine(root, "Lecture", "", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
-        LinearLayout free = navLine(root, "Mémorisation libre", "", v -> startActivity(new Intent(this, FreeMemActivity.class)));
+        LinearLayout study = homeNavLine(root, "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
+        LinearLayout free = homeNavLine(root, "Mémorisation libre", v -> startActivity(new Intent(this, FreeMemActivity.class)));
         // Révision works memory; Quiz only questions it — free, read-only on Progression.
-        LinearLayout quiz = navLine(root, "Quiz", "", v -> startActivity(new Intent(this, QuizActivity.class)));
-        LinearLayout parcours = navLine(root, "Parcours Hifz", "", v -> showParcours());
-        LinearLayout progress = navLine(root, "Progression", "", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
+        LinearLayout quiz = homeNavLine(root, "Quiz", v -> startActivity(new Intent(this, QuizActivity.class)));
+        LinearLayout parcours = homeNavLine(root, "Parcours Hifz", v -> showParcours());
+        LinearLayout progress = homeNavLine(root, "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
         geometryActions.add(quiz);
@@ -177,29 +179,72 @@ public final class MainActivity extends android.app.Activity {
         return root;
     }
 
+    /** A single true full-width portrait column; fillViewport expands height, never constrains scroll. */
     private ScrollView scrollOf(LinearLayout root) {
         ScrollView scroll = new ScrollView(this);
+        scroll.setBackgroundColor(Ui.PAPER);
         scroll.setFillViewport(true);
-        FrameLayout holder = new FrameLayout(this);
-        holder.setBackgroundColor(Ui.PAPER);
-        scroll.addView(holder, new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        int screen = getResources().getDisplayMetrics().widthPixels;
-        int contentWidth = Math.max(Ui.dp(this, 300), Math.min(screen, Ui.dp(this, 720)));
-        holder.addView(root, new FrameLayout.LayoutParams(
-            contentWidth, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
-        Ui.respectSystemBars(this, holder, 0, 0, 0, 0);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.addView(root, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        Ui.respectSystemBars(this, scroll, 0, 0, 0, 0);
         return scroll;
     }
 
-    /** "Aujourd’hui ··· next session ›" — the main destination, a line, never a card. */
+    /** Aujourd’hui remains the same computed action, with one larger accessible touch target. */
     private LinearLayout todayLine() {
         LinearLayout line = Ui.settingRow(this, "Aujourd’hui", "…", v -> openToday());
+        line.setMinimumHeight(Ui.dp(this, 84));
         if (line.getChildAt(0) instanceof TextView) {
             ((TextView) line.getChildAt(0)).setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD);
         }
         line.setContentDescription("Ouvrir la séance du jour");
         setLineEnabled(line, false);
+        return line;
+    }
+
+    /**
+     * Full-viewport home destination, with the exact existing drawable as an inline icon.
+     * No speculative symbol for Parcours Hifz: reserve its grid alignment instead.
+     * The whole row is one click target; disabled geometry actions remain truly disabled.
+     */
+    private LinearLayout homeNavLine(LinearLayout parent, String label, View.OnClickListener listener) {
+        LinearLayout line = Ui.row(this);
+        line.setBackgroundColor(Ui.PAPER);
+        line.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 8), Ui.dp(this, 6));
+        line.setMinimumHeight(Ui.dp(this, 68));
+        line.setClickable(true);
+        line.setFocusable(true);
+        line.setContentDescription(label);
+        line.setOnClickListener(listener);
+
+        int drawable = Ui.iconFor(label, label);
+        if (drawable != 0) {
+            ImageView picture = new ImageView(this);
+            picture.setImageResource(drawable);
+            picture.setColorFilter(Ui.INK);
+            picture.setPadding(Ui.dp(this, 12), Ui.dp(this, 12),
+                Ui.dp(this, 12), Ui.dp(this, 12));
+            picture.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            line.addView(picture, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        } else {
+            // Existing Parcours line has no frozen standalone pictogram.
+            line.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        }
+        TextView name = Ui.bookText(this, label, 18f, false);
+        name.setGravity(Gravity.CENTER_VERTICAL);
+        name.setPadding(Ui.dp(this, 7), 0, 0, 0);
+        line.addView(name, new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        TextView arrow = Ui.text(this, "›", 19f, false);
+        arrow.setGravity(Gravity.CENTER);
+        arrow.setTextColor(Ui.MUTED);
+        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        line.addView(arrow, new LinearLayout.LayoutParams(Ui.dp(this, 30),
+            ViewGroup.LayoutParams.MATCH_PARENT));
+        parent.addView(line, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        parent.addView(Ui.divider(this));
         return line;
     }
 
