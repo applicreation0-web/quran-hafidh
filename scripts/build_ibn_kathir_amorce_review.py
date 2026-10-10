@@ -108,13 +108,33 @@ def load_verified_verse_text(path: Path, groups):
         last_by_surah[surah] = end
     require(len(last_by_surah) == 114 and sum(last_by_surah.values()) == VERSES,
             "source text does not match canonical 114-surah verse lengths")
+    # In this source the basmala is prefixed to ayah 1 on 112 surahs
+    # although KFQC does not count it as that ayah's first words.
+    # Do NOT permit "bismillah" to masquerade as the Ibn Kathir recall cue.
+    basmala = lines[0]
+    special_basmala = basmala.replace("بِسۡمِ", "بِّسۡمِ", 1)
+    require(special_basmala != basmala, "unexpected Tanzil basmala spelling")
     text_by_ayah = {}
+    stripped_preambles = 0
     at = 0
     for surah in range(1, 115):
         for ayah in range(1, last_by_surah[surah] + 1):
-            text_by_ayah[(surah, ayah)] = lines[at]
+            line = lines[at]
             at += 1
-    require(at == VERSES, "verse text ordinal mismatch")
+            if ayah == 1 and surah not in (1, 9):
+                found = next((prefix for prefix in (basmala, special_basmala)
+                              if line.startswith(prefix + " ")), None)
+                require(found is not None, f"unrecognized basmala prelude in {surah}:1")
+                line = line[len(found):].strip()
+                stripped_preambles += 1
+            require(bool(line), f"missing canonical Quran text at {surah}:{ayah}")
+            text_by_ayah[(surah, ayah)] = line
+    require(at == VERSES and stripped_preambles == 112,
+            "incorrect canonical text/basmala segmentation")
+    require(text_by_ayah[(50, 1)].startswith("قۤۚ "),
+            "Qaf 50:1 must begin with Qaf, not the surah-level basmala")
+    require(text_by_ayah[(9, 1)] == lines[sum(last_by_surah[s] for s in range(1,9))],
+            "At-Tawbah's first ayah must remain unprefixed")
     return text_by_ayah, git_sha
 
 
