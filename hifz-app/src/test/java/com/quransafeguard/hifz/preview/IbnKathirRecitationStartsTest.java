@@ -79,7 +79,7 @@ public final class IbnKathirRecitationStartsTest {
     }
     @Test public void readerSourceNowUsesIbnKathirWhileHifzCoreKeepsLegacyApi() throws Exception {
         String reader=source("StudyReaderActivity.java");
-        assertTrue(reader.contains("recitationStarts.forPage(page)"));
+        assertTrue(reader.contains("ibnKathirCues.readerCuesForPage(page)"));
         assertTrue(reader.contains("ibn_kathir_start_markers_visible"));
         assertTrue(reader.contains("IbnKathirQuranComSource.urlForGroup(group)"));
         assertFalse(reader.contains("semanticPassages.readerCuesForPage(page)"));
