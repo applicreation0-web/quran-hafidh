@@ -75,6 +75,6 @@ public final class RevisionActiveSettledCorpusSourceContractTest {
         String completeValidation = method(session,
             "private void completeMurajaahValidation(){", "private int countMurajaahLinesThrough");
         assertTrue("validation must pick the corpus per mode before advancing either cursor",
-            completeValidation.contains("EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();"));
+            completeValidation.contains("EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);"));
     }
 }
