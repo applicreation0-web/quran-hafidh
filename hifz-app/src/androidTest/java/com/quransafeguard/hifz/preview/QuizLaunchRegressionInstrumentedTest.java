@@ -63,7 +63,7 @@ public final class QuizLaunchRegressionInstrumentedTest {
             try {
                 int resource=field.getInt(null);
                 android.graphics.drawable.Drawable drawable=
-                    androidx.core.content.ContextCompat.getDrawable(context,resource);
+                    context.getResources().getDrawable(resource,context.getTheme());
                 assertNotNull("Null packaged icon "+field.getName(),drawable);
                 drawable.setBounds(0,0,48,48);
                 android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(
@@ -80,13 +80,51 @@ public final class QuizLaunchRegressionInstrumentedTest {
         assertTrue("Expected the full Hifz icon set, not only the 23",all>=23);
         for(int resource:assets) {
             android.graphics.drawable.Drawable d=
-                androidx.core.content.ContextCompat.getDrawable(context,resource);
+                context.getResources().getDrawable(resource,context.getTheme());
             assertNotNull("Failed to inflate icon "+context.getResources().getResourceEntryName(resource),d);
             d.setBounds(0,0,48,48);
             android.graphics.Bitmap pixels=android.graphics.Bitmap.createBitmap(48,48,android.graphics.Bitmap.Config.ARGB_8888);
             d.draw(new android.graphics.Canvas(pixels));
             pixels.recycle();
         }
+    }
+
+
+    @Test public void learnedRealQuranPageMakesAQuizQuestionScreenNotCrash() {
+        android.content.Context context=androidx.test.core.app.ApplicationProvider.getApplicationContext();
+        GeometryRepository geometry=GeometryRepository.get(context);
+        HifzPrefs prefs=new HifzPrefs(context);
+        java.util.List<String> realLines=geometry.lineIdsOnPage(523);
+        assertTrue("Mushaf QCF page 523 lines must exist",realLines.size()>5);
+        // Emulator-only synthetic LEARNING completion. No user-device data is read or changed.
+        prefs.transitionV6Lines(realLines,HifzPrefs.ProgressEvent.LEARNING_COMPLETED);
+        QuizCorpus check=new QuizCorpus(geometry,WordGeometryRepository.shared(context));
+        assertFalse("Newly Appris corpus must immediately enter the official 1.17.1 Quiz",
+            check.questions(prefs.progressionSnapshotV6(),QuizCorpus.Mode.MIXED,10).isEmpty());
+        try(ActivityScenario<QuizActivity> scenario=ActivityScenario.launch(QuizActivity.class)) {
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            scenario.onActivity(activity->{
+                View start=findDescription(activity.findViewById(android.R.id.content),"Commencer");
+                assertNotNull(start);
+                start.performClick();
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            scenario.onActivity(activity->{
+                assertFalse("Quiz closed during real corpus question",activity.isFinishing());
+                assertNotNull("Mushaf question reader missing",
+                    reflect(activity,"mushaf"));
+                assertTrue("First real question not shown",
+                    activity.findViewById(android.R.id.content)!=null);
+            });
+        }
+    }
+
+    private static Object reflect(Object owner,String name) {
+        try {
+            java.lang.reflect.Field f=owner.getClass().getDeclaredField(name);
+            f.setAccessible(true);
+            return f.get(owner);
+        }catch(Exception ex){throw new AssertionError("Cannot inspect "+name,ex);}
     }
 
     private static boolean containsExactText(View view,String text) {
