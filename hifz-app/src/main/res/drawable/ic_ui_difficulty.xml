@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Contract: Lucide flag @ f93beca5957187620e30ae771d220d88501be621, ISC license; svg primitives preserved as paths. -->
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#121211"
+        android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z M4,22 L4,15" />
+</vector>
