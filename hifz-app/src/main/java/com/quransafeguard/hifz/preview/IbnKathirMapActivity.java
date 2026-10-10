@@ -29,7 +29,7 @@ public final class IbnKathirMapActivity extends Activity {
     static final String EXTRA_SURAH = "mapSurah";
     static final String EXTRA_AYAH = "mapAyah";
     private IbnKathirGroupIndex index;
-    private IbnKathirRecitationStarts recitationStarts;
+    private SemanticPassageRepository ibnKathirCues;
     private int surah = 1;
     private int highlightedAyah = 1;
     private ListView groupsList;
@@ -48,7 +48,7 @@ public final class IbnKathirMapActivity extends Activity {
         super.onCreate(saved);
         try {
             index = IbnKathirGroupIndex.shared();
-            recitationStarts=new IbnKathirRecitationStarts(index,WordGeometryRepository.shared(this));
+            ibnKathirCues=SemanticPassageRepository.shared(this);
         } catch (RuntimeException error) {
             Ui.showFatal(this, "L'index Ibn Kathīr vérifié est indisponible.");
             return;
@@ -236,8 +236,15 @@ public final class IbnKathirMapActivity extends Activity {
                 && !exact.contains(v))exact.add(v);
         }
         pagePreview.setHighlightVerses(exact);
-        pagePreview.setSemanticCues(recitationStarts.forSelectedGroup(
-            previewPage,previewGroup.id),false,true);
+        org.json.JSONArray shown=new org.json.JSONArray();
+        if (ibnKathirCues!=null && ibnKathirCues.isAvailable()) {
+            org.json.JSONArray all=ibnKathirCues.readerCuesForPage(previewPage);
+            for(int i=0;i<all.length();i++) {
+                org.json.JSONObject item=all.optJSONObject(i);
+                if(item!=null && previewGroup.id.equals(item.optString("id")))shown.put(item);
+            }
+        }
+        pagePreview.setSemanticCues(shown,false,true);
         pagePreview.show(previewPage,java.util.Collections.emptyList(),
             java.util.Collections.emptyList(),0);
     }
