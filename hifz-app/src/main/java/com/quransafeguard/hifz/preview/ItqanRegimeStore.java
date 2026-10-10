@@ -22,6 +22,7 @@ final class ItqanRegimeStore {
     static final String LEGACY_LEG = "p4AncrageLeg";
     static final String LEGACY_INITIAL_TAIL_COMPLETED = "p4AncrageInitialTailCompleted";
     static final String UNIT_PLAN = "itqanUnitPlanV1";
+    enum MaskProfile { LEGACY_15_5_5_5_10, BALANCED_20_5_5_5_5 }
 
     private ItqanRegimeStore() {}
 
@@ -80,11 +81,19 @@ final class ItqanRegimeStore {
     static final class UnitPlan {
         final ItqanMaintenancePolicy.Regime regime;
         final AnchoringQueue.ItqanProtocol protocol;
+        final MaskProfile maskProfile;
 
         UnitPlan(ItqanMaintenancePolicy.Regime regime, AnchoringQueue.ItqanProtocol protocol) {
-            if (regime == null || protocol == null) throw new IllegalArgumentException("plan required");
+            this(regime,protocol,MaskProfile.LEGACY_15_5_5_5_10);
+        }
+
+        UnitPlan(ItqanMaintenancePolicy.Regime regime, AnchoringQueue.ItqanProtocol protocol,
+                 MaskProfile maskProfile) {
+            if (regime == null || protocol == null || maskProfile == null)
+                throw new IllegalArgumentException("plan required");
             this.regime = regime;
             this.protocol = protocol;
+            this.maskProfile = maskProfile;
         }
     }
 
@@ -114,7 +123,7 @@ final class ItqanRegimeStore {
                 ItqanMaintenancePolicy.protocolFor(true, legacyProtocol));
         }
         return new UnitPlan(ItqanMaintenancePolicy.regimeFor(postNasMaintenance(p)),
-            ItqanMaintenancePolicy.protocolForNewSession());
+            ItqanMaintenancePolicy.protocolForNewSession(),MaskProfile.BALANCED_20_5_5_5_5);
     }
 
     /** Regime a new selection should be sized with, honouring a unit already mid-repetition. */
@@ -129,7 +138,8 @@ final class ItqanRegimeStore {
     }
 
     static boolean stampPlan(SharedPreferences p, String start, String end, UnitPlan plan) {
-        String value = start + "|" + end + "|" + plan.regime.name() + "|" + plan.protocol.name();
+        String value = start + "|" + end + "|" + plan.regime.name() + "|"
+            + plan.protocol.name() + "|" + plan.maskProfile.name();
         if (value.equals(p.getString(UNIT_PLAN, ""))) return true;
         return p.edit().putString(UNIT_PLAN, value).commit();
     }
@@ -137,10 +147,15 @@ final class ItqanRegimeStore {
     private static UnitPlan parsePlan(String raw, String start, String end) {
         if (raw == null || raw.isEmpty()) return null;
         String[] parts = raw.split("\\|", -1);
-        if (parts.length != 4 || !start.equals(parts[0]) || !end.equals(parts[1])) return null;
+        if ((parts.length != 4 && parts.length != 5)
+                || !start.equals(parts[0]) || !end.equals(parts[1])) return null;
         try {
+            // The existing four-field plans are already-started sessions:
+            // they remain on the exact legacy 15/5/5/5/10 schedule.
+            MaskProfile profile=parts.length==4
+                ?MaskProfile.LEGACY_15_5_5_5_10:MaskProfile.valueOf(parts[4]);
             return new UnitPlan(ItqanMaintenancePolicy.Regime.valueOf(parts[2]),
-                AnchoringQueue.ItqanProtocol.valueOf(parts[3]));
+                AnchoringQueue.ItqanProtocol.valueOf(parts[3]),profile);
         } catch (RuntimeException malformed) {
             return null;
         }
