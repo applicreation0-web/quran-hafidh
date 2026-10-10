@@ -164,6 +164,8 @@ jobs:
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
         shell: bash
         run: python3 scripts/audit_all_screen_icons.py
+      - name: J7 Contradictory full-functional contract audit (J5-J7, no APK)
+        run: python3 scripts/audit_j5_j7_contradictory.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
