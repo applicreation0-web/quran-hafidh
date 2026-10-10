@@ -227,6 +227,7 @@ final class SemanticPassageRepository {
     private final List<Cue> orderedCues = new ArrayList<>();
     private final boolean available;
     private final WordGeometryRepository wordGeometry;
+    private final IbnKathirApprovedRecallCorpus.Corpus approvedIbnKathir;
 
     private static volatile SemanticPassageRepository shared;
 
@@ -255,8 +256,17 @@ final class SemanticPassageRepository {
 
     private SemanticPassageRepository(Context context) {
         wordGeometry = WordGeometryRepository.shared(context);
+        IbnKathirApprovedRecallCorpus.Corpus reviewed =
+            IbnKathirApprovedRecallCorpus.tryLoad(context, wordGeometry);
+        approvedIbnKathir=reviewed;
         boolean loaded = false;
-        try {
+        if(reviewed!=null) {
+            byPage.putAll(reviewed.byPage);
+            byId.putAll(reviewed.byId);
+            orderedCues.addAll(reviewed.byId.values());
+            orderedCues.sort((a,b)->a.startVerse.compareTo(b.startVerse));
+            loaded=byPage.size()==604 && !byId.isEmpty();
+        } else try {
             byte[] raw = readAsset(context, ASSET_PATH);
             if (!EXPECTED_SHA256.equals(sha256(raw))) {
                 throw new IllegalStateException("semantic V2.1 SHA-256 mismatch");
@@ -329,10 +339,13 @@ final class SemanticPassageRepository {
      */
     boolean hasCompleteExactGeometryForPage(int page) {
         if (wordGeometry.pageLandmarkBoxes(page).length() != 6) return false;
-        for (Cue cue : cuesForPage(page)) {
-            if (!cue.anchorOnCurrentPage) continue;
-            if (wordGeometry.anchorBoxes(page, cue.startVerse, cue.anchorWordCount).length()
-                    != cue.anchorWordCount) return false;
+        if(approvedIbnKathir!=null && cuesForPage(page).isEmpty())return false;
+        for(Cue cue:cuesForPage(page)) {
+            if(!cue.anchorOnCurrentPage)continue;
+            JSONArray boxes=approvedIbnKathir!=null
+                ? approvedIbnKathir.boxes(cue)
+                : wordGeometry.anchorBoxes(page,cue.startVerse,cue.anchorWordCount);
+            if(boxes.length()!=cue.anchorWordCount)return false;
         }
         return true;
     }
@@ -349,17 +362,18 @@ final class SemanticPassageRepository {
                 JSONObject item = new JSONObject();
                 item.put("id", cue.passageId);
                 item.put("index", cue.indexOnPage);
-                // Public semantic title payload is canonical Al-Munir Arabic only.
-                item.put("title", cue.title);
-                item.put("titleMunirAr", cue.title);
-                item.put("anchor", cue.anchorArabic);
+                // Do not relabel an Ibn Kathir source as Al-Munir.
+                item.put("title",cue.title);
+                if(approvedIbnKathir==null)item.put("titleMunirAr",cue.title);
+                item.put("anchor",cue.anchorArabic);
                 item.put("anchorWordCount", cue.anchorWordCount);
                 item.put("startLine", cue.startLine);
 
                 // Exact viewBox-space boxes come from the pinned quran-ws word sidecar.
                 // An empty array is an explicit fail-closed state; the reader never estimates.
-                item.put("boxes", wordGeometry.anchorBoxes(
-                    page, cue.startVerse, cue.anchorWordCount));
+                item.put("boxes",approvedIbnKathir!=null
+                    ? approvedIbnKathir.boxes(cue)
+                    : wordGeometry.anchorBoxes(page,cue.startVerse,cue.anchorWordCount));
 
                 JSONArray ranges = new JSONArray();
                 for (CellRange range : cue.visualRanges) {
