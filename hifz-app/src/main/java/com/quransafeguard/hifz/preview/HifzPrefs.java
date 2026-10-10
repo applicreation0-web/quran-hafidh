@@ -2617,10 +2617,28 @@ public final class HifzPrefs {
         return Collections.unmodifiableList(out);
     }
 
-    /** Tonight's Consolidation snowball: this week's accumulated Stabilisation units, ×10 each. */
+    /**
+     * J4 Consolidation: today’s new physical Stabilisé block ×7, older blocks read
+     * once as one continuous pass. Renforcement retains its original SNOWBALL ×10.
+     * Already persisted OPEN sessions keep their frozen protocol vectors in restore.
+     */
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
-        return weeklySnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION, today,
-            ConsolidationCycleEngine.Protocol.SNOWBALL);
+        JSONArray source=rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION,today);
+        if(source.length()==0)return Collections.emptyList();
+        ArrayList<String> earlier=new ArrayList<>();
+        for(int i=0;i<source.length()-1;i++)earlier.add(source.optString(i));
+        ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
+        if(!earlier.isEmpty()){
+            String combined=earlier.size()==1?earlier.get(0)
+                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(earlier);
+            units.add(new ConsolidationCycleEngine.Unit(combined,
+                ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        }
+        String todayBlock=source.optString(source.length()-1);
+        if(todayBlock.isEmpty())throw new IllegalStateException("Missing stabilized snowball block");
+        units.add(new ConsolidationCycleEngine.Unit(todayBlock,
+            ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        return Collections.unmodifiableList(units);
     }
 
     /** Tonight's Renforcement snowball: this week's accumulated Apprentissage units, ×10 each. */
