@@ -13,7 +13,7 @@ principal	Progression	chart-no-axes-column	ic_ui_progress_map.xml	8c8798fc354f41
 principal	Reprendre	refresh-cw	ic_ui_resume.xml	85484fb6efb47d8a9294bc3b1ed735388d6b2c86	lucide:refresh-cw
 principal	Retour	arrow-left	ic_ui_back.xml	0af53313884a462b497924586c159f5e2da938ae	lucide:arrow-left
 secondaire	Valider	check	ic_ui_validate.xml	bd90b099e6c17fbf6fb5937e8ff236620544a56f	lucide:check
-secondaire	Fermer	x	ic_ui_close.xml	c1e700ef32797567f5f0fbda8061acc829e6b9df	lucide:x
+secondaire	Fermer	x	ic_ui_close.xml	2acfa3a9af5414b6f7ebbef85580caa87cae3bea	lucide:x
 secondaire	Annuler	undo-2	ic_ui_undo.xml	ee3f69cbb72726b7bb5047914bd7c184c0474461	lucide:undo-2
 secondaire	Effacer	trash-2	ic_ui_annotation_erase.xml	ec92daacd2803f4c98b8f516af69756723a04edc	lucide:trash-2
 secondaire	Information	info	ic_ui_info.xml	669d62e945a78a317275a0ee8a2e782b306c5d9a	lucide:info
