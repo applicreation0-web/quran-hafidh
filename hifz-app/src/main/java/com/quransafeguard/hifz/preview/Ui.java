@@ -308,6 +308,7 @@ final class Ui {
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
         if (s.contains("suivant")) return R.drawable.ic_ui_next;
         if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
+        if (s.equals("reprendre")) return R.drawable.ic_ui_resume;
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
         if (s.equals("lecture")) return R.drawable.ic_ui_reading;
         if (s.contains("mémor")) return R.drawable.ic_ui_memorize;
