@@ -487,9 +487,14 @@ public final class IbnKathirMapActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle out) {
         if(groupsList!=null) {
-            out.putInt("firstVisible",groupsList.getFirstVisiblePosition());
-            View first=groupsList.getChildAt(0);
-            out.putInt("topOffset",first==null?0:first.getTop());
+            // Preserve the list scroll even while the passage sheet has hidden it.
+            if(stage==1) {
+                scrollIndex=groupsList.getFirstVisiblePosition();
+                View first=groupsList.getChildAt(0);
+                scrollTop=first==null?0:first.getTop();
+            }
+            out.putInt("firstVisible",scrollIndex);
+            out.putInt("topOffset",scrollTop);
         }
         out.putInt("surah",surah);
         out.putInt("ayah",highlightedAyah);
