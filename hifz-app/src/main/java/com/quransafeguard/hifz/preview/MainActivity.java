@@ -471,6 +471,11 @@ public final class MainActivity extends android.app.Activity {
         LocalDate today=HifzClock.today();
         LocalDate date=due.getScheduledDate();
         boolean isToday=date.equals(today);
+        // Recommended: Révision active is a morning activity, before Sabqi/Itqan.
+        if(isToday && today.getDayOfWeek()!=DayOfWeek.SUNDAY
+                && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED
+                && !date.toString().equals(prefs.lastActiveMurajaahDate()))
+            return HifzSessionActivity.MURAJAAH_ACTIVE;
         if(recommendedSunday(date)){
             if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;
             if(!isToday)return null;
@@ -542,6 +547,11 @@ public final class MainActivity extends android.app.Activity {
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
         }
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        if(today.getDayOfWeek()!=DayOfWeek.SUNDAY
+                && prefs.weeklyProgramFor(today)==HifzPrefs.WeeklyProgram.RECOMMENDED)
+            addToday(out,"Révision active · matin · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",
+                HifzSessionActivity.MURAJAAH_ACTIVE,today,
+                todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
         if(recommendedSunday(today)){
             addToday(out,morningDetail!=null?morningDetail:"Itqān · 8 lignes",HifzSessionActivity.ITQAN,
                 today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
@@ -573,7 +583,8 @@ public final class MainActivity extends android.app.Activity {
             default:break;
         }
         if(today.getDayOfWeek()!=DayOfWeek.SUNDAY){
-            addToday(out,"Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
+            if(prefs.weeklyProgramFor(today)==HifzPrefs.WeeklyProgram.CLASSIC)
+                addToday(out,"Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
             addToday(out,"Entretien"+entretienDetail(),HifzSessionActivity.MURAJAAH,today,todayStr.equals(prefs.lastMurajaahDate()),nextMode);
         }
         return out;
