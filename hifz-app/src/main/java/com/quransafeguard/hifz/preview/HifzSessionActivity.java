@@ -68,6 +68,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private AnchoringQueue.Entry anchoringEntry;
     private int itqanTargetReps = PreviewConfig.ITQAN_TOTAL_REPS;
     private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
+    private ItqanRegimeStore.UnitPlan itqanUnitPlan;
     private SemanticPassageRepository semanticPassages;
     private android.app.Dialog semanticTitleDialog;
     private ItqanMaintenancePolicy.Regime itqanRegime = ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
@@ -797,6 +798,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         itqanRegime = plan.regime;
         itqanSessionProtocol = plan.protocol;
+        itqanUnitPlan = plan;
         itqanTargetReps = ItqanMaintenancePolicy.totalReps(itqanRegime, itqanSessionProtocol);
         boolean maintenance = itqanRegime == ItqanMaintenancePolicy.Regime.POST_NAS_MAINTENANCE;
         List<GeometryRepository.LineMeta> unitLines = geometry.linesForExactIds(itqanUnit.lineIds);
@@ -888,7 +890,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             return;
         }
         sessionCompleted=false;
-        currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
+        currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan, rep);
         program.setText(itqanProgramLabel());
         updateItqanProgress(rep,prefs.itqanAssisted());showCurrent();
         addRoundAction("↻","Répétition",v->completeItqanRep());
@@ -995,7 +997,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
             awaitingValidation=true;sessionCompleted=true;renderMode();return;
         }
-        currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);
+        currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan, rep);
         if(ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep)!=ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, rep-1))
             applyItqanAnchors();
         if(currentMask!=oldMask)mushaf.setMask(displayedMask());
