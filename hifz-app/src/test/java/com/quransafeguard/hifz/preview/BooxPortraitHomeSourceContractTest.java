@@ -55,7 +55,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("refreshToday()"));
         assertTrue(home.contains("WeeklyDashboardPlanner"));
         assertTrue(home.contains("setMinimumHeight(Ui.dp(this, 68))"));
-        assertFalse(home.contains("addView(Ui.iconButton(this, \"\", \"Carte\"")));
+        assertFalse(home.contains("homeNavLine(root, \"Carte\""));
     }
 
     @Test public void fixedLucideSilhouettesAreActuallyPresentNotOnlyNames() throws Exception {
