@@ -6,6 +6,9 @@ val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").g
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
 val generatedSemanticAssetsDir = layout.buildDirectory.dir("generated/semanticAssets").get().asFile
+// New coordinate-only asset; generated side-by-side until API compatibility is proven.
+val generatedQuranicCueAssetsDir = layout.buildDirectory.dir("generated/quranicCueAssets").get().asFile
+val quranicCueOutput = generatedQuranicCueAssetsDir.resolve("quranic/quranic_cues_v1.json")
 // Frozen audited semantic corpus (V2.1 boundaries + V2.3 integrity overlay) behind the Al-Munīr
 // amorces; SemanticPassageRepository re-checks both SHA-256 values at runtime and fails closed.
 val semanticV21SourceDir = file("src/main/semantic-source/v2_1")
@@ -65,8 +68,24 @@ val verifyQuranWordGeometry by tasks.registering(Exec::class) {
     )
 }
 
+val prepareQuranicCueCoordinates by tasks.registering(Exec::class) {
+    dependsOn(prepareSemanticV21, verifyQuranWordGeometry)
+    inputs.file(semanticV21Output)
+    inputs.dir(quranWordGeometrySourceDir)
+    inputs.file(rootProject.file("scripts/extract_quranic_cues_v1.py"))
+    outputs.file(quranicCueOutput)
+    commandLine(
+        "python3",
+        rootProject.file("scripts/extract_quranic_cues_v1.py").absolutePath,
+        semanticV21Output.absolutePath,
+        quranWordGeometrySourceDir.absolutePath,
+        quranicCueOutput.absolutePath
+    )
+}
+
 val prepareHifzAssets by tasks.registering(Sync::class) {
-    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21, prepareSemanticV23Titles, verifyQuranWordGeometry)
+    dependsOn(prepareHifzTafsirRelease, prepareSemanticV21, prepareSemanticV23Titles,
+              prepareQuranicCueCoordinates, verifyQuranWordGeometry)
     into(generatedHifzAssetsDir)
     from(rootProject.file("app/src/main/assets/mushaf")) { into("mushaf") }
     from(rootProject.file("app/src/main/assets/reader109/geometry.json")) { into("reader109") }
@@ -74,6 +93,8 @@ val prepareHifzAssets by tasks.registering(Sync::class) {
     from(quranWordGeometrySourceDir) { into("reader109/word-boxes") }
     from(generatedHifzTafsirDir) { into("tafsir") }
     from(generatedSemanticAssetsDir)
+    // Staged but NOT consumed by Hifz engines until the facade passes parity tests.
+    from(generatedQuranicCueAssetsDir)
 }
 
 val verifyHifzProductBoundary by tasks.registering {
