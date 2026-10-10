@@ -28,6 +28,7 @@ while IFS= read -r file; do
     "$APP_ROOT/ItqanBalancedMaskSchedule.java" | \
     "$APP_ROOT/ItqanCompletionBoundaryPolicy.java" | \
     "$APP_ROOT/MainActivity.java" | \
+    "$APP_ROOT/SettingsActivity.java" | \
     "$APP_ROOT/Ui.java" | \
     "$APP_ROOT/StudyReaderActivity.java" | \
     "$APP_ROOT/SemanticPassageRepository.java" | \
