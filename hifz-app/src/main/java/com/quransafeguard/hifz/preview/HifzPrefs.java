@@ -2758,6 +2758,44 @@ public final class HifzPrefs {
             : "v6LastStabilizationSnowballCompletedSnapshotV1";
     }
 
+    /**
+     * The OPEN session pins the exact source set from the instant it started.
+     * New units added after a BOOX restart must NOT be swallowed by an old validation.
+     */
+    String frozenConsolidationSnapshot(ConsolidationCycleEngine.Family family,
+                                      String cycleId) {
+        String raw=p.getString(consolidationStateKey(family),"");
+        if(raw==null||raw.isEmpty())return "";
+        try {
+            JSONObject root=new JSONObject(raw);
+            if(!cycleId.equals(root.optString("cycleId","")) || !root.optBoolean("open",false))
+                return "";
+            return root.optString("sourceSnapshot","");
+        } catch(Exception invalid) {return "";}
+    }
+
+    String unfinishedConsolidationSessionDate(ConsolidationCycleEngine.Family family,
+                                               String prefix) {
+        String raw=p.getString(consolidationStateKey(family),"");
+        if(raw==null||raw.isEmpty())return null;
+        try {
+            JSONObject root=new JSONObject(raw);
+            String id=root.getString("cycleId");
+            if(!root.getBoolean("open") || !id.startsWith(prefix))return null;
+            LocalDate date=LocalDate.parse(id.substring(prefix.length()));
+            return date.toString();
+        } catch(Exception corrupt){return null;}
+    }
+
+    private String exactSnowballSnapshotToValidate(
+            ConsolidationCycleEngine.Family family,LocalDate date) {
+        for(String prefix:new String[]{"learning-","stabilization-"}) {
+            String frozen=frozenConsolidationSnapshot(family,prefix+date);
+            if(!frozen.isEmpty())return frozen;
+        }
+        return snowballSnapshot(family,date);
+    }
+
     private String snowballSnapshot(ConsolidationCycleEngine.Family family, LocalDate date) {
         JSONArray current = rolledSnowballUnits(family,date);
         if(current.length()==0)return "";
@@ -2769,7 +2807,7 @@ public final class HifzPrefs {
         String marker=family==ConsolidationCycleEngine.Family.LEARNING
             ?lastLearningSnowballEveningDate():lastStabilizationSnowballEveningDate();
         if(date.toString().equals(marker))return false;
-        String snapshot=snowballSnapshot(family,date);
+        String snapshot=exactSnowballSnapshotToValidate(family,date);
         return !snapshot.isEmpty()
             && !snapshot.equals(p.getString(snowballCompletedSnapshotKey(family),""));
     }
@@ -2783,7 +2821,7 @@ public final class HifzPrefs {
             if(!snowballEveningPending(family,day))return false; // cannot credit same set twice
             String key=family==ConsolidationCycleEngine.Family.LEARNING
                 ?"lastLearningSnowballEveningDate":"lastStabilizationSnowballEveningDate";
-            String snapshot=snowballSnapshot(family,day);
+            String snapshot=exactSnowballSnapshotToValidate(family,day);
             return p.edit().putString(key,date)
                 .putString(snowballCompletedSnapshotKey(family),snapshot)
                 .remove(consolidationStateKey(family)).commit();
@@ -2900,6 +2938,15 @@ public final class HifzPrefs {
             root.put("nextUnitIndex", session.nextUnitIndex());
             root.put("donePerStage", session.donePerStage());
             root.put("open", true);
+            // Freeze the source corpus once and KEEP it when saving later repetitions.
+            String prior=frozenConsolidationSnapshot(cycle.family(),cycle.cycleId());
+            String snapshot=prior;
+            if(snapshot.isEmpty()) {
+                String id=cycle.cycleId();
+                LocalDate sourceDate=LocalDate.parse(id.substring(id.length()-10));
+                snapshot=snowballSnapshot(cycle.family(),sourceDate);
+            }
+            root.put("sourceSnapshot",snapshot);
 
             JSONArray units = new JSONArray();
             for (ConsolidationCycleEngine.Unit unit : cycle.units()) {
