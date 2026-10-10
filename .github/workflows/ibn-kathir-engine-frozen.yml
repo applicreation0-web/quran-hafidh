@@ -98,6 +98,21 @@ jobs:
           assert d["approved_semantic_amorces"]==0 and d["runtime_ready"] is False
           print("PASS: source-exact candidate evidence; Hifz and Quiz still frozen")
           PY
+      - name: J1 editorial gate for every Ibn Kathir group (NO RUNTIME ACTIVATION)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/gate_ibn_kathir_amorce_approvals.py \
+            "$RUNNER_TEMP/ik-amorce-review-only.json" \
+            "$RUNNER_TEMP/ik-1903-verified-draft-only.json" \
+            "$RUNNER_TEMP/ik-amorce-approval-gate.json"
+          python3 - "$RUNNER_TEMP/ik-amorce-approval-gate.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert d["groups"]==1903 and d["approved"]==0 and d["not_approved"]==1903
+          assert len(d["entries"])==1903 and d["runtime_ready"] is False
+          assert {x["semantic_amorce_status"] for x in d["entries"]}=={"NOT_APPROVED"}
+          PY
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
         shell: bash
         run: python3 scripts/audit_all_screen_icons.py
@@ -129,6 +144,7 @@ jobs:
             ${{ runner.temp }}/ik-amorce-review-only.json
             ${{ runner.temp }}/ik-draft-1903-words.json
             ${{ runner.temp }}/ik-1903-verified-draft-only.json
+            ${{ runner.temp }}/ik-amorce-approval-gate.json
       - name: Audit-only gate confirmed
         shell: bash
         run: |
