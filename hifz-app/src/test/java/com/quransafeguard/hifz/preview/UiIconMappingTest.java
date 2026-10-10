@@ -39,6 +39,7 @@ public final class UiIconMappingTest {
             {"Répétition", R.drawable.ic_ui_repeat},
             {"Répéter le verset", R.drawable.ic_ui_repeat},
             {"Réessayer", R.drawable.ic_ui_repeat},
+            {"Reprendre", R.drawable.ic_ui_resume},
             {"Enregistrer", R.drawable.ic_ui_record},
             {"Arrêter", R.drawable.ic_ui_stop},
             {"Écouter l’enregistrement", R.drawable.ic_ui_audio},
