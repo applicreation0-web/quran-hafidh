@@ -115,8 +115,8 @@ public final class OfficialReleaseContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
 
         assertTrue("expired timed work must be committed after process death", session.contains("completeExpiredTimedSession"));
-        assertTrue("Today must resolve oldest soft carryover with the canonical cadence", main.contains("nextDueCadence") && main.contains("nextMode") && main.contains("HifzSchedule.INSTANCE.nextDue"));
-        assertTrue("dashboard must share the canonical cadence", dashboard.contains("HifzSchedule.INSTANCE.actionFor"));
+        assertTrue("Today must resolve oldest soft carryover with the canonical cadence", main.contains("nextDueCadence") && main.contains("nextMode") && main.contains("WeeklyProgramPolicy.nextDue"));
+        assertTrue("dashboard must share the canonical cadence", dashboard.contains("WeeklyProgramPolicy.actionFor"));
         assertFalse("dashboard must not retain A/B transfer projection", dashboard.contains("secondsA") || dashboard.contains("availableB") || dashboard.contains("Murājaʿah A") || dashboard.contains("Murājaʿah B"));
         assertFalse("settings must not offer daily cursor reposition buttons", settings.contains("Repositionner Murājaʿah"));
     }
