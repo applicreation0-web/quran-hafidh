@@ -12,8 +12,10 @@ URL="https://text.quran.ws/files/mushaf/hafs.json"
 SHA="9b9eb07ff5cff144bf964400924e593d97115e4b937db3c61783f782a5168075"
 
 def norm(text):
-    return "".join(x for x in unicodedata.normalize("NFD",text)
-                   if not unicodedata.combining(x)).replace("ٱ","ا")
+    # Preserve canonical hamzah/waslah letters. NFD + hamzah stripping incorrectly
+    # conflates 2:1 (Alif-Lam-Mim) with "ألم" openings elsewhere in Al-Baqarah.
+    return "".join(x for x in unicodedata.normalize("NFC",text)
+                   if not unicodedata.combining(x))
 
 def run(index,source,output):
     request=urllib.request.Request(URL,headers={"User-Agent":"Quran-Haafidh-documentary-audit/1.0"})
