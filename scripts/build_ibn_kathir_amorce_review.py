@@ -21,6 +21,7 @@ VERSES = 6236
 PAGES = 604
 WORDS = 77432
 CHUNKS = ("001-150", "151-300", "301-450", "451-604")
+QURAN_TEXT_GIT_BLOB = "fcc214311897921d08bbc56879b82aa38328a5f3"
 
 def require(condition, reason):
     if not condition:
@@ -92,9 +93,35 @@ def geometry_index(folder: Path):
     require(len(first_positions) == VERSES, "first words missing from canonical Quran verses")
     return first_positions, verse_last_page
 
-def build(index_path: Path, words_folder: Path):
+def load_verified_verse_text(path: Path, groups):
+    # The locally pinned Tanzil text is for editorial checking ONLY.
+    # It must NEVER be treated as an exact KFQC word-to-box alignment.
+    raw = path.read_bytes()
+    git_sha = hashlib.sha1(f"blob {len(raw)}\\0".encode("ascii") + raw).hexdigest()
+    require(git_sha == QURAN_TEXT_GIT_BLOB,
+            "Tanzil reference text changed without Quranic-source audit")
+    lines = raw.decode("utf-8-sig").splitlines()
+    require(len(lines) == VERSES and all(x.strip() for x in lines),
+            "expected 6236 nonempty ayah source lines")
+    last_by_surah = {}
+    for surah, start, end in groups:
+        last_by_surah[surah] = end
+    require(len(last_by_surah) == 114 and sum(last_by_surah.values()) == VERSES,
+            "source text does not match canonical 114-surah verse lengths")
+    text_by_ayah = {}
+    at = 0
+    for surah in range(1, 115):
+        for ayah in range(1, last_by_surah[surah] + 1):
+            text_by_ayah[(surah, ayah)] = lines[at]
+            at += 1
+    require(at == VERSES, "verse text ordinal mismatch")
+    return text_by_ayah, git_sha
+
+
+def build(index_path: Path, words_folder: Path, verse_text_path: Path):
     groups, boundary_sha = read_groups(index_path)
     first_word_page, end_word_page = geometry_index(words_folder)
+    text_by_ayah, text_sha = load_verified_verse_text(verse_text_path, groups)
     review = []
     for surah, start, end in groups:
         page = first_word_page.get((surah, start))
@@ -110,6 +137,8 @@ def build(index_path: Path, words_folder: Path):
             "start_page": page,
             "end_page": last,
             "first_quran_word_key": f"{surah}:{start}:1",
+            "full_start_ayah_text_for_review": text_by_ayah[(surah, start)],
+            "review_text_warning": "TANZIL_LINE_NOT_KFQC_WORD_ALIGNED",
             "verified_boundary": True,
             "verified_start_geometry": True,
             "candidate_anchor_word_count": None,
@@ -121,6 +150,9 @@ def build(index_path: Path, words_folder: Path):
         "runtime_ready": False,
         "source_index_sha256": boundary_sha,
         "source_geometry": "quran-ws-v1.1.2",
+        "reference_verse_text_source": "scripts/data/quran-uthmani-tanzil.txt",
+        "reference_verse_text_git_blob": text_sha,
+        "reference_verse_text_is_kfqc_word_aligned": False,
         "groups": GROUPS,
         "covered_verses": VERSES,
         "verified_word_boxes": WORDS,
@@ -134,14 +166,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("group_index_java", type=Path)
     parser.add_argument("word_geometry_dir", type=Path)
+    parser.add_argument("verse_text_for_review", type=Path)
     parser.add_argument("output_json", type=Path)
     args = parser.parse_args()
-    doc = build(args.group_index_java, args.word_geometry_dir)
+    doc = build(args.group_index_java, args.word_geometry_dir, args.verse_text_for_review)
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")) + "\n",
                                 encoding="utf-8")
     require(all(c["selection_status"] == "NOT_REVIEWED"
-                and c["candidate_anchor_word_count"] is None for c in doc["candidates"]),
+                and c["candidate_anchor_word_count"] is None
+                and c["full_start_ayah_text_for_review"].strip()
+                and c["review_text_warning"] == "TANZIL_LINE_NOT_KFQC_WORD_ALIGNED"
+                for c in doc["candidates"]),
             "unverified keys must never be marked ready")
     print(f"PASS: {GROUPS} indexed Ibn Kathir blocks on the verified QCF word geometry; "
           "0 invented semantic keys; runtime NOT READY.")
