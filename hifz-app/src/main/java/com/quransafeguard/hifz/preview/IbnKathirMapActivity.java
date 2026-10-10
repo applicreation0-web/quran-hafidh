@@ -2,6 +2,8 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
+import android.net.Uri;
 import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Typeface;
@@ -315,19 +317,25 @@ public final class IbnKathirMapActivity extends Activity {
             int first=g.pageForVerse(new VerseRef(group.surah,group.startAyah));
             int last=g.pageForVerse(new VerseRef(group.surah,group.endAyah));
             int total=index.groupsForSurah(group.surah).size();
-            String details="Référence : "+group.navigationRange()
+            String[] headings=IbnKathirQuranComSource.verifiedQafHeadings(group);
+            StringBuilder details=new StringBuilder("Référence : "+group.navigationRange()
                 +"\nIdentifiant : "+group.id
                 +"\nPages du Mushaf : "+first+(last==first?"":" à "+last)
-                +"\nPage affichée : "+previewPage
-                +"\n\nCommentaire anglais : contenu non disponible."
-                +"\nLe préambule, les titres et les droits de reproduction de l’édition "
-                +"Darussalam ne sont pas encore vérifiés pour ce groupe."
-                +"\n\nAucune progression de mémorisation n’est modifiée depuis la Carte.";
+                +"\nPage affichée : "+previewPage);
+            if(headings.length>0) {
+                details.append("\n\nTitres originaux anglais vérifiés (Quran.com) :");
+                for(String title:headings) details.append("\n• ").append(title);
+            } else {
+                details.append("\n\nTitres originaux : consulter le commentaire sur Quran.com.");
+            }
+            details.append("\n\nLe commentaire complet est consultable sur Quran.com. ")
+                   .append("La Carte ne copie pas le texte du Tafsir dans l'application.")
+                   .append("\n\nAucune progression de mémorisation n’est modifiée depuis la Carte.");
             new AlertDialog.Builder(this)
                 .setTitle("Ibn Kathīr · Bloc "+(selectedGroupIndex+1)+"/"+total)
-                .setMessage(details)
-                .setPositiveButton("Ouvrir le Mushaf",(d,w)->openMushaf(group,previewPage))
-                .setNeutralButton("Source",(d,w)->showSource())
+                .setMessage(details.toString())
+                .setPositiveButton("Lire Ibn Kathīr",(d,w)->openIbnKathirOnQuranCom(group))
+                .setNeutralButton("Ouvrir le Mushaf",(d,w)->openMushaf(group,previewPage))
                 .setNegativeButton("Fermer",(d,w)->d.dismiss())
                 .show();
         } catch(RuntimeException missingGeometry) {
@@ -335,14 +343,37 @@ public final class IbnKathirMapActivity extends Activity {
         }
     }
 
+    /** External consultation on an explicit tap only, never during map navigation.
+     * No Android network permission, persisted preference, or Hifz cursor mutation.
+     */
+    private void openIbnKathirOnQuranCom(IbnKathirGroupIndex.Group group) {
+        if(group==null) return;
+        final String url;
+        try {
+            url=IbnKathirQuranComSource.urlForGroup(group);
+        } catch(IllegalArgumentException invalidSource) {
+            Toast.makeText(this,"Référence Ibn Kathīr invalide.",Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            Intent view=new Intent(Intent.ACTION_VIEW,Uri.parse(url));
+            view.addCategory(Intent.CATEGORY_BROWSABLE);
+            startActivity(view);
+        } catch(ActivityNotFoundException unavailable) {
+            new AlertDialog.Builder(this)
+                .setTitle("Quran.com")
+                .setMessage("Aucun navigateur disponible pour ouvrir le commentaire.\n"+url)
+                .setPositiveButton("Fermer",(d,w)->d.dismiss()).show();
+        }
+    }
+
     private void showSource() {
+        if(previewGroup!=null) { showBlockDetails(); return; }
         new AlertDialog.Builder(this)
             .setTitle("Ibn Kathīr · source")
-            .setMessage("Index documentaire : 1 903 groupes de commentaires numériques identiques couvrant les 114 sourates. "
-                +"Source : Darussalam, édition anglaise abrégée, corpus spa5k/tafsir_api. "
-                +"Révision : "+IbnKathirGroupIndex.SOURCE_COMMIT+". "
-                +"Titres et préambules anglais non publiés : authentification et droits non établis. "
-                +"La Carte ne produit aucun commentaire religieux.")
+            .setMessage("La Carte référence 1 903 groupes authentifiés du Tafsir Ibn Kathīr anglais abrégé. "
+                +"Sélectionner un groupe puis « Lire Ibn Kathīr » ouvre son commentaire exact sur Quran.com. "
+                +"Aucune donnée de mémorisation n’est modifiée.")
             .setPositiveButton("Fermer",(d,w)->d.dismiss()).show();
     }
 
