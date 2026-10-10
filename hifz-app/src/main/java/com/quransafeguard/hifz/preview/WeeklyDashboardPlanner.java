@@ -177,6 +177,15 @@ final class WeeklyDashboardPlanner {
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");
             }
+            if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY
+                    && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED) {
+                boolean activeDone=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE)!=null;
+                morning=(activeDone?"✓ Révision active ":"Révision active ")
+                    +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min + "+morning;
+                // Active is proposed in the morning, NOT repeated as an evening quota.
+                evening=evening.replace(" + Révision active ("
+                    +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min)","");
+            }
             out.add(new Row(date,day(date,today),morning,evening,state));
         }
         return out;
