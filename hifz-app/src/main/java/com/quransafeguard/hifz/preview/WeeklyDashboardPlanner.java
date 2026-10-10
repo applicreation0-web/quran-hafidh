@@ -169,18 +169,10 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record consolidationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
                     boolean learningDone=learningFinal!=null||prefs.learningSnowballFinalUnits(date).isEmpty();
                     boolean consolidationDone=consolidationFinal!=null||prefs.stabilizationSnowballFinalUnits(date).isEmpty();
-                    morning=(learningDone&&consolidationDone)?"✓ Révision finale ×3":"Révision finale ×3 · Renforcement + Consolidation";
-                    boolean morningDone=learningDone&&consolidationDone;
-                    DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
-                    DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean eveningDone=activeActual!=null&&entretienActual!=null;
-                    if(eveningDone)evening="✓ Révision active + Entretien";
-                    else{
-                        Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
-                        evening="Révision active ("+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min) + Entretien · "+projected.label;
-                        murajaahCursor=projected.next;
-                    }
-                    state=(morningDone&&eveningDone)?"Validé":morningDone?"Soir à faire":"À faire";
+                    morning=learningDone?"✓ Finale Renforcement Sabqi":"Finale Renforcement Sabqi · ×3";
+                    evening=consolidationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān · ×3";
+                    state=(learningDone&&consolidationDone)?"Validé":learningDone?"Soir à faire":"À faire";
+                    // Sunday cannot consume a passive cursor or schedule any general revisions.
                     break;
                 }
                 default:throw new IllegalStateException("Action de cadence inconnue");
