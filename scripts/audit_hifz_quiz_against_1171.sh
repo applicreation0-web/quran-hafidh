@@ -14,7 +14,6 @@ protected=(
   app/src/main/assets/reader109/geometry.json
   app/src/main/assets/reader109/waqf.json
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
-  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/AnchoringQueue.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java
@@ -28,7 +27,8 @@ if [[ -n "$changed" ]]; then
   printf '%s\n' "$changed"
   exit 1
 fi
-echo "PASS: all core, progress, session, anchoring, renderer, Quran geometry and Quiz source identical to 1.17.1."
+python3 scripts/verify_authorized_hifz_session_delta.py
+echo "PASS: Hifz core, progress, anchoring, renderer, Quran geometry and Quiz identical to 1.17.1; only three verified Hifz session fail-open deltas."
 
 # Also freeze the rest of application logic: only explicitly whitelisted UI/documentary
 # Java controllers may diverge. Any unexpected Java change is a regression risk.
@@ -38,6 +38,7 @@ bad=0
 while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
+    "$prefix/HifzSessionActivity.java" | \
     "$prefix/MainActivity.java" | \
     "$prefix/StudyReaderActivity.java" | \
     "$prefix/Ui.java" | \
