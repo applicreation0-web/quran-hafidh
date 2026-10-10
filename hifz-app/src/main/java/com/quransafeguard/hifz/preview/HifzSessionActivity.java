@@ -926,20 +926,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private ItqanPageCompletionPolicy.Offer computeItqanBonusOffer(
             List<StabilizationHalfPagePolicy.Unit> plannedUnits, List<String> ownBlockLineIds) {
-        List<GeometryRepository.LineMeta> ownBlockLines = geometry.linesForExactIds(ownBlockLineIds);
-        List<GeometryRepository.LineMeta> candidates = new ArrayList<>();
-        if (itqanBlockIndex + 1 < itqanBlockCount) {
-            StabilizationHalfPagePolicy.Unit nextBlock = plannedUnits.get(itqanBlockIndex + 1);
-            List<GeometryRepository.LineMeta> nextBlockLines = geometry.linesForExactIds(nextBlock.lineIds);
-            int page = ownBlockLines.get(ownBlockLines.size() - 1).page;
-            int maxTakeable = Math.min(2, nextBlockLines.size() - 1);
-            for (int i = 0; i < maxTakeable; i++) {
-                GeometryRepository.LineMeta l = nextBlockLines.get(i);
-                if (l.page != page) break;
-                candidates.add(l);
-            }
-        }
-        return ItqanPageCompletionPolicy.evaluate(ownBlockLineIds, ownBlockLines, candidates);
+        List<String> nextLineIds=itqanBlockIndex + 1 < itqanBlockCount
+            ? plannedUnits.get(itqanBlockIndex + 1).lineIds : Collections.emptyList();
+        // Physically inspect the next one/two lines against the actual Mushaf:
+        // an extension is legal only if it closes this page or this surah.
+        return ItqanCompletionBoundaryPolicy.offer(geometry,ownBlockLineIds,nextLineIds);
     }
 
     /** Suspends the clock and the repetition button until the user answers — never automatic,
