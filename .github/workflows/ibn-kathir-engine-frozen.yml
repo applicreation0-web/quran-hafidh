@@ -119,8 +119,19 @@ jobs:
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
       - name: Run BOOX visual contract and existing source regressions
         run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
+      - name: Save source-verified Ibn Kathir amorce review corpus (JSON ONLY; no APK)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibn-kathir-amorce-review-${{ github.run_id }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ik-amorce-review-only.json
+            ${{ runner.temp }}/ik-draft-1903-words.json
+            ${{ runner.temp }}/ik-1903-verified-draft-only.json
       - name: Audit-only gate confirmed
         shell: bash
         run: |
           echo "PASS: source, corpus and behavioural JVM tests checked."
+          echo "Only read-only review JSON files uploaded; no APK may be assembled or published."
           echo "NO APK BUILT OR PUBLISHED before complete Ibn Kathir integration and explicit user approval."
