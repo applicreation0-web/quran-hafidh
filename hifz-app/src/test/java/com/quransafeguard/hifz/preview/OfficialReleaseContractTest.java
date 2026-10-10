@@ -98,7 +98,7 @@ public final class OfficialReleaseContractTest {
         String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
         assertTrue("same-day learning review must remain a real internal phase", session.contains("SABQI_TODAY_REVIEW"));
         assertTrue("Consolidation runtime mode must remain explicit", session.contains("RECENT_SABQI_REVIEW"));
-        assertTrue("Revision must use the acquired corpus only", session.contains("murajaahCorpus()"));
+        assertTrue("Revision must use the acquired corpus only", session.contains("prefs.murajaahCorpus(geometry)") && session.contains("prefs.activeMurajaahCorpus()"));
         assertFalse("mixed A/B Murajaah phase must be removed", session.contains("murajaahBlockB") || session.contains("transitionToBlockB"));
         assertFalse("unused recent time may never be transferred", session.contains("unusedA") || session.contains("availableB"));
         assertTrue("runtime timed durations must consume HifzSchedule fixed-mode targets", session.contains("HifzSchedule") && session.contains("targetMinutesFor"));
