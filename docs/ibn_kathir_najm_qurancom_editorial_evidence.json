@@ -1,0 +1,262 @@
+{
+  "schema": "IK_NAJM_QURANCOM_EDITORIAL_EVIDENCE_V1",
+  "date": "2026-10-10",
+  "surah": 53,
+  "objective": "Source-faithful correction of misleading semantic headings, audit-only.",
+  "groups": 8,
+  "approved_keys": 0,
+  "runtime_ready": false,
+  "source": "Ibn Kathir (Abridged) on Quran.com",
+  "source_git_commit": "eb82bb6294efe30ad5c135c03b1864afaa70e855",
+  "methodological_warning": "The text contains differing reported scholarly views. Context summaries are editorial observations, NOT invented Ibn Kathir titles. No mandatory cue count.",
+  "reviewed": [
+    {
+      "id": "IKEN053_001_004",
+      "start_ayah": 1,
+      "end_ayah": 4,
+      "start_page": 526,
+      "end_page": 526,
+      "quran_com_url": "https://quran.com/an-najm/1/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "Allah swears the Messenger ﷺ is True and His Words are a Revelation from Him",
+      "contextual_review_note": "The oath's stated purpose in Ibn Kathir is to affirm the truth of the Prophet and revelation. An earlier title 'the star attests' is not source-faithful. A separate source section discusses speech based on revelation.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:1:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:3:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_005_018",
+      "start_ayah": 5,
+      "end_ayah": 18,
+      "start_page": 526,
+      "end_page": 526,
+      "quran_com_url": "https://quran.com/an-najm/5/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "The Trustworthy Angel brought Allah's Revelation to the Trustworthy Messenger",
+      "contextual_review_note": "Source also discusses Jibril's proximity and differing transmitted interpretations of the vision. Preserve that interpretive distinction, not a confidently invented ascension heading.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:5:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:9:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:11:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_019_026",
+      "start_ayah": 19,
+      "end_ayah": 26,
+      "start_page": 526,
+      "end_page": 526,
+      "quran_com_url": "https://quran.com/an-najm/19/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "Refuting Idolatry, Al-Lat and Al-`Uzza",
+      "contextual_review_note": "Source includes rejection of idols, imagined rival powers and intercession without Allah's leave; not merely a list of idol names.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:19:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_027_030",
+      "start_ayah": 27,
+      "end_ayah": 30,
+      "start_page": 527,
+      "end_page": 527,
+      "quran_com_url": "https://quran.com/an-najm/27/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "Refuting the Claim of the Idolators that the Angels are Allah's Daughters",
+      "contextual_review_note": "Source has an additional section about turning away from those who reject remembrance at 53:29.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:27:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:29:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_031_032",
+      "start_ayah": 31,
+      "end_ayah": 32,
+      "start_page": 527,
+      "end_page": 527,
+      "quran_com_url": "https://quran.com/an-najm/31/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "Allah knows Every Matter, whether Small or Big, and He rewards Each according to His or Her Deeds",
+      "contextual_review_note": "Ibn Kathir discusses reward by deeds, minor faults, vast forgiveness and avoidance of self-praise in distinct internal headings.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:31:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:32:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_033_041",
+      "start_ayah": 33,
+      "end_ayah": 41,
+      "start_page": 527,
+      "end_page": 527,
+      "quran_com_url": "https://quran.com/an-najm/33/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "None shall carry the Burden of Any Other on the Day of Resurrection",
+      "contextual_review_note": "Earlier internal source discussions are chastisement of abandonment of charity and the meaning of Ibrahim fulfilling his covenant; the quoted heading applies later to 53:38, not 53:33.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:33:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:36:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:38:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_042_055",
+      "start_ayah": 42,
+      "end_ayah": 55,
+      "start_page": 527,
+      "end_page": 528,
+      "quran_com_url": "https://quran.com/an-najm/42/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "Some Attributes of the Lord, that He returns Man as He originated Him",
+      "contextual_review_note": "Heading excerpt shortened. The group's commentary develops divine acts, return to Allah and former destroyed peoples, spanning two Mushaf pages.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:42:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    },
+    {
+      "id": "IKEN053_056_062",
+      "start_ayah": 56,
+      "end_ayah": 62,
+      "start_page": 528,
+      "end_page": 528,
+      "quran_com_url": "https://quran.com/an-najm/56/tafsirs/en-tafisr-ibn-kathir",
+      "observed_original_heading_excerpt": "A Warning and Exhortation, the Order to prostrate and to be humble",
+      "contextual_review_note": "The final instruction concerns prostration and worship, not an isolated description of a warning.",
+      "excerpt_completeness": "SELECTED_OR_SHORTENED_SOURCE_HEADING",
+      "qcf_verse_start_candidates": [
+        {
+          "word_key": "53:56:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        },
+        {
+          "word_key": "53:62:1",
+          "exact_word_form": null,
+          "selected_word_length": null,
+          "start_word_status": "UNREVIEWED_MNEMONIC",
+          "live": false
+        }
+      ],
+      "title_status": "READ_ON_QURANCOM_NOT_APPROVED_FOR_APP",
+      "rights_status": "NO_COMMENTARY_REPRODUCTION",
+      "candidate_status": "LOCATION_ONLY_NOT_APPROVED",
+      "runtime_enabled": false
+    }
+  ]
+}
