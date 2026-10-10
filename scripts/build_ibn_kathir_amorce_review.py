@@ -97,7 +97,7 @@ def load_verified_verse_text(path: Path, groups):
     # The locally pinned Tanzil text is for editorial checking ONLY.
     # It must NEVER be treated as an exact KFQC word-to-box alignment.
     raw = path.read_bytes()
-    git_sha = hashlib.sha1(f"blob {len(raw)}\\0".encode("ascii") + raw).hexdigest()
+    git_sha = hashlib.sha1(f"blob {len(raw)}\0".encode("ascii") + raw).hexdigest()
     require(git_sha == QURAN_TEXT_GIT_BLOB,
             "Tanzil reference text changed without Quranic-source audit")
     lines = raw.decode("utf-8-sig").splitlines()
