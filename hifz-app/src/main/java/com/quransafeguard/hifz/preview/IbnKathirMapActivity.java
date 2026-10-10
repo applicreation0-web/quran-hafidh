@@ -76,6 +76,12 @@ public final class IbnKathirMapActivity extends Activity {
         top.addView(info);
         root.addView(top);
         root.addView(Ui.divider(this));
+        TextView guidance=Ui.text(this,
+            "Choisir un passage · toucher la miniature pour lire",11f,false);
+        guidance.setTextColor(Ui.MUTED);
+        guidance.setGravity(Gravity.CENTER);
+        guidance.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,5));
+        root.addView(guidance);
         groupsList = new ListView(this);
         groupsList.setCacheColorHint(Ui.PAPER);
         groupsList.setBackgroundColor(Ui.PAPER);
@@ -87,7 +93,7 @@ public final class IbnKathirMapActivity extends Activity {
         if(!spacious)body.setOrientation(LinearLayout.VERTICAL);
         body.addView(groupsList,spacious
             ? new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,0.47f)
-            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.57f));
+            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.48f));
         LinearLayout miniature=Ui.column(this);
         miniature.setPadding(Ui.dp(this,3),Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,3));
         previewCaption=Ui.bookText(this,"",13,false);
@@ -100,7 +106,7 @@ public final class IbnKathirMapActivity extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
         body.addView(miniature,spacious
             ? new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,0.53f)
-            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.43f));
+            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.52f));
         root.addView(body,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
         setContentView(root);
@@ -151,21 +157,26 @@ public final class IbnKathirMapActivity extends Activity {
                     new VerseRef(group.surah,group.endAyah)));
                 row.setTextSize(17f);
                 row.setTextColor(Ui.INK);
-                row.setTypeface(Typeface.SERIF);
+                row.setTypeface(Typeface.SERIF,
+                    position==selectedGroupIndex?Typeface.BOLD:Typeface.NORMAL);
                 row.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
                 row.setPadding(Ui.dp(IbnKathirMapActivity.this,18),Ui.dp(IbnKathirMapActivity.this,12),
                     Ui.dp(IbnKathirMapActivity.this,18),Ui.dp(IbnKathirMapActivity.this,12));
                 row.setMinHeight(Ui.dp(IbnKathirMapActivity.this,56));
-                row.setBackgroundColor(Ui.PAPER);
-                row.setContentDescription("Ibn Kathīr, versets "+group.navigationRange()+" : ouvrir dans le Mushaf");
+                row.setBackgroundColor(position==selectedGroupIndex?Ui.SURFACE:Ui.PAPER);
+                row.setContentDescription("Ibn Kathīr, versets "+group.navigationRange()
+                    +" : sélectionner la miniature");
                 return row;
             }
         };
         groupsList.setAdapter(adapter);
         groupsList.setOnItemClickListener((parent,view,position,id) -> {
+            previewHandler.removeCallbacks(changePreview);
             selectedGroupIndex=position;
-            previewGroup=groups.get(position);
-            openMushaf(previewGroup);
+            setPreviewGroup(groups.get(position),0);
+            // Tap a group to inspect its verified Mushaf page, not to launch a new reader.
+            // The miniature itself is the only "open full Mushaf" touch target.
+            ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
         });
         groupsList.setOnScrollListener(new AbsListView.OnScrollListener() {
             @Override public void onScrollStateChanged(AbsListView view,int state) {
@@ -191,8 +202,10 @@ public final class IbnKathirMapActivity extends Activity {
         int at=groupsList.getFirstVisiblePosition();
         List<IbnKathirGroupIndex.Group> groups=index.groupsForSurah(surah);
         if(at<0||at>=groups.size())return;
+        if (selectedGroupIndex==at && previewGroup==groups.get(at)) return;
         selectedGroupIndex=at;
         setPreviewGroup(groups.get(at),0);
+        ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
     }
 
     private void setPreviewGroup(IbnKathirGroupIndex.Group group,int preferredPage) {
