@@ -73,7 +73,7 @@ final class WeeklyDashboardPlanner {
                 out.add(new Row(date,day(date,today),"—","—","Parcours non démarré"));
                 continue;
             }
-            CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), prefs.learningDaysPerWeek());
+            CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),prefs.learningDaysPerWeek());
             String morning="—",evening="—",state="À faire";
             switch(action){
                 case LEARNING:{
