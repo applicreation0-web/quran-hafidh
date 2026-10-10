@@ -32,7 +32,11 @@ public final class IbnKathirMapActivity extends Activity {
     private SemanticPassageRepository ibnKathirCues;
     private int surah = 1;
     private int highlightedAyah = 1;
-    private ListView groupsList;
+    private ListView groupsList, surahsList;
+    private LinearLayout detailPane;
+    private TextView guidance, detailHeading, detailSource;
+    private Button referenceButton;
+    private int stage=1; // 0 sourates, 1 groupes, 2 fiche — Iṣlāḥī P1 navigation
     private TextView header;
     private TextView previewCaption;
     private MushafView pagePreview;
@@ -59,24 +63,25 @@ public final class IbnKathirMapActivity extends Activity {
         scrollTop = saved == null ? 0 : saved.getInt("topOffset",0);
         selectedGroupIndex=saved==null?-1:saved.getInt("selectedGroupIndex",-1);
         previewPage=saved==null?0:saved.getInt("previewPage",0);
+        stage=saved==null?(getIntent().hasExtra(EXTRA_SURAH)?1:0):saved.getInt("stage",1);
         surah = Math.max(1,Math.min(114,surah));
 
         LinearLayout root = Ui.column(this);
         root.setPadding(Ui.dp(this,10),Ui.dp(this,4),Ui.dp(this,10),Ui.dp(this,4));
         LinearLayout top = Ui.row(this);
-        Button back = Ui.iconButton(this,"","Retour",v -> finish());
+        Button back = Ui.iconButton(this,"","Retour",v -> navigateBack());
         top.addView(back);
         header = Ui.bookText(this,"",16,true);
         header.setGravity(Gravity.CENTER);
         top.addView(header,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
         Button picker = Ui.iconButton(this,"","Choisir une sourate",v -> chooseSurah());
         top.addView(picker);
-        Button info = Ui.iconButton(this,"","Référence",v -> showBlockDetails());
-        top.addView(info);
+        referenceButton = Ui.iconButton(this,"","Référence",v -> showBlockDetails());
+        top.addView(referenceButton);
         root.addView(top);
         root.addView(Ui.divider(this));
-        TextView guidance=Ui.text(this,
-            "Choisir un bloc · glisser ou toucher le numéro de page · toucher la miniature pour lire",11f,false);
+        guidance=Ui.text(this,
+            "Sourate → passage → page du Mushaf",11f,false);
         guidance.setTextColor(Ui.MUTED);
         guidance.setGravity(Gravity.CENTER);
         guidance.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,5));
@@ -86,30 +91,53 @@ public final class IbnKathirMapActivity extends Activity {
         groupsList.setBackgroundColor(Ui.PAPER);
         groupsList.setDividerHeight(Math.max(1,Ui.dp(this,1)));
         groupsList.setFastScrollEnabled(true);
-        // One true KFQC renderer, instead of a costly WebView for every map card.
-        LinearLayout body=Ui.row(this);
-        boolean spacious=getResources().getConfiguration().smallestScreenWidthDp>=600;
-        if(!spacious)body.setOrientation(LinearLayout.VERTICAL);
-        body.addView(groupsList,spacious
-            ? new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,0.47f)
-            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.48f));
-        LinearLayout miniature=Ui.column(this);
-        miniature.setPadding(Ui.dp(this,3),Ui.dp(this,4),Ui.dp(this,3),Ui.dp(this,3));
-        previewCaption=Ui.bookText(this,"",13,false);
+        // Iṣlāḥī P1 grammar: one navigation level at a time. No useless half-screen
+        // technical list alongside a huge miniature. One authentic QCF renderer.
+        LinearLayout body=Ui.column(this);
+        body.setPadding(0,0,0,0);
+        surahsList=new ListView(this);
+        surahsList.setBackgroundColor(Ui.PAPER);
+        surahsList.setCacheColorHint(Ui.PAPER);
+        surahsList.setFastScrollEnabled(true);
+        body.addView(surahsList,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+        groupsList.setDividerHeight(Math.max(1,Ui.dp(this,1)));
+        body.addView(groupsList,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+
+        detailPane=Ui.column(this);
+        detailPane.setPadding(Ui.dp(this,10),Ui.dp(this,12),Ui.dp(this,10),Ui.dp(this,8));
+        detailHeading=Ui.bookText(this,"",18,true);
+        detailHeading.setGravity(Gravity.CENTER);
+        detailPane.addView(detailHeading);
+        detailSource=Ui.text(this,"",12,false);
+        detailSource.setTextColor(Ui.MUTED);
+        detailSource.setGravity(Gravity.CENTER);
+        detailSource.setPadding(Ui.dp(this,8),Ui.dp(this,10),Ui.dp(this,8),Ui.dp(this,10));
+        detailPane.addView(detailSource);
+        previewCaption=Ui.bookText(this,"",12,false);
         previewCaption.setGravity(Gravity.CENTER);
-        miniature.addView(previewCaption,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
-        // BOOX-friendly alternative to swipe, with no new toolbar pictogram.
+        previewCaption.setPadding(0,Ui.dp(this,6),0,Ui.dp(this,8));
+        detailPane.addView(previewCaption);
         previewCaption.setOnClickListener(v -> advancePreviewFromCaption());
         pagePreview=new MushafView(this);
         pagePreview.setContentDescription("Miniature authentique du Mushaf · toucher pour lire");
-        miniature.addView(pagePreview,new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
-        body.addView(miniature,spacious
-            ? new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.MATCH_PARENT,0.53f)
-            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,0,0.52f));
+        int previewHeight=Math.min((int)(getResources().getDisplayMetrics().heightPixels*0.53f),
+            Ui.dp(this,430));
+        detailPane.addView(pagePreview,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,previewHeight));
+        LinearLayout actions=Ui.row(this);
+        actions.setGravity(Gravity.CENTER);
+        actions.addView(Ui.smallButton(this,"Ouvrir le Mushaf",v -> openPreviewInMushaf()));
+        actions.addView(Ui.smallButton(this,"Lire Ibn Kathīr",v -> {
+            if(previewGroup!=null)openIbnKathirOnQuranCom(previewGroup);
+        }));
+        detailPane.addView(actions);
+        body.addView(detailPane,new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(body,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,0,1f));
+        populateSurahs();
         setContentView(root);
         Ui.respectSystemBars(this,root,0,0,0,0);
         pagePreview.setListener(new MushafView.Listener() {
@@ -131,19 +159,73 @@ public final class IbnKathirMapActivity extends Activity {
         showSurah();
     }
 
+    private void populateSurahs() {
+        List<String> names=new ArrayList<>();
+        for(int i=1;i<=114;i++) names.add(QuranSurahNames.labelFor(i));
+        ArrayAdapter<String> choices=new ArrayAdapter<String>(this,
+            android.R.layout.simple_list_item_1,names) {
+            @Override public View getView(int position,View convert,ViewGroup parent) {
+                TextView row=(TextView)super.getView(position,convert,parent);
+                row.setTextSize(16f);
+                row.setTextColor(Ui.INK);
+                row.setPadding(Ui.dp(IbnKathirMapActivity.this,16),Ui.dp(IbnKathirMapActivity.this,8),
+                    Ui.dp(IbnKathirMapActivity.this,16),Ui.dp(IbnKathirMapActivity.this,8));
+                row.setMinHeight(Ui.dp(IbnKathirMapActivity.this,54));
+                return row;
+            }
+        };
+        surahsList.setAdapter(choices);
+        surahsList.setOnItemClickListener((parent,v,position,id)->{
+            surah=position+1;
+            highlightedAyah=1;
+            scrollIndex=0; scrollTop=0; selectedGroupIndex=-1; previewPage=0;
+            stage=1;
+            showSurah();
+        });
+    }
+
     private void chooseSurah() {
-        String[] names = new String[114];
-        for (int i=0;i<114;i++) names[i] = QuranSurahNames.labelFor(i+1);
-        new AlertDialog.Builder(this).setTitle("Sourate")
-            .setItems(names,(dialog,which) -> {
-                surah = which+1;
-                highlightedAyah = 1;
-                scrollIndex = 0;
-                scrollTop = 0;
-                selectedGroupIndex = -1;
-                previewPage = 0;
-                showSurah();
-            }).show();
+        stage=0;
+        showStage();
+    }
+
+    private void navigateBack() {
+        if(stage==2){stage=1;showStage();}
+        else if(stage==1){stage=0;showStage();}
+        else finish();
+    }
+    @Override public void onBackPressed(){navigateBack();}
+
+    private void showStage() {
+        if(surahsList==null || groupsList==null || detailPane==null)return;
+        surahsList.setVisibility(stage==0?View.VISIBLE:View.GONE);
+        groupsList.setVisibility(stage==1?View.VISIBLE:View.GONE);
+        detailPane.setVisibility(stage==2?View.VISIBLE:View.GONE);
+        if(stage==0){
+            header.setText("Carte · 114 sourates");
+            guidance.setText("Choisir une sourate");
+        }else if(stage==1){
+            header.setText(QuranSurahNames.labelFor(surah));
+            guidance.setText("Choisir un passage · frontières Ibn Kathīr documentées");
+        }else{
+            header.setText(QuranSurahNames.labelFor(surah));
+            guidance.setText("Passage → page du Mushaf · toucher la miniature pour lire");
+            renderDetailHeading();
+        }
+        referenceButton.setVisibility(stage==2?View.VISIBLE:View.GONE);
+    }
+
+    private void renderDetailHeading(){
+        if(previewGroup==null)return;
+        detailHeading.setText("Passage "+(selectedGroupIndex+1)+"/"
+            +index.groupsForSurah(surah).size()+"  ·  "+previewGroup.navigationRange());
+        String[] headings=IbnKathirQuranComSource.verifiedQafHeadings(previewGroup);
+        if(headings.length>0){
+            detailSource.setText(headings[0]+
+                "\nTitre original vérifié · lire le Tafsir pour le contexte complet");
+        }else{
+            detailSource.setText("Frontières documentées · titre original non publié dans l’application");
+        }
     }
 
     private void showSurah() {
@@ -156,9 +238,15 @@ public final class IbnKathirMapActivity extends Activity {
             @Override public View getView(int position,View convert,ViewGroup parent) {
                 TextView row=(TextView) super.getView(position,convert,parent);
                 IbnKathirGroupIndex.Group group=getItem(position);
-                row.setText((position+1)+" / "+groups.size()+"   ·   "+QuranSurahNames.range(
+                String range=QuranSurahNames.range(
                     new VerseRef(group.surah,group.startAyah),
-                    new VerseRef(group.surah,group.endAyah)));
+                    new VerseRef(group.surah,group.endAyah));
+                int p1=geometry==null?0:geometry.pageForVerse(
+                    new VerseRef(group.surah,group.startAyah));
+                int p2=geometry==null?0:geometry.pageForVerse(
+                    new VerseRef(group.surah,group.endAyah));
+                row.setText("Passage "+(position+1)+" · "+range+
+                    (p1<1?"":"   ·   p. "+p1+(p1==p2?"":"–"+p2)));
                 row.setTextSize(17f);
                 row.setTextColor(Ui.INK);
                 row.setTypeface(Typeface.SERIF,
@@ -177,14 +265,19 @@ public final class IbnKathirMapActivity extends Activity {
         groupsList.setOnItemClickListener((parent,view,position,id) -> {
             selectedGroupIndex=position;
             setPreviewGroup(groups.get(position),0);
-            // Tap a group to inspect its verified Mushaf page, not to launch a new reader.
-            // The miniature itself is the only "open full Mushaf" touch target.
-            ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
+            // Iṣlāḥī navigation: list -> passage sheet -> authentic QCF miniature.
+            View first=groupsList.getChildAt(0);
+            scrollIndex=groupsList.getFirstVisiblePosition();
+            scrollTop=first==null?0:first.getTop();
+            stage=2;showStage();
         });
         groupsList.setOnItemLongClickListener((parent,view,position,id) -> {
             selectedGroupIndex=position;
             setPreviewGroup(groups.get(position),0);
-            ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
+            View first=groupsList.getChildAt(0);
+            scrollIndex=groupsList.getFirstVisiblePosition();
+            scrollTop=first==null?0:first.getTop();
+            stage=2;showStage();
             showBlockDetails();
             return true;
         });
@@ -198,6 +291,7 @@ public final class IbnKathirMapActivity extends Activity {
         if(selectedGroupIndex<0 || selectedGroupIndex>=groups.size())selectedGroupIndex=initial;
         setPreviewGroup(groups.get(selectedGroupIndex),previewPage);
         groupsList.post(() -> groupsList.setSelectionFromTop(target,offset));
+        showStage();
     }
 
     private void setPreviewGroup(IbnKathirGroupIndex.Group group,int preferredPage) {
@@ -401,6 +495,7 @@ public final class IbnKathirMapActivity extends Activity {
         out.putInt("ayah",highlightedAyah);
         out.putInt("selectedGroupIndex",selectedGroupIndex);
         out.putInt("previewPage",previewPage);
+        out.putInt("stage",stage);
         super.onSaveInstanceState(out);
     }
 
