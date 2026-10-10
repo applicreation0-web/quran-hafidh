@@ -125,6 +125,8 @@ jobs:
             "$RUNNER_TEMP/ik-1903-verified-draft-only.json" \
             "$RUNNER_TEMP/ik-amorce-approval-gate.json" \
             "$RUNNER_TEMP" --negative-tests
+      - name: J6 Verify all compact icon roles use the frozen 23-vector contract
+        run: python3 scripts/verify_j6_icon_roles.py
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
         shell: bash
         run: python3 scripts/audit_all_screen_icons.py

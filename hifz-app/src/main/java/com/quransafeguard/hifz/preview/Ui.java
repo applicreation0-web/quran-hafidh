@@ -86,15 +86,13 @@ final class Ui {
         params.setMargins(dp(context, 1), 0, dp(context, 1), 0);
         button.setLayoutParams(params);
         int iconRes = iconFor(description, symbol);
-        if (iconRes != 0) {
-            button.setText("");
-            setButtonIcon(button, iconRes);
-        } else {
-            button.setText(symbol);
-            button.setTextSize(17f);
-            button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
-            button.setTextColor(iconTintFlat());
+        // All icon-only controls must have an explicit mapped vector: never
+        // substitute a platform-dependent Unicode glyph or silently mislabel
+        // a button. Unknown roles are rejected during J6 source-contract CI.
+        if (iconRes == 0) {
+            throw new IllegalArgumentException("Unmapped compact icon role: " + description);
         }
+        setButtonIcon(button, iconRes);
         return button;
     }
 
@@ -330,6 +328,7 @@ final class Ui {
         if (s.contains("hizb")) return R.drawable.ic_ui_hizb;
         if (s.contains("réinitial") || s.contains("remettre à zéro")) return R.drawable.ic_ui_reset;
         if (s.contains("rotation")) return R.drawable.ic_ui_rotation;
+        if (s.equals("retirer le repère")) return R.drawable.ic_ui_annotation_erase;
         if (s.startsWith("retirer")) return R.drawable.ic_ui_delete;
         if (s.startsWith("ajouter")) return R.drawable.ic_ui_add;
         if (s.equals("commencer")) return R.drawable.ic_ui_play;
@@ -356,13 +355,13 @@ final class Ui {
         if (s.startsWith("fin")) return R.drawable.ic_ui_end;
         if (s.contains("ajouter")) return R.drawable.ic_ui_add;
         if (s.contains("modifier")) return R.drawable.ic_ui_edit;
-        if (s.contains("supprimer")) return R.drawable.ic_ui_delete;
+        if (s.contains("supprimer")) return R.drawable.ic_ui_annotation_erase;
         if (s.contains("choisir le pack") || s.contains("import")) return R.drawable.ic_ui_import;
         if (s.contains("sabqi")) return R.drawable.ic_hifz_new_lesson;
         if (s.contains("itq")) return R.drawable.ic_hifz_anchor;
         if (s.contains("murāja") || s.contains("muraja")) return R.drawable.ic_hifz_maintenance;
-        if (s.contains("annuler")) return R.drawable.ic_ui_reset;
-        if (s.contains("effacer")) return R.drawable.ic_ui_delete;
+        if (s.contains("annuler")) return R.drawable.ic_ui_undo;
+        if (s.contains("effacer")) return R.drawable.ic_ui_annotation_erase;
         return 0;
     }
 

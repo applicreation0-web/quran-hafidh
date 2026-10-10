@@ -70,7 +70,7 @@ public final class UiIconMappingTest {
             {"Valider jusqu’ici", R.drawable.ic_ui_validate},
             {"Revu", R.drawable.ic_ui_validate},
             {"Modifier la plage", R.drawable.ic_ui_edit},
-            {"Supprimer la plage", R.drawable.ic_ui_delete},
+            {"Supprimer la plage", R.drawable.ic_ui_annotation_erase},
             {"Sourate", R.drawable.ic_ui_surah_list},
             {"Hizb", R.drawable.ic_ui_hizb},
             {"Annuler la note", R.drawable.ic_ui_undo},
@@ -86,7 +86,9 @@ public final class UiIconMappingTest {
             {"À revoir", R.drawable.ic_ui_repeat},
             {"Terminer", R.drawable.ic_ui_validate},
             {"Référence · sauvegarde", R.drawable.ic_ui_info},
-            {"Retirer le repère", R.drawable.ic_ui_delete}
+            {"Retirer le repère", R.drawable.ic_ui_annotation_erase},
+            {"Annuler", R.drawable.ic_ui_undo},
+            {"Effacer", R.drawable.ic_ui_annotation_erase}
         });
     }
 
