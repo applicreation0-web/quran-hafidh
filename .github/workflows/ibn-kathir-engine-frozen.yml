@@ -155,6 +155,8 @@ jobs:
         with:
           gradle-version: '9.5.0'
       - name: Run Hifz engine and UI JVM tests
+        env:
+          IK_J2_REVIEW_PATH: ${{ runner.temp }}/ik-j2-review.json
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
       - name: Run BOOX visual contract and existing source regressions
         run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
