@@ -116,6 +116,15 @@ jobs:
       - name: J4 Verify documentary map sheet and navigation source contract
         shell: bash
         run: python3 scripts/verify_ibn_kathir_map_contract.py
+      - name: J2 Contradictory 1903-group semantic review evidence (never runtime)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_ibn_kathir_j2.py \
+            "$RUNNER_TEMP/ik-amorce-review-only.json" \
+            "$RUNNER_TEMP/ik-1903-verified-draft-only.json" \
+            "$RUNNER_TEMP/ik-amorce-approval-gate.json" \
+            "$RUNNER_TEMP" --negative-tests
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
         shell: bash
         run: python3 scripts/audit_all_screen_icons.py
@@ -148,6 +157,9 @@ jobs:
             ${{ runner.temp }}/ik-draft-1903-words.json
             ${{ runner.temp }}/ik-1903-verified-draft-only.json
             ${{ runner.temp }}/ik-amorce-approval-gate.json
+            ${{ runner.temp }}/ik-j2-review.json
+            ${{ runner.temp }}/ik-j2-review.tsv
+            ${{ runner.temp }}/ik-j2-summary.md
       - name: Audit-only gate confirmed
         shell: bash
         run: |
