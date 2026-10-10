@@ -5,6 +5,9 @@ on:
       - work/haafidh-1171-ibn-kathir-integration-independent
     paths:
       - .github/workflows/diagnose-quiz-launch-android.yml
+      - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/QuizLaunchRegressionInstrumentedTest.java
+      - hifz-app/src/main/res/drawable/ic_ui_play.xml
+      - hifz-app/src/main/res/drawable/ic_ui_close.xml
   workflow_dispatch:
 
 permissions:
