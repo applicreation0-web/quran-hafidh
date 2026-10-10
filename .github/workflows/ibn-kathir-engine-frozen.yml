@@ -71,6 +71,11 @@ jobs:
           assert d["reference_verse_text_git_blob"] == "fcc214311897921d08bbc56879b82aa38328a5f3"
           assert d["reference_verse_text_is_kfqc_word_aligned"] is False
           assert all(c["full_start_ayah_text_for_review"].strip() for c in d["candidates"])
+          by_id={c["id"]:c for c in d["candidates"]}
+          assert by_id["IKEN050_001_005"]["full_start_ayah_text_for_review"].startswith("قۤۚ ")
+          assert by_id["IKEN001_001_007"]["full_start_ayah_text_for_review"].startswith("بِسۡمِ")
+          taubah=next(c for c in d["candidates"] if c["surah"]==9 and c["start_ayah"]==1)
+          assert not taubah["full_start_ayah_text_for_review"].startswith("بِسۡمِ")
           assert len(d["candidates"]) == 1903
           assert all(x["candidate_anchor_word_count"] is None
                      and x["selection_status"]=="NOT_REVIEWED" for x in d["candidates"])
