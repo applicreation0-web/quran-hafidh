@@ -47,18 +47,19 @@ public final class RoadmapCadenceWiringSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertTrue(main.contains("private int effectiveLearningDaysPerWeek() {"));
         assertTrue("refreshQuickAccessCadenceGating must use the shared helper",
-            main.contains("HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), effectiveLearningDaysPerWeek());"));
+            main.contains("WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek());"));
         assertTrue("cadenceComplete must use the shared helper",
-            main.contains("HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), effectiveLearningDaysPerWeek());"));
+            main.contains("WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());"));
         assertTrue("nextDueCadence must use the shared helper",
-            main.contains("HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());"));
+            main.contains("WeeklyProgramPolicy.nextDue(prefs,prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());"));
     }
 
     @Test public void settingsActivityShowsTheEffectiveRatioAndAnAutoManualToggle() throws Exception {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue(settings.contains("private int effectiveLearningDaysPerWeek(){"));
         assertTrue("the manual day-count row must be disabled while AUTO is driving the ratio",
-            settings.contains("learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);"));
+            settings.contains("learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL")
+                && settings.contains("prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC"));
         assertTrue(settings.contains(
             "prefs.setRoadmapMode(checked?HifzPrefs.RoadmapMode.AUTO:HifzPrefs.RoadmapMode.MANUAL);"));
     }
