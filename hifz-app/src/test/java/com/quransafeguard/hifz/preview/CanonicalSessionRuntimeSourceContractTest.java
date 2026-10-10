@@ -79,7 +79,7 @@ public final class CanonicalSessionRuntimeSourceContractTest {
     @Test public void revisionRemainsSeparateAndConsolidationIsNotAWeekdayCadence() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         String core = read("hifz-core/src/main/kotlin/com/quransafeguard/hifz/core/HifzCore.kt");
-        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus()"));
+        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus(geometry)") && session.contains("prefs.activeMurajaahCorpus()"));
         assertTrue(core.contains("enum class CadenceAction"));
         assertFalse(core.contains("CadenceAction.CONSOLIDATION"));
     }
