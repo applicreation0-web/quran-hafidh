@@ -39,6 +39,9 @@ while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
     "$prefix/HifzSessionActivity.java" | \
+    "$prefix/ItqanRegimeStore.java" | \
+    "$prefix/ItqanBalancedMaskSchedule.java" | \
+    "$prefix/ItqanCompletionBoundaryPolicy.java" | \
     "$prefix/MainActivity.java" | \
     "$prefix/StudyReaderActivity.java" | \
     "$prefix/Ui.java" | \
