@@ -235,7 +235,7 @@ public final class SettingsActivity extends android.app.Activity {
         if(!stabilizationDays.isEmpty())out.append(stabilizationDays).append(" · Stabilisation   ·   ");
         return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
             ? out.append("Dim · Stabilisation et finales").toString()
-            : out.append("Dim · Révision").toString();
+            : out.append("Dim · Finales uniquement").toString();
     }
 
     private String learningDaysSummary(){
