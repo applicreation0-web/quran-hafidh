@@ -38,7 +38,7 @@ public final class Lot2SourceContractTest {
         assertTrue(core.contains("LEARNING") && core.contains("STABILIZATION") && core.contains("REVISION"));
         assertFalse(core.contains("CadenceAction.CONSOLIDATION"));
         assertTrue(main.contains("nextDueCadence"));
-        assertTrue(main.contains("HifzSchedule.INSTANCE.actionFor"));
+        assertTrue(main.contains("WeeklyProgramPolicy.actionFor"));
         assertTrue(core.contains("EVENING_REVIEW_MINUTES = 30"));
         assertTrue(core.contains("MAINTENANCE_MINUTES = 45"));
     }
