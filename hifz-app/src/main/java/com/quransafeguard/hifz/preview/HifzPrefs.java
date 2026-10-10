@@ -3111,8 +3111,58 @@ public final class HifzPrefs {
             Math.min(HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK, stored));
     }
 
-    /** The remaining non-Sunday days, given to Stabilisation. */
-    public int itqanDaysPerWeek() { return 6 - learningDaysPerWeek(); }
+    /** Optional programme, stored independently of all schema-6 progression keys. */
+    public enum WeeklyProgram { CLASSIC, RECOMMENDED }
+    private static final String WEEKLY_PROGRAM_HISTORY = "weeklyProgramTransitionsV1";
+
+    /** A programme change affects its effective date forward, never a historical week. */
+    public WeeklyProgram weeklyProgramFor(LocalDate date) {
+        if(date==null)throw new IllegalArgumentException("calendar date required");
+        WeeklyProgram selected=WeeklyProgram.CLASSIC;
+        try {
+            JSONArray history=new JSONArray(p.getString(WEEKLY_PROGRAM_HISTORY,"[]"));
+            for(int i=0;i<history.length();i++) {
+                JSONObject transition=history.optJSONObject(i);
+                if(transition==null)continue;
+                LocalDate from=LocalDate.parse(transition.getString("from"));
+                WeeklyProgram mode=WeeklyProgram.valueOf(transition.getString("mode"));
+                if(!from.isAfter(date))selected=mode;
+            }
+        } catch(Exception corrupt) {
+            // Corrupt optional user settings must not damage or reset Hifz progress.
+            return WeeklyProgram.CLASSIC;
+        }
+        return selected;
+    }
+
+    public WeeklyProgram weeklyProgramMode() { return weeklyProgramFor(HifzClock.today()); }
+
+    public boolean setWeeklyProgramMode(WeeklyProgram mode) {
+        if(mode==null)throw new IllegalArgumentException("programme required");
+        LocalDate today=HifzClock.today();
+        if(weeklyProgramMode()==mode)return true;
+        try {
+            JSONArray old=new JSONArray(p.getString(WEEKLY_PROGRAM_HISTORY,"[]"));
+            JSONArray next=new JSONArray();
+            for(int i=0;i<old.length();i++) {
+                JSONObject item=old.optJSONObject(i);
+                if(item==null)throw new IllegalStateException("Corrupt programme transition");
+                LocalDate from=LocalDate.parse(item.getString("from"));
+                // Preserve past choices verbatim; replace same-day changes atomically.
+                if(from.isBefore(today))next.put(item);
+            }
+            next.put(new JSONObject().put("from",today.toString()).put("mode",mode.name()));
+            return p.edit().putString(WEEKLY_PROGRAM_HISTORY,next.toString()).commit();
+        } catch(Exception invalid) {
+            // A damaged optional setting cannot justify erasing the user’s learning history.
+            throw new IllegalStateException("Unable to save weekly programme safely",invalid);
+        }
+    }
+
+    /** The recommended Sunday adds a fourth Itqan day; classic remains identical. */
+    public int itqanDaysPerWeek() {
+        return weeklyProgramMode()==WeeklyProgram.RECOMMENDED ? 4 : 6-learningDaysPerWeek();
+    }
 
     public boolean setLearningDaysPerWeek(int days) {
         if (days < HifzSchedule.MIN_LEARNING_DAYS_PER_WEEK || days > HifzSchedule.MAX_LEARNING_DAYS_PER_WEEK) {
