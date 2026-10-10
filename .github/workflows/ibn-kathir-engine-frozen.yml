@@ -24,6 +24,30 @@ jobs:
       - name: Freeze all Hifz engines, core, persistence and Mushaf renderer
         shell: bash
         run: bash scripts/guard_frozen_hifz_engines.sh
+      - name: Extract audited Quranic cue coordinates without editorial text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/materialize_semantic_v2_1.py \
+            hifz-app/src/main/semantic-source/v2_1 \
+            "$RUNNER_TEMP/legacy-input-v21.json"
+          python3 scripts/extract_quranic_cues_v1.py \
+            "$RUNNER_TEMP/legacy-input-v21.json" \
+            hifz-app/src/main/word-source/quran-ws-v1.1.2 \
+            "$RUNNER_TEMP/quranic-cues-v1.json"
+          python3 - "$RUNNER_TEMP/quranic-cues-v1.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert d["schema_version"] == "QURANIC_CUES_COORDINATES_V1"
+          assert len(d["cues"]) == 1243
+          assert len({c["id"] for c in d["cues"]}) == 1243
+          assert sum(len(c["aliases"]) for c in d["cues"]) == 1256
+          assert {c["surah"] for c in d["cues"]} == set(range(1,115))
+          assert {p["page"] for c in d["cues"] for p in c["page_occurrences"]} == set(range(1,605))
+          assert not any(k.startswith("title") or "arabic" in k or "tafsir" in k
+                         for c in d["cues"] for k in c.keys())
+          print("PASS: full migration rehearsal, no Quran text or editorial titles")
+          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
