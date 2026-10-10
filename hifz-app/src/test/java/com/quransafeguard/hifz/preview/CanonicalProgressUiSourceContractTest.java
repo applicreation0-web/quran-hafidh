@@ -87,7 +87,7 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(main.contains("\"Apprentissage\""));
         assertTrue(main.contains("\"Stabilisation\""));
         assertTrue(main.contains("\"Révision\""));
-        assertTrue(main.contains("HifzSchedule.INSTANCE.nextDue"));
+        assertTrue(main.contains("WeeklyProgramPolicy.nextDue"));
         assertTrue(main.contains("HifzSessionActivity.EXTRA_SCHEDULED_DATE"));
         assertTrue(session.contains("if (SABQI.equals(mode)) return \"Apprentissage\""));
         assertTrue(session.contains("if (SABQI_TODAY_REVIEW.equals(mode)) return \"Apprentissage\""));
@@ -97,7 +97,7 @@ public final class CanonicalProgressUiSourceContractTest {
 
     @Test public void weeklyProjectionUsesCanonicalCadenceAndNames() throws Exception {
         String week = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue(week.contains("HifzSchedule.INSTANCE.actionFor"));
+        assertTrue(week.contains("WeeklyProgramPolicy.actionFor"));
         assertTrue(week.contains("Apprentissage"));
         assertTrue(week.contains("Stabilisation"));
         assertTrue(week.contains("Révision"));
