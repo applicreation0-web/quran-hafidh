@@ -25,6 +25,8 @@ public final class PassiveApprisAndSundayContractTest {
         GeometryRepository g=geometry();
         InMemoryPrefs disk=new InMemoryPrefs();
         disk.disk.put("itqanRanges","[{\"start\":\"1:1\",\"end\":\"1:7\"}]");
+        disk.disk.put("v6LearnedLineIds","[]");
+        disk.disk.put("v6AcquiredCreditLineIds","[]");
         HifzPrefs prefs=new HifzPrefs(disk);
         String chosen=null;
         VerseRef verse=null;
@@ -70,10 +72,14 @@ public final class PassiveApprisAndSundayContractTest {
     }
 
     @Test public void bothProgrammesEnforceSundayNoActiveAndNoPassive() throws Exception {
-        String main=new String(Files.readAllBytes(Paths.get(
-            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java")),StandardCharsets.UTF_8);
-        String planner=new String(Files.readAllBytes(Paths.get(
-            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java")),StandardCharsets.UTF_8);
+        java.nio.file.Path mainFile=Paths.get(
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
+        if(!Files.exists(mainFile))mainFile=Paths.get("..",mainFile.toString());
+        java.nio.file.Path plannerFile=Paths.get(
+            "hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
+        if(!Files.exists(plannerFile))plannerFile=Paths.get("..",plannerFile.toString());
+        String main=new String(Files.readAllBytes(mainFile),StandardCharsets.UTF_8);
+        String planner=new String(Files.readAllBytes(plannerFile),StandardCharsets.UTF_8);
         assertTrue(main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY)"));
         assertTrue(main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
         assertTrue(planner.contains("// Sunday cannot consume a passive cursor or schedule any general revisions."));
