@@ -21,6 +21,7 @@ while IFS= read -r file; do
   case "$file" in
     # ONLY screen/UI and documentary adapters may be modified.
     "$APP_ROOT/MainActivity.java" | \
+    "$APP_ROOT/Ui.java" | \
     "$APP_ROOT/StudyReaderActivity.java" | \
     "$APP_ROOT/SemanticPassageRepository.java" | \
     "$APP_ROOT/SemanticTitlePopup.java" | \
