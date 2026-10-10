@@ -1184,6 +1184,28 @@ public final class HifzPrefs {
         return EligibleCorpus.Companion.of(progressionMurajaahRanges());
     }
 
+    /**
+     * J6 passive-only supplement: freshly validated Appris lines are eligible immediately.
+     * A Quranic verse is included only when ALL of its physical lines are already
+     * Appris or Acquis, and at least one of its lines is Appris. Straddling unfinished
+     * verses are never credited early. No promotion or cursor write occurs here.
+     */
+    public EligibleCorpus murajaahCorpus(GeometryRepository geometry) {
+        if(geometry==null)return murajaahCorpus();
+        LinkedHashSet<String> appris=v6LineIdSet("v6LearnedLineIds");
+        if(appris.isEmpty())return murajaahCorpus();
+        LinkedHashSet<String> eligible=new LinkedHashSet<>(appris);
+        eligible.addAll(v6LineIdSet("v6AcquiredCreditLineIds"));
+        java.util.HashSet<VerseRef> touching=new java.util.HashSet<>(geometry.versesOnLines(
+            new ArrayList<>(appris)));
+        ArrayList<VerseRef> newlyEligible=new ArrayList<>();
+        for(VerseRef verse:geometry.allVersesFullyCredited(eligible))
+            if(touching.contains(verse))newlyEligible.add(verse);
+        ArrayList<VerseRange> combined=new ArrayList<>(progressionMurajaahRanges());
+        combined.addAll(rangesFromVerses(newlyEligible));
+        return EligibleCorpus.Companion.of(combined);
+    }
+
     /** The Révision corpus as the progression engine builds it. */
     private List<VerseRange> progressionMurajaahRanges() {
         ArrayList<VerseRange> all = new ArrayList<>(itqanRanges());
@@ -3222,6 +3244,30 @@ public final class HifzPrefs {
     }
 
     /** The recommended Sunday adds a fourth Itqan day; classic remains identical. */
+    /** Suggested times are reminders for the learner, never session locks. */
+    public String suggestedMorningTime() {
+        return suggestedTime("hifzSuggestedMorningHHmmV1","05:30");
+    }
+    public String suggestedEveningTime() {
+        return suggestedTime("hifzSuggestedEveningHHmmV1","20:00");
+    }
+    private String suggestedTime(String key,String fallback) {
+        String raw=p.getString(key,fallback);
+        return validSuggestedTime(raw)?raw:fallback;
+    }
+    private static boolean validSuggestedTime(String value) {
+        if(value==null||!value.matches("[0-2][0-9]:[0-5][0-9]"))return false;
+        return Integer.parseInt(value.substring(0,2))<24;
+    }
+    public boolean setSuggestedMorningTime(String hhmm) {
+        if(!validSuggestedTime(hhmm))throw new IllegalArgumentException("invalid morning hour");
+        return p.edit().putString("hifzSuggestedMorningHHmmV1",hhmm).commit();
+    }
+    public boolean setSuggestedEveningTime(String hhmm) {
+        if(!validSuggestedTime(hhmm))throw new IllegalArgumentException("invalid evening hour");
+        return p.edit().putString("hifzSuggestedEveningHHmmV1",hhmm).commit();
+    }
+
     public int itqanDaysPerWeek() {
         return weeklyProgramMode()==WeeklyProgram.RECOMMENDED ? 4 : 6-learningDaysPerWeek();
     }
