@@ -301,6 +301,7 @@ final class Ui {
         if (s.equals("focus")) return R.drawable.ic_ui_focus;
         if (s.equals("révision") || s.equals("révision active")) return R.drawable.ic_ui_revision;
         if (s.contains("difficulté") || s.contains("difficulte")) return R.drawable.ic_ui_difficulty;
+        if (s.equals("marquer") || s.startsWith("touchez le verset")) return R.drawable.ic_ui_difficulty;
         if (s.contains("plus d’options") || s.contains("plus d'options")) return R.drawable.ic_ui_more;
         if (s.contains("quiz")) return R.drawable.ic_ui_quiz;
         if (s.contains("annoter") || s.contains("crayon")) return R.drawable.ic_ui_edit;
