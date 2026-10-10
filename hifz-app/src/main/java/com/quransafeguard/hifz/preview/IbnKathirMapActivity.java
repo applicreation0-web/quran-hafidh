@@ -67,7 +67,7 @@ public final class IbnKathirMapActivity extends Activity {
         top.addView(header,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
         Button picker = Ui.iconButton(this,"","Choisir une sourate",v -> chooseSurah());
         top.addView(picker);
-        Button info = Ui.iconButton(this,"","Référence du bloc",v -> showBlockDetails());
+        Button info = Ui.iconButton(this,"","Référence",v -> showBlockDetails());
         top.addView(info);
         root.addView(top);
         root.addView(Ui.divider(this));
@@ -116,7 +116,7 @@ public final class IbnKathirMapActivity extends Activity {
             }
             @Override public void onPageShown(int page) {}
             @Override public void onVerseTap(VerseRef verse) {openPreviewInMushaf(verse);}
-            @Override public void onSurfaceTap() {openPreviewInMushaf(null);}
+            @Override public void onSurfaceTap() {openPreviewInMushaf();}
             @Override public void onPageSwipe(int delta) {turnPreviewPage(delta);}
         });
         showSurah();
@@ -235,6 +235,8 @@ public final class IbnKathirMapActivity extends Activity {
             renderPreview();
         }
     }
+
+    private void openPreviewInMushaf() { openPreviewInMushaf(null); }
 
     private void openPreviewInMushaf(VerseRef tappedVerse) {
         if(previewGroup!=null)openMushaf(previewGroup,previewPage,tappedVerse);
