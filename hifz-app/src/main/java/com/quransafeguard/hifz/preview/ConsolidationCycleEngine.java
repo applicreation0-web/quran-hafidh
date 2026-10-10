@@ -17,7 +17,7 @@ final class ConsolidationCycleEngine {
      * backs Sunday's extended review: the current + 7 previous weeks' accumulated blocks, read
      * ×3 each instead of the evening's ×10, replacing the old this-week-only ×10 Sunday final.
      */
-    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED }
+    enum Protocol { LEARNING37, LIGHT, FULL, SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS }
 
     /**
      * LEARNING37/LIGHT/FULL cycles freeze at three physical units (their quota tables only define
@@ -29,6 +29,7 @@ final class ConsolidationCycleEngine {
      */
     static int maxUnitsFor(Protocol protocol) {
         if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;
+        if (protocol == Protocol.SNOWBALL_STABILIZATION_SEVEN || protocol == Protocol.SNOWBALL_CONTINUOUS) return 7;
         return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3;
     }
 
@@ -255,7 +256,11 @@ final class ConsolidationCycleEngine {
                     ? copy(5, 2, 2, 2, 3)
                     : copy(5, 1, 2, 2, 3);
             case SNOWBALL:
-                return copy(10, 0, 0, 0, 0);
+                return copy(10, 0, 0, 0, 0); // legacy and Renforcement, frozen
+            case SNOWBALL_STABILIZATION_SEVEN:
+                return copy(7, 0, 0, 0, 0); // only newly stabilized block on this evening
+            case SNOWBALL_CONTINUOUS:
+                return copy(1, 0, 0, 0, 0); // previous blocks once continuously
             case SNOWBALL_FINAL:
                 return copy(5, 0, 0, 0, 0);
             case SNOWBALL_EXTENDED:
@@ -297,6 +302,12 @@ final class ConsolidationCycleEngine {
         if (unit == null) throw new IllegalArgumentException("unit required");
         if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL
                 || unit.protocol() == Protocol.SNOWBALL_EXTENDED) return;
+        if (unit.protocol() == Protocol.SNOWBALL_STABILIZATION_SEVEN
+                || unit.protocol() == Protocol.SNOWBALL_CONTINUOUS) {
+            if(family!=Family.STABILIZATION)throw new IllegalArgumentException(
+                "Seven-times/continuous protocols belong to Stabilisation only");
+            return;
+        }
         if (family == Family.LEARNING && unit.protocol() != Protocol.LEARNING37) {
             throw new IllegalArgumentException("learning cycle requires LEARNING37 protocol");
         }
