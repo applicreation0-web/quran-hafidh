@@ -325,7 +325,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void refreshQuickAccessCadenceGating() {
         if (geometry == null) return;
-        CadenceAction action = HifzSchedule.INSTANCE.actionFor(HifzClock.today().getDayOfWeek(), effectiveLearningDaysPerWeek());
+        CadenceAction action = WeeklyProgramPolicy.actionFor(HifzClock.today().getDayOfWeek(),prefs.weeklyProgramMode(),effectiveLearningDaysPerWeek());
         setLineEnabled(sabqiQuickAccess, action == CadenceAction.LEARNING);
         setLineEnabled(itqanQuickAccess, action == CadenceAction.STABILIZATION);
     }
@@ -363,7 +363,7 @@ public final class MainActivity extends android.app.Activity {
      */
     private String renforcementQuickAccessMode(){
         LocalDate today=HifzClock.today();
-        CadenceAction action=HifzSchedule.INSTANCE.actionFor(today.getDayOfWeek(), effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         return action==CadenceAction.REVISION && !learningFinalResolved(today)
             ? HifzSessionActivity.LEARNING_FINAL : HifzSessionActivity.LEARNING_CONSOLIDATION;
     }
@@ -371,7 +371,7 @@ public final class MainActivity extends android.app.Activity {
     /** See renforcementQuickAccessMode: the Consolidation-track counterpart. */
     private String consolidationQuickAccessMode(){
         LocalDate today=HifzClock.today();
-        CadenceAction action=HifzSchedule.INSTANCE.actionFor(today.getDayOfWeek(), effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         return action==CadenceAction.REVISION && !consolidationFinalResolved(today)
             ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
     }
@@ -382,7 +382,7 @@ public final class MainActivity extends android.app.Activity {
      * no longer today it is treated as satisfied rather than stalling every later cadence day.
      */
     private boolean cadenceComplete(LocalDate date){
-        CadenceAction action=HifzSchedule.INSTANCE.actionFor(date.getDayOfWeek(), effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
@@ -402,7 +402,7 @@ public final class MainActivity extends android.app.Activity {
             if(cadenceComplete(cursor))completed.add(cursor);
             cursor=cursor.plusDays(1);
         }
-        return HifzSchedule.INSTANCE.nextDue(prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());
+        return WeeklyProgramPolicy.nextDue(prefs,prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());
     }
 
     /** Done, or nothing to review this week (rare, e.g. a brand-new install's first week). */
@@ -525,7 +525,7 @@ public final class MainActivity extends android.app.Activity {
         if(nextScheduled!=null&&nextScheduled.isBefore(today)&&!isTodayAnchoredMode(nextMode)){
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
         }
-        CadenceAction action=HifzSchedule.INSTANCE.actionFor(today.getDayOfWeek(),effectiveLearningDaysPerWeek());
+        CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         switch(action){
             case LEARNING:
                 addToday(out,morningDetail!=null?morningDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
