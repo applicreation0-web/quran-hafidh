@@ -2700,7 +2700,13 @@ public final class HifzPrefs {
             if (units == null) continue;
             for (int u = 0; u < units.length(); u++) {
                 String encoded = units.optString(u, "");
-                if (!encoded.isEmpty()) encodedBlocks.add(encoded);
+                if (!encoded.isEmpty() && !acquired.containsAll(
+                        ConsolidationPhysicalUnitPolicy.decodeLineUnit(encoded))) {
+                    // Contradictory audit #2: a PARTLY acquired week is not proof that
+                    // every block in it still needs its Sunday graduation. Only keep
+                    // physical units with at least one unacquired line.
+                    encodedBlocks.add(encoded);
+                }
             }
         }
 
@@ -2914,6 +2920,59 @@ public final class HifzPrefs {
         }
     }
 
+    /**
+     * Audit #2: upgrade an OPEN session saved before sourceSnapshot existed.
+     * Match its frozen physical blocks to an EXACT prefix of the same week's
+     * persisted accumulator; never attach the entire newer accumulator to it.
+     * A mismatched legacy session retains a distinct fingerprint, meaning a
+     * subsequent review can occur but future work is never silently consumed.
+     */
+    private String recoverLegacyFrozenSnowballSnapshot(
+            ConsolidationCycleEngine.Cycle cycle) {
+        String id=cycle.cycleId();
+        String fallback="LEGACY_OPEN|"+id+"|";
+        StringBuilder frozen=new StringBuilder(fallback);
+        for(ConsolidationCycleEngine.Unit unit:cycle.units())
+            frozen.append(unit.protocol().name()).append(':').append(unit.id()).append('|');
+        if(id.contains("-final-"))return frozen.toString(); // never an evening snapshot
+        LocalDate day;
+        try { day=LocalDate.parse(id.substring(id.length()-10)); }
+        catch(RuntimeException badDate) {return frozen.toString();}
+        JSONArray current=rolledSnowballUnits(cycle.family(),day);
+        if(current.length()==0)return frozen.toString();
+        List<ConsolidationCycleEngine.Unit> units=cycle.units();
+        if(cycle.family()==ConsolidationCycleEngine.Family.STABILIZATION
+                && units.get(units.size()-1).protocol()
+                    ==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN) {
+            // J4 stabilization = [previous continuous x1, newest physical x7],
+            // rather than a list of independent daily x7 blocks.
+            String newest=units.get(units.size()-1).id();
+            for(int i=0;i<current.length();i++) {
+                if(!newest.equals(current.optString(i)))continue;
+                if((i==0)!=(units.size()==1))continue;
+                if(i>0) {
+                    ArrayList<String> previous=new ArrayList<>();
+                    for(int j=0;j<i;j++)previous.add(current.optString(j));
+                    String expected=previous.size()==1?previous.get(0)
+                        :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(previous);
+                    if(!expected.equals(units.get(0).id()))continue;
+                }
+                JSONArray prefix=new JSONArray();
+                for(int j=0;j<=i;j++)prefix.put(current.optString(j));
+                return mondayOf(day)+"|"+prefix.toString();
+            }
+            return frozen.toString();
+        }
+        int physical=units.size()>1?units.size()-1:units.size();
+        if(current.length()<physical)return frozen.toString();
+        for(int i=0;i<physical;i++)
+            if(!units.get(i).id().equals(current.optString(i)))
+                return frozen.toString();
+        JSONArray prefix=new JSONArray();
+        for(int i=0;i<physical;i++)prefix.put(current.optString(i));
+        return mondayOf(day)+"|"+prefix.toString();
+    }
+
     /** Persist one OPEN grouped Consolidation session without touching individual counters. */
     boolean persistConsolidationSession(ConsolidationCycleEngine.Session session) {
         if (session == null) throw new IllegalArgumentException("Consolidation session required");
@@ -2942,9 +3001,7 @@ public final class HifzPrefs {
             String prior=frozenConsolidationSnapshot(cycle.family(),cycle.cycleId());
             String snapshot=prior;
             if(snapshot.isEmpty()) {
-                String id=cycle.cycleId();
-                LocalDate sourceDate=LocalDate.parse(id.substring(id.length()-10));
-                snapshot=snowballSnapshot(cycle.family(),sourceDate);
+                snapshot=recoverLegacyFrozenSnowballSnapshot(cycle);
             }
             root.put("sourceSnapshot",snapshot);
 
