@@ -24,9 +24,21 @@ def normalized_word(raw):
     cleaned = unicodedata.normalize("NFC", TASHKIL.sub("", raw))
     return cleaned.replace("ٱ", "ا").replace("أ", "ا").replace("إ", "ا")
 
+# Layout-only characters in the pinned Tanzil source do not represent KFQC words.
+# Never modify the source text or app Mushaf; this tokenizer is REVIEW-ONLY.
+INTRAWORD_HAIRSPACE = "\u200a"
+WORD_JOINER = "\u2060"
+ORNAMENTS = ("\u06de", "\u06e9")
+
+def tokenize_for_qcf_count_review(verse_text):
+    cleaned = verse_text.replace(INTRAWORD_HAIRSPACE, "").replace(WORD_JOINER, "")
+    for decoration in ORNAMENTS:
+        cleaned = cleaned.replace(decoration, "")
+    return cleaned.split()
+
 def load_verses(path, groups):
     verses, _ = load_verified_verse_text(path, groups)
-    return {key: value.split() for key, value in verses.items()}
+    return {key: tokenize_for_qcf_count_review(value) for key, value in verses.items()}
 
 def box_word_counts(folder):
     by_verse = collections.Counter()
@@ -110,6 +122,10 @@ def draft(index_java, word_dir, tanzil_path):
         c["review_required"]="Semantic trigger, rarity, contextual cue and KFQC exact-word confirmation"
     validated["quran_text_file_sha256"]=hashlib.sha256(tanzil_path.read_bytes()).hexdigest()
     validated["tanzil_geometry_token_count_discrepancies"]=len(wrong)
+    # Pinned-source integrity regression: the sole surviving orthographic word-count
+    # disagreement is 15:7. It is NOT a pass for word-by-word QCF alignment.
+    require(len(wrong) == 1 and wrong[0]["ref"] == "15:7",
+            "Tanzil/QCF discrepancy changed; independently re-audit before cue selection")
     validated["sample_token_discrepancies"]=wrong[:12]
     validated["unique_prefixes_within_surah"]=sum(c["suggested_distinct_prefix_words"] is not None for c in validated["candidates"])
     validated["draft_prefixes_count_compatible_with_first_page"]=sum(
