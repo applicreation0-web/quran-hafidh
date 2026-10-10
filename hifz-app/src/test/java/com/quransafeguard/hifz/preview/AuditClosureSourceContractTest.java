@@ -51,7 +51,7 @@ public final class AuditClosureSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(prefs.contains("toLowerCase(Locale.ROOT) + \"ElapsedMs\""));
         assertTrue(session.contains("SessionTimerPolicy.label(mode, elapsed, targetMinutes())"));
-        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus()"));
+        assertTrue(session.contains("EligibleCorpus corpus = prefs.murajaahCorpus(geometry)") && session.contains("prefs.activeMurajaahCorpus()"));
         assertTrue(session.contains("if (!corpus.contains(through))"));
         assertTrue(session.contains("validation possible à tout moment"));
         assertFalse(session.contains("VerseRef itqanBefore = prefs.itqanCursor()"));
