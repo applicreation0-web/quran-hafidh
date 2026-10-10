@@ -62,7 +62,10 @@ public final class SnowballValidationIdempotenceTest {
         LocalDate nextTuesday=LocalDate.of(2026,10,13);
         disk.disk.put("stabilizationSnowballWeekAnchor","2026-10-12");
         assertTrue(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,nextTuesday));
-        for(Map.Entry<String,Object> e:before.entrySet())assertEquals(e.getValue(),disk.disk.get(e.getKey()));
+        for(Map.Entry<String,Object> e:before.entrySet()) {
+            if(e.getKey().equals("stabilizationSnowballWeekAnchor"))continue; // deliberate next-week transition
+            assertEquals("No unrelated saved progression may change: "+e.getKey(),e.getValue(),disk.disk.get(e.getKey()));
+        }
     }
     @Test public void interruptedSessionRemainsPersistedUntilSuccessfulValidation() {
         LocalDate date=LocalDate.of(2026,10,6);
