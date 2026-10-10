@@ -131,6 +131,22 @@ final class WeeklyDashboardPlanner {
                         itqanForecast.completedBlock(blocks);
                     }
                     boolean morningDone=actual!=null;
+                    if(date.getDayOfWeek()==java.time.DayOfWeek.SUNDAY
+                            && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED) {
+                        DashboardLedger.Record learningFinal=ledger.find(date,HifzSessionActivity.LEARNING_FINAL);
+                        DashboardLedger.Record stabilizationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
+                        boolean learningDone=learningFinal!=null ||
+                            (date.equals(today)&&prefs.learningSnowballFinalUnits(date).isEmpty());
+                        boolean stabilizationDone=stabilizationFinal!=null ||
+                            (date.equals(today)&&prefs.stabilizationSnowballFinalUnits(date).isEmpty());
+                        morning+=" · "+(learningDone?"✓ Finale Renforcement Sabqi":"Finale Renforcement Sabqi");
+                        evening=stabilizationDone?"✓ Finale Consolidation Itqān":"Finale Consolidation Itqān uniquement";
+                        state=morningDone&&learningDone&&stabilizationDone?"Validé":
+                            morningDone&&learningDone?"Soir à faire":"À faire";
+                        // Sunday must NEVER forecast active/passive revision or consume
+                        // its independent passive cursor, even during a look-ahead week.
+                        break;
+                    }
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
                     DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
