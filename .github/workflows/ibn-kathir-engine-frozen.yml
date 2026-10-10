@@ -24,6 +24,9 @@ jobs:
       - name: Freeze all Hifz engines, core, persistence and Mushaf renderer
         shell: bash
         run: bash scripts/guard_frozen_hifz_engines.sh
+      - name: Verify all 23 exact contractual BOOX pictograms and immutable hashes
+        shell: bash
+        run: python3 scripts/verify_contractual_ui_icons.py
       - name: Extract audited Quranic cue coordinates without editorial text
         shell: bash
         run: |
