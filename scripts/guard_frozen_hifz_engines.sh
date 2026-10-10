@@ -21,6 +21,9 @@ while IFS= read -r file; do
   case "$file" in
     # ONLY screen/UI and documentary adapters may be modified.
     "$APP_ROOT/HifzSessionActivity.java" | \
+    "$APP_ROOT/HifzPrefs.java" | \
+    "$APP_ROOT/WeeklyProgramPolicy.java" | \
+    "$APP_ROOT/WeeklyDashboardPlanner.java" | \
     "$APP_ROOT/ItqanRegimeStore.java" | \
     "$APP_ROOT/ItqanBalancedMaskSchedule.java" | \
     "$APP_ROOT/ItqanCompletionBoundaryPolicy.java" | \
@@ -49,5 +52,6 @@ if [ "$bad" -ne 0 ]; then
 fi
 
 python3 scripts/verify_authorized_hifz_session_delta.py
+python3 scripts/verify_authorized_program_preferences_delta.py
 echo "PASS: core/renderer frozen; HifzSessionActivity contains only the byte-verified fail-open delta."
 echo "IMPORTANT: passing file freeze does NOT prove UI/adapters cannot alter behavior; run full tests."
