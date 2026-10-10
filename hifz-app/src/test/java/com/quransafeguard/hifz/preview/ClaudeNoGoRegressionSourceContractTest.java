@@ -104,7 +104,12 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(gate.contains("learningConsolidationNeedsAttention=true"));
         String evening = method(main, "private String eveningStabilizationMode", "private String nextMode(ScheduledCadence due)");
         assertTrue(evening.contains("prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today)"));
-        assertTrue(evening.contains("stabilizedConsolidationUnits"));
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
+        assertTrue("J5 must compute pending from a real weekly physical-unit snapshot",
+            prefs.contains("String snapshot=exactSnowballSnapshotToValidate(family,date);")
+            && prefs.contains("JSONArray current = rolledSnowballUnits(family,date);"));
+        assertTrue("Home's session list must still read the actual physical stabilization units",
+            main.contains("prefs.stabilizedConsolidationUnits(today)"));
     }
 
     @Test public void rangeNormalizationNeverSplitsPerSurah() throws Exception {
