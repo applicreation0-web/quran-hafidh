@@ -1,4 +1,4 @@
-name: Frozen Hifz engines and Ibn Kathir integration
+name: Ibn Kathir Hifz + Quiz audit ONLY - no APK
 
 on:
   push:
@@ -69,33 +69,8 @@ jobs:
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
       - name: Run BOOX visual contract and existing source regressions
         run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
-      - name: Assemble isolated debug APK
-        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
-      - name: Inspect package and fingerprint
-        id: apk
+      - name: Audit-only gate confirmed
         shell: bash
         run: |
-          set -euo pipefail
-          apk="$(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' -print -quit)"
-          test -n "$apk" && test -s "$apk"
-          "$ANDROID_HOME"/build-tools/36.0.0/aapt dump badging "$apk" > "$RUNNER_TEMP/badging.txt"
-          grep -q "name='com.quransafeguard.hifz.ibnkathirtest'" "$RUNNER_TEMP/badging.txt"
-          grep -q "versionName='1.17.1-IbnKathir-DEBUG'" "$RUNNER_TEMP/badging.txt"
-          cp "$apk" "$RUNNER_TEMP/Quran-Haafidh-1.17.1-IBN-KATHIR-ENGINE-FROZEN-DEBUG.apk"
-          sha256sum "$RUNNER_TEMP/Quran-Haafidh-1.17.1-IBN-KATHIR-ENGINE-FROZEN-DEBUG.apk"
-          echo "path=$RUNNER_TEMP/Quran-Haafidh-1.17.1-IBN-KATHIR-ENGINE-FROZEN-DEBUG.apk" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ibn-kathir-frozen-engine-test-${{ github.sha }}
-          path: ${{ steps.apk.outputs.path }}
-          retention-days: 14
-          if-no-files-found: error
-      - name: Preserve failure reports
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ibn-kathir-engine-frozen-errors-${{ github.sha }}
-          path: |
-            hifz-app/build/reports/tests/
-            hifz-app/build/test-results/
-          if-no-files-found: warn
+          echo "PASS: source, corpus and behavioural JVM tests checked."
+          echo "NO APK BUILT OR PUBLISHED before complete Ibn Kathir integration and explicit user approval."
