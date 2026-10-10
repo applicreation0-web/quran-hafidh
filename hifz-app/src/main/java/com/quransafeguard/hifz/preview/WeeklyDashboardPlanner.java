@@ -56,7 +56,7 @@ final class WeeklyDashboardPlanner {
         ArrayList<Row> out=new ArrayList<>();
         int sabqiCursor=currentSabqiCursor();
         VerseRef murajaahCursor=prefs.murajaahCursor();
-        EligibleCorpus murajaahCorpus=prefs.murajaahCorpus();
+        EligibleCorpus murajaahCorpus=prefs.murajaahCorpus(geometry);
 
         // Forecast from the SAME cursor and physical units as the live Itqān engine.
         // The legacy anchoringQueue is not the perpetual rotation, and sorting it from
