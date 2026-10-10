@@ -399,9 +399,7 @@ public final class MainActivity extends android.app.Activity {
             case STABILIZATION:return modeComplete(date,HifzSessionActivity.ITQAN);
             case REVISION:
                 if(!date.equals(HifzClock.today()))return true;
-                return learningFinalResolved(date)&&consolidationFinalResolved(date)
-                    &&date.toString().equals(prefs.lastActiveMurajaahDate())
-                    &&date.toString().equals(prefs.lastMurajaahDate());
+                return learningFinalResolved(date)&&consolidationFinalResolved(date);
             default:return false;
         }
     }
@@ -491,7 +489,7 @@ public final class MainActivity extends android.app.Activity {
                 if(!isToday)return null;
                 if(!learningFinalResolved(today))return HifzSessionActivity.LEARNING_FINAL;
                 if(!consolidationFinalResolved(today))return HifzSessionActivity.CONSOLIDATION_FINAL;
-                return eveningRevisionMode(today);
+                return null; // No active/passive review on Sunday in EITHER programme.
             default:return null;
         }
     }
@@ -574,8 +572,10 @@ public final class MainActivity extends android.app.Activity {
                 break;
             default:break;
         }
-        addToday(out,"Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
-        addToday(out,"Entretien"+entretienDetail(),HifzSessionActivity.MURAJAAH,today,todayStr.equals(prefs.lastMurajaahDate()),nextMode);
+        if(today.getDayOfWeek()!=DayOfWeek.SUNDAY){
+            addToday(out,"Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",HifzSessionActivity.MURAJAAH_ACTIVE,today,todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
+            addToday(out,"Entretien"+entretienDetail(),HifzSessionActivity.MURAJAAH,today,todayStr.equals(prefs.lastMurajaahDate()),nextMode);
+        }
         return out;
     }
 
