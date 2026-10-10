@@ -51,14 +51,14 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         assertTrue(session.contains("? prefs.completeItqanMaintenanceUnitV6(currentLineIds, itqanUnit.start, itqanUnit.end, next,"));
     }
 
-    @Test public void anchoredRecallReusesTheValidatedAlMunirAmorcesAsExactHoles() throws Exception {
+    @Test public void anchoredRecallUsesIbnKathirQcfAmorcesAndFailsOpenWithoutExactHoles() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         int start = session.indexOf("private void applyItqanAnchors() {");
         assertTrue(start >= 0);
         String method = session.substring(start, session.indexOf("\n    }\n", start));
-        assertTrue("only during the ten anchored repetitions at 100%",
+        assertTrue("only during the maintained post-An-Nās anchored repetitions at 100%",
             method.contains("currentMask == 100") && method.contains("ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime, prefs.itqanRep())"));
-        assertTrue("validated Al-Munīr amorces of the unit, as exact holes in the paper mask",
+        assertTrue("Ibn Kathīr cues of the unit, as exact QCF holes in the paper mask",
             method.contains("semanticPassages.readerCuesForPage(currentPage)")
                 && method.contains("ItqanMaintenancePolicy.amorceInsideUnit(")
                 && method.contains("mushaf.setSemanticCues(cues, true, false);"));
@@ -66,7 +66,8 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
             && !method.contains("semanticPassages.pageLandmarkBoxes("));
         assertTrue("an amorce without exact boxes makes the page fail open",
             method.contains("cue.getJSONArray(\"boxes\").length() != cue.getInt(\"anchorWordCount\")")
-                && session.contains("return ITQAN.equals(mode) && itqanAnchorFailOpen ? 0 : currentMask;"));
+                && method.contains("if (cues.length() == 0) itqanAnchorFailOpen = true;")
+                && session.contains("if (ITQAN.equals(mode) && itqanAnchorFailOpen) return 0;"));
         assertTrue(session.contains("if(ITQAN.equals(mode))applyItqanAnchors();"));
         assertTrue("no old half-line landmark in Itqān", method.contains("mushaf.setLandmarkLines(null, null);"));
     }
