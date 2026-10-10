@@ -248,7 +248,7 @@ final class SemanticPassageRepository {
         Thread loader = new Thread(() -> {
             shared(app);
             WordGeometryRepository.shared(app).preloadAll();
-        }, "al-munir-preload");
+        }, "ibn-kathir-qcf-preload");
         loader.setDaemon(true);
         loader.setPriority(Thread.MIN_PRIORITY);
         loader.start();
@@ -256,40 +256,23 @@ final class SemanticPassageRepository {
 
     private SemanticPassageRepository(Context context) {
         wordGeometry = WordGeometryRepository.shared(context);
-        IbnKathirApprovedRecallCorpus.Corpus reviewed =
-            IbnKathirApprovedRecallCorpus.tryLoad(context, wordGeometry);
-        approvedIbnKathir=reviewed;
-        boolean loaded = false;
-        if(reviewed!=null) {
-            byPage.putAll(reviewed.byPage);
-            byId.putAll(reviewed.byId);
-            orderedCues.addAll(reviewed.byId.values());
+        // Authorized 1.17.1 migration rule: exactly the first two physical QCF words
+        // per verified Ibn Kathir group. The old editorial approval manifest is NOT
+        // consulted; these are mechanical start words, not editorial mnemonic choices.
+        IbnKathirApprovedRecallCorpus.Corpus source =
+            IbnKathirFirstWordsCorpus.load(wordGeometry);
+        approvedIbnKathir = source;
+        boolean loaded = source != null;
+        if (loaded) {
+            byPage.putAll(source.byPage);
+            byId.putAll(source.byId);
+            orderedCues.addAll(source.byId.values());
             orderedCues.sort((a,b)->a.startVerse.compareTo(b.startVerse));
-            loaded=byPage.size()==604 && !byId.isEmpty();
-        } else try {
-            byte[] raw = readAsset(context, ASSET_PATH);
-            if (!EXPECTED_SHA256.equals(sha256(raw))) {
-                throw new IllegalStateException("semantic V2.1 SHA-256 mismatch");
-            }
-            byte[] titleRaw = readAsset(context, TITLE_ASSET_PATH);
-            if (!EXPECTED_TITLE_SHA256.equals(sha256(titleRaw))) {
-                throw new IllegalStateException("semantic V2.3 title SHA-256 mismatch");
-            }
-            Map<String, String> titlesV23 =
-                parseTitleOverlay(new String(titleRaw, StandardCharsets.UTF_8));
-            parseInto(new String(raw, StandardCharsets.UTF_8), titlesV23, byPage, byId);
-            Map<String, Cue> canonical = new HashMap<>();
-            for (Cue cue : byId.values()) canonical.put(cue.passageId, cue);
-            orderedCues.addAll(canonical.values());
-            orderedCues.sort((a, b) -> a.startVerse.compareTo(b.startVerse));
-            loaded = byPage.size() == 604 && byId.size() == EXPECTED_GLOBAL_PASSAGES
-                && orderedCues.size() == EXPECTED_CANONICAL_MUNIR_PASSAGES;
-        } catch (Throwable unavailableAsset) {
-            // Fail closed: semantic cues are an optional enhancement, never a reader dependency.
-            byPage.clear();
-            byId.clear();
-            orderedCues.clear();
+            loaded = byPage.size() == 604 && byId.size() == 1903
+                && orderedCues.size() == 1903;
         }
+        // No Al-Munir runtime fallback: incomplete QCF leaves the optional cues
+        // unavailable. Masked Hifz consumers must then display Quran text.
         available = loaded;
     }
 
@@ -339,7 +322,7 @@ final class SemanticPassageRepository {
      */
     boolean hasCompleteExactGeometryForPage(int page) {
         if (wordGeometry.pageLandmarkBoxes(page).length() != 6) return false;
-        if(approvedIbnKathir!=null && cuesForPage(page).isEmpty())return false;
+        if(approvedIbnKathir==null || cuesForPage(page).isEmpty())return false;
         for(Cue cue:cuesForPage(page)) {
             if(!cue.anchorOnCurrentPage)continue;
             JSONArray boxes=approvedIbnKathir!=null
@@ -364,7 +347,7 @@ final class SemanticPassageRepository {
                 item.put("index", cue.indexOnPage);
                 // Do not relabel an Ibn Kathir source as Al-Munir.
                 item.put("title",cue.title);
-                if(approvedIbnKathir==null)item.put("titleMunirAr",cue.title);
+                // No legacy Al-Munir title is exposed by the deterministic corpus.
                 item.put("anchor",cue.anchorArabic);
                 item.put("anchorWordCount", cue.anchorWordCount);
                 item.put("startLine", cue.startLine);
