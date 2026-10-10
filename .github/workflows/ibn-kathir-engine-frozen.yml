@@ -54,6 +54,24 @@ jobs:
                          for c in d["cues"] for k in c.keys())
           print("PASS: full migration rehearsal, no Quran text or editorial titles")
           PY
+      - name: Verify all 1903 Ibn Kathir group beginnings against real Mushaf word boxes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/build_ibn_kathir_amorce_review.py \
+            hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java \
+            hifz-app/src/main/word-source/quran-ws-v1.1.2 \
+            "$RUNNER_TEMP/ik-amorce-review-only.json"
+          python3 - "$RUNNER_TEMP/ik-amorce-review-only.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert d["groups"] == 1903 and d["covered_verses"] == 6236
+          assert d["selected_anchors"] == 0 and d["runtime_ready"] is False
+          assert len(d["candidates"]) == 1903
+          assert all(x["candidate_anchor_word_count"] is None
+                     and x["selection_status"]=="NOT_REVIEWED" for x in d["candidates"])
+          print("PASS: exact geometry, no invented mnemonic lengths or runtime activation")
+          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
