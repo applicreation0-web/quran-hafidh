@@ -46,6 +46,7 @@ while IFS= read -r file; do
     "$prefix/ItqanBalancedMaskSchedule.java" | \
     "$prefix/ItqanCompletionBoundaryPolicy.java" | \
     "$prefix/MainActivity.java" | \
+    "$prefix/SettingsActivity.java" | \
     "$prefix/StudyReaderActivity.java" | \
     "$prefix/Ui.java" | \
     "$prefix/IbnKathirGroupIndex.java" | \
