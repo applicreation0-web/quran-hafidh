@@ -29,6 +29,7 @@ public final class IbnKathirMapActivity extends Activity {
     static final String EXTRA_SURAH = "mapSurah";
     static final String EXTRA_AYAH = "mapAyah";
     private IbnKathirGroupIndex index;
+    private IbnKathirRecitationStarts recitationStarts;
     private int surah = 1;
     private int highlightedAyah = 1;
     private ListView groupsList;
@@ -47,6 +48,7 @@ public final class IbnKathirMapActivity extends Activity {
         super.onCreate(saved);
         try {
             index = IbnKathirGroupIndex.shared();
+            recitationStarts=new IbnKathirRecitationStarts(index,WordGeometryRepository.shared(this));
         } catch (RuntimeException error) {
             Ui.showFatal(this, "L'index Ibn Kathīr vérifié est indisponible.");
             return;
@@ -122,6 +124,9 @@ public final class IbnKathirMapActivity extends Activity {
             @Override public void onVerseTap(VerseRef verse) {openPreviewInMushaf(verse);}
             @Override public void onSurfaceTap() {openPreviewInMushaf();}
             @Override public void onPageSwipe(int delta) {turnPreviewPage(delta);}
+            @Override public void onSemanticCueTap(String groupId) {
+                if(previewGroup!=null&&previewGroup.id.equals(groupId))showBlockDetails();
+            }
         });
         showSurah();
     }
@@ -231,6 +236,8 @@ public final class IbnKathirMapActivity extends Activity {
                 && !exact.contains(v))exact.add(v);
         }
         pagePreview.setHighlightVerses(exact);
+        pagePreview.setSemanticCues(recitationStarts.forSelectedGroup(
+            previewPage,previewGroup.id),false,true);
         pagePreview.show(previewPage,java.util.Collections.emptyList(),
             java.util.Collections.emptyList(),0);
     }

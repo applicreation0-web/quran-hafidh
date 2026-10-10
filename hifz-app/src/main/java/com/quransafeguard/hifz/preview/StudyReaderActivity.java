@@ -61,7 +61,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
     private Button semanticButton;
-    private SemanticPassageRepository semanticPassages;
+    private IbnKathirRecitationStarts recitationStarts;
     private boolean semanticCuesEnabled;
     private android.app.Dialog semanticTitleDialog;
     /** Phone Tafsir: a non-modal bottom panel inside the reader (Mushaf stays tappable above it). */
@@ -92,9 +92,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        semanticPassages = SemanticPassageRepository.shared(this);
-        semanticCuesEnabled = semanticPassages.isAvailable()
-            && getSharedPreferences("hifz_study", MODE_PRIVATE).getBoolean("semantic_cues_enabled", false);
+        // Lecture only: verified Ibn Kathir passage starts, separate from Hifz masks.
+        try {
+            recitationStarts=new IbnKathirRecitationStarts(
+                IbnKathirGroupIndex.shared(),WordGeometryRepository.shared(this));
+        } catch(RuntimeException unavailable){recitationStarts=null;}
+        semanticCuesEnabled=recitationStarts!=null&&recitationStarts.isAvailable()
+            && (mapPreview||getSharedPreferences("hifz_study",MODE_PRIVATE)
+                .getBoolean("ibn_kathir_start_markers_visible",false));
 
         rootRow = new LinearLayout(this);
         rootRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -158,7 +163,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.addView(tafsirButton);
         readerActions.addView(Ui.iconButton(this, "", "Carte", v -> openIbnKathirMap()));
         semanticButton = Ui.iconButton(this, "", "Afficher les amorces", v -> toggleSemanticCues());
-        semanticButton.setVisibility(semanticPassages.isAvailable() ? View.VISIBLE : View.GONE);
+        semanticButton.setVisibility(recitationStarts!=null&&recitationStarts.isAvailable()?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
         annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
@@ -308,13 +313,34 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (controlsVisible) hideControls(); else showControls();
     }
     @Override public void onSemanticCueTap(String passageId) {
-        if (!semanticCuesEnabled || semanticPassages == null) return;
-        SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
-        if (cue == null) return;
-        semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+        if(!semanticCuesEnabled||recitationStarts==null)return;
+        IbnKathirGroupIndex.Group group=recitationStarts.groupForId(passageId);
+        if(group==null)return;
+        if(semanticTitleDialog!=null)semanticTitleDialog.dismiss();
+        semanticTitleDialog=new android.app.AlertDialog.Builder(this)
+            .setTitle("Départ Ibn Kathīr · "+group.navigationRange())
+            .setMessage("Premier mot exact du groupe documentaire. "
+                +"Ce repère de début n'est pas encore une amorce de récitation validée.")
+            .setPositiveButton("Lire Ibn Kathīr",(dialog,which)->{
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW,
+                        android.net.Uri.parse(IbnKathirQuranComSource.urlForGroup(group))));
+                } catch(android.content.ActivityNotFoundException missing) {
+                    Toast.makeText(this,"Navigateur indisponible.",Toast.LENGTH_LONG).show();
+                }
+            })
+            .setNeutralButton("Carte",(dialog,which)->{
+                Intent map=new Intent(this,IbnKathirMapActivity.class);
+                map.putExtra(IbnKathirMapActivity.EXTRA_SURAH,group.surah);
+                map.putExtra(IbnKathirMapActivity.EXTRA_AYAH,group.startAyah);
+                startActivity(map);
+            })
+            .setNegativeButton("Fermer",(dialog,which)->dialog.dismiss())
+            .create();
+        semanticTitleDialog.show();
     }
 
-    /** Lecture: discreet Al-Munīr amorces (exact word boxes, hatched, E-Ink safe), off by default. */
+    /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */
     private void toggleAnnotationMode() {
         annotationEnabled = !annotationEnabled;
         annotationOverlay.setDrawingEnabled(annotationEnabled);
@@ -326,10 +352,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private void toggleSemanticCues() {
-        if (semanticPassages == null || !semanticPassages.isAvailable()) return;
-        semanticCuesEnabled = !semanticCuesEnabled;
-        getSharedPreferences("hifz_study", MODE_PRIVATE).edit()
-            .putBoolean("semantic_cues_enabled", semanticCuesEnabled).apply();
+        if(recitationStarts==null||!recitationStarts.isAvailable())return;
+        semanticCuesEnabled=!semanticCuesEnabled;
+        if(!mapPreview)getSharedPreferences("hifz_study",MODE_PRIVATE).edit()
+            .putBoolean("ibn_kathir_start_markers_visible",semanticCuesEnabled).apply();
         updateSemanticButton();
         applySemanticCues();
         showControls();
@@ -338,19 +364,20 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void updateSemanticButton() {
         if (semanticButton == null) return;
         semanticButton.setSelected(semanticCuesEnabled);
-        String description = semanticCuesEnabled ? "Masquer les amorces" : "Afficher les amorces";
-        Ui.setIconDescription(semanticButton, description);
-        int icon = Ui.iconFor(description, "");
+        String description=semanticCuesEnabled?"Masquer les départs Ibn Kathīr"
+            :"Afficher les départs Ibn Kathīr";
+        Ui.setIconDescription(semanticButton,description);
+        int icon=Ui.iconFor(semanticCuesEnabled?"Masquer les amorces":"Afficher les amorces","");
         if (icon != 0) Ui.setButtonIcon(semanticButton, icon);
     }
 
     private void applySemanticCues() {
         if (mushaf == null) return;
-        if (!semanticCuesEnabled || semanticPassages == null || !semanticPassages.isAvailable()) {
+        if(!semanticCuesEnabled||recitationStarts==null||!recitationStarts.isAvailable()){
             mushaf.clearSemanticCues();
             return;
         }
-        mushaf.setSemanticCues(semanticPassages.readerCuesForPage(page), false, true);
+        mushaf.setSemanticCues(recitationStarts.forPage(page),false,true);
     }
 
     private void showControls() {
