@@ -1654,13 +1654,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             itqanAnchorFailOpen = true;
         }
         mushaf.clearPageLandmarkBoxes();
+        // A unit that has no Ibn Kathir beginning on the displayed page must
+        // remain visible; a totally covered page is not a valid recall aid.
+        if (cues.length() == 0) itqanAnchorFailOpen = true;
         if (itqanAnchorFailOpen) { mushaf.clearSemanticCues(); return; }
         mushaf.setSemanticCues(cues, true, false);
     }
 
-    /** The mask actually drawn: an anchored page without exact anchors stays readable. */
+    /** Fail open on active-recall pages with incomplete QCF landmark/cue geometry too. */
     private int displayedMask() {
-        return ITQAN.equals(mode) && itqanAnchorFailOpen ? 0 : currentMask;
+        if (ITQAN.equals(mode) && itqanAnchorFailOpen) return 0;
+        if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0
+                && (semanticPassages == null || !semanticPassages.isAvailable()
+                    || !semanticPassages.hasCompleteExactGeometryForPage(currentPage)))
+            return 0;
+        return currentMask;
     }
 
     private void goPage(int delta) {
@@ -1707,7 +1715,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 view.setPressed(true);mushaf.setMask(0);return true;
             }
             if(action==android.view.MotionEvent.ACTION_UP||action==android.view.MotionEvent.ACTION_CANCEL){
-                view.setPressed(false);mushaf.setMask(currentMask);if(action==android.view.MotionEvent.ACTION_UP)view.performClick();return true;
+                view.setPressed(false);mushaf.setMask(displayedMask());if(action==android.view.MotionEvent.ACTION_UP)view.performClick();return true;
             }
             return false;
         });
