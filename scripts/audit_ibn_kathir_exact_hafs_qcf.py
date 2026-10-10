@@ -39,7 +39,7 @@ def run(index,source,output):
         page_offsets.append(len(qcf))
         qcf.extend(tuple(map(int,row[0].split(":"))) for row in pages[page])
     page_offsets.append(len(qcf))
-    require(len(qcf)==77432 and doc["page_starts"]==page_offsets,"word/page alignment failed")
+    require(len(qcf)==77432 and doc["page_starts"]==page_offsets[:604],"word/page alignment failed")
     offsets={key:index for index,key in enumerate(qcf) if key[2]==1}
     require(len(offsets)==6236,"missing Quran first word")
     metadata=doc["surahs"]
@@ -48,10 +48,12 @@ def run(index,source,output):
     for chapter,meta in enumerate(metadata,1):
         require(meta["number"]==chapter and isinstance(meta["first_ayah"],int),"surah numbering mismatch")
         canonical.extend((chapter,a) for a in range(1,meta["ayah_count"]+1))
-    require(len(canonical)==6236 and len(doc["ayah_starts"])==6237,"invalid ayah offsets")
+    ayah_offsets=list(doc["ayah_starts"])
+    require(len(canonical)==6236 and len(ayah_offsets)==6236,"invalid ayah offsets")
+    ayah_offsets.append(77432)
     for k,ref in enumerate(canonical):
-        first=doc["ayah_starts"][k]
-        last=doc["ayah_starts"][k+1]
+        first=ayah_offsets[k]
+        last=ayah_offsets[k+1]
         require(offsets[ref]==first and last>first,"verse boundary mismatch "+str(ref))
         require(all(qcf[p]==(ref[0],ref[1],p-first+1) for p in range(first,last)),
                 "QCF word identity differs "+str(ref))
@@ -61,7 +63,7 @@ def run(index,source,output):
     for surah,start,end in groups:
         first=offsets[(surah,start)]
         meta=metadata[surah-1]
-        end_i=doc["ayah_starts"][meta["first_ayah"]+end]
+        end_i=ayah_offsets[meta["first_ayah"]+end]
         page=next(p for p in range(1,605) if page_offsets[p-1]<=first<page_offsets[p])
         room=min(end_i,page_offsets[page])-first
         require(room>0,"group starts outside source page")
