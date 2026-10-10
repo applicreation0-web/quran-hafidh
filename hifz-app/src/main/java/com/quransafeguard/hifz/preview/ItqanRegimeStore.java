@@ -98,8 +98,13 @@ final class ItqanRegimeStore {
     }
 
     private static boolean unitInProgress(SharedPreferences p, String start, String end) {
-        if (p.getInt("itqanRep", 0) <= 0 && p.getInt("itqanBlockIndex", 0) <= 0) return false;
-        return start.equals(p.getString("itqanUnitStart", "")) && end.equals(p.getString("itqanUnitEnd", ""));
+        if (!start.equals(p.getString("itqanUnitStart", ""))
+                || !end.equals(p.getString("itqanUnitEnd", ""))) return false;
+        // After an assistance restart the repetition counter is deliberately reset
+        // to zero, but the same persisted unit and stamped plan must survive.
+        // On successful FINAL completion HifzPrefs clears both unit bounds.
+        return p.getInt("itqanRep", 0)>0 || p.getInt("itqanBlockIndex", 0)>0
+            || parsePlan(p.getString(UNIT_PLAN, ""),start,end)!=null;
     }
 
     /**
