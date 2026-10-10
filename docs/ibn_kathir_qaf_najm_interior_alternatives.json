@@ -1,0 +1,109 @@
+{
+  "schema": "IK_J2_QAF_NAJM_INTERIOR_ALTERNATIVES_V1",
+  "date": "2026-10-10",
+  "independent_semantic_review": false,
+  "runtime_ready": false,
+  "approved": 0,
+  "reason": "Global lexical rarity of original verse beginnings can require too many words. Check internal semantic triggers from Ibn Kathir context.",
+  "suggestions": [
+    {
+      "start_word_key": "50:12:1",
+      "word_count": 5,
+      "source_group_id": "IKEN050_012_015",
+      "page": 518,
+      "semantic_review_reason_fr": "Vérifier cinq mots autour des peuples anciens, au lieu de deux trop fréquents",
+      "primary_tafsir_reference": "https://quran.com/qaf/12/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "50:16:1",
+      "word_count": 4,
+      "source_group_id": "IKEN050_016_022",
+      "page": 519,
+      "semantic_review_reason_fr": "Allonger seulement si la séquence évoque réellement la science divine",
+      "primary_tafsir_reference": "https://quran.com/qaf/16/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "50:31:1",
+      "word_count": 4,
+      "source_group_id": "IKEN050_030_035",
+      "page": 519,
+      "semantic_review_reason_fr": "Distinguer l'entrée des gens du Jardin de la scène de l'Enfer",
+      "primary_tafsir_reference": "https://quran.com/qaf/31/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "50:36:7",
+      "word_count": 3,
+      "source_group_id": "IKEN050_036_040",
+      "page": 520,
+      "semantic_review_reason_fr": "Évoquer les peuples plus puissants avant leur destruction",
+      "primary_tafsir_reference": "https://quran.com/qaf/36/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "50:36:10",
+      "word_count": 3,
+      "source_group_id": "IKEN050_036_040",
+      "page": 520,
+      "semantic_review_reason_fr": "Alternative de contraste : les puissants qui parcouraient les terres",
+      "primary_tafsir_reference": "https://quran.com/qaf/36/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "50:39:5",
+      "word_count": 3,
+      "source_group_id": "IKEN050_036_040",
+      "page": 520,
+      "semantic_review_reason_fr": "Déclencher directement la glorification après l'ordre de patience",
+      "primary_tafsir_reference": "https://quran.com/qaf/39/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "50:45:1",
+      "word_count": 5,
+      "source_group_id": "IKEN050_041_045",
+      "page": 520,
+      "semantic_review_reason_fr": "Identifier la parole de réconfort au Prophète et le rappel coranique",
+      "primary_tafsir_reference": "https://quran.com/qaf/45/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "53:27:6",
+      "word_count": 4,
+      "source_group_id": "IKEN053_027_030",
+      "page": 527,
+      "semantic_review_reason_fr": "Cibler précisément l'attribution erronée du genre féminin aux anges",
+      "primary_tafsir_reference": "https://quran.com/an-najm/27/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    },
+    {
+      "start_word_key": "53:31:8",
+      "word_count": 3,
+      "source_group_id": "IKEN053_031_032",
+      "page": 527,
+      "semantic_review_reason_fr": "Cibler la rétribution des œuvres au lieu d'une ouverture longue et générique",
+      "primary_tafsir_reference": "https://quran.com/an-najm/31/tafsirs/en-tafisr-ibn-kathir",
+      "editorial_status": "ALTERNATIVE_TO_REVIEW_NOT_APPROVED",
+      "approved": false,
+      "runtime_enabled": false
+    }
+  ]
+}
