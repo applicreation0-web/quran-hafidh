@@ -4,6 +4,9 @@ from pathlib import Path
 s=(Path(__file__).resolve().parents[1]/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java").read_text(encoding="utf-8")
 required=["IbnKathirGroupIndex.shared()", "group.navigationRange()", "group.id",
           "setOnItemLongClickListener", "showBlockDetails()", "contenu non disponible",
+          "advancePreviewFromCaption()", "previewCaption.setOnClickListener",
+          "previewPage = previewPage>=last ? first : previewPage+1",
+          "previewCaption.setContentDescription",
           "openPreviewInMushaf(verse)", "tappedVerse.getAyah()>=group.startAyah",
           "g.versesOnLines(g.lineIdsOnPage(page)).contains(tappedVerse)",
           "EXTRA_MAP_PREVIEW,true", 'out.putInt("selectedGroupIndex",selectedGroupIndex)',

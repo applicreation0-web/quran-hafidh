@@ -72,7 +72,7 @@ public final class IbnKathirMapActivity extends Activity {
         root.addView(top);
         root.addView(Ui.divider(this));
         TextView guidance=Ui.text(this,
-            "Choisir un bloc · fiche via information · glisser les pages · toucher pour lire",11f,false);
+            "Choisir un bloc · glisser ou toucher le numéro de page · toucher la miniature pour lire",11f,false);
         guidance.setTextColor(Ui.MUTED);
         guidance.setGravity(Gravity.CENTER);
         guidance.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,5));
@@ -95,6 +95,8 @@ public final class IbnKathirMapActivity extends Activity {
         previewCaption.setGravity(Gravity.CENTER);
         miniature.addView(previewCaption,new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        // BOOX-friendly alternative to swipe, with no new toolbar pictogram.
+        previewCaption.setOnClickListener(v -> advancePreviewFromCaption());
         pagePreview=new MushafView(this);
         pagePreview.setContentDescription("Miniature authentique du Mushaf · toucher pour lire");
         miniature.addView(pagePreview,new LinearLayout.LayoutParams(
@@ -213,6 +215,12 @@ public final class IbnKathirMapActivity extends Activity {
         int ordinal=selectedGroupIndex+1;
         previewCaption.setText("Bloc "+ordinal+"/"+count+" · "+previewGroup.navigationRange()
             +" · p. "+previewPage+(first==last?"":" ("+(previewPage-first+1)+"/"+(last-first+1)+")"));
+        previewCaption.setContentDescription("Ibn Kathīr, bloc "+ordinal+" sur "+count
+            +", "+previewGroup.navigationRange()+", page "+previewPage
+            +(first==last ? ". Toucher pour la référence du bloc."
+                : ", page "+(previewPage-first+1)+" sur "+(last-first+1)
+                    +". Toucher pour "+(previewPage==last
+                        ? "revenir à la première page." : "voir la page suivante.")));
         List<VerseRef> exact=new ArrayList<>();
         for(VerseRef v:geometry.versesOnLines(geometry.lineIdsOnPage(previewPage))) {
             if(v.getSurah()==previewGroup.surah
@@ -223,6 +231,21 @@ public final class IbnKathirMapActivity extends Activity {
         pagePreview.setHighlightVerses(exact);
         pagePreview.show(previewPage,java.util.Collections.emptyList(),
             java.util.Collections.emptyList(),0);
+    }
+
+    private void advancePreviewFromCaption() {
+        if(previewGroup==null||geometry==null)return;
+        try {
+            int first=geometry.pageForVerse(
+                new VerseRef(previewGroup.surah,previewGroup.startAyah));
+            int last=geometry.pageForVerse(
+                new VerseRef(previewGroup.surah,previewGroup.endAyah));
+            if(first==last) { showBlockDetails(); return; }
+            previewPage = previewPage>=last ? first : previewPage+1;
+            renderPreview();
+        } catch(RuntimeException missingGeometry) {
+            Toast.makeText(this,"Miniature indisponible.",Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void turnPreviewPage(int delta) {
