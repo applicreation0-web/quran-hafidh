@@ -1,0 +1,24 @@
+# kind	role	contract	drawable	git_blob_sha1	source
+principal	Accueil	home	ic_ui_home.xml	7acc26efee9d4b04123db8efcabee62c12c4fe7d	lucide:house
+principal	Lecture	book-open	ic_ui_reading.xml	630eb9f4ded2387ab929f5945c6b634b5dee6b85	frozen-original
+principal	Carte	network	ic_ui_semantic_map.xml	bea50ef9f3c35c903fbe36400660053dbb075c54	frozen-original
+principal	Amorces	key-round	ic_ui_recall_key.xml	bb6670756b22dfb43ab94d9c56e2c66ac87ce7d3	frozen-original
+principal	Tafsir	book-text	ic_ui_tafsir.xml	ca2b48f87f4f561a018361127d1d152243cd146e	frozen-original
+principal	Focus	scan	ic_ui_focus.xml	96e9398dd047974829023eb4e4a58b8effbbc48c	lucide:scan
+principal	Révision	brain	ic_ui_revision.xml	5edd4b21bb0df323ffa057e76c068b57f764323e	lucide:brain
+principal	Difficulté	flag	ic_ui_difficulty.xml	240fd90b4e606d9517d85b00e6d84ca5fa2477e5	lucide:flag
+principal	Crayon	pencil	ic_ui_edit.xml	9770d143f2854f6356d773375a5e42d2d52dc6e0	frozen-original
+principal	Quiz	check-circle	ic_ui_quiz.xml	1d6dc56b8f1d46ce688f20d74641ce830258e491	lucide:circle-check
+principal	Progression	chart-no-axes-column	ic_ui_progress_map.xml	8c8798fc354f4188e6f3900429548cf9dbd182a7	lucide:chart-no-axes-column
+principal	Reprendre	refresh-cw	ic_ui_resume.xml	85484fb6efb47d8a9294bc3b1ed735388d6b2c86	lucide:refresh-cw
+principal	Retour	arrow-left	ic_ui_back.xml	0af53313884a462b497924586c159f5e2da938ae	lucide:arrow-left
+secondaire	Valider	check	ic_ui_validate.xml	bd90b099e6c17fbf6fb5937e8ff236620544a56f	lucide:check
+secondaire	Fermer	x	ic_ui_close.xml	c1e700ef32797567f5f0fbda8061acc829e6b9df	lucide:x
+secondaire	Annuler	undo-2	ic_ui_undo.xml	ee3f69cbb72726b7bb5047914bd7c184c0474461	lucide:undo-2
+secondaire	Effacer	trash-2	ic_ui_annotation_erase.xml	ec92daacd2803f4c98b8f516af69756723a04edc	lucide:trash-2
+secondaire	Information	info	ic_ui_info.xml	669d62e945a78a317275a0ee8a2e782b306c5d9a	lucide:info
+secondaire	Révéler	eye	ic_ui_reveal.xml	c97fd1d2640291a8671b87d60f64c6c4d650def7	lucide:eye
+secondaire	Enregistrer	mic	ic_ui_record.xml	3f6b7e1dcba46b98dc7323583edaaec25b3172df	lucide:mic
+secondaire	Lire	play	ic_ui_play.xml	2cb65e29757bd946daff84d5db6723b836c18b9b	lucide:play
+secondaire	Pause	pause	ic_ui_pause.xml	6edfcc5e2dcbae9a50cdb84dfffe122bbb262126	lucide:pause
+secondaire	Autres options	ellipsis	ic_ui_more.xml	469f3456af11f153466b8a9ffc26ad596c8c6419	lucide:ellipsis
