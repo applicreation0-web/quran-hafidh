@@ -24,7 +24,7 @@ public final class ItqanCompletionBoundaryPolicyTest {
         geometry=GeometryRepository.fromJson(new String(Files.readAllBytes(p),StandardCharsets.UTF_8));
     }
 
-    @Test public void qafToDhariyat520To521NeverBorrowsAcrossSurahOrPage() {
+    @Test public void qafToDhariyat520To521NeverBorrowsAcrossSurahOrPage() throws Exception {
         int accepted=0, rejected=0;
         for(int page:new int[]{518,519,520,521,522}) {
             List<String> ids=geometry.lineIdsOnPage(page);
