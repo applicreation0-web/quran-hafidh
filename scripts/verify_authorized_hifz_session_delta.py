@@ -42,8 +42,18 @@ replacements=[
 """view.setPressed(false);mushaf.setMask(displayedMask());if(action==android.view.MotionEvent.ACTION_UP)view.performClick();return true;"""
 ),
 ]
+
+# J2 explicitly authorized: frozen per-unit mask profile and strictly physical
+# page/surah completion check; any other Hifz session delta still fails.
+replacements.extend([
+    ("    private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;", "    private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;\n    private ItqanRegimeStore.UnitPlan itqanUnitPlan;"),
+    ("        itqanSessionProtocol = plan.protocol;\n        itqanTargetReps =", "        itqanSessionProtocol = plan.protocol;\n        itqanUnitPlan = plan;\n        itqanTargetReps ="),
+    ("currentMask=ItqanMaintenancePolicy.maskForNextRep(itqanRegime, itqanSessionProtocol, rep);", "currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan, rep);"),
+    ("    private ItqanPageCompletionPolicy.Offer computeItqanBonusOffer(\n            List<StabilizationHalfPagePolicy.Unit> plannedUnits, List<String> ownBlockLineIds) {\n        List<GeometryRepository.LineMeta> ownBlockLines = geometry.linesForExactIds(ownBlockLineIds);\n        List<GeometryRepository.LineMeta> candidates = new ArrayList<>();\n        if (itqanBlockIndex + 1 < itqanBlockCount) {\n            StabilizationHalfPagePolicy.Unit nextBlock = plannedUnits.get(itqanBlockIndex + 1);\n            List<GeometryRepository.LineMeta> nextBlockLines = geometry.linesForExactIds(nextBlock.lineIds);\n            int page = ownBlockLines.get(ownBlockLines.size() - 1).page;\n            int maxTakeable = Math.min(2, nextBlockLines.size() - 1);\n            for (int i = 0; i < maxTakeable; i++) {\n                GeometryRepository.LineMeta l = nextBlockLines.get(i);\n                if (l.page != page) break;\n                candidates.add(l);\n            }\n        }\n        return ItqanPageCompletionPolicy.evaluate(ownBlockLineIds, ownBlockLines, candidates);\n    }\n\n", "    private ItqanPageCompletionPolicy.Offer computeItqanBonusOffer(\n            List<StabilizationHalfPagePolicy.Unit> plannedUnits, List<String> ownBlockLineIds) {\n        List<String> nextLineIds=itqanBlockIndex + 1 < itqanBlockCount\n            ? plannedUnits.get(itqanBlockIndex + 1).lineIds : Collections.emptyList();\n        // Physically inspect the next one/two lines against the actual Mushaf:\n        // an extension is legal only if it closes this page or this surah.\n        return ItqanCompletionBoundaryPolicy.offer(geometry,ownBlockLineIds,nextLineIds);\n    }\n\n"),
+])
 for before,after in replacements:
-    assert baseline.count(before)==1,"Official 1.17.1 source no longer matches expected Hifz code."
+    expected=2 if before.startswith("currentMask=ItqanMaintenancePolicy.maskForNextRep(") else 1
+    assert baseline.count(before)==expected,"Official 1.17.1 source no longer matches expected Hifz code."
     baseline=baseline.replace(before,after)
 actual=Path(PATH).read_text(encoding="utf-8")
 assert baseline == actual, ("UNAUTHORIZED HifzSessionActivity delta: "
