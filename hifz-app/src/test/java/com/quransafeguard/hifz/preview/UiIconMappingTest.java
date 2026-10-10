@@ -29,6 +29,8 @@ public final class UiIconMappingTest {
             {"Parcours Hifz", R.drawable.ic_ui_revision},
             {"Focus", R.drawable.ic_ui_focus},
             {"Difficulté", R.drawable.ic_ui_difficulty},
+            {"Marquer", R.drawable.ic_ui_difficulty},
+            {"Touchez le verset…", R.drawable.ic_ui_difficulty},
             {"Plus d’options", R.drawable.ic_ui_more},
             {"Pause", R.drawable.ic_ui_pause},
             {"Lecture", R.drawable.ic_ui_reading},
