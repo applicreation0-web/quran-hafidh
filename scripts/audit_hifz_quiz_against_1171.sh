@@ -13,7 +13,6 @@ protected=(
   hifz-app/src/main/assets/hifzreader
   app/src/main/assets/reader109/geometry.json
   app/src/main/assets/reader109/waqf.json
-  hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/MushafView.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/AnchoringQueue.java
   hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java
@@ -28,6 +27,7 @@ if [[ -n "$changed" ]]; then
   exit 1
 fi
 python3 scripts/verify_authorized_hifz_session_delta.py
+python3 scripts/verify_authorized_program_preferences_delta.py
 echo "PASS: Hifz core, progress, anchoring, renderer, Quran geometry and Quiz identical to 1.17.1; only three verified Hifz session fail-open deltas."
 
 # Also freeze the rest of application logic: only explicitly whitelisted UI/documentary
@@ -39,6 +39,9 @@ while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
     "$prefix/HifzSessionActivity.java" | \
+    "$prefix/HifzPrefs.java" | \
+    "$prefix/WeeklyProgramPolicy.java" | \
+    "$prefix/WeeklyDashboardPlanner.java" | \
     "$prefix/ItqanRegimeStore.java" | \
     "$prefix/ItqanBalancedMaskSchedule.java" | \
     "$prefix/ItqanCompletionBoundaryPolicy.java" | \
