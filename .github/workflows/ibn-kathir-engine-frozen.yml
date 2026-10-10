@@ -113,6 +113,9 @@ jobs:
           assert len(d["entries"])==1903 and d["runtime_ready"] is False
           assert {x["semantic_amorce_status"] for x in d["entries"]}=={"NOT_APPROVED"}
           PY
+      - name: J4 Verify documentary map sheet and navigation source contract
+        shell: bash
+        run: python3 scripts/verify_ibn_kathir_map_contract.py
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
         shell: bash
         run: python3 scripts/audit_all_screen_icons.py

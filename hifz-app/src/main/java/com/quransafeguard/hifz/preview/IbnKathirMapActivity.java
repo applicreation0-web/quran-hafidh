@@ -67,12 +67,12 @@ public final class IbnKathirMapActivity extends Activity {
         top.addView(header,new LinearLayout.LayoutParams(0,Ui.dp(this,48),1f));
         Button picker = Ui.iconButton(this,"","Choisir une sourate",v -> chooseSurah());
         top.addView(picker);
-        Button info = Ui.iconButton(this,"","Référence",v -> showSource());
+        Button info = Ui.iconButton(this,"","Référence du bloc",v -> showBlockDetails());
         top.addView(info);
         root.addView(top);
         root.addView(Ui.divider(this));
         TextView guidance=Ui.text(this,
-            "Choisir un bloc pour voir son aperçu · toucher le Mushaf pour lire",11f,false);
+            "Choisir un bloc · fiche via information · glisser les pages · toucher pour lire",11f,false);
         guidance.setTextColor(Ui.MUTED);
         guidance.setGravity(Gravity.CENTER);
         guidance.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,5));
@@ -115,8 +115,8 @@ public final class IbnKathirMapActivity extends Activity {
                 previewCaption.setText("Miniature indisponible · ouvrir depuis la liste");
             }
             @Override public void onPageShown(int page) {}
-            @Override public void onVerseTap(VerseRef verse) {openPreviewInMushaf();}
-            @Override public void onSurfaceTap() {openPreviewInMushaf();}
+            @Override public void onVerseTap(VerseRef verse) {openPreviewInMushaf(verse);}
+            @Override public void onSurfaceTap() {openPreviewInMushaf(null);}
             @Override public void onPageSwipe(int delta) {turnPreviewPage(delta);}
         });
         showSurah();
@@ -171,6 +171,13 @@ public final class IbnKathirMapActivity extends Activity {
             // Tap a group to inspect its verified Mushaf page, not to launch a new reader.
             // The miniature itself is the only "open full Mushaf" touch target.
             ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
+        });
+        groupsList.setOnItemLongClickListener((parent,view,position,id) -> {
+            selectedGroupIndex=position;
+            setPreviewGroup(groups.get(position),0);
+            ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
+            showBlockDetails();
+            return true;
         });
         int initial=0;
         if(scrollIndex>=0) initial=Math.min(groups.size()-1,scrollIndex);
@@ -229,8 +236,8 @@ public final class IbnKathirMapActivity extends Activity {
         }
     }
 
-    private void openPreviewInMushaf() {
-        if(previewGroup!=null)openMushaf(previewGroup,previewPage);
+    private void openPreviewInMushaf(VerseRef tappedVerse) {
+        if(previewGroup!=null)openMushaf(previewGroup,previewPage,tappedVerse);
     }
 
     private void openMushaf(IbnKathirGroupIndex.Group group) {
@@ -238,6 +245,10 @@ public final class IbnKathirMapActivity extends Activity {
     }
 
     private void openMushaf(IbnKathirGroupIndex.Group group,int preferredPage) {
+        openMushaf(group,preferredPage,null);
+    }
+
+    private void openMushaf(IbnKathirGroupIndex.Group group,int preferredPage,VerseRef tappedVerse) {
         try {
             VerseRef begin = new VerseRef(group.surah,group.startAyah);
             GeometryRepository g=GeometryRepository.get(this);
@@ -251,6 +262,14 @@ public final class IbnKathirMapActivity extends Activity {
                         &&v.getAyah()<=group.endAyah) {selectedVerse=v;break;}
                 }
             }
+            // Open the actual touched ayah only if it belongs to the verified block/page.
+            // A surface tap retains the first visible verse of the current block.
+            if(tappedVerse!=null && tappedVerse.getSurah()==group.surah
+                    && tappedVerse.getAyah()>=group.startAyah
+                    && tappedVerse.getAyah()<=group.endAyah
+                    && g.versesOnLines(g.lineIdsOnPage(page)).contains(tappedVerse)) {
+                selectedVerse=tappedVerse;
+            }
             // Open a temporary reader: no Hifz cursor or persisted Lecture bookmark changes.
             Intent intent = new Intent(this,StudyReaderActivity.class);
             intent.putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page);
@@ -259,6 +278,35 @@ public final class IbnKathirMapActivity extends Activity {
             startActivity(intent);
         } catch (RuntimeException invalidGeometry) {
             Toast.makeText(this,"Le verset demandé est absent du Mushaf.",Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** Rights-safe documentary sheet: only numeric references and the pinned index. */
+    private void showBlockDetails() {
+        IbnKathirGroupIndex.Group group=previewGroup;
+        if(group==null) { showSource(); return; }
+        try {
+            GeometryRepository g=geometry==null?GeometryRepository.get(this):geometry;
+            int first=g.pageForVerse(new VerseRef(group.surah,group.startAyah));
+            int last=g.pageForVerse(new VerseRef(group.surah,group.endAyah));
+            int total=index.groupsForSurah(group.surah).size();
+            String details="Référence : "+group.navigationRange()
+                +"\nIdentifiant : "+group.id
+                +"\nPages du Mushaf : "+first+(last==first?"":" à "+last)
+                +"\nPage affichée : "+previewPage
+                +"\n\nCommentaire anglais : contenu non disponible."
+                +"\nLe préambule, les titres et les droits de reproduction de l’édition "
+                +"Darussalam ne sont pas encore vérifiés pour ce groupe."
+                +"\n\nAucune progression de mémorisation n’est modifiée depuis la Carte.";
+            new AlertDialog.Builder(this)
+                .setTitle("Ibn Kathīr · Bloc "+(selectedGroupIndex+1)+"/"+total)
+                .setMessage(details)
+                .setPositiveButton("Ouvrir le Mushaf",(d,w)->openMushaf(group,previewPage))
+                .setNeutralButton("Source",(d,w)->showSource())
+                .setNegativeButton("Fermer",(d,w)->d.dismiss())
+                .show();
+        } catch(RuntimeException missingGeometry) {
+            Toast.makeText(this,"Référence du bloc indisponible.",Toast.LENGTH_LONG).show();
         }
     }
 
