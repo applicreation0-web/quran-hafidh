@@ -38,6 +38,10 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                     assertFalse("Unexpected close of Hifz "+mode,activity.isFinishing());
                     assertNotNull("Missing Hifz view "+mode,
                         activity.findViewById(android.R.id.content));
+                    TextView program=(TextView)reflect(activity,"program");
+                    String title=program.getText().toString();
+                    assertFalse("Hifz "+mode+" rendered an error instead of a session: "+title,
+                        title.contains("état à vérifier"));
                 });
             }
         }
