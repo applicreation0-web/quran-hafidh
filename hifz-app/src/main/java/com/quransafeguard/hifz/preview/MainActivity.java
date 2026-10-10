@@ -430,7 +430,7 @@ public final class MainActivity extends android.app.Activity {
     /** Lundi/Mercredi/Vendredi soir, once the morning Apprentissage is done: Renforcement, then Révision active, then Entretien. */
     private String eveningLearningMode(LocalDate today){
         String todayStr=today.toString();
-        if(!todayStr.equals(prefs.lastLearningSnowballEveningDate())&&!prefs.learningConsolidationUnits(today).isEmpty())
+        if(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today))
             return HifzSessionActivity.LEARNING_CONSOLIDATION;
         if(!todayStr.equals(prefs.lastActiveMurajaahDate()))return HifzSessionActivity.MURAJAAH_ACTIVE;
         if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
@@ -440,7 +440,7 @@ public final class MainActivity extends android.app.Activity {
     /** Mardi/Jeudi/Samedi soir, once the morning Stabilisation is done: Consolidation, then Révision active, then Entretien. */
     private String eveningStabilizationMode(LocalDate today){
         String todayStr=today.toString();
-        if(!todayStr.equals(prefs.lastStabilizationSnowballEveningDate())&&!prefs.stabilizedConsolidationUnits(today).isEmpty())
+        if(prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today))
             return HifzSessionActivity.RECENT_SABQI_REVIEW;
         if(!todayStr.equals(prefs.lastActiveMurajaahDate()))return HifzSessionActivity.MURAJAAH_ACTIVE;
         if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;
@@ -558,13 +558,13 @@ public final class MainActivity extends android.app.Activity {
         switch(action){
             case LEARNING:
                 addToday(out,morningDetail!=null?morningDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
-                if(!prefs.learningConsolidationUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningSnowballEveningDate()))
-                    addToday(out,"Renforcement · boule de neige du soir",HifzSessionActivity.LEARNING_CONSOLIDATION,today,todayStr.equals(prefs.lastLearningSnowballEveningDate()),nextMode);
+                if(!prefs.learningConsolidationUnits(today).isEmpty())
+                    addToday(out,"Renforcement · boule de neige du soir",HifzSessionActivity.LEARNING_CONSOLIDATION,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,today),nextMode);
                 break;
             case STABILIZATION:
                 addToday(out,morningDetail!=null?morningDetail:"Stabilisation",HifzSessionActivity.ITQAN,today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
-                if(!prefs.stabilizedConsolidationUnits(today).isEmpty()||todayStr.equals(prefs.lastStabilizationSnowballEveningDate()))
-                    addToday(out,"Consolidation · boule de neige du soir",HifzSessionActivity.RECENT_SABQI_REVIEW,today,todayStr.equals(prefs.lastStabilizationSnowballEveningDate()),nextMode);
+                if(!prefs.stabilizedConsolidationUnits(today).isEmpty())
+                    addToday(out,"Consolidation · boule de neige du soir",HifzSessionActivity.RECENT_SABQI_REVIEW,today,!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today),nextMode);
                 break;
             case REVISION:
                 if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
