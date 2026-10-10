@@ -34,7 +34,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue("Home must inspect this week's accumulated Stabilisation units before offering the evening snowball",
             main.contains("stabilizedConsolidationUnits"));
         assertTrue("Home must not re-offer tonight's snowball once it was already validated",
-            main.contains("lastStabilizationSnowballEveningDate"));
+            main.contains("prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today)"));
     }
 
     @Test public void stabilizationProjectionUsesTheSamePhysicalPlannerAsRuntime() throws Exception {
@@ -103,7 +103,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
         assertTrue(gate.contains("consolidationNeedsAttention=true"));
         assertTrue(gate.contains("learningConsolidationNeedsAttention=true"));
         String evening = method(main, "private String eveningStabilizationMode", "private String nextMode(ScheduledCadence due)");
-        assertTrue(evening.contains("lastStabilizationSnowballEveningDate"));
+        assertTrue(evening.contains("prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,today)"));
         assertTrue(evening.contains("stabilizedConsolidationUnits"));
     }
 
@@ -296,7 +296,7 @@ public final class ClaudeNoGoRegressionSourceContractTest {
             "private List<ConsolidationCycleEngine.Unit> extendedSnowballUnits(",
             "List<ConsolidationCycleEngine.Unit> stabilizationSnowballFinalUnits(");
         assertTrue("extendedSnowballUnits must still surface an out-of-window week that isn't fully acquired yet",
-            extended.contains("if (!withinWindow && weekFullyAcquired(week, acquired)) continue;"));
+            extended.contains("if (weekFullyAcquired(week, acquired)) continue;"));
     }
 
     /**
@@ -610,23 +610,22 @@ public final class ClaudeNoGoRegressionSourceContractTest {
      * a real 30-minute Entretien, gated behind the morning finales and tracked the same way
      * (lastMurajaahDate) so it can't be silently skipped or double-validated.
      */
-    @Test public void sundayEveningNowOffersTheOrdinaryEntretien() throws Exception {
+    @Test public void sundayFinalsNeverScheduleGeneralReviewInEitherProgramme() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue("computeNextMode's REVISION case must fall through to the evening Entretien once both finales resolve",
-            main.contains("if(!consolidationFinalResolved(today))return HifzSessionActivity.CONSOLIDATION_FINAL;\n                return eveningRevisionMode(today);"));
-        String eveningRevision = method(main,
-            "private String eveningRevisionMode(LocalDate today){", "private static boolean isTodayAnchoredMode(String mode){");
-        assertTrue("Sunday evening must offer the ordinary Murajaah mode, gated by lastMurajaahDate like every other evening",
-            eveningRevision.contains("if(!todayStr.equals(prefs.lastMurajaahDate()))return HifzSessionActivity.MURAJAAH;"));
-        assertTrue("cadenceComplete's REVISION case must also require the evening Entretien, not just the morning finales",
-            main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date)\n                    &&date.toString().equals(prefs.lastActiveMurajaahDate())\n                    &&date.toString().equals(prefs.lastMurajaahDate());"));
-
         String weekly = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyDashboardPlanner.java");
-        assertTrue("the weekly dashboard must project a real evening Entretien for Sunday instead of a dash "
-                + "(compound with the same mandatory Révision active step every other evening has)",
-            weekly.contains("evening=\"Révision active (\"+HifzSchedule.ACTIVE_REVIEW_MINUTES+\" min) + Entretien · \"+projected.label;"));
-        assertFalse("the old evening dash must be gone from the REVISION row",
-            method(weekly, "case REVISION:{", "default:throw").contains("evening=\"—\";"));
+        assertTrue("after two Sunday finales, no general active/passive review may be proposed",
+            main.contains("return null; // No active/passive review on Sunday in EITHER programme."));
+        assertTrue("classic Sunday is complete after two separate finales",
+            main.contains("return learningFinalResolved(date)&&consolidationFinalResolved(date);"));
+        assertTrue("recommended Sunday has Itqan plus two distinct finals",
+            main.contains("if(recommendedSunday(date))")
+            && main.contains("if(!modeComplete(date,HifzSessionActivity.ITQAN))return false;"));
+        assertTrue("Sunday selector excludes both active and passive review",
+            main.contains("if(today.getDayOfWeek()!=DayOfWeek.SUNDAY){"));
+        assertTrue("Sunday forecast offers Consolidation finale instead of general Entretien",
+            weekly.contains("evening=consolidationDone?\"✓ Finale Consolidation Itqān\""));
+        assertFalse("Sunday REVISION branch must not project any passive cursor",
+            method(weekly,"case REVISION:{","default:throw").contains("projectMurajaah("));
     }
 
     /**
