@@ -364,7 +364,7 @@ public final class MainActivity extends android.app.Activity {
     private String renforcementQuickAccessMode(){
         LocalDate today=HifzClock.today();
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
-        return action==CadenceAction.REVISION && !learningFinalResolved(today)
+        return today.getDayOfWeek()==DayOfWeek.SUNDAY && !learningFinalResolved(today)
             ? HifzSessionActivity.LEARNING_FINAL : HifzSessionActivity.LEARNING_CONSOLIDATION;
     }
 
@@ -372,7 +372,7 @@ public final class MainActivity extends android.app.Activity {
     private String consolidationQuickAccessMode(){
         LocalDate today=HifzClock.today();
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
-        return action==CadenceAction.REVISION && !consolidationFinalResolved(today)
+        return today.getDayOfWeek()==DayOfWeek.SUNDAY && !consolidationFinalResolved(today)
             ? HifzSessionActivity.CONSOLIDATION_FINAL : HifzSessionActivity.RECENT_SABQI_REVIEW;
     }
 
@@ -381,7 +381,18 @@ public final class MainActivity extends android.app.Activity {
      * would be revisited, the accumulator has already rolled to a new week — so once a Sunday is
      * no longer today it is treated as satisfied rather than stalling every later cadence day.
      */
+    /** Recommended Sunday contains Itqan plus two independent finals, never generic revision. */
+    private boolean recommendedSunday(LocalDate date) {
+        return date.getDayOfWeek()==DayOfWeek.SUNDAY
+            && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED;
+    }
+
     private boolean cadenceComplete(LocalDate date){
+        if(recommendedSunday(date)){
+            if(!modeComplete(date,HifzSessionActivity.ITQAN))return false;
+            return !date.equals(HifzClock.today())
+                || (learningFinalResolved(date) && consolidationFinalResolved(date));
+        }
         CadenceAction action=WeeklyProgramPolicy.actionFor(date.getDayOfWeek(),prefs.weeklyProgramFor(date),effectiveLearningDaysPerWeek());
         switch(action){
             case LEARNING:return modeComplete(date,HifzSessionActivity.SABQI);
@@ -462,6 +473,13 @@ public final class MainActivity extends android.app.Activity {
         LocalDate today=HifzClock.today();
         LocalDate date=due.getScheduledDate();
         boolean isToday=date.equals(today);
+        if(recommendedSunday(date)){
+            if(!modeComplete(date,HifzSessionActivity.ITQAN))return HifzSessionActivity.ITQAN;
+            if(!isToday)return null;
+            if(!learningFinalResolved(date))return HifzSessionActivity.LEARNING_FINAL;
+            if(!consolidationFinalResolved(date))return HifzSessionActivity.CONSOLIDATION_FINAL;
+            return null;
+        }
         switch(due.getAction()){
             case LEARNING:
                 if(!modeComplete(date,HifzSessionActivity.SABQI))return HifzSessionActivity.SABQI;
@@ -526,6 +544,17 @@ public final class MainActivity extends android.app.Activity {
             out.add(new TodaySession("Report "+nextScheduled+" · "+modeTitle(nextMode),nextMode,nextScheduled,false,true));
         }
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
+        if(recommendedSunday(today)){
+            addToday(out,morningDetail!=null?morningDetail:"Itqān · 8 lignes",HifzSessionActivity.ITQAN,
+                today,modeComplete(today,HifzSessionActivity.ITQAN),nextMode);
+            if(!prefs.learningSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastLearningConsolidationDate()))
+                addToday(out,"Finale Renforcement Sabqi · matin",HifzSessionActivity.LEARNING_FINAL,
+                    today,learningFinalResolved(today),nextMode);
+            if(!prefs.stabilizationSnowballFinalUnits(today).isEmpty()||todayStr.equals(prefs.lastRecentSabqiReviewDate()))
+                addToday(out,"Finale Consolidation Itqān · soir",HifzSessionActivity.CONSOLIDATION_FINAL,
+                    today,consolidationFinalResolved(today),nextMode);
+            return out; // Absolutely no active/passive revisions on Sunday.
+        }
         switch(action){
             case LEARNING:
                 addToday(out,morningDetail!=null?morningDetail:"Apprentissage",HifzSessionActivity.SABQI,today,modeComplete(today,HifzSessionActivity.SABQI),nextMode);
