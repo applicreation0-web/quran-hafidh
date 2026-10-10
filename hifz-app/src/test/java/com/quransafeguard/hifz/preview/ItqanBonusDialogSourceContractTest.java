@@ -62,9 +62,14 @@ public final class ItqanBonusDialogSourceContractTest {
 
     @Test public void onlyOfferedFromTheImmediateNextSubBlockOfTheSameParentUnit() throws Exception {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
-        assertTrue(session.contains("if (itqanBlockIndex + 1 < itqanBlockCount) {"));
-        assertTrue("must always leave at least one line for the next block itself",
-            session.contains("int maxTakeable = Math.min(2, nextBlockLines.size() - 1);"));
+        assertTrue(session.contains("itqanBlockIndex + 1 < itqanBlockCount"));
+        assertTrue(session.contains("ItqanCompletionBoundaryPolicy.offer(geometry,ownBlockLineIds,nextLineIds)"));
+        String boundary = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/ItqanCompletionBoundaryPolicy.java");
+        assertTrue("must always leave at least one line in the next sub-block",
+            boundary.contains("int maxTake=Math.min(2,next.size()-1);"));
+        assertTrue("only real page/surah endings may receive +1/+2",
+            boundary.contains("if(endOfPhysicalPage || endOfSurah)"));
+        assertTrue("no lines from another surah",boundary.contains("!onlySurah(candidate,surah)"));
     }
 
     @Test public void acceptedBonusLinesFlowIntoTheSameSingleCommit() throws Exception {
