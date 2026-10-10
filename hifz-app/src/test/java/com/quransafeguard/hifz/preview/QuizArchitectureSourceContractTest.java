@@ -70,7 +70,8 @@ public final class QuizArchitectureSourceContractTest {
     @Test public void freeQuizIsASeparateHomeEntryAndManifestOnlyAddsMicrophonePermission() throws Exception {
         String home = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String manifest = read("hifz-app/src/main/AndroidManifest.xml");
-        assertTrue(home.contains("homeNavLine(root, \"Quiz\", v -> startActivity(new Intent(this, QuizActivity.class)));")\n            || home.contains("navLine(root, \"Quiz\", \"\", v -> startActivity(new Intent(this, QuizActivity.class)));"));
+        assertTrue(home.contains("homeNavLine(root, \"Quiz\", v -> startActivity(new Intent(this, QuizActivity.class)));")
+            || home.contains("navLine(root, \"Quiz\", \"\", v -> startActivity(new Intent(this, QuizActivity.class)));"));
         assertTrue(home.contains("new Intent(this, QuizActivity.class)"));
         assertTrue(manifest.contains("android.permission.RECORD_AUDIO"));
         assertFalse(manifest.contains("WRITE_EXTERNAL_STORAGE"));
