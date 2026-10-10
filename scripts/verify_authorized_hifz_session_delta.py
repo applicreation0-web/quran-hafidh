@@ -57,8 +57,10 @@ replacements.extend([
     ("if (today.equals(prefs.lastStabilizationSnowballEveningDate())) {","if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {"),
     ("if (today.equals(prefs.lastLearningSnowballEveningDate())) {","if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,sessionDate)) {"),
 ])
+# J6: passive-only corpus enlargement; active remains frozen.
+replacements.append(("prefs.murajaahCorpus()","prefs.murajaahCorpus(geometry)"))
 for before,after in replacements:
-    expected=2 if before.startswith("currentMask=ItqanMaintenancePolicy.maskForNextRep(") else 1
+    expected=4 if before=="prefs.murajaahCorpus()" else (2 if before.startswith("currentMask=ItqanMaintenancePolicy.maskForNextRep(") else 1)
     assert baseline.count(before)==expected,"Official 1.17.1 source no longer matches expected Hifz code."
     baseline=baseline.replace(before,after)
 actual=Path(PATH).read_text(encoding="utf-8")
