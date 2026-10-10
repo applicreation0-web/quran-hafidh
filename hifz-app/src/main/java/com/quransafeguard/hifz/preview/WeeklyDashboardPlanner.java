@@ -88,7 +88,9 @@ final class WeeklyDashboardPlanner {
                         morning="Apprentissage · "+range(block.startVerse,block.endVerse)+" · "+block.lineIds.size()+" lignes";
                         sabqiCursor=block.endLineIndex+1;
                     }
-                    boolean eveningDone=snowballActual!=null&&activeActual!=null&&entretienActual!=null;
+                    boolean eveningDone=(snowballActual!=null || (date.equals(today)
+                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,date)))
+                        &&activeActual!=null&&entretienActual!=null;
                     if(eveningDone)evening="✓ Renforcement + Révision active + Entretien";
                     else{
                         Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
@@ -150,7 +152,9 @@ final class WeeklyDashboardPlanner {
                     DashboardLedger.Record snowballActual=ledger.find(date,HifzSessionActivity.RECENT_SABQI_REVIEW);
                     DashboardLedger.Record activeActual=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE);
                     DashboardLedger.Record entretienActual=ledger.find(date,HifzSessionActivity.MURAJAAH);
-                    boolean eveningDone=snowballActual!=null&&activeActual!=null&&entretienActual!=null;
+                    boolean eveningDone=(snowballActual!=null || (date.equals(today)
+                        && !prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,date)))
+                        &&activeActual!=null&&entretienActual!=null;
                     if(eveningDone)evening="✓ Consolidation + Révision active + Entretien";
                     else{
                         Projection projected=projectMurajaah(murajaahCursor,murajaahCorpus,maintenanceMinutes());
