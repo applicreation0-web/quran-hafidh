@@ -295,6 +295,13 @@ final class Ui {
 
     static int iconFor(String semantic, String fallbackSymbol) {
         String s = semantic == null ? "" : semantic.toLowerCase(Locale.ROOT);
+        // Frozen BOOX pictograms: never infer shapes from fallback Unicode glyphs.
+        if (s.equals("accueil")) return R.drawable.ic_ui_home;
+        if (s.equals("parcours hifz")) return R.drawable.ic_ui_revision;
+        if (s.equals("focus")) return R.drawable.ic_ui_focus;
+        if (s.equals("révision") || s.equals("révision active")) return R.drawable.ic_ui_revision;
+        if (s.contains("difficulté") || s.contains("difficulte")) return R.drawable.ic_ui_difficulty;
+        if (s.contains("plus d’options") || s.contains("plus d'options")) return R.drawable.ic_ui_more;
         if (s.contains("quiz")) return R.drawable.ic_ui_quiz;
         if (s.contains("annoter") || s.contains("crayon")) return R.drawable.ic_ui_edit;
         if (s.contains("annuler la note")) return R.drawable.ic_ui_undo;
@@ -307,6 +314,7 @@ final class Ui {
         if (s.contains("passage suivant du corpus")) return R.drawable.ic_ui_jump_next;
         if (s.contains("précédent") || s.contains("precedent")) return R.drawable.ic_ui_previous;
         if (s.contains("suivant")) return R.drawable.ic_ui_next;
+        if (s.equals("pause") || s.equals("mettre en pause")) return R.drawable.ic_ui_pause;
         if (s.contains("lire") || s.contains("pause")) return R.drawable.ic_ui_play;
         if (s.equals("reprendre")) return R.drawable.ic_ui_resume;
         if (s.contains("référence") || s.contains("diagnostic")) return R.drawable.ic_ui_info;
@@ -315,7 +323,8 @@ final class Ui {
         if (s.contains("progression")) return R.drawable.ic_ui_progress_map;
         if (s.contains("param")) return R.drawable.ic_ui_settings;
         if (s.equals("séance")) return R.drawable.ic_ui_session;
-        if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_audio;
+        // Playback uses the agreed play triangle, not the legacy speaker approximation.
+        if (s.contains("audio") || s.contains("écouter")) return R.drawable.ic_ui_play;
         if (s.contains("sourate")) return R.drawable.ic_ui_surah_list;
         if (s.contains("hizb")) return R.drawable.ic_ui_hizb;
         if (s.contains("réinitial") || s.contains("remettre à zéro")) return R.drawable.ic_ui_reset;
