@@ -215,6 +215,7 @@ public final class SettingsActivity extends android.app.Activity {
         int days=effectiveLearningDaysPerWeek();
         StringBuilder out=new StringBuilder();
         for(int i=0;i<WEEKDAYS.length;i++){
+            if(WEEKDAYS[i]==DayOfWeek.SUNDAY)continue; // Separate finales, no weekday evening quota
             if(WeeklyProgramPolicy.actionFor(WEEKDAYS[i],prefs.weeklyProgramMode(),days)!=action)continue;
             if(out.length()>0)out.append("/");
             out.append(WEEKDAY_ABBREVIATIONS[i]);
@@ -253,11 +254,10 @@ public final class SettingsActivity extends android.app.Activity {
         if(value!=null)value.setText(learningDaysSummary());
         String stabilizationDays=daysFor(CadenceAction.STABILIZATION),learningDays=daysFor(CadenceAction.LEARNING);
         consolidationSchemaNote.setText("Consolidation · soir "+stabilizationDays);
-        renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") — l’effet boule de neige :"
-            +"\n1. Chaque soir : ×10 sur CHAQUE bloc Appris ou Stabilisé accumulé depuis le début de la semaine (pas seulement celui du jour), plus ×10 sur l’ensemble de ces blocs lus d’une traite dès qu’il y en a plus d’un."
-            +"\n2. Dimanche matin : chaque bloc des huit dernières semaines ×3, puis l’ensemble ×3, puis ils passent en Acquis."
-            +"\n3. Chaque soir ajoute aussi "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min de Révision active puis "
-            +maintenanceMinutes()+" min d’Entretien de l’Acquis, dimanche soir compris.");
+        renforcementSchemaNote.setText("Renforcement (soir "+learningDays+") et Consolidation (soir "+stabilizationDays+") :"
+            +"\\n1. Renforcement Sabqi : protocole conservé. Consolidation Itqān : ×7 sur le nouveau bloc, puis passage continu des blocs précédents (sans refaire chacun ×7)."
+            +"\\n2. Dimanche matin : finale Renforcement Sabqi, distincte de l’Itqān recommandé. Dimanche soir : finale Consolidation Itqān. Seules ces finales permettent les promotions Acquis."
+            +"\\n3. Révision active 15 min et Entretien passif "+maintenanceMinutes()+" min les jours de semaine. Aucune Révision le dimanche.");
     }
 
     private String weeklyProgramSummary() {
