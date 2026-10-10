@@ -56,7 +56,7 @@ public final class QuickAccessFinaleRoutingSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String m = method(main, "private String renforcementQuickAccessMode(){", "\n    }");
         assertTrue("must use the same REVISION-day check nextMode uses for Sunday",
-            m.contains("CadenceAction.REVISION"));
+            m.contains("today.getDayOfWeek()==DayOfWeek.SUNDAY"));
         assertTrue("must use the same unresolved check nextMode uses before routing to the finale",
             m.contains("!learningFinalResolved(today)"));
         assertTrue("must open the graduating finale when due and unresolved",
@@ -67,7 +67,7 @@ public final class QuickAccessFinaleRoutingSourceContractTest {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String m = method(main, "private String consolidationQuickAccessMode(){", "\n    }");
         assertTrue("must use the same REVISION-day check nextMode uses for Sunday",
-            m.contains("CadenceAction.REVISION"));
+            m.contains("today.getDayOfWeek()==DayOfWeek.SUNDAY"));
         assertTrue("must use the same unresolved check nextMode uses before routing to the finale",
             m.contains("!consolidationFinalResolved(today)"));
         assertTrue("must open the graduating finale when due and unresolved",
