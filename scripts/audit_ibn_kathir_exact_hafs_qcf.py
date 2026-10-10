@@ -87,16 +87,24 @@ def run(index,source,output):
             row["draft_not_approved"]=True
             output_rows.append(row)
     good=sum(x["distinctive_prefix_draft_words"] is not None for x in output_rows)
+    pages_with_block_starts={x["qcf_page"] for x in output_rows}
+    pages_without_block_starts=sorted(set(range(1,605))-pages_with_block_starts)
+    unresolved_ids=[x["id"] for x in output_rows if x["distinctive_prefix_draft_words"] is None]
     report={"source_url":URL,"source_sha256":SHA,"boundary_sha256":boundary_sha,
         "ayahs_exactly_aligned":6236,"pages_exactly_aligned":604,"words_exactly_aligned":77432,
         "ibn_kathir_groups":1903,"draft_one_page_distinct_keys":good,
-        "unresolved":1903-good,"approved_semantic_amorces":0,
+        "unresolved":1903-good,"unresolved_prefix_ids":unresolved_ids,
+        "pages_without_documentary_block_start":pages_without_block_starts,
+        "post_nas_zero_anchor_page_risk":bool(pages_without_block_starts),
+        "approved_semantic_amorces":0,
         "runtime_ready":False,"copyright":"KFGQPC rights check needed before reproduction",
         "candidates":output_rows}
     output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text(json.dumps(report,ensure_ascii=False,indent=1)+"\n",encoding="utf-8")
     print("PASS: exact Quran-to-QCF join, 6236 ayahs, 604 pages, 77432 words.")
     print(f"IBN KATHIR: {good}/1903 same-page uniquely identifiable lexical drafts; 0 editorial approvals; NO APK.")
+    print("UNRESOLVED GROUPS:",unresolved_ids)
+    print("PAGES WITHOUT GROUP START:",len(pages_without_block_starts),pages_without_block_starts[:40])
     return report
 
 if __name__=="__main__":
