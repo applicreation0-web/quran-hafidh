@@ -121,6 +121,20 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         } catch (RuntimeException invalidRecordedDate) {
             sessionDate = capturedToday;
         }
+        // Resume the original frozen evening/final session, including its calendar date,
+        // instead of assigning yesterday's repetitions to today's new cumulative set.
+        ConsolidationCycleEngine.Family resumeFamily =
+            LEARNING_CONSOLIDATION.equals(mode)||LEARNING_FINAL.equals(mode)
+            ? ConsolidationCycleEngine.Family.LEARNING
+            : RECENT_SABQI_REVIEW.equals(mode)||CONSOLIDATION_FINAL.equals(mode)
+              ? ConsolidationCycleEngine.Family.STABILIZATION : null;
+        if(resumeFamily!=null) {
+            String prefix=LEARNING_FINAL.equals(mode)?"learning-final-"
+                : CONSOLIDATION_FINAL.equals(mode)?"stabilization-final-"
+                : LEARNING_CONSOLIDATION.equals(mode)?"learning-":"stabilization-";
+            String original=prefs.unfinishedConsolidationSessionDate(resumeFamily,prefix);
+            if(original!=null)sessionDate=LocalDate.parse(original);
+        }
         speedStore = new HifzSpeedStore(this);
         metricsStore = new HifzSessionMetricsStore(this);
         try {
@@ -489,7 +503,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 +consolidationSession.cycle().cycleId()
                 +". Reprendre l'ancienne séance avant une nouvelle validation.");
         }
-        if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()) {
+        if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()
+                && prefs.frozenConsolidationSnapshot(family,cycleIdPrefix+today).isEmpty()) {
             // The week's accumulator grew a new block (e.g. Friday's own) since this session was
             // frozen open at a smaller size (e.g. Wednesday's 2 units) — reusing it as-is would
             // silently finish out the old, now-incomplete unit set and never review the new block
