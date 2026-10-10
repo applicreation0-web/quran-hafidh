@@ -2671,7 +2671,9 @@ public final class HifzPrefs {
             LocalDate weekStart = safeDate(week.optString("week"), null);
             if (weekStart == null) continue;
             boolean withinWindow = !weekStart.isBefore(cutoff);
-            if (!withinWindow && weekFullyAcquired(week, acquired)) continue;
+            // Once credited Acquis, an old week must never be offered for promotion again,
+            // even while it still falls inside the eight-week reference window.
+            if (weekFullyAcquired(week, acquired)) continue;
             JSONArray units = week.optJSONArray("units");
             if (units == null) continue;
             for (int u = 0; u < units.length(); u++) {
@@ -2979,6 +2981,8 @@ public final class HifzPrefs {
             throw new IllegalStateException("Consolidation session must be OPEN and complete");
         if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
         synchronized (V6_STATE_LOCK) {
+            // Idempotent final: a replay must not re-promote or rewrite the earned history.
+            if(date.equals(p.getString("lastRecentSabqiReviewDate","")))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -3062,6 +3066,8 @@ public final class HifzPrefs {
             throw new IllegalStateException("Consolidation session must be OPEN and complete");
         if (geometry == null) throw new IllegalArgumentException("Consolidation geometry required");
         synchronized (V6_STATE_LOCK) {
+            // Idempotent final: a replay must not re-promote or rewrite the earned history.
+            if(date.equals(p.getString("lastLearningConsolidationDate","")))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
