@@ -73,7 +73,8 @@ jobs:
           assert all(c["full_start_ayah_text_for_review"].strip() for c in d["candidates"])
           by_id={c["id"]:c for c in d["candidates"]}
           assert by_id["IKEN050_001_005"]["full_start_ayah_text_for_review"].startswith("قۤۚ ")
-          assert by_id["IKEN001_001_007"]["full_start_ayah_text_for_review"].startswith("بِسۡمِ")
+          fatiha=next(c for c in d["candidates"] if c["surah"]==1 and c["start_ayah"]==1)
+          assert fatiha["full_start_ayah_text_for_review"].startswith("بِسۡمِ")
           taubah=next(c for c in d["candidates"] if c["surah"]==9 and c["start_ayah"]==1)
           assert not taubah["full_start_ayah_text_for_review"].startswith("بِسۡمِ")
           assert len(d["candidates"]) == 1903
