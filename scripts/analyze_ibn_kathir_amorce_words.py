@@ -56,9 +56,11 @@ def draft(index_java, word_dir, tanzil_path):
     ayahs = load_verses(tanzil_path, read_groups(index_java)[0])
     box_counts, page_starts = box_word_counts(word_dir)
     wrong=[]
+    wrong_refs=set()
     for verse,words in ayahs.items():
         n=box_counts.get(verse,0)
         if len(words) != n:
+            wrong_refs.add(verse)
             wrong.append({"ref":f"{verse[0]}:{verse[1]}","text_words":len(words),"geometry_words":n})
     by_surah=collections.defaultdict(list)
     starts=[]
@@ -83,12 +85,26 @@ def draft(index_java, word_dir, tanzil_path):
             if page_starts.get((surah,ayah),c["start_page"]) != c["start_page"]:
                 break
             count_at_first_page+=box_counts[(surah,ayah)]
+        # Analyze the PARTICULAR candidate's touched verses only; a word-count mismatch
+        # anywhere else in the Quran must not falsely invalidate every other block.
+        touched=[]
+        remaining=candidate or 0
+        if remaining:
+            for ayah in range(c["start_ayah"],c["end_ayah"]+1):
+                touched.append((surah,ayah))
+                remaining -= len(ayahs[(surah,ayah)])
+                if remaining<=0:break
+        compatible=bool(candidate and remaining<=0 and not any(v in wrong_refs for v in touched))
         c["suggested_distinct_prefix_words"]=candidate
         c["suggested_prefix_quran_arabic"] = " ".join(tokens[:candidate]) if candidate else None
         c["prefix_status"]="DRAFT_ONLY_NOT_SEMANTICALLY_APPROVED"
-        c["geometry_and_text_word_counts_agree"]=not bool(wrong)
+        c["text_token_counts_match_qcf_on_touched_verses"]=compatible
+        c["touched_verse_count"] = len(touched)
         c["one_page_word_capacity"]=count_at_first_page
-        c["preview_exact_on_one_page"]=bool(candidate and candidate <= count_at_first_page and not wrong)
+        # Necessary but NEVER sufficient for exact word-to-box correspondence.
+        c["draft_word_count_compatible_with_first_page"]=bool(
+            compatible and candidate <= count_at_first_page)
+        c["preview_exact_on_one_page"]=False
         c["candidate_anchor_word_count"]=None  # NEVER activate a draft!
         c["selection_status"]="NOT_REVIEWED"
         c["review_required"]="Semantic trigger, rarity, contextual cue and KFQC exact-word confirmation"
@@ -96,7 +112,10 @@ def draft(index_java, word_dir, tanzil_path):
     validated["tanzil_geometry_token_count_discrepancies"]=len(wrong)
     validated["sample_token_discrepancies"]=wrong[:12]
     validated["unique_prefixes_within_surah"]=sum(c["suggested_distinct_prefix_words"] is not None for c in validated["candidates"])
-    validated["prefixes_fit_in_one_page"]=sum(c["preview_exact_on_one_page"] for c in validated["candidates"])
+    validated["draft_prefixes_count_compatible_with_first_page"]=sum(
+        c["draft_word_count_compatible_with_first_page"] for c in validated["candidates"])
+    validated["prefixes_fit_in_one_page"]=0  # none verified word by word
+    validated["review_has_global_alignment_approval"]=False
     validated["approved_semantic_amorces"]=0
     validated["runtime_ready"]=False
     return validated
@@ -115,7 +134,8 @@ def main():
     assert data["approved_semantic_amorces"]==0 and not data["runtime_ready"]
     print(f"IBN KATHIR CUE AUDIT: 1903 groups; "
           f"{data['unique_prefixes_within_surah']} distinct-prefix proposals; "
-          f"{data['prefixes_fit_in_one_page']} proposals fit same KFQC page; "
+          f"{data['draft_prefixes_count_compatible_with_first_page']} drafts have compatible "
+          f"QCF word counts on the same page (NOT aligned/approved); "
           f"{data['tanzil_geometry_token_count_discrepancies']} verse text/box count anomalies; "
           "ZERO SEMANTIC APPROVAL. No runtime use.")
     for item in data["sample_token_discrepancies"][:5]:
