@@ -55,6 +55,29 @@ public final class QuizLaunchRegressionInstrumentedTest {
             R.drawable.ic_ui_play,R.drawable.ic_ui_pause,R.drawable.ic_ui_more
         };
         assertEquals("Contractual icon count",23,assets.length);
+        // Broad UI gate: the 23 contracted glyphs are NOT the only icons used
+        // in Hifz, settings and annotations. Inflate every packaged ic_* icon.
+        int all=0;
+        for(java.lang.reflect.Field field:R.drawable.class.getFields()) {
+            if(!field.getName().startsWith("ic_"))continue;
+            try {
+                int resource=field.getInt(null);
+                android.graphics.drawable.Drawable drawable=
+                    androidx.core.content.ContextCompat.getDrawable(context,resource);
+                assertNotNull("Null packaged icon "+field.getName(),drawable);
+                drawable.setBounds(0,0,48,48);
+                android.graphics.Bitmap image=android.graphics.Bitmap.createBitmap(
+                    48,48,android.graphics.Bitmap.Config.ARGB_8888);
+                drawable.draw(new android.graphics.Canvas(image));
+                image.recycle();
+                all++;
+            } catch(ReflectiveOperationException error) {
+                throw new AssertionError("Broken drawable identifier "+field.getName(),error);
+            } catch(RuntimeException error) {
+                throw new AssertionError("Android cannot render "+field.getName(),error);
+            }
+        }
+        assertTrue("Expected the full Hifz icon set, not only the 23",all>=23);
         for(int resource:assets) {
             android.graphics.drawable.Drawable d=
                 androidx.core.content.ContextCompat.getDrawable(context,resource);
