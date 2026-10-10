@@ -28,6 +28,7 @@ if [[ -n "$changed" ]]; then
 fi
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
+python3 scripts/verify_authorized_consolidation_delta.py
 echo "PASS: Hifz core, progress, anchoring, renderer, Quran geometry and Quiz identical to 1.17.1; only three verified Hifz session fail-open deltas."
 
 # Also freeze the rest of application logic: only explicitly whitelisted UI/documentary
@@ -40,6 +41,7 @@ while IFS= read -r file; do
   case "$file" in
     "$prefix/HifzSessionActivity.java" | \
     "$prefix/HifzPrefs.java" | \
+    "$prefix/ConsolidationCycleEngine.java" | \
     "$prefix/WeeklyProgramPolicy.java" | \
     "$prefix/WeeklyDashboardPlanner.java" | \
     "$prefix/ItqanRegimeStore.java" | \
