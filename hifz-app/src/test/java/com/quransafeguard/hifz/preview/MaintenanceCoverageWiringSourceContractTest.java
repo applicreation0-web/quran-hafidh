@@ -58,7 +58,7 @@ public final class MaintenanceCoverageWiringSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertFalse(settings.contains("HifzSchedule.MAINTENANCE_MINUTES"));
         assertTrue(settings.contains("private int maintenanceMinutes(){"));
-        assertTrue(settings.contains("+maintenanceMinutes()+\" min d’Entretien de l’Acquis, dimanche soir compris.\");"));
+        assertTrue(settings.contains("+maintenanceMinutes()+\" min les jours de semaine. Aucune Révision le dimanche.\");"));
         assertTrue(settings.contains("+maintenanceMinutes()+\" min · chaque soir · position \"+prefs.murajaahCursor());"));
     }
 }
