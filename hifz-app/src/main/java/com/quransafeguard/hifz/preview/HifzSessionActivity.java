@@ -1141,7 +1141,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         }
         sessionCompleted = false;
         timedSessionLimitReached = PreviewConfig.timedSessionComplete(clock.elapsedMs(), targetMinutes());
-        EligibleCorpus corpus = prefs.murajaahCorpus();
+        EligibleCorpus corpus = prefs.murajaahCorpus(geometry);
         int lines = HifzCadence.targetLines(targetMinutes(), speedStore.maintenanceSecondsPerLine());
         murajaahPlan = geometry.planEligibleLines(prefs.murajaahCursor(), lines, corpus);
         murajaahActualEnd = prefs.murajaahActualEnd();
@@ -1422,7 +1422,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         boolean active = MURAJAAH_ACTIVE.equals(mode);
         long elapsed = clock.elapsedMs();
         int lines = countMurajaahLinesThrough(murajaahActualEnd);
-        EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
+        EligibleCorpus corpus = active ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         VerseRef next = corpus.next(murajaahActualEnd);
         if (active) {
             advanceWeakVerseStreaksForActiveSession(corpus);
@@ -1487,7 +1487,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
      */
     private int countMurajaahLinesThrough(VerseRef through){
         if (murajaahPlan == null || through == null) return 0;
-        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
+        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         if (!corpus.contains(through)) throw new IllegalArgumentException("Fin d’Révision hors du corpus acquis : " + through);
         LinkedHashSet<String> ids = new LinkedHashSet<>();
         VerseRef cursor = murajaahPlan.start;
@@ -1569,7 +1569,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     @Override public void onVerseTap(VerseRef verse){
         if (!isMurajaahMode() || murajaahPlan == null || sessionCompleted) return;
         if (MURAJAAH_ACTIVE.equals(mode) && weakMarkMode) { toggleWeakVerse(verse); return; }
-        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus();
+        EligibleCorpus corpus = MURAJAAH_ACTIVE.equals(mode) ? prefs.activeMurajaahCorpus() : prefs.murajaahCorpus(geometry);
         if (!corpus.contains(verse)) {
             Toast.makeText(this, "Ce verset n’appartient pas encore au corpus acquis.", Toast.LENGTH_SHORT).show();
             return;
