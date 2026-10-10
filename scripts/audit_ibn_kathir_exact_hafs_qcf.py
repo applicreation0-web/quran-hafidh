@@ -17,12 +17,15 @@ def norm(text):
     return "".join(x for x in unicodedata.normalize("NFC",text)
                    if not unicodedata.combining(x))
 
-def run(index,source,output):
+def run(index,source,output,save_pinned_words=None):
     request=urllib.request.Request(URL,headers={"User-Agent":"Quran-Haafidh-documentary-audit/1.0"})
     with urllib.request.urlopen(request,timeout=50) as stream:
         raw=stream.read(6_000_000)
     require(hashlib.sha256(raw).hexdigest()==SHA,"external Quran text SHA-256 mismatch")
     doc=json.loads(raw)
+    if save_pinned_words is not None:
+        save_pinned_words.parent.mkdir(parents=True, exist_ok=True)
+        save_pinned_words.write_bytes(raw)
     words=doc["words"]
     require(doc["format"]=="quran-mushaf" and doc["mushaf"]["key"]=="hafs","wrong source edition")
     require(doc["counting"]["system"]=="kufi" and doc["counting"]["ayah_count"]==6236,"wrong 6236-ayah count")
@@ -114,5 +117,6 @@ if __name__=="__main__":
     p.add_argument("group_index",type=Path)
     p.add_argument("word_geometry",type=Path)
     p.add_argument("output",type=Path)
+    p.add_argument("--save-pinned-words", type=Path, default=None)
     a=p.parse_args()
-    run(a.group_index,a.word_geometry,a.output)
+    run(a.group_index,a.word_geometry,a.output,a.save_pinned_words)

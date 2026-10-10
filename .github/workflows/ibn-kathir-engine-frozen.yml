@@ -89,7 +89,8 @@ jobs:
           python3 scripts/audit_ibn_kathir_exact_hafs_qcf.py \
             hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java \
             hifz-app/src/main/word-source/quran-ws-v1.1.2 \
-            "$RUNNER_TEMP/ik-1903-verified-draft-only.json"
+            "$RUNNER_TEMP/ik-1903-verified-draft-only.json" \
+            --save-pinned-words "$RUNNER_TEMP/pinned-quran-ws-hafs.json"
           python3 - "$RUNNER_TEMP/ik-1903-verified-draft-only.json" <<'PY'
           import json,sys
           d=json.load(open(sys.argv[1],encoding="utf-8"))
@@ -141,6 +142,11 @@ jobs:
         run: python3 scripts/verify_ibn_kathir_najm_qurancom.py --negative-tests
       - name: J2 Qaf contextual cue preselection and exact contiguous QCF spans
         run: python3 scripts/verify_ibn_kathir_qaf_cue_selection_pass1.py
+      - name: J2 Evaluate 30 Qaf and Najm cues against the entire pinned Hafs Quran
+        run: |
+          python3 scripts/analyze_ibn_kathir_qaf_najm_global_rarity.py \
+            "$RUNNER_TEMP/pinned-quran-ws-hafs.json" \
+            "$RUNNER_TEMP"
       - name: J6 Verify all compact icon roles use the frozen 23-vector contract
         run: python3 scripts/verify_j6_icon_roles.py
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
@@ -184,6 +190,8 @@ jobs:
             ${{ runner.temp }}/ik-j2-editorial-sample-109.json
             ${{ runner.temp }}/ik-j2-editorial-sample-109.tsv
             ${{ runner.temp }}/ik-j2-editorial-review-summary.md
+            ${{ runner.temp }}/ik-j2-qaf-najm-global-rarity.json
+            ${{ runner.temp }}/ik-j2-qaf-najm-global-rarity.md
       - name: Audit-only gate confirmed
         shell: bash
         run: |
