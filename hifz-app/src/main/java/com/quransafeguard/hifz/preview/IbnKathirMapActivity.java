@@ -2,8 +2,6 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.os.Handler;
-import android.os.Looper;
 import android.content.Intent;
 import android.os.Bundle;
 import android.graphics.Typeface;
@@ -14,7 +12,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.AbsListView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -41,8 +38,6 @@ public final class IbnKathirMapActivity extends Activity {
     private int previewPage;
     private int selectedGroupIndex=-1;
     private boolean previewReady;
-    private final Handler previewHandler=new Handler(Looper.getMainLooper());
-    private final Runnable changePreview=this::previewFirstVisibleGroup;
     private int scrollIndex;
     private int scrollTop;
 
@@ -77,7 +72,7 @@ public final class IbnKathirMapActivity extends Activity {
         root.addView(top);
         root.addView(Ui.divider(this));
         TextView guidance=Ui.text(this,
-            "Choisir un passage · toucher la miniature pour lire",11f,false);
+            "Choisir un bloc pour voir son aperçu · toucher le Mushaf pour lire",11f,false);
         guidance.setTextColor(Ui.MUTED);
         guidance.setGravity(Gravity.CENTER);
         guidance.setPadding(Ui.dp(this,4),Ui.dp(this,5),Ui.dp(this,4),Ui.dp(this,5));
@@ -152,7 +147,7 @@ public final class IbnKathirMapActivity extends Activity {
             @Override public View getView(int position,View convert,ViewGroup parent) {
                 TextView row=(TextView) super.getView(position,convert,parent);
                 IbnKathirGroupIndex.Group group=getItem(position);
-                row.setText(QuranSurahNames.range(
+                row.setText((position+1)+" / "+groups.size()+"   ·   "+QuranSurahNames.range(
                     new VerseRef(group.surah,group.startAyah),
                     new VerseRef(group.surah,group.endAyah)));
                 row.setTextSize(17f);
@@ -171,19 +166,11 @@ public final class IbnKathirMapActivity extends Activity {
         };
         groupsList.setAdapter(adapter);
         groupsList.setOnItemClickListener((parent,view,position,id) -> {
-            previewHandler.removeCallbacks(changePreview);
             selectedGroupIndex=position;
             setPreviewGroup(groups.get(position),0);
             // Tap a group to inspect its verified Mushaf page, not to launch a new reader.
             // The miniature itself is the only "open full Mushaf" touch target.
             ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
-        });
-        groupsList.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override public void onScrollStateChanged(AbsListView view,int state) {
-                previewHandler.removeCallbacks(changePreview);
-                if(state==SCROLL_STATE_IDLE)previewHandler.postDelayed(changePreview,250);
-            }
-            @Override public void onScroll(AbsListView view,int firstVisible,int visible,int total) {}
         });
         int initial=0;
         if(scrollIndex>=0) initial=Math.min(groups.size()-1,scrollIndex);
@@ -195,17 +182,6 @@ public final class IbnKathirMapActivity extends Activity {
         if(selectedGroupIndex<0 || selectedGroupIndex>=groups.size())selectedGroupIndex=initial;
         setPreviewGroup(groups.get(selectedGroupIndex),previewPage);
         groupsList.post(() -> groupsList.setSelectionFromTop(target,offset));
-    }
-
-    private void previewFirstVisibleGroup() {
-        if(groupsList==null||index==null)return;
-        int at=groupsList.getFirstVisiblePosition();
-        List<IbnKathirGroupIndex.Group> groups=index.groupsForSurah(surah);
-        if(at<0||at>=groups.size())return;
-        if (selectedGroupIndex==at && previewGroup==groups.get(at)) return;
-        selectedGroupIndex=at;
-        setPreviewGroup(groups.get(at),0);
-        ((ArrayAdapter<?>)groupsList.getAdapter()).notifyDataSetChanged();
     }
 
     private void setPreviewGroup(IbnKathirGroupIndex.Group group,int preferredPage) {
@@ -226,8 +202,10 @@ public final class IbnKathirMapActivity extends Activity {
         if(!previewReady||previewGroup==null||geometry==null)return;
         int first=geometry.pageForVerse(new VerseRef(previewGroup.surah,previewGroup.startAyah));
         int last=geometry.pageForVerse(new VerseRef(previewGroup.surah,previewGroup.endAyah));
-        previewCaption.setText(previewGroup.navigationRange()+" · p. "+previewPage
-            +(first==last?"":" / "+first+"–"+last));
+        int count=index.groupsForSurah(surah).size();
+        int ordinal=selectedGroupIndex+1;
+        previewCaption.setText("Bloc "+ordinal+"/"+count+" · "+previewGroup.navigationRange()
+            +" · p. "+previewPage+(first==last?"":" ("+(previewPage-first+1)+"/"+(last-first+1)+")"));
         List<VerseRef> exact=new ArrayList<>();
         for(VerseRef v:geometry.versesOnLines(geometry.lineIdsOnPage(previewPage))) {
             if(v.getSurah()==previewGroup.surah
@@ -309,7 +287,6 @@ public final class IbnKathirMapActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
-        previewHandler.removeCallbacks(changePreview);
         if(pagePreview!=null)pagePreview.destroySafely();
         super.onDestroy();
     }
