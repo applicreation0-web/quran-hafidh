@@ -35,12 +35,12 @@ public final class SettingsActivity extends android.app.Activity {
     private HifzPrefs prefs;
     private HifzSpeedStore speedStore;
     private GeometryRepository geometry;
-    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weakVersesSetting;
+    private LinearLayout stabilizationRangesBox, acquiredRangesBox, sabqiStartRow, sabqiEndRow, rotationSetting, hardAnchoringSetting, audioSetting, learningDaysSetting, weeklyProgramSetting, weakVersesSetting;
     private TextView sabqiStatus, itqanStatus, effectiveCorpusStatus, murajaahStatus, audioStatus, protocol, consolidationSchemaNote, renforcementSchemaNote;
-    private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"};
+    private static final String[] WEEKDAY_ABBREVIATIONS = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
     private static final DayOfWeek[] WEEKDAYS = {
         DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
-        DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY
+        DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY
     };
 
     private interface VerseChosen { void accept(VerseRef verse); }
@@ -73,11 +73,15 @@ public final class SettingsActivity extends android.app.Activity {
         TextView roadmapModeLabel=Ui.text(this,"Pilotage Roadmap · Automatique",13f,false);Ui.weight(roadmapModeLabel,1);roadmapModeRow.addView(roadmapModeLabel);
         Switch roadmapModeSwitch=new Switch(this);roadmapModeSwitch.setChecked(prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO);roadmapModeSwitch.setContentDescription("Pilotage Roadmap automatique");
         roadmapModeRow.addView(roadmapModeSwitch);parcours.addView(roadmapModeRow);parcours.addView(Ui.divider(this));
+        weeklyProgramSetting=Ui.settingRow(this,"Programme hebdomadaire",
+            weeklyProgramSummary(),v->chooseWeeklyProgram());
+        parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
         learningDaysSetting=Ui.settingRow(this,"Séances d’Apprentissage par semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
-        learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
+        learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
+            && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC);
         roadmapModeSwitch.setOnCheckedChangeListener((button,checked)->{
             prefs.setRoadmapMode(checked?HifzPrefs.RoadmapMode.AUTO:HifzPrefs.RoadmapMode.MANUAL);
-            learningDaysSetting.setEnabled(!checked);
+            learningDaysSetting.setEnabled(!checked && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC);
             refreshWeeklyCadence();
         });
         parcours.addView(learningDaysSetting);parcours.addView(Ui.divider(this));
@@ -211,7 +215,7 @@ public final class SettingsActivity extends android.app.Activity {
         int days=effectiveLearningDaysPerWeek();
         StringBuilder out=new StringBuilder();
         for(int i=0;i<WEEKDAYS.length;i++){
-            if(HifzSchedule.INSTANCE.actionFor(WEEKDAYS[i],days)!=action)continue;
+            if(WeeklyProgramPolicy.actionFor(WEEKDAYS[i],prefs.weeklyProgramMode(),days)!=action)continue;
             if(out.length()>0)out.append("/");
             out.append(WEEKDAY_ABBREVIATIONS[i]);
         }
@@ -228,17 +232,23 @@ public final class SettingsActivity extends android.app.Activity {
         StringBuilder out=new StringBuilder();
         if(!learningDays.isEmpty())out.append(learningDays).append(" · Apprentissage   ·   ");
         if(!stabilizationDays.isEmpty())out.append(stabilizationDays).append(" · Stabilisation   ·   ");
-        return out.append("Dim · Révision").toString();
+        return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
+            ? out.append("Dim · Stabilisation et finales").toString()
+            : out.append("Dim · Révision").toString();
     }
 
     private String learningDaysSummary(){
         int days=effectiveLearningDaysPerWeek();
-        String base=days+"/6 jours   ·   Stabilisation "+(6-days)+"/6";
+        String base=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
+            ? "3 jours Apprentissage · 4 jours Stabilisation"
+            : days+"/6 jours   ·   Stabilisation "+(6-days)+"/6";
         return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   Automatique" : base;
     }
 
     private void refreshWeeklyCadence(){
         protocol.setText(weeklyCadenceSummary());
+        TextView modeValue=Ui.settingValue(weeklyProgramSetting);
+        if(modeValue!=null)modeValue.setText(weeklyProgramSummary());
         TextView value=Ui.settingValue(learningDaysSetting);
         if(value!=null)value.setText(learningDaysSummary());
         String stabilizationDays=daysFor(CadenceAction.STABILIZATION),learningDays=daysFor(CadenceAction.LEARNING);
@@ -248,6 +258,32 @@ public final class SettingsActivity extends android.app.Activity {
             +"\n2. Dimanche matin : chaque bloc des huit dernières semaines ×3, puis l’ensemble ×3, puis ils passent en Acquis."
             +"\n3. Chaque soir ajoute aussi "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min de Révision active puis "
             +maintenanceMinutes()+" min d’Entretien de l’Acquis, dimanche soir compris.");
+    }
+
+    private String weeklyProgramSummary() {
+        return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
+            ? "Recommandé · 3 Sabqi + 4 Itqān" : "Classique · organisation 1.17.1";
+    }
+
+    private void chooseWeeklyProgram() {
+        HifzPrefs.WeeklyProgram previous=prefs.weeklyProgramMode();
+        HifzPrefs.WeeklyProgram[] modes={HifzPrefs.WeeklyProgram.CLASSIC,
+            HifzPrefs.WeeklyProgram.RECOMMENDED};
+        String[] titles={"Classique · organisation 1.17.1",
+            "Recommandé · Itqān Mar/Jeu/Sam/Dim (8/7/7/8 lignes)"};
+        int[] choice={previous==HifzPrefs.WeeklyProgram.CLASSIC?0:1};
+        new AlertDialog.Builder(this).setTitle("Programme hebdomadaire")
+            .setSingleChoiceItems(titles,choice[0],(dialog,index)->choice[0]=index)
+            .setNegativeButton("Annuler",null)
+            .setPositiveButton("Enregistrer",(dialog,index)->{
+                if(!prefs.setWeeklyProgramMode(modes[choice[0]])){
+                    Ui.showFatal(this,"Impossible de sauvegarder le programme.");
+                    return;
+                }
+                learningDaysSetting.setEnabled(modes[choice[0]]==HifzPrefs.WeeklyProgram.CLASSIC
+                    && prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
+                refreshWeeklyCadence();
+            }).show();
     }
 
     private void chooseLearningDaysPerWeek(){
