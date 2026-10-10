@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Exact J4 exception: two stabilization evening quotas; all other cycle logic frozen."""
+from pathlib import Path
+import subprocess
+BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
+FILE="hifz-app/src/main/java/com/quransafeguard/hifz/preview/ConsolidationCycleEngine.java"
+old=subprocess.check_output(["git","show",f"{BASE}:{FILE}"]).decode("utf-8")
+pairs=[
+    ("SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED }","SNOWBALL, SNOWBALL_FINAL, SNOWBALL_EXTENDED, SNOWBALL_STABILIZATION_SEVEN, SNOWBALL_CONTINUOUS }"),
+    ("        if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;","        if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;\n        if (protocol == Protocol.SNOWBALL_STABILIZATION_SEVEN || protocol == Protocol.SNOWBALL_CONTINUOUS) return 7;"),
+    ("            case SNOWBALL:\n                return copy(10, 0, 0, 0, 0);","            case SNOWBALL:\n                return copy(10, 0, 0, 0, 0); // legacy and Renforcement, frozen\n            case SNOWBALL_STABILIZATION_SEVEN:\n                return copy(7, 0, 0, 0, 0); // only newly stabilized block on this evening\n            case SNOWBALL_CONTINUOUS:\n                return copy(1, 0, 0, 0, 0); // previous blocks once continuously"),
+    ("        if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL\n                || unit.protocol() == Protocol.SNOWBALL_EXTENDED) return;","        if (unit.protocol() == Protocol.SNOWBALL || unit.protocol() == Protocol.SNOWBALL_FINAL\n                || unit.protocol() == Protocol.SNOWBALL_EXTENDED) return;\n        if (unit.protocol() == Protocol.SNOWBALL_STABILIZATION_SEVEN\n                || unit.protocol() == Protocol.SNOWBALL_CONTINUOUS) {\n            if(family!=Family.STABILIZATION)throw new IllegalArgumentException(\n                \"Seven-times/continuous protocols belong to Stabilisation only\");\n            return;\n        }"),
+]
+for before,after in pairs:
+    assert old.count(before)==1,"Official ConsolidationCycleEngine baseline unexpectedly differs"
+    old=old.replace(before,after)
+assert Path(FILE).read_text(encoding="utf-8")==old,"UNAUTHORIZED ConsolidationCycleEngine change"
+print("PASS: Renforcement, old sessions, all frozen cycle logic unchanged; only J4 ×7/continuous introduced")
