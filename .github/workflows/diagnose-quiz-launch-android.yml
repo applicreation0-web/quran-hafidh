@@ -38,8 +38,7 @@ jobs:
           # The full legacy androidTest source set does not compile on 1.17.1 (obsolete
           # HifzPrefs APIs). Do not change/delete those tests in the repository:
           # isolate only this diagnostic test in the ephemeral CI checkout.
-          find hifz-app/src/androidTest/java -type f -name '*.java' \\
-            ! -name 'QuizLaunchRegressionInstrumentedTest.java' -delete
+          find hifz-app/src/androidTest/java -type f -name '*.java' ! -name 'QuizLaunchRegressionInstrumentedTest.java' -delete
           test "$(find hifz-app/src/androidTest/java -type f -name '*.java' | wc -l)" -eq 1
       - name: Enable KVM for genuine Android execution
         run: |
