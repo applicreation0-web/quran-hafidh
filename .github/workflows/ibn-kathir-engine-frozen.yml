@@ -24,6 +24,9 @@ jobs:
       - name: Freeze all Hifz engines, core, persistence and Mushaf renderer
         shell: bash
         run: bash scripts/guard_frozen_hifz_engines.sh
+      - name: Prove Hifz and Quiz source exactly equals official 1.17.1
+        shell: bash
+        run: bash scripts/audit_hifz_quiz_against_1171.sh
       - name: Verify all 23 exact contractual BOOX pictograms and immutable hashes
         shell: bash
         run: python3 scripts/verify_contractual_ui_icons.py
