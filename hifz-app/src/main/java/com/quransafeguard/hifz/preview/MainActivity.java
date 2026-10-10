@@ -37,6 +37,7 @@ public final class MainActivity extends android.app.Activity {
     private TextView recentSabqiAdvisory;
     private LinearLayout todayAction;
     private LinearLayout dashboard;
+    private TextView dashboardTitle;
     private LinearLayout sabqiQuickAccess;
     private LinearLayout itqanQuickAccess;
     private final List<View> geometryActions = new ArrayList<>();
@@ -129,9 +130,9 @@ public final class MainActivity extends android.app.Activity {
         geometryActions.add(consolidation);
         setGeometryActionsEnabled(false);
 
-        TextView dashTitle = Ui.bookText(this, "Cette semaine", 15, true);
-        dashTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
-        path.addView(dashTitle);
+        dashboardTitle = Ui.bookText(this, "Cette semaine", 15, true);
+        dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
+        path.addView(dashboardTitle);
         dashboard = Ui.column(this);
         dashboard.setPadding(0, 0, 0, 0);
         path.addView(dashboard);
@@ -289,18 +290,25 @@ public final class MainActivity extends android.app.Activity {
         if (ledger == null) ledger = new DashboardLedger(this);
         ledger.capture(prefs);
         TextView itqanCue = Ui.settingValue(itqanCard);
-        if (itqanCue != null) itqanCue.setText(Ui.stabilizationCue(prefs.itqanPostNasMaintenance()));
+        if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());
         if (today != null && geometry != null) refreshAll();
     }
 
-    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshToday(); refreshRecentSabqiAdvisory(); refreshDashboard(); refreshStabilizationPosition(); }
+    private void refreshAll() { refreshQuickAccessCadenceGating(); refreshDashboard(); refreshToday(); refreshRecentSabqiAdvisory(); refreshStabilizationPosition(); }
+
+    /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
+    private String stabilizationProgramCue() {
+        if(prefs.itqanPostNasMaintenance())return Ui.stabilizationCue(true);
+        return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
+            ? "30 lignes/semaine · 4 séances" : Ui.stabilizationCue(false);
+    }
 
     /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
     private void refreshStabilizationPosition() {
         TextView cue = Ui.settingValue(itqanCard);
         if (cue == null || geometry == null) return;
         boolean postNas = prefs.itqanPostNasMaintenance();
-        String base = Ui.stabilizationCue(postNas);
+        String base = stabilizationProgramCue();
         HifzPrefs.ItqanRotationProgress position = prefs.itqanRotationProgress(geometry);
         if (position == null) { cue.setText(base); return; }
         cue.setText(postNas
@@ -516,7 +524,18 @@ public final class MainActivity extends android.app.Activity {
             startActivity(new Intent(this,SettingsActivity.class));
             return;
         }
-        if(mode==null)return;
+        // A fully validated day must remain inspectable: the old disabled “Programme à jour”
+        // prevented the learner from seeing the real session list and times afterwards.
+        if(mode==null){
+            List<TodaySession> completed;
+            try { completed=todaySessions(current,null,null); }
+            catch(RuntimeException error){ completed=new ArrayList<>(); }
+            if(completed.isEmpty()){
+                new android.app.AlertDialog.Builder(this).setTitle("Aujourd’hui")
+                    .setMessage("Aucune séance programmée.").setPositiveButton("Fermer",null).show();
+            }else showTodayWindow(completed);
+            return;
+        }
         LocalDate scheduled=isTodayAnchoredMode(mode)?current:due.getScheduledDate();
         List<TodaySession> sessions;
         try{ sessions=todaySessions(current,mode,scheduled); }
@@ -639,7 +658,7 @@ public final class MainActivity extends android.app.Activity {
             setToday("Consolidation · état à vérifier",true);
             return;
         }
-        if(mode==null){setToday("Programme à jour",false);return;}
+        if(mode==null){setToday("Programme à jour · voir les séances",true);return;}
         String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
         String detail;
         try{
@@ -701,6 +720,14 @@ public final class MainActivity extends android.app.Activity {
     private void refreshDashboard() {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
+        if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
+            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED?"Recommandé":"Classique"));
+        TextView scheduleHours=Ui.text(this,"Horaires indicatifs · matin "+
+            prefs.suggestedMorningTime()+" · soir "+prefs.suggestedEveningTime()+
+            " · modifiables dans Paramètres",10.5f,false);
+        scheduleHours.setTextColor(Ui.MUTED);
+        scheduleHours.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));
+        dashboard.addView(scheduleHours);
         LinearLayout header = Ui.row(this);
         header.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 2));
         addCell(header, "Jour", 0.62f, true, true);
