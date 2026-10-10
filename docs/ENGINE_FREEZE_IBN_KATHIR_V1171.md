@@ -14,7 +14,7 @@ Commit immuable pré-migration : `0b70b2b34aca9334680ad8f282273706cf868313` (der
 
 ## Surface modifiable en code Java
 **Uniquement** des adaptateurs documentaires et les contrôleurs d'interface déjà autorisés :
-`MainActivity`, `StudyReaderActivity`, `SemanticPassageRepository`, `SemanticTitlePopup`,
+`MainActivity`, `Ui` (**affectation des pictogrammes uniquement**), `StudyReaderActivity`, `SemanticPassageRepository`, `SemanticTitlePopup`,
 `IbnKathirMapActivity`, `IbnKathirGroupIndex`, classes nouvelles `IbnKathir*`,
 `QuranicCue*`, `QuranicAmorce*`.
 
