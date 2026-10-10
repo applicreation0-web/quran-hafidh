@@ -481,6 +481,14 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                                      Runnable onValidate) {
         String today = sessionDate.toString();
         consolidationSession = prefs.restoreConsolidationSession(consolidationEngine, family);
+        if (consolidationSession != null
+                && !consolidationSession.cycle().cycleId().equals(cycleIdPrefix+today)) {
+            // Cross-midnight or another final/evening session: NEVER attribute
+            // repetitions from a different date to today's credits.
+            throw new IllegalStateException("Séance antérieure encore ouverte : "
+                +consolidationSession.cycle().cycleId()
+                +". Reprendre l'ancienne séance avant une nouvelle validation.");
+        }
         if (consolidationSession != null && consolidationSession.sessionGroupSize() < units.size()) {
             // The week's accumulator grew a new block (e.g. Friday's own) since this session was
             // frozen open at a smaller size (e.g. Wednesday's 2 units) — reusing it as-is would
@@ -567,7 +575,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Mardi/Jeudi/Samedi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
     private void renderConsolidationCycle() {
         String today = sessionDate.toString();
-        if (today.equals(prefs.lastStabilizationSnowballEveningDate())) {
+        if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,sessionDate)) {
             sessionCompleted = true;
             program.setText("Consolidation · séance validée");
             progress.setText("Boule de neige du soir terminée.");
@@ -594,7 +602,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     /** Lundi/Mercredi/Vendredi soir: ×10 par unité, cumulatif dans la semaine ; ne graduate rien. */
     private void renderLearningConsolidationCycle() {
         String today = sessionDate.toString();
-        if (today.equals(prefs.lastLearningSnowballEveningDate())) {
+        if (!prefs.snowballEveningPending(ConsolidationCycleEngine.Family.LEARNING,sessionDate)) {
             sessionCompleted = true;
             program.setText("Renforcement · séance validée");
             progress.setText("Boule de neige du soir terminée.");
