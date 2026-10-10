@@ -125,6 +125,16 @@ jobs:
             "$RUNNER_TEMP/ik-1903-verified-draft-only.json" \
             "$RUNNER_TEMP/ik-amorce-approval-gate.json" \
             "$RUNNER_TEMP" --negative-tests
+      - name: J2 Produce complete editorial cards and source-linked 109-case review packet
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/build_ibn_kathir_editorial_review_queue.py \
+            "$RUNNER_TEMP/ik-amorce-review-only.json" \
+            "$RUNNER_TEMP/ik-1903-verified-draft-only.json" \
+            "$RUNNER_TEMP/ik-amorce-approval-gate.json" \
+            "$RUNNER_TEMP/ik-j2-review.json" \
+            "$RUNNER_TEMP"
       - name: J6 Verify all compact icon roles use the frozen 23-vector contract
         run: python3 scripts/verify_j6_icon_roles.py
       - name: Audit icon usage on every Android screen (no Hifz logic changes)
@@ -162,6 +172,10 @@ jobs:
             ${{ runner.temp }}/ik-j2-review.json
             ${{ runner.temp }}/ik-j2-review.tsv
             ${{ runner.temp }}/ik-j2-summary.md
+            ${{ runner.temp }}/ik-j2-editorial-all-1903.json
+            ${{ runner.temp }}/ik-j2-editorial-sample-109.json
+            ${{ runner.temp }}/ik-j2-editorial-sample-109.tsv
+            ${{ runner.temp }}/ik-j2-editorial-review-summary.md
       - name: Audit-only gate confirmed
         shell: bash
         run: |
