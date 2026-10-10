@@ -91,6 +91,51 @@ public final class QuizCorpusTest {
         assertTrue(corpus().eligibleVerses(snapshot(new ArrayList<>(), new ArrayList<>(), new ArrayList<>())).isEmpty());
     }
 
+    /**
+     * Regression: a new Quiz series must re-read the schema6 progression,
+     * retaining week-1 verses while admitting newly learned week-2 material.
+     * This tests the unchanged 1.17.1 QuizCorpus, not a new quiz engine.
+     */
+    @Test public void corpusGrowsAcrossWeeksFromLiveProgressionWithoutRecreditOrMutation() {
+        List<String> firstWeek =
+            CorpusLinePolicy.ownedLineIdsForRangeOnPage(new VerseRef(78, 1), new VerseRef(78, 40), geometry);
+        List<String> secondWeek =
+            CorpusLinePolicy.ownedLineIdsForRangeOnPage(new VerseRef(79, 1), new VerseRef(79, 46), geometry);
+
+        HifzPrefs.ProgressionSnapshot week1 =
+            snapshot(firstWeek, new ArrayList<>(), new ArrayList<>());
+        HifzPrefs.ProgressionSnapshot week2 =
+            snapshot(secondWeek, firstWeek, new ArrayList<>());
+        HifzPrefs.ProgressionSnapshot week3 =
+            snapshot(new ArrayList<>(), secondWeek, firstWeek);
+
+        QuizCorpus quiz = corpus();
+        List<VerseRef> a = quiz.eligibleVerses(week1);
+        List<VerseRef> b = quiz.eligibleVerses(week2);
+        List<VerseRef> c = quiz.eligibleVerses(week3);
+
+        assertFalse(a.isEmpty());
+        assertTrue("new week must expand actual eligible corpus", b.size() > a.size());
+        assertTrue("old week still eligible after stabilization", b.containsAll(a));
+        assertEquals("moving learned -> stabilized -> acquired cannot shrink the corpus", b, c);
+        assertFalse("not eligible before learning", a.contains(new VerseRef(79, 10)));
+        assertTrue("newly learned surah eligible in a fresh quiz", b.contains(new VerseRef(79, 10)));
+        assertTrue("week 1 survives week 3", c.contains(new VerseRef(78, 10)));
+
+        // Series questions are constructed from the supplied current snapshot;
+        // no stale week-1 question cache is carried into a later new series.
+        List<QuizQuestion> week1Questions =
+            quiz.questions(week1, QuizCorpus.Mode.MIXED, 1000);
+        List<QuizQuestion> week2Questions =
+            quiz.questions(week2, QuizCorpus.Mode.MIXED, 1000);
+        assertFalse(week1Questions.isEmpty());
+        assertTrue(week2Questions.size() > week1Questions.size());
+        for (QuizQuestion q : week2Questions) {
+            assertTrue("prompt must be part of actual progression", b.contains(q.prompt));
+            assertTrue("expected verse must be eligible", b.contains(q.expected));
+        }
+    }
+
     @Test public void questionsRespectContinueAndPreviousRules() {
         List<String> lines = CorpusLinePolicy.ownedLineIdsForRangeOnPage(new VerseRef(2, 1), new VerseRef(2, 141), geometry);
         HifzPrefs.ProgressionSnapshot snap = snapshot(new ArrayList<>(), new ArrayList<>(), lines);
