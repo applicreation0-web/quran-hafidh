@@ -62,6 +62,7 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
     Context context=ApplicationProvider.getApplicationContext();
     IbnKathirGroupIndex.Group qaf=IbnKathirGroupIndex.shared().containing(50,1);
     String[] expected=IbnKathirQuranComPrivateTitles.sourceHeadings(context,qaf);
+    int expectedFirst=IbnKathirQuranComPrivateTitles.firstThematicIndex(expected);
     android.content.Intent intent=new android.content.Intent(context,StudyReaderActivity.class)
       .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,518);
     try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
@@ -81,8 +82,8 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         }
         assertNotNull(dialog);
         assertTrue(dialog.isShowing());
-        assertTrue(containsText(dialog.findViewById(android.R.id.content),expected[0]));
-        TextView title=findTitle(dialog.findViewById(android.R.id.content),expected[0]);
+        assertTrue(containsText(dialog.findViewById(android.R.id.content),expected[expectedFirst]));
+        TextView title=findTitle(dialog.findViewById(android.R.id.content),expected[expectedFirst]);
         assertNotNull(title);
         assertFalse("Regular typeface required",title.getTypeface().isBold());
         assertTrue(title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12f);
@@ -114,11 +115,12 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         IbnKathirGroupIndex.Group b=IbnKathirGroupIndex.shared().containing(2,1);
         String[] headings=IbnKathirQuranComPrivateTitles.sourceHeadings(a,b);
         assertTrue("Private Quran.com pack must contain verified contextual 2:1",headings.length>0);
-        assertEquals("The Discussion of the Individual Letters",headings[0]);
+        int preferred=IbnKathirQuranComPrivateTitles.firstThematicIndex(headings);
+        assertEquals("The Discussion of the Individual Letters",headings[preferred]);
         a.onSemanticCueTap(b.id);
         Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull(popup);
-        assertTrue(containsText(popup.findViewById(android.R.id.content),headings[0]));
+        assertTrue(containsText(popup.findViewById(android.R.id.content),headings[preferred]));
         assertFalse(containsText(popup.findViewById(android.R.id.content),
           "The Virtues of Surat Al-Baqarah"));
       });
