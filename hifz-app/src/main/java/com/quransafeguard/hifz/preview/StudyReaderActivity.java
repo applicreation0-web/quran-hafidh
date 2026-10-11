@@ -310,10 +310,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // gesture, duration and non-dimming treatment, with English typography.
         // No source page list, browser, or intrusive Android AlertDialog.
         String[] titles=IbnKathirOfflineTitles.verifiedHeadings(group);
-        String label=titles.length==0
-            ?"English heading not yet verified · "+group.navigationRange()
-            :String.join(" · ",titles);
-        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
+        // An unverified heading is NOT editorial material: never present a
+        // technical placeholder or fabricate a title for the reader.
+        if(titles.length==0)return;
+        semanticTitleDialog=SemanticTitlePopup.showEnglish(
+            this,String.join(" · ",titles),semanticTitleDialog);
     }
 
     /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */
