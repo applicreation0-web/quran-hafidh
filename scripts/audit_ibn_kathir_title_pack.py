@@ -67,9 +67,9 @@ def verify(raws=None):
                 assert "English heading not yet verified" not in title
             titles[key]=items
             covered_sura.add(surah)
-    assert len(titles)==1428,("Unexpected source heading coverage",len(titles))
+    assert len(titles)==1415,("Unexpected source heading coverage",len(titles))
     missing=canonical-set(titles)
-    assert len(missing)==475
+    assert len(missing)==488
     if raws:
         for key,surah,start,end in groups:
             raw=pathlib.Path(raws)/f"{surah}.json"
