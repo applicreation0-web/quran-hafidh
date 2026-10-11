@@ -39,9 +39,12 @@ public final class StabilizationEtaSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue("Diagnostic must surface the estimate, not just raw counts",
             settings.contains("+\"\\nEstimation fin Stabilisation : \"+stabilizationEtaSummary()"));
-        assertTrue("the projection must divide by Stabilisation's real fixed weekly pace, never a "
-                + "second hardcoded copy of the number",
-            settings.contains("(remaining+PreviewConfig.STABILIZATION_WEEKLY_LINES-1)/PreviewConfig.STABILIZATION_WEEKLY_LINES"));
+        assertTrue("forecast is programme-specific rather than stale fixed 22 lines",
+            settings.contains("int weeklyPace=forecastItqanLinesPerWeek();")
+                && settings.contains("if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return 30;")
+                && settings.contains("(7-effectiveLearningDaysPerWeek())*7"));
+        assertTrue("projection uses the selected weekly pace",
+            settings.contains("(remaining+weeklyPace-1)/weeklyPace"));
         assertTrue("the projection must be dated from today, not a static offset",
             settings.contains("HifzClock.today().plusWeeks(weeks)"));
         assertTrue("a cleared queue must say so plainly instead of a meaningless \"0 weeks\"",

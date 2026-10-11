@@ -72,7 +72,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Run full Hifz behavioural tests and all revised BOOX source contracts
+      - name: Run full Hifz behavioural tests and seven-day BOOX source contracts
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
       - name: Assemble exactly ONE isolated DEBUG APK (never release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace

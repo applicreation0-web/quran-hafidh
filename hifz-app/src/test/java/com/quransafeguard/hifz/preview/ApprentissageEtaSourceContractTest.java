@@ -40,10 +40,11 @@ public final class ApprentissageEtaSourceContractTest {
         String settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java");
         assertTrue("the estimate must sit right next to the raw Apprentissage position it explains",
             settings.contains("+\"\\nEstimation fin Apprentissage : \"+apprentissageEtaSummary()"));
-        assertTrue("Apprentissage's pace is its own — SABQI_LINES per session times "
-                + "learningDaysPerWeek — never Stabilisation's fixed weekly constant",
-            settings.contains("int weeklyPace=PreviewConfig.SABQI_LINES*prefs.learningDaysPerWeek();"));
-        assertTrue("a cleared target must say so plainly",
-            settings.contains("if(remaining==0)return \"à jour\";\n        int weeklyPace="));
+        assertTrue("Sabqi weekly pace reflects selected seven-day programme",
+            settings.contains("int weeklyPace=PreviewConfig.SABQI_LINES*Math.max(0,sabqiDays);"));
+        assertTrue("No allocated Sabqi day must never divide by zero",
+            settings.contains("if(weeklyPace==0)return remaining+"));
+        assertTrue("A cleared target must say so plainly",
+            settings.contains("if(remaining==0)return \"à jour\";"));
     }
 }
