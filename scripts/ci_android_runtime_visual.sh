@@ -21,7 +21,7 @@ status=$?
 set -e
 cat audit-runtime-instrumentation.txt
 test "$status" -eq 0
-grep -Eq '^OK ([0-9]+ tests?)' audit-runtime-instrumentation.txt
+grep -Eq '^OK \([0-9]+ tests?\)' audit-runtime-instrumentation.txt
 ! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION' audit-runtime-instrumentation.txt
 
 # Unlike Gradle connectedDebugAndroidTest, manual instrumentation keeps the
