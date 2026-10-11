@@ -38,6 +38,12 @@ public final class ContradictoryAuditTwoPersistenceTest {
             history("2026-10-05",acquired,pending));
         HifzPrefs prefs=new HifzPrefs(disk);
 
+        assertTrue("No Sunday final without weekday x7/x10 receipt",
+            prefs.learningSnowballFinalUnits(sunday).isEmpty()
+                && prefs.stabilizationSnowballFinalUnits(sunday).isEmpty());
+        // The pending block has now completed the actual evening protocol.
+        disk.disk.put("v6LearningEarnedEveningUnitsV1",units(pending));
+        disk.disk.put("v6StabilizationEarnedEveningUnitsV1",units(pending));
         for(List<ConsolidationCycleEngine.Unit> finale:Arrays.asList(
             prefs.learningSnowballFinalUnits(sunday),
             prefs.stabilizationSnowballFinalUnits(sunday))) {
