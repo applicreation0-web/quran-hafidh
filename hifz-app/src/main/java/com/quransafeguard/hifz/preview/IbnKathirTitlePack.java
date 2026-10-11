@@ -37,8 +37,17 @@ final class IbnKathirTitlePack {
         if(data==null)return new String[0]; // never fabricate an absent heading
         JSONArray items=data.optJSONArray(group.id);
         if(items==null||items.length()==0)return new String[0];
-        // One compact source header per tap. Avoid 3-title walls on 11-inch BOOX.
+        // One compact source heading per tap. If a first group opens with a
+        // general introduction/recitation notice and the source also has an
+        // actual thematic heading, prefer the thematic one. Never paraphrase.
         String title=items.optString(0,"").trim();
+        if(items.length()>1 && (title.startsWith("Introduction to ")
+                ||title.startsWith("The Recitation of ")
+                ||title.startsWith("The Beginning of ")
+                ||title.startsWith("What has been narrated about "))) {
+            String thematic=items.optString(1,"").trim();
+            if(!thematic.isEmpty())title=thematic;
+        }
         if(title.isEmpty()||title.length()>145)return new String[0];
         return new String[]{title};
     }
