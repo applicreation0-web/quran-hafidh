@@ -53,6 +53,32 @@ final class IbnKathirQuranComPrivateTitles {
         return exact;
     }
 
+    /**
+     * Display the thematic/source heading first, not a chapter preface.
+     * All original Quran.com h2 strings remain in their original array and
+     * subsequent taps visit every heading, including introductions/virtues.
+     * This changes only navigation order, NEVER wording or group boundaries.
+     */
+    static int firstThematicIndex(String[] headings) {
+        if (headings == null || headings.length == 0) return 0;
+        for (int i = 0; i < headings.length; i++) {
+            String title = headings[i];
+            if (title == null || title.trim().isEmpty()) continue;
+            String lower = title.toLowerCase(java.util.Locale.ROOT);
+            if (lower.startsWith("which was revealed in ") ||
+                    lower.startsWith("introduction to ") ||
+                    lower.startsWith("the virtues of ") ||
+                    lower.startsWith("virtues of ") ||
+                    lower.startsWith("the beginning of the ") ||
+                    lower.startsWith("the first surah in which ") ||
+                    ((lower.startsWith("surat ") || lower.startsWith("surah "))
+                     && lower.contains(" was revealed in ")))
+                continue;
+            return i;
+        }
+        return 0;
+    }
+
     private static synchronized JSONObject load(Context context, int chunk) {
         if (CACHE.containsKey(chunk)) return CACHE.get(chunk);
         if (Boolean.TRUE.equals(FAILED.get(chunk))) return null;
