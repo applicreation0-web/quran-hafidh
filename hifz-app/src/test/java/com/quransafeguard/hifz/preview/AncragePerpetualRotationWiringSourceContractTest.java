@@ -64,7 +64,8 @@ public final class AncragePerpetualRotationWiringSourceContractTest {
         assertTrue(session.contains("boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);"));
         assertTrue(session.contains("? prefs.completeItqanReinforcementBlock("));
         assertTrue("the rotation cursor must advance past every completed unit, build or reinforcement alike",
-            session.contains("if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {"));
+            !session.contains("if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {")
+                && prefs.contains("return appendFinalItqanRotation(editor,finalBlock,unitEnd).commit();"));
     }
 
     @Test public void reinforcementNeverTouchesProgressionStateOrTheConsolidationSnowball() throws Exception {

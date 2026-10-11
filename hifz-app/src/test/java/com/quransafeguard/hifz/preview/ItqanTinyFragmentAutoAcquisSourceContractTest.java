@@ -114,7 +114,8 @@ public final class ItqanTinyFragmentAutoAcquisSourceContractTest {
                 && method.contains("boolean finalBlock = nextBlock >= itqanBlockCount;"));
         assertTrue("must advance the perpetual rotation past this unit once it's the final block, "
                 + "exactly like a normal validation would",
-            method.contains("if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {"));
+            method.contains("prefs.completeItqanTinyBlockV6(")
+                && !method.contains("prefs.advanceItqanRotationPast("));
         assertTrue("must chain into the next render with an incremented depth counter",
             method.contains("renderItqan(autoChainDepth + 1);"));
     }

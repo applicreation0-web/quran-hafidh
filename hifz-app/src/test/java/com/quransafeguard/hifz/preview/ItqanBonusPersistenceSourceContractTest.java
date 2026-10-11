@@ -42,8 +42,8 @@ public final class ItqanBonusPersistenceSourceContractTest {
             prefs.contains(".putString(\"itqanBonusSnapshotV1\", \"\");"));
         assertTrue("still exactly one editor built from the frozen pre-commit state",
             prefs.contains("SharedPreferences.Editor e = p.edit()"));
-        assertTrue("and still exactly one return e.commit() closing out the whole method",
-            prefs.contains("return e.commit();\n        }\n    }\n\n    /** Tolerant counterpart to v6LineIdSet"));
+        assertTrue("bonus, V6 credits and rotation close atomically in the same editor",
+            prefs.contains("return appendFinalItqanRotation(e,finalBlock,unitEnd).commit();"));
     }
 
     @Test public void bonusReadersDegradeSilentlyRatherThanThrow() throws Exception {
