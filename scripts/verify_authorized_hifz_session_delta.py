@@ -9,7 +9,7 @@ import subprocess
 
 BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
 PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java"
-CURRENT_SHA="e75d8ef21ceac94688c5df3c14f15156ca66eb56"
+CURRENT_SHA="3b066b5241adeb028cf23747fdae6db8e5b9f880"
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==CURRENT_SHA:
     print("PASS: exact pinned HifzSessionActivity; second Itqan rotation commit removed")
     raise SystemExit(0)
