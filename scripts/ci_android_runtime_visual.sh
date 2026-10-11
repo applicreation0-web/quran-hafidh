@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Real Android UI gate on the independently named 1.17.1 Ibn Kathir test package.
-# No production data, signed release, or original Quran/Hifz engine is modified.
+# Quran Haafidh 1.17.1: fail-closed real Android Quiz/Hifz/Map/BOOX UI audit.
+# Compiles app + test apk for emulator ONLY. No user data or release publishing.
 set -euo pipefail
 
 gradle --no-daemon :hifz-app:assembleDebug :hifz-app:assembleDebugAndroidTest --stacktrace
@@ -17,40 +17,29 @@ adb shell am instrument -w -r \
   -e class 'com.quransafeguard.hifz.preview.QuizLaunchRegressionInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest' \
   'com.quransafeguard.hifz.ibnkathirtest.test/androidx.test.runner.AndroidJUnitRunner' \
   > audit-runtime-instrumentation.txt 2>&1
-status=$?
+shell_status=$?
 set -e
 cat audit-runtime-instrumentation.txt
-# The ADB instrument command can use a nonzero shell code for the Android
-# success sentinel INSTRUMENTATION_CODE: -1. The authoritative check is the
-# actual terminal result from AndroidJUnitRunner (and all 5 tests).
-echo "ADB instrumentation shell status: $status"
-grep -Eq '^OK \(5 tests\)' audit-runtime-instrumentation.txt
-grep -Eq '^INSTRUMENTATION_CODE: -1
+echo "ADB instrumentation shell status: $shell_status"
 
-# Unlike Gradle connectedDebugAndroidTest, manual instrumentation keeps the
-# target test package installed until the evidence has been copied out.
-mkdir -p audit-runtime-screens
-adb shell ls -la /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
-adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/. audit-runtime-screens/
-test "$(find audit-runtime-screens -type f -name 'audit-*.png' | wc -l)" -ge 12
-echo "PASS: instrumented Quiz and all Hifz/Map tests plus >=12 real emulator screenshots"
- audit-runtime-instrumentation.txt
-test "$(grep -c '^INSTRUMENTATION_STATUS_CODE: 0
+# AndroidJUnitRunner is authoritative: exactly SIX independent runtime tests.
+# A bare Android shell exit code is not sufficient to prove test success.
+grep -Fxq 'OK (6 tests)' audit-runtime-instrumentation.txt
+grep -Fxq 'INSTRUMENTATION_CODE: -1' audit-runtime-instrumentation.txt
+test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq 6
+if grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|INSTRUMENTATION_STATUS_CODE: -[0-9]+' audit-runtime-instrumentation.txt; then
+  echo "::error::Android instrumented tests contain a failure; no debug allowed"
+  exit 1
+fi
 
-# Unlike Gradle connectedDebugAndroidTest, manual instrumentation keeps the
-# target test package installed until the evidence has been copied out.
+# Screen evidence is mandatory. Keep test APK installed until copying pixels.
 mkdir -p audit-runtime-screens
-adb shell ls -la /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
-adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/. audit-runtime-screens/
-test "$(find audit-runtime-screens -type f -name 'audit-*.png' | wc -l)" -ge 12
-echo "PASS: instrumented Quiz and all Hifz/Map tests plus >=12 real emulator screenshots"
- audit-runtime-instrumentation.txt)" -eq 5
-! grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|INSTRUMENTATION_STATUS_CODE: -[0-9]+' audit-runtime-instrumentation.txt
-
-# Unlike Gradle connectedDebugAndroidTest, manual instrumentation keeps the
-# target test package installed until the evidence has been copied out.
-mkdir -p audit-runtime-screens
-adb shell ls -la /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
-adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/. audit-runtime-screens/
-test "$(find audit-runtime-screens -type f -name 'audit-*.png' | wc -l)" -ge 12
-echo "PASS: instrumented Quiz and all Hifz/Map tests plus >=12 real emulator screenshots"
+device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
+adb shell ls -la "$device_dir"
+adb pull "$device_dir/." audit-runtime-screens/
+count="$(find audit-runtime-screens -type f -name 'audit-*.png' | wc -l | tr -d ' ')"
+test "$count" -ge 14
+find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q . && {
+  echo "::error::At least one required screenshot is empty"; exit 1;
+} || true
+echo "PASS: six genuine Android runtime tests + $count screenshot PNGs"
