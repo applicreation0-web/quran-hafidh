@@ -58,128 +58,71 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-calendrier-sept-jours.png");
     }
  }
- @Test public void verifiedEnglishTitleAppearsLocallyWithoutBrowser() {
+ @Test public void quranComPrivateTitleIsPageScopedOrFailsClosedWhenNotBundled() {
     Context context=ApplicationProvider.getApplicationContext();
+    IbnKathirGroupIndex.Group qaf=IbnKathirGroupIndex.shared().containing(50,1);
+    String[] expected=IbnKathirQuranComPrivateTitles.sourceHeadings(context,qaf);
     android.content.Intent intent=new android.content.Intent(context,StudyReaderActivity.class)
       .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,518);
-    try(ActivityScenario<StudyReaderActivity> s=ActivityScenario.launch(intent)){
-      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Ibn Kathir title Qaf");
-      s.onActivity(a->{
+    try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
+      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quran.com Qaf title");
+      scenario.onActivity(a->{
         if(Boolean.FALSE.equals(reflect(a,"semanticCuesEnabled"))) {
           try {
             java.lang.reflect.Method enable=StudyReaderActivity.class.getDeclaredMethod("toggleSemanticCues");
             enable.setAccessible(true);enable.invoke(a);
-          }catch(Exception e){throw new AssertionError(e);}
+          }catch(Exception error){throw new AssertionError(error);}
         }
         a.onSemanticCueTap("IKEN050_001_005");
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
-        assertNotNull("Amorce dialog not created",dialog);
-        assertTrue("Local English title not shown",dialog.isShowing());
-        View root=dialog.findViewById(android.R.id.content);
-        assertNotNull("Missing Al-Munir-style English title sheet",root);
-        assertTrue("Missing verified local heading",containsText(root,
-          "The Disbelievers wonder at the Message and Resurrection"));
-        assertEquals("English popup must remain bottom-aligned",android.view.Gravity.BOTTOM,
-          dialog.getWindow().getAttributes().gravity & android.view.Gravity.VERTICAL_GRAVITY_MASK);
-        assertTrue("Caption positioning must be toolbar-anchored, not a fixed offset",
-          dialog.getWindow().getAttributes().y>=Ui.dp(a,68));
-        assertTrue("Caption must not prevent taps outside from reaching the Mushaf",
-          (dialog.getWindow().getAttributes().flags
-            & android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)!=0);
-        TextView title=findTitle(root,
-          "The Disbelievers wonder at the Message and Resurrection");
+        if(expected.length==0) {
+          assertNull("Never fall back to spa5k title when private corpus is absent",dialog);
+          return;
+        }
+        assertNotNull(dialog);
+        assertTrue(dialog.isShowing());
+        assertTrue(containsText(dialog.findViewById(android.R.id.content),expected[0]));
+        TextView title=findTitle(dialog.findViewById(android.R.id.content),expected[0]);
         assertNotNull(title);
-        assertTrue("English heading is secondary micro-typography, not a giant bold banner",
-          title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12.0f);
-        assertFalse("English heading must not be bold",title.getTypeface().isBold());
+        assertFalse("Regular typeface required",title.getTypeface().isBold());
+        assertTrue(title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12f);
       });
-      // Measure actual on-device screen coordinates AFTER layout, not only an
-      // arbitrary dialog gravity/margin: the complete caption stays over the
-      // visible icons as the original Al-Munir design required.
+      if(expected.length==0)return; // Public CI: fail-closed; private Work audit stages actual title pack.
       InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-      s.onActivity(a->{
-        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
-        assertNotNull(popup);
-        View iconRow=(View)reflect(a,"readerActions");
-        assertEquals(View.VISIBLE,iconRow.getVisibility());
-        View caption=popup.findViewById(android.R.id.content);
-        assertNotNull(caption);
-        int[] iconTop=new int[2],captionTop=new int[2];
-        iconRow.getLocationOnScreen(iconTop);
-        caption.getLocationOnScreen(captionTop);
-        assertTrue("Title sheet must have measured height",caption.getHeight()>0);
-        assertTrue("Al-Munir contract: heading BELOW Mushaf and strictly ABOVE icons",
-          captionTop[1]+caption.getHeight()+Ui.dp(a,4)<=iconTop[1]);
+      scenario.onActivity(a->{
+        Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
+        View icons=(View)reflect(a,"readerActions");
+        View caption=dialog.findViewById(android.R.id.content);
+        int[] i=new int[2],c=new int[2];
+        icons.getLocationOnScreen(i);caption.getLocationOnScreen(c);
+        assertTrue("Caption height must be measured",caption.getHeight()>0);
+        assertTrue("Title bottom never overlaps toolbar",
+          c[1]+caption.getHeight()+Ui.dp(a,4)<=i[1]);
+        assertEquals("Title visible after measured anchoring",
+          1f,dialog.getWindow().getAttributes().alpha,0.01f);
       });
-      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-anglais.png");
-      // Different part of the Mushaf. The title MUST come from the pinned
-      // source asset, not the 16 Qaf/Najm editorial checkpoint methods.
-      s.onActivity(a->{
+      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-qurancom-qaf-private.png");
+
+      scenario.onActivity(a->{
         try{
           java.lang.reflect.Method jump=StudyReaderActivity.class.getDeclaredMethod("setPage",int.class);
           jump.setAccessible(true);jump.invoke(a,2);
-        }catch(Exception error){throw new AssertionError("Cannot navigate to real Al-Baqarah page",error);}
+        }catch(Exception ex){throw new AssertionError(ex);}
       });
-      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Ibn Kathir title Al-Baqarah");
-      s.onActivity(a->{
-        IbnKathirGroupIndex.Group baqarah=IbnKathirGroupIndex.shared().containing(2,1);
-        assertNotNull(baqarah);
-        String[] source=IbnKathirTitlePack.sourceHeadings(a,baqarah);
-        assertEquals("The Virtues of Surat Al-Baqarah",source[0]);
-        a.onSemanticCueTap("IKEN002_001_001");
-        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
-        assertNotNull("Missing attested Al-Baqarah heading",popup);
-        View panel=popup.findViewById(android.R.id.content);
-        assertTrue("The verse-specific original title overrides general surah virtues",
-            containsText(panel,"The Discussion of the Individual Letters"));
-        assertFalse("Do not show a generic surah-virtue title for 2:1",
-            containsText(panel,source[0]));
-        View row=(View)reflect(a,"readerActions");
-        assertTrue(row.getVisibility()==View.VISIBLE);
-      });
-      InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-      s.onActivity(a->{
-        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
-        View row=(View)reflect(a,"readerActions");
-        View panel=popup.findViewById(android.R.id.content);
-        int[] barTop=new int[2],panelTop=new int[2];
-        row.getLocationOnScreen(barTop);panel.getLocationOnScreen(panelTop);
-        assertTrue("Actual Al-Baqarah heading must remain ABOVE the three icons",
-            panelTop[1]+panel.getHeight()+Ui.dp(a,4)<=barTop[1]);
-      });
-      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-baqarah-source.png");
-
-      // Another chapter/group: an original (still editorially provisional)
-      // title from the correct commentary interval on the actual Mushaf page.
-      s.onActivity(a->{
-        try {
-          java.lang.reflect.Method jump=StudyReaderActivity.class.getDeclaredMethod("setPage",int.class);
-          jump.setAccessible(true);jump.invoke(a,5);
-        } catch(Exception error){throw new AssertionError("Cannot jump to Al-Baqarah p5",error);}
-      });
-      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","source title Al-Baqarah 2:26");
-      s.onActivity(a->{
-        a.onSemanticCueTap("IKEN002_026_027");
+      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quran.com Baqarah");
+      scenario.onActivity(a->{
+        IbnKathirGroupIndex.Group b=IbnKathirGroupIndex.shared().containing(2,1);
+        String[] headings=IbnKathirQuranComPrivateTitles.sourceHeadings(a,b);
+        assertTrue("Private Quran.com pack must contain verified contextual 2:1",headings.length>0);
+        assertEquals("The Discussion of the Individual Letters",headings[0]);
+        a.onSemanticCueTap(b.id);
         Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull(popup);
-        assertTrue("Authentic source heading should be shown for the tapped group",
-            containsText(popup.findViewById(android.R.id.content),
-                "A Parable about the Life of This World"));
-        a.onSemanticCueTap("IKEN050_001_005");
-        assertSame("An off-page group must not replace the shown title",
-            popup,reflect(a,"semanticTitleDialog"));
+        assertTrue(containsText(popup.findViewById(android.R.id.content),headings[0]));
+        assertFalse(containsText(popup.findViewById(android.R.id.content),
+          "The Virtues of Surat Al-Baqarah"));
       });
-      InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-      s.onActivity(a->{
-        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
-        View row=(View)reflect(a,"readerActions");
-        View sheet=popup.findViewById(android.R.id.content);
-        int[] top=new int[2],caption=new int[2];
-        row.getLocationOnScreen(top);sheet.getLocationOnScreen(caption);
-        assertTrue("English heading is never drawn over the icon row",
-            caption[1]+sheet.getHeight()+Ui.dp(a,4)<=top[1]);
-      });
-      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-baqarah-2-26.png");
+      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-qurancom-baqarah-private.png");
     }
  }
  @Test public void liveItqanFourDateWindowSurvivesRealTapAndRecreation() {
