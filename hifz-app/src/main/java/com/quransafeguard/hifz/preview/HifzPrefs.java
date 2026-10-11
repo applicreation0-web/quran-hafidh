@@ -1667,18 +1667,14 @@ public final class HifzPrefs {
         return ItqanFourSessionStore.read(p,geo);
     }
 
-    ItqanFourSessionSnapshot openOrResumeFrozenItqan(
-            GeometryRepository geo,LocalDate date) {
-        if(geo==null||date==null)throw new IllegalArgumentException("Itqan QCF and date required");
-        ItqanFourSessionSnapshot existing=ItqanFourSessionStore.read(p,geo);
-        if(existing!=null)return existing; // frozen forever, never dynamically replanned
+    /** Read-only physical Itqan forecast: uses the exact same QCF boundary
+     * as the live opener, never writes progression, dates or rotation. */
+    ItqanFourSessionPolicy.Plan previewFourDateItqanPlan(GeometryRepository geo) {
+        if(geo==null)throw new IllegalArgumentException("QCF required");
         if(itqanPostNasMaintenance()
                 ||p.getInt("itqanRep",0)!=0||p.getInt("itqanBlockIndex",0)!=0
                 ||!p.getString("itqanUnitStart","").isEmpty()
-                ||!p.getString("itqanUnitEnd","").isEmpty()
-                ||date.toString().equals(lastItqanDate()))return null;
-        // Resolve any one-time historic bootstrapping before pinning the cursor.
-        itqanRotationLiveCursor(geo);
+                ||!p.getString("itqanUnitEnd","").isEmpty())return null;
         ItqanRotationPolicy.State rotation=itqanRotationState();
         if(rotation.initialTailCompleted ||
                 rotation.leg!=ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS)return null;
@@ -1696,10 +1692,21 @@ public final class HifzPrefs {
             throw new IllegalStateException("Itqan physical cursor outside first tail");
         LinkedHashSet<String> eligible=new LinkedHashSet<>();
         for(int i=firstLine;i<geo.lineCount();i++)eligible.add(geo.line(i).id);
-        ItqanFourSessionPolicy.Plan geometryPlan=
-            ItqanFourSessionPolicy.fromGeometry(geo,firstLine,eligible);
+        return ItqanFourSessionPolicy.fromGeometry(geo,firstLine,eligible);
+    }
+
+    ItqanFourSessionSnapshot openOrResumeFrozenItqan(
+            GeometryRepository geo,LocalDate date) {
+        if(geo==null||date==null)throw new IllegalArgumentException("Itqan QCF and date required");
+        ItqanFourSessionSnapshot existing=ItqanFourSessionStore.read(p,geo);
+        if(existing!=null)return existing; // frozen forever, never dynamically replanned
+        if(date.toString().equals(lastItqanDate()))return null;
+        // Resolve any one-time historic bootstrapping before pinning the cursor.
+        itqanRotationLiveCursor(geo);
+        ItqanFourSessionPolicy.Plan geometryPlan=previewFourDateItqanPlan(geo);
+        if(geometryPlan==null)return null; // post-Nas or in-progress 1.17.1 session
         ItqanFourSessionSnapshot frozen=ItqanFourSessionSnapshot.freeze(
-            geometryPlan,rotation,mondayOf(date),geo);
+            geometryPlan,itqanRotationState(),mondayOf(date),geo);
         if(!ItqanFourSessionStore.open(p,frozen,geo))
             throw new IllegalStateException("Conflicting Itqan plan: preserve previous progress");
         return ItqanFourSessionStore.read(p,geo);
