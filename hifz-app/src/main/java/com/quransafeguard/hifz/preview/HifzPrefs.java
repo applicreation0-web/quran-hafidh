@@ -1739,7 +1739,10 @@ public final class HifzPrefs {
         if (lineIds.size() > ItqanMaintenancePolicy.MAX_UNIT_LINES)
             throw new IllegalStateException("Post-An-Nās Itqān unit exceeds one hizb");
         synchronized (V6_STATE_LOCK) {
-            if(alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
+            // An identical completed maintenance tap is a successful no-op:
+            // never advance the perpetual cursor a second time.
+            if(alreadyCompletedItqanUnit(unitStart,unitEnd)
+                && date.equals(p.getString("lastItqanDate","")))return true;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -2341,7 +2344,9 @@ public final class HifzPrefs {
                                                     String date, String label) {
         if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
         synchronized(V6_STATE_LOCK) {
-            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
+            // A duplicate last-tap acknowledgement must not perform another write.
+            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd)
+                && date.equals(p.getString("lastItqanDate","")))return true;
             SharedPreferences.Editor editor=p.edit()
             .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
             .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
