@@ -84,11 +84,13 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
 
     @Test public void homeCardCueIsRefreshedOnEveryReturnToHome() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertEquals(1, count(main, "navLine(path, \"Stabilisation\", Ui.stabilizationCue(prefs.itqanPostNasMaintenance()),"));
+        assertEquals(1, count(main, "navLine(path, \"Stabilisation\", stabilizationProgramCue(),"));
         assertEquals(1, count(main, "if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());"));
-        assertTrue("Post-Nas maintenance cue must stay the original",
-            main.contains("if(prefs.itqanPostNasMaintenance())return Ui.stabilizationCue(true);"));
-        assertTrue("Recommended mode must show the agreed 30-line weekly target",
+        assertTrue("Post-Nas summary stays a concise hizb cue",
+            main.contains("prefs.itqanPostNasMaintenance() ? \"1 hizb · entretien\""));
+        assertTrue("The menu gives the same amount of detail to every Hifz mode",
+            main.contains("2 pages / 4 séances"));
+        assertFalse("A detailed weekly quota belongs inside Itqan, not its menu",
             main.contains("30 lignes/semaine · 4 séances"));
     }
 }
