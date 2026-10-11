@@ -81,7 +81,9 @@ public final class IbnKathirRecitationStartsTest {
         String reader=source("StudyReaderActivity.java");
         assertTrue(reader.contains("ibnKathirCues.readerCuesForPage(page)"));
         assertTrue(reader.contains("ibn_kathir_start_markers_visible"));
-        assertTrue(reader.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
+        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.sourceHeadings(this,group)"));
+        assertFalse(reader.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
+        assertFalse(reader.contains("IbnKathirTitlePack.sourceHeadings(this,group)"));
         assertFalse(reader.contains("IbnKathirQuranComSource.urlForGroup(group)"));
         assertFalse(reader.contains("semanticPassages.readerCuesForPage(page)"));
         assertFalse(reader.contains("putBoolean(\"semantic_cues_enabled\""));
