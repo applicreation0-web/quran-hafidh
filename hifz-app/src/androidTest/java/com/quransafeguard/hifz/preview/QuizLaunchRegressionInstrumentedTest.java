@@ -117,6 +117,7 @@ public final class QuizLaunchRegressionInstrumentedTest {
                 assertTrue("First real question not shown",
                     activity.findViewById(android.R.id.content)!=null);
             });
+            HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quiz real learned Quran question");
             HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-quiz-question.png");
         }
     }
