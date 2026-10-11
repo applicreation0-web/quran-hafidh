@@ -80,7 +80,7 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
           "The Disbelievers wonder at the Message and Resurrection"));
         assertEquals("English popup must remain bottom-aligned",android.view.Gravity.BOTTOM,
           dialog.getWindow().getAttributes().gravity & android.view.Gravity.VERTICAL_GRAVITY_MASK);
-        assertTrue("English cue must be raised above bottom toolbars and navigation bar",
+        assertTrue("Caption positioning must be toolbar-anchored, not a fixed offset",
           dialog.getWindow().getAttributes().y>=Ui.dp(a,68));
         assertTrue("Caption must not prevent taps outside from reaching the Mushaf",
           (dialog.getWindow().getAttributes().flags
@@ -91,6 +91,24 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         assertTrue("English heading is secondary micro-typography, not a giant bold banner",
           title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12.0f);
         assertFalse("English heading must not be bold",title.getTypeface().isBold());
+      });
+      // Measure actual on-device screen coordinates AFTER layout, not only an
+      // arbitrary dialog gravity/margin: the complete caption stays over the
+      // visible icons as the original Al-Munir design required.
+      InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+      s.onActivity(a->{
+        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
+        assertNotNull(popup);
+        View iconRow=(View)reflect(a,"readerActions");
+        assertEquals(View.VISIBLE,iconRow.getVisibility());
+        View caption=popup.findViewById(android.R.id.content);
+        assertNotNull(caption);
+        int[] iconTop=new int[2],captionTop=new int[2];
+        iconRow.getLocationOnScreen(iconTop);
+        caption.getLocationOnScreen(captionTop);
+        assertTrue("Title sheet must have measured height",caption.getHeight()>0);
+        assertTrue("Al-Munir contract: heading BELOW Mushaf and strictly ABOVE icons",
+          captionTop[1]+caption.getHeight()+Ui.dp(a,4)<=iconTop[1]);
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-anglais.png");
     }
