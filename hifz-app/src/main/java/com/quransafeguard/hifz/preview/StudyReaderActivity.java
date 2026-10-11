@@ -325,7 +325,10 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             lastQuranComHeadingIndex=(lastQuranComHeadingIndex+1)%titles.length;
         } else {
             lastQuranComHeadingGroupId=group.id;
-            lastQuranComHeadingIndex=0;
+            // Source arrays keep original h2 order. First tap prioritises an
+            // actual thematic heading over Quran.com's surah preamble.
+            // Every heading remains available on subsequent taps.
+            lastQuranComHeadingIndex=IbnKathirQuranComPrivateTitles.firstThematicIndex(titles);
         }
         String label=titles[lastQuranComHeadingIndex];
         showControls(); // Same Munir position: the icons remain visible BELOW the title.
