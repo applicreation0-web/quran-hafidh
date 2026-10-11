@@ -26,7 +26,7 @@ final class Ui {
     static final int PAPER = 0xfffaf8f0;
     static final int SURFACE = 0xfffdfbf6;
     static final int MUTED = 0xff524f49;
-    static final int LINE = 0xffcec9be;
+    static final int LINE = 0xff88847d; // visible on greyscale E-Ink, no subtle web hairline
 
     private Ui() {}
 
@@ -136,26 +136,27 @@ final class Ui {
     /** Liseuse-style setting: label on the left, current value/action on the right. */
     static LinearLayout settingRow(Context context, String label, String value, View.OnClickListener listener) {
         LinearLayout row = row(context);
-        row.setPadding(dp(context, 2), dp(context, 5), dp(context, 2), dp(context, 5));
+        row.setPadding(dp(context, 2), dp(context, 7), dp(context, 2), dp(context, 7));
         row.setMinimumHeight(dp(context, 48));
         // Device report (phone): a long value ("Stabilisation · bloc 1/3 · p. 515 …") took the
         // whole width and squeezed the label into one letter-column ("Auj/our/d'h/ui"). The label
         // keeps its natural width (up to half the screen); the value takes the rest and wraps.
-        TextView name = text(context, label, 13f, false);
+        TextView name = text(context, label, 15f, true);
         name.setPadding(dp(context, 4), 0, dp(context, 6), 0);
         name.setMaxWidth(context.getResources().getDisplayMetrics().widthPixels / 2);
         row.addView(name, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        TextView current = text(context, value == null ? "" : value, 12f, false);
+        TextView current = text(context, value == null ? "" : value, 13.5f, false);
         current.setTextColor(MUTED);
         current.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         current.setMaxLines(3);
         row.addView(current, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         if (listener != null) {
-            TextView chevron = text(context, "›", 20f, false);
-            chevron.setTextColor(MUTED);
-            chevron.setGravity(Gravity.CENTER);
-            chevron.setPadding(dp(context, 7), 0, 0, 0);
+            android.widget.ImageView chevron = new android.widget.ImageView(context);
+            chevron.setImageResource(R.drawable.ic_ui_next);
+            chevron.setColorFilter(INK);
+            chevron.setPadding(dp(context, 3), dp(context, 12), dp(context, 3), dp(context, 12));
+            chevron.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             row.addView(chevron, new LinearLayout.LayoutParams(dp(context, 24), dp(context, 44)));
             row.setClickable(true);
             row.setFocusable(true);
@@ -178,7 +179,7 @@ final class Ui {
     }
 
     static void panel(View view) {
-        view.setBackground(shape(SURFACE, LINE, dp(view.getContext(), 12), Math.max(1, dp(view.getContext(), 1))));
+        view.setBackground(shape(SURFACE, LINE, dp(view.getContext(), 16), Math.max(1, dp(view.getContext(), 1))));
     }
 
     static LinearLayout column(Context context) {
@@ -209,7 +210,7 @@ final class Ui {
 
     static TextView bookText(Context context, String value, float sizeSp, boolean bold) {
         TextView view = text(context, value, sizeSp, false);
-        view.setTypeface(Typeface.SERIF, bold ? Typeface.BOLD : Typeface.NORMAL);
+        view.setTypeface(Typeface.create("sans-serif",bold ? Typeface.BOLD : Typeface.NORMAL));
         return view;
     }
 

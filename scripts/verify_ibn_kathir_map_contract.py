@@ -7,9 +7,10 @@ lecture=(java/"StudyReaderActivity.java").read_text(encoding="utf-8")
 titles=(java/"IbnKathirOfflineTitles.java").read_text(encoding="utf-8")
 manifest=(root/"hifz-app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
 for token in ['onSemanticCueTap(String passageId)','IbnKathirOfflineTitles.verifiedHeadings(group)',
-             'setTitle("Amorce · Ibn Kathīr")','readerActions.addView(semanticButton)',
+             'SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)','readerActions.addView(semanticButton)',
              'ibnKathirCues.readerCuesForPage(page)','"Masquer les amorces"']:
     assert token in lecture, "Missing Mushaf-first role: "+token
+assert "private static Dialog create(" in (java/"SemanticTitlePopup.java").read_text(encoding="utf-8")
 for forbidden in ('openIbnKathirMap', 'Intent.ACTION_VIEW',
                   'new Intent(this,IbnKathirMapActivity.class)', 'IbnKathirQuranComSource.urlForGroup'):
     assert forbidden not in lecture, "Legacy list/network dependency: "+forbidden

@@ -210,7 +210,7 @@ public final class MainActivity extends android.app.Activity {
      */
     private LinearLayout homeNavLine(LinearLayout parent, String label, View.OnClickListener listener) {
         LinearLayout line = Ui.row(this);
-        line.setBackgroundColor(Ui.PAPER);
+        Ui.panel(line);
         line.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 8), Ui.dp(this, 6));
         line.setMinimumHeight(Ui.dp(this, 68));
         line.setClickable(true);
@@ -236,9 +236,10 @@ public final class MainActivity extends android.app.Activity {
         name.setPadding(Ui.dp(this, 7), 0, 0, 0);
         line.addView(name, new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.MATCH_PARENT, 1f));
-        TextView arrow = Ui.text(this, "›", 19f, false);
-        arrow.setGravity(Gravity.CENTER);
-        arrow.setTextColor(Ui.MUTED);
+        ImageView arrow=new ImageView(this);
+        arrow.setImageResource(R.drawable.ic_ui_next);
+        arrow.setColorFilter(Ui.INK);
+        arrow.setPadding(Ui.dp(this, 4), Ui.dp(this, 20), Ui.dp(this, 4), Ui.dp(this, 20));
         arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         line.addView(arrow, new LinearLayout.LayoutParams(Ui.dp(this, 30),
             ViewGroup.LayoutParams.MATCH_PARENT));
