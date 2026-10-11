@@ -91,6 +91,28 @@ public final class ItqanFourSessionPolicyTest {
    assertEquals(604,p.firstPage);assertEquals(604,p.lastPage);
    assertPartition(p,actual);
  }
+ @Test public void entireMushafExposesCompositeCapacityBeyondFourDaySlots() {
+   int maxBlocks=0,worstStart=-1,multipleSurahPairs=0;
+   for(int page=1;page<604;page++){
+     List<String> ids=new ArrayList<>(geo.lineIdsOnPage(page));
+     ids.addAll(geo.lineIdsOnPage(page+1));
+     ItqanFourSessionPolicy.Plan plan=ItqanFourSessionPolicy.plan(
+       geo.linesForExactIds(ids),true);
+     int blocks=0;
+     for(ItqanFourSessionPolicy.Session session:plan.sessions)
+       blocks+=session.blocks.size();
+     if(blocks>maxBlocks){maxBlocks=blocks;worstStart=page;}
+     if(blocks>4)multipleSurahPairs++;
+   }
+   System.out.println("ITQAN COMPOSITE CAPACITY: max subblocks="+maxBlocks
+       +" at first page="+worstStart+"; pairs exceeding four daily snowball units="
+       +multipleSurahPairs);
+   assertTrue("At least one Mufassal pair has more than four surah-local subblocks",
+       multipleSurahPairs>0);
+   assertTrue("Two-page target must fit physical maximum without discarded units",maxBlocks<=30);
+   // Every future weekly ledger must account for ALL these subblocks,
+   // rather than silently truncate at itqanDaysPerWeek() (four).
+ }
  @Test(expected=IllegalArgumentException.class) public void sameLineTwiceRejected(){
    List<GeometryRepository.LineMeta> real=geo.linesForExactIds(geo.lineIdsOnPage(518));
    ItqanFourSessionPolicy.plan(Arrays.asList(real.get(0),real.get(0)),true);
