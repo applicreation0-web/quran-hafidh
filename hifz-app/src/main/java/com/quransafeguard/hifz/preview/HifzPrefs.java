@@ -2661,10 +2661,15 @@ public final class HifzPrefs {
         if(units.isEmpty())throw new IllegalStateException("Empty frozen evening");
         ArrayList<String> earned=new ArrayList<>();
         if(family==ConsolidationCycleEngine.Family.STABILIZATION){
-            ConsolidationCycleEngine.Unit newest=units.get(units.size()-1);
-            if(newest.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
-                throw new IllegalStateException("Missing ×7 NEW block");
-            earned.add(newest.id());
+            // Composite days can have several same-surah NEW ×7 subblocks.
+            // A combined old ×1 pass NEVER earns a ×7 receipt.
+            for(ConsolidationCycleEngine.Unit unit:units){
+                if(unit.protocol()==ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
+                    earned.add(unit.id());
+                else if(unit.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS)
+                    throw new IllegalStateException("Invalid Stabilisation evening protocol");
+            }
+            if(earned.isEmpty())throw new IllegalStateException("Missing NEW ×7 receipts");
         } else {
             int physical=units.size()>1?units.size()-1:1;
             for(int i=0;i<physical;i++){
@@ -2712,8 +2717,12 @@ public final class HifzPrefs {
     private java.util.Map<String, String> weeklySnowballAppendUnits(
             ConsolidationCycleEngine.Family family, List<List<String>> units, LocalDate today) {
         JSONArray current = rolledSnowballUnits(family, today);
+        // A four-date window may have >4 independent surah-local subblocks.
+        // Its cap is physical SUBBLOCKS, not the number of Itqan dates. Legacy
+        // weekly plans keep their original caps while their OPEN state runs out.
         int weeklyCap = family == ConsolidationCycleEngine.Family.LEARNING
-            ? learningDaysPerWeek() : itqanDaysPerWeek();
+            ? learningDaysPerWeek()
+            : p.contains(ItqanFourSessionStore.KEY) ? 30 : itqanDaysPerWeek();
         for (List<String> unitLineIds : units) {
             if (current.length() < weeklyCap) current.put(ConsolidationPhysicalUnitPolicy.encodeLineUnit(unitLineIds));
         }
@@ -2816,19 +2825,27 @@ public final class HifzPrefs {
     List<ConsolidationCycleEngine.Unit> stabilizedConsolidationUnits(LocalDate today) {
         JSONArray source=rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION,today);
         if(source.length()==0)return Collections.emptyList();
-        ArrayList<String> earlier=new ArrayList<>();
-        for(int i=0;i<source.length()-1;i++)earlier.add(source.optString(i));
+        Set<String> earned=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
+        ArrayList<String> alreadyRepeated=new ArrayList<>(),newBlocks=new ArrayList<>();
+        for(int i=0;i<source.length();i++){
+            String id=source.optString(i);
+            if(id.isEmpty())throw new IllegalStateException("Empty stabilized snowball unit");
+            if(earned.contains(id))alreadyRepeated.add(id);
+            else newBlocks.add(id);
+        }
+        if(newBlocks.isEmpty())return Collections.emptyList();
         ArrayList<ConsolidationCycleEngine.Unit> units=new ArrayList<>();
-        if(!earlier.isEmpty()){
-            String combined=earlier.size()==1?earlier.get(0)
-                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(earlier);
+        if(!alreadyRepeated.isEmpty()){
+            String combined=alreadyRepeated.size()==1?alreadyRepeated.get(0)
+                :ConsolidationPhysicalUnitPolicy.encodeContinuousUnit(alreadyRepeated);
             units.add(new ConsolidationCycleEngine.Unit(combined,
                 ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
         }
-        String todayBlock=source.optString(source.length()-1);
-        if(todayBlock.isEmpty())throw new IllegalStateException("Missing stabilized snowball block");
-        units.add(new ConsolidationCycleEngine.Unit(todayBlock,
+        for(String id:newBlocks)units.add(new ConsolidationCycleEngine.Unit(id,
             ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        if(units.size()>ConsolidationCycleEngine.maxUnitsFor(
+                ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN))
+            throw new IllegalStateException("Composite snowball exceeds safe frozen capacity");
         return Collections.unmodifiableList(units);
     }
 

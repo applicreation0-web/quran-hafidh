@@ -29,7 +29,7 @@ final class ConsolidationCycleEngine {
      */
     static int maxUnitsFor(Protocol protocol) {
         if (protocol == Protocol.SNOWBALL_EXTENDED) return 30;
-        if (protocol == Protocol.SNOWBALL_STABILIZATION_SEVEN || protocol == Protocol.SNOWBALL_CONTINUOUS) return 7;
+        if (protocol == Protocol.SNOWBALL_STABILIZATION_SEVEN || protocol == Protocol.SNOWBALL_CONTINUOUS) return 31; // up to 30 composite subblocks + old continuous
         return (protocol == Protocol.SNOWBALL || protocol == Protocol.SNOWBALL_FINAL) ? 7 : 3;
     }
 
