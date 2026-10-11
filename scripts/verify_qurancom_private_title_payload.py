@@ -18,7 +18,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 INDEX=ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java"
 EXPECTED_BOUNDARY_SHA="deffec6e775965d7b1f717a63fc4d0d60c1933540aacefc13e1333d30c49be62"
 EXPECTED_SOURCE_SHA="8b07799cbe02a7f907be84bbff2b09f95e19a319dffcf3a5458fd8365fa755b1"
-EXPECTED_STATUS={"à contrôler":1689,"absent":163,"discordant":51}
+EXPECTED_STATUS={"à contrôler":1709,"absent":154,"discordant":40}
 
 def canonical_groups():
     text=INDEX.read_text(encoding="utf8")
@@ -108,15 +108,26 @@ def main():
             assert key not in restored and start<=groups[key][0]<=end
             restored[key]=title_list
     assert staged==restored, "Quran.com staging chunks differ from CSV"
+    # Quran.com intros/virtues are not to be erased simply because they are
+    # not thematic: only malformed HTML or pure commentary may be quarantined.
+    assert staged["IKEN002_001_001"][:4] == [
+        "Which was revealed in Al-Madina",
+        "Virtues of Surat Al-Baqarah",
+        "Virtues of Surat Al-Baqarah and Surat Al `Imran",
+        "Surat Al-Baqarah was revealed in Al-Madinah"]
+    # Actual source h2 on an interior ayah is still in the SAME verified group.
+    assert "Salih and the People of Thamud" in staged["IKEN026_136_145"]
+    assert len(staged["IKEN001_001_001"]) == 23
+
     import subprocess
     tracked=subprocess.check_output(
         ["git","ls-files","--","hifz-app/src/main/assets/ibn_kathir_qurancom_private"],
         cwd=ROOT,text=True).strip()
     assert not tracked, "Private content is tracked in the public repository"
     assert "The Discussion of the Individual Letters" in staged["IKEN002_001_001"]
-    assert "IKEN114_001_006" not in staged, "Do not fabricate An-Nas title"
+    assert staged["IKEN114_001_006"] == ["Which was revealed in Makkah"], "Preserve source h2 even when only preface is present"
     print("PASS: 1903 exact canonical groups, 6236 verses, 2951 Quran.com h2 records;")
-    print("      staged=1689, absent=163, discordant=51; all 8 private chunks verified.")
-    print("WARNING: editorial h2 validation, legal offline sync, and real BOOX pixels NOT YET VERIFIED.")
+    print("      staged=1709, no-h2=154, malformed-only=40; all 8 private chunks verified.")
+    print("WARNING: 40 malformed-only groups, 3 source-literal split candidates, private BOOX pixels and offline conditions require independent review.")
 if __name__=="__main__":
     main()
