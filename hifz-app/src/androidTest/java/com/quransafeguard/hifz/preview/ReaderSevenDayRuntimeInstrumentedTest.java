@@ -61,12 +61,23 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull("Amorce dialog not created",dialog);
         assertTrue("Local English title not shown",dialog.isShowing());
-        TextView body=dialog.findViewById(android.R.id.message);
-        assertNotNull("Missing verified local heading",body);
-        assertTrue(body.getText().toString().contains("The Disbelievers wonder at the Message and Resurrection"));
+        View root=dialog.findViewById(android.R.id.content);
+        assertNotNull("Missing Al-Munir-style English title sheet",root);
+        assertTrue("Missing verified local heading",containsText(root,
+          "The Disbelievers wonder at the Message and Resurrection"));
+        assertEquals("English popup must remain bottom-aligned",android.view.Gravity.BOTTOM,
+          dialog.getWindow().getAttributes().gravity & android.view.Gravity.VERTICAL_GRAVITY_MASK);
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-anglais.png");
     }
+ }
+ private static boolean containsText(View v,String value){
+   if(v instanceof TextView && ((TextView)v).getText().toString().contains(value))return true;
+   if(v instanceof ViewGroup){
+     ViewGroup g=(ViewGroup)v;
+     for(int i=0;i<g.getChildCount();i++)if(containsText(g.getChildAt(i),value))return true;
+   }
+   return false;
  }
  private static boolean shownText(View v,String value){
    if(v.getVisibility()!=View.VISIBLE)return false;

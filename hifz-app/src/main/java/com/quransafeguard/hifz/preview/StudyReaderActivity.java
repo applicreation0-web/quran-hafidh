@@ -306,28 +306,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(!semanticCuesEnabled||recitationStarts==null)return;
         IbnKathirGroupIndex.Group group=recitationStarts.groupForId(passageId);
         if(group==null)return;
-        if(semanticTitleDialog!=null)semanticTitleDialog.dismiss();
-        // Mushaf-first: a cue tap opens its original English title in place.
-        // No passages list, semantic map, browser or network dependency.
+        // Restore precisely the 1.17.1 Al-Munir bottom sheet: same location,
+        // gesture, duration and non-dimming treatment, with English typography.
+        // No source page list, browser, or intrusive Android AlertDialog.
         String[] titles=IbnKathirOfflineTitles.verifiedHeadings(group);
-        StringBuilder body=new StringBuilder();
-        if(titles.length==0) {
-            body.append("Titre anglais original non encore vérifié pour ce passage. ");
-            body.append("Les repères QCF identifient une frontière documentaire, ");
-            body.append("pas une amorce mnémotechnique validée.");
-        } else {
-            for(int i=0;i<titles.length;i++) {
-                if(i>0)body.append("\n\n");
-                body.append(titles[i]);
-            }
-        }
-        body.append("\n\nIbn Kathīr · ").append(group.navigationRange());
-        semanticTitleDialog=new android.app.AlertDialog.Builder(this)
-            .setTitle("Amorce · Ibn Kathīr")
-            .setMessage(body.toString())
-            .setPositiveButton("Fermer",(d,w)->d.dismiss())
-            .create();
-        semanticTitleDialog.show();
+        String label=titles.length==0
+            ?"English heading not yet verified · "+group.navigationRange()
+            :String.join(" · ",titles);
+        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
     }
 
     /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */

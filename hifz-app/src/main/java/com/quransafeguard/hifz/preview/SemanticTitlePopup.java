@@ -15,19 +15,38 @@ final class SemanticTitlePopup {
     private SemanticTitlePopup() {}
 
     static Dialog show(Activity activity, String title, Dialog previous) {
+        return create(activity,title,previous,true);
+    }
+
+    /** Same bottom-anchored, non-dimming Al-Munir title sheet, English typography. */
+    static Dialog showEnglish(Activity activity,String title,Dialog previous) {
+        return create(activity,title,previous,false);
+    }
+
+    private static Dialog create(Activity activity,String title,Dialog previous,boolean arabic) {
         if (previous != null && previous.isShowing()) previous.dismiss();
         if (activity == null || activity.isFinishing() || title == null || title.trim().isEmpty()) return null;
 
         Dialog dialog = new Dialog(activity);
         LinearLayout shell = Ui.column(activity);
         shell.setPadding(Ui.dp(activity, 14), Ui.dp(activity, 9), Ui.dp(activity, 14), Ui.dp(activity, 9));
-        TextView label = Ui.bookText(activity, title.trim(), 14f, true);
+        TextView label = arabic
+            ?Ui.bookText(activity, title.trim(), 14f, true)
+            :Ui.text(activity, title.trim(), 17f, true);
         label.setGravity(Gravity.CENTER);
-        label.setTextDirection(android.view.View.TEXT_DIRECTION_RTL);
+        label.setTextDirection(arabic ? android.view.View.TEXT_DIRECTION_RTL : android.view.View.TEXT_DIRECTION_LTR);
         label.setTextAlignment(android.view.View.TEXT_ALIGNMENT_CENTER);
         label.setTextColor(Ui.INK);
         shell.addView(label, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if(!arabic) {
+            // BOOX-friendly high-contrast card; no color-only status or glow/blur.
+            android.graphics.drawable.GradientDrawable panel=new android.graphics.drawable.GradientDrawable();
+            panel.setColor(Ui.PAPER);
+            panel.setCornerRadius(Ui.dp(activity,14));
+            panel.setStroke(Ui.dp(activity,1),Ui.INK);
+            shell.setBackground(panel);
+        }
         dialog.setContentView(shell);
         dialog.setCanceledOnTouchOutside(true);
         dialog.show();
