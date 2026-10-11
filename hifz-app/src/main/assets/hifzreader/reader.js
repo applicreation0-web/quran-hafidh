@@ -727,6 +727,25 @@ function focusContextLayer(svg,activeLines,polys){
   return g;
 }
 
+/* Off-unit page: the due physical lines are on another Mushaf page.
+ * Keep all Quranic ink legible but faint. Never expose off-unit text at full
+ * contrast or invent a mask hole when this page has zero due-line geometry.
+ * No Hifz session/cursor/credit is touched: display-only SVG overlay. */
+function fadedOffUnitPage(svg){
+  const g=document.createElementNS(NS,'g');
+  g.setAttribute('class','focuscontextlayer');
+  g.setAttribute('pointer-events','none');
+  const vb=svg.viewBox&&svg.viewBox.baseVal;
+  if(!vb)return g;
+  const paper=document.createElementNS(NS,'rect');
+  paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);
+  paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);
+  paper.setAttribute('fill','var(--sheet)');
+  paper.setAttribute('fill-opacity',eink?'0.72':'0.65');
+  g.appendChild(paper);
+  return g;
+}
+
 const AMORCE_HIGHLIGHT_HEIGHT=31;
 function semanticExactRects(cue,svg){
   const boxes=(cue.boxes||[]).map(box=>(box||[]).map(Number)).filter(validWordBox)
@@ -811,6 +830,11 @@ function render(){
     : [];
   if(contextFocus&&lines.length){
     const context=focusContextLayer(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);
+    if(context.childNodes.length)svg.appendChild(context);
+  }else if(contextFocus&&lineIds.length&&pageGeo&&(pageGeo.lines||[]).length){
+    // The selected unit is on a different page: fade this entire context page.
+    // Original logic fell through here and displayed unrelated lines at 100%.
+    const context=fadedOffUnitPage(svg);
     if(context.childNodes.length)svg.appendChild(context);
   }
 
