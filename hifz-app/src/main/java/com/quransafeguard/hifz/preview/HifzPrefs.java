@@ -1662,6 +1662,81 @@ public final class HifzPrefs {
     }
 
     /**
+     * Atomic V6 close of a verified ×40 subblock from a frozen four-date window.
+     * This endpoint is not used by legacy OPEN 22-line sessions.
+     */
+    boolean completeFrozenItqanSubblockV6(ItqanFourSessionSnapshot expected,
+            GeometryRepository geo,String date,String label) {
+        if(expected==null||geo==null||date==null||label==null)
+            throw new IllegalArgumentException("Frozen Itqan block required");
+        synchronized(V6_STATE_LOCK) {
+            synchronized(p) {
+                ItqanFourSessionSnapshot actual=ItqanFourSessionStore.read(p,geo);
+                if(actual==null||!actual.encode().equals(expected.encode()))return false;
+                if(actual.sessionIndex>=4||actual.reps!=40||itqanPostNasMaintenance())
+                    throw new IllegalStateException("Incomplete/deprecated Itqan window");
+                ItqanRotationPolicy.State rotation=itqanRotationState();
+                if(!rotation.leg.name().equals(actual.originLeg)
+                    ||!rotation.cursor.toString().equals(actual.originCursor))
+                    throw new IllegalStateException("Itqan cursor moved during frozen window");
+                ItqanFourSessionPolicy.Block block=actual.plan.sessions
+                    .get(actual.sessionIndex).blocks.get(actual.blockIndex);
+                List<GeometryRepository.LineMeta> physical=geo.linesForExactIds(block.lineIds);
+                GeometryRepository.LineMeta first=physical.get(0),last=physical.get(physical.size()-1);
+                VerseRef firstVerse=first.verses.get(0);
+                VerseRef lastVerse=last.verses.get(last.verses.size()-1);
+                requireSchema6ProgressionState();
+                LinkedHashSet<String> learned=v6LineIdSet("v6LearnedLineIds");
+                LinkedHashSet<String> stabilized=v6LineIdSet("v6StabilizedLineIds");
+                LinkedHashSet<String> acquired=v6LineIdSet("v6AcquiredCreditLineIds");
+                Set<String> quarantine=v6LineIdSet("v6QuarantineLineIds");
+                Set<String> partial=v6LineIdSet("v6LegacyPartialAcquiredLineIds");
+                ArrayList<String> newLines=new ArrayList<>();
+                for(String id:block.lineIds){
+                    if(quarantine.contains(id)||partial.contains(id))
+                        throw new IllegalStateException("Unresolved V6 Itqan line: "+id);
+                    ProgressState state=progressStateFromSets(id,learned,stabilized,acquired);
+                    if(state==ProgressState.LEARNED||state==ProgressState.NONE){
+                        learned.remove(id);stabilized.add(id);newLines.add(id);
+                    }
+                }
+                if(!newLines.isEmpty()&&newLines.size()!=block.lineIds.size())
+                    throw new IllegalStateException("Partial acquired subblock requires reconciled snowball ownership");
+                java.util.Map<String,String> snowball=Collections.emptyMap();
+                if(!newLines.isEmpty()){
+                    LocalDate day=LocalDate.parse(date);
+                    JSONArray before=rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION,day);
+                    snowball=weeklySnowballAppendEntries(ConsolidationCycleEngine.Family.STABILIZATION,newLines,day);
+                    JSONArray after=new JSONArray(snowball.get(snowballUnitsKey(
+                        ConsolidationCycleEngine.Family.STABILIZATION)));
+                    if(after.length()!=before.length()+1)
+                        throw new IllegalStateException("No free weekly Consolidation slot for composite Itqan");
+                }
+                ItqanFourSessionSnapshot next=ItqanFourSessionStore.nextAfterValidatedBlock(actual,geo);
+                boolean finishedDate=next.sessionIndex>actual.sessionIndex;
+                boolean finishedWindow=next.sessionIndex==4;
+                SharedPreferences.Editor e=p.edit()
+                    .putString("v6LearnedLineIds",lineIdsJson(learned))
+                    .putString("v6StabilizedLineIds",lineIdsJson(stabilized))
+                    .putString("v6AcquiredCreditLineIds",lineIdsJson(acquired))
+                    .putInt("itqanRep",0).putInt("itqanAssisted",0)
+                    .putInt("itqanFinalReveals",0).putInt("itqanBlockIndex",0)
+                    .putString("itqanUnitStart","").putString("itqanUnitEnd","")
+                    .putString("lastItqanCreditStart",firstVerse.toString())
+                    .putString("lastItqanCreditEnd",lastVerse.toString())
+                    .putString("itqanBonusSnapshotV1","");
+                for(java.util.Map.Entry<String,String> row:snowball.entrySet())
+                    e.putString(row.getKey(),row.getValue());
+                if(finishedWindow)e.remove(ItqanFourSessionStore.KEY);
+                else e.putString(ItqanFourSessionStore.KEY,next.encode());
+                if(finishedDate)e.putString("lastItqanDate",date).putString("lastItqanLabel",label);
+                if(finishedWindow)e=appendFinalItqanRotation(e,true,lastVerse);
+                return e.commit();
+            }
+        }
+    }
+
+    /**
      * Atomically advances one frozen Stabilisation half-page and its schema6 line state.
      * bonusLineIds is P3's "finish the page" subset of lineIds actually consumed this commit
      * (empty when no bonus was accepted) — folded into the same commit as everything else so a
