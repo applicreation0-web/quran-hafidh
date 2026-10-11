@@ -118,6 +118,11 @@ public final class QuizLaunchRegressionInstrumentedTest {
                     activity.findViewById(android.R.id.content)!=null);
             });
             HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quiz real learned Quran question");
+            // Android WebView can signal JS pageShown before the very first raster commit.
+            // Never mistake an early white compositor frame for an actual masked Quiz.
+            android.os.SystemClock.sleep(1750);
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+
             // Pixel-level adversarial audit. The preceding green run proved an Activity
             // was alive but its screenshot contained ZERO Quran ink in the reader body.
             // pageShown alone only confirms JS boot, not a usable visible question.
@@ -149,6 +154,26 @@ public final class QuizLaunchRegressionInstrumentedTest {
                     }
                 initialInk[0]=dark;
             } finally {bmp.recycle();}
+            if(initialInk[0]<=15) {
+                // Distinguish a blank Quran page from text placed only in the
+                // first/last lines outside the original central 20–80% ROI.
+                scenario.onActivity(activity -> {
+                    MushafView v=(MushafView)reflect(activity,"mushaf");
+                    v.evaluateJavascript(
+                        "(function(){var b=window.HIFZ_BOOT||{};"+
+                        "return JSON.stringify({mask:b.mask,mode:b.semanticAnchorMaskMode,"+
+                        "cues:(b.semanticCues||[]).map(c=>c.id),"+
+                        "landmarks:(b.pageLandmarkBoxes||[]).length,"+
+                        "cueWords:(b.semanticCues||[]).reduce((n,c)=>n+(c.boxes||[]).length,0),"+
+                        "selection:(b.selection||[]).length,"+
+                        "maskRects:document.querySelectorAll('.maskcell').length,"+
+                        "semanticRects:document.querySelectorAll('.semanticcuelayer rect').length,"+
+                        "svg:!!document.querySelector('#mushaf svg')});})()",
+                        value -> android.util.Log.e("QuizQCFProbe","MASKED-QCF-DIAG "+value));
+                });
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                android.os.SystemClock.sleep(220);
+            }
             if(initialInk[0]<=15) {
                 // Diagnostic only: show the SAME real Quran page without an eraser.
                 // If ink returns, the bug is the Quiz mask/focus adapter, not QCF assets.
