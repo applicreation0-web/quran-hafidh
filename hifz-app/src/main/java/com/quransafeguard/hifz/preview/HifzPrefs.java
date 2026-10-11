@@ -2521,6 +2521,61 @@ public final class HifzPrefs {
             ? "learningSnowball8WeekHistory" : "stabilizationSnowball8WeekHistory";
     }
 
+    /** A due history is not proof of ×7/×10 evening work. Earned receipts are
+     * durable per physical block and never inferred from dates alone. */
+    private static String earnedEveningKey(ConsolidationCycleEngine.Family family) {
+        return family==ConsolidationCycleEngine.Family.LEARNING
+            ?"v6LearningEarnedEveningUnitsV1":"v6StabilizationEarnedEveningUnitsV1";
+    }
+
+    private LinkedHashSet<String> earnedEveningUnits(ConsolidationCycleEngine.Family family) {
+        try {
+            JSONArray raw=new JSONArray(p.getString(earnedEveningKey(family),"[]"));
+            LinkedHashSet<String> out=new LinkedHashSet<>();
+            for(int i=0;i<raw.length();i++) {
+                String id=raw.getString(i);
+                if(id.isEmpty())throw new IllegalStateException("Empty unit receipt");
+                out.add(id);
+            }
+            return out;
+        }catch(Exception corrupt){
+            throw new IllegalStateException("Corrupt Hifz evening receipts: fail closed",corrupt);
+        }
+    }
+
+    private static String unitReceiptsJson(Set<String> ids) {
+        JSONArray arr=new JSONArray();
+        for(String id:ids)arr.put(id);
+        return arr.toString();
+    }
+
+    /** Exact verified repetitions: on STABILIZATION only newest block is ×7,
+     * older blocks receive ×1; LEARNING repeats every physical block ×10. */
+    private static List<String> earnedFromClosedEvening(
+            ConsolidationCycleEngine.Session done,ConsolidationCycleEngine.Family family) {
+        if(done==null||!done.open()||!done.readyToClose()||done.cycle()==null
+                ||done.cycle().family()!=family)
+            throw new IllegalStateException("Complete frozen evening proof required");
+        List<ConsolidationCycleEngine.Unit> units=done.cycle().units();
+        if(units.isEmpty())throw new IllegalStateException("Empty frozen evening");
+        ArrayList<String> earned=new ArrayList<>();
+        if(family==ConsolidationCycleEngine.Family.STABILIZATION){
+            ConsolidationCycleEngine.Unit newest=units.get(units.size()-1);
+            if(newest.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN)
+                throw new IllegalStateException("Missing ×7 NEW block");
+            earned.add(newest.id());
+        } else {
+            int physical=units.size()>1?units.size()-1:1;
+            for(int i=0;i<physical;i++){
+                ConsolidationCycleEngine.Unit unit=units.get(i);
+                if(unit.protocol()!=ConsolidationCycleEngine.Protocol.SNOWBALL)
+                    throw new IllegalStateException("Missing ×10 physical Renforcement");
+                earned.add(unit.id());
+            }
+        }
+        return earned;
+    }
+
     private static final int SNOWBALL_EXTENDED_WEEKS = 8;
 
     private static LocalDate mondayOf(LocalDate date) {
@@ -2698,6 +2753,7 @@ public final class HifzPrefs {
         catch (Exception malformed) { history = new JSONArray(); }
         LocalDate cutoff = mondayOf(today).minusWeeks(SNOWBALL_EXTENDED_WEEKS - 1L);
         LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+        LinkedHashSet<String> earned=earnedEveningUnits(family);
 
         ArrayList<String> encodedBlocks = new ArrayList<>();
         for (int i = 0; i < history.length(); i++) {
@@ -2713,7 +2769,8 @@ public final class HifzPrefs {
             if (units == null) continue;
             for (int u = 0; u < units.length(); u++) {
                 String encoded = units.optString(u, "");
-                if (!encoded.isEmpty() && !acquired.containsAll(
+                if (!encoded.isEmpty() && earned.contains(encoded)
+                        && !acquired.containsAll(
                         ConsolidationPhysicalUnitPolicy.decodeLineUnit(encoded))) {
                     // Contradictory audit #2: a PARTLY acquired week is not proof that
                     // every block in it still needs its Sunday graduation. Only keep
@@ -2829,6 +2886,34 @@ public final class HifzPrefs {
         String snapshot=exactSnowballSnapshotToValidate(family,date);
         return !snapshot.isEmpty()
             && !snapshot.equals(p.getString(snowballCompletedSnapshotKey(family),""));
+    }
+
+    /** Verified production closure: the completed session, its date and all
+     * earned physical-unit receipts are committed atomically. The legacy
+     * date-only overload below deliberately earns no protocol receipts. */
+    boolean completeSnowballEvening(ConsolidationCycleEngine.Family family,String date,
+                                    ConsolidationCycleEngine.Session completed) {
+        if(family==null||date==null)return false;
+        LocalDate day;
+        try { day=LocalDate.parse(date); } catch(RuntimeException e){return false;}
+        String id=(family==ConsolidationCycleEngine.Family.LEARNING
+            ?"learning-":"stabilization-")+date;
+        if(completed==null||completed.cycle()==null||!id.equals(completed.cycle().cycleId()))
+            throw new IllegalStateException("Evening receipt date mismatch");
+        List<String> justEarned=earnedFromClosedEvening(completed,family);
+        synchronized(V6_STATE_LOCK) {
+            if(!snowballEveningPending(family,day))return false;
+            String snapshot=exactSnowballSnapshotToValidate(family,day);
+            if(snapshot.isEmpty())throw new IllegalStateException("Missing frozen evening source");
+            LinkedHashSet<String> receipts=earnedEveningUnits(family);
+            receipts.addAll(justEarned);
+            String lastDate=family==ConsolidationCycleEngine.Family.LEARNING
+                ?"lastLearningSnowballEveningDate":"lastStabilizationSnowballEveningDate";
+            return p.edit().putString(lastDate,date)
+                .putString(snowballCompletedSnapshotKey(family),snapshot)
+                .putString(earnedEveningKey(family),unitReceiptsJson(receipts))
+                .remove(consolidationStateKey(family)).commit();
+        }
     }
 
     /** Idempotent, single atomic close: validation date + consumed cumulative units + session. */
@@ -3126,6 +3211,13 @@ public final class HifzPrefs {
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
             LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            // No Acquis without the verified weekday protocol receipt.
+            LinkedHashSet<String> paid=earnedEveningUnits(ConsolidationCycleEngine.Family.STABILIZATION);
+            for(String unitId:physicalUnitIds(session)){
+                List<String> due=ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
+                if(!acquired.containsAll(due)&&!paid.contains(unitId))
+                    throw new IllegalStateException("Missing evening ×7/×10 receipt: "+unitId);
+            }
 
             for (String unitId : physicalUnitIds(session)) {
                 List<String> ids = ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
@@ -3211,6 +3303,13 @@ public final class HifzPrefs {
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
             LinkedHashSet<String> acquired = v6LineIdSet("v6AcquiredCreditLineIds");
+            // No Acquis without the verified weekday protocol receipt.
+            LinkedHashSet<String> paid=earnedEveningUnits(ConsolidationCycleEngine.Family.LEARNING);
+            for(String unitId:physicalUnitIds(session)){
+                List<String> due=ConsolidationPhysicalUnitPolicy.decodeLineUnit(unitId);
+                if(!acquired.containsAll(due)&&!paid.contains(unitId))
+                    throw new IllegalStateException("Missing evening ×7/×10 receipt: "+unitId);
+            }
 
             ArrayList<RecentSabqi> processed = new ArrayList<>();
             ArrayList<VerseRef> versesToPromote = new ArrayList<>();
