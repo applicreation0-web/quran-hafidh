@@ -5,6 +5,8 @@ on:
       - work/haafidh-1171-ibn-kathir-integration-independent
     paths:
       - .github/workflows/diagnose-quiz-launch-android.yml
+      - .github/workflows/haafidh-ibn-kathir-debug.yml
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
       - scripts/ci_android_runtime_visual.sh
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/QuizLaunchRegressionInstrumentedTest.java
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzAndMapRuntimeSmokeInstrumentedTest.java
