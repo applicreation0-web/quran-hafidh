@@ -32,7 +32,7 @@ final class SemanticTitlePopup {
         shell.setPadding(Ui.dp(activity, 14), Ui.dp(activity, 9), Ui.dp(activity, 14), Ui.dp(activity, 9));
         TextView label = arabic
             ?Ui.bookText(activity, title.trim(), 14f, true)
-            :Ui.text(activity, title.trim(), 17f, true);
+            :Ui.text(activity, title.trim(), 14.5f, true);
         label.setGravity(Gravity.CENTER);
         label.setTextDirection(arabic ? android.view.View.TEXT_DIRECTION_RTL : android.view.View.TEXT_DIRECTION_LTR);
         label.setTextAlignment(android.view.View.TEXT_ALIGNMENT_CENTER);
