@@ -1700,8 +1700,14 @@ public final class HifzPrefs {
         if(geo==null||date==null)throw new IllegalArgumentException("Itqan QCF and date required");
         ItqanFourSessionSnapshot existing=ItqanFourSessionStore.read(p,geo);
         if(existing!=null)return existing; // frozen forever, never dynamically replanned
-        if(date.toString().equals(lastItqanDate()))return null;
-        // Resolve any one-time historic bootstrapping before pinning the cursor.
+        if(date.toString().equals(lastItqanDate())
+                ||p.getInt("itqanRep",0)!=0||p.getInt("itqanBlockIndex",0)!=0
+                ||!p.getString("itqanUnitStart","").isEmpty()
+                ||!p.getString("itqanUnitEnd","").isEmpty()
+                ||itqanPostNasMaintenance())return null;
+        // Never bootstrap/shift rotation while a historical 1.17.1
+        // unit is OPEN, even if its snapshot has not yet been stamped.
+        // Resolve only clean-boundary bootstrapping before pinning the cursor.
         itqanRotationLiveCursor(geo);
         ItqanFourSessionPolicy.Plan geometryPlan=previewFourDateItqanPlan(geo);
         if(geometryPlan==null)return null; // post-Nas or in-progress 1.17.1 session
