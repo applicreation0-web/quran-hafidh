@@ -658,34 +658,8 @@ public final class MainActivity extends android.app.Activity {
         }
         if(mode==null){setToday("Programme à jour · voir les séances",true);return;}
         String prefix=!isTodayAnchoredMode(mode)&&due!=null&&due.getOverdue()?"Report "+due.getScheduledDate()+" · ":"";
-        String detail;
-        try{
-            if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)){
-                detail="Consolidation · boule de neige du soir";
-            }else if(HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)){
-                detail="Renforcement · boule de neige du soir";
-            }else if(HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode)){
-                detail="Consolidation · révision finale ×3";
-            }else if(HifzSessionActivity.LEARNING_FINAL.equals(mode)){
-                detail="Renforcement · révision finale ×3";
-            }else if(HifzSessionActivity.SABQI.equals(mode)){
-                int cursor=prefs.sabqiLineCursor();if(cursor<0)cursor=g.firstLineIndex(prefs.sabqiStart());
-                GeometryRepository.FiveLineBlock b=g.fiveLineBlock(cursor);
-                detail="Apprentissage · "+shortRange(b.startVerse,b.endVerse)+" · "+b.lineIds.size()+" lignes";
-            }else if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode)){
-                detail="Apprentissage · reprise · "+HifzSchedule.EVENING_REVIEW_MINUTES+" min";
-            }else if(HifzSessionActivity.ITQAN.equals(mode)){
-                detail=anchoringTodayDetail(prefs,g);
-            }else if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode)){
-                detail="Révision active · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min";
-            }else if(HifzSessionActivity.MURAJAAH.equals(mode)){
-                int maintenanceMinutes=MaintenanceCoveragePolicy.minutes(
-                    prefs.acquiredLineCountV6(), g.lineCount(), speedStore.maintenanceSecondsPerLine());
-                detail="Révision · "+maintenanceMinutes+" min";
-            }else detail="Parcours à vérifier";
-        }catch(RuntimeException error){detail="Parcours à vérifier";}
-        // Home and Parcours share a concise action label. The exact block,
-        // surah, cursor, mask and repetitions belong to the opened session.
+        // Never query a live Itqan block or mutate its cursor merely
+        // to render a home navigation summary.
         setToday(prefix+todaySummary(mode),true);
     }
 
@@ -844,6 +818,14 @@ public final class MainActivity extends android.app.Activity {
         else if(clean.contains("Entretien"))kind="Entretien";
         else if(clean.contains("Révision"))kind="Révision";
         else kind=clean.split(" · ")[0];
+        if(clean.contains("Révision active") && clean.contains("Apprentissage"))
+            kind="Révision active + Apprentissage";
+        else if(clean.contains("Révision active") && clean.contains("Stabilisation"))
+            kind="Révision active + Stabilisation";
+        else if(clean.contains("Consolidation") && clean.contains("Entretien"))
+            kind="Consolidation + Entretien";
+        else if(clean.contains("Renforcement") && clean.contains("Entretien"))
+            kind="Renforcement + Entretien";
         if(clean.contains("Finale")||clean.contains("finale"))kind+=" · finale";
         if(clean.contains("séance 1/4"))kind+=" · 1/4";
         else if(clean.contains("séance 2/4"))kind+=" · 2/4";
