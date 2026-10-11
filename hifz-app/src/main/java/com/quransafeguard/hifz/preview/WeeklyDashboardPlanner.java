@@ -184,7 +184,8 @@ final class WeeklyDashboardPlanner {
                     +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min + "+morning;
                 // Active is proposed in the morning, NOT repeated as an evening quota.
                 evening=evening.replace(" + Révision active ("
-                    +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min)","");
+                    +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min)","")
+                    .replace(" + Révision active + Entretien"," + Entretien");
             }
             out.add(new Row(date,day(date,today),morning,evening,state));
         }
