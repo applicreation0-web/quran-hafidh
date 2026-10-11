@@ -39,14 +39,6 @@ final class SemanticTitlePopup {
         label.setTextColor(Ui.INK);
         shell.addView(label, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        if(!arabic) {
-            // BOOX-friendly high-contrast card; no color-only status or glow/blur.
-            android.graphics.drawable.GradientDrawable panel=new android.graphics.drawable.GradientDrawable();
-            panel.setColor(Ui.PAPER);
-            panel.setCornerRadius(Ui.dp(activity,14));
-            panel.setStroke(Ui.dp(activity,1),Ui.INK);
-            shell.setBackground(panel);
-        }
         dialog.setContentView(shell);
         dialog.setCanceledOnTouchOutside(true);
         dialog.show();
