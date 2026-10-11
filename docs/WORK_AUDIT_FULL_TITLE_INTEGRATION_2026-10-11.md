@@ -1,45 +1,60 @@
-# WORK HIGH — independent pre-debug audit after ALL Ibn Kathir title commits
+# WORK HIGH — AUDIT CONTRADICTOIRE AVANT DEBUG — QURAN HAAFIDH
 
-**READ-ONLY. No GitHub writes. No APK. No release. Do not use an older build as proof.**
+**Strictement READ-ONLY. Aucun commit, aucune branche, aucun APK, aucune release.**
+**Ne commencer qu'après le gel du dernier HEAD réel. Aucun ancien APK comme preuve du dernier HEAD.**
 
-## Exact target
-- Repo: `applicreation0-web/quran-hafidh`
-- Branch: `work/haafidh-1171-ibn-kathir-integration-independent`
-- 1.17.1 official baseline: `7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21`
-- Re-read and freeze ACTUAL HEAD at launch, then require every command and screenshot to match that SHA. Never guess a future SHA from this document.
-- Main external standard: `STANDARD_COMPLET_HAAFIDH_FONCTIONNEL_VISUEL.md`; 133-case `MATRICE_TESTS.csv`, 23 exact icon SHA manifest and reference screenshots in the attached Work package.
-- App sources: `docs/PREDEBUG_IMPLEMENTATION_HANDOFF_2026-10-11.md`, `IbnKathirGroupIndex.java`, `IbnKathirOfflineTitles.java`, `IbnKathirTitlePack.java`, eight `chunk-*.json` files and `StudyReaderActivity.java`.
+## Références à figer
+- Dépôt public (code) : `applicreation0-web/quran-hafidh`
+- Branche unique : `work/haafidh-1171-ibn-kathir-integration-independent`
+- Référence officielle 1.17.1 : `7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21`.
+- Relever le SHA réel au démarrage, puis utiliser **exactement** ce SHA pour toutes les commandes, archives, captures et conclusions.
+- Contrat de 23 icônes : `docs/FROZEN_UI_ICONS_13_PLUS_10.tsv`.
+- Contrat graphique et moteur : standard fonctionnel et visuel déjà préparé + 133 cas de la matrice Work précédente (demander la pièce jointe si absente ; ne pas inventer 133 PASS).
+- Paquet **privé joint au Work**, qui n'appartient pas au dépôt GitHub : `IBN_KATHIR_QURANCOM_TITRES_1903.csv`, `CONTROLES_ET_LIMITES.json`, huit `chunk-*.json` privés et le ZIP source Quran.com.
+- Source unique autorisée à l'affichage des titres : Quran.com, Tafsīr Ibn Kathīr anglais, ressource API 169 ; aucune récupération de titre depuis spa5k.
 
-## DECISION FINALE AVANT WORK : règles de correspondance groupe → amorce → titre
+## Faits vérifiables avant l'audit éditorial
+- Index canonique de **1 903** groupes sur **114** sourates et **6 236** versets, SHA des frontières : `deffec6e775965d7b1f717a63fc4d0d60c1933540aacefc13e1333d30c49be62`.
+- ZIP Quran.com fourni : SHA-256 `8b07799cbe02a7f907be84bbff2b09f95e19a319dffcf3a5458fd8365fa755b1`, manifeste **2 951 entrées HTML h2** depuis 114 sourates et 6 236 réponses de versets.
+- Les h2 correspondent à **1 749 groupes** au moins ; **154 groupes sans h2**. La présence d'un h2 n'est PAS une validation éditoriale.
+- Première passe conservative du paquet privé : **1 689 groupes provisoirement préparés**, **163 sans titre admissible**, **51 discordants**. Ces totaux sont les sorties automatiques du registre, pas un verdict de Work.
+- **Ne PAS déclarer 1 689 titres validés**. Des titres h2 fusionnent parfois avec du commentaire, par exemple Al-Kahf 18:9 ou Qāf 50:1. Trois préfixes littéraux de h2 ont été isolés à titre **expressément provisoire**, avec preuve du texte original dans le CSV. Contrôler le contexte et le texte affiché.
+- Quran.com Conditions développeurs actualisées 2026-10-04 : un usage strictement personnel ne prouve pas une licence d'archivage hors ligne illimité ; confirmer les droits et restrictions, notamment la durée de cache.
+- Le dépôt GitHub est **public**. Aucune donnée de titres issue du ZIP ne doit être ajoutée au code public. Les huit chunks sont une **annexe privée**, destinée au contrôle du rendu via un checkout local jetable ; aucun upload public.
+- NOUVEAU chemin d'affichage : `StudyReaderActivity.java` -> `IbnKathirQuranComPrivateTitles.sourceHeadings(context,group)`, fichier privé `assets/ibn_kathir_qurancom_private/chunk-NNN-NNN.json`. Les anciens `IbnKathirTitlePack` et `IbnKathirOfflineTitles` restent dans l'historique mais **ne doivent plus être utilisés à l'affichage**.
+- Sans annexe privée, absence de popup = **comportement de repli voulu**, pas titre inventé. Un test sans paquet ne prouve pas l'intégration finale. Les tests Work doivent vérifier AVEC le paquet et la continuité SANS paquet.
 
-- **Amorces validées par l'utilisateur :** chaque groupe documentaire Ibn Kathīr affiche au tout début du bloc ses **deux premiers mots QCF réels**, ou un seul si le groupe s'arrête réellement après ce mot. Aucun quota artificiel, aucun repère au début de chaque verset, aucun déplacement, aucune amorce intérieure inventée. **1 903 groupes → 1 903 positions de départ** sur les **604 pages**, en conservant le marqueur exact QCF ; un deuxième mot à cheval sur deux pages n'est jamais simulé sur la mauvaise page.
-- Ce choix mécanique des premiers mots est **différent** d'une prétention à 1 903 « sélections mnémotechniques éditoriales » : ne pas redemander arbitrairement une sélection ou supprimer des départs que l'utilisateur a approuvés.
-- **Titre associé :** uniquement l'intitulé anglais attesté dans le **MÊME** groupe de commentaire. Les 17 overrides contextualisés sont prioritaires. Parmi les 1 415 autres candidats de source, une mention introductive de récitation, de vertus ou de révélation de sourate cède la place à un intitulé thématique original *du même groupe* ; jamais au texte d'un groupe voisin. Les 488 cas sans titre source plausible restent sans popup. **Aucun titre IA**.
-- **Présentation :** surlignage gris très léger suivant les boîtes QCF exactes (pas un soulignement), police anglaise **11,5sp normale**, texte centré sans gros encadré, titre totalement au-dessus des icônes avec ≥4dp de séparation vérifiée sur l'écran, bouton d'amorces lisible sélectionné, Mushaf prioritaire. Le toucher d'une amorce sur la page N ne peut pas ouvrir un titre d'une autre page.
-- **Avant tout debug :** auditer intégralement cette règle et les nouvelles extractions. Exécuter `bash scripts/verify_ibn_kathir_pinned_source_114.sh` puis `python3 scripts/audit_ibn_kathir_title_pack.py --out /tmp/ik-title-inventory.csv` ; vérifier preuves, licences et états V6 sans modifier les moteurs. Le résultat automatisé source-verbatim **n'est pas une approbation éditoriale ou juridique**.
+## P0 — Source Quran.com, éditorial, coordonnées
+1. Vérifier les **1 903 lignes du CSV** une par une ou avec des preuves automatisées solides, l'URL de chaque source, le chapitre, la position du verset, l'ordre des h2, les frontières et l'absence d'emprunt entre groupes. Ne pas mettre le statut « vérifié » sans source et contexte convaincants.
+2. Contrôler obligatoirement Fātiḥah, 2:1, 2:25–27, 18:9–16, Qāf, Adh-Dhāriyāt, An-Najm, An-Nabaʾ, An-Nās. Séparer les titres véritables des préambules, vertus, citations, narrations et prose fusionnée. Titres anglais originaux non reformulés.
+3. Vérifier **1 903 premières amorces**, deux premiers mots QCF réels du bloc avec les vrais cas de fin de sourate/page ; **77 432 zones**, **604 pages**, **6 236 versets**. Aucune nouvelle amorce intérieure ni modification des frontières. Amorces OFF conservé ; ON par défaut si aucune préférence.
+4. Vérifier que les titres n'affectent ni boîte QCF ni masque de lecture, ni la validation de récitation, ni l'état de Hifz. Contrôler les 23 icônes gelées.
+5. Les titres multiples doivent rester exactement dans leur propre groupe et être affichés **un à la fois par appui successif**, pas dans un gros pavé. Manque de titre = aucun dialogue.
 
-## P0 source fidelity, copyright and integration
-1. The original English source is spa5k/tafsir_api at exact commit `eb82bb6294efe30ad5c135c03b1864afaa70e855`, `tafsir/en-tafisr-ibn-kathir/{1..114}.json`. Retrieve every file, independently verify group boundaries of identical commentary and all 6,236 verses. Compare against `IbnKathirGroupIndex`: exactly 1,903 intervals over 114 surahs, no omissions, no overlap.
-2. Execute `python3 scripts/audit_ibn_kathir_title_pack.py --out /tmp/WORK_IK_HEADINGS.csv`. If the pinned 114 source JSON files are locally available, run the same script with `--source-dir /path/to/114-jsons` and verify *every* extracted title line exactly appears verbatim in that exact group's source text. Expected **1,415 groups with extracted heading candidates**, **488 without**. Do not call them all verified/approved.
-3. Review all 1,415 candidates **as actual editorial headings**, not merely English lines without punctuation. Red flags: alleged titles starting with a reporter's name, Hadith narration, verse translation, a commentary sentence, title of whole surah unrelated to the group, or first surah virtue when a better group title occurs later. Record source quote, group id, paragraph position, matched verse and correction/disposition. For 488 others record genuine absence vs regex false negative and whether a human-verified original short heading exists. Never fabricate a title, synthesize by LLM, translate automatically, or silently label prose as a headline.
-4. **Independent rights gate:** repo `spa5k/tafsir_api` MIT licensing of software does NOT establish permissions for its modern English Darussalam abridgement. The public app repository now contains many short English extracts as an internal staging dataset; independently establish whether grouped heading reproduction and prospective APK redistribution are authorized. If not established, verdict is NO-GO for distribution. Distinguish source accessibility from permission to republish.
-5. Verify `IbnKathirOfflineTitles.verifiedHeadings(group)` (17 source-checked groups (16 Qaf/Najm and Al-Baqarah 2:1)) is ALWAYS preferred over `IbnKathirTitlePack.sourceHeadings(...)`. No new canonical mnemonic cue, additional highlight coordinate, Quranic transcription, group segmentation or marker position is derived from the title text. Source titles are annotations only; group starts use existing exact pinned QCF boxes. Missing title => silent no-popup, NEVER "English heading not yet verified".
-6. Offline performance/security: 8 chapter chunks (1..15,16..30,...106..114), read only when tapping a real heading, no remote browser, no network, no file picker, bounded (350 KB) read, no data loss on malformed/missing pack, UTF-8 apostrophes/punctuation, QCF untouched. Validate actual title at 2:1, 18:9, 50:1, 53:1, 78:1, 109:1 and no-title group 114:1. Confirm 109 favors a relevant thematic title over generic recitation introduction.
-7. **Real pixel proof:** title English 11.5sp REGULAR, not bold, max width 480dp, left-to-right, centered. Real measured panel bottom + ≥4dp is ABOVE actual icon-bar top. Test 2:1, Qaf, long heading, multi-subheading, BOOX portrait+landscape/zoom, emulator and if accessible actual BOOX. No clipped title, no rectangular black backing, no giant pavés, NO title atop controls. The exact amorce word backgrounds return as light grey `var(--sel)` with E-Ink 0.16 opacity. A title/source asset must never affect touch actions or Qur'an reading masks.
-8. Honor persisted Amorces OFF and default ON only when no saved preference; select key icon stays dark on light state. Validate the 23 immutable pictograms, brain/Parcours, `Std 3/4` vs honest `Manual day count`, compact home and all other 133 cases from the standard.
+## P0 — BOOX / interface
+1. Comparer les interfaces accueil, Lecture, Mémorisation libre, Parcours Hifz, Progression, Apprentissage, Stabilisation, Renforcement, Consolidation, Révisions, Réglages, Planning, sélection de programme et Tafsīr aux captures validées ; aucun redesign.
+2. Contrôler le surlignage gris clair **derrière les mots QCF exacts**, pas soulignement, ni rectangle massif ; Mushaf visuellement prioritaire.
+3. Le titre 11,5sp regular centré LTR, largeur max 480dp, SANS encadré, 3,2s ; ENTIÈREMENT au-dessus du haut réel de la barre des icônes avec un écart de 4dp minimum, en portrait et paysage, texte court/long, titres multiples.
+4. La nouvelle fenêtre démarre transparente puis devient visible **après** l'ancrage sur la barre mesurée ; pas de scintillement, de placement arbitraire ni de commandes recouvertes ; vérifier captures physiques BOOX si disponibles.
+5. Commandes et 23 icônes exacts, 13 principales + 10 secondaires, cerveau pour Parcours Hifz, pas de libellés sous pictogrammes et pas de cartes énormes.
 
-## P0 Hifz and persistence regression — prohibited changes
-- Compare `hifz-core`, `HifzPrefs`, `HifzSessionActivity`, `ConsolidationCycleEngine`, `WeeklyDashboardPlanner`, all 604 Mushaf pages, QCF geometry and 77,432 Quranic word boxes against approved frozen baseline and exact authorized deltas.
-- Validate Sabqi 5 physical lines/37 repetitions; Itqan pre-Nas two pages/four dates/40 repetitions, straddling page/surah boundaries, V6 atomic acquisition, current/next physical line, clock rollback, same date replay and process death; post-Nas maintenance and amorce masks; Renforcement/Consolidation new ×7 plus continuous older blocks; Sunday no generic active/passive revision; reappearance after validation; weekly Standard and Manual transitions; audio, settings, user ranges, no Quiz runtime, no learning regression.
-- Run independent protected-source checks, JVM tests and real Android instrumentation. Source CI success is not BOOX approval.
+## P0 — Moteurs, planification, état V6
+- Comparer à 1.17.1 et aux **deltas Itqān explicitement autorisés** seulement.
+- Sabqi et ligne physique, 37 répétitions, 3 jours standard ; Itqān avant Nās : 2 pages / 4 dates, 40 répétitions, transitions pages/sourates, masques, validation ; après Nās : entretien et amorces.
+- Stabilisation et reprise après fermeture, acquisition unique, éviter double crédit ; consolidation/réinforcement nouvel acquis ×7, ancien acquis continu ; éviter réapparition le lendemain après validation.
+- Révision active + planning réel, aucune révision active ni générale dimanche mais séances Itqān et validation finale conservées ; programme standard 3/4, programme manuel **uniquement** ce que le moteur autorise. Simuler 8 semaines, semaine retardée, modification de programme, frontières Itqān et réouverture de sessions.
+- Persistance V6, absence de perte d'acquis, restauration après arrêt de processus, rollback horaire, acquisitions/validations atomiques, séparation des profils et état des pages.
+- Vérifier l'absence de Quiz au runtime si telle est la direction gelée du HEAD, sans réintroduire l'ancien code.
 
-## Evidence and verdict
-- Deliver `WORK_AUDIT_VERDICT.md`: P0/P1/P2 table with PASS/FAIL/UNVERIFIED, source SHA, code line, reproducer, impact, mitigation, explicit GO/NO-GO. No unsupported "100%".
-- Deliver `IK_TITLE_EDITORIAL_REVIEW.csv` (one row for EACH 1,903 groups), `IK_RIGHTS_FINDINGS.md`, `BOOX_PIXEL_SCREENSHOTS/` (if available), `HIFZ_REGRESSION_MATRIX.csv`, `MANUAL_8WEEK_SIMULATION.csv`, `ICON_SHA_CHECK.csv` and `NO_SIDE_EFFECT_EVIDENCE.md`.
-- Any title/provenance/rights violation or loss/corruption of Hifz credit is **NO-GO**. If anything is unverified, state exactly what evidence is lacking and do NOT recommend unconditional debug delivery.
-- There must be NO audit commits, PRs, app edits, builds intended for user distribution or APK releases. The audit is the final independent gate AFTER all implementation commits.
+## Tests indépendants et preuves
+- Vérifier gel des moteurs : `bash scripts/guard_frozen_hifz_engines.sh`, puis exécuter tous les scripts de contrôle de source, les tests JVM `:hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest` et les tests Android instrumentés ; **ne pas assembler ni publier d'APK**.
+- Vérifier les résultats des CI à partir des runs du **même SHA**. Un vieux PASS n'est pas un PASS du HEAD.
+- Audit de navigation, titres avec annexe privée et sans, orientation, écran petit et BOOX, titres multiples, popup sans chevauchement et changement de page.
+- Produire `WORK_AUDIT_VERDICT.md`, `IBN_KATHIR_QURANCOM_REVIEW_FINAL.csv` (1 903 lignes), `MANUAL_8WEEK_SIMULATION.csv`, `ICON_SHA_CHECK.csv`, `HIFZ_REGRESSION_MATRIX.csv`, `NO_SIDE_EFFECT_EVIDENCE.md`, preuves de licences et captures adaptées.
 
-
-### Editorial override validated before Work — Al-Baqarah 2:1
-
-The source `2.json` commentary on exactly 2:1 includes the genuine heading **“The Discussion of the Individual Letters”** immediately after the Arabic `الم`; the generic initial paragraph about surah virtues must NOT be displayed as the verse-specific cue title. `IbnKathirOfflineTitles.java` now explicitly overrides that one group, and Android instrumentation checks the exact wording and measured placement. All other extracted candidates remain provisional pending Work audit. Source SHA: `eb82bb6294efe30ad5c135c03b1864afaa70e855`.
+## Verdict
+- **NO-GO si P0** ou régression de progression, titres erronés présentés comme originaux, source/coordinate corrompue, ou droits bloquants pour l'usage visé.
+- Classer chaque anomalie P0/P1/P2, fichier/ligne, scénario de reproduction et correction exacte.
+- Ne déclarer GO que pour le **HEAD figé** et pour un **paquet privé identifié par son SHA**, jamais GO générique.
+- Work ne doit PAS faire de commit, ouvrir de PR, modifier le dépôt, construire un debug, ni produire une release.
+- Toute correction après Work => nouveau HEAD, tests relancés et relecture indépendante avant un **unique debug** distinct des précédents.
