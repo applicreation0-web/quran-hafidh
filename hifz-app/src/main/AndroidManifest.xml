@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Quiz only: optional local self-recording, never uploaded, no speech recognition. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
         android:allowBackup="false"
@@ -15,10 +13,6 @@
         <activity android:name=".WeakVersesActivity" android:exported="false" />
         <activity android:name=".ProgressMapActivity" android:exported="false" />
         <activity android:name=".IbnKathirMapActivity" android:exported="false" />
-        <activity
-            android:name=".QuizActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|fontScale" />
         <activity
             android:name=".HifzSessionActivity"
             android:exported="false"

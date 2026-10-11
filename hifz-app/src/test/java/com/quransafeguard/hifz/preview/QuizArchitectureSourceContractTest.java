@@ -67,16 +67,13 @@ public final class QuizArchitectureSourceContractTest {
         assertTrue(corpus.contains("!eligibleSet.contains(previous)"));
     }
 
-    @Test public void freeQuizIsASeparateHomeEntryAndManifestOnlyAddsMicrophonePermission() throws Exception {
+    @Test public void retiredQuizIsAbsentFromHomeAndAndroidManifest() throws Exception {
         String home = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         String manifest = read("hifz-app/src/main/AndroidManifest.xml");
-        assertTrue(home.contains("homeNavLine(root, \"Quiz\", v -> startActivity(new Intent(this, QuizActivity.class)));")
-            || home.contains("navLine(root, \"Quiz\", \"\", v -> startActivity(new Intent(this, QuizActivity.class)));"));
-        assertTrue(home.contains("new Intent(this, QuizActivity.class)"));
-        assertTrue(manifest.contains("android.permission.RECORD_AUDIO"));
-        assertFalse(manifest.contains("WRITE_EXTERNAL_STORAGE"));
-        assertFalse(manifest.contains("READ_EXTERNAL_STORAGE"));
-        assertTrue(manifest.contains("android:name=\".QuizActivity\""));
+        assertFalse(home.contains("new Intent(this, QuizActivity.class)"));
+        assertFalse(home.contains("homeNavLine(root, \"Quiz\""));
+        assertFalse(manifest.contains("android:name=\".QuizActivity\""));
+        assertFalse(manifest.contains("android.permission.RECORD_AUDIO"));
     }
 
     @Test public void quizHistoryIsSeparateAndBounded() throws Exception {

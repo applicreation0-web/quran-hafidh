@@ -164,7 +164,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         readerActions.setMinimumHeight(Ui.dp(this, 48));
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
-        readerActions.addView(Ui.iconButton(this, "", "Carte", v -> openIbnKathirMap()));
         semanticButton = Ui.iconButton(this, "", "Afficher les amorces", v -> toggleSemanticCues());
         semanticButton.setVisibility(ibnKathirCues!=null&&ibnKathirCues.isAvailable()?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
@@ -270,18 +269,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return button;
     }
 
-    private void openIbnKathirMap() {
-        // A temporary Mushaf consultation returns to its existing Carte, never nests another one.
-        if (mapPreview) { finish(); return; }
-        int currentSurah = selected != null ? selected.getSurah()
-            : (geometry == null ? 1 : geometry.firstSurahOnPage(page));
-        int currentAyah = selected == null ? 1 : selected.getAyah();
-        Intent map = new Intent(this, IbnKathirMapActivity.class);
-        map.putExtra(IbnKathirMapActivity.EXTRA_SURAH, currentSurah);
-        map.putExtra(IbnKathirMapActivity.EXTRA_AYAH, currentAyah);
-        startActivity(map);
-    }
-
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
@@ -320,24 +307,25 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         IbnKathirGroupIndex.Group group=recitationStarts.groupForId(passageId);
         if(group==null)return;
         if(semanticTitleDialog!=null)semanticTitleDialog.dismiss();
+        // Mushaf-first: a cue tap opens its original English title in place.
+        // No passages list, semantic map, browser or network dependency.
+        String[] titles=IbnKathirQuranComSource.verifiedQafHeadings(group);
+        StringBuilder body=new StringBuilder();
+        if(titles.length==0) {
+            body.append("Titre anglais original non encore vérifié pour ce passage. ");
+            body.append("Les repères QCF identifient une frontière documentaire, ");
+            body.append("pas une amorce mnémotechnique validée.");
+        } else {
+            for(int i=0;i<titles.length;i++) {
+                if(i>0)body.append("\n\n");
+                body.append(titles[i]);
+            }
+        }
+        body.append("\n\nIbn Kathīr · ").append(group.navigationRange());
         semanticTitleDialog=new android.app.AlertDialog.Builder(this)
-            .setTitle("Départ Ibn Kathīr · "+group.navigationRange())
-            .setMessage("Amorce mécanique : les deux premiers mots coraniques du groupe Ibn Kathīr, ou le seul mot disponible.")
-            .setPositiveButton("Lire Ibn Kathīr",(dialog,which)->{
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW,
-                        android.net.Uri.parse(IbnKathirQuranComSource.urlForGroup(group))));
-                } catch(android.content.ActivityNotFoundException missing) {
-                    Toast.makeText(this,"Navigateur indisponible.",Toast.LENGTH_LONG).show();
-                }
-            })
-            .setNeutralButton("Carte",(dialog,which)->{
-                Intent map=new Intent(this,IbnKathirMapActivity.class);
-                map.putExtra(IbnKathirMapActivity.EXTRA_SURAH,group.surah);
-                map.putExtra(IbnKathirMapActivity.EXTRA_AYAH,group.startAyah);
-                startActivity(map);
-            })
-            .setNegativeButton("Fermer",(dialog,which)->dialog.dismiss())
+            .setTitle("Amorce · Ibn Kathīr")
+            .setMessage(body.toString())
+            .setPositiveButton("Fermer",(d,w)->d.dismiss())
             .create();
         semanticTitleDialog.show();
     }
@@ -366,8 +354,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void updateSemanticButton() {
         if (semanticButton == null) return;
         semanticButton.setSelected(semanticCuesEnabled);
-        String description=semanticCuesEnabled?"Masquer les départs Ibn Kathīr"
-            :"Afficher les départs Ibn Kathīr";
+        String description=semanticCuesEnabled?"Masquer les amorces"
+            :"Afficher les amorces";
         Ui.setIconDescription(semanticButton,description);
         int icon=Ui.iconFor(semanticCuesEnabled?"Masquer les amorces":"Afficher les amorces","");
         if (icon != 0) Ui.setButtonIcon(semanticButton, icon);

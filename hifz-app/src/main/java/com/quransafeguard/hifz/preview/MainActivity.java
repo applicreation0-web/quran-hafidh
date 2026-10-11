@@ -86,13 +86,10 @@ public final class MainActivity extends android.app.Activity {
 
         LinearLayout study = homeNavLine(root, "Lecture", v -> startActivity(new Intent(this, StudyReaderActivity.class)));
         LinearLayout free = homeNavLine(root, "Mémorisation libre", v -> startActivity(new Intent(this, FreeMemActivity.class)));
-        // Révision works memory; Quiz only questions it — free, read-only on Progression.
-        LinearLayout quiz = homeNavLine(root, "Quiz", v -> startActivity(new Intent(this, QuizActivity.class)));
         LinearLayout parcours = homeNavLine(root, "Parcours Hifz", v -> showParcours());
         LinearLayout progress = homeNavLine(root, "Progression", v -> startActivity(new Intent(this, ProgressMapActivity.class)));
         geometryActions.add(study);
         geometryActions.add(free);
-        geometryActions.add(quiz);
         geometryActions.add(progress);
 
         // --- Parcours Hifz: the five paths, one line each, then this week.
