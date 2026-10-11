@@ -2,10 +2,8 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.os.Build;
-import android.view.WindowInsets;
+import android.graphics.Point;
 import android.view.View;
-import android.graphics.Color;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -24,6 +22,29 @@ final class SemanticTitlePopup {
     /** Same bottom-anchored, non-dimming Al-Munir title sheet, English typography. */
     static Dialog showEnglish(Activity activity,String title,Dialog previous) {
         return create(activity,title,previous,false);
+    }
+
+    /** Match Al-Munir: the ENTIRE heading sheet ends above the real
+     * reader icon row, including on BOOX with non-standard system insets.
+     * Measuring the toolbar's screen Y is safer than guessing its height. */
+    static void positionAboveIcons(Activity activity, Dialog dialog, View iconRow) {
+        if(activity==null||dialog==null||!dialog.isShowing()||iconRow==null)return;
+        Window window=dialog.getWindow();
+        if(window==null)return;
+        if(!iconRow.isShown()||iconRow.getHeight()<=0) {
+            iconRow.post(() -> positionAboveIcons(activity,dialog,iconRow));
+            return;
+        }
+        int[] iconTop=new int[2];
+        iconRow.getLocationOnScreen(iconTop);
+        Point realScreen=new Point();
+        activity.getWindowManager().getDefaultDisplay().getRealSize(realScreen);
+        // The window bottom is never below the physical screen bottom; using
+        // that upper bound cannot let the popup overlap the icon row.
+        int gap=Ui.dp(activity, 10);
+        WindowManager.LayoutParams attrs=window.getAttributes();
+        attrs.y=Math.max(Ui.dp(activity, 8),realScreen.y-iconTop[1]+gap);
+        window.setAttributes(attrs);
     }
 
     private static Dialog create(Activity activity,String title,Dialog previous,boolean arabic) {
@@ -61,19 +82,10 @@ final class SemanticTitlePopup {
             window.setBackgroundDrawableResource(android.R.color.transparent);
             int max = Math.min(activity.getResources().getDisplayMetrics().widthPixels
                 - Ui.dp(activity, 28), Ui.dp(activity, 480));
-            // Gravity.BOTTOM alone places the sheet behind navigation controls
-            // on some BOOX/Android configurations. Lift it above the reader's
-            // two compact control rows AND the actual system navigation inset.
-            int bottomInset=0;
-            View decor=activity.getWindow().getDecorView();
-            WindowInsets insets=decor.getRootWindowInsets();
-            if(insets!=null) {
-                if(Build.VERSION.SDK_INT>=30)
-                    bottomInset=insets.getInsets(WindowInsets.Type.navigationBars()).bottom;
-                else bottomInset=insets.getStableInsetBottom();
-            }
+            // Safe initial position until the actual reader toolbar is measured.
+            // The final placement is calculated from that toolbar, not a 68dp guess.
             WindowManager.LayoutParams attrs=window.getAttributes();
-            attrs.y=bottomInset+Ui.dp(activity, 68);
+            attrs.y=Ui.dp(activity, 140);
             window.setAttributes(attrs);
             window.setLayout(Math.max(Ui.dp(activity, 160), max),
                 ViewGroup.LayoutParams.WRAP_CONTENT);
