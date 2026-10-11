@@ -63,14 +63,20 @@ final class ItqanRegimeStore {
      *  initialTailCompleted=false never clears a true already on disk. */
     static boolean saveRotationState(SharedPreferences p, ItqanRotationPolicy.State state) {
         if (state == null) throw new IllegalArgumentException("state required");
-        boolean everCompleted = p.getBoolean(INITIAL_TAIL_COMPLETED, false)
-            || p.getBoolean(LEGACY_INITIAL_TAIL_COMPLETED, false);
-        ItqanRotationPolicy.State latched = ItqanRotationPolicy.latched(state, everCompleted);
-        return p.edit()
-            .putString(LEG, latched.leg.name())
-            .putString(CURSOR, latched.cursor.toString())
-            .putBoolean(INITIAL_TAIL_COMPLETED, latched.initialTailCompleted)
-            .commit();
+        return appendRotationState(p,p.edit(),state).commit();
+    }
+
+    /** Add leg, cursor and irreversible An-Nas latch to an existing V6 editor.
+     * Never commit these keys after crediting a block in a separate edit. */
+    static SharedPreferences.Editor appendRotationState(SharedPreferences p,
+            SharedPreferences.Editor e,ItqanRotationPolicy.State state) {
+        if(p==null||e==null||state==null)throw new IllegalArgumentException("rotation required");
+        boolean everCompleted=p.getBoolean(INITIAL_TAIL_COMPLETED,false)
+            ||p.getBoolean(LEGACY_INITIAL_TAIL_COMPLETED,false);
+        ItqanRotationPolicy.State latched=ItqanRotationPolicy.latched(state,everCompleted);
+        return e.putString(LEG,latched.leg.name())
+            .putString(CURSOR,latched.cursor.toString())
+            .putBoolean(INITIAL_TAIL_COMPLETED,latched.initialTailCompleted);
     }
 
     static boolean postNasMaintenance(SharedPreferences p) {
