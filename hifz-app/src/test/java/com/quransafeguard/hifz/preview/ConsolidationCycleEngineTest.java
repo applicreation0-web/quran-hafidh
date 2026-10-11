@@ -48,6 +48,32 @@ public final class ConsolidationCycleEngineTest {
         }
     }
 
+    @Test public void compositeStabilizationAllowsThirtyNewBlocksAndOneOldContinuous() {
+        ConsolidationCycleEngine engine=new ConsolidationCycleEngine();
+        ConsolidationCycleEngine.Cycle cycle=engine.startCycle("composite-week",
+            ConsolidationCycleEngine.Family.STABILIZATION,
+            new ConsolidationCycleEngine.Unit("old",
+                ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS));
+        for(int i=0;i<30;i++)
+            cycle=engine.addUnit(cycle,new ConsolidationCycleEngine.Unit(
+                "new-"+i,ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+        ConsolidationCycleEngine.Session session=engine.openSession(cycle,"x7-every-new");
+        assertEquals(31,session.sessionGroupSize());
+        int repetitions=0;
+        while(!session.readyToClose()) {
+            session=engine.recordRepetition(session);
+            repetitions++;
+        }
+        assertEquals(1+30*7,repetitions);
+        assertTrue(session.readyToClose());
+        try {
+            engine.addUnit(engine.closeSession(session).cycle(),
+                new ConsolidationCycleEngine.Unit("overflow",
+                    ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN));
+            fail("Composite stabilization must cap at 30 new blocks plus continuous");
+        }catch(IllegalStateException expected){}
+    }
+
     @Test public void snowballProtocolsAreValidForBothFamilies() {
         ConsolidationCycleEngine engine = new ConsolidationCycleEngine();
         engine.startCycle("learning-snowball", ConsolidationCycleEngine.Family.LEARNING,

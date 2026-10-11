@@ -48,6 +48,38 @@ public final class EarnedEveningProtocolRegressionTest {
    HifzPrefs.ProgressionSnapshot snapshot=p.progressionSnapshotV6();
    for(String id:ids)assertFalse("Premature Acquis: "+id,snapshot.acquired.contains(id));
  }
+ @Test public void compositeItqanEveningEarnsEveryNewSevenTimeReceipt() {
+   InMemoryPrefs db=disk();
+   List<String> ids=geometry.lineIdsOnPage(603);
+   String earned=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+       Collections.singletonList(ids.get(0)));
+   String newA=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+       Collections.singletonList(ids.get(1)));
+   String newB=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
+       Collections.singletonList(ids.get(2)));
+   db.disk.put("stabilizationSnowballWeekAnchor","2026-10-12");
+   db.disk.put("stabilizationSnowballUnitIds",
+       new org.json.JSONArray().put(earned).put(newA).put(newB).toString());
+   db.disk.put("v6StabilizationEarnedEveningUnitsV1",
+       new org.json.JSONArray().put(earned).toString());
+   HifzPrefs p=new HifzPrefs(db);
+   LocalDate day=LocalDate.of(2026,10,13);
+   List<ConsolidationCycleEngine.Unit> cycle=p.stabilizedConsolidationUnits(day);
+   assertEquals(3,cycle.size());
+   assertEquals(ConsolidationCycleEngine.Protocol.SNOWBALL_CONTINUOUS,cycle.get(0).protocol());
+   for(int i=1;i<3;i++)assertEquals(
+       ConsolidationCycleEngine.Protocol.SNOWBALL_STABILIZATION_SEVEN,cycle.get(i).protocol());
+   ConsolidationCycleEngine.Session session=ready(ConsolidationCycleEngine.Family.STABILIZATION,
+       "stabilization-"+day,cycle);
+   assertTrue(p.persistConsolidationSession(session));
+   assertTrue(p.completeSnowballEvening(
+       ConsolidationCycleEngine.Family.STABILIZATION,day.toString(),session));
+   org.json.JSONArray receipts=new org.json.JSONArray(
+       db.getString("v6StabilizationEarnedEveningUnitsV1","[]"));
+   assertEquals(3,receipts.length());
+   assertTrue(p.stabilizedConsolidationUnits(day).isEmpty());
+   assertFalse(p.snowballEveningPending(ConsolidationCycleEngine.Family.STABILIZATION,day));
+ }
  @Test public void missedStabilizationEveningNeverPromotesDespiteFinalRepetitions(){
    InMemoryPrefs db=disk();
    HifzPrefs p=new HifzPrefs(db);
