@@ -82,11 +82,10 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertEquals(naturalMaintenanceCursor, prefs.murajaahCursor());
     }
 
-    @Test public void consolidationAttendanceIsPersistedAtCompletionWithoutDashboardNavigation() {
+    @Test public void legacyConsolidationAttendanceRemainsReadableSortedAndDeduplicated() {
+        assertTrue(raw.edit().putString("consolidationAttendanceDates",
+            "[\"2026-01-11\",\"2026-01-04\",\"2026-01-04\"]").commit());
         HifzPrefs prefs = new HifzPrefs(context);
-        assertTrue(prefs.completeRecentSabqiReview("2026-01-04", 0, "Consolidation"));
-        assertTrue(prefs.completeRecentSabqiReview("2026-01-04", 0, "Consolidation reprise"));
-        assertTrue(prefs.completeRecentSabqiReview("2026-01-11", 0, "Consolidation"));
 
         assertEquals(2, prefs.consolidationAttendanceDates().size());
         assertEquals(LocalDate.of(2026, 1, 4), prefs.consolidationAttendanceDates().get(0));
@@ -127,7 +126,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(raw.getBoolean("anchoringQueueInitialized", false));
     }
 
-    @Test public void failedAnchoringAtomicallyClearsElapsedAndSinglePageDoesNotImmediateLoop() {
+    @Test public void singlePageFailurePolicyDefersWithoutImmediateReplay() {
         HifzPrefs prefs = new HifzPrefs(context);
         String one = "[{\"start\":\"49:1\",\"end\":\"49:5\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]";
         raw.edit()
@@ -137,9 +136,10 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
             .putLong("itqanElapsedMs", 55_000L)
             .commit();
 
-        assertTrue(prefs.failAndDeferAnchoring(new VerseRef(49, 1), new VerseRef(49, 5)));
-        assertEquals(0L, prefs.elapsedFor("ITQAN"));
-        assertNull(prefs.currentAnchoringEntry(GeometryRepository.get(context)));
+        AnchoringQueue.Deferral deferred = AnchoringQueue.failAndDefer(prefs.anchoringQueue(), 0, 3);
+        assertEquals(-1, deferred.nextIndex);
+        assertEquals(1, deferred.entries.size());
+        assertEquals(1, deferred.entries.get(0).failures);
     }
 
     @Test public void completedAnchoringEntryMissingFromQueueFailsClosed() {

@@ -60,7 +60,7 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
         assertEquals(13, unit.lineIds.size());
         assertArrayEquals(new int[]{5, 4, 4}, PreviewConfig.fractionatedBlockSizes(unit.lineIds.size()));
         assertTrue(prefs.setHardAnchoringSurahs(Collections.singletonList(53)));
-        assertTrue(prefs.isFractionatedUnit(unit.verses));
+        assertTrue(HifzPrefs.containsHardAnchoringSurah(prefs.hardAnchoringSurahs(), unit.verses));
 
         assertTrue(prefs.setItqanProgress(35, 7, 2, unit.start, unit.end));
         assertTrue(prefs.advanceItqanBlock(1, "2026-09-13", "bloc 1/3"));

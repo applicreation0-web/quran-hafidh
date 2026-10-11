@@ -58,36 +58,29 @@ public final class HifzV6StateTransitionsInstrumentedTest {
         HifzPrefs prefs = new HifzPrefs(context);
         String line = geometry.line(0).id;
 
-        assertEquals(HifzPrefs.ProgressState.NONE, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.LEARNING, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.NONE, progressState(prefs, line));
         assertExclusive(line, false, false, false);
 
         prefs.transitionV6Lines(Arrays.asList(line), HifzPrefs.ProgressEvent.LEARNING_COMPLETED);
-        assertEquals(HifzPrefs.ProgressState.LEARNED, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.STABILIZATION, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.LEARNED, progressState(prefs, line));
         assertExclusive(line, true, false, false);
 
         prefs = new HifzPrefs(context);
-        assertEquals(HifzPrefs.ProgressState.LEARNED, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.STABILIZATION, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.LEARNED, progressState(prefs, line));
 
         prefs.transitionV6Lines(Arrays.asList(line), HifzPrefs.ProgressEvent.STABILIZATION_COMPLETED);
-        assertEquals(HifzPrefs.ProgressState.STABILIZED, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.CONSOLIDATION, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.STABILIZED, progressState(prefs, line));
         assertExclusive(line, false, true, false);
 
         prefs = new HifzPrefs(context);
-        assertEquals(HifzPrefs.ProgressState.STABILIZED, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.CONSOLIDATION, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.STABILIZED, progressState(prefs, line));
 
         prefs.transitionV6Lines(Arrays.asList(line), HifzPrefs.ProgressEvent.CONSOLIDATION_COMPLETED);
-        assertEquals(HifzPrefs.ProgressState.ACQUIRED, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.REVIEW, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.ACQUIRED, progressState(prefs, line));
         assertExclusive(line, false, false, true);
 
         prefs = new HifzPrefs(context);
-        assertEquals(HifzPrefs.ProgressState.ACQUIRED, prefs.progressStateV6(line));
-        assertEquals(HifzPrefs.ProgressAction.REVIEW, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.ACQUIRED, progressState(prefs, line));
         assertExclusive(line, false, false, true);
     }
 
@@ -130,7 +123,7 @@ public final class HifzV6StateTransitionsInstrumentedTest {
         prefs.transitionV6Lines(Arrays.asList(line), HifzPrefs.ProgressEvent.STABILIZATION_COMPLETED);
         prefs.transitionV6Lines(Arrays.asList(line), HifzPrefs.ProgressEvent.CONSOLIDATION_COMPLETED);
         assertExclusive(line, false, false, true);
-        assertEquals(HifzPrefs.ProgressAction.REVIEW, prefs.nextActionV6(line));
+        assertEquals(HifzPrefs.ProgressState.ACQUIRED, progressState(prefs, line));
     }
 
     @Test public void transitionsTouchOnlyCanonicalStateSetsNotJ10CursorsOrHistoricalCounters() throws Exception {
@@ -172,6 +165,14 @@ public final class HifzV6StateTransitionsInstrumentedTest {
         assertEquals(acquired, stringSet(ACQUIRED).contains(line));
         int memberships = (learned ? 1 : 0) + (stabilized ? 1 : 0) + (acquired ? 1 : 0);
         assertTrue("line must have at most one canonical persisted state", memberships <= 1);
+    }
+
+    private static HifzPrefs.ProgressState progressState(HifzPrefs prefs, String line) {
+        HifzPrefs.ProgressionSnapshot snapshot = prefs.progressionSnapshotV6();
+        if (snapshot.acquired.contains(line)) return HifzPrefs.ProgressState.ACQUIRED;
+        if (snapshot.stabilized.contains(line)) return HifzPrefs.ProgressState.STABILIZED;
+        if (snapshot.learned.contains(line)) return HifzPrefs.ProgressState.LEARNED;
+        return HifzPrefs.ProgressState.NONE;
     }
 
     private java.util.LinkedHashSet<String> stringSet(String key) throws Exception {

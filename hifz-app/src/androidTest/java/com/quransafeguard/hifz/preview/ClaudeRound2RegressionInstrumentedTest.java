@@ -50,7 +50,7 @@ public final class ClaudeRound2RegressionInstrumentedTest {
 
     @Test public void ownerlessStabilizationRangeDoesNotCrashHomeOrPoisonQueue() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
-        prefs.setProgramStartDate(HifzClock.today());
+        assertTrue(main.edit().putString("programStartDate", HifzClock.today().toString()).commit());
         assertTrue(CorpusLinePolicy.ownedLineIdsForRangeOnPage(
             new VerseRef(53, 2), new VerseRef(53, 2), geometry).isEmpty());
         assertTrue(main.edit()
@@ -66,12 +66,12 @@ public final class ClaudeRound2RegressionInstrumentedTest {
         }
         HifzPrefs reloaded = new HifzPrefs(context);
         assertTrue("Ownerless verse must not remain in the Stabilisation queue", reloaded.anchoringQueue().isEmpty());
-        assertTrue(reloaded.stabilizedConsolidationUnits(geometry, 3).isEmpty());
+        assertTrue(reloaded.stabilizedConsolidationUnits(HifzClock.today()).isEmpty());
     }
 
     @Test public void completedConsolidationTodayYieldsBackToScheduledCadence() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
-        prefs.setProgramStartDate(HifzClock.today());
+        assertTrue(main.edit().putString("programStartDate", HifzClock.today().toString()).commit());
         List<String> stabilized = new ArrayList<>();
         for (GeometryRepository.LineMeta line : pageLines(48)) stabilized.add(line.id);
         assertTrue(main.edit()

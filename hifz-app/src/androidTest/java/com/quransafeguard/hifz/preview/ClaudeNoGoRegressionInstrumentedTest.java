@@ -54,21 +54,16 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
 
     @Test public void homeTodayOpensProgressionTriggeredConsolidation() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
-        prefs.setProgramStartDate(HifzClock.today());
+        assertTrue(main.edit().putString("programStartDate", HifzClock.today().toString()).commit());
         List<GeometryRepository.LineMeta> page = pageLines(48);
         List<StabilizationHalfPagePolicy.Unit> units = StabilizationHalfPagePolicy.planPage(page);
         assertEquals(2, units.size());
         List<String> stabilized = units.get(0).lineIds;
 
-        assertTrue(main.edit()
-            .putString("anchoringQueue", "[{\"start\":\"2:282\",\"end\":\"2:282\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]")
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", 0)
-            .putString("v6StabilizedLineIds", json(stabilized))
-            .putString("v6AcquiredCreditLineIds", "[]")
-            .putString("v6LegacyPartialAcquiredLineIds", "[]")
-            .putString("v6QuarantineLineIds", "[]")
-            .commit());
+        assertTrue(prefs.completeStabilizationBlockV6(
+            stabilized, 1, true,
+            new VerseRef(2, 282), new VerseRef(2, 282), new VerseRef(2, 283),
+            HifzClock.today().toString(), "device consolidation fixture", Collections.emptyList()));
 
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
@@ -121,20 +116,20 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
 
         for (int i = 0; i < 10; i++) {
             assertEquals("legacy validated five-line work must become Stabilized",
-                HifzPrefs.ProgressState.STABILIZED, prefs.progressStateV6(page.get(i).id));
+                HifzPrefs.ProgressState.STABILIZED, progressState(prefs, page.get(i).id));
         }
         for (int i = 10; i < 15; i++) {
             assertEquals("unvalidated tail must remain Learned",
-                HifzPrefs.ProgressState.LEARNED, prefs.progressStateV6(page.get(i).id));
+                HifzPrefs.ProgressState.LEARNED, progressState(prefs, page.get(i).id));
         }
         assertEquals("new 7+8 plan must resume on its first incomplete unit", 1, prefs.itqanBlockIndex());
 
         assertTrue(prefs.completeStabilizationBlockV6(
             units.get(1).lineIds, 2, true,
             new VerseRef(54, 7), new VerseRef(54, 27), null,
-            "2026-09-16", "migration regression"));
+            "2026-09-16", "migration regression", Collections.emptyList()));
         for (GeometryRepository.LineMeta line : page) {
-            assertEquals(HifzPrefs.ProgressState.STABILIZED, prefs.progressStateV6(line.id));
+            assertEquals(HifzPrefs.ProgressState.STABILIZED, progressState(prefs, line.id));
         }
     }
 
@@ -145,17 +140,17 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         for (int i = 7; i <= 14; i++) stabilized.add(page11.get(i).id);
         String previousOwnerSharedLine = page11.get(6).id;
 
-        assertTrue(main.edit()
-            .putString("anchoringQueue", "[{\"start\":\"2:74\",\"end\":\"2:76\",\"origin\":\"RECONSTRUCTION\",\"protocol\":\"LIGHT\",\"failures\":0}]")
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", 0)
-            .putString("v6StabilizedLineIds", json(stabilized))
-            .putString("v6AcquiredCreditLineIds", json(Collections.singletonList(previousOwnerSharedLine)))
-            .putString("v6LegacyPartialAcquiredLineIds", "[]")
-            .putString("v6QuarantineLineIds", "[]")
-            .commit());
+        List<GeometryRepository.LineMeta> owned = geometry.linesForExactIds(stabilized);
+        VerseRef first = owned.get(0).verses.get(0);
+        List<VerseRef> lastOwners = owned.get(owned.size() - 1).verses;
+        VerseRef last = lastOwners.get(lastOwners.size() - 1);
+        assertTrue(prefs.completeStabilizationBlockV6(
+            stabilized, 1, true, first, last, last,
+            HifzClock.today().toString(), "device boundary fixture", Collections.emptyList()));
+        assertTrue(main.edit().putString("v6AcquiredCreditLineIds",
+            json(Collections.singletonList(previousOwnerSharedLine))).commit());
 
-        List<ConsolidationCycleEngine.Unit> ready = prefs.stabilizedConsolidationUnits(geometry, 3);
+        List<ConsolidationCycleEngine.Unit> ready = prefs.stabilizedConsolidationUnits(HifzClock.today());
         assertEquals(1, ready.size());
         assertEquals(stabilized,
             ConsolidationPhysicalUnitPolicy.decodeLineUnit(ready.get(0).id()));
@@ -198,6 +193,14 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
             if (line.page == page) out.add(line);
         }
         return out;
+    }
+
+    private static HifzPrefs.ProgressState progressState(HifzPrefs prefs, String line) {
+        HifzPrefs.ProgressionSnapshot snapshot = prefs.progressionSnapshotV6();
+        if (snapshot.acquired.contains(line)) return HifzPrefs.ProgressState.ACQUIRED;
+        if (snapshot.stabilized.contains(line)) return HifzPrefs.ProgressState.STABILIZED;
+        if (snapshot.learned.contains(line)) return HifzPrefs.ProgressState.LEARNED;
+        return HifzPrefs.ProgressState.NONE;
     }
 
     private static View findByContentDescription(View root, String wanted) {
