@@ -42,10 +42,13 @@ store_test=(ROOT/'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ItqanFo
 for tag in ('static final String KEY=', 'ItqanFourSessionSnapshot.decode(raw,geo)',
             'Finish existing legacy Itqan before new window',
             'if(stored==null||!stored.encode().equals(expected.encode()))return false',
-            'p.edit().putString(KEY,next.encode()).putInt("itqanRep",next.reps).commit()'):
+            '.putInt("itqanAssisted",assisted)',
+            '.putInt("itqanFinalReveals",finalReveals).commit()',
+            'ItqanMaintenancePolicy.isValidationRep('):
     assert tag in store,"Missing crash-safe snapshot store contract: "+tag
 for tag in ('frozenPlanSurvivesRestartAndRejectsStaleTap',
             'aFailedCommitLeavesTheEntireSnapshotAndRepUntouched',
+            'revealAssistanceAndRepetitionSaveAtomically',
             'existingOpenLegacySessionCannotBeOverwritten',
             'aBlockCannotAdvanceBeforeFortyRepetitions',
             'aCorruptSnapshotNeverResetsToCurrentGeometry'):

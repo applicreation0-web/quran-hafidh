@@ -50,6 +50,14 @@ final class ItqanFourSessionStore {
      * duplicate taps, stale screen references and process termination. */
     static boolean recordRep(SharedPreferences p,ItqanFourSessionSnapshot expected,
                              GeometryRepository geo) {
+        return recordRep(p,expected,geo,false);
+    }
+
+    /** Assistance is written with the SAME repetition transaction, never
+     * forgotten on process death. Only the final ×40 mask stages count toward
+     * final-reveal limits, mirroring the legacy FULL deep-first-pass engine. */
+    static boolean recordRep(SharedPreferences p,ItqanFourSessionSnapshot expected,
+                             GeometryRepository geo,boolean revealed) {
         if(p==null||expected==null||geo==null)throw new IllegalArgumentException("Itqan rep required");
         synchronized(p) {
             ItqanFourSessionSnapshot stored=read(p,geo);
@@ -59,7 +67,16 @@ final class ItqanFourSessionStore {
                 throw new IllegalStateException("No incomplete current Itqan block");
             ItqanFourSessionSnapshot next=stored.withProgress(stored.sessionIndex,
                 stored.blockIndex,stored.reps+1,geo);
-            return p.edit().putString(KEY,next.encode()).putInt("itqanRep",next.reps).commit();
+            int assisted=p.getInt("itqanAssisted",0)+(revealed?1:0);
+            int finalReveals=p.getInt("itqanFinalReveals",0);
+            if(revealed && ItqanMaintenancePolicy.isValidationRep(
+                    ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS,
+                    AnchoringQueue.ItqanProtocol.FULL,stored.reps))
+                finalReveals++;
+            return p.edit().putString(KEY,next.encode())
+                .putInt("itqanRep",next.reps)
+                .putInt("itqanAssisted",assisted)
+                .putInt("itqanFinalReveals",finalReveals).commit();
         }
     }
 

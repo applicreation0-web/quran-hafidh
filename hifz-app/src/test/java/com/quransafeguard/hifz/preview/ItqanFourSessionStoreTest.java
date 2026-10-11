@@ -40,6 +40,21 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(snap.fingerprint,reboot.fingerprint);
    assertEquals(1,db.getInt("itqanRep",0));
  }
+ @Test public void revealAssistanceAndRepetitionSaveAtomically() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();
+   ItqanFourSessionSnapshot snap=sample(db,520);
+   assertTrue(ItqanFourSessionStore.open(db,snap,geo));
+   db.failCommit=db.commits+1;
+   assertFalse(ItqanFourSessionStore.recordRep(db,snap,geo,true));
+   assertEquals(0,db.getInt("itqanAssisted",0));
+   assertEquals(0,db.getInt("itqanRep",0));
+   db.failCommit=-1;
+   assertTrue(ItqanFourSessionStore.recordRep(db,snap,geo,true));
+   assertEquals(1,db.getInt("itqanAssisted",0));
+   assertEquals(1,db.getInt("itqanRep",0));
+   assertFalse(ItqanFourSessionStore.recordRep(db,snap,geo,true));
+   assertEquals("Stale tap cannot add assistance",1,db.getInt("itqanAssisted",0));
+ }
  @Test public void aFailedCommitLeavesTheEntireSnapshotAndRepUntouched() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
    ItqanFourSessionSnapshot snap=sample(db,520);

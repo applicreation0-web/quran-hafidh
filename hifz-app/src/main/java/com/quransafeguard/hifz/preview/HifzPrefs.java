@@ -1673,8 +1673,11 @@ public final class HifzPrefs {
             synchronized(p) {
                 ItqanFourSessionSnapshot actual=ItqanFourSessionStore.read(p,geo);
                 if(actual==null||!actual.encode().equals(expected.encode()))return false;
-                if(actual.sessionIndex>=4||actual.reps!=40||itqanPostNasMaintenance())
-                    throw new IllegalStateException("Incomplete/deprecated Itqan window");
+                if(actual.sessionIndex>=4||actual.reps!=40||itqanPostNasMaintenance()
+                    ||p.getInt("itqanRep",-1)!=40
+                    ||!ItqanMaintenancePolicy.validationAllowed(
+                        ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS,p.getInt("itqanAssisted",0)))
+                    throw new IllegalStateException("Incomplete, assisted or deprecated Itqan window");
                 ItqanRotationPolicy.State rotation=itqanRotationState();
                 if(!rotation.leg.name().equals(actual.originLeg)
                     ||!rotation.cursor.toString().equals(actual.originCursor))
