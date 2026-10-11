@@ -746,28 +746,18 @@ function semanticExactRects(cue,svg){
 }
 
 function semanticCueRect(rect,cue){
-  // Thin line under the exact start-words, not a grey rectangle over Quranic
-  // calligraphy. Full transparent word hit-area keeps the original tap target.
-  const group=document.createElementNS(NS,'g');
-  const underline=document.createElementNS(NS,'line');
-  underline.setAttribute('x1',rect.x);
-  underline.setAttribute('x2',rect.x+rect.width);
-  underline.setAttribute('y1',rect.y+rect.height-0.75);
-  underline.setAttribute('y2',rect.y+rect.height-0.75);
-  underline.setAttribute('stroke','#524f49');
-  underline.setAttribute('stroke-width',eink?'0.8':'0.65');
-  underline.setAttribute('stroke-opacity','0.75');
-  underline.setAttribute('pointer-events','none');
-  const hit=document.createElementNS(NS,'rect');
-  hit.setAttribute('x',rect.x);hit.setAttribute('y',rect.y);
-  hit.setAttribute('width',rect.width);hit.setAttribute('height',rect.height);
-  hit.setAttribute('fill','transparent');
-  hit.setAttribute('stroke','none');
-  hit.setAttribute('pointer-events','all');
-  group.appendChild(underline);
-  group.appendChild(hit);
-  group.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
-  return group;
+  const el=document.createElementNS(NS,'rect');
+  el.setAttribute('x',rect.x);el.setAttribute('y',rect.y);
+  el.setAttribute('width',rect.width);el.setAttribute('height',rect.height);
+  el.setAttribute('rx','1.35');el.setAttribute('ry','1.35');
+  // User decision: a light grey highlight behind the amorce words — never over the glyphs as a
+  // pattern. Lighter than any reading-mask tile, and only ever drawn in Lecture (Révision
+  // active and post-An-Nās Itqān use the amorces as mask holes with highlighting disabled).
+  el.setAttribute('fill','var(--sel)');
+  el.setAttribute('fill-opacity',eink?'0.16':'0.10');
+  el.setAttribute('stroke','none');el.setAttribute('pointer-events','all');
+  el.onclick=event=>{event.stopPropagation();if(cue.id)N?.semanticCueTap?.(String(cue.id));};
+  return el;
 }
 
 function semanticCueLayer(svg){
