@@ -103,6 +103,7 @@ public final class QuizLaunchRegressionInstrumentedTest {
             check.questions(prefs.progressionSnapshotV6(),QuizCorpus.Mode.MIXED,10).isEmpty());
         try(ActivityScenario<QuizActivity> scenario=ActivityScenario.launch(QuizActivity.class)) {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-quiz-accueil.png");
             scenario.onActivity(activity->{
                 View start=findDescription(activity.findViewById(android.R.id.content),"Commencer");
                 assertNotNull(start);
@@ -116,6 +117,7 @@ public final class QuizLaunchRegressionInstrumentedTest {
                 assertTrue("First real question not shown",
                     activity.findViewById(android.R.id.content)!=null);
             });
+            HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-quiz-question.png");
         }
     }
 
