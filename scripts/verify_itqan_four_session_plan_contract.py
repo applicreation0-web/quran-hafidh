@@ -24,4 +24,17 @@ for contract in ('all604PagesAndEveryPairHaveExactFourWayCoverage',
  'oneLineNearNasYieldsThreeEmptySlotsWithoutJump',
  'sameLineTwiceRejected'):
     assert contract in test,'Missing adversarial planner regression: '+contract
-print('PASS: additive pure 2-page/4-slot future planner, NO live Hifz activation')
+snapshot=(APP/'ItqanFourSessionSnapshot.java').read_text(encoding='utf-8')
+snapshot_test=(ROOT/'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ItqanFourSessionSnapshotTest.java').read_text(encoding='utf-8')
+for tag in ('static final int VERSION=1;', 'static ItqanFourSessionSnapshot decode(', 
+ 'String encode()', 'originalTailCompleted', 'plan.sessions.size()!=4',
+ 'Corrupt frozen Itqan snapshot; do not replan', 'SHA-256'):
+    assert tag in snapshot,"Missing frozen 4-session snapshot contract: "+tag
+for tag in ('partiallyCompletedSnapshotPreservesExactSlotAndRep',
+ 'corruptLineIdentityIsNeverSilentlyRecomputed',
+ 'alteredProgressOutside40RepsMustFail'):
+    assert tag in snapshot_test,"Missing interrupted four-session regression: "+tag
+for forbidden in ('SharedPreferences', '.commit()', 'v6AcquiredCreditLineIds',
+                  'advanceItqanRotationPast(', 'lastItqanDate'):
+    assert forbidden not in snapshot,'Planning snapshot must have no live progression effects'
+print('PASS: pure 2-page plan + versioned frozen QCF snapshot with tamper and restart checks')
