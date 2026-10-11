@@ -9,12 +9,23 @@ Date : 11 octobre 2026. Dépôt : `applicreation0-web/quran-hafidh`. Branche exc
 - Aucun résultat JVM ou simple compilation APK ne peut se substituer à l'instrumentation Android.
 - **Deux workflows indépendants obligatoires, sur le même SHA que l'APK** : `Ibn Kathir Hifz + Quiz audit ONLY - no APK` et `Quiz launch Android runtime regression ONLY - no APK`. La porte logicielle `scripts/require_same_sha_ci.py` vérifie ces statuts et l'archive des captures (> 50 Ko) avant **toute compilation du debug publiable**.
 
+### Complément contradictoire — correctif du rendu Quiz 100 % (11 octobre)
+
+La première instrumentation Android avait laissé passer un défaut **plus grave qu'un crash** : avec une vraie page Appris (Mushaf 523), la question du Quiz ouvrait une page entièrement blanche. Un test adversarial compte les pixels de texte visibles. Résultat reproductible : **0 pixel noir avec le masque de question, 784 pixels sans masque, à page et QCF identiques**. Cela isole la cause dans les exclusions du masque Quiz, pas dans le corpus ou le texte arabe. Le premier APK « audit critique » sur `fdb50765` ne doit **pas** être réputé fonctionnel à ce titre.
+
+Une correction **strictement Quiz** a été appliquée : dans `hifz-app/src/main/assets/hifzreader/reader.js`, les rectangles de papier du Quiz sont découpés selon les boîtes coraniques `quran-ws` exactes des mots protégés (`cue.id === 'quiz-prompt'`). Les autres modes continuent d'emprunter leur mécanisme original de masquage. L'exception est verrouillée par `scripts/verify_authorized_quiz_reader_delta.py` contre la release officielle 1.17.1 (blob source `8a9611a8bbd0e5983f0f9ee4e98ddfd9484efa44`; blob autorisé `3dbac04861730d982da8a8f87c25a4415cb352dc`). Les classes `QuizActivity`, `QuizCorpus`, `QuizHistory`, `QuizQuestion`, `MushafView` et `hifz-core` demeurent octet-identiques à la 1.17.1. **Le JS lecteur n'est désormais plus identique** : ne jamais prétendre le contraire.
+
+**Porte de publication renforcée :** le test Android `learnedRealQuranPageMakesAQuizQuestionScreenNotCrash` échoue si la zone centrale de la question n'affiche pas réellement de texte coranique, même si `pageShown` est vrai. Le correctif ne devient acceptable qu'après cette épreuve réussie, revue visuelle et deux workflows verts sur le SHA exact de livraison.
+
+---
+
 ## B. Matrice 1.17.1 ↔ debug — ce qui est réellement inchangé
 
 | Famille | Comparaison Git source | Épreuve complémentaire |
 |---|---|---|
 | `hifz-core/src/main/` et cadence/horloge de base | **Identique** | `:hifz-core:test`; test `WeeklyProgramPolicyTest.classicDelegatesOriginalCanonicalCadenceWithoutChange` |
 | `MushafView.java`, `GeometryRepository.java`, `WordGeometryRepository.java` et QCF | **Identiques** | 604 pages, 77 432 mots, frontières de versets testées |
+| `hifzreader/reader.js` | **Exception Quiz-only approuvée et SHA-verrouillée**, non identique à la 1.17.1 | Test pixel Android réel obligatoire, autres modes inchangés par condition stricte |
 | Quiz `QuizActivity.java`, `QuizCorpus.java`, `QuizQuestion.java`, `QuizHistory.java` | **Identiques** | Questions `Appris ∪ Stabilisé ∪ Acquis`; lancement Android avec corpus vide puis vraie page 523 Appris |
 | `AnchoringQueue.java`, migrations V6, sauvegarde / restauration | **Identiques** | Tests de progression et de reprise; aucune migration des IDs coraniques |
 | `HifzPrefs.java`, `HifzSessionActivity.java` | **Modifiés, jamais assimilés à identiques** | Scripts `verify_authorized_program_preferences_delta.py`, `verify_authorized_hifz_session_delta.py` reconstituant les changements permis depuis 1.17.1 et comparant les fichiers complets octet à octet; tests J3-J7 |
@@ -66,7 +77,7 @@ Comparer au vrai prototype `work/islahi-prototype-p1-from-1-17-1`, fichiers `Isl
 ## E. Résultats, limites et publication
 
 - Source/JVM : voir le workflow `Ibn Kathir Hifz + Quiz audit ONLY - no APK` du HEAD livré.
-- Tests de l'émulateur Android : voir le workflow `Quiz launch Android runtime regression ONLY - no APK`, qui doit donner **OK (tests)** et téléverser des captures PNG (pas seulement un log texte).
+- Tests de l'émulateur Android : voir le workflow `Quiz launch Android runtime regression ONLY - no APK`, qui doit donner **OK (tests)**, prouver des **mots QCF réellement visibles** dans la question Quiz et téléverser des captures PNG (pas seulement un log texte).
 - Le workflow de debug exige les **DEUX conclusions SUCCESS du MÊME SHA et une archive réelle de captures** avant de lancer `assembleDebug`. Signature `apksigner`, identifiant `com.quransafeguard.hifz.ibnkathirtest`, ressources Mushaf et SHA-256 contrôlés après.
 - Les anciens tests instrumentés `androidTest` invoquant des APIs V6 supprimées de l'ancien dépôt ne compilent plus en totalité. L'exécution CI **isole les scénarios actuels sans supprimer ni réécrire les anciens fichiers dans Git**, et ce passif reste une dette d'audit. Le moteur `hifz-core` et la persistance doivent rester protégés.
 - **BOOX physique non certifié** : rémanence E-Ink, ressenti tactile, rafraîchissement, taille de la calligraphie, retour après veille, orientation paysage, vrais historiques privés et batterie ne sont pas reproduits par un émulateur Android. Un APK debug distinct du package officiel permet de les vérifier sans écraser les données de production.
