@@ -309,7 +309,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(semanticTitleDialog!=null)semanticTitleDialog.dismiss();
         // Mushaf-first: a cue tap opens its original English title in place.
         // No passages list, semantic map, browser or network dependency.
-        String[] titles=IbnKathirQuranComSource.verifiedQafHeadings(group);
+        String[] titles=IbnKathirOfflineTitles.verifiedHeadings(group);
         StringBuilder body=new StringBuilder();
         if(titles.length==0) {
             body.append("Titre anglais original non encore vérifié pour ce passage. ");

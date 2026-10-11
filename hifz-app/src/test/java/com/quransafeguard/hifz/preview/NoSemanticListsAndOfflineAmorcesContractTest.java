@@ -17,5 +17,6 @@ public final class NoSemanticListsAndOfflineAmorcesContractTest {
     assertTrue(s.contains("setTitle(\"Amorce · Ibn Kathīr\")"));
     assertTrue(s.contains("verifiedQafHeadings(group)"));
     assertFalse(s.contains("IbnKathirQuranComSource.urlForGroup(group)"));
+    assertFalse(s.contains("Intent.ACTION_VIEW"));
   }
 }
