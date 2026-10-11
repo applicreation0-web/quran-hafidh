@@ -20,6 +20,7 @@ while IFS= read -r file; do
   [ -n "$file" ] || continue
   case "$file" in
     # ONLY screen/UI and documentary adapters may be modified.
+    hifz-app/src/main/assets/hifzreader/reader.js | \
     "$APP_ROOT/HifzSessionActivity.java" | \
     "$APP_ROOT/HifzPrefs.java" | \
     "$APP_ROOT/ConsolidationCycleEngine.java" | \
@@ -53,6 +54,7 @@ if [ "$bad" -ne 0 ]; then
   exit 1
 fi
 
+python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py
