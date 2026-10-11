@@ -240,7 +240,7 @@ public final class MainActivity extends android.app.Activity {
         ImageView arrow=new ImageView(this);
         arrow.setImageResource(R.drawable.ic_ui_next);
         arrow.setColorFilter(Ui.INK);
-        arrow.setPadding(Ui.dp(this, 4), Ui.dp(this, 20), Ui.dp(this, 4), Ui.dp(this, 20));
+        arrow.setPadding(Ui.dp(this, 3), Ui.dp(this, 11), Ui.dp(this, 3), Ui.dp(this, 11));
         arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         line.addView(arrow, new LinearLayout.LayoutParams(Ui.dp(this, 30),
             ViewGroup.LayoutParams.MATCH_PARENT));
@@ -713,19 +713,20 @@ public final class MainActivity extends android.app.Activity {
         HifzPrefs.WeeklyProgram[] options={
             HifzPrefs.WeeklyProgram.MANUAL_SEVEN,HifzPrefs.WeeklyProgram.RECOMMENDED
         };
+        // "Manuel" selects only a NUMBER of days via Settings, not weekday positions.
         String[] labels={
-            "7 jours · Manuel : répartition choisie, dimanche Itqān + finales",
-            "7 jours · Recommandé : Sabqi lun/mer/ven, Itqān mar/jeu/sam/dim"
+            "Manuel · nombre de jours",
+            "Standard · 3 Sabqi / 4 Itqān"
         };
         int current=prefs.weeklyProgramMode()==options[1]?1:0;
         new android.app.AlertDialog.Builder(this)
-            .setTitle("Programme de cette semaine")
+            .setTitle("Programme hebdomadaire")
             .setSingleChoiceItems(labels,current,(dialog,which)->{
                 dialog.dismiss();
                 if(options[which]==prefs.weeklyProgramMode())return;
                 new android.app.AlertDialog.Builder(this)
                     .setTitle("Modifier le programme ?")
-                    .setMessage("Le changement s'applique dès aujourd'hui. Les séances antérieures, crédits Hifz et validations sont conservés. Horaires indicatifs dans Paramètres.")
+                    .setMessage("À partir d’aujourd’hui. Acquis et séances passées conservés. Manuel : régler le nombre de jours dans Paramètres ; dimanche Itqān et finales.")
                     .setNegativeButton("Annuler",null)
                     .setPositiveButton("Confirmer",(yes,button)->{
                         if(prefs.setWeeklyProgramMode(options[which])) refreshAll();
@@ -738,7 +739,8 @@ public final class MainActivity extends android.app.Activity {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
         if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
-            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN?"Manuel 7 jours":"Recommandé 7 jours")+" ▾");
+            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
+                ?"Manuel · jours configurables":"Standard · 3/4")+" ▾");
         TextView scheduleHours=Ui.text(this,"Matin "+prefs.suggestedMorningTime()+
             "  ·  Soir "+prefs.suggestedEveningTime(),11f,false);
         scheduleHours.setTextColor(Ui.MUTED);
