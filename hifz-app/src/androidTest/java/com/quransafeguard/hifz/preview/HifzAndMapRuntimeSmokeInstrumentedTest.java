@@ -50,37 +50,21 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
         }
     }
 
-    @Test public void ibnKathirMapMustShowFullBlockListThenSeparatePassageSheet() {
+    @Test public void readingOpensQcfWithNoSemanticPassageList() {
         Context context=ApplicationProvider.getApplicationContext();
-        Intent intent=new Intent(context,IbnKathirMapActivity.class)
-            .putExtra(IbnKathirMapActivity.EXTRA_SURAH,50)
-            .putExtra(IbnKathirMapActivity.EXTRA_AYAH,1);
-        try(ActivityScenario<IbnKathirMapActivity> scenario=ActivityScenario.launch(intent)) {
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        Intent intent=new Intent(context,StudyReaderActivity.class)
+            .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,518);
+        try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)) {
+            awaitMushafPage(scenario,"mushaf","Lecture Mushaf without lists");
             scenario.onActivity(activity->{
-                ListView groups=(ListView)reflect(activity,"groupsList");
-                View details=(View)reflect(activity,"detailPane");
-                assertEquals("Block list should own screen initially",View.VISIBLE,groups.getVisibility());
-                assertEquals("No oversized half-screen preview",View.GONE,details.getVisibility());
-                assertTrue("Qaf should have multiple Ibn Kathir passages",groups.getCount()>1);
-                groups.performItemClick(groups.getAdapter().getView(0,null,groups),0,groups.getAdapter().getItemId(0));
+                assertFalse("Reader must remain open",activity.isFinishing());
+                android.widget.LinearLayout actions=(android.widget.LinearLayout)reflect(activity,"readerActions");
+                for(int i=0;i<actions.getChildCount();i++) {
+                    CharSequence c=actions.getChildAt(i).getContentDescription();
+                    assertFalse("Passage-list Carte button still accessible",c!=null&&c.toString().equals("Carte"));
+                }
             });
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            scenario.onActivity(activity->{
-                ListView groups=(ListView)reflect(activity,"groupsList");
-                View details=(View)reflect(activity,"detailPane");
-                assertEquals(View.GONE,groups.getVisibility());
-                assertEquals(View.VISIBLE,details.getVisibility());
-                assertFalse(activity.isFinishing());
-            });
-            awaitMushafPage(scenario,"pagePreview","Ibn Kathir selected passage");
-            saveScreenshot("audit-ibn-kathir-passage.png");
-            scenario.onActivity(activity->{
-                ListView groups=(ListView)reflect(activity,"groupsList");
-                activity.onBackPressed();
-                assertEquals("Retour must restore the block list",View.VISIBLE,groups.getVisibility());
-            });
-            saveScreenshot("audit-ibn-kathir-liste.png");
+            saveScreenshot("audit-lecture-mushaf.png");
         }
     }
 

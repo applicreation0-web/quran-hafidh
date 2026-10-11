@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quran Haafidh 1.17.1: fail-closed real Android Quiz/Hifz/Map/BOOX UI audit.
+# Quran Haafidh 1.17.1: fail-closed real Android Hifz/Amorces/7-day UI audit.
 # Compiles app + test apk for emulator ONLY. No user data or release publishing.
 set -euo pipefail
 
@@ -14,7 +14,7 @@ adb install -r "${test_apks[0]}"
 
 set +e
 adb shell am instrument -w -r \
-  -e class 'com.quransafeguard.hifz.preview.QuizLaunchRegressionInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest' \
+  -e class 'com.quransafeguard.hifz.preview.ReaderSevenDayRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest' \
   'com.quransafeguard.hifz.ibnkathirtest.test/androidx.test.runner.AndroidJUnitRunner' \
   > audit-runtime-instrumentation.txt 2>&1
 shell_status=$?
@@ -48,18 +48,12 @@ test "$count" -ge 14
 find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q . && {
   echo "::error::At least one required screenshot is empty"; exit 1;
 } || true
-# Independent visual transition contracts: a screenshot of the same screen twice
-# is NOT evidence that back-navigation or the Quiz actually changed UI.
-test -s audit-runtime-screens/audit-ibn-kathir-liste.png
-test -s audit-runtime-screens/audit-ibn-kathir-passage.png
-test -s audit-runtime-screens/audit-quiz-accueil.png
-test -s audit-runtime-screens/audit-quiz-question.png
-if cmp -s audit-runtime-screens/audit-ibn-kathir-liste.png audit-runtime-screens/audit-ibn-kathir-passage.png; then
-  echo "::error::Map return screenshot is identical to its passage sheet"
-  exit 1
-fi
-if cmp -s audit-runtime-screens/audit-quiz-accueil.png audit-runtime-screens/audit-quiz-question.png; then
-  echo "::error::Quiz start screenshot is identical to its setup screen"
-  exit 1
+# Independent visual screens are checked; no Quiz or numbered Carte screens.
+for file in audit-lecture-mushaf.png audit-lecture-amorce-anglais.png \
+            audit-accueil-sans-quiz.png audit-calendrier-sept-jours.png; do
+  test -s "audit-runtime-screens/$file"
+done
+if cmp -s audit-runtime-screens/audit-lecture-mushaf.png audit-runtime-screens/audit-lecture-amorce-anglais.png; then
+  echo "::error::Amorce title popup has no visible UI transition"; exit 1
 fi
 echo "PASS: six genuine Android runtime tests + $count screenshot PNGs"
