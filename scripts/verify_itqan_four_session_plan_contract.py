@@ -37,4 +37,17 @@ for tag in ('partiallyCompletedSnapshotPreservesExactSlotAndRep',
 for forbidden in ('SharedPreferences', '.commit()', 'v6AcquiredCreditLineIds',
                   'advanceItqanRotationPast(', 'lastItqanDate'):
     assert forbidden not in snapshot,'Planning snapshot must have no live progression effects'
-print('PASS: pure 2-page plan + versioned frozen QCF snapshot with tamper and restart checks')
+store=(APP/'ItqanFourSessionStore.java').read_text(encoding='utf-8')
+store_test=(ROOT/'hifz-app/src/test/java/com/quransafeguard/hifz/preview/ItqanFourSessionStoreTest.java').read_text(encoding='utf-8')
+for tag in ('static final String KEY=', 'ItqanFourSessionSnapshot.decode(raw,geo)',
+            'Finish existing legacy Itqan before new window',
+            'if(stored==null||!stored.encode().equals(expected.encode()))return false',
+            'p.edit().putString(KEY,next.encode()).putInt("itqanRep",next.reps).commit()'):
+    assert tag in store,"Missing crash-safe snapshot store contract: "+tag
+for tag in ('frozenPlanSurvivesRestartAndRejectsStaleTap',
+            'aFailedCommitLeavesTheEntireSnapshotAndRepUntouched',
+            'existingOpenLegacySessionCannotBeOverwritten',
+            'aBlockCannotAdvanceBeforeFortyRepetitions',
+            'aCorruptSnapshotNeverResetsToCurrentGeometry'):
+    assert tag in store_test,"Missing atomicity / backward-compatibility regression: "+tag
+print('PASS: pure 2-page plan, frozen QCF snapshot, and crash-safe staging store')

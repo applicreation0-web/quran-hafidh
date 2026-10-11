@@ -60,6 +60,7 @@ while IFS= read -r file; do
     "$prefix/ItqanCompletionBoundaryPolicy.java" | \
     "$prefix/ItqanFourSessionPolicy.java" | \
     "$prefix/ItqanFourSessionSnapshot.java" | \
+    "$prefix/ItqanFourSessionStore.java" | \
     "$prefix/MainActivity.java" | \
     "$prefix/SettingsActivity.java" | \
     "$prefix/StudyReaderActivity.java" | \
