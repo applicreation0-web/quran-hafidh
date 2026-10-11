@@ -102,7 +102,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticCuesEnabled=recitationStarts!=null&&recitationStarts.isAvailable()
             && ibnKathirCues!=null&&ibnKathirCues.isAvailable()
             && (mapPreview||getSharedPreferences("hifz_study",MODE_PRIVATE)
-                .getBoolean("ibn_kathir_start_markers_visible",false));
+                .getBoolean("ibn_kathir_start_markers_visible",true));
 
         rootRow = new LinearLayout(this);
         rootRow.setOrientation(LinearLayout.HORIZONTAL);
