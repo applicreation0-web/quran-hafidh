@@ -22,8 +22,8 @@ api = os.environ.get("GITHUB_API_URL", "https://api.github.com")
 actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
 assert len(sha) == 40 and actual == sha, "Not building exact audited commit"
 names = (
-    "Ibn Kathir Hifz + Quiz audit ONLY - no APK",
-    "Quiz launch Android runtime regression ONLY - no APK",
+    "Ibn Kathir Hifz + Amorces audit ONLY - no APK",
+    "Hifz + Amorces + sept jours Android regression ONLY - no APK",
 )
 
 
@@ -74,7 +74,7 @@ while time.monotonic() < deadline:
             art = get("/repos/" + repo + "/actions/runs/" + str(runtime["id"])
                       + "/artifacts?per_page=100")
             proofs = [a for a in art.get("artifacts", [])
-                      if a.get("name", "").startswith("quiz-launch-android-runtime-")
+                      if a.get("name", "").startswith("haafidh-android-runtime-")
                       and not a.get("expired")
                       and a.get("size_in_bytes", 0) >= 50000]
             if not proofs:

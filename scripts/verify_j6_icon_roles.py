@@ -83,7 +83,11 @@ indirect_roles=re.findall(r'\baddRoundAction\s*\(\s*"(?:[^"\\]|\\.)*"\s*,\s*"([^
                          hifz)
 check(len(indirect_roles)>=8, "Hifz round-action call-site inventory reduced")
 check(all(role in roles for role in indirect_roles), "unmapped indirect Hifz action")
-check(len(screens)>=10 and all_actions>=55, "screen inventory unexpectedly shrank")
+# Quiz and list-map are intentionally deleted; preserve every other icon-bearing
+# screen and the immutable vector contract rather than counting removed UI.
+check(not (PREVIEW/"QuizActivity.java").exists() and not (PREVIEW/"IbnKathirMapActivity.java").exists(),
+      "retired Quiz/Carte source unexpectedly returned")
+check(len(screens)>=8 and all_actions>=38, "active Hifz icon inventory unexpectedly shrank")
 # All contracted action types are explicit in the central mapper, even where
 # their screen is hidden until Hifz progresses.
 expected = {

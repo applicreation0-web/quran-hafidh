@@ -1,4 +1,4 @@
-name: Ibn Kathir Hifz + Quiz audit ONLY - no APK
+name: Ibn Kathir Hifz + Amorces audit ONLY - no APK
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Freeze all Hifz engines, core, persistence and Mushaf renderer
         shell: bash
         run: bash scripts/guard_frozen_hifz_engines.sh
-      - name: Prove Hifz and Quiz source exactly equals official 1.17.1
+      - name: Prove Hifz source matches official 1.17.1 plus authorized deltas
         shell: bash
         run: bash scripts/audit_hifz_quiz_against_1171.sh
       - name: Verify all 23 exact contractual BOOX pictograms and immutable hashes
@@ -97,7 +97,7 @@ jobs:
           assert d["words_exactly_aligned"]==77432 and d["ayahs_exactly_aligned"]==6236
           assert d["pages_exactly_aligned"]==604 and d["ibn_kathir_groups"]==1903
           assert d["approved_semantic_amorces"]==0 and d["runtime_ready"] is False
-          print("PASS: source-exact candidate evidence; Hifz and Quiz still frozen")
+          print("PASS: source-exact candidate evidence; Hifz frozen, Quiz retired")
           PY
       - name: J1 editorial gate for every Ibn Kathir group (NO RUNTIME ACTIVATION)
         shell: bash
@@ -114,7 +114,7 @@ jobs:
           assert len(d["entries"])==1903 and d["runtime_ready"] is False
           assert {x["semantic_amorce_status"] for x in d["entries"]}=={"NOT_APPROVED"}
           PY
-      - name: J4 Verify documentary map sheet and navigation source contract
+      - name: J4 Verify no lists, English titles locally on Mushaf only
         shell: bash
         run: python3 scripts/verify_ibn_kathir_map_contract.py
       - name: J2 Contradictory 1903-group semantic review evidence (never runtime)

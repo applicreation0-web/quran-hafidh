@@ -2,7 +2,7 @@
 """Contradictory J5-J7 static audit, complementing (never replacing) JVM tests.
 
 Each rule deliberately checks a counterexample/risk: a repeated credit, a
-post-midnight inherited session, unauthorized active/Quiz corpus growth, a
+post-midnight inherited session, unauthorized corpus growth, a
 Sunday passive cursor advance, a missing first-two-word QCF fallback, or a
 silent weakening of BOOX vector contracts. This is NOT an on-device certificate.
 """
@@ -16,7 +16,7 @@ m=source("MainActivity.java")
 w=source("WeeklyDashboardPlanner.java")
 s=source("SettingsActivity.java")
 core=source("ConsolidationCycleEngine.java")
-q=source("QuizCorpus.java")
+
 k=source("IbnKathirFirstWordsCorpus.java")
 r=source("SemanticPassageRepository.java")
 checks=[
@@ -37,7 +37,12 @@ checks=[
  ("J6 passive enhanced active independent", "prefs.murajaahCorpus(geometry)" in h and "prefs.activeMurajaahCorpus()" in h and "activeMurajaahCorpus()" in p),
  ("J6 no Sunday revision in both programmes", "if(today.getDayOfWeek()!=DayOfWeek.SUNDAY)" in m and "No active/passive review on Sunday in EITHER programme" in m and "Sunday cannot consume a passive cursor" in w),
  ("J6 05:30 and 20:00 editable and nonlocking", 'hifzSuggestedMorningHHmmV1","05:30"' in p and 'hifzSuggestedEveningHHmmV1","20:00"' in p and "TimePickerDialog" in s),
- ("J7 Quiz immutable source-algorithm: read-only eligible learned + stabilized + acquired", "snapshot.learned" in q and "snapshot.stabilized" in q and "snapshot.acquired" in q and "fullyEligible" in q),
+ ("J7 Quiz code fully removed, independent Hifz progression intact",
+   all(not (JAVA/name).exists() for name in ("QuizActivity.java","QuizCorpus.java","QuizHistory.java","QuizQuestion.java"))
+   and "transitionV6Lines" in p and "completeConsolidationSessionV6" in p),
+ ("J7 new manual schedule is seven full days",
+   "MANUAL_SEVEN" in p and "7-learningDaysPerWeek()" in p
+   and "day==DayOfWeek.SUNDAY ? CadenceAction.STABILIZATION" in source("WeeklyProgramPolicy.java")),
  ("J7 BOOX 23-vector immutable audit exists", (ROOT/"docs/FROZEN_UI_ICONS_13_PLUS_10.tsv").exists() and (ROOT/"scripts/verify_contractual_ui_icons.py").exists()),
  ("J7 exact Hifz/Quiz baseline parity gate exists", (ROOT/"scripts/audit_hifz_quiz_against_1171.sh").exists()),
 ]

@@ -1,20 +1,8 @@
-name: Quiz launch Android runtime regression ONLY - no APK
+name: Hifz + Amorces + sept jours Android regression ONLY - no APK
 on:
   push:
     branches:
       - work/haafidh-1171-ibn-kathir-integration-independent
-    paths:
-      - .github/workflows/diagnose-quiz-launch-android.yml
-      - .github/workflows/haafidh-ibn-kathir-debug.yml
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java
-      - scripts/ci_android_runtime_visual.sh
-      - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/QuizLaunchRegressionInstrumentedTest.java
-      - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzAndMapRuntimeSmokeInstrumentedTest.java
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
-      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/SabqiItqanMaskCleanRectangleOnSingleVerseLinesSourceContractTest.java
-      - hifz-app/src/main/assets/hifzreader/reader.js
-      - hifz-app/src/main/res/drawable/ic_ui_play.xml
-      - hifz-app/src/main/res/drawable/ic_ui_close.xml
   workflow_dispatch:
 
 permissions:
@@ -45,21 +33,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Isolate the new Quiz runtime regression from pre-existing obsolete Android tests
+      - name: Isolate three Hifz and three no-list seven-day Android tests
         shell: bash
         run: |
           set -euo pipefail
           # The full legacy androidTest source set does not compile on 1.17.1 (obsolete
           # HifzPrefs APIs). Do not change/delete those tests in the repository:
           # isolate only this diagnostic test in the ephemeral CI checkout.
-          find hifz-app/src/androidTest/java -type f -name '*.java' ! -name 'QuizLaunchRegressionInstrumentedTest.java' ! -name 'HifzAndMapRuntimeSmokeInstrumentedTest.java' -delete
+          find hifz-app/src/androidTest/java -type f -name '*.java' ! -name 'ReaderSevenDayRuntimeInstrumentedTest.java' ! -name 'HifzAndMapRuntimeSmokeInstrumentedTest.java' -delete
           test "$(find hifz-app/src/androidTest/java -type f -name '*.java' | wc -l)" -eq 2
       - name: Enable KVM for genuine Android execution
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Launch Quiz in Android emulator (instrumented, never JVM-only)
+      - name: Test real Hifz, seven-day schedule and offline Amorces on Android
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -73,7 +61,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quiz-launch-android-runtime-${{ github.sha }}
+          name: haafidh-android-runtime-${{ github.sha }}
           path: |
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
