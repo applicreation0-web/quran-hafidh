@@ -391,7 +391,7 @@ public final class MainActivity extends android.app.Activity {
     /** Recommended Sunday contains Itqan plus two independent finals, never generic revision. */
     private boolean recommendedSunday(LocalDate date) {
         return date.getDayOfWeek()==DayOfWeek.SUNDAY
-            && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED;
+            && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC;
     }
 
     private boolean cadenceComplete(LocalDate date){
@@ -480,7 +480,7 @@ public final class MainActivity extends android.app.Activity {
         boolean isToday=date.equals(today);
         // Recommended: Révision active is a morning activity, before Sabqi/Itqan.
         if(isToday && today.getDayOfWeek()!=DayOfWeek.SUNDAY
-                && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED
+                && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC
                 && !date.toString().equals(prefs.lastActiveMurajaahDate()))
             return HifzSessionActivity.MURAJAAH_ACTIVE;
         if(recommendedSunday(date)){
@@ -566,7 +566,7 @@ public final class MainActivity extends android.app.Activity {
         }
         CadenceAction action=WeeklyProgramPolicy.actionFor(today.getDayOfWeek(),prefs.weeklyProgramFor(today),effectiveLearningDaysPerWeek());
         if(today.getDayOfWeek()!=DayOfWeek.SUNDAY
-                && prefs.weeklyProgramFor(today)==HifzPrefs.WeeklyProgram.RECOMMENDED)
+                && prefs.weeklyProgramFor(today)!=HifzPrefs.WeeklyProgram.CLASSIC)
             addToday(out,"Révision active · matin · "+HifzSchedule.ACTIVE_REVIEW_MINUTES+" min",
                 HifzSessionActivity.MURAJAAH_ACTIVE,today,
                 todayStr.equals(prefs.lastActiveMurajaahDate()),nextMode);
@@ -723,11 +723,11 @@ public final class MainActivity extends android.app.Activity {
      */
     private void chooseWeeklyProgram() {
         HifzPrefs.WeeklyProgram[] options={
-            HifzPrefs.WeeklyProgram.CLASSIC,HifzPrefs.WeeklyProgram.RECOMMENDED
+            HifzPrefs.WeeklyProgram.MANUAL_SEVEN,HifzPrefs.WeeklyProgram.RECOMMENDED
         };
         String[] labels={
-            "Classique · rythme existant, dimanche : finales",
-            "Recommandé · Apprentissage lun/mer/ven, Itqān mar/jeu/sam/dim (30 lignes)"
+            "7 jours · Manuel : répartition choisie, dimanche Itqān + finales",
+            "7 jours · Recommandé : Sabqi lun/mer/ven, Itqān mar/jeu/sam/dim"
         };
         int current=prefs.weeklyProgramMode()==options[1]?1:0;
         new android.app.AlertDialog.Builder(this)
@@ -750,7 +750,7 @@ public final class MainActivity extends android.app.Activity {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
         if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
-            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED?"Recommandé":"Classique")+" ▾");
+            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN?"Manuel 7 jours":"Recommandé 7 jours")+" ▾");
         TextView scheduleHours=Ui.text(this,"Horaires indicatifs · matin "+
             prefs.suggestedMorningTime()+" · soir "+prefs.suggestedEveningTime()+
             " · modifiables dans Paramètres",10.5f,false);

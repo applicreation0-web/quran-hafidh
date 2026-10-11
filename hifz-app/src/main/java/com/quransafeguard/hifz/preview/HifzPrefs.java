@@ -64,8 +64,10 @@ public final class HifzPrefs {
 
     public HifzPrefs(Context context) {
         p = context.getSharedPreferences(NAME, Context.MODE_PRIVATE);
+        boolean firstInstall=p.getInt("schema",0)==0;
         ensureSchema(context);
         migrateLegacyGates(context);
+        ensureSevenDayProgramme(HifzClock.today(),firstInstall);
     }
 
     /** JVM tests only: wraps an already-populated store as-is (no schema bootstrap, no legacy
@@ -3300,7 +3302,7 @@ public final class HifzPrefs {
     }
 
     /** Optional programme, stored independently of all schema-6 progression keys. */
-    public enum WeeklyProgram { CLASSIC, RECOMMENDED }
+    public enum WeeklyProgram { CLASSIC, RECOMMENDED, MANUAL_SEVEN }
     private static final String WEEKLY_PROGRAM_HISTORY = "weeklyProgramTransitionsV1";
 
     /** A programme change affects its effective date forward, never a historical week. */
@@ -3373,7 +3375,44 @@ public final class HifzPrefs {
     }
 
     public int itqanDaysPerWeek() {
-        return weeklyProgramMode()==WeeklyProgram.RECOMMENDED ? 4 : 6-learningDaysPerWeek();
+        WeeklyProgram mode=weeklyProgramMode();
+        return mode==WeeklyProgram.RECOMMENDED?4
+            :mode==WeeklyProgram.MANUAL_SEVEN?7-learningDaysPerWeek()
+            :6-learningDaysPerWeek(); // historical only
+    }
+
+    /**
+     * One-time safe calendar migration: old dates remain CLASSIC, while a fresh
+     * install starts the seven-day cadence immediately. An existing installation
+     * starts at the next Monday to avoid reclassifying this week's snowball.
+     * Only a dated optional setting is written: no V6 corpus, counters or cursors.
+     */
+    void ensureSevenDayProgramme(LocalDate today,boolean firstInstall) {
+        if(today==null)throw new IllegalArgumentException("date required");
+        if(p.getBoolean("sevenDayProgrammeMigratedV1",false))return;
+        synchronized(V6_STATE_LOCK) {
+            if(p.getBoolean("sevenDayProgrammeMigratedV1",false))return;
+            if(weeklyProgramFor(today)!=WeeklyProgram.CLASSIC) {
+                if(!p.edit().putBoolean("sevenDayProgrammeMigratedV1",true).commit())
+                    throw new IllegalStateException("Cannot record seven-day calendar migration");
+                return;
+            }
+            LocalDate start=firstInstall?today:today.plusDays((8-today.getDayOfWeek().getValue())%7);
+            WeeklyProgram desired=learningDaysPerWeek()==3
+                ?WeeklyProgram.RECOMMENDED:WeeklyProgram.MANUAL_SEVEN;
+            try {
+                JSONArray previous=new JSONArray(p.getString(WEEKLY_PROGRAM_HISTORY,"[]"));
+                JSONArray updated=new JSONArray();
+                for(int i=0;i<previous.length();i++)updated.put(previous.getJSONObject(i));
+                updated.put(new JSONObject().put("from",start.toString())
+                    .put("mode",desired.name()));
+                if(!p.edit().putString(WEEKLY_PROGRAM_HISTORY,updated.toString())
+                        .putBoolean("sevenDayProgrammeMigratedV1",true).commit())
+                    throw new IllegalStateException("Cannot save seven-day dated transition");
+            }catch(Exception invalid) {
+                throw new IllegalStateException("Seven-day transition refused, historical data intact",invalid);
+            }
+        }
     }
 
     public boolean setLearningDaysPerWeek(int days) {

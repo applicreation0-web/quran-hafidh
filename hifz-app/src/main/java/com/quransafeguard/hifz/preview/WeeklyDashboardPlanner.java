@@ -134,7 +134,7 @@ final class WeeklyDashboardPlanner {
                     }
                     boolean morningDone=actual!=null;
                     if(date.getDayOfWeek()==java.time.DayOfWeek.SUNDAY
-                            && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED) {
+                            && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC) {
                         DashboardLedger.Record learningFinal=ledger.find(date,HifzSessionActivity.LEARNING_FINAL);
                         DashboardLedger.Record stabilizationFinal=ledger.find(date,HifzSessionActivity.CONSOLIDATION_FINAL);
                         boolean learningDone=learningFinal!=null ||
@@ -178,7 +178,7 @@ final class WeeklyDashboardPlanner {
                 default:throw new IllegalStateException("Action de cadence inconnue");
             }
             if(date.getDayOfWeek()!=java.time.DayOfWeek.SUNDAY
-                    && prefs.weeklyProgramFor(date)==HifzPrefs.WeeklyProgram.RECOMMENDED) {
+                    && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC) {
                 boolean activeDone=ledger.find(date,HifzSessionActivity.MURAJAAH_ACTIVE)!=null;
                 morning=(activeDone?"✓ Révision active ":"Révision active ")
                     +HifzSchedule.ACTIVE_REVIEW_MINUTES+" min + "+morning;

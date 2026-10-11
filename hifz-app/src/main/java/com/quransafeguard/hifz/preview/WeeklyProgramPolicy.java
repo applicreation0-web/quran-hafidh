@@ -20,7 +20,10 @@ final class WeeklyProgramPolicy {
             HifzPrefs.WeeklyProgram mode,int classicLearningDays) {
         if(day==null || mode==null)throw new IllegalArgumentException("day and programme required");
         if(mode==HifzPrefs.WeeklyProgram.CLASSIC)
-            return HifzSchedule.INSTANCE.actionFor(day,classicLearningDays);
+            return HifzSchedule.INSTANCE.actionFor(day,classicLearningDays); // history only
+        if(mode==HifzPrefs.WeeklyProgram.MANUAL_SEVEN)
+            return day==DayOfWeek.SUNDAY ? CadenceAction.STABILIZATION
+                :HifzSchedule.INSTANCE.actionFor(day,classicLearningDays);
         return day==DayOfWeek.MONDAY || day==DayOfWeek.WEDNESDAY
             || day==DayOfWeek.FRIDAY
             ? CadenceAction.LEARNING : CadenceAction.STABILIZATION;

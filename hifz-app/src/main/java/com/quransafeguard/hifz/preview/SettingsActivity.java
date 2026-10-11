@@ -78,10 +78,10 @@ public final class SettingsActivity extends android.app.Activity {
         parcours.addView(weeklyProgramSetting);parcours.addView(Ui.divider(this));
         learningDaysSetting=Ui.settingRow(this,"Séances d’Apprentissage par semaine",learningDaysSummary(),v->chooseLearningDaysPerWeek());
         learningDaysSetting.setEnabled(prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL
-            && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC);
+            && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
         roadmapModeSwitch.setOnCheckedChangeListener((button,checked)->{
             prefs.setRoadmapMode(checked?HifzPrefs.RoadmapMode.AUTO:HifzPrefs.RoadmapMode.MANUAL);
-            learningDaysSetting.setEnabled(!checked && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC);
+            learningDaysSetting.setEnabled(!checked && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN);
             refreshWeeklyCadence();
         });
         parcours.addView(learningDaysSetting);parcours.addView(Ui.divider(this));
@@ -224,7 +224,8 @@ public final class SettingsActivity extends android.app.Activity {
         int days=effectiveLearningDaysPerWeek();
         StringBuilder out=new StringBuilder();
         for(int i=0;i<WEEKDAYS.length;i++){
-            if(WEEKDAYS[i]==DayOfWeek.SUNDAY)continue; // Separate finales, no weekday evening quota
+            if(WEEKDAYS[i]==DayOfWeek.SUNDAY
+                    && prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC)continue;
             if(WeeklyProgramPolicy.actionFor(WEEKDAYS[i],prefs.weeklyProgramMode(),days)!=action)continue;
             if(out.length()>0)out.append("/");
             out.append(WEEKDAY_ABBREVIATIONS[i]);
@@ -242,16 +243,16 @@ public final class SettingsActivity extends android.app.Activity {
         StringBuilder out=new StringBuilder();
         if(!learningDays.isEmpty())out.append(learningDays).append(" · Apprentissage   ·   ");
         if(!stabilizationDays.isEmpty())out.append(stabilizationDays).append(" · Stabilisation   ·   ");
-        return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? out.append("Dim · Stabilisation et finales").toString()
-            : out.append("Dim · Finales uniquement").toString();
+        return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.CLASSIC
+            ? out.append("Dim · Finales (historique uniquement)").toString()
+            : out.append("Dim · Finales sans révision").toString();
     }
 
     private String learningDaysSummary(){
         int days=effectiveLearningDaysPerWeek();
         String base=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "3 jours Apprentissage · 4 jours Stabilisation"
-            : days+"/6 jours   ·   Stabilisation "+(6-days)+"/6";
+            ? "3 jours Apprentissage · 4 jours Stabilisation · 7 jours"
+            : days+" jours Apprentissage + "+(7-days)+" jours Stabilisation = 7 jours";
         return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   Automatique" : base;
     }
 
@@ -296,16 +297,18 @@ public final class SettingsActivity extends android.app.Activity {
 
     private String weeklyProgramSummary() {
         return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "Recommandé · 3 Sabqi + 4 Itqān" : "Classique · organisation 1.17.1";
+            ? "7 jours · Recommandé · 3 Sabqi + 4 Itqān"
+            : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
+                ? "7 jours · Manuel" : "Historique 6 jours · migration lundi";
     }
 
     private void chooseWeeklyProgram() {
         HifzPrefs.WeeklyProgram previous=prefs.weeklyProgramMode();
-        HifzPrefs.WeeklyProgram[] modes={HifzPrefs.WeeklyProgram.CLASSIC,
-            HifzPrefs.WeeklyProgram.RECOMMENDED};
-        String[] titles={"Classique · organisation 1.17.1",
-            "Recommandé · Itqān Mar/Jeu/Sam/Dim (8/7/7/8 lignes)"};
-        int[] choice={previous==HifzPrefs.WeeklyProgram.CLASSIC?0:1};
+        HifzPrefs.WeeklyProgram[] modes={HifzPrefs.WeeklyProgram.RECOMMENDED,
+            HifzPrefs.WeeklyProgram.MANUAL_SEVEN};
+        String[] titles={"7 jours · Recommandé (Sabqi 3 / Itqān 4)",
+            "7 jours · Manuel (répartition personnalisée)"};
+        int[] choice={previous==HifzPrefs.WeeklyProgram.MANUAL_SEVEN?1:0};
         new AlertDialog.Builder(this).setTitle("Programme hebdomadaire")
             .setSingleChoiceItems(titles,choice[0],(dialog,index)->choice[0]=index)
             .setNegativeButton("Annuler",null)
@@ -314,7 +317,7 @@ public final class SettingsActivity extends android.app.Activity {
                     Ui.showFatal(this,"Impossible de sauvegarder le programme.");
                     return;
                 }
-                learningDaysSetting.setEnabled(modes[choice[0]]==HifzPrefs.WeeklyProgram.CLASSIC
+                learningDaysSetting.setEnabled(modes[choice[0]]==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
                     && prefs.roadmapMode()==HifzPrefs.RoadmapMode.MANUAL);
                 refreshWeeklyCadence();
             }).show();
@@ -327,7 +330,7 @@ public final class SettingsActivity extends android.app.Activity {
         int checkedIndex=0;
         for(int i=0;i<labels.length;i++){
             int days=min+i;
-            labels[i]=days+" Apprentissage  ·  "+(6-days)+" Stabilisation";
+            labels[i]=days+" Apprentissage  +  "+(7-days)+" Stabilisation  = 7 jours";
             if(days==current)checkedIndex=i;
         }
         int[] selection={checkedIndex};
@@ -362,7 +365,7 @@ public final class SettingsActivity extends android.app.Activity {
     private void applyLearningDaysPerWeek(int days){
         if(!prefs.setLearningDaysPerWeek(days)){Toast.makeText(this,"Impossible d’enregistrer ce réglage.",Toast.LENGTH_LONG).show();return;}
         refreshWeeklyCadence();
-        Toast.makeText(this,"Cadence mise à jour : "+days+" Apprentissage / "+(6-days)+" Stabilisation par semaine.",Toast.LENGTH_LONG).show();
+        Toast.makeText(this,"Cadence 7 jours : "+days+" Apprentissage + "+(7-days)+" Stabilisation.",Toast.LENGTH_LONG).show();
     }
 
     private void refreshSabqi(){
