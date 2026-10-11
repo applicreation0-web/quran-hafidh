@@ -54,6 +54,9 @@ jobs:
                          for c in d["cues"] for k in c.keys())
           print("PASS: full migration rehearsal, no Quran text or editorial titles")
           PY
+      - name: Verify all 114 English source chapters verbatim at PINNED source commit
+        shell: bash
+        run: bash scripts/verify_ibn_kathir_pinned_source_114.sh
       - name: Audit all 114 source-heading packs against canonical 1903 Ibn Kathir intervals
         shell: bash
         run: |
