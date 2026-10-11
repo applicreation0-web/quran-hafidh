@@ -1673,6 +1673,14 @@ public final class HifzPrefs {
             synchronized(p) {
                 ItqanFourSessionSnapshot actual=ItqanFourSessionStore.read(p,geo);
                 if(actual==null||!actual.encode().equals(expected.encode()))return false;
+                // One frozen slot belongs to one Itqan date. Multiple surah-local
+                // blocks may finish on that date; only crossing into the NEXT
+                // slot requires a strictly later date. A UI replay, a clock
+                // rollback, or a direct call must never credit tomorrow today.
+                LocalDate requestedDay=LocalDate.parse(date);
+                String lastDate=p.getString("lastItqanDate","");
+                if(!lastDate.isEmpty()&&!requestedDay.isAfter(LocalDate.parse(lastDate)))
+                    return false;
                 if(actual.sessionIndex>=4||actual.reps!=40||itqanPostNasMaintenance()
                     ||p.getInt("itqanRep",-1)!=40
                     ||!ItqanMaintenancePolicy.validationAllowed(
