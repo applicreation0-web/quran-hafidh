@@ -43,6 +43,8 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                     assertFalse("Hifz "+mode+" rendered an error instead of a session: "+title,
                         title.contains("état à vérifier"));
                 });
+                if(HifzSessionActivity.SABQI.equals(mode) || HifzSessionActivity.ITQAN.equals(mode))
+                    awaitMushafPage(scenario,"mushaf",mode);
                 saveScreenshot("audit-hifz-"+mode.toLowerCase(java.util.Locale.ROOT)+".png");
             }
         }
@@ -71,6 +73,7 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                 assertEquals(View.VISIBLE,details.getVisibility());
                 assertFalse(activity.isFinishing());
             });
+            awaitMushafPage(scenario,"pagePreview","Ibn Kathir selected passage");
             saveScreenshot("audit-ibn-kathir-passage.png");
             scenario.onActivity(activity->{
                 ListView groups=(ListView)reflect(activity,"groupsList");
@@ -81,7 +84,30 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
         }
     }
 
+    /** Assert the actual QCF page was rendered, not merely an empty Activity shell.
+     * The first audit passed while screenshots captured WebViews before onPageShown. */
+    static <T extends android.app.Activity> void awaitMushafPage(
+            ActivityScenario<T> scenario,String field,String label) {
+        java.util.concurrent.atomic.AtomicBoolean drawn=new java.util.concurrent.atomic.AtomicBoolean();
+        for(int attempt=0;attempt<44;attempt++) {
+            scenario.onActivity(activity->{
+                Object view=reflect(activity,field);
+                assertTrue("Expected genuine MushafView in "+label,view instanceof MushafView);
+                drawn.set((Boolean)reflect(view,"pageShown"));
+            });
+            if(drawn.get()) {
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                android.os.SystemClock.sleep(800);
+                return;
+            }
+            android.os.SystemClock.sleep(250);
+        }
+        fail("QCF page was NOT rendered in real Android for "+label);
+    }
+
     static void saveScreenshot(String name) {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        android.os.SystemClock.sleep(900); // allow WebView/GPU frame to reach the display
         android.graphics.Bitmap image=
             InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
         assertNotNull("Cannot capture Android UI screenshot "+name,image);
