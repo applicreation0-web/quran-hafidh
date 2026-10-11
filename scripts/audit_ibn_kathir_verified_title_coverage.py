@@ -50,7 +50,10 @@ def approved_title_ranges():
     result = set()
     for method, surah in [("verifiedQafHeadings", 50), ("verifiedNajmHeadings", 53)]:
         i = text.index("private static String[] " + method)
-        block = text[i:].split("return new String[0];", 1)[0]
+        # Qaf begins with a null guard returning an empty array; start at
+        # the actual switch rather than stopping at that preliminary return.
+        switch = text.index("switch(group.startAyah)", i)
+        block = text[switch:].split("\\n        return new String[0];", 1)[0]
         for case in re.finditer(r"case\s+(\d+)\s*:", block):
             following = block[case.end():]
             next_case = re.search(r"\bcase\s+\d+\s*:", following)
