@@ -128,8 +128,12 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         assertEquals("The Virtues of Surat Al-Baqarah",source[0]);
         a.onSemanticCueTap("IKEN002_001_001");
         Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
-        assertNotNull("Missing packaged Al-Baqarah source title",popup);
-        assertTrue(containsText(popup.findViewById(android.R.id.content),source[0]));
+        assertNotNull("Missing attested Al-Baqarah heading",popup);
+        View panel=popup.findViewById(android.R.id.content);
+        assertTrue("The verse-specific original title overrides general surah virtues",
+            containsText(panel,"The Discussion of the Individual Letters"));
+        assertFalse("Do not show a generic surah-virtue title for 2:1",
+            containsText(panel,source[0]));
         View row=(View)reflect(a,"readerActions");
         assertTrue(row.getVisibility()==View.VISIBLE);
       });
