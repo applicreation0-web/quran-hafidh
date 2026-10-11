@@ -45,6 +45,7 @@ jobs:
           set -euo pipefail
           bash scripts/guard_frozen_hifz_engines.sh
           bash scripts/audit_hifz_quiz_against_1171.sh
+          python3 scripts/verify_authorized_quiz_reader_delta.py
       - name: Second contradictory audit, exact 23 icons and BOOX screen inventory
         shell: bash
         run: |
