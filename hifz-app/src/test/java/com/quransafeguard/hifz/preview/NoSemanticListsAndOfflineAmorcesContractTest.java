@@ -15,7 +15,12 @@ public final class NoSemanticListsAndOfflineAmorcesContractTest {
     assertFalse(s.contains("new Intent(this,IbnKathirMapActivity.class)"));
     assertFalse(s.contains("Ui.iconButton(this, \"\", \"Carte\""));
     assertTrue(s.contains("SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)"));
-    assertTrue(s.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
+    assertTrue("Reader must load ONLY private Quran.com titles",
+      s.contains("IbnKathirQuranComPrivateTitles.sourceHeadings(this,group)"));
+    assertFalse("Old spa5k source headings must not be displayed",
+      s.contains("IbnKathirTitlePack.sourceHeadings(this,group)"));
+    assertFalse("Old hard-coded source checkpoints must not be displayed",
+      s.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
     assertFalse(s.contains("IbnKathirQuranComSource.urlForGroup(group)"));
     assertFalse(s.contains("Intent.ACTION_VIEW"));
   }
