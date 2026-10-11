@@ -80,6 +80,17 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
           "The Disbelievers wonder at the Message and Resurrection"));
         assertEquals("English popup must remain bottom-aligned",android.view.Gravity.BOTTOM,
           dialog.getWindow().getAttributes().gravity & android.view.Gravity.VERTICAL_GRAVITY_MASK);
+        assertTrue("English cue must be raised above bottom toolbars and navigation bar",
+          dialog.getWindow().getAttributes().y>=Ui.dp(a,68));
+        assertTrue("Caption must not prevent taps outside from reaching the Mushaf",
+          (dialog.getWindow().getAttributes().flags
+            & android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)!=0);
+        TextView title=findTitle(root,
+          "The Disbelievers wonder at the Message and Resurrection");
+        assertNotNull(title);
+        assertTrue("English heading is secondary micro-typography, not a giant bold banner",
+          title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12.0f);
+        assertFalse("English heading must not be bold",title.getTypeface().isBold());
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-anglais.png");
     }
@@ -158,6 +169,18 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
    for(int i=0;i<group.getChildCount();i++) {
      View found=rowContainingLabel(group.getChildAt(i),exact);
      if(found!=null)return found;
+   }
+   return null;
+ }
+ private static TextView findTitle(View node,String target) {
+   if(node instanceof TextView && target.contentEquals(((TextView)node).getText()))
+     return (TextView)node;
+   if(node instanceof ViewGroup) {
+     ViewGroup group=(ViewGroup)node;
+     for(int i=0;i<group.getChildCount();i++) {
+       TextView result=findTitle(group.getChildAt(i),target);
+       if(result!=null)return result;
+     }
    }
    return null;
  }
