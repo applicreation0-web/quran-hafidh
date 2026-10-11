@@ -313,8 +313,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // An unverified heading is NOT editorial material: never present a
         // technical placeholder or fabricate a title for the reader.
         if(titles.length==0)return;
-        semanticTitleDialog=SemanticTitlePopup.showEnglish(
-            this,String.join(" · ",titles),semanticTitleDialog);
+        String label=String.join(" · ",titles);
+        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
     }
 
     /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */
