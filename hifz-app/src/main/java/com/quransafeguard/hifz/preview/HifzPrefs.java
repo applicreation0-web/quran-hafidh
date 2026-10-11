@@ -1744,8 +1744,18 @@ public final class HifzPrefs {
                     .putString("itqanBonusSnapshotV1","");
                 for(java.util.Map.Entry<String,String> row:snowball.entrySet())
                     e.putString(row.getKey(),row.getValue());
-                if(finishedWindow)e.remove(ItqanFourSessionStore.KEY);
-                else e.putString(ItqanFourSessionStore.KEY,next.encode());
+                if(finishedWindow) {
+                    e.remove(ItqanFourSessionStore.KEY);
+                    // The legacy rotation advances by VERSE; an Itqan 2-page
+                    // window advances by PHYSICAL QCF LINE. Their boundaries
+                    // can differ. Pin the exact following physical line in
+                    // the same V6 completion commit, or a later window could
+                    // silently omit a continuation of the last verse.
+                    int physicalNext=last.globalIndex+1;
+                    if(physicalNext<geo.lineCount())
+                        e.putString("itqanFourNextPhysicalLineIdV1",geo.line(physicalNext).id);
+                    else e.remove("itqanFourNextPhysicalLineIdV1");
+                } else e.putString(ItqanFourSessionStore.KEY,next.encode());
                 if(finishedDate)e.putString("lastItqanDate",date).putString("lastItqanLabel",label);
                 if(finishedWindow)e=appendFinalItqanRotation(e,true,lastVerse);
                 return e.commit();
