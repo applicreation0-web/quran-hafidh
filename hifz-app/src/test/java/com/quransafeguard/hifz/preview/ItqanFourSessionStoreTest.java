@@ -144,6 +144,35 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(0,ItqanFourSessionStore.read(db,geo).reps);
    assertTrue(new HifzPrefs(db).progressionSnapshotV6().stabilized.containsAll(due));
  }
+ @Test public void frozenNextDateCannotBeValidatedTwiceOnSameDayOrBackdated() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();
+   seedV6(db);
+   ItqanFourSessionSnapshot original=sample(db,520);
+   assertTrue(ItqanFourSessionStore.open(db,original,geo));
+   HifzPrefs prefs=new HifzPrefs(db);
+   int blocks=original.plan.sessions.get(0).blocks.size();
+   assertTrue(blocks>0);
+   for(int b=0;b<blocks;b++) {
+     ItqanFourSessionSnapshot ready=completeRepetitions(db);
+     assertEquals(0,ready.sessionIndex);
+     assertEquals(b,ready.blockIndex);
+     assertTrue(prefs.completeFrozenItqanSubblockV6(
+         ready,geo,"2026-10-13","first date"));
+   }
+   ItqanFourSessionSnapshot next=ItqanFourSessionStore.read(db,geo);
+   assertEquals(1,next.sessionIndex);
+   assertEquals("2026-10-13",prefs.lastItqanDate());
+   ItqanFourSessionSnapshot ready=completeRepetitions(db);
+   int committed=db.commits;
+   assertFalse("The next date must not be credited on the same day",
+       prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-13","replayed"));
+   assertFalse("A backward device clock must never credit a second date",
+       prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-12","backdated"));
+   assertEquals("No progress on rejected dates",committed,db.commits);
+   assertEquals(40,ItqanFourSessionStore.read(db,geo).reps);
+   assertTrue("The same saved 40 repetitions remain valid on the proper next day",
+       prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-14","second date"));
+ }
  @Test public void aCorruptSnapshotNeverResetsToCurrentGeometry() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
    ItqanFourSessionSnapshot snap=sample(db,520);
