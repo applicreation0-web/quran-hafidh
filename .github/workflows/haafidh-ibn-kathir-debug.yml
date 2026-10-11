@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   build-verified-debug:
+    # Seven runtime tests include one live Itqan tap/recreate in the established
+    # ReaderSevenDayRuntimeInstrumentedTest; publish only after exact-SHA proof.
     runs-on: ubuntu-latest
     timeout-minutes: 65
     steps:
