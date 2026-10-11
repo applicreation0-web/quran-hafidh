@@ -108,7 +108,11 @@ def main():
             assert key not in restored and start<=groups[key][0]<=end
             restored[key]=title_list
     assert staged==restored, "Quran.com staging chunks differ from CSV"
-    assert not (ROOT/"hifz-app/src/main/assets/ibn_kathir_qurancom_private").exists()
+    import subprocess
+    tracked=subprocess.check_output(
+        ["git","ls-files","--","hifz-app/src/main/assets/ibn_kathir_qurancom_private"],
+        cwd=ROOT,text=True).strip()
+    assert not tracked, "Private content is tracked in the public repository"
     assert "The Discussion of the Individual Letters" in staged["IKEN002_001_001"]
     assert "IKEN114_001_006" not in staged, "Do not fabricate An-Nas title"
     print("PASS: 1903 exact canonical groups, 6236 verses, 2951 Quran.com h2 records;")
