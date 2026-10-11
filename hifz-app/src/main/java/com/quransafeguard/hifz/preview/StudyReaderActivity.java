@@ -65,6 +65,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private SemanticPassageRepository ibnKathirCues;
     private boolean semanticCuesEnabled;
     private android.app.Dialog semanticTitleDialog;
+    /** Consecutive taps cycle through multiple ORIGINAL headings of one group. */
+    private String lastQuranComHeadingGroupId;
+    private int lastQuranComHeadingIndex = -1;
     /** Phone Tafsir: a non-modal bottom panel inside the reader (Mushaf stays tappable above it). */
     private FrameLayout bottomTafsir;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
@@ -311,17 +314,20 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // never show a plausible but unrelated English heading.
         SemanticPassageRepository.Cue visible=ibnKathirCues.cue(passageId);
         if(visible==null||visible.startPage!=page)return;
-        // Restore precisely the 1.17.1 Al-Munir bottom sheet: same location,
-        // gesture, duration and non-dimming treatment, with English typography.
-        // No source page list, browser, or intrusive Android AlertDialog.
-        String[] titles=IbnKathirOfflineTitles.verifiedHeadings(group);
-        // Keep the 16 individually verified editorial checkpoints untouched.
-        // Only on an exact documentary interval, fall back to original English
-        // source headings stored OFFLINE in 114-chapter pinned draft packs.
-        // No ML/paraphrase, and no additional memory key/word is generated.
-        if(titles.length==0) titles=IbnKathirTitlePack.sourceHeadings(this,group);
-        if(titles.length==0)return; // no title genuinely attested -> no popup
-        String label=String.join(" · ",titles);
+        // Quran.com English Ibn Kathir titles ONLY: original text from a
+        // PRIVATE audit pack, never from the old spa5k heading candidates.
+        // Missing/uncertain groups display nothing, with NO invented fallback.
+        String[] titles=IbnKathirQuranComPrivateTitles.sourceHeadings(this,group);
+        if(titles.length==0)return;
+        // Keep long/multiple headings legible on BOOX: one exact heading per
+        // touch, successive touches cycle. No giant combined caption or trim.
+        if(group.id.equals(lastQuranComHeadingGroupId)) {
+            lastQuranComHeadingIndex=(lastQuranComHeadingIndex+1)%titles.length;
+        } else {
+            lastQuranComHeadingGroupId=group.id;
+            lastQuranComHeadingIndex=0;
+        }
+        String label=titles[lastQuranComHeadingIndex];
         showControls(); // Same Munir position: the icons remain visible BELOW the title.
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
         SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);
