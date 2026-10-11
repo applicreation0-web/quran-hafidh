@@ -194,7 +194,7 @@ public final class MainActivity extends android.app.Activity {
     /** Aujourd’hui remains the same computed action, with one larger accessible touch target. */
     private LinearLayout todayLine() {
         LinearLayout line = Ui.settingRow(this, "Aujourd’hui", "…", v -> openToday());
-        line.setMinimumHeight(Ui.dp(this, 84));
+        line.setMinimumHeight(Ui.dp(this, 56));
         if (line.getChildAt(0) instanceof TextView) {
             ((TextView) line.getChildAt(0)).setTypeface(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD);
         }
@@ -210,9 +210,10 @@ public final class MainActivity extends android.app.Activity {
      */
     private LinearLayout homeNavLine(LinearLayout parent, String label, View.OnClickListener listener) {
         LinearLayout line = Ui.row(this);
-        Ui.panel(line);
-        line.setPadding(Ui.dp(this, 8), Ui.dp(this, 6), Ui.dp(this, 8), Ui.dp(this, 6));
-        line.setMinimumHeight(Ui.dp(this, 68));
+        // Flat, consistent navigation rows: never allocate a viewport-sized card.
+        line.setBackgroundColor(Ui.PAPER);
+        line.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
+        line.setMinimumHeight(Ui.dp(this, 56));
         line.setClickable(true);
         line.setFocusable(true);
         line.setContentDescription(label);
@@ -231,7 +232,7 @@ public final class MainActivity extends android.app.Activity {
             // Existing Parcours line has no frozen standalone pictogram.
             line.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         }
-        TextView name = Ui.bookText(this, label, 18f, false);
+        TextView name = Ui.bookText(this, label, 15f, false);
         name.setGravity(Gravity.CENTER_VERTICAL);
         name.setPadding(Ui.dp(this, 7), 0, 0, 0);
         line.addView(name, new LinearLayout.LayoutParams(0,
@@ -243,8 +244,10 @@ public final class MainActivity extends android.app.Activity {
         arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         line.addView(arrow, new LinearLayout.LayoutParams(Ui.dp(this, 30),
             ViewGroup.LayoutParams.MATCH_PARENT));
+        // WRAP_CONTENT without weight: the four destinations must not stretch
+        // to fill the screen or leave enormous unused blank surfaces.
         parent.addView(line, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         parent.addView(Ui.divider(this));
         return line;
     }
@@ -298,22 +301,17 @@ public final class MainActivity extends android.app.Activity {
 
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
     private String stabilizationProgramCue() {
-        if(prefs.itqanPostNasMaintenance())return Ui.stabilizationCue(true);
-        return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "30 lignes/semaine · 4 séances" : Ui.stabilizationCue(false);
+        return prefs.itqanPostNasMaintenance() ? "1 hizb · entretien"
+            : "2 pages / 4 séances";
     }
 
     /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
     private void refreshStabilizationPosition() {
         TextView cue = Ui.settingValue(itqanCard);
         if (cue == null || geometry == null) return;
-        boolean postNas = prefs.itqanPostNasMaintenance();
-        String base = stabilizationProgramCue();
-        HifzPrefs.ItqanRotationProgress position = prefs.itqanRotationProgress(geometry);
-        if (position == null) { cue.setText(base); return; }
-        cue.setText(postNas
-            ? "Hizb " + QuranRubBoundaries.hizbOf(position.start) + " · " + position.index + "/" + position.total + " séances"
-            : base + " · " + position.index + "/" + position.total);
+        // The Parcours menu contains navigation labels, not engine diagnostics.
+        // Position, cursor, repetitions and block geometry stay inside Itqan.
+        cue.setText(stabilizationProgramCue());
     }
 
     /**
@@ -686,7 +684,22 @@ public final class MainActivity extends android.app.Activity {
                 detail="Révision · "+maintenanceMinutes+" min";
             }else detail="Parcours à vérifier";
         }catch(RuntimeException error){detail="Parcours à vérifier";}
-        setToday(prefix+detail,true);
+        // Home and Parcours share a concise action label. The exact block,
+        // surah, cursor, mask and repetitions belong to the opened session.
+        setToday(prefix+todaySummary(mode),true);
+    }
+
+    private static String todaySummary(String mode) {
+        if(HifzSessionActivity.SABQI.equals(mode))return "Apprentissage";
+        if(HifzSessionActivity.ITQAN.equals(mode))return "Stabilisation";
+        if(HifzSessionActivity.SABQI_TODAY_REVIEW.equals(mode))return "Revue apprentissage";
+        if(HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode))return "Révision active";
+        if(HifzSessionActivity.MURAJAAH.equals(mode))return "Révision";
+        if(HifzSessionActivity.LEARNING_CONSOLIDATION.equals(mode)
+            ||HifzSessionActivity.LEARNING_FINAL.equals(mode))return "Renforcement";
+        if(HifzSessionActivity.RECENT_SABQI_REVIEW.equals(mode)
+            ||HifzSessionActivity.CONSOLIDATION_FINAL.equals(mode))return "Consolidation";
+        return "Séance du jour";
     }
 
     static String anchoringTodayDetail(HifzPrefs prefs,GeometryRepository geometry){
@@ -752,9 +765,8 @@ public final class MainActivity extends android.app.Activity {
         dashboard.removeAllViews();
         if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
             (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN?"Manuel 7 jours":"Recommandé 7 jours")+" ▾");
-        TextView scheduleHours=Ui.text(this,"Horaires indicatifs · matin "+
-            prefs.suggestedMorningTime()+" · soir "+prefs.suggestedEveningTime()+
-            " · modifiables dans Paramètres",10.5f,false);
+        TextView scheduleHours=Ui.text(this,"Matin "+prefs.suggestedMorningTime()+
+            "  ·  Soir "+prefs.suggestedEveningTime(),11f,false);
         scheduleHours.setTextColor(Ui.MUTED);
         scheduleHours.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));
         dashboard.addView(scheduleHours);
@@ -777,18 +789,18 @@ public final class MainActivity extends android.app.Activity {
         for (int i = 0; i < rows.size(); i++) {
             WeeklyDashboardPlanner.Row item = rows.get(i);
             LinearLayout day=Ui.column(this);
-            day.setPadding(Ui.dp(this,6),Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,9));
+            day.setPadding(Ui.dp(this,4),Ui.dp(this,8),Ui.dp(this,4),Ui.dp(this,8));
             TextView dayTitle=Ui.bookText(this,
                 item.day+"   ·   "+compactState(item.state),13,true);
             dayTitle.setTextColor(Ui.INK);
             day.addView(dayTitle);
             TextView morning=Ui.text(this,
-                "Matin "+prefs.suggestedMorningTime()+"   ·   "+compactSession(item.morning),12.5f,false);
+                "Matin  ·  "+compactScheduleLine(item.morning),12.5f,false);
             morning.setTextColor(Ui.INK);
             morning.setPadding(0,Ui.dp(this,5),0,Ui.dp(this,2));
             day.addView(morning);
             TextView evening=Ui.text(this,
-                "Soir "+prefs.suggestedEveningTime()+"   ·   "+compactSession(item.evening),12.5f,false);
+                "Soir  ·  "+compactScheduleLine(item.evening),12.5f,false);
             evening.setTextColor(Ui.INK);
             day.addView(evening);
             dashboard.addView(day);
@@ -814,6 +826,30 @@ public final class MainActivity extends android.app.Activity {
     private static String compactSession(String value) {
         if (value == null || value.trim().isEmpty()) return "—";
         return value.replace("Sourate ", "S.").replace("v.", "");
+    }
+
+    /** Weekly list is an agenda, not a long technical protocol transcript.
+     * Keep meaningful statuses and full geometry in the session itself. */
+    private static String compactScheduleLine(String raw) {
+        String value=compactSession(raw);
+        if(value.equals("—"))return value;
+        boolean done=value.trim().startsWith("✓");
+        String clean=value.replaceFirst("^\\s*✓\\s*","");
+        String kind;
+        if(clean.contains("Révision active"))kind="Révision active";
+        else if(clean.contains("Apprentissage"))kind="Apprentissage";
+        else if(clean.contains("Stabilisation"))kind="Stabilisation";
+        else if(clean.contains("Renforcement"))kind="Renforcement";
+        else if(clean.contains("Consolidation"))kind="Consolidation";
+        else if(clean.contains("Entretien"))kind="Entretien";
+        else if(clean.contains("Révision"))kind="Révision";
+        else kind=clean.split(" · ")[0];
+        if(clean.contains("Finale")||clean.contains("finale"))kind+=" · finale";
+        if(clean.contains("séance 1/4"))kind+=" · 1/4";
+        else if(clean.contains("séance 2/4"))kind+=" · 2/4";
+        else if(clean.contains("séance 3/4"))kind+=" · 3/4";
+        else if(clean.contains("séance 4/4"))kind+=" · 4/4";
+        return done ? "✓ "+kind : kind;
     }
 
     private static String shortRange(VerseRef a, VerseRef b) {
