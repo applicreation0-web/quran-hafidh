@@ -1,4 +1,4 @@
-name: Quran Haafidh 1.17.1 - ITQAN 2P/4J + AMORCES 7J DEBUG APK
+name: Quran Haafidh 1.17.1 - BOOX compact UI + ITQAN 2P/4J DEBUG APK
 
 on:
   push:
@@ -96,7 +96,7 @@ jobs:
           grep -Fxq 'assets/reader109/geometry.json' "$RUNNER_TEMP/apk-files.txt"
           grep -Eq '^assets/reader109/word-boxes/' "$RUNNER_TEMP/apk-files.txt"
           mkdir -p "$RUNNER_TEMP/haafidh-audit-critique-debug"
-          output="Quran-Haafidh-1.17.1-ITQAN-2P-4SEANCES-DEBUG.apk"
+          output="Quran-Haafidh-1.17.1-UI-COMPACT-ITQAN-DEBUG.apk"
           cp "$apk" "$RUNNER_TEMP/haafidh-audit-critique-debug/$output"
           cp docs/AUDIT_CRITIQUE_7J_AMORCES_SANS_LISTES_2026-10-11.md "$RUNNER_TEMP/haafidh-audit-critique-debug/AUDIT_7J_AMORCES.md"
           printf "Official baseline: 7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21\\nGitHub tested HEAD: %s\\nAndroid: seven instrumented checks and at least 15 PNGs (including real Itqan four-date tap and recreation)\\nEnglish headings: 16 verified groups only; 1903 documentary starts; BOOX physical NOT certified.\\nNo production release. Independent test-only APK.\\n" "$GITHUB_SHA" > "$RUNNER_TEMP/haafidh-audit-critique-debug/BUILD_PROVENANCE.txt"
@@ -108,7 +108,7 @@ jobs:
       - name: Publish ONLY the final APK debug + SHA256, no release
         uses: actions/upload-artifact@v4
         with:
-          name: Quran-Haafidh-1.17.1-ITQAN-2P-4DATES-DEBUG-${{ github.sha }}
+          name: Quran-Haafidh-1.17.1-UI-COMPACT-ITQAN-DEBUG-${{ github.sha }}
           path: ${{ runner.temp }}/haafidh-audit-critique-debug/
           retention-days: 30
           if-no-files-found: error
