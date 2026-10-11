@@ -65,11 +65,12 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
     try(ActivityScenario<StudyReaderActivity> s=ActivityScenario.launch(intent)){
       HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Ibn Kathir title Qaf");
       s.onActivity(a->{
-        try{
-          java.lang.reflect.Method enable=StudyReaderActivity.class.getDeclaredMethod("toggleSemanticCues");
-          enable.setAccessible(true);
-          enable.invoke(a);
-        }catch(Exception e){throw new AssertionError(e);}
+        if(Boolean.FALSE.equals(reflect(a,"semanticCuesEnabled"))) {
+          try {
+            java.lang.reflect.Method enable=StudyReaderActivity.class.getDeclaredMethod("toggleSemanticCues");
+            enable.setAccessible(true);enable.invoke(a);
+          }catch(Exception e){throw new AssertionError(e);}
+        }
         a.onSemanticCueTap("IKEN050_001_005");
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull("Amorce dialog not created",dialog);
@@ -111,6 +112,31 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
           captionTop[1]+caption.getHeight()+Ui.dp(a,4)<=iconTop[1]);
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-anglais.png");
+      // Different part of the Mushaf. The title MUST come from the pinned
+      // source asset, not the 16 Qaf/Najm editorial checkpoint methods.
+      s.onActivity(a->{
+        IbnKathirGroupIndex.Group baqarah=IbnKathirGroupIndex.shared().containing(2,1);
+        assertNotNull(baqarah);
+        String[] source=IbnKathirTitlePack.sourceHeadings(a,baqarah);
+        assertEquals("The Virtues of Surat Al-Baqarah",source[0]);
+        a.onSemanticCueTap("IKEN002_001_001");
+        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
+        assertNotNull("Missing packaged Al-Baqarah source title",popup);
+        assertTrue(containsText(popup.findViewById(android.R.id.content),source[0]));
+        View row=(View)reflect(a,"readerActions");
+        assertTrue(row.getVisibility()==View.VISIBLE);
+      });
+      InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+      s.onActivity(a->{
+        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
+        View row=(View)reflect(a,"readerActions");
+        View panel=popup.findViewById(android.R.id.content);
+        int[] barTop=new int[2],panelTop=new int[2];
+        row.getLocationOnScreen(barTop);panel.getLocationOnScreen(panelTop);
+        assertTrue("Actual Al-Baqarah heading must remain ABOVE the three icons",
+            panelTop[1]+panel.getHeight()+Ui.dp(a,4)<=barTop[1]);
+      });
+      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-baqarah-source.png");
     }
  }
  @Test public void liveItqanFourDateWindowSurvivesRealTapAndRecreation() {
