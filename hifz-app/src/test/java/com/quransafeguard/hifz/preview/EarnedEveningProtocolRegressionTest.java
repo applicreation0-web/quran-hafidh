@@ -48,7 +48,7 @@ public final class EarnedEveningProtocolRegressionTest {
    HifzPrefs.ProgressionSnapshot snapshot=p.progressionSnapshotV6();
    for(String id:ids)assertFalse("Premature Acquis: "+id,snapshot.acquired.contains(id));
  }
- @Test public void compositeItqanEveningEarnsEveryNewSevenTimeReceipt() {
+ @Test public void compositeItqanEveningEarnsEveryNewSevenTimeReceipt() throws Exception {
    InMemoryPrefs db=disk();
    List<String> ids=geometry.lineIdsOnPage(603);
    String earned=ConsolidationPhysicalUnitPolicy.encodeLineUnit(
