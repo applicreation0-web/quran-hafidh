@@ -72,8 +72,10 @@ public final class ItqanFourSessionStoreTest {
    ItqanFourSessionSnapshot next=ItqanFourSessionStore.nextAfterValidatedBlock(
        snap.withProgress(0,0,40,geo),geo);
    assertEquals(0,next.reps);
-   assertEquals(0,next.sessionIndex);
-   assertEquals(1,next.blockIndex);
+   // One date may legitimately contain only one same-surah subblock.
+   boolean moreBlocksInFirstDate=snap.plan.sessions.get(0).blocks.size()>1;
+   assertEquals(moreBlocksInFirstDate?0:1,next.sessionIndex);
+   assertEquals(moreBlocksInFirstDate?1:0,next.blockIndex);
  }
  @Test public void aCorruptSnapshotNeverResetsToCurrentGeometry() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
