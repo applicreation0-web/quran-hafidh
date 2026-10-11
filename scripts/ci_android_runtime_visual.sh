@@ -22,6 +22,12 @@ set -e
 cat audit-runtime-instrumentation.txt
 echo "ADB instrumentation shell status: $shell_status"
 
+# Preserve actual pixels even if an instrumented test fails. The old fail-fast
+# grep discarded the very screenshots needed to diagnose a blank Quiz.
+mkdir -p audit-runtime-screens
+device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
+adb pull "$device_dir/." audit-runtime-screens/ || true
+
 # AndroidJUnitRunner is authoritative: exactly SIX independent runtime tests.
 # A bare Android shell exit code is not sufficient to prove test success.
 grep -Fxq 'OK (6 tests)' audit-runtime-instrumentation.txt
