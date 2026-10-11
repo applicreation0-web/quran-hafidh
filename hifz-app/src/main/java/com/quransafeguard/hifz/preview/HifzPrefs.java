@@ -1661,6 +1661,55 @@ public final class HifzPrefs {
             .commit();
     }
 
+    /** Frozen Itqan is opt-in only at a clean pre-An-Nas boundary.
+     * A legacy OPEN block always stays on its original immutable protocol. */
+    ItqanFourSessionSnapshot frozenItqanSnapshot(GeometryRepository geo) {
+        return ItqanFourSessionStore.read(p,geo);
+    }
+
+    ItqanFourSessionSnapshot openOrResumeFrozenItqan(
+            GeometryRepository geo,LocalDate date) {
+        if(geo==null||date==null)throw new IllegalArgumentException("Itqan QCF and date required");
+        ItqanFourSessionSnapshot existing=ItqanFourSessionStore.read(p,geo);
+        if(existing!=null)return existing; // frozen forever, never dynamically replanned
+        if(itqanPostNasMaintenance()
+                ||p.getInt("itqanRep",0)!=0||p.getInt("itqanBlockIndex",0)!=0
+                ||!p.getString("itqanUnitStart","").isEmpty()
+                ||!p.getString("itqanUnitEnd","").isEmpty()
+                ||date.toString().equals(lastItqanDate()))return null;
+        // Resolve any one-time historic bootstrapping before pinning the cursor.
+        itqanRotationLiveCursor(geo);
+        ItqanRotationPolicy.State rotation=itqanRotationState();
+        if(rotation.initialTailCompleted ||
+                rotation.leg!=ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS)return null;
+        String physicalId=p.getString("itqanFourNextPhysicalLineIdV1","");
+        int firstLine;
+        if(physicalId.isEmpty())firstLine=geo.firstLineIndex(rotation.cursor);
+        else {
+            List<GeometryRepository.LineMeta> verified=geo.linesForExactIds(
+                Collections.singletonList(physicalId));
+            if(verified.size()!=1)throw new IllegalStateException("Lost physical Itqan cursor");
+            firstLine=verified.get(0).globalIndex;
+        }
+        if(firstLine<0||firstLine>=geo.lineCount()
+                ||geo.line(firstLine).verses.get(0).getSurah()<49)
+            throw new IllegalStateException("Itqan physical cursor outside first tail");
+        LinkedHashSet<String> eligible=new LinkedHashSet<>();
+        for(int i=firstLine;i<geo.lineCount();i++)eligible.add(geo.line(i).id);
+        ItqanFourSessionPolicy.Plan geometryPlan=
+            ItqanFourSessionPolicy.fromGeometry(geo,firstLine,eligible);
+        ItqanFourSessionSnapshot frozen=ItqanFourSessionSnapshot.freeze(
+            geometryPlan,rotation,mondayOf(date),geo);
+        if(!ItqanFourSessionStore.open(p,frozen,geo))
+            throw new IllegalStateException("Conflicting Itqan plan: preserve previous progress");
+        return ItqanFourSessionStore.read(p,geo);
+    }
+
+    boolean recordFrozenItqanRep(ItqanFourSessionSnapshot expected,
+            GeometryRepository geo,boolean revealed) {
+        return ItqanFourSessionStore.recordRep(p,expected,geo,revealed);
+    }
+
     /**
      * Atomic V6 close of a verified ×40 subblock from a frozen four-date window.
      * This endpoint is not used by legacy OPEN 22-line sessions.
