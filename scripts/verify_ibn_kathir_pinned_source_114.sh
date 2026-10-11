@@ -15,7 +15,7 @@ download() {
   test -s "$tmp/$chapter.json"
 }
 export -f download
-seq 1 114 | xargs -P 8 -n 1 bash -c 'download "$1" "$2" "$3"' _ _ "$TMP" "$SHA"
+seq 1 114 | xargs -P 8 -I{} bash -c 'download "$1" "$2" "$3"' _ {} "$TMP" "$SHA"
 python3 "$ROOT/scripts/audit_ibn_kathir_title_pack.py" \
   --source-dir "$TMP" --out "$TMP/source_headings_review.csv"
 echo "PASS: 114 pinned original English source files; 1,903 groups; per-title verbatim provenance"
