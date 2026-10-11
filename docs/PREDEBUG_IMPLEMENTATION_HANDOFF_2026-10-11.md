@@ -1,0 +1,35 @@
+# Quran Haafidh — correction batch before independent Work audit
+
+**Mode:** historical corrections and regression tests committed first; independent Work audit READ-ONLY afterwards; debug ONLY on explicit GO. Never use a previous debug artifact as proof for this HEAD.
+
+## Pre-audit changes — WHAT WAS ACTUALLY COMMITTED
+
+1. `hifz-app/src/main/assets/hifzreader/reader.js`: restore the ORIGINAL exact-QCF-word translucent Al-Munir-style rectangles (`var(--sel)`, E-Ink alpha 0.16, screen alpha 0.10) rather than the unilateral underline substitution. Transparent grey is behind the words, not a 100% reading mask. The exact original renderer is re-pinned by `scripts/verify_authorized_quiz_reader_delta.py`; other erasers and QCF geometry must be byte-equal.
+2. `StudyReaderActivity.java`: available offline Amorces are now ON at first launch; the persisted user choice OFF remains honored, and the exact toolbar-relative Ibn Kathir title position remains unchanged. A missing verified heading still shows no fake technical sentence.
+3. `MainActivity.java`: home chevrons no longer shrink to an 8dp-high mark. Short compact weekly-program dialog. 3/4 Standard remains the default; Manual truthfully describes configurable number of days, NOT individually movable weekdays.
+4. `SettingsActivity.java`: same truthful Standard/Manual wording. Roadmap AUTO continues to control the effective Sabqi ratio where designed.
+5. `Ui.java`: the selected key/pencil icon is INK on a light selected background; PAPER-on-PAPER caused an invisible selected icon. The contracted vector file and its frozen SHA are unchanged.
+6. `PreDebugVisualRestorationSourceContractTest.java`: guards highlight exact boxes, absence of old underlining, visible active vectors, honest program text, fail-closed titles, and the persisted Amorces toggle.
+7. `scripts/audit_ibn_kathir_verified_title_coverage.py`: a READ-ONLY CSV inventory for all 1,903 documentary intervals, listing the 16 verified title ranges (Qaf/Najm) and the other 1,887 unsupported title slots. No commentary or invented religious text is embedded by this script.
+8. Historic `CanonicalProgressUiSourceContractTest` assertion updated to insist on the newly truthful Sunday-fixed manual wording. No functional schema/cadence/credit change in this batch.
+
+**Protected**: `hifz-core`, `HifzPrefs`, `HifzSessionActivity`, `ConsolidationCycleEngine`, `WeeklyDashboardPlanner`, QCF 604 page content and word boxes, all session-motor plans, credit and ledger data, app signing. This batch is an UI/documentary correction, not a new motor release.
+
+## Unresolved findings to expose to Work (DO NOT CLAIM COMPLETION)
+
+- **TITLE-COVERAGE (P1/GO-BLOCKER for a purported fully titled deliverable):** 1,903 documentary commentary groups, 16 offline original English headings, 1,887 missing title evidence. A source-derived group start is not automatically an *editorially validated mnemonic key*. 0 of 1,903 have an editorial mnemonic approval. Work must inventory and report full source/citation/rights status and must not fabricate titles.
+- **MANUAL SCHEDULING (P1):** `MANUAL_SEVEN` selects the *number* of Sabqi days through the original cadence policy with Sunday Itqan/finals; it DOES NOT let the user choose dates. If the effective setting results in fewer than four Itqan days in a week, a two-page/four-date Itqan window may span weeks. Work must prove this does not skip/replay credits; the user has not yet approved a new persisted custom-days engine. Do not silently rewrite historic ratios.
+- **BOOX (UNVERIFIED):** real physical device, responsiveness, title clipping, grey highlight opacity, right chevron glyph and in-progress state restore require device verification. Emulator captures alone are not a signed physical-BOOX acceptance.
+- **CORPUS/LICENSING (P0 if content imported unlawfully):** software-repository MIT license does not by itself prove republication rights for Darussalam's English tafsir and its headings. Existing 16 title units are source-attested. No unreviewed English prose was added to the APK in this batch.
+- **ROTATION & SUNDAY (P0 if broken):** verify four-date Itqan atomic V6 credit, no next-date replay, line-contiguous cursor at page/surah boundary, post-Nas regime, zero general revision Sundays, legacy OPEN sessions, snowball ×7/new and ×1/old, final weekly credit once.
+
+## Work audit: expected proof, not an automatic APK authorization
+
+1. Freeze Git SHA at the start; confirm branch is exclusively `work/haafidh-1171-ibn-kathir-integration-independent` and baseline immutable `7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21`.
+2. Read the full external `STANDARD_COMPLET_HAAFIDH_FONCTIONNEL_VISUEL.md`, `DECISIONS_ET_CONTRADICTIONS.md`, 133-case `MATRICE_TESTS.csv`, and source docs (especially 23-icon manifest).
+3. Execute the new coverage audit (write output ONLY to local scratch directory; do NOT commit): `python3 scripts/audit_ibn_kathir_verified_title_coverage.py --out /tmp/ibn_kathir_title_coverage.csv`. Verify 1,903/16/1,887 counts.
+4. Independently check exact renderer deltas and old/current title popup coordinates; ensure Amorces default ON does not modify saved OFF; inspect the *actual* E-Ink/screenshots; if physical BOOX unavailable flag UNVERIFIED.
+5. Execute all independent CI scripts, JVM and Android if available on frozen SHA, and compare source/visual/regression. Simulate schedule over ≥8 weeks, manual/recommended, Sunday/finales, source/target progression, and upgrade from schema V6.
+6. Provide GO/NO-GO with P0/P1/P2 matrix and precise executable reproductions. **No Git commits, PR, build-upload, APK delivery, release, fake green verdict, source generation or cosmetic guesses during Work audit.**
+
+**Gate:** after all correction commits, independent Work audit is the LAST step before the NEXT DEBUG; on a NO-GO do not build the debug, and report exact blockers to the user. On GO, run the two independent same-SHA CI workflows and the isolated debug workflow only with user authorization. Existing (older) APK remains rejected for this change set.
