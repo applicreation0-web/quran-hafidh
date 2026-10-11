@@ -25,8 +25,8 @@ SHA="eb82bb6294efe30ad5c135c03b1864afaa70e855"
 
 def canonical_groups():
     src=INDEX.read_text(encoding="utf8")
-    packed=re.search(r'BOUNDARIES_ZLIB_BASE64\\s*=\\s*"([^"]+)"',src)
-    expected=re.search(r'ENDPOINTS_SHA256\\s*=\\s*"([0-9a-f]{64})"',src)
+    packed=re.search(r'BOUNDARIES_ZLIB_BASE64\s*=\s*"([^"]+)"',src)
+    expected=re.search(r'ENDPOINTS_SHA256\s*=\s*"([0-9a-f]{64})"',src)
     assert packed and expected, "Canonical index was changed"
     raw=zlib.decompress(base64.b64decode(packed.group(1)))
     assert hashlib.sha256(raw).hexdigest()==expected.group(1)
@@ -62,8 +62,8 @@ def verify(raws=None):
             assert 1<=len(items)<=3
             for title in items:
                 assert title==title.strip()
-                assert 9<=len(title)<=145 and "\\n" not in title
-                assert not re.search(r'[\\u0600-\\u06ff\\d]',title)
+                assert 9<=len(title)<=145 and "\n" not in title
+                assert not re.search(r'[\u0600-\u06ff\d]',title)
                 assert "English heading not yet verified" not in title
             titles[key]=items
             covered_sura.add(surah)
