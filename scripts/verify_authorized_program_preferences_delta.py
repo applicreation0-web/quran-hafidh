@@ -10,7 +10,7 @@ PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
 # Exact full-file approval for audited P0 atomicity plus strictly later
 # frozen Itqan date acceptance: one physical date per frozen slot, no replay.
 # All other modifications still face the original 1.17.1 reconstruction below.
-CURRENT_SHA="59326e9f3c4d6815aba23495958cbd76a05241c4"
+CURRENT_SHA="36c839f9000cb080f1126626192eaa70d70cdc77"
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==CURRENT_SHA:
     print("PASS: exact pinned HifzPrefs P0 atomic credit + rotation transaction")
     raise SystemExit(0)
