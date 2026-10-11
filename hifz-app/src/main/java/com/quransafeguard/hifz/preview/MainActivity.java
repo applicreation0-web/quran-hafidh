@@ -760,13 +760,7 @@ public final class MainActivity extends android.app.Activity {
         scheduleHours.setTextColor(Ui.MUTED);
         scheduleHours.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,4));
         dashboard.addView(scheduleHours);
-        LinearLayout header = Ui.row(this);
-        header.setPadding(0, Ui.dp(this, 1), 0, Ui.dp(this, 2));
-        addCell(header, "Jour", 0.62f, true, true);
-        addCell(header, "Matin", 2.05f, true, false);
-        addCell(header, "Soir", 2.05f, true, false);
-        addCell(header, "État", 1.05f, true, false);
-        dashboard.addView(header);
+        // Portrait BOOX: full-width, readable daily rows; never four 10sp columns.
         dashboard.addView(Ui.divider(this));
 
         List<WeeklyDashboardPlanner.Row> rows;
@@ -784,14 +778,23 @@ public final class MainActivity extends android.app.Activity {
         }
         for (int i = 0; i < rows.size(); i++) {
             WeeklyDashboardPlanner.Row item = rows.get(i);
-            LinearLayout row = Ui.row(this);
-            row.setPadding(0, Ui.dp(this, 3), 0, Ui.dp(this, 3));
-            addCell(row, "Aujourd’hui".equals(item.day) ? "Auj." : item.day, 0.62f, true, true);
-            addCell(row, compactSession(item.morning), 2.05f, false, false);
-            addCell(row, compactSession(item.evening), 2.05f, false, false);
-            addCell(row, compactState(item.state), 1.05f, false, false);
-            dashboard.addView(row);
-            if (i + 1 < rows.size()) dashboard.addView(Ui.divider(this));
+            LinearLayout day=Ui.column(this);
+            day.setPadding(Ui.dp(this,6),Ui.dp(this,8),Ui.dp(this,6),Ui.dp(this,9));
+            TextView dayTitle=Ui.bookText(this,
+                item.day+"   ·   "+compactState(item.state),13,true);
+            dayTitle.setTextColor(Ui.INK);
+            day.addView(dayTitle);
+            TextView morning=Ui.text(this,
+                "Matin "+prefs.suggestedMorningTime()+"   ·   "+compactSession(item.morning),12.5f,false);
+            morning.setTextColor(Ui.INK);
+            morning.setPadding(0,Ui.dp(this,5),0,Ui.dp(this,2));
+            day.addView(morning);
+            TextView evening=Ui.text(this,
+                "Soir "+prefs.suggestedEveningTime()+"   ·   "+compactSession(item.evening),12.5f,false);
+            evening.setTextColor(Ui.INK);
+            day.addView(evening);
+            dashboard.addView(day);
+            if (i + 1 < rows.size())dashboard.addView(Ui.divider(this));
         }
     }
 
