@@ -76,6 +76,8 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private int itqanBlockIndex;
     private int itqanBlockCount = 1;
     private ItqanPlanSnapshot itqanBonusDecision;
+    /** Non-null only for a verified, immutable pre-An-Nas two-page window. */
+    private ItqanFourSessionSnapshot frozenItqan;
     private GeometryRepository.EligibleLinePlan murajaahPlan;
     private VerseRef murajaahActualEnd;
     private boolean timedSessionLimitReached;
@@ -751,6 +753,10 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void renderItqan() { renderItqan(0); }
 
     private void renderItqan(int autoChainDepth) {
+        // Restore the exact saved plan BEFORE asking the legacy verse-unit picker.
+        // Existing 1.17.1 OPEN units return null and finish unmodified.
+        frozenItqan=prefs.openOrResumeFrozenItqan(geometry,sessionDate);
+        if(frozenItqan!=null){renderFrozenItqan();return;}
         String today=sessionDate.toString();
         if(today.equals(prefs.lastItqanDate())){
             sessionCompleted = true;
@@ -936,7 +942,97 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         updateRevealButton();
     }
 
+    /** Live four-date window: every subblock stays in its original physical
+     * order and on its exact saved ×40 progress, including across process death.
+     * No P3 bonus, 1–2 line auto-credit, or legacy picker can rewrite this plan. */
+    private void renderFrozenItqan() {
+        if(sessionDate.toString().equals(prefs.lastItqanDate())) {
+            sessionCompleted=true;
+            clock.pause();
+            program.setText("Stabilisation · séance terminée");
+            progress.setText("Prochaine séance sur la prochaine date prévue.");
+            return;
+        }
+        if(frozenItqan.sessionIndex>=4)
+            throw new IllegalStateException("Stale finished Itqan window");
+        ItqanFourSessionPolicy.Session slot=
+            frozenItqan.plan.sessions.get(frozenItqan.sessionIndex);
+        if(frozenItqan.blockIndex<0||frozenItqan.blockIndex>=slot.blocks.size())
+            throw new IllegalStateException("Frozen Itqan subblock index outside this date");
+        ItqanFourSessionPolicy.Block block=slot.blocks.get(frozenItqan.blockIndex);
+        List<GeometryRepository.LineMeta> physical=geometry.linesForExactIds(block.lineIds);
+        if(physical.isEmpty())throw new IllegalStateException("Missing frozen QCF lines");
+        GeometryRepository.LineMeta first=physical.get(0),last=physical.get(physical.size()-1);
+        VerseRef start=first.verses.get(0);
+        VerseRef end=last.verses.get(last.verses.size()-1);
+        currentLineIds=new ArrayList<>(block.lineIds);
+        List<VerseRef> verses=geometry.versesForRange(start,end);
+        itqanUnit=new GeometryRepository.VerseUnit(first.page,start,end,verses,currentLineIds);
+        anchoringEntry=new AnchoringQueue.Entry(start.toString(),end.toString(),
+            AnchoringQueue.Origin.PROMOTED,AnchoringQueue.ItqanProtocol.FULL,0);
+        currentSelection=geometry.versesOnLines(currentLineIds,verses);
+        unitFirstPage=first.page;unitLastPage=last.page;
+        itqanBlockPage=first.page;currentPage=first.page;
+        itqanBlockCount=slot.blocks.size();
+        itqanBlockIndex=frozenItqan.blockIndex;
+        fractionatedItqan=slot.blocks.size()>1;
+        itqanRegime=ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
+        itqanSessionProtocol=AnchoringQueue.ItqanProtocol.FULL;
+        itqanUnitPlan=new ItqanRegimeStore.UnitPlan(itqanRegime,itqanSessionProtocol,
+            ItqanRegimeStore.MaskProfile.BALANCED_20_5_5_5_5);
+        itqanTargetReps=40;
+        if(frozenItqan.reps>=40) {
+            boolean assistancePassed=ItqanMaintenancePolicy.validationAllowed(
+                itqanRegime,prefs.itqanAssisted());
+            awaitingValidation=assistancePassed;sessionCompleted=true;clock.pause();
+            currentMask=0;
+            program.setText(itqanProgramLabel());
+            progress.setText(assistancePassed?"40/40 · prêt à valider"
+                :"40/40 · révélations excessives : reprendre ce bloc");
+            showCurrent();
+            if(assistancePassed)addRoundAction("✓","Valider",v->runValidationSafely(this::validateItqan));
+            else addRoundAction("↻","Reprendre",v->restartItqanAfterAssistance());
+            return;
+        }
+        awaitingValidation=false;sessionCompleted=false;
+        currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan,frozenItqan.reps);
+        program.setText(itqanProgramLabel());
+        updateItqanProgress(frozenItqan.reps,prefs.itqanAssisted());
+        showCurrent();
+        addRoundAction("↻","Répétition",v->completeItqanRep());
+        LinearLayout revealAction=Ui.roundAction(this,"","Révéler",null);
+        revealButton=(Button)revealAction.getChildAt(0);
+        configureRevealButton(revealButton);
+        actions.addView(revealAction);
+        updateRevealButton();
+    }
+
+    private void validateFrozenItqan() {
+        if(frozenItqan==null||frozenItqan.reps!=40)return;
+        if(!ItqanMaintenancePolicy.validationAllowed(itqanRegime,prefs.itqanAssisted())) {
+            restartItqanAfterAssistance();return;
+        }
+        String label=itqanProgramLabel()+" · validé · "+anchoringInstrumentation();
+        if(!prefs.completeFrozenItqanSubblockV6(frozenItqan,geometry,sessionDate.toString(),label)) {
+            onError("Validation non enregistrée : séance ou date à vérifier.");
+            return;
+        }
+        metricsStore.recordAnchoring(label);
+        awaitingValidation=false;
+        closeClockForCompletedSession();
+        mushaf.cycleCompleted();
+        renderMode();
+    }
+
     private String itqanProgramLabel() {
+        if(frozenItqan!=null) {
+            ItqanFourSessionPolicy.Session slot=frozenItqan.plan.sessions.get(frozenItqan.sessionIndex);
+            String where=QuranSurahNames.block(geometry,currentLineIds,
+                QuranSurahNames.range(itqanUnit.start,itqanUnit.end));
+            return "Stabilisation · séance "+(frozenItqan.sessionIndex+1)+"/4"
+                +" · bloc "+(frozenItqan.blockIndex+1)+"/"+slot.blocks.size()
+                +" · "+where+" · ×40";
+        }
         if (fractionatedItqan) {
             VerseRef start = currentSelection.isEmpty() ? itqanUnit.start : currentSelection.get(0);
             VerseRef end = currentSelection.isEmpty() ? itqanUnit.end : currentSelection.get(currentSelection.size() - 1);
@@ -1013,6 +1109,25 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private void completeItqanRep(){
         if (!takeRepLock()) return;
         boolean revealed=consumeReveal();
+        if(frozenItqan!=null) {
+            if(!prefs.recordFrozenItqanRep(frozenItqan,geometry,revealed)) {
+                onError("La répétition est périmée : aucune progression enregistrée.");
+                return;
+            }
+            frozenItqan=prefs.frozenItqanSnapshot(geometry);
+            int rep=frozenItqan.reps,oldMask=currentMask;
+            if(rep>=40) {
+                currentMask=0;mushaf.setMask(0);
+                long elapsed=clock.pause();prefs.setElapsedFor(mode,elapsed);
+                awaitingValidation=true;sessionCompleted=true;renderMode();return;
+            }
+            currentMask=ItqanBalancedMaskSchedule.maskForNextRep(itqanUnitPlan,rep);
+            if(currentMask!=oldMask)mushaf.setMask(displayedMask());
+            updateRevealButton();
+            if(currentPage!=itqanBlockPage){currentPage=itqanBlockPage;showCurrent();}
+            updateItqanProgress(rep,prefs.itqanAssisted());
+            return;
+        }
         int rep=prefs.itqanRep();if(rep>=itqanTargetReps)return;
         int oldMask=currentMask;rep++;int reveals=prefs.itqanAssisted()+(revealed?1:0);
         int finalReveals = prefs.itqanFinalReveals()
@@ -1095,6 +1210,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void validateItqan(){
+        if(frozenItqan!=null){validateFrozenItqan();return;}
         if(itqanUnit==null||anchoringEntry==null||prefs.itqanRep()<itqanTargetReps)return;
         if (!ItqanMaintenancePolicy.validationAllowed(itqanRegime, prefs.itqanAssisted())) {
             restartItqanAfterAssistance();
@@ -1130,6 +1246,21 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     private void restartItqanAfterAssistance() {
+        if(frozenItqan!=null) {
+            if(!prefs.restartFrozenItqanBlock(frozenItqan,geometry)) {
+                onError("Impossible de reprendre la séance de Stabilisation.");
+                return;
+            }
+            lastCheckpointBucket=-1L;
+            clock.reset();
+            prefs.setElapsedFor(mode,0L);
+            awaitingValidation=false;
+            sessionCompleted=false;
+            clock.resume();
+            mushaf.cycleCompleted();
+            renderMode();
+            return;
+        }
         if (itqanUnit == null || !prefs.setItqanProgress(0, 0, 0, itqanUnit.start, itqanUnit.end)) {
             onError("Impossible de relancer ce bloc de Stabilisation.");
             return;
