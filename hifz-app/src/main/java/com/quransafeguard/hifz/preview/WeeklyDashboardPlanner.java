@@ -67,6 +67,10 @@ final class WeeklyDashboardPlanner {
             prefs.itqanRotationState(),currentItqan,prefs.itqanBlockIndex(),
             (leg,postNas)->prefs.cachedUnitsInLeg(leg,sabqiFrontier,geometry,
                 ItqanMaintenancePolicy.regimeFor(postNas)));
+        ItqanFourSessionSnapshot frozenItqan=prefs.frozenItqanSnapshot(geometry);
+        ItqanFourSessionPolicy.Plan fourDates=frozenItqan==null
+            ?prefs.previewFourDateItqanPlan(geometry):frozenItqan.plan;
+        int nextFourDateSlot=frozenItqan==null?0:frozenItqan.sessionIndex;
 
         for(LocalDate date:window(today)){
             if(date.isBefore(prefs.programStartDate())){
@@ -103,8 +107,25 @@ final class WeeklyDashboardPlanner {
                 }
                 case STABILIZATION:{
                     DashboardLedger.Record actual=ledger.find(date,HifzSessionActivity.ITQAN);
+                    boolean alreadyValidated=date.toString().equals(prefs.lastItqanDate());
                     if(actual!=null)morning="✓ "+compact(actual.label);
+                    else if(alreadyValidated)morning="✓ Stabilisation · séance validée";
                     else if(date.equals(today)&&prefs.anchoringDeferredToday())morning="Stabilisation · unité reportée";
+                    else if(fourDates!=null&&nextFourDateSlot<4) {
+                        ItqanFourSessionPolicy.Session slot=fourDates.sessions.get(nextFourDateSlot);
+                        while(slot.blocks.isEmpty()&&nextFourDateSlot<3)
+                            slot=fourDates.sessions.get(++nextFourDateSlot);
+                        if(slot.blocks.isEmpty())morning="Stabilisation · fenêtre terminée";
+                        else {
+                            String where=QuranSurahNames.block(geometry,slot.blocks.get(0).lineIds,
+                                "pages "+fourDates.firstPage+"–"+fourDates.lastPage);
+                            morning="Stabilisation · séance "+(nextFourDateSlot+1)+"/4"
+                                +" · "+slot.lineCount+" lignes · "+slot.blocks.size()
+                                +" bloc(s) · "+where+" · ×40";
+                            nextFourDateSlot++;
+                        }
+                    }
+                    else if(fourDates!=null)morning="Stabilisation · prochaine fenêtre après validation";
                     else if(itqanForecast.entry()==null)morning="Stabilisation · aucune unité à stabiliser";
                     else{
                         AnchoringQueue.Entry entry=itqanForecast.entry();
@@ -132,7 +153,7 @@ final class WeeklyDashboardPlanner {
                         // This advances the *forecast only*, never the user's saved state.
                         itqanForecast.completedBlock(blocks);
                     }
-                    boolean morningDone=actual!=null;
+                    boolean morningDone=actual!=null||alreadyValidated;
                     if(date.getDayOfWeek()==java.time.DayOfWeek.SUNDAY
                             && prefs.weeklyProgramFor(date)!=HifzPrefs.WeeklyProgram.CLASSIC) {
                         DashboardLedger.Record learningFinal=ledger.find(date,HifzSessionActivity.LEARNING_FINAL);
