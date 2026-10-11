@@ -63,6 +63,7 @@ fi
 python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_itqan_four_session_plan_contract.py
+python3 scripts/verify_itqan_rotation_atomicity.py
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py
