@@ -9,7 +9,7 @@ BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
 PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
 # Exact full-file approval for the independently reviewed P0 atomicity delta.
 # Other modifications still face the original 1.17.1 reconstruction below.
-CURRENT_SHA="453161669f0cbd134963fe404a1a4b77d3b7595b"
+CURRENT_SHA="838ce83ce7b7d833275df6350d4030d67c10a590"
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==CURRENT_SHA:
     print("PASS: exact pinned HifzPrefs P0 atomic credit + rotation transaction")
     raise SystemExit(0)

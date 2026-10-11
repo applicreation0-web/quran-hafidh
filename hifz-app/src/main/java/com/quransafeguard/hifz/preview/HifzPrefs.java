@@ -1707,9 +1707,15 @@ public final class HifzPrefs {
                     LocalDate day=LocalDate.parse(date);
                     JSONArray before=rolledSnowballUnits(ConsolidationCycleEngine.Family.STABILIZATION,day);
                     snowball=weeklySnowballAppendEntries(ConsolidationCycleEngine.Family.STABILIZATION,newLines,day);
-                    JSONArray after=new JSONArray(snowball.get(snowballUnitsKey(
-                        ConsolidationCycleEngine.Family.STABILIZATION)));
-                    if(after.length()!=before.length()+1)
+                    int afterSize;
+                    try {
+                        JSONArray after=new JSONArray(snowball.get(snowballUnitsKey(
+                            ConsolidationCycleEngine.Family.STABILIZATION)));
+                        afterSize=after.length();
+                    }catch(Exception malformed){
+                        throw new IllegalStateException("Corrupt composite Consolidation enrollment",malformed);
+                    }
+                    if(afterSize!=before.length()+1)
                         throw new IllegalStateException("No free weekly Consolidation slot for composite Itqan");
                 }
                 ItqanFourSessionSnapshot next=ItqanFourSessionStore.nextAfterValidatedBlock(actual,geo);
