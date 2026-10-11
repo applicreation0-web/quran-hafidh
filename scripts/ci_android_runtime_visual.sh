@@ -42,4 +42,18 @@ test "$count" -ge 14
 find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q . && {
   echo "::error::At least one required screenshot is empty"; exit 1;
 } || true
+# Independent visual transition contracts: a screenshot of the same screen twice
+# is NOT evidence that back-navigation or the Quiz actually changed UI.
+test -s audit-runtime-screens/audit-ibn-kathir-liste.png
+test -s audit-runtime-screens/audit-ibn-kathir-passage.png
+test -s audit-runtime-screens/audit-quiz-accueil.png
+test -s audit-runtime-screens/audit-quiz-question.png
+if cmp -s audit-runtime-screens/audit-ibn-kathir-liste.png audit-runtime-screens/audit-ibn-kathir-passage.png; then
+  echo "::error::Map return screenshot is identical to its passage sheet"
+  exit 1
+fi
+if cmp -s audit-runtime-screens/audit-quiz-accueil.png audit-runtime-screens/audit-quiz-question.png; then
+  echo "::error::Quiz start screenshot is identical to its setup screen"
+  exit 1
+fi
 echo "PASS: six genuine Android runtime tests + $count screenshot PNGs"
