@@ -80,6 +80,26 @@ final class ItqanFourSessionStore {
         }
     }
 
+    /** Retry ONLY this in-flight ×40 block after excessive assistance.
+     * The date slot, all earlier validated blocks and its frozen geometry stay put. */
+    static boolean restartBlock(SharedPreferences p,ItqanFourSessionSnapshot expected,
+                                GeometryRepository geo) {
+        if(p==null||expected==null||geo==null)throw new IllegalArgumentException("Frozen retry required");
+        synchronized(p) {
+            ItqanFourSessionSnapshot stored=read(p,geo);
+            if(stored==null||!stored.encode().equals(expected.encode()))return false;
+            if(stored.sessionIndex>=4||
+                    stored.blockIndex>=stored.plan.sessions.get(stored.sessionIndex).blocks.size())
+                throw new IllegalStateException("No active Itqan block to repeat");
+            ItqanFourSessionSnapshot reset=stored.withProgress(
+                stored.sessionIndex,stored.blockIndex,0,geo);
+            return p.edit().putString(KEY,reset.encode())
+                .putInt("itqanRep",0).putInt("itqanAssisted",0)
+                .putInt("itqanFinalReveals",0)
+                .putLong("itqanElapsedMs",0L).commit();
+        }
+    }
+
     /** Pure next-state calculation. This is NOT a persistence or credit API:
      * only the final Hifz V6 completion transaction may append this result. */
     static ItqanFourSessionSnapshot nextAfterValidatedBlock(
