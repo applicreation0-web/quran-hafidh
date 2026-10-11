@@ -11,6 +11,10 @@ final class IbnKathirOfflineTitles {
     private IbnKathirOfflineTitles() {}
     static String[] verifiedHeadings(IbnKathirGroupIndex.Group group) {
         if(group==null)return new String[0];
+        // The source begins 2:1 with general surah virtues, but the genuine
+        // verse-specific original heading below Alif Lam Mim is more faithful.
+        if(group.surah==2 && group.startAyah==1 && group.endAyah==1)
+            return new String[]{"The Discussion of the Individual Letters"};
         if(group.surah==50)return verifiedQafHeadings(group);
         if(group.surah==53)return verifiedNajmHeadings(group);
         return new String[0];
