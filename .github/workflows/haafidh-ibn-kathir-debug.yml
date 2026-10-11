@@ -89,6 +89,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/haafidh-audit-critique-debug"
           output="Quran-Haafidh-1.17.1-IbnKathir-AUDIT-CRITIQUE-DEBUG.apk"
           cp "$apk" "$RUNNER_TEMP/haafidh-audit-critique-debug/$output"
+          cp docs/AUDIT_CRITIQUE_CODE_ANDROID_BOOX_V1171_2026-10-11.md "$RUNNER_TEMP/haafidh-audit-critique-debug/AUDIT_CRITIQUE_1171.md"
+          printf "Official baseline: 7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21\\nGitHub tested HEAD: %s\\nAndroid test: six instrumented tests + fourteen PNGs, same SHA\\nNo release. Independent test-only package.\\n" "$GITHUB_SHA" > "$RUNNER_TEMP/haafidh-audit-critique-debug/BUILD_PROVENANCE.txt"
           (cd "$RUNNER_TEMP/haafidh-audit-critique-debug" && sha256sum "$output" > "$output.sha256")
           echo "SHA256 and signed package:"
           cat "$RUNNER_TEMP/haafidh-audit-critique-debug/$output.sha256"
