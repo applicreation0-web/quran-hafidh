@@ -27,10 +27,17 @@ if [[ -n "$changed" ]]; then
 fi
 # Every QCF asset remains byte-identical except the exact approved Quiz-only JS
 # mask cut-out. Prevent silently changing fonts, geometry or a different reader asset.
-unexpected_assets="$(git diff --name-only --no-renames "${BASE}" HEAD -- hifz-app/src/main/assets/hifzreader | grep -v '^hifz-app/src/main/assets/hifzreader/reader[.]js
+unexpected_assets="$(git diff --name-only --no-renames "${BASE}" HEAD -- hifz-app/src/main/assets/hifzreader | grep -v '^hifz-app/src/main/assets/hifzreader/reader[.]js$' || true)"
+if [[ -n "$unexpected_assets" ]]; then
+  echo "::error::Unexpected official Hifz reader asset changes:"
+  printf '%s\n' "$unexpected_assets"
+  exit 1
+fi
+python3 scripts/verify_authorized_quiz_reader_delta.py
+python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py
-echo "PASS: Hifz core, progress, anchoring, renderer, Quran geometry and Quiz identical to 1.17.1; only three verified Hifz session fail-open deltas."
+echo "PASS: Official Quiz logic/QCF assets frozen, except SHA-pinned exact-word Quiz mask fix."
 
 # Also freeze the rest of application logic: only explicitly whitelisted UI/documentary
 # Java controllers may diverge. Any unexpected Java change is a regression risk.
