@@ -19,6 +19,19 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       s.onActivity(a->{
         View root=a.findViewById(android.R.id.content);
         assertFalse("Quiz must disappear entirely from home",shownText(root,"Quiz"));
+        int expectedHeight=-1;
+        for(String label:new String[]{"Lecture","Mémorisation libre","Parcours Hifz","Progression"}) {
+          View row=rowContainingLabel(root,label);
+          assertNotNull("Missing home destination "+label,row);
+          assertTrue("No giant cards: "+label,row.getHeight()>0
+              && row.getHeight()<=Ui.dp(a,76));
+          if(expectedHeight<0)expectedHeight=row.getHeight();
+          else assertTrue("Every destination must use the same compact row height",
+              Math.abs(row.getHeight()-expectedHeight)<=Ui.dp(a,4));
+        }
+        android.widget.LinearLayout itqan=(android.widget.LinearLayout)reflect(a,"itqanCard");
+        assertEquals("No engine diagnostics inside Parcours Hifz",
+            "2 pages / 4 séances",Ui.settingValue(itqan).getText().toString());
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-accueil-sans-quiz.png");
     }
@@ -133,6 +146,20 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       }
       assertTrue("Restore original user state after Android proof",restore.commit());
     }
+ }
+ private static View rowContainingLabel(View node,String exact) {
+   if(!(node instanceof ViewGroup))return null;
+   ViewGroup group=(ViewGroup)node;
+   for(int i=0;i<group.getChildCount();i++) {
+     View child=group.getChildAt(i);
+     if(child instanceof TextView && exact.contentEquals(((TextView)child).getText()))
+       return node;
+   }
+   for(int i=0;i<group.getChildCount();i++) {
+     View found=rowContainingLabel(group.getChildAt(i),exact);
+     if(found!=null)return found;
+   }
+   return null;
  }
  private static boolean containsText(View v,String value){
    if(v instanceof TextView && ((TextView)v).getText().toString().contains(value))return true;
