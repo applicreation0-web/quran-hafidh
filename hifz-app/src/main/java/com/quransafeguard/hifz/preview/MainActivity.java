@@ -65,7 +65,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout header = Ui.row(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
-        TextView title = Ui.bookText(this, "Quran Haafidh", 21, true);
+        TextView title = Ui.bookText(this, "Quran Haafidh", 18, true);
         title.setGravity(Gravity.CENTER);
         Ui.weight(title, 1f);
         header.addView(title);
@@ -98,7 +98,7 @@ public final class MainActivity extends android.app.Activity {
         LinearLayout pathHeader = Ui.row(this);
         pathHeader.setGravity(Gravity.CENTER_VERTICAL);
         pathHeader.addView(Ui.iconButton(this, "‹", "Retour", v -> showHome()));
-        TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 19, true);
+        TextView pathTitle = Ui.bookText(this, "Parcours Hifz", 18, true);
         pathTitle.setGravity(Gravity.CENTER);
         Ui.weight(pathTitle, 1f);
         pathHeader.addView(pathTitle);
