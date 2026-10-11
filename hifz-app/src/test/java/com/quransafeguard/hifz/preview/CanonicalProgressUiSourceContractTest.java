@@ -36,7 +36,10 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(settings.contains("· Stabilisation   ·   \""));
         assertTrue(settings.contains("\"Dim · Finales (historique uniquement)\"")
             && settings.contains("\"Dim · Finales sans révision\""));
-        assertTrue(settings.contains("Stabilisation = 7 jours"));
+        assertTrue("Manual mode must describe Sunday as fixed, not a freely selected weekday",
+            settings.contains("jours Stabilisation (dimanche imposé)"));
+        assertTrue("Standard mode must keep the frozen three/four schedule",
+            settings.contains("3 jours Apprentissage · 4 jours Stabilisation"));
         assertFalse(settings.contains("days+\"/6 jours\""));
         assertFalse(settings.contains("Mar/Jeu · Stabilisation"));
         assertFalse(settings.contains("Sam/Dim · Révision"));
