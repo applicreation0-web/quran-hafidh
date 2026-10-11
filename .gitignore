@@ -9,3 +9,6 @@ local.properties
 .cxx/
 **/build/
 /private/hifz-audio/
+
+# Personal Quran.com Tafsir title sidecar; NEVER commit API data to public GitHub.
+/hifz-app/src/main/assets/ibn_kathir_qurancom_private/
