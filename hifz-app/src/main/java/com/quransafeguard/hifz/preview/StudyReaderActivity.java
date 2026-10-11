@@ -305,7 +305,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onSemanticCueTap(String passageId) {
         if(!semanticCuesEnabled||recitationStarts==null)return;
         IbnKathirGroupIndex.Group group=recitationStarts.groupForId(passageId);
-        if(group==null)return;
+        if(group==null||ibnKathirCues==null)return;
+        // Only a real highlighted QCF start visible on THIS Mushaf page may
+        // open its corresponding title. A stale/off-page bridge event must
+        // never show a plausible but unrelated English heading.
+        SemanticPassageRepository.Cue visible=ibnKathirCues.cue(passageId);
+        if(visible==null||visible.startPage!=page)return;
         // Restore precisely the 1.17.1 Al-Munir bottom sheet: same location,
         // gesture, duration and non-dimming treatment, with English typography.
         // No source page list, browser, or intrusive Android AlertDialog.
