@@ -62,6 +62,10 @@ public final class PreDebugVisualRestorationSourceContractTest {
     @Test public void unverifiedIbnKathirHeadingsAreNotDisplayedAsTechnicalLabels() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String titles=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirOfflineTitles.java");
+        assertTrue("First launch highlights the available exact-word amorces",
+            reader.contains(".getBoolean(\"ibn_kathir_start_markers_visible\",true)"));
+        assertTrue("The OFF toggle is still explicitly persisted",
+            reader.contains(".putBoolean(\"ibn_kathir_start_markers_visible\",semanticCuesEnabled)"));
         assertTrue(reader.contains("if(titles.length==0)return;"));
         assertFalse(reader.contains("English heading not yet verified"));
         assertTrue(titles.contains("if(group.surah==50)return verifiedQafHeadings(group);"));
