@@ -77,6 +77,58 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(moreBlocksInFirstDate?0:1,next.sessionIndex);
    assertEquals(moreBlocksInFirstDate?1:0,next.blockIndex);
  }
+ private static void seedV6(FaultInjectingPrefs p) {
+   p.disk.put("schema",6);
+   for(String k:new String[]{"v6LearnedLineIds","v6StabilizedLineIds",
+       "v6AcquiredCreditLineIds","v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})
+     p.disk.put(k,"[]");
+ }
+ private static ItqanFourSessionSnapshot completeRepetitions(FaultInjectingPrefs db) {
+   for(int rep=0;rep<40;rep++) {
+     ItqanFourSessionSnapshot current=ItqanFourSessionStore.read(db,geo);
+     assertEquals(rep,current.reps);
+     assertTrue("Each repetition must persist once",ItqanFourSessionStore.recordRep(db,current,geo));
+   }
+   ItqanFourSessionSnapshot ready=ItqanFourSessionStore.read(db,geo);
+   assertEquals(40,ready.reps);
+   return ready;
+ }
+ @Test public void completedFortyRepsCreditsExactlyOneSubblockAndPersistsCursor() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();
+   seedV6(db);
+   ItqanFourSessionSnapshot snapshot=sample(db,520);
+   assertTrue(ItqanFourSessionStore.open(db,snapshot,geo));
+   ItqanFourSessionSnapshot ready=completeRepetitions(db);
+   List<String> due=ready.plan.sessions.get(0).blocks.get(0).lineIds;
+   HifzPrefs prefs=new HifzPrefs(db);
+   assertTrue(prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-13","first x40"));
+   assertTrue(new HifzPrefs(db).progressionSnapshotV6().stabilized.containsAll(due));
+   ItqanFourSessionSnapshot next=ItqanFourSessionStore.read(db,geo);
+   assertNotNull(next);
+   assertEquals(0,next.reps);
+   int successful=db.commits;
+   assertFalse("Stale completion must not credit twice",
+     new HifzPrefs(db).completeFrozenItqanSubblockV6(ready,geo,"2026-10-13","duplicate"));
+   assertEquals(successful,db.commits);
+   assertTrue(new HifzPrefs(db).progressionSnapshotV6().stabilized.containsAll(due));
+ }
+ @Test public void failedFourDateBlockCommitDoesNotCreditOrAdvanceAndCanRetry() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();
+   seedV6(db);
+   ItqanFourSessionSnapshot snapshot=sample(db,520);
+   assertTrue(ItqanFourSessionStore.open(db,snapshot,geo));
+   ItqanFourSessionSnapshot ready=completeRepetitions(db);
+   List<String> due=ready.plan.sessions.get(0).blocks.get(0).lineIds;
+   db.failCommit=db.commits+1;
+   HifzPrefs prefs=new HifzPrefs(db);
+   assertFalse(prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-13","failed"));
+   assertEquals(40,ItqanFourSessionStore.read(db,geo).reps);
+   for(String id:due)assertFalse(new HifzPrefs(db).progressionSnapshotV6().stabilized.contains(id));
+   db.failCommit=-1;
+   assertTrue(prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-13","retry"));
+   assertEquals(0,ItqanFourSessionStore.read(db,geo).reps);
+   assertTrue(new HifzPrefs(db).progressionSnapshotV6().stabilized.containsAll(due));
+ }
  @Test public void aCorruptSnapshotNeverResetsToCurrentGeometry() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
    ItqanFourSessionSnapshot snap=sample(db,520);
