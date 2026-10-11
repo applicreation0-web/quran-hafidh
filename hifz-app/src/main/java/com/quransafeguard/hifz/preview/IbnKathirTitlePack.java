@@ -77,7 +77,9 @@ final class IbnKathirTitlePack {
             ||h.startsWith("recitation of ")
             ||h.startsWith("what has been narrated about ")
             ||h.startsWith("the first surah in which ")
-            ||h.startsWith("the revelation of surah ");
+            ||h.startsWith("the revelation of surah ")
+            ||((h.startsWith("surah ")||h.startsWith("surat "))
+                && (h.contains(" was revealed ")||h.endsWith(" was revealed")));
     }
 
     private static synchronized JSONObject readChunk(Context context,int chunk){
