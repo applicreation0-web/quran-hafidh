@@ -314,7 +314,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // technical placeholder or fabricate a title for the reader.
         if(titles.length==0)return;
         String label=String.join(" · ",titles);
+        showControls(); // Same Munir position: the icons remain visible BELOW the title.
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
+        SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);
+        // After a GONE-to-VISIBLE transition the toolbar may gain height on
+        // the next layout pass; re-anchor once to its measured screen position.
+        readerActions.post(() ->
+            SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions));
     }
 
     /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */
