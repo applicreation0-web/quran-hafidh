@@ -310,9 +310,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // gesture, duration and non-dimming treatment, with English typography.
         // No source page list, browser, or intrusive Android AlertDialog.
         String[] titles=IbnKathirOfflineTitles.verifiedHeadings(group);
-        // An unverified heading is NOT editorial material: never present a
-        // technical placeholder or fabricate a title for the reader.
-        if(titles.length==0)return;
+        // Keep the 16 individually verified editorial checkpoints untouched.
+        // Only on an exact documentary interval, fall back to original English
+        // source headings stored OFFLINE in 114-chapter pinned draft packs.
+        // No ML/paraphrase, and no additional memory key/word is generated.
+        if(titles.length==0) titles=IbnKathirTitlePack.sourceHeadings(this,group);
+        if(titles.length==0)return; // no title genuinely attested -> no popup
         String label=String.join(" · ",titles);
         showControls(); // Same Munir position: the icons remain visible BELOW the title.
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
