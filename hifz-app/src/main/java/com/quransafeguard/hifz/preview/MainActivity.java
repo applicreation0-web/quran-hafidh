@@ -132,6 +132,8 @@ public final class MainActivity extends android.app.Activity {
 
         dashboardTitle = Ui.bookText(this, "Cette semaine", 15, true);
         dashboardTitle.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), 0, Ui.dp(this, 3));
+        dashboardTitle.setOnClickListener(v -> chooseWeeklyProgram());
+        dashboardTitle.setContentDescription("Choisir le programme hebdomadaire");
         path.addView(dashboardTitle);
         dashboard = Ui.column(this);
         dashboard.setPadding(0, 0, 0, 0);
@@ -717,11 +719,41 @@ public final class MainActivity extends android.app.Activity {
         recentSabqiAdvisory.setVisibility(View.GONE);
     }
 
+    /**
+     * The selected plan must be visible AND directly selectable on the week.
+     * Never switch the learner's Hifz cadence silently or rewrite past dates.
+     * HifzPrefs records an effective-dated transition without changing credits.
+     */
+    private void chooseWeeklyProgram() {
+        HifzPrefs.WeeklyProgram[] options={
+            HifzPrefs.WeeklyProgram.CLASSIC,HifzPrefs.WeeklyProgram.RECOMMENDED
+        };
+        String[] labels={
+            "Classique · rythme existant, dimanche : finales",
+            "Recommandé · Apprentissage lun/mer/ven, Itqān mar/jeu/sam/dim (30 lignes)"
+        };
+        int current=prefs.weeklyProgramMode()==options[1]?1:0;
+        new android.app.AlertDialog.Builder(this)
+            .setTitle("Programme de cette semaine")
+            .setSingleChoiceItems(labels,current,(dialog,which)->{
+                dialog.dismiss();
+                if(options[which]==prefs.weeklyProgramMode())return;
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("Modifier le programme ?")
+                    .setMessage("Le changement s'applique dès aujourd'hui. Les séances antérieures, crédits Hifz et validations sont conservés. Horaires indicatifs dans Paramètres.")
+                    .setNegativeButton("Annuler",null)
+                    .setPositiveButton("Confirmer",(yes,button)->{
+                        if(prefs.setWeeklyProgramMode(options[which])) refreshAll();
+                        else Ui.showFatal(this,"Le programme n’a pas été enregistré.");
+                    }).show();
+            }).setNegativeButton("Fermer",null).show();
+    }
+
     private void refreshDashboard() {
         if (dashboard == null || geometry == null) return;
         dashboard.removeAllViews();
         if(dashboardTitle!=null) dashboardTitle.setText("Cette semaine · "+
-            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED?"Recommandé":"Classique"));
+            (prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED?"Recommandé":"Classique")+" ▾");
         TextView scheduleHours=Ui.text(this,"Horaires indicatifs · matin "+
             prefs.suggestedMorningTime()+" · soir "+prefs.suggestedEveningTime()+
             " · modifiables dans Paramètres",10.5f,false);
