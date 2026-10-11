@@ -195,6 +195,54 @@ public final class ItqanFourSessionStoreTest {
    assertEquals(expectedNext,db.getString("itqanFourNextPhysicalLineIdV1",""));
    assertEquals("The plan was closed after full V6 credit",
         "",db.getString(ItqanFourSessionStore.KEY,""));
+   ItqanFourSessionSnapshot resumed=new HifzPrefs(db).openOrResumeFrozenItqan(
+       geo,day.plusDays(1));
+   assertNotNull("A fresh window follows the credited QCF line",resumed);
+   assertEquals(expectedNext,
+       resumed.plan.sessions.get(0).blocks.get(0).lineIds.get(0));
+ }
+ @Test public void cleanOpeningPinsExactlyThePreviewedPhysicalWindowAndSurvivesReboot() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
+   sample(db,520); // seed the first-tail rotation at a real QCF page
+   HifzPrefs prefs=new HifzPrefs(db);
+   ItqanFourSessionPolicy.Plan preview=prefs.previewFourDateItqanPlan(geo);
+   assertNotNull(preview);
+   LocalDate day=LocalDate.of(2026,10,13);
+   ItqanFourSessionSnapshot opened=prefs.openOrResumeFrozenItqan(geo,day);
+   assertNotNull(opened);
+   assertEquals(preview.lines(),opened.plan.lines());
+   assertEquals(preview.sessions.get(0).blocks.get(0).lineIds.get(0),
+       opened.plan.sessions.get(0).blocks.get(0).lineIds.get(0));
+   int committed=db.commits;
+   assertEquals(opened.encode(),new HifzPrefs(db).openOrResumeFrozenItqan(
+       geo,day.plusDays(1)).encode());
+   assertEquals("Restart must never reopen/repartition the same window",committed,db.commits);
+ }
+ @Test public void legacyOpenBlocksNeverStartNewFourDatePlanOrResetRotation() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
+   ItqanFourSessionSnapshot sample=sample(db,520);
+   db.disk.put("itqanRep",27);
+   db.disk.put("itqanUnitStart",sample.originCursor);
+   db.disk.put("itqanUnitEnd",sample.originCursor);
+   int prior=db.commits;
+   assertNull(new HifzPrefs(db).openOrResumeFrozenItqan(
+       geo,LocalDate.of(2026,10,13)));
+   assertEquals(prior,db.commits);
+   assertFalse(db.contains(ItqanFourSessionStore.KEY));
+   assertEquals(27,db.getInt("itqanRep",0));
+ }
+ @Test public void frozenCurrentEntryMustNeverInvokeLegacyRotationPicker() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
+   ItqanFourSessionSnapshot snap=sample(db,603);
+   assertTrue(ItqanFourSessionStore.open(db,snap,geo));
+   int prior=db.commits;
+   AnchoringQueue.Entry entry=new HifzPrefs(db).currentAnchoringEntry(geo);
+   assertNotNull(entry);
+   assertEquals(snap.plan.sessions.get(0).blocks.get(0).lineIds.get(0),
+       geo.linesForExactIds(Collections.singletonList(
+         snap.plan.sessions.get(0).blocks.get(0).lineIds.get(0))).get(0).id);
+   assertEquals("Dashboard must never flip the rotation leg",prior,db.commits);
+   assertEquals(snap.originCursor,db.getString(ItqanRegimeStore.CURSOR,""));
  }
  @Test public void aCorruptSnapshotNeverResetsToCurrentGeometry() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
