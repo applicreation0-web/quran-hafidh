@@ -251,8 +251,9 @@ public final class SettingsActivity extends android.app.Activity {
     private String learningDaysSummary(){
         int days=effectiveLearningDaysPerWeek();
         String base=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "3 jours Apprentissage · 4 jours Stabilisation · 7 jours"
-            : days+" jours Apprentissage + "+(7-days)+" jours Stabilisation = 7 jours";
+            ? "3 jours Apprentissage · 4 jours Stabilisation"
+            : days+" jours Apprentissage · "+(7-days)
+                +" jours Stabilisation (dimanche imposé)";
         return prefs.roadmapMode()==HifzPrefs.RoadmapMode.AUTO ? base+"   ·   Automatique" : base;
     }
 
@@ -297,17 +298,18 @@ public final class SettingsActivity extends android.app.Activity {
 
     private String weeklyProgramSummary() {
         return prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
-            ? "7 jours · Recommandé · 3 Sabqi + 4 Itqān"
+            ? "Standard · 3 Sabqi / 4 Itqān"
             : prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.MANUAL_SEVEN
-                ? "7 jours · Manuel" : "Historique 6 jours · migration lundi";
+                ? "Manuel · jours Sabqi : "+effectiveLearningDaysPerWeek()
+                    +" · dimanche Itqān" : "Historique 6 jours · migration lundi";
     }
 
     private void chooseWeeklyProgram() {
         HifzPrefs.WeeklyProgram previous=prefs.weeklyProgramMode();
         HifzPrefs.WeeklyProgram[] modes={HifzPrefs.WeeklyProgram.RECOMMENDED,
             HifzPrefs.WeeklyProgram.MANUAL_SEVEN};
-        String[] titles={"7 jours · Recommandé (Sabqi 3 / Itqān 4)",
-            "7 jours · Manuel (répartition personnalisée)"};
+        String[] titles={"Standard · 3 Sabqi / 4 Itqān",
+            "Manuel · nombre de jours Sabqi"};
         int[] choice={previous==HifzPrefs.WeeklyProgram.MANUAL_SEVEN?1:0};
         new AlertDialog.Builder(this).setTitle("Programme hebdomadaire")
             .setSingleChoiceItems(titles,choice[0],(dialog,index)->choice[0]=index)
