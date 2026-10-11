@@ -43,6 +43,7 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                     assertFalse("Hifz "+mode+" rendered an error instead of a session: "+title,
                         title.contains("état à vérifier"));
                 });
+                saveScreenshot("audit-hifz-"+mode.toLowerCase(java.util.Locale.ROOT)+".png");
             }
         }
     }
@@ -69,9 +70,30 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                 assertEquals(View.GONE,groups.getVisibility());
                 assertEquals(View.VISIBLE,details.getVisibility());
                 assertFalse(activity.isFinishing());
+            });
+            saveScreenshot("audit-ibn-kathir-passage.png");
+            scenario.onActivity(activity->{
+                ListView groups=(ListView)reflect(activity,"groupsList");
                 activity.onBackPressed();
                 assertEquals("Retour must restore the block list",View.VISIBLE,groups.getVisibility());
             });
+            saveScreenshot("audit-ibn-kathir-liste.png");
+        }
+    }
+
+    static void saveScreenshot(String name) {
+        android.graphics.Bitmap image=
+            InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull("Cannot capture Android UI screenshot "+name,image);
+        Context context=ApplicationProvider.getApplicationContext();
+        java.io.File base=context.getExternalFilesDir(null);
+        assertNotNull("Android external audit dir unavailable",base);
+        try(java.io.FileOutputStream output=new java.io.FileOutputStream(new java.io.File(base,name))) {
+            assertTrue("PNG encoding failed",image.compress(android.graphics.Bitmap.CompressFormat.PNG,100,output));
+        } catch(java.io.IOException error) {
+            throw new AssertionError("Cannot save "+name,error);
+        } finally {
+            image.recycle();
         }
     }
 
