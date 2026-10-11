@@ -111,7 +111,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(Ui.divider(this));
 
         LinearLayout sabqi = navLine(path, "Apprentissage", "5 lignes", v -> openMode(HifzSessionActivity.SABQI));
-        itqanCard = navLine(path, "Stabilisation", Ui.stabilizationCue(prefs.itqanPostNasMaintenance()),
+        itqanCard = navLine(path, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
         LinearLayout itqan = itqanCard;
         LinearLayout murajaah = navLine(path, "Révision", "Au choix", v -> showRevisionSelector());
