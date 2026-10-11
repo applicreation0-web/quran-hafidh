@@ -148,6 +148,38 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
             panelTop[1]+panel.getHeight()+Ui.dp(a,4)<=barTop[1]);
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-baqarah-source.png");
+
+      // Another chapter/group: an original (still editorially provisional)
+      // title from the correct commentary interval on the actual Mushaf page.
+      s.onActivity(a->{
+        try {
+          java.lang.reflect.Method jump=StudyReaderActivity.class.getDeclaredMethod("setPage",int.class);
+          jump.setAccessible(true);jump.invoke(a,5);
+        } catch(Exception error){throw new AssertionError("Cannot jump to Al-Baqarah p5",error);}
+      });
+      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","source title Al-Baqarah 2:26");
+      s.onActivity(a->{
+        a.onSemanticCueTap("IKEN002_026_027");
+        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
+        assertNotNull(popup);
+        assertTrue("Authentic source heading should be shown for the tapped group",
+            containsText(popup.findViewById(android.R.id.content),
+                "A Parable about the Life of This World"));
+        a.onSemanticCueTap("IKEN050_001_005");
+        assertSame("An off-page group must not replace the shown title",
+            popup,reflect(a,"semanticTitleDialog"));
+      });
+      InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+      s.onActivity(a->{
+        Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
+        View row=(View)reflect(a,"readerActions");
+        View sheet=popup.findViewById(android.R.id.content);
+        int[] top=new int[2],caption=new int[2];
+        row.getLocationOnScreen(top);sheet.getLocationOnScreen(caption);
+        assertTrue("English heading is never drawn over the icon row",
+            caption[1]+sheet.getHeight()+Ui.dp(a,4)<=top[1]);
+      });
+      HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-baqarah-2-26.png");
     }
  }
  @Test public void liveItqanFourDateWindowSurvivesRealTapAndRecreation() {
