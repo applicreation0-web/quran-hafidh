@@ -5,6 +5,7 @@ on:
       - work/haafidh-1171-ibn-kathir-integration-independent
     paths:
       - .github/workflows/diagnose-quiz-launch-android.yml
+      - scripts/ci_android_runtime_visual.sh
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/QuizLaunchRegressionInstrumentedTest.java
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzAndMapRuntimeSmokeInstrumentedTest.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
@@ -59,14 +60,7 @@ jobs:
           ram-size: 4096M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          script: |
-            adb logcat -c
-            set +e
-            gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.QuizLaunchRegressionInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest --stacktrace
-            status=$?
-            mkdir -p audit-runtime-screens
-            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/. audit-runtime-screens/ || true
-            exit "$status"
+          script: bash scripts/ci_android_runtime_visual.sh
       - name: Keep instrumented failures and context only
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,5 +70,6 @@ jobs:
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
             audit-runtime-screens/
+            audit-runtime-instrumentation.txt
           retention-days: 14
           if-no-files-found: warn
