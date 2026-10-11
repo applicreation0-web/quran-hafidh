@@ -11,8 +11,15 @@ import static org.junit.Assert.*;
  *  Exercise the genuine HifzPrefs V6 production transition methods.
  */
 public final class LongHorizonHifzPersistenceStressTest {
- @Test public void thousandLinesSurviveThreePromotionsAndOneThousandDuplicateEvents() {
+ static InMemoryPrefs freshV6Disk(){
    InMemoryPrefs db=new InMemoryPrefs();
+   db.disk.put("schema",6);
+   for(String key:new String[]{"v6LearnedLineIds","v6StabilizedLineIds","v6AcquiredCreditLineIds",
+     "v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})db.disk.put(key,"[]");
+   return db;
+ }
+ @Test public void thousandLinesSurviveThreePromotionsAndOneThousandDuplicateEvents() {
+   InMemoryPrefs db=freshV6Disk();
    HifzPrefs prefs=new HifzPrefs(db);
    List<String> lines=new ArrayList<>();
    for(int i=0;i<1000;i++)lines.add(String.format(Locale.ROOT,"p%03d-l%02d",i/15+20,i%15+1));
@@ -40,7 +47,7 @@ public final class LongHorizonHifzPersistenceStressTest {
    assertEquals(1000,after.acquired.size());
  }
  @Test public void fiftyTwoWeeksOfSnowballsAreIdempotentAndDoNotLeakAcrossWeeks() {
-   InMemoryPrefs db=new InMemoryPrefs();
+   InMemoryPrefs db=freshV6Disk();
    HifzPrefs prefs=new HifzPrefs(db);
    LocalDate monday=LocalDate.of(2026,10,5);
    for(int w=0;w<52;w++) {
@@ -61,7 +68,7 @@ public final class LongHorizonHifzPersistenceStressTest {
    }
  }
  @Test public void aSkippedPromotionIsAlwaysRejectedEvenAfterRestart() {
-   InMemoryPrefs db=new InMemoryPrefs();
+   InMemoryPrefs db=freshV6Disk();
    HifzPrefs prefs=new HifzPrefs(db);
    List<String> ids=Collections.singletonList("p520-l01");
    try {
