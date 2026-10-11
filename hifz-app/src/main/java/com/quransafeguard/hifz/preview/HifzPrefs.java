@@ -1710,6 +1710,11 @@ public final class HifzPrefs {
         return ItqanFourSessionStore.recordRep(p,expected,geo,revealed);
     }
 
+    boolean restartFrozenItqanBlock(ItqanFourSessionSnapshot expected,
+                                     GeometryRepository geo) {
+        return ItqanFourSessionStore.restartBlock(p,expected,geo);
+    }
+
     /**
      * Atomic V6 close of a verified ×40 subblock from a frozen four-date window.
      * This endpoint is not used by legacy OPEN 22-line sessions.
