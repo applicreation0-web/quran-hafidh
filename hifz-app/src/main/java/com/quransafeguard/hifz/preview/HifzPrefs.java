@@ -1720,7 +1720,7 @@ public final class HifzPrefs {
                 .putString("itqanBonusSnapshotV1", "");
             for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
-            return e.commit();
+            return appendFinalItqanRotation(e,finalBlock,unitEnd).commit();
         }
     }
 
@@ -1770,7 +1770,7 @@ public final class HifzPrefs {
                 for (java.util.Map.Entry<String, String> entry : snowball.entrySet()) e.putString(entry.getKey(), entry.getValue());
             }
             if (nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
-            return e.commit();
+            return appendFinalItqanRotation(e,true,unitEnd).commit();
         }
     }
 
@@ -1821,7 +1821,7 @@ public final class HifzPrefs {
                 .putString("itqanBonusSnapshotV1", "")
                 .putString("itqanTinyBlockDecisionValue", "");
             if (finalBlock && nextCursor != null) e.putString("itqanCursor", nextCursor.toString());
-            return e.commit();
+            return appendFinalItqanRotation(e,finalBlock,unitEnd).commit();
         }
     }
 
@@ -2266,6 +2266,14 @@ public final class HifzPrefs {
         return end;
     }
 
+    /** Keep final Itqan credit, rotation and An-Nas latch in one transaction. */
+    private SharedPreferences.Editor appendFinalItqanRotation(
+            SharedPreferences.Editor editor,boolean finalBlock,VerseRef unitEnd) {
+        if(!finalBlock)return editor;
+        ItqanRotationPolicy.State next=ItqanRotationPolicy.advancedPast(itqanRotationState(),unitEnd);
+        return ItqanRegimeStore.appendRotationState(p,editor,next);
+    }
+
     /** P4: advances the perpetual Itqān leg/cursor past a just-completed unit's last verse —
      *  called once a unit's final block validates, whether that was a first build or a later
      *  reinforcement lap; never called for a non-final sub-block. */
@@ -2321,7 +2329,8 @@ public final class HifzPrefs {
                                                     VerseRef unitStart, VerseRef unitEnd,
                                                     String date, String label) {
         if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
-        return p.edit()
+        synchronized(V6_STATE_LOCK) {
+            SharedPreferences.Editor editor=p.edit()
             .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
             .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))
             .putString("itqanUnitStart", finalBlock ? "" : unitStart.toString())
@@ -2332,7 +2341,9 @@ public final class HifzPrefs {
             .putString("lastItqanCreditEnd", unitEnd.toString())
             .putString("itqanBonusSnapshotV1", "")
             .putString("itqanTinyBlockDecisionValue", "")
-            .commit();
+            ;
+            return appendFinalItqanRotation(editor,finalBlock,unitEnd).commit();
+        }
     }
 
     /**
