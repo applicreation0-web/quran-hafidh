@@ -38,7 +38,9 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse(home.contains("Ui.dp(this, 720)"));
         assertFalse(home.contains("contentWidth"));
         assertTrue(home.contains("Ui.respectSystemBars(this, scroll, 0, 0, 0, 0)"));
-        assertTrue(home.contains("ViewGroup.LayoutParams.WRAP_CONTENT, 1f"));
+        assertFalse("Home destinations must no longer be viewport-weighted cards",
+            home.contains("ViewGroup.LayoutParams.WRAP_CONTENT, 1f"));
+        assertFalse("Never restore large bordered home cards",home.contains("Ui.panel(line)"));
     }
 
     @Test public void routingAndComputedTodayStayIntact() throws Exception {
@@ -55,7 +57,8 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("showParcours()"));
         assertTrue(home.contains("refreshToday()"));
         assertTrue(home.contains("WeeklyDashboardPlanner"));
-        assertTrue(home.contains("setMinimumHeight(Ui.dp(this, 68))"));
+        assertTrue("Home rows have identical compact touch targets",
+            home.contains("line.setMinimumHeight(Ui.dp(this, 56))"));
         assertFalse(home.contains("homeNavLine(root, \"Carte\""));
     }
 
