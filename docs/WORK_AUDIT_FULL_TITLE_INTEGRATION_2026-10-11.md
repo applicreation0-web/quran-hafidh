@@ -1,7 +1,9 @@
 # WORK HIGH — AUDIT CONTRADICTOIRE AVANT DEBUG — QURAN HAAFIDH
 
-**Strictement READ-ONLY. Aucun commit, aucune branche, aucun APK, aucune release.**
+**Strictement READ-ONLY. Aucun commit Work, aucune branche, aucun APK à distribuer, aucune release.**
 **Ne commencer qu'après le gel du dernier HEAD réel. Aucun ancien APK comme preuve du dernier HEAD.**
+
+**PÉRIMÈTRE EXPLICITEMENT FIGÉ : amorces et titres anglais Quran.com uniquement. Aucun Tafsīr Ibn Kathīr intégral ; Jalalayn et les autres moteurs/panneaux Tafsīr inchangés.**
 
 ## Références à figer
 - Dépôt public (code) : `applicreation0-web/quran-hafidh`
@@ -17,19 +19,19 @@
 - Index canonique de **1 903** groupes sur **114** sourates et **6 236** versets, SHA des frontières : `deffec6e775965d7b1f717a63fc4d0d60c1933540aacefc13e1333d30c49be62`.
 - ZIP Quran.com fourni : SHA-256 `8b07799cbe02a7f907be84bbff2b09f95e19a319dffcf3a5458fd8365fa755b1`, manifeste **2 951 entrées HTML h2** depuis 114 sourates et 6 236 réponses de versets.
 - Les h2 correspondent à **1 749 groupes** au moins ; **154 groupes sans h2**. La présence d'un h2 n'est PAS une validation éditoriale.
-- Première passe conservative du paquet privé : **1 689 groupes provisoirement préparés**, **163 sans titre admissible**, **51 discordants**. Ces totaux sont les sorties automatiques du registre, pas un verdict de Work.
-- **Ne PAS déclarer 1 689 titres validés**. Des titres h2 fusionnent parfois avec du commentaire, par exemple Al-Kahf 18:9 ou Qāf 50:1. Trois préfixes littéraux de h2 ont été isolés à titre **expressément provisoire**, avec preuve du texte original dans le CSV. Contrôler le contexte et le texte affiché.
+- Paquet privé **V2** aligné sur le choix explicite « recopier les titres Quran.com tels quels » : **1 709 groupes avec titres h2 utilisables**, **154 groupes sans aucun h2**, **40 groupes avec seulement des h2 corrompus/commentaires**. Ces totaux sont des résultats mécaniques, pas une certification du rendu BOOX.
+- **Ne PAS déclarer 1 709 titres validés** : la provenance textuelle est prouvée automatiquement, mais trois préfixes littéraux de h2 fusionnés avec un commentaire attendent un contrôle ciblé. Pour les 40 cas corrompus sans titre récupérable : aucun texte inventé. Les introductions et vertus de sourate sont conservées à l'identique lorsqu'elles existent réellement dans les h2 Quran.com.
 - Quran.com Conditions développeurs actualisées 2026-10-04 : un usage strictement personnel ne prouve pas une licence d'archivage hors ligne illimité ; confirmer les droits et restrictions, notamment la durée de cache.
 - Le dépôt GitHub est **public**. Aucune donnée de titres issue du ZIP ne doit être ajoutée au code public. Les huit chunks sont une **annexe privée**, destinée au contrôle du rendu via un checkout local jetable ; aucun upload public.
 - NOUVEAU chemin d'affichage : `StudyReaderActivity.java` -> `IbnKathirQuranComPrivateTitles.sourceHeadings(context,group)`, fichier privé `assets/ibn_kathir_qurancom_private/chunk-NNN-NNN.json`. Les anciens `IbnKathirTitlePack` et `IbnKathirOfflineTitles` restent dans l'historique mais **ne doivent plus être utilisés à l'affichage**.
 - Sans annexe privée, absence de popup = **comportement de repli voulu**, pas titre inventé. Un test sans paquet ne prouve pas l'intégration finale. Les tests Work doivent vérifier AVEC le paquet et la continuité SANS paquet.
 
 ## P0 — Source Quran.com, éditorial, coordonnées
-1. Vérifier les **1 903 lignes du CSV** une par une ou avec des preuves automatisées solides, l'URL de chaque source, le chapitre, la position du verset, l'ordre des h2, les frontières et l'absence d'emprunt entre groupes. Ne pas mettre le statut « vérifié » sans source et contexte convaincants.
-2. Contrôler obligatoirement Fātiḥah, 2:1, 2:25–27, 18:9–16, Qāf, Adh-Dhāriyāt, An-Najm, An-Nabaʾ, An-Nās. Séparer les titres véritables des préambules, vertus, citations, narrations et prose fusionnée. Titres anglais originaux non reformulés.
+1. Vérifier par script les **1 903 lignes du CSV V2**, l'URL de chaque h2, le chapitre et les positions, les frontières immuables et les huit chunks privés. Conserver les h2 **verbatim**, sans reformulation ni tri éditorial systématique des titres. L'audit humain se concentre sur les **40 groupes corrompus** et les **3 préfixes littéraux séparés**, plus l'échantillonnage documentaire des 114 sourates.
+2. Contrôler obligatoirement Fātiḥah, 2:1, 2:25–27, 18:9–16, Qāf, Adh-Dhāriyāt, An-Najm, An-Nabaʾ, An-Nās. **Les titres introductifs et de vertus restent disponibles** s'ils sont réellement des h2, mais l'affichage initial choisit un intitulé thématique lorsqu'il existe. Ne pas prendre une narration/prose collée par le HTML pour un intitulé. Aucune invention.
 3. Vérifier **1 903 premières amorces**, deux premiers mots QCF réels du bloc avec les vrais cas de fin de sourate/page ; **77 432 zones**, **604 pages**, **6 236 versets**. Aucune nouvelle amorce intérieure ni modification des frontières. Amorces OFF conservé ; ON par défaut si aucune préférence.
 4. Vérifier que les titres n'affectent ni boîte QCF ni masque de lecture, ni la validation de récitation, ni l'état de Hifz. Contrôler les 23 icônes gelées.
-5. Les titres multiples doivent rester exactement dans leur propre groupe et être affichés **un à la fois par appui successif**, pas dans un gros pavé. Manque de titre = aucun dialogue.
+5. Titres multiples : un seul par appui, tous les h2 conservés, première ouverture sur le thème (sinon introduction), puis boucle dans l'ordre source sans perdre de titre. Les h2 dont la position est **à l'intérieur du même groupe documentaire** restent rattachés à ce groupe : pas de nouvelle frontière, pas de quarantaine du groupe pour ce seul motif. Groupe sans titre admissible = aucun dialogue.
 
 ## P0 — BOOX / interface
 1. Comparer les interfaces accueil, Lecture, Mémorisation libre, Parcours Hifz, Progression, Apprentissage, Stabilisation, Renforcement, Consolidation, Révisions, Réglages, Planning, sélection de programme et Tafsīr aux captures validées ; aucun redesign.
@@ -47,7 +49,7 @@
 - Vérifier l'absence de Quiz au runtime si telle est la direction gelée du HEAD, sans réintroduire l'ancien code.
 
 ## Tests indépendants et preuves
-- Vérifier gel des moteurs : `bash scripts/guard_frozen_hifz_engines.sh`, puis exécuter tous les scripts de contrôle de source, les tests JVM `:hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest` et les tests Android instrumentés ; **ne pas assembler ni publier d'APK**.
+- Vérifier gel des moteurs : `bash scripts/guard_frozen_hifz_engines.sh`, puis contrôles source, `python3 scripts/verify_qurancom_private_title_payload.py <répertoire_décompressé_du_paquet_privé_V2>`, tests JVM `:hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest`. Lire les tests Android instrumentés et preuves CI au SHA courant ; un test pixel réel avec données privées ne doit pas être remplacé par le test de repli sans paquet. **Ne pas assembler ni publier de debug livrable.**
 - Vérifier les résultats des CI à partir des runs du **même SHA**. Un vieux PASS n'est pas un PASS du HEAD.
 - Audit de navigation, titres avec annexe privée et sans, orientation, écran petit et BOOX, titres multiples, popup sans chevauchement et changement de page.
 - Produire `WORK_AUDIT_VERDICT.md`, `IBN_KATHIR_QURANCOM_REVIEW_FINAL.csv` (1 903 lignes), `MANUAL_8WEEK_SIMULATION.csv`, `ICON_SHA_CHECK.csv`, `HIFZ_REGRESSION_MATRIX.csv`, `NO_SIDE_EFFECT_EVIDENCE.md`, preuves de licences et captures adaptées.
