@@ -131,6 +131,7 @@ public final class QuizLaunchRegressionInstrumentedTest {
                     ", webview="+view.getWidth()+"x"+view.getHeight());
             });
             HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-quiz-question.png");
+            final int[] initialInk={0};
             android.graphics.Bitmap bmp=InstrumentationRegistry.getInstrumentation()
                 .getUiAutomation().takeScreenshot();
             assertNotNull("Cannot inspect rendered Quiz body",bmp);
@@ -146,9 +147,36 @@ public final class QuizLaunchRegressionInstrumentedTest {
                             android.graphics.Color.blue(col))/3;
                         if(rgb<180)dark++;
                     }
-                assertTrue("Quiz question has NO visible Mushaf/Quran ink: only "+
-                    dark+" sampled dark pixels in centre (must render prompt)",dark>15);
+                initialInk[0]=dark;
             } finally {bmp.recycle();}
+            if(initialInk[0]<=15) {
+                // Diagnostic only: show the SAME real Quran page without an eraser.
+                // If ink returns, the bug is the Quiz mask/focus adapter, not QCF assets.
+                scenario.onActivity(activity -> {
+                    MushafView v=(MushafView)reflect(activity,"mushaf");
+                    v.setMask(0);
+                });
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                android.os.SystemClock.sleep(1100);
+                HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-quiz-unmasked-diagnostic.png");
+                android.graphics.Bitmap unmasked=InstrumentationRegistry.getInstrumentation()
+                    .getUiAutomation().takeScreenshot();
+                int extra=0;
+                try {
+                    int w=unmasked.getWidth(),h=unmasked.getHeight();
+                    for(int y=(int)(h*0.20f);y<(int)(h*0.80f);y+=2)
+                        for(int x=(int)(w*0.20f);x<(int)(w*0.80f);x+=2) {
+                            int color=unmasked.getPixel(x,y);
+                            int grey=(android.graphics.Color.red(color)+
+                                android.graphics.Color.green(color)+
+                                android.graphics.Color.blue(color))/3;
+                            if(grey<180)extra++;
+                        }
+                } finally {unmasked.recycle();}
+                assertTrue("QUIZ BLANK: original masked="+initialInk[0]+
+                    " ink; unmasked diagnostic="+extra+
+                    " ink. Do not publish a Quiz question without visible Quran",false);
+            }
         }
     }
 
