@@ -71,7 +71,14 @@ public final class ItqanBonusPersistenceSourceContractTest {
                 + "settled decision (see ItqanBonusDialogSourceContractTest for the full offer/"
                 + "dialog wiring this now derives from)",
             session.contains("sessionDate.toString(), label, bonusLineIds);"));
-        assertFalse("the old 8-argument call must be gone, not left alongside a second call site",
-            session.contains("sessionDate.toString(), label);"));
+        int call=session.indexOf("prefs.completeStabilizationBlockV6(");
+        assertTrue("finalizing Itqan must call the one bonus-aware V6 method",call>=0);
+        int close=session.indexOf(");",call);
+        assertTrue("Stabilization call must have a closing delimiter",close>call);
+        String stabilizationCall=session.substring(call,close+2);
+        assertTrue("the bonus must be passed explicitly by that same call",
+            stabilizationCall.contains("sessionDate.toString(), label, bonusLineIds);"));
+        assertFalse("the old 8-argument stabilization call must be absent",
+            stabilizationCall.contains("sessionDate.toString(), label);"));
     }
 }
