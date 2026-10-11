@@ -68,6 +68,9 @@ def verify(raws=None):
             titles[key]=items
             covered_sura.add(surah)
     assert len(titles)==1415,("Unexpected source heading coverage",len(titles))
+    checked=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirOfflineTitles.java").read_text(encoding="utf8")
+    assert 'group.surah==2 && group.startAyah==1 && group.endAyah==1' in checked
+    assert 'The Discussion of the Individual Letters' in checked
     missing=canonical-set(titles)
     assert len(missing)==488
     if raws:
@@ -104,7 +107,7 @@ def main():
                                  "UNVERIFIED_DARUSSALAM_ENGLISH_RIGHTS" if h else ""])
     print(f"PASS: 114 surahs; canonical groups={len(groups)}; source heading candidates={len(titles)};"
           f" no heading candidate={len(groups)-len(titles)}; groups with content span={len(sura)} surahs;"
-          " 16 existing editorially verified checkpoints preserved; rights NOT CLEARED")
+          " 17 source-checked checkpoints (Qaf/Najm + Al-Baqarah 2:1) preserved; rights NOT CLEARED")
 
 if __name__=="__main__":
     main()
