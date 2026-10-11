@@ -15,7 +15,7 @@ public final class NoSemanticListsAndOfflineAmorcesContractTest {
     assertFalse(s.contains("new Intent(this,IbnKathirMapActivity.class)"));
     assertFalse(s.contains("Ui.iconButton(this, \"\", \"Carte\""));
     assertTrue(s.contains("setTitle(\"Amorce · Ibn Kathīr\")"));
-    assertTrue(s.contains("verifiedQafHeadings(group)"));
+    assertTrue(s.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
     assertFalse(s.contains("IbnKathirQuranComSource.urlForGroup(group)"));
     assertFalse(s.contains("Intent.ACTION_VIEW"));
   }

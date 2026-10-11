@@ -14,7 +14,8 @@ import static org.junit.Assert.*;
 /**
  * Every literal icon-only action on every production screen must map to a
  * real drawable; no silent fallback to an improvised unicode glyph.
- * Hifz engines and Quiz production source remain byte-identical to 1.17.1.
+ * Old Quiz and semantic-list Carte screens are intentionally absent.
+ * Every remaining production screen must still use mapped icons.
  */
 public final class EveryScreenContractualIconTest {
     private static final String ROOT =
@@ -32,8 +33,8 @@ public final class EveryScreenContractualIconTest {
     @Test public void noLabelledIconOnlyActionFallsBackToGlyph() throws Exception {
         Path dir = repo(ROOT);
         String[] screens = {
-            "MainActivity", "StudyReaderActivity", "IbnKathirMapActivity",
-            "HifzSessionActivity", "QuizActivity", "FreeMemActivity",
+            "MainActivity", "StudyReaderActivity",
+            "HifzSessionActivity", "FreeMemActivity",
             "ProgressMapActivity", "SettingsActivity", "WeakVersesActivity",
             "HifzAudioDialog"
         };
@@ -54,8 +55,8 @@ public final class EveryScreenContractualIconTest {
             assertTrue("No icon actions parsed in " + screen, local > 0);
             matches += local;
         }
-        assertTrue("Unexpected shrinkage of icon role coverage: " + matches, matches >= 50);
-        assertTrue("Contractual action roles must be diverse", labels.size() >= 35);
+        assertTrue("Unexpected shrinkage of icon role coverage: " + matches, matches >= 35);
+        assertTrue("Contractual action roles must be diverse", labels.size() >= 25);
     }
 
     @Test public void noLabelsPrintedUnderIconButtons() throws Exception {
