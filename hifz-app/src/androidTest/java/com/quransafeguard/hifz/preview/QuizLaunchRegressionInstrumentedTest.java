@@ -118,7 +118,37 @@ public final class QuizLaunchRegressionInstrumentedTest {
                     activity.findViewById(android.R.id.content)!=null);
             });
             HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quiz real learned Quran question");
+            // Pixel-level adversarial audit. The preceding green run proved an Activity
+            // was alive but its screenshot contained ZERO Quran ink in the reader body.
+            // pageShown alone only confirms JS boot, not a usable visible question.
+            scenario.onActivity(activity -> {
+                android.webkit.WebView view=(android.webkit.WebView)reflect(activity,"mushaf");
+                android.graphics.Rect rect=new android.graphics.Rect();
+                assertTrue("Quiz Mushaf is not on screen",view.getGlobalVisibleRect(rect));
+                assertTrue("Quiz Mushaf has no height: "+rect,rect.height()>150);
+                assertTrue("Quiz Mushaf has no width: "+rect,rect.width()>200);
+                android.util.Log.i("QuizQCFProbe","Mushaf layout = "+rect+
+                    ", webview="+view.getWidth()+"x"+view.getHeight());
+            });
             HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-quiz-question.png");
+            android.graphics.Bitmap bmp=InstrumentationRegistry.getInstrumentation()
+                .getUiAutomation().takeScreenshot();
+            assertNotNull("Cannot inspect rendered Quiz body",bmp);
+            try {
+                // The region between header and footer must contain actual Quran ink;
+                // a completely blank WebView fails even when Android reports pageShown.
+                int w=bmp.getWidth(),h=bmp.getHeight(),dark=0;
+                for(int y=(int)(h*0.20f);y<(int)(h*0.80f);y+=2)
+                    for(int x=(int)(w*0.20f);x<(int)(w*0.80f);x+=2) {
+                        int col=bmp.getPixel(x,y);
+                        int rgb=(android.graphics.Color.red(col)+
+                            android.graphics.Color.green(col)+
+                            android.graphics.Color.blue(col))/3;
+                        if(rgb<180)dark++;
+                    }
+                assertTrue("Quiz question has NO visible Mushaf/Quran ink: only "+
+                    dark+" sampled dark pixels in centre (must render prompt)",dark>15);
+            } finally {bmp.recycle();}
         }
     }
 
