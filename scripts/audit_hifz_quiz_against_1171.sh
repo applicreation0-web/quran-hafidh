@@ -34,6 +34,7 @@ for f in hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.jav
   if [[ -e "$f" ]]; then echo "::error::Retired Quiz still compiled: $f"; exit 1; fi
 done
 python3 scripts/verify_authorized_quiz_reader_delta.py
+python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py
@@ -58,6 +59,7 @@ while IFS= read -r file; do
     "$prefix/MainActivity.java" | \
     "$prefix/SettingsActivity.java" | \
     "$prefix/StudyReaderActivity.java" | \
+    "$prefix/WordGeometryRepository.java" | \
     "$prefix/QuizActivity.java" | \
     "$prefix/QuizCorpus.java" | \
     "$prefix/QuizHistory.java" | \

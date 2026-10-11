@@ -33,6 +33,7 @@ while IFS= read -r file; do
     "$APP_ROOT/SettingsActivity.java" | \
     "$APP_ROOT/Ui.java" | \
     "$APP_ROOT/StudyReaderActivity.java" | \
+    "$APP_ROOT/WordGeometryRepository.java" | \
     "$APP_ROOT/QuizActivity.java" | \
     "$APP_ROOT/QuizCorpus.java" | \
     "$APP_ROOT/QuizHistory.java" | \
@@ -59,6 +60,7 @@ if [ "$bad" -ne 0 ]; then
 fi
 
 python3 scripts/verify_authorized_quiz_reader_delta.py
+python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_authorized_hifz_session_delta.py
 python3 scripts/verify_authorized_program_preferences_delta.py
 python3 scripts/verify_authorized_consolidation_delta.py

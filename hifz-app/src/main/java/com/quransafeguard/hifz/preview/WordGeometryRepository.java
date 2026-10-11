@@ -25,7 +25,7 @@ import java.util.Set;
  * Boxes use the same 0 0 345 550 page coordinate space as the shipped Madinah SVG reader.
  * This repository never infers word positions from ink cells: missing or malformed data fails closed.
  */
-final class WordGeometryRepository implements QuizCorpus.WordCounts {
+final class WordGeometryRepository {
     private static final String SOURCE_RELEASE = "v1.1.2";
     private static final String SCHEMA = "quran-haafidh-word-boxes-v1";
     private static final String ASSET_DIR = "reader109/word-boxes/";
@@ -129,7 +129,7 @@ final class WordGeometryRepository implements QuizCorpus.WordCounts {
         return out;
     }
 
-    @Override public synchronized int wordCountForVerse(int page, VerseRef verse) {
+    public synchronized int wordCountForVerse(int page, VerseRef verse) {
         if (verse == null) return 0;
         int count = 0;
         for (WordBox word : wordsForPage(page)) {
