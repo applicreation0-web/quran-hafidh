@@ -113,6 +113,31 @@ public final class ItqanFourSessionPolicyTest {
    // Every future weekly ledger must account for ALL these subblocks,
    // rather than silently truncate at itqanDaysPerWeek() (four).
  }
+ @Test public void successiveTwoPageWindowsCoverTailWithoutGapsOrDuplicates() {
+   // Physical cursor chaining is the only safe future runtime handoff:
+   // the legacy ~22-line verse-unit picker can skip residual physical lines.
+   int first=geo.firstLineIndex(new com.quransafeguard.hifz.core.VerseRef(49,1));
+   int stop=geo.lineCount();
+   LinkedHashSet<String> eligible=new LinkedHashSet<>();
+   for(int i=first;i<stop;i++)eligible.add(geo.line(i).id);
+   int cursor=first,windows=0;
+   while(cursor<stop) {
+     ItqanFourSessionPolicy.Plan plan=ItqanFourSessionPolicy.fromGeometry(geo,cursor,eligible);
+     assertTrue("A frozen window must advance the physical cursor",plan.lines()>0);
+     int physical=cursor;
+     for(ItqanFourSessionPolicy.Session session:plan.sessions)
+       for(ItqanFourSessionPolicy.Block block:session.blocks)
+         for(String id:block.lineIds) {
+           assertEquals("No line may be repeated or silently skipped in Itqan",
+               geo.line(physical).id,id);
+           physical++;
+         }
+     assertEquals(cursor+plan.lines(),physical);
+     cursor=physical;
+     assertTrue("Finite physical Itqan windows expected",++windows<=604);
+   }
+   assertEquals("Every physical line through An-Nas must be assigned once",stop,cursor);
+ }
  @Test(expected=IllegalArgumentException.class) public void sameLineTwiceRejected(){
    List<GeometryRepository.LineMeta> real=geo.linesForExactIds(geo.lineIdsOnPage(518));
    ItqanFourSessionPolicy.plan(Arrays.asList(real.get(0),real.get(0)),true);
