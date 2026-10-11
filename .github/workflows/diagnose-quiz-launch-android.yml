@@ -18,6 +18,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: haafidh-1171-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   reproduce:
     runs-on: ubuntu-latest
