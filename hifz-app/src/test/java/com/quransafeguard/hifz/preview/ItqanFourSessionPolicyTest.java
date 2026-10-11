@@ -82,6 +82,15 @@ public final class ItqanFourSessionPolicyTest {
    assertEquals(1,plan.sessions.get(0).lineCount);
    for(int i=1;i<4;i++)assertEquals(0,plan.sessions.get(i).lineCount);
  }
+ @Test public void lastPageOfNasHasNoFictitiousSecondPage() {
+   List<String> ids=geo.lineIdsOnPage(604);
+   List<GeometryRepository.LineMeta> actual=geo.linesForExactIds(ids);
+   ItqanFourSessionPolicy.Plan p=ItqanFourSessionPolicy.fromGeometry(
+      geo,actual.get(0).globalIndex,new LinkedHashSet<>(ids));
+   assertFalse(p.fullWindow);
+   assertEquals(604,p.firstPage);assertEquals(604,p.lastPage);
+   assertPartition(p,actual);
+ }
  @Test(expected=IllegalArgumentException.class) public void sameLineTwiceRejected(){
    List<GeometryRepository.LineMeta> real=geo.linesForExactIds(geo.lineIdsOnPage(518));
    ItqanFourSessionPolicy.plan(Arrays.asList(real.get(0),real.get(0)),true);

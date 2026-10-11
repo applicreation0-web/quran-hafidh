@@ -18,11 +18,20 @@ public final class LongHorizonHifzPersistenceStressTest {
      "v6QuarantineLineIds","v6LegacyPartialAcquiredLineIds"})db.disk.put(key,"[]");
    return db;
  }
+ private static GeometryRepository geometry(){
+   try{
+      java.nio.file.Path p=java.nio.file.Paths.get("app/src/main/assets/reader109/geometry.json");
+      if(!java.nio.file.Files.exists(p))p=java.nio.file.Paths.get("../app/src/main/assets/reader109/geometry.json");
+      return GeometryRepository.fromJson(
+        new String(java.nio.file.Files.readAllBytes(p),java.nio.charset.StandardCharsets.UTF_8));
+   }catch(Exception e){throw new AssertionError("Canonical QCF fixture missing",e);}
+ }
  @Test public void thousandLinesSurviveThreePromotionsAndOneThousandDuplicateEvents() {
    InMemoryPrefs db=freshV6Disk();
    HifzPrefs prefs=new HifzPrefs(db);
    List<String> lines=new ArrayList<>();
-   for(int i=0;i<1000;i++)lines.add(String.format(Locale.ROOT,"p%03d-l%02d",i/15+20,i%15+1));
+   GeometryRepository geo=geometry();
+   for(int i=0;i<1000;i++)lines.add(geo.line(i).id);
    for(int start=0;start<1000;start+=25){
      List<String> batch=lines.subList(start,start+25);
      prefs.transitionV6Lines(batch,HifzPrefs.ProgressEvent.LEARNING_COMPLETED);
@@ -70,7 +79,7 @@ public final class LongHorizonHifzPersistenceStressTest {
  @Test public void aSkippedPromotionIsAlwaysRejectedEvenAfterRestart() {
    InMemoryPrefs db=freshV6Disk();
    HifzPrefs prefs=new HifzPrefs(db);
-   List<String> ids=Collections.singletonList("p520-l01");
+   List<String> ids=Collections.singletonList(geometry().line(0).id);
    try {
      prefs.transitionV6Lines(ids,HifzPrefs.ProgressEvent.CONSOLIDATION_COMPLETED);
      fail("Promoting NONE directly to Acquis must fail");

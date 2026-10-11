@@ -67,7 +67,7 @@ final class ItqanFourSessionPolicy {
             if(l.page>endPage||!eligibleLineIds.contains(l.id))break;
             owned.add(l);
         }
-        boolean complete=owned.get(owned.size()-1).page==endPage
+        boolean complete=initial.page<604 && owned.get(owned.size()-1).page==endPage
             && owned.get(owned.size()-1).id.equals(
                 last(geometry.lineIdsOnPage(endPage)));
         return plan(owned,complete);
