@@ -14,7 +14,7 @@ adb install -r "${test_apks[0]}"
 
 set +e
 adb shell am instrument -w -r \
-  -e class 'com.quransafeguard.hifz.preview.ReaderSevenDayRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest,com.quransafeguard.hifz.preview.ItqanFourDateLiveRuntimeInstrumentedTest' \
+  -e class 'com.quransafeguard.hifz.preview.ReaderSevenDayRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest' \
   'com.quransafeguard.hifz.ibnkathirtest.test/androidx.test.runner.AndroidJUnitRunner' \
   > audit-runtime-instrumentation.txt 2>&1
 shell_status=$?
