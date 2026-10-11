@@ -73,8 +73,9 @@ final class Ui {
         StateListDrawable pressBackground = new StateListDrawable();
         pressBackground.addState(new int[] {android.R.attr.state_pressed},
             shape(INK, INK, dp(context, 8), 0));
+        // An active icon stays quiet on E-Ink: no large solid black tile.
         pressBackground.addState(new int[] {android.R.attr.state_selected},
-            shape(INK, INK, dp(context, 8), 0));
+            shape(SURFACE, LINE, dp(context, 6), Math.max(1, dp(context, 1))));
         pressBackground.addState(new int[] {},
             shape(Color.TRANSPARENT, Color.TRANSPARENT, dp(context, 8), 0));
         button.setBackground(pressBackground);
