@@ -139,7 +139,7 @@ public final class QuizLaunchRegressionInstrumentedTest {
 
     private static View findDescription(View view,String description) {
         CharSequence value=view.getContentDescription();
-        if(description.contentEquals(value))return view;
+        if(value!=null && description.contentEquals(value))return view;
         if(view instanceof ViewGroup) {
             ViewGroup group=(ViewGroup)view;
             for(int i=0;i<group.getChildCount();i++) {
