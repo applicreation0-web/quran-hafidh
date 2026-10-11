@@ -44,6 +44,9 @@ final class SemanticTitlePopup {
         int gap=Ui.dp(activity, 10);
         WindowManager.LayoutParams attrs=window.getAttributes();
         attrs.y=Math.max(Ui.dp(activity, 8),realScreen.y-iconTop[1]+gap);
+        // A title becomes visible ONLY when its final position is anchored
+        // to the measured icon row; avoid a flash over BOOX toolbar controls.
+        attrs.alpha=1f;
         window.setAttributes(attrs);
     }
 
@@ -82,10 +85,11 @@ final class SemanticTitlePopup {
             window.setBackgroundDrawableResource(android.R.color.transparent);
             int max = Math.min(activity.getResources().getDisplayMetrics().widthPixels
                 - Ui.dp(activity, 28), Ui.dp(activity, 480));
-            // Safe initial position until the actual reader toolbar is measured.
-            // The final placement is calculated from that toolbar, not a 68dp guess.
+            // Initially invisible, NOT at a guessed position. The caller
+            // must measure readerActions and invoke positionAboveIcons(...).
             WindowManager.LayoutParams attrs=window.getAttributes();
-            attrs.y=Ui.dp(activity, 140);
+            attrs.alpha=0f;
+            attrs.y=0;
             window.setAttributes(attrs);
             window.setLayout(Math.max(Ui.dp(activity, 160), max),
                 ViewGroup.LayoutParams.WRAP_CONTENT);
