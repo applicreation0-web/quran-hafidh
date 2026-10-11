@@ -40,16 +40,44 @@ final class IbnKathirTitlePack {
         // One compact source heading per tap. If a first group opens with a
         // general introduction/recitation notice and the source also has an
         // actual thematic heading, prefer the thematic one. Never paraphrase.
-        String title=items.optString(0,"").trim();
-        if(items.length()>1 && (title.startsWith("Introduction to ")
-                ||title.startsWith("The Recitation of ")
-                ||title.startsWith("The Beginning of ")
-                ||title.startsWith("What has been narrated about "))) {
-            String thematic=items.optString(1,"").trim();
-            if(!thematic.isEmpty())title=thematic;
+        String[] candidates=new String[items.length()];
+        for(int i=0;i<candidates.length;i++) {
+            String heading=items.optString(i,"").trim();
+            if(heading.isEmpty()||heading.length()>145)return new String[0];
+            candidates[i]=heading;
         }
-        if(title.isEmpty()||title.length()>145)return new String[0];
-        return new String[]{title};
+        return new String[]{preferredSourceHeading(candidates)};
+    }
+
+    /**
+     * For the SAME verified commentary interval, prefer an original contextual
+     * heading to a surah-level preamble about virtues or recitation. Never invent
+     * or translate a heading, never borrow from adjacent intervals.
+     *
+     * All 1,415 staged groups remain editorial candidates until Work reviews
+     * the full source context and downstream redistribution rights.
+     */
+    static String preferredSourceHeading(String[] candidates) {
+        if(candidates==null||candidates.length==0)return "";
+        for(String heading:candidates) {
+            if(heading!=null&&!heading.trim().isEmpty()&&!isGenericPreamble(heading))
+                return heading.trim();
+        }
+        return candidates[0]==null?"":candidates[0].trim();
+    }
+
+    static boolean isGenericPreamble(String heading) {
+        if(heading==null)return false;
+        String h=heading.trim().toLowerCase(java.util.Locale.ROOT);
+        return h.startsWith("introduction to ")
+            ||h.startsWith("the beginning of ")
+            ||h.startsWith("the virtues of ")
+            ||h.startsWith("virtues of ")
+            ||h.startsWith("the recitation of ")
+            ||h.startsWith("recitation of ")
+            ||h.startsWith("what has been narrated about ")
+            ||h.startsWith("the first surah in which ")
+            ||h.startsWith("the revelation of surah ");
     }
 
     private static synchronized JSONObject readChunk(Context context,int chunk){
