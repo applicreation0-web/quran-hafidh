@@ -49,12 +49,26 @@ find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q 
   echo "::error::At least one required screenshot is empty"; exit 1;
 } || true
 # Independent visual screens are checked; no Quiz or numbered Carte screens.
-for file in audit-lecture-mushaf.png audit-lecture-amorce-anglais.png \
+# The public GitHub checkout has NO private Quran.com title sidecar.
+# This job must prove all seven independent live behaviors and 14 available
+# screens, but must NOT claim private title pixels were exercised.
+for file in audit-lecture-mushaf.png \
             audit-accueil-sans-quiz.png audit-calendrier-sept-jours.png \
             audit-itqan-4dates.png; do
   test -s "audit-runtime-screens/$file"
 done
-if cmp -s audit-runtime-screens/audit-lecture-mushaf.png audit-runtime-screens/audit-lecture-amorce-anglais.png; then
-  echo "::error::Amorce title popup has no visible UI transition"; exit 1
+private_dir=hifz-app/src/main/assets/ibn_kathir_qurancom_private
+if [ -d "$private_dir" ]; then
+  # Work's independent private-checkout test is stricter: actual title pixels.
+  test -s audit-runtime-screens/audit-qurancom-qaf-private.png
+  test -s audit-runtime-screens/audit-qurancom-baqarah-private.png
+  if cmp -s audit-runtime-screens/audit-lecture-mushaf.png \
+            audit-runtime-screens/audit-qurancom-qaf-private.png; then
+    echo "::error::Private Quran.com heading created no visible UI transition"
+    exit 1
+  fi
+  echo "PASS: seven live Android tests + $count screenshots, including PRIVATE title pixels"
+else
+  echo "PASS: seven live Android tests + $count screenshots, PUBLIC no-title fail-closed only"
+  echo "::notice::Quran.com English title pixels remain UNVERIFIED until private Work audit"
 fi
-echo "PASS: seven genuine Android runtime tests + $count screenshot PNGs"
