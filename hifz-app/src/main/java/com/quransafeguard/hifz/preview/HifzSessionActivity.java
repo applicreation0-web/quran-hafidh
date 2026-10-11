@@ -1079,10 +1079,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             onError("Impossible de créditer directement ce fragment de Stabilisation.");
             return;
         }
-        if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {
-            onError("Impossible d’avancer la rotation d’Itqān.");
-            return;
-        }
         renderItqan(autoChainDepth + 1);
     }
 
@@ -1118,10 +1114,6 @@ public final class HifzSessionActivity extends android.app.Activity implements M
                 currentLineIds, nextBlock, finalBlock, itqanUnit.start, itqanUnit.end, next,
                 sessionDate.toString(), label, bonusLineIds);
         if(!ok){onError("Impossible d’enregistrer la validation de la Stabilisation.");return;}
-        if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {
-            onError("Impossible d’avancer la rotation d’Itqān.");
-            return;
-        }
         awaitingValidation=false;closeClockForCompletedSession();mushaf.cycleCompleted();renderMode();
     }
 
