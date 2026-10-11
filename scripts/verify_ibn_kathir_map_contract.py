@@ -32,6 +32,9 @@ for token in ('ibn_kathir_qurancom_private','IK_QURANCOM_PRIVATE_V1',
     assert token in titles, "Private fail-closed title contract missing: "+token
 for token in ('getSharedPreferences(', 'prefs.set', 'startActivity(', 'https://'):
     assert token not in titles, "Private title reader must never mutate Hifz/network state"
-assert not (root/"hifz-app/src/main/assets/ibn_kathir_qurancom_private").exists(), (
-    "Quran.com licensed corpus must not be committed to this PUBLIC repository")
+import subprocess
+tracked=subprocess.check_output(
+    ["git","ls-files","--","hifz-app/src/main/assets/ibn_kathir_qurancom_private"],
+    cwd=root,text=True).strip()
+assert not tracked, "PRIVATE source is tracked in PUBLIC repo"
 print("PASS: private Quran.com title loader, old spa5k display disabled, 1903 index intact, no Quiz, NO APK")
