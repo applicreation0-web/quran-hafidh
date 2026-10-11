@@ -22,7 +22,8 @@ public final class VerseRosettesNeverErasedSourceContractTest {
         String reader = read("hifz-app/src/main/assets/hifzreader/reader.js");
         assertTrue(reader.contains("      layer.appendChild(markerLayer(svg,polys,lines));"));
         assertFalse(reader.contains("preserveVerseMarkersOnMask"));
-        for (String path : new String[]{"MushafView.java", "QuizActivity.java", "HifzSessionActivity.java", "StudyReaderActivity.java"}) {
+        assertFalse(Files.exists(Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java")));
+        for (String path : new String[]{"MushafView.java", "HifzSessionActivity.java", "StudyReaderActivity.java"}) {
             assertFalse(path, read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/" + path).contains("PreserveVerseMarkers"));
         }
     }

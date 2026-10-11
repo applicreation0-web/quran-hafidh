@@ -44,12 +44,13 @@ public final class BooxPortraitHomeSourceContractTest {
     @Test public void routingAndComputedTodayStayIntact() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("Ui.settingRow(this, \"Aujourd’hui\", \"…\", v -> openToday())"));
-        for (String label : new String[]{"Lecture","Parcours Hifz","Mémorisation libre","Quiz","Progression"}) {
+        for (String label : new String[]{"Lecture","Parcours Hifz","Mémorisation libre","Progression"}) {
             assertTrue("Missing "+label,home.contains("homeNavLine(root, \""+label+"\""));
         }
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
         assertTrue(home.contains("new Intent(this, FreeMemActivity.class)"));
-        assertTrue(home.contains("new Intent(this, QuizActivity.class)"));
+        assertFalse(home.contains("new Intent(this, QuizActivity.class)"));
+        assertFalse(home.contains("homeNavLine(root, \"Quiz\""));
         assertTrue(home.contains("new Intent(this, ProgressMapActivity.class)"));
         assertTrue(home.contains("showParcours()"));
         assertTrue(home.contains("refreshToday()"));

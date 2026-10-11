@@ -34,7 +34,10 @@ public final class CanonicalProgressUiSourceContractTest {
         assertTrue(settings.contains("private String weeklyCadenceSummary(){"));
         assertTrue(settings.contains("· Apprentissage   ·   \""));
         assertTrue(settings.contains("· Stabilisation   ·   \""));
-        assertTrue(settings.contains("\"Dim · Finales uniquement\"") && settings.contains("\"Dim · Stabilisation et finales\""));
+        assertTrue(settings.contains("\"Dim · Finales (historique uniquement)\"")
+            && settings.contains("\"Dim · Finales sans révision\""));
+        assertTrue(settings.contains("Stabilisation = 7 jours"));
+        assertFalse(settings.contains("days+\"/6 jours\""));
         assertFalse(settings.contains("Mar/Jeu · Stabilisation"));
         assertFalse(settings.contains("Sam/Dim · Révision"));
         assertFalse(settings.contains("Dim · Ancrage puis Consolidation"));
