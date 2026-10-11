@@ -1,4 +1,4 @@
-name: Quran Haafidh 1.17.1 - Second Audit DEBUG (APK only)
+name: Quran Haafidh 1.17.1 - AUDIT CRITIQUE final DEBUG APK
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: haafidh-1171-ik-audit2-debug-${{ github.ref }}
@@ -18,12 +19,20 @@ concurrency:
 jobs:
   build-verified-debug:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 65
     steps:
       - name: Checkout EXACT tested branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Require green independent Hifz/Quiz SOURCE + Android runtime/screenshots on SAME SHA
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/work/haafidh-1171-ibn-kathir-integration-independent"
+          python3 scripts/require_same_sha_ci.py
       - name: Enforce official 1.17.1 Hifz and Quiz freeze, with exact audited exceptions
         shell: bash
         run: |
@@ -77,19 +86,19 @@ jobs:
           unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-files.txt"
           grep -Fxq 'assets/reader109/geometry.json' "$RUNNER_TEMP/apk-files.txt"
           grep -Eq '^assets/reader109/word-boxes/' "$RUNNER_TEMP/apk-files.txt"
-          mkdir -p "$RUNNER_TEMP/haafidh-audit2-debug"
-          output="Quran-Haafidh-1.17.1-IbnKathir-AUDIT2-DEBUG.apk"
-          cp "$apk" "$RUNNER_TEMP/haafidh-audit2-debug/$output"
-          (cd "$RUNNER_TEMP/haafidh-audit2-debug" && sha256sum "$output" > "$output.sha256")
+          mkdir -p "$RUNNER_TEMP/haafidh-audit-critique-debug"
+          output="Quran-Haafidh-1.17.1-IbnKathir-AUDIT-CRITIQUE-DEBUG.apk"
+          cp "$apk" "$RUNNER_TEMP/haafidh-audit-critique-debug/$output"
+          (cd "$RUNNER_TEMP/haafidh-audit-critique-debug" && sha256sum "$output" > "$output.sha256")
           echo "SHA256 and signed package:"
-          cat "$RUNNER_TEMP/haafidh-audit2-debug/$output.sha256"
+          cat "$RUNNER_TEMP/haafidh-audit-critique-debug/$output.sha256"
           grep '^package:' "$RUNNER_TEMP/apk-badging.txt"
-          echo "verified_debug_apk=$RUNNER_TEMP/haafidh-audit2-debug/$output" >> "$GITHUB_OUTPUT"
+          echo "verified_debug_apk=$RUNNER_TEMP/haafidh-audit-critique-debug/$output" >> "$GITHUB_OUTPUT"
       - name: Publish ONLY the final APK debug + SHA256, no release
         uses: actions/upload-artifact@v4
         with:
-          name: Quran-Haafidh-1.17.1-IbnKathir-AUDIT2-DEBUG-${{ github.sha }}
-          path: ${{ runner.temp }}/haafidh-audit2-debug/
+          name: Quran-Haafidh-1.17.1-IbnKathir-AUDIT-CRITIQUE-DEBUG-${{ github.sha }}
+          path: ${{ runner.temp }}/haafidh-audit-critique-debug/
           retention-days: 30
           if-no-files-found: error
       - name: Failure logs (never an APK)
