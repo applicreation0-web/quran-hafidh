@@ -1,4 +1,4 @@
-name: Quran Haafidh 1.17.1 - AUDIT CRITIQUE final DEBUG APK
+name: Quran Haafidh 1.17.1 - AMORCES 7J unique final DEBUG APK
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           set -euo pipefail
           bash -n scripts/ci_android_runtime_visual.sh
           python3 -m py_compile scripts/require_same_sha_ci.py
-      - name: Require green independent Hifz/Quiz SOURCE + Android runtime/screenshots on SAME SHA
+      - name: Require independent Hifz/source and seven-day Android pixel tests on SAME SHA
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/work/haafidh-1171-ibn-kathir-integration-independent"
           python3 scripts/require_same_sha_ci.py
-      - name: Enforce official 1.17.1 Hifz and Quiz freeze, with exact audited exceptions
+      - name: Enforce official 1.17.1 Hifz freeze and exact Quiz-removal exceptions
         shell: bash
         run: |
           set -euo pipefail
@@ -72,7 +72,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Run full Hifz/Quiz behavioural tests and all original BOOX source contracts
+      - name: Run full Hifz behavioural tests and all revised BOOX source contracts
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
       - name: Assemble exactly ONE isolated DEBUG APK (never release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
@@ -94,10 +94,10 @@ jobs:
           grep -Fxq 'assets/reader109/geometry.json' "$RUNNER_TEMP/apk-files.txt"
           grep -Eq '^assets/reader109/word-boxes/' "$RUNNER_TEMP/apk-files.txt"
           mkdir -p "$RUNNER_TEMP/haafidh-audit-critique-debug"
-          output="Quran-Haafidh-1.17.1-IbnKathir-AUDIT-CRITIQUE-DEBUG.apk"
+          output="Quran-Haafidh-1.17.1-AMORCES-7J-SANS-QUIZ-DEBUG.apk"
           cp "$apk" "$RUNNER_TEMP/haafidh-audit-critique-debug/$output"
-          cp docs/AUDIT_CRITIQUE_CODE_ANDROID_BOOX_V1171_2026-10-11.md "$RUNNER_TEMP/haafidh-audit-critique-debug/AUDIT_CRITIQUE_1171.md"
-          printf "Official baseline: 7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21\\nGitHub tested HEAD: %s\\nAndroid test: 6 instrumented tests, 14 PNGs, WebView raster confirmed, same SHA\\nNo release. Independent test-only package.\\n" "$GITHUB_SHA" > "$RUNNER_TEMP/haafidh-audit-critique-debug/BUILD_PROVENANCE.txt"
+          cp docs/AUDIT_CRITIQUE_7J_AMORCES_SANS_LISTES_2026-10-11.md "$RUNNER_TEMP/haafidh-audit-critique-debug/AUDIT_7J_AMORCES.md"
+          printf "Official baseline: 7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21\\nGitHub tested HEAD: %s\\nAndroid: six instrumented checks and 14 PNGs (Hifz, offline Amorces, no Quiz, seven days)\\nEnglish headings: 16 verified groups only; 1903 documentary starts; BOOX physical NOT certified.\\nNo production release. Independent test-only APK.\\n" "$GITHUB_SHA" > "$RUNNER_TEMP/haafidh-audit-critique-debug/BUILD_PROVENANCE.txt"
           (cd "$RUNNER_TEMP/haafidh-audit-critique-debug" && sha256sum "$output" > "$output.sha256")
           echo "SHA256 and signed package:"
           cat "$RUNNER_TEMP/haafidh-audit-critique-debug/$output.sha256"
@@ -106,7 +106,7 @@ jobs:
       - name: Publish ONLY the final APK debug + SHA256, no release
         uses: actions/upload-artifact@v4
         with:
-          name: Quran-Haafidh-1.17.1-IbnKathir-AUDIT-CRITIQUE-DEBUG-${{ github.sha }}
+          name: Quran-Haafidh-1.17.1-AMORCES-7J-FINAL-DEBUG-${{ github.sha }}
           path: ${{ runner.temp }}/haafidh-audit-critique-debug/
           retention-days: 30
           if-no-files-found: error
@@ -114,7 +114,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Quran-Haafidh-AUDIT2-BLOCKERS-${{ github.sha }}
+          name: Quran-Haafidh-7J-BLOCKERS-${{ github.sha }}
           path: |
             hifz-app/build/reports/tests/
             hifz-app/build/test-results/

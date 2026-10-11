@@ -732,30 +732,38 @@ public final class SettingsActivity extends android.app.Activity {
     }
 
     /**
-     * Stabilisation runs a fixed PreviewConfig.STABILIZATION_WEEKLY_LINES lines/week (3 sessions,
-     * Tue/Thu/Sat, 8+7+7) regardless of learningDaysPerWeek, so remaining physical lines divided
-     * by that pace, projected from today, is an honest — if optimistic, since a weekly unit can
-     * end early at a surah boundary — estimate of when "à stabiliser" clears entirely.
+     * Calendar-only estimates, never earned credits. Recommended Itqan target
+     * is 8+7+7+8 physical lines over 7 days; manual uses a conservative seven
+     * lines per Itqan day (actual physical surah/page boundaries can reduce it).
+     * Historical CLASSIC retains its original 22-line estimate.
      */
+    private int forecastItqanLinesPerWeek(){
+        HifzPrefs.WeeklyProgram mode=prefs.weeklyProgramMode();
+        if(mode==HifzPrefs.WeeklyProgram.RECOMMENDED)return 30;
+        if(mode==HifzPrefs.WeeklyProgram.MANUAL_SEVEN)
+            return Math.max(1,(7-effectiveLearningDaysPerWeek())*7);
+        return PreviewConfig.STABILIZATION_WEEKLY_LINES;
+    }
+
     private String stabilizationEtaSummary(){
         int remaining=prefs.stabilizationLinesRemaining(geometry);
         if(remaining==0)return "à jour";
-        int weeks=(remaining+PreviewConfig.STABILIZATION_WEEKLY_LINES-1)/PreviewConfig.STABILIZATION_WEEKLY_LINES;
-        return remaining+" ligne(s) restante(s) · ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
+        int weeklyPace=forecastItqanLinesPerWeek();
+        int weeks=(remaining+weeklyPace-1)/weeklyPace;
+        return remaining+" ligne(s) restante(s) · estimation ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
     }
 
-    /**
-     * Apprentissage's own weekly pace — SABQI_LINES per session, learningDaysPerWeek sessions —
-     * unlike Stabilisation's fixed cadence. Remaining lines run from the live sabqiLineCursor to
-     * sabqiEnd and are bounded below by sabqiStart, so anything printed before it (Al-Fatiha,
-     * under the default 2:75 start) is never counted: it was never part of this walk.
-     */
+    /** Seven-day Sabqi forecast: only the Recommended programme fixes 3×5 lines.
+     * A manual choice of zero days must NOT divide by zero or fabricate progress. */
     private String apprentissageEtaSummary(){
         int remaining=prefs.sabqiLinesRemaining(geometry);
         if(remaining==0)return "à jour";
-        int weeklyPace=PreviewConfig.SABQI_LINES*prefs.learningDaysPerWeek();
+        int sabqiDays=prefs.weeklyProgramMode()==HifzPrefs.WeeklyProgram.RECOMMENDED
+            ?3:effectiveLearningDaysPerWeek();
+        int weeklyPace=PreviewConfig.SABQI_LINES*Math.max(0,sabqiDays);
+        if(weeklyPace==0)return remaining+" ligne(s) restante(s) · aucun jour Sabqi programmé";
         int weeks=(remaining+weeklyPace-1)/weeklyPace;
-        return remaining+" ligne(s) restante(s) · ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
+        return remaining+" ligne(s) restante(s) · estimation ~"+weeks+" semaine(s) · ~"+HifzClock.today().plusWeeks(weeks);
     }
 
     private void confirmReset(){
