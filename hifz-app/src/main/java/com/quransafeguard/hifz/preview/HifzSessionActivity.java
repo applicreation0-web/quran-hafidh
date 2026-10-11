@@ -659,7 +659,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         String label = "Consolidation · " + physicalUnitCount(consolidationSession) + " unité(s) · Acquis";
-        if (!prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
+        boolean closed;
+        try { closed=prefs.completeConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label); }
+        catch(IllegalStateException missingEvening) {
+            onError("Finale refusée : Consolidation ×7 du soir manquant. Aucune ligne créditée.");
+            return;
+        }
+        if (!closed) {
             onError("Impossible d’enregistrer la Consolidation.");
             return;
         }
@@ -687,7 +693,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         if (consolidationSession == null || !consolidationSession.readyToClose()) return;
         speedStore.calibrateConsolidation(metricsStore.consolidationLines(), clock.elapsedMs());
         String label = "Renforcement · " + physicalUnitCount(consolidationSession) + " unité(s) · Acquis";
-        if (!prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label)) {
+        boolean closed;
+        try { closed=prefs.completeLearningConsolidationSessionV6(consolidationSession, geometry, sessionDate.toString(), label); }
+        catch(IllegalStateException missingEvening) {
+            onError("Finale refusée : Renforcement ×10 du soir manquant. Aucune ligne créditée.");
+            return;
+        }
+        if (!closed) {
             onError("Impossible d’enregistrer le Renforcement.");
             return;
         }
