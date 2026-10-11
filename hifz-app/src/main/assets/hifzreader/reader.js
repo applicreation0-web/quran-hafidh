@@ -374,6 +374,30 @@ function maskRect(segment){
   return el;
 }
 
+/**
+ * Quiz-only 100% mask. The original SVG <mask> + nested hole defs was accepted
+ * by WebView but erased the ENTIRE prompt on Android (0 visible pixels).
+ * Subtract the already verified quran-ws word boxes from the actual paper
+ * rectangles instead: same canonical SVG ink, no text reconstruction, no
+ * cell-sized approximate opening. Never used by Sabqi, Itqan or revisions.
+ */
+function quizMaskElement(segment,svg,protectedRects){
+  const original=maskRect(segment);
+  if(!protectedRects.length)return original;
+  const x=Number(original.getAttribute('x')),y=Number(original.getAttribute('y'));
+  const width=Number(original.getAttribute('width')),height=Number(original.getAttribute('height'));
+  const parts=rectMinus([[x,y,x+width,y+height]],protectedRects);
+  const group=document.createElementNS(NS,'g');
+  parts.forEach(r=>{
+    const tile=document.createElementNS(NS,'rect');
+    tile.setAttribute('class','maskcell');
+    tile.setAttribute('x',r[0]);tile.setAttribute('y',r[1]);
+    tile.setAttribute('width',r[2]-r[0]);tile.setAttribute('height',r[3]-r[1]);
+    group.appendChild(tile);
+  });
+  return group;
+}
+
 /* Personal weak-spot flags: a thin dashed outline cloned above every layer (including any
  * active mask), never a filled shade — deliberately the lightest possible mark to avoid E-Ink
  * ghosting from a shape that can stay on screen for many page views. */
@@ -798,6 +822,13 @@ function render(){
       const segments=sealFullEraseSeams(randomSegmentsForCells(cells,clamped,currentRandomOrder(cells)),lines);
       segments.push(...fullEraseWordSegments(segments,lines,svg));
       const layer=document.createElementNS(NS,'g');layer.setAttribute('class','masklayer');
+      // Only the named Quiz prompt uses geometric cut-outs. All memorization
+      // motors keep the release 1.17.1 exact renderer and mask behavior.
+      const quizPrompt=semanticAnchorMaskMode&&semanticCues.some(cue=>cue.id==='quiz-prompt');
+      const quizHoles=quizPrompt?protectedWordBoxes()
+        .map(b=>wordBoxInSvgSpace(b,svg)).filter(Boolean):[];
+      const paintMask=quizPrompt
+        ?segment=>quizMaskElement(segment,svg,quizHoles):maskRect;
       if(polys.length){
         /*
          * A cell's rectangle is the raw geometric line-cell box, not the selected verse's exact
@@ -811,7 +842,7 @@ function render(){
         segments.forEach(segment=>(multiVerseLines.has(segment.lineId)?clipped:open).push(segment));
         if(open.length){
           const openGroup=document.createElementNS(NS,'g');
-          open.forEach(segment=>openGroup.appendChild(maskRect(segment)));
+          open.forEach(segment=>openGroup.appendChild(paintMask(segment)));
           layer.appendChild(openGroup);
         }
         if(clipped.length){
@@ -821,17 +852,17 @@ function render(){
           defs.appendChild(clip);layer.appendChild(defs);
           const clippedGroup=document.createElementNS(NS,'g');
           clippedGroup.setAttribute('clip-path','url(#hifz-selection-clip)');
-          clipped.forEach(segment=>clippedGroup.appendChild(maskRect(segment)));
+          clipped.forEach(segment=>clippedGroup.appendChild(paintMask(segment)));
           layer.appendChild(clippedGroup);
         }
       } else {
         const group=document.createElementNS(NS,'g');
-        segments.forEach(segment=>group.appendChild(maskRect(segment)));
+        segments.forEach(segment=>group.appendChild(paintMask(segment)));
         layer.appendChild(group);
       }
       // Exact anchor words are holes in the mask itself. Verse-number rosettes are never erased:
       // they are always redrawn above the paper eraser, in every mode (user decision).
-      applyProtectedWordHoles(layer,svg);
+      if(!quizPrompt)applyProtectedWordHoles(layer,svg);
       layer.appendChild(markerLayer(svg,polys,lines));
       svg.appendChild(layer);
     }
