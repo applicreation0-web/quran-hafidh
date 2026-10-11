@@ -71,6 +71,69 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-lecture-amorce-anglais.png");
     }
  }
+ @Test public void liveItqanFourDateWindowSurvivesRealTapAndRecreation() {
+    Context context=ApplicationProvider.getApplicationContext();
+    android.content.SharedPreferences disk=context.getSharedPreferences(
+        "quran_hifz_preview_v1",Context.MODE_PRIVATE);
+    java.util.Map<String,?> backup=new java.util.HashMap<>(disk.getAll());
+    try {
+      assertTrue(disk.edit().clear().commit());
+      GeometryRepository geo=GeometryRepository.get(context);
+      HifzPrefs prefs=new HifzPrefs(context);
+      GeometryRepository.LineMeta first=geo.linesForExactIds(geo.lineIdsOnPage(520)).get(0);
+      assertTrue(prefs.saveItqanRotationState(new ItqanRotationPolicy.State(
+          ItqanRotationPolicy.Leg.TAIL_HUJURAT_NAS,first.verses.get(0),false)));
+      java.time.LocalDate date=HifzClock.today().plusDays(1);
+      android.content.Intent launch=new android.content.Intent(context,HifzSessionActivity.class)
+          .putExtra(HifzSessionActivity.EXTRA_MODE,HifzSessionActivity.ITQAN)
+          .putExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE,date.toString());
+      try(ActivityScenario<HifzSessionActivity> s=ActivityScenario.launch(launch)) {
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        s.onActivity(a->{
+          ItqanFourSessionSnapshot snapshot=(ItqanFourSessionSnapshot)reflect(a,"frozenItqan");
+          assertNotNull("Itqan screen did not open frozen 2-page model",snapshot);
+          assertEquals(0,snapshot.sessionIndex);
+          assertEquals(0,snapshot.reps);
+          assertEquals(520,snapshot.plan.firstPage);
+          assertEquals(521,snapshot.plan.lastPage);
+          assertTrue(((TextView)reflect(a,"program")).getText().toString().contains("séance 1/4"));
+          android.widget.LinearLayout actions=(android.widget.LinearLayout)reflect(a,"actions");
+          assertTrue(actions.getChildCount()>0);
+          ViewGroup rep=(ViewGroup)actions.getChildAt(0);
+          assertTrue(rep.getChildAt(0) instanceof android.widget.Button);
+          assertTrue("Tap must reach actual repetition engine",rep.getChildAt(0).performClick());
+        });
+        s.recreate();
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        s.onActivity(a->{
+          ItqanFourSessionSnapshot restored=(ItqanFourSessionSnapshot)reflect(a,"frozenItqan");
+          assertNotNull(restored);
+          assertEquals("One real click persisted through Activity recreation",1,restored.reps);
+          assertEquals(520,restored.plan.firstPage);
+          assertEquals(521,restored.plan.lastPage);
+          assertEquals(1,new HifzPrefs(a).frozenItqanSnapshot(
+              GeometryRepository.get(a)).reps);
+        });
+        HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-itqan-4dates.png");
+      }
+    } finally {
+      android.content.SharedPreferences.Editor restore=disk.edit().clear();
+      for(java.util.Map.Entry<String,?> e:backup.entrySet()) {
+        String key=e.getKey();Object val=e.getValue();
+        if(val instanceof String)restore.putString(key,(String)val);
+        else if(val instanceof Integer)restore.putInt(key,(Integer)val);
+        else if(val instanceof Long)restore.putLong(key,(Long)val);
+        else if(val instanceof Boolean)restore.putBoolean(key,(Boolean)val);
+        else if(val instanceof Float)restore.putFloat(key,(Float)val);
+        else if(val instanceof java.util.Set) {
+          @SuppressWarnings("unchecked")
+          java.util.Set<String> values=(java.util.Set<String>)val;
+          restore.putStringSet(key,values);
+        } else throw new AssertionError("Unknown Hifz preference type: "+key);
+      }
+      assertTrue("Restore original user state after Android proof",restore.commit());
+    }
+ }
  private static boolean containsText(View v,String value){
    if(v instanceof TextView && ((TextView)v).getText().toString().contains(value))return true;
    if(v instanceof ViewGroup){
