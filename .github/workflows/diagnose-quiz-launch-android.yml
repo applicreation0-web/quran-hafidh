@@ -61,7 +61,12 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             adb logcat -c
+            set +e
             gradle --no-daemon :hifz-app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.quransafeguard.hifz.preview.QuizLaunchRegressionInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest --stacktrace
+            status=$?
+            mkdir -p audit-runtime-screens
+            adb pull /sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files/. audit-runtime-screens/ || true
+            exit "$status"
       - name: Keep instrumented failures and context only
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,5 +75,6 @@ jobs:
           path: |
             hifz-app/build/outputs/androidTest-results/
             hifz-app/build/reports/androidTests/
+            audit-runtime-screens/
           retention-days: 14
           if-no-files-found: warn
