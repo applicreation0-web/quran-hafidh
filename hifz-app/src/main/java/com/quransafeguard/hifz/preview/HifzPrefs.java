@@ -1678,6 +1678,7 @@ public final class HifzPrefs {
             throw new IllegalArgumentException("Stabilisation unit required");
         List<String> bonus = bonusLineIds == null ? Collections.emptyList() : bonusLineIds;
         synchronized (V6_STATE_LOCK) {
+            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -1738,6 +1739,7 @@ public final class HifzPrefs {
         if (lineIds.size() > ItqanMaintenancePolicy.MAX_UNIT_LINES)
             throw new IllegalStateException("Post-An-Nās Itqān unit exceeds one hizb");
         synchronized (V6_STATE_LOCK) {
+            if(alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -1790,6 +1792,7 @@ public final class HifzPrefs {
             throw new IllegalArgumentException("tiny Itqan fragment must be exactly 1 or 2 lines");
         if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
         synchronized (V6_STATE_LOCK) {
+            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
             requireSchema6ProgressionState();
             LinkedHashSet<String> learned = v6LineIdSet("v6LearnedLineIds");
             LinkedHashSet<String> stabilized = v6LineIdSet("v6StabilizedLineIds");
@@ -2267,6 +2270,14 @@ public final class HifzPrefs {
     }
 
     /** Keep final Itqan credit, rotation and An-Nas latch in one transaction. */
+    private boolean alreadyCompletedItqanUnit(VerseRef start,VerseRef end) {
+        return start!=null && end!=null
+            && p.getString("itqanUnitStart","").isEmpty()
+            && p.getString("itqanUnitEnd","").isEmpty()
+            && start.toString().equals(p.getString("lastItqanCreditStart",""))
+            && end.toString().equals(p.getString("lastItqanCreditEnd",""));
+    }
+
     private SharedPreferences.Editor appendFinalItqanRotation(
             SharedPreferences.Editor editor,boolean finalBlock,VerseRef unitEnd) {
         if(!finalBlock)return editor;
@@ -2330,6 +2341,7 @@ public final class HifzPrefs {
                                                     String date, String label) {
         if (unitStart == null || unitEnd == null) throw new IllegalArgumentException("Stabilisation unit required");
         synchronized(V6_STATE_LOCK) {
+            if(finalBlock&&alreadyCompletedItqanUnit(unitStart,unitEnd))return false;
             SharedPreferences.Editor editor=p.edit()
             .putInt("itqanRep", 0).putInt("itqanAssisted", 0).putInt("itqanFinalReveals", 0)
             .putInt("itqanBlockIndex", finalBlock ? 0 : Math.max(0, nextBlockIndex))

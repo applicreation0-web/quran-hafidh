@@ -59,6 +59,27 @@ public final class AtomicItqanRotationRegressionTest {
    assertEquals(start,reboot.itqanRotationState().cursor);
    assertFalse(reboot.itqanPostNasMaintenance());
  }
+ @Test public void doubleValidationAfterRestartMustNotAdvanceRotationAgain() {
+   FaultInjectingPrefs disk=disk();
+   AnchoringQueue.Entry entry=terminal();
+   VerseRef start=GeometryRepository.parseVerse(entry.start);
+   VerseRef end=GeometryRepository.parseVerse(entry.end);
+   startAt(disk,start);
+   HifzPrefs original=new HifzPrefs(disk);
+   List<String> ids=CorpusLinePolicy.ownedLineIdsForRangeOnPage(start,end,geometry);
+   String date="2026-10-11";
+   assertTrue(original.completeStabilizationBlockV6(ids,1,true,start,end,end,
+       date,"once",Collections.emptyList()));
+   HifzPrefs restored=new HifzPrefs(disk);
+   ItqanRotationPolicy.State after=restored.itqanRotationState();
+   int commits=disk.commits;
+   assertFalse("A replay cannot repeat the final V6 transition",
+       restored.completeStabilizationBlockV6(ids,1,true,start,end,end,date,
+          "duplicate",Collections.emptyList()));
+   assertEquals("No second write",commits,disk.commits);
+   assertEquals(after.cursor,new HifzPrefs(disk).itqanRotationState().cursor);
+   assertEquals(after.initialTailCompleted,new HifzPrefs(disk).itqanPostNasMaintenance());
+ }
  @Test public void successPersistsCreditRotationAndNasLatchInExactlyOneCommit() {
    FaultInjectingPrefs disk=disk();
    AnchoringQueue.Entry unit=terminal();
