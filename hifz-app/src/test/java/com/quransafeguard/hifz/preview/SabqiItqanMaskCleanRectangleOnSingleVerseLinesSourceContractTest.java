@@ -58,20 +58,14 @@ public final class SabqiItqanMaskCleanRectangleOnSingleVerseLinesSourceContractT
         assertTrue("must partition segments by whether their line is in that multi-verse set",
             render.contains("segments.forEach(segment=>(multiVerseLines.has(segment.lineId)?clipped:open).push(segment));"));
         assertTrue("single-verse-line segments must render as plain, unclipped rectangles",
-            render.contains("open.forEach(segment=>openGroup.appendChild(paintMask(segment)));"));
+            render.contains("open.forEach(segment=>openGroup.appendChild(maskRect(segment)));"));
         assertTrue("multi-verse-line segments must keep the exact polygon clip, unchanged",
             render.contains("clippedGroup.setAttribute('clip-path','url(#hifz-selection-clip)');")
-                && render.contains("clipped.forEach(segment=>clippedGroup.appendChild(paintMask(segment)));"));
-        // Audit #3: Quiz has a deliberately isolated word-geometry cutout.
-        // For every Hifz mode quizPrompt=false and paintMask is EXACTLY
-        // the prior maskRect — assert the dispatch rather than false-failing
-        // on the name of the wrapper. Keep both open/clip branches unchanged.
-        assertTrue("Only Quiz can use the alternative eraser (Hifz = old maskRect)",
-            render.contains("const quizPrompt=semanticAnchorMaskMode&&semanticCues.some(cue=>cue.id==='quiz-prompt');")
-                && render.contains("const paintMask=quizPrompt\n        ?segment=>quizMaskElement(segment,svg,quizHoles):maskRect;"));
-        assertTrue("Both Hifz mask branches must use the same safe dispatch",
-            render.contains("open.forEach(segment=>openGroup.appendChild(paintMask(segment)));")
-                && render.contains("clipped.forEach(segment=>clippedGroup.appendChild(paintMask(segment)));"));
+                && render.contains("clipped.forEach(segment=>clippedGroup.appendChild(maskRect(segment)));"));
+        assertTrue("Retired Quiz eraser is absent; all Hifz modes use the native mask",
+            render.contains("open.forEach(segment=>openGroup.appendChild(maskRect(segment)));")
+                && render.contains("clipped.forEach(segment=>clippedGroup.appendChild(maskRect(segment)));")
+                && !reader.contains("quizMaskElement"));
         assertTrue("this split must only run when there's an actual selection to clip against "
                 + "(Révision's maskFollowsSelection=false path is untouched, already fully unclipped)",
             render.contains("if(polys.length){") && render.contains("} else {\n        const group=document.createElementNS(NS,'g');"));

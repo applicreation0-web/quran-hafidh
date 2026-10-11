@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
-"""Exact immutable exception to the 1.17.1 QCF renderer freeze: Quiz prompt holes ONLY.
+"""Proof that the 1.17.1 Mushaf reader is unchanged except the EXACT off-unit focus veil.
 
-This gate pins the prior audited Quiz cut-outs plus the new off-unit context veil.
-The veil changes only presentation, not Quran mask quotas or progression.
+The retired Quiz eraser has been removed, not hidden. The remainder of the
+reader, including Sabqi/Itqan mask algorithms, is reconstructed byte-for-byte
+from the official 1.17.1 blob before asserting equality with the checked source.
 """
-import pathlib
-import subprocess
-
+import pathlib,subprocess
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 FILE="hifz-app/src/main/assets/hifzreader/reader.js"
 BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
-ORIGINAL="8a9611a8bbd0e5983f0f9ee4e98ddfd9484efa44"
-APPROVED="167004da3db90622b1b21419dde7593c37536b20"
-
-def blob(path):
-    return subprocess.check_output(["git","hash-object",str(path)],cwd=ROOT,text=True).strip()
-
-assert subprocess.check_output(["git","rev-parse",f"{BASE}:{FILE}"],cwd=ROOT,text=True).strip()==ORIGINAL, "Official Quiz renderer baseline changed"
-assert blob(ROOT/FILE)==APPROVED, "Quiz-only mask code diverged from byte-audited and Android-tested implementation"
-source=(ROOT/FILE).read_text(encoding="utf-8")
-assert source.count("function quizMaskElement(segment,svg,protectedRects)")==1
-assert source.count("semanticCues.some(cue=>cue.id==='quiz-prompt')")==1
-assert source.count("if(!quizPrompt)applyProtectedWordHoles(layer,svg);")==1
-assert source.count("paintMask(segment)")==3
-assert source.count("function fadedOffUnitPage(svg)")==1
-assert source.count("contextFocus&&lineIds.length&&pageGeo&&(pageGeo.lines||[]).length")==1
-assert source.count("paper.setAttribute('fill-opacity',eink?'0.72':'0.65');")==2
-print("PASS: exact pinned renderer; Quiz geometry and off-unit focus are SHA-locked")
+OFFICIAL_BLOB="8a9611a8bbd0e5983f0f9ee4e98ddfd9484efa44"
+CURRENT_BLOB="cd1c922e1525c088f3ea672a8549294e643746ac"
+original=subprocess.check_output(["git","show",f"{BASE}:{FILE}"],cwd=ROOT).decode("utf-8")
+assert subprocess.check_output(["git","rev-parse",f"{BASE}:{FILE}"],cwd=ROOT,text=True).strip()==OFFICIAL_BLOB
+helper="/* Off-unit page: the due physical lines are on another Mushaf page.\n * Keep all Quranic ink legible but faint. Never expose off-unit text at full\n * contrast or invent a mask hole when this page has zero due-line geometry.\n * No Hifz session/cursor/credit is touched: display-only SVG overlay. */\nfunction fadedOffUnitPage(svg){\n  const g=document.createElementNS(NS,'g');\n  g.setAttribute('class','focuscontextlayer');\n  g.setAttribute('pointer-events','none');\n  const vb=svg.viewBox&&svg.viewBox.baseVal;\n  if(!vb)return g;\n  const paper=document.createElementNS(NS,'rect');\n  paper.setAttribute('x',vb.x);paper.setAttribute('y',vb.y);\n  paper.setAttribute('width',vb.width);paper.setAttribute('height',vb.height);\n  paper.setAttribute('fill','var(--sheet)');\n  paper.setAttribute('fill-opacity',eink?'0.72':'0.65');\n  g.appendChild(paper);\n  return g;\n}\n\n"
+old="  if(contextFocus&&lines.length){\n    const context=focusContextLayer(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);\n    if(context.childNodes.length)svg.appendChild(context);\n  }\n"
+new="  if(contextFocus&&lines.length){\n    const context=focusContextLayer(svg,lines,maskFollowsSelection?selectedPolygons(svg):[]);\n    if(context.childNodes.length)svg.appendChild(context);\n  }else if(contextFocus&&lineIds.length&&pageGeo&&(pageGeo.lines||[]).length){\n    // The selected unit is on a different page: fade this entire context page.\n    // Original logic fell through here and displayed unrelated lines at 100%.\n    const context=fadedOffUnitPage(svg);\n    if(context.childNodes.length)svg.appendChild(context);\n  }\n\n"
+assert original.count("const AMORCE_HIGHLIGHT_HEIGHT=31;")==1
+assert original.count(old)==1
+expected=original.replace("const AMORCE_HIGHLIGHT_HEIGHT=31;",helper+"const AMORCE_HIGHLIGHT_HEIGHT=31;").replace(old,new)
+actual=(ROOT/FILE).read_text(encoding="utf-8")
+assert actual==expected, "Mushaf renderer drift outside exact off-unit fog"
+assert "quizMaskElement" not in actual and "quiz-prompt" not in actual
+assert subprocess.check_output(["git","hash-object",str(ROOT/FILE)],cwd=ROOT,text=True).strip()==CURRENT_BLOB
+print("PASS: Official 1.17.1 QCF and all Hifz erasers byte-equal except off-unit context veil")
