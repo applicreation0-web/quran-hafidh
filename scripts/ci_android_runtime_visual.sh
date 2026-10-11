@@ -14,7 +14,6 @@ adb install -r "${test_apks[0]}"
 
 set +e
 adb shell am instrument -w -r \
-  -e class 'com.quransafeguard.hifz.preview.ReaderSevenDayRuntimeInstrumentedTest,com.quransafeguard.hifz.preview.HifzAndMapRuntimeSmokeInstrumentedTest' \
   'com.quransafeguard.hifz.ibnkathirtest.test/androidx.test.runner.AndroidJUnitRunner' \
   > audit-runtime-instrumentation.txt 2>&1
 shell_status=$?
@@ -28,11 +27,11 @@ mkdir -p audit-runtime-screens
 device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
 adb pull "$device_dir/." audit-runtime-screens/ || true
 
-# AndroidJUnitRunner is authoritative: exactly SEVEN independent runtime tests.
+# AndroidJUnitRunner is authoritative: the complete checked-in suite has 98 tests.
 # A bare Android shell exit code is not sufficient to prove test success.
-grep -Fxq 'OK (7 tests)' audit-runtime-instrumentation.txt
+grep -Fxq 'OK (98 tests)' audit-runtime-instrumentation.txt
 grep -Fxq 'INSTRUMENTATION_CODE: -1' audit-runtime-instrumentation.txt
-test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq 7
+test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq 98
 if grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|INSTRUMENTATION_STATUS_CODE: -[0-9]+' audit-runtime-instrumentation.txt; then
   echo "::error::Android instrumented tests contain a failure; no debug allowed"
   exit 1
@@ -67,8 +66,8 @@ if [ -d "$private_dir" ]; then
     echo "::error::Private Quran.com heading created no visible UI transition"
     exit 1
   fi
-  echo "PASS: seven live Android tests + $count screenshots, including PRIVATE title pixels"
+  echo "PASS: 98 live Android tests + $count screenshots, including PRIVATE title pixels"
 else
-  echo "PASS: seven live Android tests + $count screenshots, PUBLIC no-title fail-closed only"
+  echo "PASS: 98 live Android tests + $count screenshots, PUBLIC no-title fail-closed only"
   echo "::notice::Quran.com English title pixels remain UNVERIFIED until private Work audit"
 fi

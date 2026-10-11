@@ -47,7 +47,7 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Test real Hifz, seven-day schedule and offline Amorces on Android
+      - name: Run all 98 Hifz Android tests and collect authorized pixels
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
