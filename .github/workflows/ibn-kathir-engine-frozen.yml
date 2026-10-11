@@ -54,6 +54,12 @@ jobs:
                          for c in d["cues"] for k in c.keys())
           print("PASS: full migration rehearsal, no Quran text or editorial titles")
           PY
+      - name: Audit all 114 source-heading packs against canonical 1903 Ibn Kathir intervals
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_ibn_kathir_title_pack.py --out "$RUNNER_TEMP/ibn-kathir-work-title-coverage.csv"
+          test -s "$RUNNER_TEMP/ibn-kathir-work-title-coverage.csv"
       - name: Verify all 1903 Ibn Kathir group beginnings against real Mushaf word boxes
         shell: bash
         run: |
