@@ -2530,6 +2530,23 @@ public final class HifzPrefs {
      * Stabilisation here, so it inherits this same order for free.
      */
     public AnchoringQueue.Entry currentAnchoringEntry(GeometryRepository geometry) {
+        // Dashboard/Settings may query this even while a frozen physical-line
+        // window is open. Never invoke the old 22-line picker then: at An-Nas
+        // it could flip the rotation leg before ×40/V6 completion.
+        ItqanFourSessionSnapshot frozen=ItqanFourSessionStore.read(p,geometry);
+        if(frozen!=null) {
+            if(frozen.sessionIndex>=4)throw new IllegalStateException("Completed Itqan snapshot not closed");
+            ItqanFourSessionPolicy.Session slot=frozen.plan.sessions.get(frozen.sessionIndex);
+            if(frozen.blockIndex>=slot.blocks.size())
+                throw new IllegalStateException("Frozen Itqan cursor outside current slot");
+            ItqanFourSessionPolicy.Block part=slot.blocks.get(frozen.blockIndex);
+            List<GeometryRepository.LineMeta> lines=geometry.linesForExactIds(part.lineIds);
+            GeometryRepository.LineMeta first=lines.get(0),last=lines.get(lines.size()-1);
+            VerseRef start=first.verses.get(0);
+            VerseRef end=last.verses.get(last.verses.size()-1);
+            return new AnchoringQueue.Entry(start.toString(),end.toString(),
+                AnchoringQueue.Origin.PROMOTED,AnchoringQueue.ItqanProtocol.FULL,0);
+        }
         if (!p.getBoolean("anchoringQueueInitialized", false)
                 && !reconcileAnchoringQueue(geometry)) {
             throw new IllegalStateException("Unable to persist anchoring queue");
