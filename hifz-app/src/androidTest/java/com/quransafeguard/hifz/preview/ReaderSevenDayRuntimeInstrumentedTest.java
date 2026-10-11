@@ -115,6 +115,13 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       // Different part of the Mushaf. The title MUST come from the pinned
       // source asset, not the 16 Qaf/Najm editorial checkpoint methods.
       s.onActivity(a->{
+        try{
+          java.lang.reflect.Method jump=StudyReaderActivity.class.getDeclaredMethod("setPage",int.class);
+          jump.setAccessible(true);jump.invoke(a,2);
+        }catch(Exception error){throw new AssertionError("Cannot navigate to real Al-Baqarah page",error);}
+      });
+      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(s,"mushaf","Ibn Kathir title Al-Baqarah");
+      s.onActivity(a->{
         IbnKathirGroupIndex.Group baqarah=IbnKathirGroupIndex.shared().containing(2,1);
         assertNotNull(baqarah);
         String[] source=IbnKathirTitlePack.sourceHeadings(a,baqarah);
