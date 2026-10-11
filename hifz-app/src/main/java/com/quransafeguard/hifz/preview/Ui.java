@@ -288,9 +288,11 @@ final class Ui {
     }
 
     private static ColorStateList iconTintFlat() {
+        // Selected glyph sits on a light E-Ink outline, NOT on solid black.
+        // PAPER-on-PAPER made the Amorces key invisible in the user's screenshot.
         return new ColorStateList(
             new int[][]{{-android.R.attr.state_enabled},{android.R.attr.state_pressed},{android.R.attr.state_selected},{}},
-            new int[]{MUTED,PAPER,PAPER,INK});
+            new int[]{MUTED,PAPER,INK,INK});
     }
 
     static int iconFor(String semantic, String fallbackSymbol) {
