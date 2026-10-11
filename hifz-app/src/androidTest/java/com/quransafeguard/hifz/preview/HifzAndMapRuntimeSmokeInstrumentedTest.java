@@ -97,6 +97,33 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
         }
     }
 
+    @Test public void weeklyProgramCanBeChosenDirectlyWithoutEngineCredit() {
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            scenario.onActivity(activity->{
+                TextView selector=(TextView)reflect(activity,"dashboardTitle");
+                assertNotNull(selector);
+                assertEquals("Choisir le programme hebdomadaire",
+                    selector.getContentDescription().toString());
+                try {
+                    java.lang.reflect.Method show=MainActivity.class.getDeclaredMethod("showParcours");
+                    show.setAccessible(true);
+                    show.invoke(activity);
+                }catch(ReflectiveOperationException error) {throw new AssertionError(error);}
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            saveScreenshot("audit-programme-choix.png");
+            scenario.onActivity(activity->{
+                TextView selector=(TextView)reflect(activity,"dashboardTitle");
+                assertTrue("Weekly mode selector must be clickable",selector.isClickable());
+                selector.performClick();
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            saveScreenshot("audit-programme-dialogue.png");
+            scenario.onActivity(activity->assertFalse("Schedule selector must not close MainActivity",activity.isFinishing()));
+        }
+    }
+
     private static Object reflect(Object owner,String name) {
         try {
             Field f=owner.getClass().getDeclaredField(name);
