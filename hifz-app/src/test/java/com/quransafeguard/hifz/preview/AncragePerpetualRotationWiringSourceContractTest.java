@@ -63,6 +63,7 @@ public final class AncragePerpetualRotationWiringSourceContractTest {
         String session = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java");
         assertTrue(session.contains("boolean reinforcementLap = prefs.entryIsFullyStabilizedOrAcquired(anchoringEntry, geometry);"));
         assertTrue(session.contains("? prefs.completeItqanReinforcementBlock("));
+        String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue("the rotation cursor must advance past every completed unit, build or reinforcement alike",
             !session.contains("if (finalBlock && !prefs.advanceItqanRotationPast(itqanUnit.end)) {")
                 && prefs.contains("return appendFinalItqanRotation(editor,finalBlock,unitEnd).commit();"));
