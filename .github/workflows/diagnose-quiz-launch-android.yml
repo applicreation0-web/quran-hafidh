@@ -11,6 +11,7 @@ on:
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/QuizLaunchRegressionInstrumentedTest.java
       - hifz-app/src/androidTest/java/com/quransafeguard/hifz/preview/HifzAndMapRuntimeSmokeInstrumentedTest.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
+      - hifz-app/src/main/assets/hifzreader/reader.js
       - hifz-app/src/main/res/drawable/ic_ui_play.xml
       - hifz-app/src/main/res/drawable/ic_ui_close.xml
   workflow_dispatch:
