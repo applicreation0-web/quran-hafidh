@@ -173,6 +173,29 @@ public final class ItqanFourSessionStoreTest {
    assertTrue("The same saved 40 repetitions remain valid on the proper next day",
        prefs.completeFrozenItqanSubblockV6(ready,geo,"2026-10-14","second date"));
  }
+ @Test public void finalFourDateCreditPinsPhysicalCursorWithoutLosingTheFollowingLine() {
+   FaultInjectingPrefs db=new FaultInjectingPrefs();seedV6(db);
+   ItqanFourSessionSnapshot original=sample(db,520);
+   assertTrue(ItqanFourSessionStore.open(db,original,geo));
+   String lastOriginalId=geo.lineIdsOnPage(521).get(geo.lineIdsOnPage(521).size()-1);
+   int nextPhysical=geo.linesForExactIds(Collections.singletonList(lastOriginalId)).get(0).globalIndex+1;
+   assertTrue(nextPhysical<geo.lineCount());
+   String expectedNext=geo.line(nextPhysical).id;
+   LocalDate day=LocalDate.of(2026,10,13);
+   int completed=0;
+   while(ItqanFourSessionStore.read(db,geo)!=null) {
+     ItqanFourSessionSnapshot ready=completeRepetitions(db);
+     int sessionBefore=ready.sessionIndex;
+     assertTrue(new HifzPrefs(db).completeFrozenItqanSubblockV6(ready,geo,
+          day.toString(),"atomic physical cursor "+completed));
+     ItqanFourSessionSnapshot after=ItqanFourSessionStore.read(db,geo);
+     if(after!=null&&after.sessionIndex>sessionBefore)day=day.plusDays(1);
+     assertTrue("Four-date plan must terminate",++completed<=30);
+   }
+   assertEquals(expectedNext,db.getString("itqanFourNextPhysicalLineIdV1",""));
+   assertEquals("The plan was closed after full V6 credit",
+        "",db.getString(ItqanFourSessionStore.KEY,""));
+ }
  @Test public void aCorruptSnapshotNeverResetsToCurrentGeometry() {
    FaultInjectingPrefs db=new FaultInjectingPrefs();
    ItqanFourSessionSnapshot snap=sample(db,520);
