@@ -49,8 +49,11 @@ public final class MaintenanceCoverageWiringSourceContractTest {
     @Test public void mainActivityTodayLabelAndPlannerCallSiteBothUseTheDynamicDuration() throws Exception {
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
         assertFalse(main.contains("HifzSchedule.MAINTENANCE_MINUTES"));
-        assertTrue(main.contains("int maintenanceMinutes=MaintenanceCoveragePolicy.minutes(\n"
-            + "                    prefs.acquiredLineCountV6(), g.lineCount(), speedStore.maintenanceSecondsPerLine());"));
+        assertTrue("Home must show a simple label instead of a technical duration",
+            main.contains("setToday(prefix+todaySummary(mode),true);"));
+        assertTrue("The actual dynamic Révision duration is still implemented by the session",
+            read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzSessionActivity.java")
+                .contains("MaintenanceCoveragePolicy.minutes("));
         assertTrue(main.contains("new WeeklyDashboardPlanner(prefs, geometry, ledger, speedStore).week(HifzClock.today());"));
     }
 
