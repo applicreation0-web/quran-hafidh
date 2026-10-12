@@ -10,6 +10,8 @@
 - M2 local Android tests: **NOT RUN** — this workspace has Java 17 but no Gradle executable or Android SDK.
 - M2 RED run: `38177121051`, **FAIL as expected** with 29 compile errors in five legacy fixture files.
 - M2 compile-repair run: `38177602466`, **PASS**, but only seven tests executed because the runtime script retained a class filter.
-- Known P0 blockers: Quran Foundation durable-storage decision; 91 of 98 instrumented tests excluded from the current diagnostic workflow.
-- Next gate: execute the complete 98-test suite without a class filter and capture named runtime failures before any further correction.
+- M2 complete runtime run: `38178017596`, **FAIL**, with all 98 tests executed: 68 passed and 30 failed.
+- Initial classification: stale schema-5 assertions, incomplete V6 fixtures, wall-clock-dependent cadence fixtures, and missing earned-evening proof dominate the failures; four semantic cases remain under focused comparison.
+- Known P0 blockers: Quran Foundation durable-storage decision; complete Android runtime suite not yet green.
+- Next gate: repair test-only fixtures, rerun all 98 tests, and isolate any surviving current-contract failure before touching production code.
 
