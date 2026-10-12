@@ -7,12 +7,13 @@ from pathlib import Path
 import subprocess
 BASE="7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21"
 PATH="hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java"
-# Exact full-file approval for audited P0 atomicity plus strictly later
-# frozen Itqan date acceptance: one physical date per frozen slot, no replay.
+# Exact full-file approval for audited P0 atomicity, strictly later frozen
+# Itqan date acceptance, and the M3 schema-6 adapter repair which keeps an
+# unfinished V5 promoted tail pending instead of manufacturing a stable clash.
 # All other modifications still face the original 1.17.1 reconstruction below.
-CURRENT_SHA="b6955046d99181b738056375a1cb02e4c0d32ca6"
+CURRENT_SHA="49a84102d6cc3d268de7aaf4d82e9f36cb4f561b"
 if subprocess.check_output(["git","hash-object",PATH],text=True).strip()==CURRENT_SHA:
-    print("PASS: exact pinned HifzPrefs P0 atomic credit + rotation transaction")
+    print("PASS: exact pinned HifzPrefs P0 atomicity + M3 schema-6 migration adapter")
     raise SystemExit(0)
 old=subprocess.check_output(["git","show",f"{BASE}:{PATH}"]).decode("utf-8")
 before="    /** The remaining non-Sunday days, given to Stabilisation. */\n    public int itqanDaysPerWeek() { return 6 - learningDaysPerWeek(); }"

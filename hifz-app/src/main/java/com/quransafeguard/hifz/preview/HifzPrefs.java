@@ -266,6 +266,16 @@ public final class HifzPrefs {
         int completedBlocks = Math.max(0, p.getInt("itqanBlockIndex", 0));
         VerseRef unitStart = optionalRef("itqanUnitStart");
         VerseRef unitEnd = optionalRef("itqanUnitEnd");
+        if (unitStart != null && unitEnd != null) {
+            // A dated J10 review inside the still-active Stabilisation unit is
+            // genuine contradictory evidence, unlike a date attached to an
+            // unrelated pending range (which the classifier archives as orphan).
+            for (String lineId : geometry.lineIdsForVerseRange(unitStart, unitEnd)) {
+                if (pendingLineIds.contains(lineId) && legacyJ10EpochDays.containsKey(lineId)) {
+                    legacyStableLineIds.add(lineId);
+                }
+            }
+        }
         if (completedBlocks > 0 && unitStart != null && unitEnd != null) {
             List<VerseRef> unitVerses = geometry.versesForRange(unitStart, unitEnd);
             if (containsHardAnchoringSurah(hardAnchoringSurahs(), unitVerses)) {
