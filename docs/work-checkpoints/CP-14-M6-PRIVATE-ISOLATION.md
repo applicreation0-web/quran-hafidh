@@ -106,6 +106,20 @@ before any distribution or claim of permanent-storage authorization.
 
 ## CI
 
-Same-SHA source/JVM and Android 98-test plus external-force-stop results will
-be recorded after this public checkpoint is committed. No APK or release is
-published by either audit workflow.
+M6 evidence SHA: `7289b2f18cfc69dab2b2d37c227e6486e29ba30c`.
+
+- source/JVM run `38275169555`: **PASS**, including the explicit
+  `src/audit` isolation gate, all source contracts and both Gradle test
+  phases;
+- Android run `38275169442`: **PASS**, exact main result
+  `OK (98 tests)`, preparation `OK (1 test)`, external
+  `adb shell am force-stop`, and fresh-process verification
+  `OK (1 test)`; 14 public no-title screenshots.
+
+The failed predecessor SHA `73627055968e8b789f4e3067a158f71230ed16d3`
+has source/JVM run `38274414563` and Android run `38274414561`, both
+**FAIL before test execution** on the same unsupported AGP exclusion DSL. It
+is retained as RED evidence and is not the M6 audit target.
+
+No APK or release is published by either audit workflow. Emulator screenshots
+without private titles are not represented as final-title or BOOX evidence.

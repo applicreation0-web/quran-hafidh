@@ -5,9 +5,9 @@ Date: 2026-10-12.
 - Repository: `applicreation0-web/quran-hafidh`.
 - Branch: `work/haafidh-1171-ibn-kathir-integration-independent`.
 - Official reference: `7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21`.
-- Last completed public milestone: M5 at
-  `92f93e5ec73408c0456d8ebaa504f816cc9863b8`.
-- Current movement: M6 private-data isolation; final same-SHA CI pending.
+- Last completed functional milestone: M6 evidence SHA
+  `7289b2f18cfc69dab2b2d37c227e6486e29ba30c`.
+- Current movement: publish the independent Work High handover packet.
 - Distribution/debug verdict: **NO-GO**.
 
 ## M3 — complete
@@ -37,7 +37,7 @@ Tafsir and pencil are NON_CERTIFIABLE because no independent approved
 reference was supplied. Private-title captures and physical BOOX checks remain
 NON_EXECUTE; emulator/source results are not a physical-device certificate.
 
-## M6 — isolation implemented, CI pending
+## M6 — complete with rights restriction
 
 The baseline private sidecar verifies 1,903 groups / 6,236 verses / eight
 chunks. The 69:44–52 candidate is 1,710 staged / 154 absent / 39 quarantined;
@@ -56,8 +56,14 @@ or synchronization. It does not establish durable-content authorization:
 distribution containing the private titles remains NO-GO. Content Sync 169
 publication/access and physical/private visual proofs remain NON_EXECUTE.
 
+Same-SHA source/JVM `38275169555` and Android `38275169442` are PASS.
+Android executed 98/98 plus preparation 1/1, external `am force-stop`, and
+fresh-process verification 1/1. The predecessor runs `38274414563` and
+`38274414561` failed before tests on unsupported AGP exclusion syntax and
+remain documented as RED evidence.
+
 ## Next gate
 
-Publish CP-14, obtain same-SHA source/JVM and Android 98-test + force-stop
-results, then publish `HANDOVER_WORK_HIGH_M7.md`. Work High itself remains a
-separate READ-ONLY audit and is not launched here.
+Publish `HANDOVER_WORK_HIGH_M7.md` as a documentation-only descendant of the
+M6 evidence SHA. Work High itself remains a separate READ-ONLY audit and is not
+launched here.
