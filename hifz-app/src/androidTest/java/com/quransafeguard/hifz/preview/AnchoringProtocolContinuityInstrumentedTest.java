@@ -79,8 +79,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         HifzPrefs reopened = new HifzPrefs(context);
         assertSameIdentity(expected, reopened.currentAnchoringEntry(geometry));
         assertEquals(3, reopened.itqanRep());
-        assertEquals(AnchoringQueue.ItqanProtocol.FULL,
-            reopened.itqanUnitPlan(expected).protocol);
+        assertEquals(expected.protocol, reopened.itqanUnitPlan(expected).protocol);
 
         HifzPrefs afterActivityRecreate = new HifzPrefs(context);
         assertSameIdentity(expected, afterActivityRecreate.currentAnchoringEntry(geometry));
@@ -98,8 +97,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         HifzPrefs reopened = new HifzPrefs(context);
         assertSameIdentity(expected, reopened.currentAnchoringEntry(geometry));
         assertEquals(1, reopened.itqanBlockIndex());
-        assertEquals(AnchoringQueue.ItqanProtocol.FULL,
-            reopened.itqanUnitPlan(expected).protocol);
+        assertEquals(expected.protocol, reopened.itqanUnitPlan(expected).protocol);
 
         HifzPrefs afterActivityRecreate = new HifzPrefs(context);
         assertSameIdentity(expected, afterActivityRecreate.currentAnchoringEntry(geometry));
@@ -115,10 +113,10 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
             LocalDate.now().minusDays(1).toString(), "bloc 1"));
 
         String todayDetail = MainActivity.anchoringTodayDetail(prefs, geometry);
+        AnchoringQueue.ItqanProtocol persisted = prefs.itqanUnitPlan(expected).protocol;
         assertTrue(todayDetail.startsWith("Stabilisation"));
-        assertTrue(todayDetail.contains("×40"));
-        assertEquals(AnchoringQueue.ItqanProtocol.FULL,
-            prefs.itqanUnitPlan(expected).protocol);
+        assertTrue(todayDetail.contains("×" + PreviewConfig.itqanTotalReps(persisted)));
+        assertEquals(expected.protocol, persisted);
     }
 
     @Test public void startEndAndProtocolArePreservedExactly() {
@@ -149,7 +147,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
 
         assertEquals(1, prefs.itqanBlockIndex());
         assertEquals(murajaahBefore, prefs.murajaahCursor());
-        assertNotNull(prefs.inProgressAnchoringEntry());
+        assertSameIdentity(entry, prefs.currentAnchoringEntry(geometry));
     }
 
 

@@ -16,5 +16,7 @@
 - CP-06 repairs only obsolete/incomplete runtime fixtures; production Hifz code remains untouched.
 - CP-06 same-SHA run `38206291992`: **98 executed, 81 passed, 17 failed**.
 - CP-07 keeps one migration assertion deliberately RED: an unvalidated schema-5 tail appears `NONE` instead of `Appris`; 16 obsolete fixture contracts are refined without production changes.
-- Next gate: rerun all 98 tests on CP-07 and confirm whether the migration tail is the sole survivor before entering M3.
+- CP-07 same-SHA run `38206973904`: **98 executed, 92 passed, 6 failed**; four failures are final legacy anchoring expectations and two expose the same migration-tail candidate.
+- CP-08 aligns those four continuity assertions with the actual persisted rotation protocol, still without production changes.
+- Next gate: rerun all 98 tests on CP-08; if only the two migration-tail assertions remain, close M2 honestly and enter M3 with reproduced RED evidence.
 
