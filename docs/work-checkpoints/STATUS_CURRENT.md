@@ -1,6 +1,6 @@
 # Current Work 5.6 status
 
-- Movement: M2 — full 98-test runtime gate.
+- Movement: M3 complete — M4 private-title/source-safe integration next.
 - Starting HEAD: `43a991e5a6b75f939e50da313078a1c2b1419240`.
 - Branch: `work/haafidh-1171-ibn-kathir-integration-independent`.
 - Official reference: `7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21`.
@@ -24,7 +24,10 @@
 - M2 is complete: 25 files / 98 tests present, compilable, discovered, and executed; zero ignored by the runtime gate.
 - CP-11 migration correction commit `e61a27fa87e309729fdaf160f804e129be874c56` is GREEN: source/JVM run `38208907474` passed and Android run `38208907462` passed all 98 tests.
 - External process-death run `38235307061` kept the 98-test suite green but failed its new post-suite gate: active-review elapsed time was lost across `am force-stop` while Itqan and Sabqi state survived.
-- Corrective code commit `e527fb1eb3e56b3f3b6b423e0df26f50d5a6c2c8` replaces the asynchronous elapsed-time write with a checked synchronous commit; its same-SHA-equivalent CI trigger is pending.
-- Movement: M3 — protected-behavior proof completion.
-- Next gate: rerun the checked synchronous elapsed-time fix on Android plus the source/JVM audit, then complete the P0 and eight-week evidence map.
+- Corrective code commit `e527fb1eb3e56b3f3b6b423e0df26f50d5a6c2c8` replaces the asynchronous elapsed-time write with a checked synchronous commit.
+- M3 evidence SHA `84bee60f1fb364a97ac8622c53f92ba484d121c1`: source/JVM run `38236706373` and Android run `38236706405` both PASS.
+- Android exact result: 98/98 main tests, then prepare 1/1, external `am force-stop`, fresh-process verify 1/1; no failures, ignored or filters.
+- M3 strict residuals: T-009 and T-010 are `NON_EXECUTE` without physical BOOX/pixel proof; 98/98 is not a general product or BOOX certification.
+- Movement: M4 — private Quran.com review and source-safe ordering logic. No private English title or title-bearing capture may enter this repository.
+- Next gate: integrate only reviewed offsets and fail-closed quarantine decisions, then rerun both CI workflows at the same SHA.
 
