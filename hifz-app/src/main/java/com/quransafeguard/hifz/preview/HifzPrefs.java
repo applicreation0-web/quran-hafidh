@@ -224,13 +224,20 @@ public final class HifzPrefs {
         LinkedHashSet<String> pendingLineIds = new LinkedHashSet<>(
             CorpusLinePolicy.ownedLineIds(unconsolidatedPromotedRanges(), allLines));
 
-        LinkedHashSet<String> legacyStableLineIds = new LinkedHashSet<>();
-        EligibleCorpus legacyStableCorpus = EligibleCorpus.Companion.of(progressionMurajaahRanges());
-        for (GeometryRepository.LineMeta line : allLines) {
-            if (legacyStableCorpus.contains(CorpusLinePolicy.ownerVerse(line))) {
-                legacyStableLineIds.add(line.id);
-            }
-        }
+        // V5 stored an unfinished promoted unit in both promotedRanges and
+        // unconsolidatedPromotedRanges.  Treating all promotedRanges as stable
+        // therefore manufactures a pending+stable contradiction and wrongly
+        // quarantines ordinary unfinished work.  Explicit legacy Murajaah/Itqan
+        // evidence remains stable; promoted material is stable only once it is
+        // no longer part of the physical pending tail.
+        ArrayList<VerseRange> explicitStableRanges = new ArrayList<>(itqanRanges());
+        explicitStableRanges.addAll(legacyMurajaahPromotedRanges());
+        LinkedHashSet<String> legacyStableLineIds = new LinkedHashSet<>(
+            CorpusLinePolicy.ownedLineIds(explicitStableRanges, allLines));
+        LinkedHashSet<String> settledPromotedLineIds = new LinkedHashSet<>(
+            CorpusLinePolicy.ownedLineIds(promotedRanges(), allLines));
+        settledPromotedLineIds.removeAll(pendingLineIds);
+        legacyStableLineIds.addAll(settledPromotedLineIds);
 
         LinkedHashMap<String, Long> recentSabqiAddedOnEpochDays = new LinkedHashMap<>();
         try {
