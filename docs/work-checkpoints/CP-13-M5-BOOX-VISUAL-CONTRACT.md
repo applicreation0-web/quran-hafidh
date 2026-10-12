@@ -105,6 +105,16 @@ physical BOOX was accessible. Old no-title captures are not reused as proof.
 
 ## CI
 
-Same-SHA source/JVM and 98-test Android results are recorded after the public
-checkpoint commit completes. A passing hash/geometry script is not represented
-as a physical BOOX certification.
+Checkpoint SHA: `92f93e5ec73408c0456d8ebaa504f816cc9863b8`.
+
+- source/JVM run `38273528132`: **PASS**. The 23-file byte check and the
+  independent 19-silhouette geometry check both passed; all Gradle source/JVM
+  tasks completed successfully.
+- Android run `38273528162`: **PASS**. Exact main result `OK (98 tests)`,
+  then preparation `OK (1 test)`, external `adb shell am force-stop`, and
+  fresh-process verification `OK (1 test)`; 14 public no-title screenshots.
+
+The two one-test phases re-run members of the 98-test inventory and are not
+reported as 100 distinct tests. A passing hash/geometry script and emulator
+run are not represented as physical BOOX certification or private-title pixel
+proof.

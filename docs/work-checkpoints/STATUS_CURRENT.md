@@ -1,37 +1,61 @@
 # Current Work 5.6 status
 
-- Movement: M3 complete — M4 private-title/source-safe integration next.
-- Starting HEAD: `43a991e5a6b75f939e50da313078a1c2b1419240`.
+Date: 2026-10-12.
+
+- Repository: `applicreation0-web/quran-hafidh`.
 - Branch: `work/haafidh-1171-ibn-kathir-integration-independent`.
 - Official reference: `7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21`.
-- Audit verdict carried forward: **NO-GO**.
-- Code changes in M1: none.
-- M1 same-SHA Android run: **PASS**, run `38176731635`, seven selected tests only.
-- M2 local Android tests: **NOT RUN** — this workspace has Java 17 but no Gradle executable or Android SDK.
-- M2 RED run: `38177121051`, **FAIL as expected** with 29 compile errors in five legacy fixture files.
-- M2 compile-repair run: `38177602466`, **PASS**, but only seven tests executed because the runtime script retained a class filter.
-- M2 complete runtime run: `38178017596`, **FAIL**, with all 98 tests executed: 68 passed and 30 failed.
-- Initial classification: stale schema-5 assertions, incomplete V6 fixtures, wall-clock-dependent cadence fixtures, and missing earned-evening proof dominate the failures; four semantic cases remain under focused comparison.
-- Known P0 blockers: Quran Foundation durable-storage decision; complete Android runtime suite not yet green.
-- CP-06 repairs only obsolete/incomplete runtime fixtures; production Hifz code remains untouched.
-- CP-06 same-SHA run `38206291992`: **98 executed, 81 passed, 17 failed**.
-- CP-07 keeps one migration assertion deliberately RED: an unvalidated schema-5 tail appears `NONE` instead of `Appris`; 16 obsolete fixture contracts are refined without production changes.
-- CP-07 same-SHA run `38206973904`: **98 executed, 92 passed, 6 failed**; four failures are final legacy anchoring expectations and two expose the same migration-tail candidate.
-- CP-08 aligns those four continuity assertions with the actual persisted rotation protocol, still without production changes.
-- CP-08 same-SHA run `38207426156`: **98 executed, 93 passed, 5 failed**; three failures compare a started legacy LIGHT plan with its fresh FULL entry, while two retain the migration-tail defect.
-- CP-09 captures the protocol after start and compares that exact persisted value across reopen.
-- CP-09 same-SHA run `38207906981`: **98 executed, 96 passed, 2 failed**. Both failures reproduce one V5→V6 unfinished-tail migration defect.
-- M2 is complete: 25 files / 98 tests present, compilable, discovered, and executed; zero ignored by the runtime gate.
-- CP-11 migration correction commit `e61a27fa87e309729fdaf160f804e129be874c56` is GREEN: source/JVM run `38208907474` passed and Android run `38208907462` passed all 98 tests.
-- External process-death run `38235307061` kept the 98-test suite green but failed its new post-suite gate: active-review elapsed time was lost across `am force-stop` while Itqan and Sabqi state survived.
-- Corrective code commit `e527fb1eb3e56b3f3b6b423e0df26f50d5a6c2c8` replaces the asynchronous elapsed-time write with a checked synchronous commit.
-- M3 evidence SHA `84bee60f1fb364a97ac8622c53f92ba484d121c1`: source/JVM run `38236706373` and Android run `38236706405` both PASS.
-- M3 checkpoint SHA `8110185c4825b612994bc852a51683bf26145b04`: same-SHA source/JVM `38237473916` and Android `38237474035` both PASS.
-- Android exact result: 98/98 main tests, then prepare 1/1, external `am force-stop`, fresh-process verify 1/1; no failures, ignored or filters.
-- M3 strict residuals: T-009 and T-010 are `NON_EXECUTE` without physical BOOX/pixel proof; 98/98 is not a general product or BOOX certification.
-- Movement: M4 — private Quran.com review and source-safe ordering logic. No private English title or title-bearing capture may enter this repository.
-- Next gate: integrate only reviewed offsets and fail-closed quarantine decisions, then rerun both CI workflows at the same SHA.
-- M4 checkpoint SHA `20c9bd5707c3903aa6fa45e2a391b796a96a585a`: source/JVM `38238427503` and Android `38238427459` PASS; Android 98/98 plus external force-stop 1/1 + 1/1 and 14 public no-title screenshots.
-- Movement: M5 — demonstrated key-round silhouette correction and screen-by-screen visual classification. Hash identity is no longer treated as graphic conformity.
-- M5 strict limits: final title-bearing Android captures and physical BOOX review remain NON_EXECUTE; four historical icon references are unavailable and therefore NON_CERTIFIABLE.
+- Last completed public milestone: M5 at
+  `92f93e5ec73408c0456d8ebaa504f816cc9863b8`.
+- Current movement: M6 private-data isolation; final same-SHA CI pending.
+- Distribution/debug verdict: **NO-GO**.
 
+## M3 — complete
+
+Checkpoint `8110185c4825b612994bc852a51683bf26145b04`:
+source/JVM `38237473916` PASS; Android `38237474035` PASS. Exact Android
+result: 98/98 main tests, preparation 1/1, external `am force-stop`,
+fresh-process verification 1/1. T-009 and T-010 remain NON_EXECUTE without
+physical BOOX/pixel proof.
+
+## M4 — complete, source-safe
+
+Checkpoint `20c9bd5707c3903aa6fa45e2a391b796a96a585a`:
+source/JVM `38238427503` PASS; Android `38238427459` PASS with 98/98 plus
+the external force-stop phases. The reviewed private candidate remains outside
+Git. Final private-title pixels remain NON_EXECUTE.
+
+## M5 — complete with explicit visual limits
+
+Checkpoint `92f93e5ec73408c0456d8ebaa504f816cc9863b8`:
+source/JVM `38273528132` PASS; Android `38273528162` PASS with exact
+`OK (98 tests)`, preparation 1/1, external force-stop and fresh-process 1/1.
+
+The Amorces key now matches pinned Lucide `key-round` geometry. Nineteen
+Lucide silhouettes pass geometry comparison. Reading, documentary Carte,
+Tafsir and pencil are NON_CERTIFIABLE because no independent approved
+reference was supplied. Private-title captures and physical BOOX checks remain
+NON_EXECUTE; emulator/source results are not a physical-device certificate.
+
+## M6 — isolation implemented, CI pending
+
+The baseline private sidecar verifies 1,903 groups / 6,236 verses / eight
+chunks. The 69:44–52 candidate is 1,710 staged / 154 absent / 39 quarantined;
+the old baseline validator rejects this expected one-group delta and is not
+misreported as PASS.
+
+The historical spa5k assets and two obsolete providers remain audit inputs but
+are excluded from main Android packaging/compilation. A RED→GREEN verifier and
+CI gate cover the exclusion. No Hifz engine, persistence, Jalalayn or QCF
+geometry was modified.
+
+The personal-only decision is applied without adding network, account, server
+or synchronization. It does not establish durable-content authorization:
+distribution containing the private titles remains NO-GO. Content Sync 169
+publication/access and physical/private visual proofs remain NON_EXECUTE.
+
+## Next gate
+
+Publish CP-14, obtain same-SHA source/JVM and Android 98-test + force-stop
+results, then publish `HANDOVER_WORK_HIGH_M7.md`. Work High itself remains a
+separate READ-ONLY audit and is not launched here.

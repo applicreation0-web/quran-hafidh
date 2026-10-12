@@ -312,7 +312,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
+    sourceSets.getByName("main") {
+        assets.srcDir(generatedHifzAssetsDir)
+        // Historical spa5k extracts remain audit inputs, never application payloads.
+        assets.exclude("ibn_kathir_headings/**")
+        java.exclude("**/IbnKathirOfflineTitles.java")
+        java.exclude("**/IbnKathirTitlePack.java")
+    }
 
     signingConfigs {
         create("release") {
