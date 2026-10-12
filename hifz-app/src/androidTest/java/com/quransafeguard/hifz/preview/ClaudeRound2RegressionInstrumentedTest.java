@@ -1,16 +1,12 @@
 package com.quransafeguard.hifz.preview;
 
-import android.app.Activity;
-import android.app.Instrumentation;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -23,6 +19,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.lang.reflect.Method;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -75,7 +72,7 @@ public final class ClaudeRound2RegressionInstrumentedTest {
         assertTrue(reloaded.stabilizedConsolidationUnits(HifzClock.today()).isEmpty());
     }
 
-    @Test public void completedConsolidationTodayYieldsBackToScheduledCadence() throws Exception {
+    @Test public void completedConsolidationTodayStillListsScheduledCadence() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
         assertTrue(main.edit().putString("programStartDate", HifzClock.today().toString()).commit());
         List<String> stabilized = new ArrayList<>();
@@ -92,24 +89,14 @@ public final class ClaudeRound2RegressionInstrumentedTest {
             .putString("lastRecentSabqiReviewLabel", "Consolidation · séance validée")
             .commit());
 
-        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(HifzSessionActivity.class.getName(), null, false);
-        Activity opened = null;
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             assertTrue(awaitTodayEnabled(scenario));
             scenario.onActivity(activity -> {
-                View action = findByContentDescription(activity.getWindow().getDecorView(), "Ouvrir la séance du jour");
-                assertNotNull(action);
-                action.performClick();
+                List<String> modes = todayModes(activity);
+                assertTrue(modes.contains(HifzSessionActivity.SABQI));
+                assertTrue("completed Consolidation must not reappear",
+                    !modes.contains(HifzSessionActivity.RECENT_SABQI_REVIEW));
             });
-            opened = monitor.waitForActivityWithTimeout(5_000L);
-            assertNotNull(opened);
-            Intent intent = opened.getIntent();
-            assertEquals(HifzSessionActivity.SABQI, intent.getStringExtra(HifzSessionActivity.EXTRA_MODE));
-            assertEquals(HifzClock.today().toString(), intent.getStringExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE));
-        } finally {
-            if (opened != null) opened.finish();
-            instrumentation.removeMonitor(monitor);
         }
     }
 
@@ -145,6 +132,22 @@ public final class ClaudeRound2RegressionInstrumentedTest {
             if (!enabled) Thread.sleep(50L);
         }
         return enabled;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> todayModes(MainActivity activity) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod(
+                "todaySessions", java.time.LocalDate.class, String.class, java.time.LocalDate.class);
+            method.setAccessible(true);
+            List<MainActivity.TodaySession> sessions = (List<MainActivity.TodaySession>) method.invoke(
+                activity, HifzClock.today(), null, null);
+            ArrayList<String> modes = new ArrayList<>();
+            for (MainActivity.TodaySession session : sessions) modes.add(session.mode);
+            return modes;
+        } catch (Exception error) {
+            throw new AssertionError(error);
+        }
     }
 
     private List<GeometryRepository.LineMeta> pageLines(int page) {

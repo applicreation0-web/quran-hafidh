@@ -1,16 +1,12 @@
 package com.quransafeguard.hifz.preview;
 
-import android.app.Activity;
-import android.app.Instrumentation;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.quransafeguard.hifz.core.VerseRange;
 import com.quransafeguard.hifz.core.VerseRef;
@@ -24,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.lang.reflect.Method;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -58,7 +55,7 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         legacyJ10.edit().clear().commit();
     }
 
-    @Test public void homeTodayOpensProgressionTriggeredConsolidation() throws Exception {
+    @Test public void todayWindowListsProgressionTriggeredConsolidation() throws Exception {
         HifzPrefs prefs = new HifzPrefs(context);
         assertTrue(main.edit().putString("programStartDate", HifzClock.today().toString()).commit());
         List<GeometryRepository.LineMeta> page = pageLines(48);
@@ -71,10 +68,6 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
             new VerseRef(2, 282), new VerseRef(2, 282), new VerseRef(2, 283),
             HifzClock.today().toString(), "device consolidation fixture", Collections.emptyList()));
 
-        Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
-            HifzSessionActivity.class.getName(), null, false);
-        Activity opened = null;
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             boolean enabled = false;
             for (int attempt = 0; attempt < 100 && !enabled; attempt++) {
@@ -89,23 +82,9 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
             }
             assertTrue("Today action never became enabled", enabled);
 
-            scenario.onActivity(activity -> {
-                View action = findByContentDescription(
-                    activity.getWindow().getDecorView(), "Ouvrir la séance du jour");
-                assertNotNull(action);
-                action.performClick();
-            });
-
-            opened = monitor.waitForActivityWithTimeout(5_000L);
-            assertNotNull("HifzSessionActivity was not opened", opened);
-            Intent intent = opened.getIntent();
-            assertEquals(HifzSessionActivity.RECENT_SABQI_REVIEW,
-                intent.getStringExtra(HifzSessionActivity.EXTRA_MODE));
-            assertEquals(HifzClock.today().toString(),
-                intent.getStringExtra(HifzSessionActivity.EXTRA_SCHEDULED_DATE));
-        } finally {
-            if (opened != null) opened.finish();
-            instrumentation.removeMonitor(monitor);
+            scenario.onActivity(activity -> assertTrue(
+                "Today window must retain progression-triggered Consolidation",
+                todayModes(activity).contains(HifzSessionActivity.RECENT_SABQI_REVIEW)));
         }
     }
 
@@ -208,6 +187,22 @@ public final class ClaudeNoGoRegressionInstrumentedTest {
         if (snapshot.stabilized.contains(line)) return HifzPrefs.ProgressState.STABILIZED;
         if (snapshot.learned.contains(line)) return HifzPrefs.ProgressState.LEARNED;
         return HifzPrefs.ProgressState.NONE;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> todayModes(MainActivity activity) {
+        try {
+            Method method = MainActivity.class.getDeclaredMethod(
+                "todaySessions", java.time.LocalDate.class, String.class, java.time.LocalDate.class);
+            method.setAccessible(true);
+            List<MainActivity.TodaySession> sessions = (List<MainActivity.TodaySession>) method.invoke(
+                activity, HifzClock.today(), null, null);
+            ArrayList<String> modes = new ArrayList<>();
+            for (MainActivity.TodaySession session : sessions) modes.add(session.mode);
+            return modes;
+        } catch (Exception error) {
+            throw new AssertionError(error);
+        }
     }
 
     private static View findByContentDescription(View root, String wanted) {

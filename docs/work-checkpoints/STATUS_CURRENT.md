@@ -14,5 +14,7 @@
 - Initial classification: stale schema-5 assertions, incomplete V6 fixtures, wall-clock-dependent cadence fixtures, and missing earned-evening proof dominate the failures; four semantic cases remain under focused comparison.
 - Known P0 blockers: Quran Foundation durable-storage decision; complete Android runtime suite not yet green.
 - CP-06 repairs only obsolete/incomplete runtime fixtures; production Hifz code remains untouched.
-- Next gate: rerun all 98 tests on the CP-06 SHA and isolate any surviving current-contract failure before touching production code.
+- CP-06 same-SHA run `38206291992`: **98 executed, 81 passed, 17 failed**.
+- CP-07 keeps one migration assertion deliberately RED: an unvalidated schema-5 tail appears `NONE` instead of `Appris`; 16 obsolete fixture contracts are refined without production changes.
+- Next gate: rerun all 98 tests on CP-07 and confirm whether the migration tail is the sole survivor before entering M3.
 

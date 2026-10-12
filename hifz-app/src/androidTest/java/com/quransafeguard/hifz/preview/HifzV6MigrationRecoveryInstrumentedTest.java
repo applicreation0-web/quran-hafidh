@@ -77,10 +77,13 @@ public final class HifzV6MigrationRecoveryInstrumentedTest {
         assertTrue(main.contains("v6ActiveJ10LastReviewed"));
         assertEquals("post-commit interruption must not mutate retained J10", legacyBefore, snapshot(legacyJ10));
 
-        Map<String, ?> mainAfterInterruptedCommit = snapshot(main);
         HifzPrefs reopened = new HifzPrefs(context);
         assertEquals(6, reopened.schema());
-        assertEquals("schema 6 reopen must be idempotent", mainAfterInterruptedCommit, snapshot(main));
+        Map<String, ?> mainAfterCompletedReopen = snapshot(main);
+        HifzPrefs reopenedAgain = new HifzPrefs(context);
+        assertEquals(6, reopenedAgain.schema());
+        assertEquals("a completed schema 6 reopen must be idempotent",
+            mainAfterCompletedReopen, snapshot(main));
         assertEquals(legacyBefore, snapshot(legacyJ10));
     }
 

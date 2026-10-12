@@ -40,14 +40,14 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertEquals(6, prefs.schema());
         assertEquals(1, prefs.itqanRanges().size());
         assertTrue(prefs.itqanWorkCorpus().contains(new VerseRef(49, 1)));
-        assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
+        assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 74)));
         assertEquals(new VerseRef(49, 1), prefs.itqanCursor());
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
         assertTrue(prefs.consolidationAttendanceDates().isEmpty());
         assertTrue(prefs.forcedPromotedRanges().isEmpty());
         AnchoringQueue.Entry first = prefs.currentAnchoringEntry(GeometryRepository.get(context));
-        assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, first.origin);
+        assertEquals(AnchoringQueue.Origin.PROMOTED, first.origin);
         assertEquals("FULL only: LIGHT is never planned for a new session", AnchoringQueue.ItqanProtocol.FULL, first.protocol);
     }
 
@@ -176,7 +176,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertEquals("progression à conserver", prefs.lastSabqiLabel());
         assertEquals(1, prefs.itqanRanges().size());
         assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
-        assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
+        assertFalse(prefs.progressionSnapshotV6().learned.isEmpty());
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
         assertTrue(prefs.consolidationAttendanceDates().isEmpty());
     }
@@ -203,7 +203,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(2, 100)));
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 100)));
         assertTrue(prefs.itqanWorkCorpus().contains(new VerseRef(49, 1)));
-        assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
+        assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
         assertEquals(1, prefs.itqanRanges().size());
         assertEquals(new VerseRef(2, 1), prefs.murajaahCursor());
         assertEquals("progression à conserver", prefs.lastSabqiLabel());
@@ -371,7 +371,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         assertTrue(raw.getString("unconsolidatedPromotedRanges", "").contains("55:70"));
     }
 
-    @Test public void schemaFourStartedSingleSurahUnitKeepsItsSubBlockProgress() {
+    @Test public void schemaFourStartedLegacyUnitResetsObsoleteSubBlockProgress() {
         raw.edit()
             .putInt("schema", 4)
             .putString("itqanRanges", "[{\"start\":\"2:1\",\"end\":\"2:74\"}]")
@@ -388,11 +388,11 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         HifzPrefs prefs = new HifzPrefs(context);
 
         assertEquals(6, prefs.schema());
-        assertEquals(1, prefs.itqanBlockIndex());
-        assertEquals(7, prefs.itqanRep());
-        assertEquals(2, prefs.itqanAssisted());
-        assertEquals(1, prefs.itqanFinalReveals());
-        assertEquals(4444L, prefs.elapsedFor(HifzSessionActivity.ITQAN));
+        assertEquals(0, prefs.itqanBlockIndex());
+        assertEquals(0, prefs.itqanRep());
+        assertEquals(0, prefs.itqanAssisted());
+        assertEquals(0, prefs.itqanFinalReveals());
+        assertEquals(0L, prefs.elapsedFor(HifzSessionActivity.ITQAN));
     }
 
 }

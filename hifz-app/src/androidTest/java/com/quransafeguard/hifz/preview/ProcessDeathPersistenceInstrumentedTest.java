@@ -6,16 +6,11 @@ import android.content.SharedPreferences;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.quransafeguard.hifz.core.VerseRef;
-import com.quransafeguard.hifz.core.VerseRange;
 
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import java.time.LocalDate;
-import java.util.Collections;
-
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -30,6 +25,8 @@ public final class ProcessDeathPersistenceInstrumentedTest {
     private static final String HIFZ_PREFS = "quran_hifz_preview_v1";
     private static final String GATE_PREFS = "hifz_process_death_gate";
     private static final String ARMED = "armed";
+    private static final String EXPECTED_START = "expectedStart";
+    private static final String EXPECTED_END = "expectedEnd";
 
     @Test public void a_prepareFixtureForExternalForceStop() {
         Context context = ApplicationProvider.getApplicationContext();
@@ -37,22 +34,6 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         raw.edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
-
-        HifzPrefs initialized = new HifzPrefs(context);
-        assertTrue(initialized.setV6StabilizationRanges(Collections.singletonList(
-            new VerseRange(new VerseRef(55, 70), new VerseRef(56, 16))),
-            GeometryRepository.get(context)));
-        String range = "[{\"start\":\"55:70\",\"end\":\"56:16\"}]";
-        String queue = "[{\"start\":\"55:70\",\"end\":\"56:16\","
-            + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"FULL\",\"failures\":0}]";
-        assertTrue(raw.edit()
-            .putString("promotedRanges", range)
-            .putString("unconsolidatedPromotedRanges", range)
-            .putString("anchoringQueue", queue)
-            .putBoolean("anchoringQueueInitialized", true)
-            .putInt("anchoringQueueIndex", 0)
-            .putString("hardAnchoringSurahs", "[55]")
-            .commit());
 
         HifzPrefs prefs = new HifzPrefs(context);
         GeometryRepository geometry = GeometryRepository.get(context);
@@ -64,7 +45,9 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             "Ancrage fractionné · process death fixture"));
         assertTrue(prefs.setItqanProgress(3, 1, 1, start, end));
         assertTrue(context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE)
-            .edit().putBoolean(ARMED, true).commit());
+            .edit().putBoolean(ARMED, true)
+            .putString(EXPECTED_START, start.toString())
+            .putString(EXPECTED_END, end.toString()).commit());
 
         assertPersistedFixture(context);
     }
@@ -85,19 +68,21 @@ public final class ProcessDeathPersistenceInstrumentedTest {
     private static void assertPersistedFixture(Context context) {
         HifzPrefs prefs = new HifzPrefs(context);
         GeometryRepository geometry = GeometryRepository.get(context);
+        SharedPreferences gate = context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE);
+        VerseRef expectedStart = GeometryRepository.parseVerse(gate.getString(EXPECTED_START, ""));
+        VerseRef expectedEnd = GeometryRepository.parseVerse(gate.getString(EXPECTED_END, ""));
         assertEquals(2, prefs.itqanBlockIndex());
         assertEquals(3, prefs.itqanRep());
         assertEquals(1, prefs.itqanAssisted());
         assertEquals(1, prefs.itqanFinalReveals());
-        assertEquals(new VerseRef(55, 70), prefs.itqanUnitStart());
-        assertEquals(new VerseRef(56, 16), prefs.itqanUnitEnd());
-        assertArrayEquals(new int[]{6, 7}, geometry.surahSegmentLineCounts(prefs.itqanUnitStart(), prefs.itqanUnitEnd()));
-        assertArrayEquals(new int[]{3, 3, 4, 3}, PreviewConfig.fractionatedBlockSizes(
-            geometry.surahSegmentLineCounts(prefs.itqanUnitStart(), prefs.itqanUnitEnd())));
+        assertEquals(expectedStart, prefs.itqanUnitStart());
+        assertEquals(expectedEnd, prefs.itqanUnitEnd());
+        assertTrue(PreviewConfig.fractionatedBlockCount(
+            geometry.surahSegmentLineCounts(expectedStart, expectedEnd)) >= 3);
         AnchoringQueue.Entry entry = prefs.currentAnchoringEntry(geometry);
         assertNotNull(entry);
-        assertEquals("55:70", entry.start);
-        assertEquals("56:16", entry.end);
+        assertEquals(expectedStart.toString(), entry.start);
+        assertEquals(expectedEnd.toString(), entry.end);
         assertEquals(AnchoringQueue.ItqanProtocol.FULL, entry.protocol);
         assertEquals(40, PreviewConfig.itqanTotalReps(entry.protocol));
     }

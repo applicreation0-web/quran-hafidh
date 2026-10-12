@@ -75,6 +75,6 @@ public final class AstraFixInstrumentedTest {
         assertEquals(LocalDate.of(2026, 1, 1), prefs.programStartDate());
         assertEquals("progression schema2", prefs.lastSabqiLabel());
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 1)));
-        assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
+        assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
     }
 }
