@@ -23,6 +23,7 @@
 - CP-09 same-SHA run `38207906981`: **98 executed, 96 passed, 2 failed**. Both failures reproduce one V5→V6 unfinished-tail migration defect.
 - M2 is complete: 25 files / 98 tests present, compilable, discovered, and executed; zero ignored by the runtime gate.
 - CP-11 migration correction commit `e61a27fa87e309729fdaf160f804e129be874c56` is GREEN: source/JVM run `38208907474` passed and Android run `38208907462` passed all 98 tests.
+- External process-death run `38235307061` kept the 98-test suite green but failed its new post-suite gate: active-review elapsed time was lost across `am force-stop` while Itqan and Sabqi state survived.
 - Movement: M3 — protected-behavior proof completion.
-- Next gate: execute a real external force-stop between fixture preparation and verification, then complete the P0 and eight-week evidence map.
+- Next gate: rerun the checked synchronous elapsed-time fix on Android plus the source/JVM audit, then complete the P0 and eight-week evidence map.
 

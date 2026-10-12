@@ -3629,7 +3629,11 @@ public final class HifzPrefs {
         return mode.toLowerCase(Locale.ROOT) + "ElapsedMs";
     }
     public long elapsedFor(String mode) { return p.getLong(elapsedKey(mode), 0L); }
-    public void setElapsedFor(String mode, long value) { p.edit().putLong(elapsedKey(mode), Math.max(0L, value)).apply(); }
+    public void setElapsedFor(String mode, long value) {
+        if (!p.edit().putLong(elapsedKey(mode), Math.max(0L, value)).commit()) {
+            throw new IllegalStateException("Unable to persist Hifz session elapsed time");
+        }
+    }
 
     public double murajaahSecondsPerLine() { return p.getFloat("murajaahSecPerLine", (float) PreviewConfig.INITIAL_MURAJAAH_SECONDS_PER_LINE_WORKING); }
 

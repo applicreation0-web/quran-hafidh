@@ -21,4 +21,10 @@ The pure classifier, state-transition engine, cadence, UI, Quran assets, and pri
 
 ## Remaining M3 work
 
-The 98-test run invokes the two process-death fixture methods in one instrumentation process. M3 still requires a shell-level gate that performs a real external `am force-stop` between preparation and verification, plus the final P0 mapping and eight-week planning evidence.
+The first shell-level force-stop run `38235307061` proved the distinction matters:
+
+- the unfiltered suite still reported `OK (98 tests)`;
+- the independent preparation process reported `OK (1 test)`;
+- after `am force-stop`, Itqan and Sabqi state survived but active-review elapsed time was `0` instead of `420321` ms.
+
+Root cause: `setElapsedFor` used asynchronous `SharedPreferences.apply()`, so an immediate process kill could race the disk write. The follow-up patch uses a checked synchronous commit for this durable checkpoint only. Its same-SHA GREEN rerun is required before M3 closure, followed by the final P0 mapping and planning evidence.
