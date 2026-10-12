@@ -11,12 +11,14 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.quransafeguard.hifz.core.VerseRef;
+import com.quransafeguard.hifz.core.VerseRange;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.time.LocalDate;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -171,7 +173,9 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
     }
 
     private HifzPrefs fractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
-        new HifzPrefs(context);
+        HifzPrefs initialized = new HifzPrefs(context);
+        assertTrue(initialized.setV6StabilizationRanges(Collections.singletonList(
+            new VerseRange(new VerseRef(53, 1), new VerseRef(53, 26))), geometry));
         String range = "[{\"start\":\"53:1\",\"end\":\"53:26\"}]";
         String queue = "[{\"start\":\"53:1\",\"end\":\"53:26\","
             + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"" + protocol.name()
@@ -190,7 +194,9 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
 
 
     private HifzPrefs crossSurahFractionatedFixture(AnchoringQueue.ItqanProtocol protocol) {
-        new HifzPrefs(context);
+        HifzPrefs initialized = new HifzPrefs(context);
+        assertTrue(initialized.setV6StabilizationRanges(Collections.singletonList(
+            new VerseRange(new VerseRef(55, 70), new VerseRef(56, 16))), geometry));
         String range = "[{\"start\":\"55:70\",\"end\":\"56:16\"}]";
         String queue = "[{\"start\":\"55:70\",\"end\":\"56:16\","
             + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"" + protocol.name()

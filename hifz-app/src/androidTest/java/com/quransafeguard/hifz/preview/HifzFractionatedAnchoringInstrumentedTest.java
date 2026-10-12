@@ -37,10 +37,12 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
     }
 
     @Test public void schemaFourOptionalStateIsAddedWithoutSchemaBumpAndMalformedFlagsFailOpen() {
-        raw.edit().putInt("schema", 4).putString("hardAnchoringSurahs", "not-json").commit();
+        raw.edit().putInt("schema", 4)
+            .putString("itqanRanges", "[{\"start\":\"2:1\",\"end\":\"2:74\"}]")
+            .putString("hardAnchoringSurahs", "not-json").commit();
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertTrue(raw.contains("itqanBlockIndex"));
         assertTrue(prefs.hardAnchoringSurahs().isEmpty());
 
@@ -94,13 +96,13 @@ public final class HifzFractionatedAnchoringInstrumentedTest {
             .commit();
         VerseRef maintenanceBefore = prefs.murajaahCursor();
 
-        assertFalse(prefs.murajaahCorpus().contains(start));
+        assertTrue(prefs.isUnconsolidatedPromoted(start));
         assertTrue(prefs.completeItqanUnitAndConsolidate(start, end, new VerseRef(2, 1),
             "2026-09-15", "fractionated complete"));
 
         assertEquals(0, prefs.itqanBlockIndex());
         assertTrue(prefs.anchoringQueue().isEmpty());
-        assertTrue(prefs.murajaahCorpus().contains(start));
+        assertFalse(prefs.isUnconsolidatedPromoted(start));
         assertEquals(maintenanceBefore, prefs.murajaahCursor());
     }
     @Test public void threeBlockFractionatedProgressionResetsEachBlockAndLeavesQueueOnlyAtTheEnd() {

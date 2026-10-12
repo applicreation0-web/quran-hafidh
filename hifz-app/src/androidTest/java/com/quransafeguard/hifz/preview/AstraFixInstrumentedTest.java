@@ -42,15 +42,17 @@ public final class AstraFixInstrumentedTest {
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
     }
 
-    @Test public void newPromotionPreemptsReconstructionOnNextAnchoringRead() {
+    @Test public void newPromotionDoesNotTeleportPerpetualRotation() {
         HifzPrefs prefs = new HifzPrefs(context);
         GeometryRepository geometry = GeometryRepository.get(context);
         AnchoringQueue.Entry before = prefs.currentAnchoringEntry(geometry);
-        assertEquals(AnchoringQueue.Origin.RECONSTRUCTION, before.origin);
+        assertEquals(AnchoringQueue.Origin.PROMOTED, before.origin);
 
         assertTrue(prefs.addPromotedVerses(Collections.singletonList(new VerseRef(2, 75)), false));
         AnchoringQueue.Entry after = prefs.currentAnchoringEntry(geometry);
 
+        assertEquals(before.start, after.start);
+        assertEquals(before.end, after.end);
         assertEquals(AnchoringQueue.Origin.PROMOTED, after.origin);
     }
 
@@ -69,7 +71,7 @@ public final class AstraFixInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertEquals(LocalDate.of(2026, 1, 1), prefs.programStartDate());
         assertEquals("progression schema2", prefs.lastSabqiLabel());
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 1)));

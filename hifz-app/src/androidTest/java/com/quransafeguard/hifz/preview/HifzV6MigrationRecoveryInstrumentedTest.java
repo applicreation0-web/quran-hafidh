@@ -9,8 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -96,15 +95,9 @@ public final class HifzV6MigrationRecoveryInstrumentedTest {
     }
 
     private static void setFaultPoint(String point) throws Exception {
-        Method method = HifzPrefs.class.getDeclaredMethod("setMigrationFaultPointForTest", String.class);
-        method.setAccessible(true);
-        try {
-            method.invoke(null, point);
-        } catch (InvocationTargetException error) {
-            Throwable cause = error.getCause();
-            if (cause instanceof RuntimeException) throw (RuntimeException) cause;
-            throw error;
-        }
+        Field field = HifzPrefs.class.getDeclaredField("migrationFaultPointForTest");
+        field.setAccessible(true);
+        field.set(null, point);
     }
 
     private static void clearFaultPoint() throws Exception {

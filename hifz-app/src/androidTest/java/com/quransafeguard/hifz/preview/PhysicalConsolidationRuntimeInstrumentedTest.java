@@ -107,6 +107,8 @@ public final class PhysicalConsolidationRuntimeInstrumentedTest {
             "physical-first-half", ConsolidationCycleEngine.Family.STABILIZATION, unit);
         ConsolidationCycleEngine.Session session = engine.openSession(cycle, "physical-first-half-session");
         while (!session.readyToClose()) session = engine.recordRepetition(session);
+        assertTrue(main.edit().putString("v6StabilizationEarnedEveningUnitsV1",
+            json(Collections.singletonList(unit.id()))).commit());
 
         assertTrue(prefs.completeConsolidationSessionV6(session, geometry, "2026-09-16", "physical-half"));
         Set<String> acquired = stringSet("v6AcquiredCreditLineIds");

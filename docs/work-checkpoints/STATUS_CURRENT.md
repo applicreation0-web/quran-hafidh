@@ -13,5 +13,6 @@
 - M2 complete runtime run: `38178017596`, **FAIL**, with all 98 tests executed: 68 passed and 30 failed.
 - Initial classification: stale schema-5 assertions, incomplete V6 fixtures, wall-clock-dependent cadence fixtures, and missing earned-evening proof dominate the failures; four semantic cases remain under focused comparison.
 - Known P0 blockers: Quran Foundation durable-storage decision; complete Android runtime suite not yet green.
-- Next gate: repair test-only fixtures, rerun all 98 tests, and isolate any surviving current-contract failure before touching production code.
+- CP-06 repairs only obsolete/incomplete runtime fixtures; production Hifz code remains untouched.
+- Next gate: rerun all 98 tests on the CP-06 SHA and isolate any surviving current-contract failure before touching production code.
 

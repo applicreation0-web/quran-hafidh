@@ -6,12 +6,14 @@ import android.content.SharedPreferences;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.quransafeguard.hifz.core.VerseRef;
+import com.quransafeguard.hifz.core.VerseRange;
 
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.time.LocalDate;
+import java.util.Collections;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -36,7 +38,10 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
 
-        new HifzPrefs(context);
+        HifzPrefs initialized = new HifzPrefs(context);
+        assertTrue(initialized.setV6StabilizationRanges(Collections.singletonList(
+            new VerseRange(new VerseRef(55, 70), new VerseRef(56, 16))),
+            GeometryRepository.get(context)));
         String range = "[{\"start\":\"55:70\",\"end\":\"56:16\"}]";
         String queue = "[{\"start\":\"55:70\",\"end\":\"56:16\","
             + "\"origin\":\"RECONSTRUCTION\",\"protocol\":\"FULL\",\"failures\":0}]";

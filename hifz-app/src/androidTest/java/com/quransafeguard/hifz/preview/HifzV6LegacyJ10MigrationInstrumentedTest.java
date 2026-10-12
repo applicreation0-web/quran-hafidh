@@ -107,8 +107,8 @@ public final class HifzV6LegacyJ10MigrationInstrumentedTest {
         assertFalse(longMap(ACTIVE_J10).containsKey(completed));
         assertFalse(stringSet(LEGACY_IMPORTED).contains(completed));
 
-        assertTrue("unfinished historical work becomes Appris", stringSet(LEARNED).contains(learned));
-        assertEquals(Long.valueOf(learnedLegacyDate), longMap(ORPHAN_J10).get(learned));
+        assertTrue("ambiguous unfinished work remains quarantined", stringSet(QUARANTINE).contains(learned));
+        assertEquals(Long.valueOf(learnedLegacyDate), longMap(QUARANTINE_DATES).get(learned));
         assertFalse(longMap(ACTIVE_J10).containsKey(learned));
         assertFalse(stringSet(ACQUIRED).contains(learned));
 

@@ -23,6 +23,9 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -36,6 +39,8 @@ public final class ClaudeRound2RegressionInstrumentedTest {
     private GeometryRepository geometry;
 
     @Before public void setUp() {
+        HifzClock.setClockForTests(Clock.fixed(
+            Instant.parse("2026-09-14T12:00:00Z"), ZoneOffset.UTC));
         context = ApplicationProvider.getApplicationContext();
         main = context.getSharedPreferences(MAIN, Context.MODE_PRIVATE);
         main.edit().clear().commit();
@@ -44,6 +49,7 @@ public final class ClaudeRound2RegressionInstrumentedTest {
     }
 
     @After public void tearDown() {
+        HifzClock.resetClockForTests();
         main.edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
     }

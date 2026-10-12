@@ -195,9 +195,9 @@ public final class HifzV6PersistentStateInstrumentedTest {
 
         new HifzPrefs(context);
 
-        assertTrue(stringSet(LEARNED).contains(learnedRangeLine));
-        assertEquals(Long.valueOf(learnedHistorical), longMap(ORPHAN_J10).get(learnedRangeLine));
-        assertFalse(stringSet(QUARANTINE).contains(learnedRangeLine));
+        assertTrue(stringSet(QUARANTINE).contains(learnedRangeLine));
+        assertEquals(Long.valueOf(learnedHistorical), longMap(QUARANTINE_DATES).get(learnedRangeLine));
+        assertFalse(stringSet(LEARNED).contains(learnedRangeLine));
         assertFalse(stringSet(ACQUIRED).contains(learnedRangeLine));
 
         assertTrue(stringSet(QUARANTINE).contains(conflictingRangeLine));

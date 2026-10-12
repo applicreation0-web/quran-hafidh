@@ -37,7 +37,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
     @Test public void freshSchemaFourBootstrapsTailAsPendingReconstruction() {
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertEquals(1, prefs.itqanRanges().size());
         assertTrue(prefs.itqanWorkCorpus().contains(new VerseRef(49, 1)));
         assertFalse(prefs.murajaahCorpus().contains(new VerseRef(49, 1)));
@@ -54,6 +54,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
     @Test public void alreadyV4InstallPurgesObsoleteStableRecentLinesAndRepairsNewOptionalKeys() {
         raw.edit()
             .putInt("schema", 4)
+            .putString("itqanRanges", "[{\"start\":\"2:1\",\"end\":\"2:74\"}]")
             .putString("stableRecentLines", "[{\"start\":10,\"end\":14}]")
             .commit();
 
@@ -74,15 +75,16 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         VerseRef end = GeometryRepository.parseVerse(first.end);
         VerseRef naturalMaintenanceCursor = prefs.murajaahCursor();
 
-        assertFalse(prefs.murajaahCorpus().contains(start));
+        assertTrue(prefs.isUnconsolidatedPromoted(start));
         assertTrue(prefs.completeItqanUnitAndConsolidate(start, end,
             prefs.itqanWorkCorpus().next(end), "2026-09-13", "validation test"));
 
-        assertTrue(prefs.murajaahCorpus().contains(start));
+        assertFalse(prefs.isUnconsolidatedPromoted(start));
         assertEquals(naturalMaintenanceCursor, prefs.murajaahCursor());
     }
 
     @Test public void legacyConsolidationAttendanceRemainsReadableSortedAndDeduplicated() {
+        new HifzPrefs(context);
         assertTrue(raw.edit().putString("consolidationAttendanceDates",
             "[\"2026-01-11\",\"2026-01-04\",\"2026-01-04\"]").commit());
         HifzPrefs prefs = new HifzPrefs(context);
@@ -170,7 +172,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertEquals("progression à conserver", prefs.lastSabqiLabel());
         assertEquals(1, prefs.itqanRanges().size());
         assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(49, 1)));
@@ -197,7 +199,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertTrue(prefs.isUnconsolidatedPromoted(new VerseRef(2, 100)));
         assertTrue(prefs.murajaahCorpus().contains(new VerseRef(2, 100)));
         assertTrue(prefs.itqanWorkCorpus().contains(new VerseRef(49, 1)));
@@ -238,7 +240,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
         int pendingCount = first.unconsolidatedPromotedRanges().size();
 
         HifzPrefs reopened = new HifzPrefs(context);
-        assertEquals(5, reopened.schema());
+        assertEquals(6, reopened.schema());
         assertEquals(promotedCount, reopened.promotedRanges().size());
         assertEquals(pendingCount, reopened.unconsolidatedPromotedRanges().size());
         assertEquals("progression à conserver", reopened.lastSabqiLabel());
@@ -269,7 +271,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertEquals(0, prefs.itqanBlockIndex());
         assertEquals(0, prefs.itqanRep());
         assertEquals(0, prefs.itqanAssisted());
@@ -352,7 +354,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertEquals(0, prefs.itqanBlockIndex());
         assertEquals(0, prefs.itqanRep());
         assertEquals(0, prefs.itqanAssisted());
@@ -372,6 +374,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
     @Test public void schemaFourStartedSingleSurahUnitKeepsItsSubBlockProgress() {
         raw.edit()
             .putInt("schema", 4)
+            .putString("itqanRanges", "[{\"start\":\"2:1\",\"end\":\"2:74\"}]")
             .putString("hardAnchoringSurahs", "[53]")
             .putString("itqanUnitStart", "53:1")
             .putString("itqanUnitEnd", "53:26")
@@ -384,7 +387,7 @@ public final class HifzPrefsV4MigrationInstrumentedTest {
 
         HifzPrefs prefs = new HifzPrefs(context);
 
-        assertEquals(5, prefs.schema());
+        assertEquals(6, prefs.schema());
         assertEquals(1, prefs.itqanBlockIndex());
         assertEquals(7, prefs.itqanRep());
         assertEquals(2, prefs.itqanAssisted());
