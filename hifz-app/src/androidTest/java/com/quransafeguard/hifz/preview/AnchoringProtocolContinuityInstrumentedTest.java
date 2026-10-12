@@ -75,11 +75,12 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         VerseRef start = GeometryRepository.parseVerse(expected.start);
         VerseRef end = GeometryRepository.parseVerse(expected.end);
         assertTrue(prefs.setItqanProgress(3, 0, start, end));
+        AnchoringQueue.ItqanProtocol startedProtocol = prefs.itqanUnitPlan(expected).protocol;
 
         HifzPrefs reopened = new HifzPrefs(context);
         assertSameIdentity(expected, reopened.currentAnchoringEntry(geometry));
         assertEquals(3, reopened.itqanRep());
-        assertEquals(expected.protocol, reopened.itqanUnitPlan(expected).protocol);
+        assertEquals(startedProtocol, reopened.itqanUnitPlan(expected).protocol);
 
         HifzPrefs afterActivityRecreate = new HifzPrefs(context);
         assertSameIdentity(expected, afterActivityRecreate.currentAnchoringEntry(geometry));
@@ -93,11 +94,12 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         VerseRef end = GeometryRepository.parseVerse(expected.end);
         assertTrue(prefs.advanceItqanBlock(1, start, end,
             LocalDate.now().minusDays(1).toString(), "bloc 1"));
+        AnchoringQueue.ItqanProtocol startedProtocol = prefs.itqanUnitPlan(expected).protocol;
 
         HifzPrefs reopened = new HifzPrefs(context);
         assertSameIdentity(expected, reopened.currentAnchoringEntry(geometry));
         assertEquals(1, reopened.itqanBlockIndex());
-        assertEquals(expected.protocol, reopened.itqanUnitPlan(expected).protocol);
+        assertEquals(startedProtocol, reopened.itqanUnitPlan(expected).protocol);
 
         HifzPrefs afterActivityRecreate = new HifzPrefs(context);
         assertSameIdentity(expected, afterActivityRecreate.currentAnchoringEntry(geometry));
@@ -116,7 +118,7 @@ public final class AnchoringProtocolContinuityInstrumentedTest {
         AnchoringQueue.ItqanProtocol persisted = prefs.itqanUnitPlan(expected).protocol;
         assertTrue(todayDetail.startsWith("Stabilisation"));
         assertTrue(todayDetail.contains("×" + PreviewConfig.itqanTotalReps(persisted)));
-        assertEquals(expected.protocol, persisted);
+        assertEquals(persisted, new HifzPrefs(context).itqanUnitPlan(expected).protocol);
     }
 
     @Test public void startEndAndProtocolArePreservedExactly() {

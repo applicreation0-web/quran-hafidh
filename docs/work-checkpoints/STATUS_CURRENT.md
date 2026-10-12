@@ -18,5 +18,7 @@
 - CP-07 keeps one migration assertion deliberately RED: an unvalidated schema-5 tail appears `NONE` instead of `Appris`; 16 obsolete fixture contracts are refined without production changes.
 - CP-07 same-SHA run `38206973904`: **98 executed, 92 passed, 6 failed**; four failures are final legacy anchoring expectations and two expose the same migration-tail candidate.
 - CP-08 aligns those four continuity assertions with the actual persisted rotation protocol, still without production changes.
-- Next gate: rerun all 98 tests on CP-08; if only the two migration-tail assertions remain, close M2 honestly and enter M3 with reproduced RED evidence.
+- CP-08 same-SHA run `38207426156`: **98 executed, 93 passed, 5 failed**; three failures compare a started legacy LIGHT plan with its fresh FULL entry, while two retain the migration-tail defect.
+- CP-09 captures the protocol after start and compares that exact persisted value across reopen.
+- Next gate: rerun all 98 tests on CP-09; if only the two migration-tail assertions remain, close M2 honestly and enter M3 with reproduced RED evidence.
 
