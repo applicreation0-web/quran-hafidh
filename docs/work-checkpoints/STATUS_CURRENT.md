@@ -20,5 +20,8 @@
 - CP-08 aligns those four continuity assertions with the actual persisted rotation protocol, still without production changes.
 - CP-08 same-SHA run `38207426156`: **98 executed, 93 passed, 5 failed**; three failures compare a started legacy LIGHT plan with its fresh FULL entry, while two retain the migration-tail defect.
 - CP-09 captures the protocol after start and compares that exact persisted value across reopen.
-- Next gate: rerun all 98 tests on CP-09; if only the two migration-tail assertions remain, close M2 honestly and enter M3 with reproduced RED evidence.
+- CP-09 same-SHA run `38207906981`: **98 executed, 96 passed, 2 failed**. Both failures reproduce one V5→V6 unfinished-tail migration defect.
+- M2 is complete: 25 files / 98 tests present, compilable, discovered, and executed; zero ignored by the runtime gate.
+- Movement: M3 — minimal migration correction under RED/GREEN discipline.
+- Next gate: publish CP-10 RED, then correct only the legacy-stable adapter and rerun Android plus the broader same-SHA audit workflow.
 
