@@ -67,5 +67,8 @@ jobs:
             hifz-app/build/reports/androidTests/
             audit-runtime-screens/
             audit-runtime-instrumentation.txt
+            audit-process-death-prepare.txt
+            audit-process-death-launch.txt
+            audit-process-death-verify.txt
           retention-days: 14
           if-no-files-found: warn

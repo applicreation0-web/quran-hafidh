@@ -37,6 +37,29 @@ if grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|
   exit 1
 fi
 
+# A same-process pair of JUnit methods is not process-death evidence. Prepare
+# committed Itqan, Sabqi and active-review state in one instrumentation process,
+# launch the real activity, force-stop the target package from adb, then verify
+# the exact values in a fresh instrumentation process.
+runner='com.quransafeguard.hifz.ibnkathirtest.test/androidx.test.runner.AndroidJUnitRunner'
+process_death_class='com.quransafeguard.hifz.preview.ProcessDeathPersistenceInstrumentedTest'
+run_process_death_phase() {
+  local method="$1"
+  local output="$2"
+  adb shell am instrument -w -r -e class "${process_death_class}#${method}" "$runner" \
+    > "$output" 2>&1
+  cat "$output"
+  grep -Fxq 'OK (1 test)' "$output"
+  grep -Fxq 'INSTRUMENTATION_CODE: -1' "$output"
+  test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' "$output")" -eq 1
+}
+run_process_death_phase a_prepareFixtureForExternalForceStop audit-process-death-prepare.txt
+adb shell am start -W -n \
+  'com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity' \
+  > audit-process-death-launch.txt
+adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
+run_process_death_phase b_verifyFixtureAfterExternalForceStop audit-process-death-verify.txt
+
 # Screen evidence is mandatory. Keep test APK installed until copying pixels.
 mkdir -p audit-runtime-screens
 device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
@@ -68,6 +91,6 @@ if [ -d "$private_dir" ]; then
   fi
   echo "PASS: 98 live Android tests + $count screenshots, including PRIVATE title pixels"
 else
-  echo "PASS: 98 live Android tests + $count screenshots, PUBLIC no-title fail-closed only"
+  echo "PASS: 98 live Android tests + external force-stop persistence + $count screenshots, PUBLIC no-title fail-closed only"
   echo "::notice::Quran.com English title pixels remain UNVERIFIED until private Work audit"
 fi

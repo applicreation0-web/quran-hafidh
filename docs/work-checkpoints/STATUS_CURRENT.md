@@ -22,6 +22,7 @@
 - CP-09 captures the protocol after start and compares that exact persisted value across reopen.
 - CP-09 same-SHA run `38207906981`: **98 executed, 96 passed, 2 failed**. Both failures reproduce one V5→V6 unfinished-tail migration defect.
 - M2 is complete: 25 files / 98 tests present, compilable, discovered, and executed; zero ignored by the runtime gate.
-- Movement: M3 — minimal migration correction under RED/GREEN discipline.
-- Next gate: publish CP-10 RED, then correct only the legacy-stable adapter and rerun Android plus the broader same-SHA audit workflow.
+- CP-11 migration correction commit `e61a27fa87e309729fdaf160f804e129be874c56` is GREEN: source/JVM run `38208907474` passed and Android run `38208907462` passed all 98 tests.
+- Movement: M3 — protected-behavior proof completion.
+- Next gate: execute a real external force-stop between fixture preparation and verification, then complete the P0 and eight-week evidence map.
 

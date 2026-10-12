@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 
 import androidx.test.core.app.ApplicationProvider;
 
+import com.quransafeguard.hifz.core.HifzSchedule;
 import com.quransafeguard.hifz.core.VerseRef;
 
 import org.junit.FixMethodOrder;
@@ -27,6 +28,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
     private static final String ARMED = "armed";
     private static final String EXPECTED_START = "expectedStart";
     private static final String EXPECTED_END = "expectedEnd";
+    private static final long ACTIVE_REVIEW_ELAPSED_MS = 7L * 60_000L + 321L;
 
     @Test public void a_prepareFixtureForExternalForceStop() {
         Context context = ApplicationProvider.getApplicationContext();
@@ -44,6 +46,8 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertTrue(prefs.advanceItqanBlock(2, start, end, HifzClock.today().toString(),
             "Ancrage fractionné · process death fixture"));
         assertTrue(prefs.setItqanProgress(3, 1, 1, start, end));
+        assertTrue(prefs.setSabqiProgress(11, 3));
+        prefs.setElapsedFor(HifzSessionActivity.MURAJAAH_ACTIVE, ACTIVE_REVIEW_ELAPSED_MS);
         assertTrue(context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(ARMED, true)
             .putString(EXPECTED_START, start.toString())
@@ -75,6 +79,11 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertEquals(3, prefs.itqanRep());
         assertEquals(1, prefs.itqanAssisted());
         assertEquals(1, prefs.itqanFinalReveals());
+        assertEquals(11, prefs.sabqiRep());
+        assertEquals(3, prefs.sabqiAssisted());
+        assertEquals(15, HifzSchedule.ACTIVE_REVIEW_MINUTES);
+        assertEquals(ACTIVE_REVIEW_ELAPSED_MS,
+            prefs.elapsedFor(HifzSessionActivity.MURAJAAH_ACTIVE));
         assertEquals(expectedStart, prefs.itqanUnitStart());
         assertEquals(expectedEnd, prefs.itqanUnitEnd());
         assertTrue(PreviewConfig.fractionatedBlockCount(
