@@ -86,3 +86,17 @@ than reviewed. Public tests use synthetic strings only.
 - Rights for durable offline storage remain the independent M6 gate.
 - No claim is made that 1,709 or 1,710 groups are editorially certified merely
   because an extraction/validation script accepted their structure.
+
+## Same-SHA public CI
+
+Checkpoint code SHA `20c9bd5707c3903aa6fa45e2a391b796a96a585a`:
+
+- source/JVM/source-contract run `38238427503`: **PASS**;
+- Android run `38238427459`: **PASS**;
+- main Android suite: **98/98**, 0 failed/ignored/filtered;
+- external force-stop phases: prepare **1/1**, fresh-process verify **1/1**;
+- 14 public no-title screenshots were produced. The run itself states that
+  Quran.com English title pixels remain unverified pending private audit.
+
+This CI proves source-safe ordering and fail-closed behavior without the private
+pack. It does not prove the final title pixels or a physical BOOX.

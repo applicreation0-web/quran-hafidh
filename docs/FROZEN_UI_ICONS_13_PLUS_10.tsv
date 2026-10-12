@@ -2,7 +2,7 @@
 principal	Accueil	home	ic_ui_home.xml	7acc26efee9d4b04123db8efcabee62c12c4fe7d	lucide:house
 principal	Lecture	book-open	ic_ui_reading.xml	630eb9f4ded2387ab929f5945c6b634b5dee6b85	frozen-original
 principal	Carte	network	ic_ui_semantic_map.xml	bea50ef9f3c35c903fbe36400660053dbb075c54	frozen-original
-principal	Amorces	key-round	ic_ui_recall_key.xml	bb6670756b22dfb43ab94d9c56e2c66ac87ce7d3	frozen-original
+principal	Amorces	key-round	ic_ui_recall_key.xml	f4161d77563b2a572934df143ff1ae5af83cfbc2	lucide:key-round
 principal	Tafsir	book-text	ic_ui_tafsir.xml	ca2b48f87f4f561a018361127d1d152243cd146e	frozen-original
 principal	Focus	scan	ic_ui_focus.xml	96e9398dd047974829023eb4e4a58b8effbbc48c	lucide:scan
 principal	Révision	brain	ic_ui_revision.xml	5edd4b21bb0df323ffa057e76c068b57f764323e	lucide:brain

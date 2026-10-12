@@ -27,9 +27,12 @@ jobs:
       - name: Prove Hifz source matches official 1.17.1 plus authorized deltas
         shell: bash
         run: bash scripts/audit_hifz_quiz_against_1171.sh
-      - name: Verify all 23 exact contractual BOOX pictograms and immutable hashes
+      - name: Verify all 23 contractual BOOX pictogram files and byte integrity
         shell: bash
         run: python3 scripts/verify_contractual_ui_icons.py
+      - name: Compare approved pictogram geometry, not only hashes
+        shell: bash
+        run: python3 scripts/verify_approved_icon_silhouettes.py
       - name: Extract audited Quranic cue coordinates without editorial text
         shell: bash
         run: |

@@ -31,4 +31,7 @@
 - M3 strict residuals: T-009 and T-010 are `NON_EXECUTE` without physical BOOX/pixel proof; 98/98 is not a general product or BOOX certification.
 - Movement: M4 — private Quran.com review and source-safe ordering logic. No private English title or title-bearing capture may enter this repository.
 - Next gate: integrate only reviewed offsets and fail-closed quarantine decisions, then rerun both CI workflows at the same SHA.
+- M4 checkpoint SHA `20c9bd5707c3903aa6fa45e2a391b796a96a585a`: source/JVM `38238427503` and Android `38238427459` PASS; Android 98/98 plus external force-stop 1/1 + 1/1 and 14 public no-title screenshots.
+- Movement: M5 — demonstrated key-round silhouette correction and screen-by-screen visual classification. Hash identity is no longer treated as graphic conformity.
+- M5 strict limits: final title-bearing Android captures and physical BOOX review remain NON_EXECUTE; four historical icon references are unavailable and therefore NON_CERTIFIABLE.
 

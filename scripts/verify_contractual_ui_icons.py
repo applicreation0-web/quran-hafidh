@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fail-closed contract for the 13 primary and 10 secondary BOOX glyphs."""
+"""Fail-closed byte-integrity contract for the 13+10 BOOX glyph files.
+
+This check deliberately does not claim visual conformity. Approved Lucide
+geometry is checked independently by verify_approved_icon_silhouettes.py.
+"""
 import csv
 import pathlib
 import re
@@ -27,10 +31,10 @@ if sum(r[0]=="secondaire" for r in rows) != 10: fail("Secondary count changed")
 immutable = {
     "ic_ui_reading.xml":"630eb9f4ded2387ab929f5945c6b634b5dee6b85",
     "ic_ui_semantic_map.xml":"bea50ef9f3c35c903fbe36400660053dbb075c54",
-    "ic_ui_recall_key.xml":"bb6670756b22dfb43ab94d9c56e2c66ac87ce7d3",
     "ic_ui_tafsir.xml":"ca2b48f87f4f561a018361127d1d152243cd146e",
     "ic_ui_edit.xml":"9770d143f2854f6356d773375a5e42d2d52dc6e0",
 }
+historical_recall_key = "bb6670756b22dfb43ab94d9c56e2c66ac87ce7d3"
 for row in rows:
     if len(row)!=6: fail(f"Incorrect row format: {row}")
     kind, role, icon, filename, expected, source = row
@@ -40,6 +44,9 @@ for row in rows:
     actual=subprocess.check_output(["git","hash-object",str(path)],cwd=ROOT,text=True).strip()
     if actual!=expected: fail(f"Changed frozen icon {icon} ({filename}): expected {expected}, got {actual}")
     if filename in immutable and immutable[filename]!=expected: fail(f"Original pictogram overwritten: {filename}")
+    if filename == "ic_ui_recall_key.xml":
+        if expected == historical_recall_key: fail("Rejected historical key silhouette restored")
+        if source != "lucide:key-round": fail("Approved key-round provenance missing")
     if source != "frozen-original" and not source.startswith("lucide:"):
         fail(f"Unverified pictogram provenance: {filename}")
     text=path.read_text(encoding="utf-8")
@@ -71,4 +78,4 @@ if reader.count('readerActions.addView(')<4: fail("4 permanent reader controls m
 if 'Ui.iconButton(this, "", "Focus"' in reader: fail("Focus improperly added as fifth permanent icon")
 hifz=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java").read_text(encoding="utf-8")
 if 'R.drawable.ic_hifz_anchor' not in hifz: fail("Itqan anchoring pictogram removed")
-print(f"PASS: exact {len(PRIMARY)}+{len(SECONDARY)} contract icons, original 5 byte-immutable; Lucide commit {PIN}")
+print(f"PASS: byte integrity for exact {len(PRIMARY)}+{len(SECONDARY)} contract files; 4 historical originals immutable; Lucide commit {PIN}")
