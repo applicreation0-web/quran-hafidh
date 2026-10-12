@@ -24,6 +24,7 @@
 - M2 is complete: 25 files / 98 tests present, compilable, discovered, and executed; zero ignored by the runtime gate.
 - CP-11 migration correction commit `e61a27fa87e309729fdaf160f804e129be874c56` is GREEN: source/JVM run `38208907474` passed and Android run `38208907462` passed all 98 tests.
 - External process-death run `38235307061` kept the 98-test suite green but failed its new post-suite gate: active-review elapsed time was lost across `am force-stop` while Itqan and Sabqi state survived.
+- Corrective code commit `e527fb1eb3e56b3f3b6b423e0df26f50d5a6c2c8` replaces the asynchronous elapsed-time write with a checked synchronous commit; its same-SHA-equivalent CI trigger is pending.
 - Movement: M3 — protected-behavior proof completion.
 - Next gate: rerun the checked synchronous elapsed-time fix on Android plus the source/JVM audit, then complete the P0 and eight-week evidence map.
 
