@@ -34,13 +34,20 @@ files and two obsolete Java providers as review/audit inputs. They were no
 longer called by `StudyReaderActivity`, but Android packages every main asset
 by default; the old files could therefore still enter an application package.
 
-A new regression check first failed because no exclusion existed. The minimal
-correction now:
+A new regression check first failed because the files still lived under
+`src/main`. The first implementation used AGP source-set `exclude` calls;
+both same-SHA runs `38274414563` and `38274414561` failed before tests
+because AGP 9.3 exposes no such Kotlin DSL receiver. That failed commit is not
+counted as M6 GREEN.
 
-- excludes `ibn_kathir_headings/**` from main assets;
-- excludes `IbnKathirOfflineTitles.java` and `IbnKathirTitlePack.java` from
-  main compilation;
-- retains those files in Git solely for provenance/audit;
+The corrected minimal isolation now:
+
+- relocates all eight historical chunks from `src/main/assets` to
+  `src/audit/legacy-ibn-kathir/assets`;
+- relocates `IbnKathirOfflineTitles.java` and `IbnKathirTitlePack.java`
+  from `src/main/java` to `src/audit/legacy-ibn-kathir/java`;
+- retains the files in Git solely for provenance/audit, outside every Android
+  main source directory;
 - asserts the reader uses only `IbnKathirQuranComPrivateTitles`;
 - runs the exclusion check in public CI without reading any private text.
 
@@ -88,7 +95,8 @@ before any distribution or claim of permanent-storage authorization.
 
 - **PASS:** eight private chunks are isolated and mechanically matched to the
   1,903-group sidecar; candidate delta is explicitly classified.
-- **PASS:** obsolete spa5k assets/classes cannot enter main packaging.
+- **PASS:** obsolete spa5k assets/classes exist only under `src/audit` and
+  cannot enter main packaging through Android's default source sets.
 - **PASS:** Git tracking contains no private chunk/archive/title-bearing
   capture or credential at this checkpoint.
 - **P0 NO-GO DISTRIBUTION:** no verified durable-storage authorization for the

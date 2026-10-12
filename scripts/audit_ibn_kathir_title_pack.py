@@ -19,7 +19,7 @@ import re
 import zlib
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-DIR=ROOT/"hifz-app/src/main/assets/ibn_kathir_headings"
+DIR=ROOT/"hifz-app/src/audit/legacy-ibn-kathir/assets/ibn_kathir_headings"
 INDEX=ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirGroupIndex.java"
 SHA="eb82bb6294efe30ad5c135c03b1864afaa70e855"
 
@@ -68,7 +68,7 @@ def verify(raws=None):
             titles[key]=items
             covered_sura.add(surah)
     assert len(titles)==1415,("Unexpected source heading coverage",len(titles))
-    checked=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirOfflineTitles.java").read_text(encoding="utf8")
+    checked=(ROOT/"hifz-app/src/audit/legacy-ibn-kathir/java/IbnKathirOfflineTitles.java").read_text(encoding="utf8")
     assert 'group.surah==2 && group.startAyah==1 && group.endAyah==1' in checked
     assert 'The Discussion of the Individual Letters' in checked
     missing=canonical-set(titles)

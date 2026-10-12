@@ -21,7 +21,7 @@ from collections import Counter
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PKG = ROOT / "hifz-app/src/main/java/com/quransafeguard/hifz/preview"
 INDEX = PKG / "IbnKathirGroupIndex.java"
-TITLE = PKG / "IbnKathirOfflineTitles.java"
+TITLE = ROOT / "hifz-app/src/audit/legacy-ibn-kathir/java/IbnKathirOfflineTitles.java"
 
 def intervals_from_index():
     source = INDEX.read_text(encoding="utf8")

@@ -16,16 +16,24 @@ public final class IbnKathirHeadingSelectionTest {
     }
 
     @Test public void legacyHeadingAssetsAreAuditOnlyAndExcludedFromPackaging() throws Exception {
-        String gradle=read("hifz-app/build.gradle.kts");
-        assertTrue(Files.isDirectory(Paths.get("hifz-app/src/main/assets/ibn_kathir_headings")) ||
-            Files.isDirectory(Paths.get("../hifz-app/src/main/assets/ibn_kathir_headings")));
-        assertTrue(gradle.contains("assets.exclude(\"ibn_kathir_headings/**\")"));
+        Path main=Paths.get("hifz-app/src/main/assets/ibn_kathir_headings");
+        if(!Files.exists(Paths.get("hifz-app")))main=Paths.get("..").resolve(main);
+        Path audit=main.getParent().getParent().getParent().resolve(
+            "audit/legacy-ibn-kathir/assets/ibn_kathir_headings");
+        assertFalse(Files.exists(main));
+        assertEquals(8,Files.list(audit).filter(p -> p.getFileName().toString()
+            .startsWith("chunk-")).count());
     }
 
     @Test public void supersededTitleClassesAreAuditOnlyAndExcludedFromMainCompilation() throws Exception {
-        String gradle=read("hifz-app/build.gradle.kts");
-        assertTrue(gradle.contains("java.exclude(\"**/IbnKathirOfflineTitles.java\")"));
-        assertTrue(gradle.contains("java.exclude(\"**/IbnKathirTitlePack.java\")"));
+        Path main=Paths.get("hifz-app/src/main/java/com/quransafeguard/hifz/preview");
+        if(!Files.exists(Paths.get("hifz-app")))main=Paths.get("..").resolve(main);
+        Path audit=main.getParent().getParent().getParent().getParent().getParent().getParent()
+            .resolve("audit/legacy-ibn-kathir/java");
+        assertFalse(Files.exists(main.resolve("IbnKathirOfflineTitles.java")));
+        assertFalse(Files.exists(main.resolve("IbnKathirTitlePack.java")));
+        assertTrue(Files.isRegularFile(audit.resolve("IbnKathirOfflineTitles.java")));
+        assertTrue(Files.isRegularFile(audit.resolve("IbnKathirTitlePack.java")));
     }
 
     @Test public void readerUsesOnlyThePrivateQuranComTitleProvider() throws Exception {

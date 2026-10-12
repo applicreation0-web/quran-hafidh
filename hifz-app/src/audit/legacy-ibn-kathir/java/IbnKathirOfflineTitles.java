@@ -1,7 +1,7 @@
 package com.quransafeguard.hifz.preview;
 
 /**
- * Local, source-attested English Ibn Kathir headings. No browser, URL,
+ * AUDIT-ONLY legacy source-attested English Ibn Kathir headings. No browser, URL,
  * machine-generated title or commentary. Missing headings stay absent.
  * The group locator is not itself proof of an approved mnemonic Amorce.
  * Sources: Qaf editorial checkpoint + original digital 53.json at

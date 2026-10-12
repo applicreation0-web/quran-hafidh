@@ -61,7 +61,7 @@ public final class PreDebugVisualRestorationSourceContractTest {
 
     @Test public void unverifiedIbnKathirHeadingsAreNotDisplayedAsTechnicalLabels() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        String titles=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirOfflineTitles.java");
+        String titles=read("hifz-app/src/audit/legacy-ibn-kathir/java/IbnKathirOfflineTitles.java");
         assertTrue("First launch highlights the available exact-word amorces",
             reader.contains(".getBoolean(\"ibn_kathir_start_markers_visible\",true)"));
         assertTrue("The OFF toggle is still explicitly persisted",

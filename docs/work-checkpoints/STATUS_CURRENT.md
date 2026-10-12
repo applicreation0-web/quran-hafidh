@@ -45,9 +45,11 @@ the old baseline validator rejects this expected one-group delta and is not
 misreported as PASS.
 
 The historical spa5k assets and two obsolete providers remain audit inputs but
-are excluded from main Android packaging/compilation. A RED→GREEN verifier and
-CI gate cover the exclusion. No Hifz engine, persistence, Jalalayn or QCF
-geometry was modified.
+are relocated from `src/main` to `src/audit/legacy-ibn-kathir`, outside
+Android's default source sets. A RED→GREEN verifier and CI gate cover the
+isolation. The first unsupported AGP `exclude` attempt failed runs
+`38274414563` and `38274414561` before tests and was replaced, not hidden.
+No Hifz engine, persistence, Jalalayn or QCF geometry was modified.
 
 The personal-only decision is applied without adding network, account, server
 or synchronization. It does not establish durable-content authorization:

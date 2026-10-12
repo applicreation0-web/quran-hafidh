@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Source-extracted English Ibn Kathir headings. The indexed commentary
+ * AUDIT-ONLY legacy source-extracted English Ibn Kathir headings. The indexed commentary
  * intervals match the pinned digital source, not an invented heading model.
  *
  * Each chunk is immutable, bundled offline, and only opened on a user's
