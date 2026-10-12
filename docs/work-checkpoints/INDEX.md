@@ -14,7 +14,8 @@ Public, source-safe checkpoints for branch `work/haafidh-1171-ibn-kathir-integra
 | [CP-08-M2-FINAL-GATE](CP-08-M2-FINAL-GATE.md) | Final M2 gate before product diagnosis | Complete when visible remotely | See branch history | Pending same-SHA 98-test run |
 | [CP-09-M2-RED-HANDOFF](CP-09-M2-RED-HANDOFF.md) | Reproducible migration RED handoff | Complete when visible remotely | See branch history | Pending same-SHA 98-test run |
 | [CP-10-M3-MIGRATION-RED](CP-10-M3-MIGRATION-RED.md) | V5→V6 unfinished-tail RED | Complete when visible remotely | See branch history | Run `38207906981`: 98 run, 2 failed |
-| [CP-11-M3-MIGRATION-GREEN](CP-11-M3-MIGRATION-GREEN.md) | Migration plus real process-death closure | **Complete** | Evidence SHA `84bee60f1fb364a97ac8622c53f92ba484d121c1` | Runs `38236706373` and `38236706405`: PASS; 98/98 + force-stop 1/1 + 1/1 |
+| [CP-11-M3-MIGRATION-GREEN](CP-11-M3-MIGRATION-GREEN.md) | Migration plus real process-death closure | **Complete** | `8110185c4825b612994bc852a51683bf26145b04` | Same-SHA runs `38237473916` and `38237474035`: PASS; 98/98 + force-stop 1/1 + 1/1 |
+| [CP-12-M4-QURANCOM-SOURCE-SAFE](CP-12-M4-QURANCOM-SOURCE-SAFE.md) | Private-title decisions and source-safe ordering | CI pending | See branch history | Private corpus excluded; public CI must remain fail-closed |
 
 Detailed public mapping: [M3 Hifz evidence matrix](M3_HIFZ_EVIDENCE_MATRIX.md).
 

@@ -52,3 +52,8 @@ emulator/source evidence cannot certify exact BOOX glyph pixels or masked-page
 visibility on physical hardware. No result here certifies every feature, a
 physical BOOX, private Quran.com title rendering, a distributable debug or a
 release.
+
+Checkpoint publication `8110185c4825b612994bc852a51683bf26145b04`
+was independently re-run at that exact SHA: source/JVM run `38237473916`
+**PASS** and Android run `38237474035` **PASS** (98/98 plus the two GREEN
+external-force-stop phases).

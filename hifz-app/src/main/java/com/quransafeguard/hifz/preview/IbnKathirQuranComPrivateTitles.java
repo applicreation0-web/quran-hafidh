@@ -79,6 +79,26 @@ final class IbnKathirQuranComPrivateTitles {
         return 0;
     }
 
+    /**
+     * Source-safe initial offsets established by private review. The public
+     * code stores only documentary group IDs and array positions: never title
+     * text. Every source heading remains reachable in its original order.
+     */
+    static int preferredFirstTitleIndex(String groupId, String[] headings) {
+        if (headings == null || headings.length == 0) return 0;
+        int preferred;
+        if ("IKEN011_001_004".equals(groupId) ||
+                "IKEN018_001_005".equals(groupId)) {
+            preferred = 2;
+        } else if ("IKEN020_001_008".equals(groupId) ||
+                "IKEN079_001_014".equals(groupId)) {
+            preferred = 1;
+        } else {
+            return firstThematicIndex(headings);
+        }
+        return preferred < headings.length ? preferred : 0;
+    }
+
     private static synchronized JSONObject load(Context context, int chunk) {
         if (CACHE.containsKey(chunk)) return CACHE.get(chunk);
         if (Boolean.TRUE.equals(FAILED.get(chunk))) return null;

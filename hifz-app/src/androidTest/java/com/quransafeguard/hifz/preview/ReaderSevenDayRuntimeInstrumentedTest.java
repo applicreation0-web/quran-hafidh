@@ -62,7 +62,7 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
     Context context=ApplicationProvider.getApplicationContext();
     IbnKathirGroupIndex.Group qaf=IbnKathirGroupIndex.shared().containing(50,1);
     String[] expected=IbnKathirQuranComPrivateTitles.sourceHeadings(context,qaf);
-    int expectedFirst=IbnKathirQuranComPrivateTitles.firstThematicIndex(expected);
+    int expectedFirst=IbnKathirQuranComPrivateTitles.preferredFirstTitleIndex(qaf.id,expected);
     android.content.Intent intent=new android.content.Intent(context,StudyReaderActivity.class)
       .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,518);
     try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
@@ -115,14 +115,13 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         IbnKathirGroupIndex.Group b=IbnKathirGroupIndex.shared().containing(2,1);
         String[] headings=IbnKathirQuranComPrivateTitles.sourceHeadings(a,b);
         assertTrue("Private Quran.com pack must contain verified contextual 2:1",headings.length>0);
-        int preferred=IbnKathirQuranComPrivateTitles.firstThematicIndex(headings);
-        assertEquals("The Discussion of the Individual Letters",headings[preferred]);
+        int preferred=IbnKathirQuranComPrivateTitles.preferredFirstTitleIndex(b.id,headings);
+        assertTrue("Reviewed index must remain inside the exact source array",
+          preferred>=0 && preferred<headings.length);
         a.onSemanticCueTap(b.id);
         Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull(popup);
         assertTrue(containsText(popup.findViewById(android.R.id.content),headings[preferred]));
-        assertFalse(containsText(popup.findViewById(android.R.id.content),
-          "The Virtues of Surat Al-Baqarah"));
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-qurancom-baqarah-private.png");
     }

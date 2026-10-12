@@ -26,6 +26,7 @@
 - External process-death run `38235307061` kept the 98-test suite green but failed its new post-suite gate: active-review elapsed time was lost across `am force-stop` while Itqan and Sabqi state survived.
 - Corrective code commit `e527fb1eb3e56b3f3b6b423e0df26f50d5a6c2c8` replaces the asynchronous elapsed-time write with a checked synchronous commit.
 - M3 evidence SHA `84bee60f1fb364a97ac8622c53f92ba484d121c1`: source/JVM run `38236706373` and Android run `38236706405` both PASS.
+- M3 checkpoint SHA `8110185c4825b612994bc852a51683bf26145b04`: same-SHA source/JVM `38237473916` and Android `38237474035` both PASS.
 - Android exact result: 98/98 main tests, then prepare 1/1, external `am force-stop`, fresh-process verify 1/1; no failures, ignored or filters.
 - M3 strict residuals: T-009 and T-010 are `NON_EXECUTE` without physical BOOX/pixel proof; 98/98 is not a general product or BOOX certification.
 - Movement: M4 — private Quran.com review and source-safe ordering logic. No private English title or title-bearing capture may enter this repository.

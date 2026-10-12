@@ -328,7 +328,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             // Source arrays keep original h2 order. First tap prioritises an
             // actual thematic heading over Quran.com's surah preamble.
             // Every heading remains available on subsequent taps.
-            lastQuranComHeadingIndex=IbnKathirQuranComPrivateTitles.firstThematicIndex(titles);
+            lastQuranComHeadingIndex=IbnKathirQuranComPrivateTitles
+                    .preferredFirstTitleIndex(group.id,titles);
         }
         String label=titles[lastQuranComHeadingIndex];
         showControls(); // Same Munir position: the icons remain visible BELOW the title.
