@@ -66,7 +66,8 @@ public final class PreDebugVisualRestorationSourceContractTest {
             reader.contains(".getBoolean(\"ibn_kathir_start_markers_visible\",true)"));
         assertTrue("The OFF toggle is still explicitly persisted",
             reader.contains(".putBoolean(\"ibn_kathir_start_markers_visible\",semanticCuesEnabled)"));
-        assertTrue(reader.contains("if(titles.length==0)return;"));
+        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
+        assertTrue(reader.contains("if(label==null)return;"));
         assertFalse(reader.contains("English heading not yet verified"));
         assertTrue(titles.contains("if(group.surah==50)return verifiedQafHeadings(group);"));
         assertTrue(titles.contains("if(group.surah==53)return verifiedNajmHeadings(group);"));
