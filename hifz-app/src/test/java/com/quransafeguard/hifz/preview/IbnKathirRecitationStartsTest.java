@@ -81,7 +81,7 @@ public final class IbnKathirRecitationStartsTest {
         String reader=source("StudyReaderActivity.java");
         assertTrue(reader.contains("ibnKathirCues.readerCuesForPage(page)"));
         assertTrue(reader.contains("ibn_kathir_start_markers_visible"));
-        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.sourceHeadings(this,group)"));
+        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
         assertFalse(reader.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
         assertFalse(reader.contains("IbnKathirTitlePack.sourceHeadings(this,group)"));
         assertFalse(reader.contains("IbnKathirQuranComSource.urlForGroup(group)"));
