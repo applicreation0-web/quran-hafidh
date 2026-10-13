@@ -21,6 +21,14 @@ while IFS= read -r file; do
   case "$file" in
     # ONLY screen/UI and documentary adapters may be modified.
     hifz-app/src/main/assets/hifzreader/reader.js | \
+    "$APP_ROOT/DashboardLedger.java")
+      if [ "$(git hash-object "$file")" != "c7f74ee850acaf20e16e08776095263ef5332d5c" ]; then
+        echo "::error file=$file::M9-P0 completion ledger differs from the exact tested source."
+        bad=1
+      else
+        echo "EXACT M9-P0 ONLY: $file"
+      fi
+      ;;
     "$APP_ROOT/HifzSessionActivity.java" | \
     "$APP_ROOT/HifzPrefs.java" | \
     "$APP_ROOT/ConsolidationCycleEngine.java" | \

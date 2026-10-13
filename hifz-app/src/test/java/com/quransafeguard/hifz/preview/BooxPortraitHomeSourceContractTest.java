@@ -43,6 +43,14 @@ public final class BooxPortraitHomeSourceContractTest {
         assertFalse("Never restore large bordered home cards",home.contains("Ui.panel(line)"));
     }
 
+    @Test public void homeUsesReadableOneLine18spWithoutScalingTheMushaf() throws Exception {
+        String home=read(MAIN);
+        assertTrue(home.contains("Ui.bookText(this, label, 18f, true)"));
+        assertTrue(home.contains("name.setSingleLine(true)"));
+        assertTrue(home.contains("name.setEllipsize(android.text.TextUtils.TruncateAt.END)"));
+        assertFalse(home.contains("Ui.bookText(this, label, 15f, false)"));
+    }
+
     @Test public void routingAndComputedTodayStayIntact() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("Ui.settingRow(this, \"Aujourd’hui\", \"…\", v -> openToday())"));

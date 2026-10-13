@@ -232,8 +232,10 @@ public final class MainActivity extends android.app.Activity {
             // Existing Parcours line has no frozen standalone pictogram.
             line.addView(new View(this), new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
         }
-        TextView name = Ui.bookText(this, label, 15f, false);
+        TextView name = Ui.bookText(this, label, 18f, true);
         name.setGravity(Gravity.CENTER_VERTICAL);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         name.setPadding(Ui.dp(this, 7), 0, 0, 0);
         line.addView(name, new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.MATCH_PARENT, 1f));

@@ -38,7 +38,7 @@ public final class IbnKathirHeadingSelectionTest {
 
     @Test public void readerUsesOnlyThePrivateQuranComTitleProvider() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.sourceHeadings(this,group)"));
+        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
         assertFalse(reader.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
         assertFalse(reader.contains("IbnKathirTitlePack.sourceHeadings(this,group)"));
     }

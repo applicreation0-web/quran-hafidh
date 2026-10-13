@@ -65,9 +65,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private SemanticPassageRepository ibnKathirCues;
     private boolean semanticCuesEnabled;
     private android.app.Dialog semanticTitleDialog;
-    /** Consecutive taps cycle through multiple ORIGINAL headings of one group. */
-    private String lastQuranComHeadingGroupId;
-    private int lastQuranComHeadingIndex = -1;
     /** Phone Tafsir: a non-modal bottom panel inside the reader (Mushaf stays tappable above it). */
     private FrameLayout bottomTafsir;
     private LinearLayout topControls, readerActions, pageRail, rootRow, sideTafsir;
@@ -314,24 +311,9 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // never show a plausible but unrelated English heading.
         SemanticPassageRepository.Cue visible=ibnKathirCues.cue(passageId);
         if(visible==null||visible.startPage!=page)return;
-        // Quran.com English Ibn Kathir titles ONLY: original text from a
-        // PRIVATE audit pack, never from the old spa5k heading candidates.
-        // Missing/uncertain groups display nothing, with NO invented fallback.
-        String[] titles=IbnKathirQuranComPrivateTitles.sourceHeadings(this,group);
-        if(titles.length==0)return;
-        // Keep long/multiple headings legible on BOOX: one exact heading per
-        // touch, successive touches cycle. No giant combined caption or trim.
-        if(group.id.equals(lastQuranComHeadingGroupId)) {
-            lastQuranComHeadingIndex=(lastQuranComHeadingIndex+1)%titles.length;
-        } else {
-            lastQuranComHeadingGroupId=group.id;
-            // Source arrays keep original h2 order. First tap prioritises an
-            // actual thematic heading over Quran.com's surah preamble.
-            // Every heading remains available on subsequent taps.
-            lastQuranComHeadingIndex=IbnKathirQuranComPrivateTitles
-                    .preferredFirstTitleIndex(group.id,titles);
-        }
-        String label=titles[lastQuranComHeadingIndex];
+        // One M7-B-approved private title per documentary group; no title cycling.
+        String label=IbnKathirQuranComPrivateTitles.approvedTitle(this,group);
+        if(label==null)return;
         showControls(); // Same Munir position: the icons remain visible BELOW the title.
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
         SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);

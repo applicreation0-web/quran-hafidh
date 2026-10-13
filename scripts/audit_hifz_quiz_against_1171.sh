@@ -50,6 +50,14 @@ bad=0
 while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
+    "$prefix/DashboardLedger.java")
+      if [[ "$(git hash-object "$file")" == "c7f74ee850acaf20e16e08776095263ef5332d5c" ]]; then
+        echo "EXACT M9-P0: $file"
+      else
+        echo "::error file=$file::M9-P0 ledger hash differs from approved proof"
+        bad=1
+      fi
+      ;;
     "$prefix/HifzSessionActivity.java" | \
     "$prefix/HifzPrefs.java" | \
     "$prefix/ConsolidationCycleEngine.java" | \
