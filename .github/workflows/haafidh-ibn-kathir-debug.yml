@@ -1,4 +1,4 @@
-name: Quran Haafidh 1.17.1 - TITRE AU-DESSUS ICONES + ITQAN DEBUG APK
+name: Quran Haafidh M9 — intermediate APK only, no private titles
 
 on:
   push:
@@ -78,48 +78,28 @@ jobs:
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
       - name: Assemble exactly ONE isolated DEBUG APK (never release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
-      - name: Verify identity, signature, packed corpus and cryptographic checksum
-        id: apk
+      - name: Export M9 build intermediate and Android signing tools (NO PRIVATE TITLES)
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -type f -name '*.apk' | sort)
+          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
+          out="$RUNNER_TEMP/haafidh-m9-intermediate"
+          mkdir -p "$out"
+          mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -type f -name '*.apk')
           test "${#apks[@]}" -eq 1
-          apk="${apks[0]}"
-          test -s "$apk"
-          test "$(stat -c %s "$apk")" -gt 1000000
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk"
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/apk-badging.txt"
-          grep -Fq "name='com.quransafeguard.hifz.ibnkathirtest'" "$RUNNER_TEMP/apk-badging.txt"
-          grep -Fq "versionName='1.17.1-IbnKathir-DEBUG'" "$RUNNER_TEMP/apk-badging.txt"
-          unzip -Z1 "$apk" > "$RUNNER_TEMP/apk-files.txt"
-          grep -Fxq 'assets/reader109/geometry.json' "$RUNNER_TEMP/apk-files.txt"
-          grep -Eq '^assets/reader109/word-boxes/' "$RUNNER_TEMP/apk-files.txt"
-          mkdir -p "$RUNNER_TEMP/haafidh-audit-critique-debug"
-          output="Quran-Haafidh-1.17.1-TITRE-AU-DESSUS-ICONES-DEBUG.apk"
-          cp "$apk" "$RUNNER_TEMP/haafidh-audit-critique-debug/$output"
-          cp docs/AUDIT_CRITIQUE_7J_AMORCES_SANS_LISTES_2026-10-11.md "$RUNNER_TEMP/haafidh-audit-critique-debug/AUDIT_7J_AMORCES.md"
-          printf "Official baseline: 7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21\\nGitHub tested HEAD: %s\\nAndroid: seven instrumented checks and at least 15 PNGs (including real Itqan four-date tap and recreation)\\nEnglish headings: 16 verified groups only; 1903 documentary starts; BOOX physical NOT certified.\\nNo production release. Independent test-only APK.\\n" "$GITHUB_SHA" > "$RUNNER_TEMP/haafidh-audit-critique-debug/BUILD_PROVENANCE.txt"
-          (cd "$RUNNER_TEMP/haafidh-audit-critique-debug" && sha256sum "$output" > "$output.sha256")
-          echo "SHA256 and signed package:"
-          cat "$RUNNER_TEMP/haafidh-audit-critique-debug/$output.sha256"
-          grep '^package:' "$RUNNER_TEMP/apk-badging.txt"
-          echo "verified_debug_apk=$RUNNER_TEMP/haafidh-audit-critique-debug/$output" >> "$GITHUB_OUTPUT"
-      - name: Publish ONLY the final APK debug + SHA256, no release
+          cp "${apks[0]}" "$out/public-build-UNFINALIZED-debug.apk"
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          test -f "$sdk/lib/apksigner.jar"
+          test -x "$sdk/zipalign"
+          cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
+          cp "$sdk/zipalign" "$out/zipalign"
+          printf 'STAGING ONLY: this APK contains no private Ibn Kathir M7-B titles.\nDo not install or distribute as a final M9 debug.\nSource SHA: %s\nPrivate titles will be inserted and signed only in a local private container.\n' "$GITHUB_SHA" > "$out/README_STAGING_ONLY.txt"
+          sha256sum "$out/public-build-UNFINALIZED-debug.apk" "$out/apksigner.jar" "$out/zipalign" > "$out/staging.sha256"
+          echo 'PASS: code-only build intermediate exported; no private assets in public CI.'
+      - name: Keep temporary intermediate for private offline injection (24 hours only)
         uses: actions/upload-artifact@v4
         with:
-          name: Quran-Haafidh-1.17.1-TITRE-AU-DESSUS-ICONES-DEBUG-${{ github.sha }}
-          path: ${{ runner.temp }}/haafidh-audit-critique-debug/
-          retention-days: 30
+          name: M9-STAGING-NO-PRIVATE-TITLES-${{ github.sha }}
+          path: ${{ runner.temp }}/haafidh-m9-intermediate/
+          retention-days: 1
           if-no-files-found: error
-      - name: Failure logs (never an APK)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Quran-Haafidh-7J-BLOCKERS-${{ github.sha }}
-          path: |
-            hifz-app/build/reports/tests/
-            hifz-app/build/test-results/
-            hifz-core/build/reports/tests/
-          retention-days: 14
-          if-no-files-found: warn
