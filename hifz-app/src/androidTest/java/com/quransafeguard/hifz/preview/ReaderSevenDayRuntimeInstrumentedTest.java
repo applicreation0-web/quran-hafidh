@@ -61,8 +61,7 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
  @Test public void quranComPrivateTitleIsPageScopedOrFailsClosedWhenNotBundled() {
     Context context=ApplicationProvider.getApplicationContext();
     IbnKathirGroupIndex.Group qaf=IbnKathirGroupIndex.shared().containing(50,1);
-    String[] expected=IbnKathirQuranComPrivateTitles.sourceHeadings(context,qaf);
-    int expectedFirst=IbnKathirQuranComPrivateTitles.preferredFirstTitleIndex(qaf.id,expected);
+    String expected=IbnKathirQuranComPrivateTitles.approvedTitle(context,qaf);
     android.content.Intent intent=new android.content.Intent(context,StudyReaderActivity.class)
       .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,518);
     try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
@@ -76,19 +75,19 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         }
         a.onSemanticCueTap("IKEN050_001_005");
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
-        if(expected.length==0) {
+        if(expected==null) {
           assertNull("Never fall back to spa5k title when private corpus is absent",dialog);
           return;
         }
         assertNotNull(dialog);
         assertTrue(dialog.isShowing());
-        assertTrue(containsText(dialog.findViewById(android.R.id.content),expected[expectedFirst]));
-        TextView title=findTitle(dialog.findViewById(android.R.id.content),expected[expectedFirst]);
+        assertTrue(containsText(dialog.findViewById(android.R.id.content),expected));
+        TextView title=findTitle(dialog.findViewById(android.R.id.content),expected);
         assertNotNull(title);
         assertFalse("Regular typeface required",title.getTypeface().isBold());
         assertTrue(title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12f);
       });
-      if(expected.length==0)return; // Public CI: fail-closed; private Work audit stages actual title pack.
+      if(expected==null)return; // Public CI: no private title; personal APK verifies the local pack.
       InstrumentationRegistry.getInstrumentation().waitForIdleSync();
       scenario.onActivity(a->{
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
@@ -113,15 +112,12 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quran.com Baqarah");
       scenario.onActivity(a->{
         IbnKathirGroupIndex.Group b=IbnKathirGroupIndex.shared().containing(2,1);
-        String[] headings=IbnKathirQuranComPrivateTitles.sourceHeadings(a,b);
-        assertTrue("Private Quran.com pack must contain verified contextual 2:1",headings.length>0);
-        int preferred=IbnKathirQuranComPrivateTitles.preferredFirstTitleIndex(b.id,headings);
-        assertTrue("Reviewed index must remain inside the exact source array",
-          preferred>=0 && preferred<headings.length);
+        String heading=IbnKathirQuranComPrivateTitles.approvedTitle(a,b);
+        assertNotNull("Private M7-B corpus must contain approved contextual 2:1",heading);
         a.onSemanticCueTap(b.id);
         Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull(popup);
-        assertTrue(containsText(popup.findViewById(android.R.id.content),headings[preferred]));
+        assertTrue(containsText(popup.findViewById(android.R.id.content),heading));
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-qurancom-baqarah-private.png");
     }
