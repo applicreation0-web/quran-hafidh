@@ -34,6 +34,15 @@ public final class M8TargetedLongitudinalRegressionTest {
         return null;
     }
 
+    private static GeometryRepository geometry() throws Exception {
+        java.nio.file.Path p=java.nio.file.Paths.get(
+            "app/src/main/assets/reader109/geometry.json");
+        if(!java.nio.file.Files.exists(p))
+            p=java.nio.file.Paths.get("../app/src/main/assets/reader109/geometry.json");
+        return GeometryRepository.fromJson(new String(java.nio.file.Files.readAllBytes(p),
+            java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     private static List<String> physicalFive(GeometryRepository geo,int start) {
         List<String> ids=new ArrayList<>();
         for(int i=0;i<5;i++)ids.add(geo.line(start+i).id);
@@ -63,7 +72,7 @@ public final class M8TargetedLongitudinalRegressionTest {
                 .put("mode","RECOMMENDED"));
         disk.disk.put("weeklyProgramTransitionsV1",history.toString());
         HifzPrefs prefs=new HifzPrefs(disk);
-        GeometryRepository geo=LongHorizonHifzPersistenceStressTest.geometry();
+        GeometryRepository geo=geometry();
         int physicalCursor=geo.firstLineIndex(new VerseRef(49,1));
         List<String> weekUnit=null;
         LinkedHashSet<String> acquiredOracle=new LinkedHashSet<>();
