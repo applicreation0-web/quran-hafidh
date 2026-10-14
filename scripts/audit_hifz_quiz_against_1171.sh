@@ -33,6 +33,7 @@ fi
 for f in hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizActivity.java hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizCorpus.java hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizHistory.java hifz-app/src/main/java/com/quransafeguard/hifz/preview/QuizQuestion.java; do
   if [[ -e "$f" ]]; then echo "::error::Retired Quiz still compiled: $f"; exit 1; fi
 done
+python3 scripts/verify_public_amorce_keys.py
 python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_itqan_four_session_plan_contract.py
@@ -56,6 +57,22 @@ while IFS= read -r file; do
       else
         echo "::error file=$file::M9-P0 ledger hash differs from approved proof"
         bad=1
+      fi
+      ;;
+    "$prefix/WordLookupAccessPolicy.java")
+      if [[ "$(git hash-object "$file")" != "314cb9ae2c4f592b0ad7cf5822c0868939da3772" ]]; then
+        echo "::error file=$file::M10 word lookup display-only source differs from the PINNED file 314cb9ae2c4f592b0ad7cf5822c0868939da3772"
+        bad=1
+      else
+        echo "EXACT M10 WORD LOOKUP FOUNDATION: $file"
+      fi
+      ;;
+    "$prefix/WordLookupHitTest.java")
+      if [[ "$(git hash-object "$file")" != "4c1f77972ecd30ecd52563d1cdb5d981bda8908f" ]]; then
+        echo "::error file=$file::M10 word lookup display-only source differs from the PINNED file 4c1f77972ecd30ecd52563d1cdb5d981bda8908f"
+        bad=1
+      else
+        echo "EXACT M10 WORD LOOKUP FOUNDATION: $file"
       fi
       ;;
     "$prefix/HifzSessionActivity.java" | \

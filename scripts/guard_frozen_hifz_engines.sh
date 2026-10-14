@@ -31,6 +31,22 @@ while IFS= read -r file; do
         echo "EXACT M9-P0 ONLY: $file"
       fi
       ;;
+    "$APP_ROOT/WordLookupAccessPolicy.java")
+      if [ "$(git hash-object "$file")" != "314cb9ae2c4f592b0ad7cf5822c0868939da3772" ]; then
+        echo "::error file=$file::M10 word lookup display-only source differs from the PINNED file 314cb9ae2c4f592b0ad7cf5822c0868939da3772"
+        bad=1
+      else
+        echo "EXACT M10 WORD LOOKUP FOUNDATION: $file"
+      fi
+      ;;
+    "$APP_ROOT/WordLookupHitTest.java")
+      if [ "$(git hash-object "$file")" != "4c1f77972ecd30ecd52563d1cdb5d981bda8908f" ]; then
+        echo "::error file=$file::M10 word lookup display-only source differs from the PINNED file 4c1f77972ecd30ecd52563d1cdb5d981bda8908f"
+        bad=1
+      else
+        echo "EXACT M10 WORD LOOKUP FOUNDATION: $file"
+      fi
+      ;;
     "$APP_ROOT/HifzSessionActivity.java" | \
     "$APP_ROOT/HifzPrefs.java" | \
     "$APP_ROOT/ConsolidationCycleEngine.java" | \
@@ -72,6 +88,7 @@ if [ "$bad" -ne 0 ]; then
   exit 1
 fi
 
+python3 scripts/verify_public_amorce_keys.py
 python3 scripts/verify_authorized_quiz_reader_delta.py
 python3 scripts/verify_authorized_word_geometry_quiz_detach.py
 python3 scripts/verify_itqan_four_session_plan_contract.py
