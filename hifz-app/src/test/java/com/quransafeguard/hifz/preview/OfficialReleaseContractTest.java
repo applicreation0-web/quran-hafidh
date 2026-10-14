@@ -72,7 +72,18 @@ public final class OfficialReleaseContractTest {
      */
     @Test public void backupStaysGenericAndPostSchemaKeysReadWithSafeDefaults() throws Exception {
         String backup = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzBackup.java");
-        assertTrue("export must iterate the whole store, not a fixed key list", backup.contains("prefs.getAll()"));
+        assertTrue("export must iterate all keys, not a hard-coded progression list",
+            backup.contains("encoded(Map<String,?> all)") &&
+            backup.contains("for(Map.Entry<String,?> e:all.entrySet())"));
+        assertTrue("M9 completion receipts must be exported",
+            backup.contains("root.put(\"dashboard\", encoded("));
+        assertTrue("J10 revision dates must be exported",
+            backup.contains("root.put(\"j10\", encoded("));
+        assertTrue("both backup versions must remain importable",
+            backup.contains("version!=1 && version!=VERSION"));
+        assertTrue("all data must be validated before writing",
+            backup.contains("checkValues(mainValues)") && backup.contains("checkValues(ledgerValues)") &&
+            backup.contains("checkValues(j10Values)"));
         assertTrue("import must restore into the exact same preference file", backup.contains("quran_hifz_preview_v1"));
         assertTrue("import must be a single atomic commit", backup.contains("editor.commit()"));
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
