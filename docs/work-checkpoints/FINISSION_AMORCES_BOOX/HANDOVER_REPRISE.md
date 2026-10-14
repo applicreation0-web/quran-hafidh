@@ -38,5 +38,6 @@ concerné n’a changé.
 5. Exécuter seulement le test interrompu ou invalidé par un changement.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
-Au 14 octobre 2026, la reprise commence à CP-01 : test RED du format AEAD et
-du manifeste, sans relancer les travaux documentaires antérieurs.
+Après CP-01, la reprise commence à CP-02 : tests RED/GREEN des promotions
+dominicales vers le corpus actif, sans relancer les travaux documentaires ou
+les simulations longitudinales antérieurs.

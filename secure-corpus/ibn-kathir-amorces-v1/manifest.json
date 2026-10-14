@@ -1,0 +1,27 @@
+{
+  "schema": "QH_AMORCES_AEAD_V1",
+  "cipher": "AES-256-GCM",
+  "container_format": "QHAEAD01",
+  "authenticated_context": "quran-haafidh|ibn-kathir-amorces|m7b-final|1903|1708|195|8|2026-10-13",
+  "corpus": "M7B_1903_2026-10-13",
+  "total_groups": 1903,
+  "titles": 1708,
+  "untitled": 195,
+  "chunks": 8,
+  "private_archive_sha256": "3723f16d5ddf43fce7bd34d09c5ba8b7ee7d5ed765c70e02d49371f1b02ef642",
+  "ciphertext_sha256": "32f49284a0e5845b71b398cfcfd6e01a3f0e9413fad568c1eabb71c7f9656ce8",
+  "ciphertext_bytes": 207071,
+  "secret_fingerprint_sha256": "466a9affce1118bafa946c7824edeb4fe02994216b3ff786e2f01d07c4864945",
+  "m7b_source_zip_sha256": "a95d6a89a1f212a21589374ff456325396d64b3bde0587887926c567245acf16",
+  "source_chunks": {
+    "chunk-001-015.json": {"bytes": 55621, "titles": 757, "sha256": "b5ad249bc979298e2925a4ef0b06939a6a2559576f8cff07b19ceede619d9284"},
+    "chunk-016-030.json": {"bytes": 35136, "titles": 466, "sha256": "ce3a0ec9015aed640cb9ec174288704ec6c5e94d75ce4a41681ab7e2c4d940fb"},
+    "chunk-031-045.json": {"bytes": 17571, "titles": 238, "sha256": "b452599e13b96114f75dc45b4c99bd3ca11229bdf0e936495cf4e1223fdb2ff0"},
+    "chunk-046-060.json": {"bytes": 9187, "titles": 117, "sha256": "eb9c9372a2473090b1090f6d007ad66023535b290d5c3a1e824a6ccfc2d4d35a"},
+    "chunk-061-075.json": {"bytes": 5312, "titles": 66, "sha256": "bab97935aa40fc9f6e4aba0ca0c15e265dc61238ac8a11ff7d042ece2672993e"},
+    "chunk-076-090.json": {"bytes": 3488, "titles": 40, "sha256": "d32cfdc720430efea9f094deaef1e0e84ec232ae4fc508c1dfb255d8d6591f41"},
+    "chunk-091-105.json": {"bytes": 1520, "titles": 18, "sha256": "d2ea627fa1400295da095666daa3e17ffb4e2e52d00e6ac1dbf56b0d8a85544d"},
+    "chunk-106-114.json": {"bytes": 571, "titles": 6, "sha256": "3e7b6f0ee7f72c392796bbe44d2b9cce616e9b47e33871b5710078262cb6c9c2"}
+  },
+  "created_at": "2026-10-14"
+}

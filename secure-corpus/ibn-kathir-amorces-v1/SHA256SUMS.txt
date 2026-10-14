@@ -1,0 +1,2 @@
+48071f72ca415bd01e6eaa6d2d8a03b0bad59c4eb71bfffa0b2ef313729097a7  manifest.json
+32f49284a0e5845b71b398cfcfd6e01a3f0e9413fad568c1eabb71c7f9656ce8  amorces-m7b-1903.qhaead

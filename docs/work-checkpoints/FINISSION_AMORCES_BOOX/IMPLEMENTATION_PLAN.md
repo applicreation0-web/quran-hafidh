@@ -42,7 +42,7 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
 
 - [x] **CP-00 — Inventaire et reprise.** Vérifier Git/GitHub, CI, preuves M8,
   paquets M7-B/M9, APK/clé et références graphiques ; figer la liste des manques.
-- [ ] **CP-01 — Titres chiffrés dans GitHub.** Écrire d’abord les tests de
+- [x] **CP-01 — Titres chiffrés dans GitHub.** Écrire d’abord les tests de
   structure/intégrité/déchiffrement, produire le conteneur AEAD depuis les huit
   chunks approuvés, générer une clé privée séparée, puis committer uniquement le
   chiffré, le manifeste et les outils sans secret.
