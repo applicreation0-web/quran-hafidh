@@ -77,18 +77,22 @@ public final class OfficialReleaseContractTest {
             backup.contains("for(Map.Entry<String,?> e:all.entrySet())"));
         assertTrue("M9 completion receipts must be exported",
             backup.contains("root.put(\"dashboard\", encoded("));
-        assertTrue("J10 revision dates must be exported",
+        assertTrue("Legacy migration archive must remain exportable (J10 is not an active programme)",
             backup.contains("root.put(\"j10\", encoded("));
         assertTrue("Legacy gates must be explicit and cleared on V1 import",
             backup.contains("root.put(\"legacy_gates\", encoded(") &&
-            backup.contains("version==VERSION ? root.getJSONObject(\"legacy_gates\") : new JSONObject()"));
+            backup.contains("version==VERSION?root.getJSONObject(\"legacy_gates\"):new JSONObject()"));
         assertTrue("both backup versions must remain importable",
             backup.contains("version!=1 && version!=VERSION"));
         assertTrue("all data must be validated before writing",
-            backup.contains("checkValues(mainValues)") && backup.contains("checkValues(ledgerValues)") &&
-            backup.contains("checkValues(j10Values)"));
+            backup.contains("checkValues(values)") && backup.contains("checkValues(dashboard)") &&
+            backup.contains("checkValues(j10)"));
         assertTrue("import must restore into the exact same preference file", backup.contains("quran_hifz_preview_v1"));
-        assertTrue("import must be a single atomic commit", backup.contains("editor.commit()"));
+        assertTrue("multi-store import requires a durable pre-write rollback journal",
+            backup.contains("JOURNAL_NAME") && backup.contains("putString(JOURNAL_KEY")
+                && backup.contains("recoverIfNecessary(context)"));
+        assertTrue("V1 requires a coverage boundary, not fabricated completions",
+            backup.contains("legacyDashboard()") && backup.contains("coverage_start_date_v1"));
         String prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java");
         assertTrue("weekly snowball evening gate must default to never-done, not require the key",
             prefs.contains("public String lastLearningSnowballEveningDate() { return p.getString(\"lastLearningSnowballEveningDate\", \"\"); }"));

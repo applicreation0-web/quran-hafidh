@@ -75,6 +75,37 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         try {
             org.json.JSONObject backup=HifzBackup.export(context);
             assertEquals(2,backup.getInt("version"));
+            // Kill after each individually committed store: a fresh process must
+            // recover the exact old snapshot, never a partially imported state.
+            java.util.Map<String,?> mainBefore=new java.util.HashMap<>(raw.getAll());
+            java.util.Map<String,?> ledgerBefore=new java.util.HashMap<>(ledger.getAll());
+            java.util.Map<String,?> j10Before=new java.util.HashMap<>(legacy.getAll());
+            java.util.Map<String,?> gatesBefore=new java.util.HashMap<>(
+                context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).getAll());
+            for(String store:new String[]{"MAIN","LEDGER","J10","GATES"}){
+                org.json.JSONObject changed=new org.json.JSONObject(backup.toString());
+                for(String section:new String[]{"values","dashboard","j10","legacy_gates"}){
+                    changed.getJSONObject(section).put("transaction-probe",
+                        new org.json.JSONObject().put("t","s").put("v",store));
+                }
+                HifzBackup.failAfterStoreForTest=store;
+                try {
+                    HifzBackup.restore(context,changed);
+                    throw new AssertionError("Missing injected process death after "+store);
+                }catch(AssertionError expected){
+                    assertTrue(expected.getMessage(),
+                        expected.getMessage().startsWith("Simulated process death after "));
+                }finally{HifzBackup.failAfterStoreForTest=null;}
+                // The same recovery is called from Application.onCreate.
+                HifzBackup.recoverIfNecessary(context);
+                assertEquals(mainBefore,raw.getAll());
+                assertEquals(ledgerBefore,ledger.getAll());
+                assertEquals(j10Before,legacy.getAll());
+                assertEquals(gatesBefore,context.getSharedPreferences(
+                    LEGACY_GATES,Context.MODE_PRIVATE).getAll());
+                HifzBackup.recoverIfNecessary(context); // idempotent
+                assertEquals(mainBefore,raw.getAll());
+            }
             assertTrue(backup.getJSONObject("dashboard").has("completed_session_keys_v1"));
             assertTrue(backup.getJSONObject("j10").has(J10_SENTINEL));
             assertTrue(backup.getJSONObject("legacy_gates").has(GATE_SENTINEL));
@@ -90,9 +121,14 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             oldV1.remove("dashboard");
             oldV1.remove("j10");
             assertTrue(HifzBackup.restore(context,oldV1)>0);
-            assertTrue("V1 import must clear stale M9 receipts",
-                !context.getSharedPreferences(LEDGER_PREFS,Context.MODE_PRIVATE)
-                    .contains("completed_session_keys_v1"));
+            assertEquals("No fabricated receipt after V1 import","[]",
+                context.getSharedPreferences(LEDGER_PREFS,Context.MODE_PRIVATE)
+                    .getString("completed_session_keys_v1","missing"));
+            DashboardLedger importedLedger=new DashboardLedger(context);
+            assertTrue("Pre-import attendance remains UNKNOWN, not a debt",
+                importedLedger.historyUnverifiable(HifzClock.today().minusDays(1)));
+            assertTrue("Post-import missed days must still be due",
+                !importedLedger.historyUnverifiable(HifzClock.today()));
             assertTrue("V1 import must clear unrelated target J10 history",
                 !legacy.contains(J10_SENTINEL));
             assertTrue("V1 import must not retain stale gates from the target install",

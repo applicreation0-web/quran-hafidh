@@ -29,6 +29,7 @@ final class DashboardLedger {
     private static final String START="started";
     // Display history still rolls over after 120 days; completion receipts must not.
     private static final String COMPLETED="completed_session_keys_v1";
+    private static final String COVERAGE="coverage_start_date_v1";
     private final SharedPreferences p;
     // Avoid parsing the whole durable history for every date in nextDueCadence().
     private String cachedReceiptsJson;
@@ -39,10 +40,24 @@ final class DashboardLedger {
 
     DashboardLedger(Context context){
         p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
-        if(!p.contains(START))p.edit().putString(START,HifzClock.today().toString()).apply();
+        // Older ledgers cannot prove attendance before the first verified coverage.
+        SharedPreferences.Editor init=p.edit();
+        boolean dirty=false;
+        if(!p.contains(START)){init.putString(START,HifzClock.today().toString());dirty=true;}
+        if(!p.contains(COVERAGE)){init.putString(COVERAGE,HifzClock.today().toString());dirty=true;}
+        if(dirty&&!init.commit())throw new IllegalStateException("Unable to persist ledger coverage");
     }
 
     LocalDate started(){return LocalDate.parse(p.getString(START,HifzClock.today().toString()));}
+
+    LocalDate coverageStartDate(){
+        return LocalDate.parse(p.getString(COVERAGE,HifzClock.today().toString()));
+    }
+
+    /** Before this boundary, absence of a receipt is UNKNOWN, never a debt. */
+    boolean historyUnverifiable(LocalDate date){
+        return date!=null && date.isBefore(coverageStartDate());
+    }
 
     void capture(HifzPrefs prefs){ capture(prefs, HifzClock.today()); }
 

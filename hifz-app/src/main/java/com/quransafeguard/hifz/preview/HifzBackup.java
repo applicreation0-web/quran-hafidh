@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -22,10 +24,17 @@ final class HifzBackup {
     private static final String LEGACY_GATES = "hifz_preview_session_gates";
     private static final String MAGIC = "quran-hifz-backup";
     private static final int VERSION = 2;
+    private static final String JOURNAL_NAME = "quran_hifz_restore_journal_v1";
+    private static final String JOURNAL_KEY = "pending_restore";
+    private static final String COVERAGE_KEY = "coverage_start_date_v1";
+    private static final Object RESTORE_LOCK = new Object();
+    // Instrumentation only; never set in production.
+    static volatile String failAfterStoreForTest;
 
     private HifzBackup() {}
 
     static JSONObject export(Context context) throws JSONException {
+        recoverIfNecessary(context);
         JSONObject root = new JSONObject();
         root.put("magic", MAGIC);
         root.put("version", VERSION);
@@ -37,61 +46,150 @@ final class HifzBackup {
         return root;
     }
 
-    /** Validate ALL imported stores and types before any destructive write. */
-    static int restore(Context context, JSONObject root) throws JSONException {
-        if (!MAGIC.equals(root.optString("magic")))
-            throw new JSONException("Fichier de sauvegarde non reconnu.");
-        int version=root.optInt("version", -1);
-        if (version!=1 && version!=VERSION)
-            throw new JSONException("Version de sauvegarde non prise en charge.");
-        JSONObject mainValues=root.getJSONObject("values");
-        JSONObject ledgerValues=version==VERSION ? root.getJSONObject("dashboard") : new JSONObject();
-        JSONObject j10Values=version==VERSION ? root.getJSONObject("j10") : new JSONObject();
-        JSONObject gateValues=version==VERSION ? root.getJSONObject("legacy_gates") : new JSONObject();
-        checkValues(mainValues);
-        checkValues(ledgerValues);
-        checkValues(j10Values);
-        checkValues(gateValues);
-        // Sanity check the M9 completion list rather than importing invented dates.
-        if (ledgerValues.has("completed_session_keys_v1")) {
-            JSONObject e=ledgerValues.getJSONObject("completed_session_keys_v1");
-            JSONArray keys=new JSONArray(e.getString("v"));
-            for(int i=0;i<keys.length();i++){
-                String item=keys.getString(i);
-                int at=item.indexOf('|');
-                if(at<=0 || at==item.length()-1)
-                    throw new JSONException("Reçu de validation M9 invalide.");
-                try {java.time.LocalDate.parse(item.substring(0,at));}
-                catch(RuntimeException invalid){throw new JSONException("Date de validation M9 invalide.");}
+
+    private static JSONObject typed(String value) throws JSONException {
+        return new JSONObject().put("t","s").put("v",value);
+    }
+
+    /** V1 never contained session receipts. Its pre-import attendance is UNKNOWN. */
+    private static JSONObject legacyDashboard() throws JSONException {
+        String today=HifzClock.today().toString();
+        return new JSONObject().put("started",typed(today))
+            .put(COVERAGE_KEY,typed(today))
+            .put("completed_session_keys_v1",typed("[]"))
+            .put("records",typed("[]"));
+    }
+
+    private static JSONObject withCoverage(JSONObject dashboard) throws JSONException {
+        if(!dashboard.has(COVERAGE_KEY))
+            dashboard.put(COVERAGE_KEY,typed(HifzClock.today().toString()));
+        return dashboard;
+    }
+
+    private static String sha256(String value) {
+        try {
+            byte[] digest=MessageDigest.getInstance("SHA-256")
+                .digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder result=new StringBuilder(digest.length*2);
+            for(byte b:digest)result.append(String.format(java.util.Locale.ROOT,"%02x",b&0xff));
+            return result.toString();
+        }catch(java.security.NoSuchAlgorithmException impossible){
+            throw new IllegalStateException("SHA-256 unavailable",impossible);
+        }
+    }
+
+    /**
+     * Roll back a pending multi-store import at process start, before any Activity
+     * or HifzPrefs schema migration. If killed during rollback, the journal
+     * remains and rollback is retried on next launch.
+     */
+    static void recoverIfNecessary(Context context) {
+        synchronized(RESTORE_LOCK) {
+            synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
+                SharedPreferences journal=context.getSharedPreferences(JOURNAL_NAME,Context.MODE_PRIVATE);
+                String pending=journal.getString(JOURNAL_KEY,null);
+                if(pending==null)return;
+                try {
+                    JSONObject entry=new JSONObject(pending);
+                    String beforeJson=entry.getString("before");
+                    if(!sha256(beforeJson).equals(entry.getString("sha256")))
+                        throw new JSONException("Corrupt restore journal.");
+                    JSONObject before=new JSONObject(beforeJson);
+                    JSONObject values=before.getJSONObject("values");
+                    JSONObject dashboard=before.getJSONObject("dashboard");
+                    JSONObject oldJ10=before.getJSONObject("j10");
+                    JSONObject gates=before.getJSONObject("legacy_gates");
+                    checkValues(values);checkValues(dashboard);
+                    checkValues(oldJ10);checkValues(gates);
+                    replace(context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE),values);
+                    replace(context.getSharedPreferences(DASHBOARD_NAME,Context.MODE_PRIVATE),dashboard);
+                    replace(context.getSharedPreferences(J10ReviewStore.NAME,Context.MODE_PRIVATE),oldJ10);
+                    replace(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE),gates);
+                    if(!journal.edit().remove(JOURNAL_KEY).commit())
+                        throw new JSONException("Unable to finalize restore recovery.");
+                }catch(JSONException invalid) {
+                    // Fail closed rather than boot a mixed Hifz state.
+                    throw new IllegalStateException("Unfinished restore: keep original backup.",invalid);
+                }
             }
         }
-        SharedPreferences main=context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        SharedPreferences ledger=context.getSharedPreferences(DASHBOARD_NAME, Context.MODE_PRIVATE);
-        SharedPreferences j10=context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE);
-        SharedPreferences gates=context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE);
-        synchronized (J10ReviewStore.LEGACY_STORE_LOCK) {
-            JSONObject oldMain=encoded(main.getAll());
-            JSONObject oldLedger=encoded(ledger.getAll());
-            JSONObject oldJ10=encoded(j10.getAll());
-            JSONObject oldGates=encoded(gates.getAll());
-            try {
-                replace(main,mainValues);
-                replace(ledger,ledgerValues);
-                replace(j10,j10Values);
-                replace(gates,gateValues);
-            }catch(JSONException invalid){
-                // Cross-file Android preferences are not an atomic database.
-                // Best-effort rollback rather than silently accepting half a restore.
-                boolean recovered=true;
-                try{replace(main,oldMain);}catch(JSONException failure){recovered=false;}
-                try{replace(ledger,oldLedger);}catch(JSONException failure){recovered=false;}
-                try{replace(j10,oldJ10);}catch(JSONException failure){recovered=false;}
-                try{replace(gates,oldGates);}catch(JSONException failure){recovered=false;}
-                if(!recovered)throw new JSONException("Échec de restauration et de reprise; conserver le fichier original.");
-                throw invalid;
+    }
+
+    /** All-old or all-new after process death; four SharedPreferences are not atomic. */
+    static int restore(Context context,JSONObject root) throws JSONException {
+        synchronized(RESTORE_LOCK) {
+            recoverIfNecessary(context);
+            if(!MAGIC.equals(root.optString("magic")))
+                throw new JSONException("Fichier de sauvegarde non reconnu.");
+            int version=root.optInt("version",-1);
+            if(version!=1 && version!=VERSION)
+                throw new JSONException("Version de sauvegarde non prise en charge.");
+            JSONObject values=root.getJSONObject("values");
+            JSONObject dashboard=version==VERSION
+                ?withCoverage(root.getJSONObject("dashboard")):legacyDashboard();
+            JSONObject j10=version==VERSION?root.getJSONObject("j10"):new JSONObject();
+            JSONObject gates=version==VERSION?root.getJSONObject("legacy_gates"):new JSONObject();
+            checkValues(values);checkValues(dashboard);
+            checkValues(j10);checkValues(gates);
+            validateReceipts(dashboard);
+            synchronized(J10ReviewStore.LEGACY_STORE_LOCK) {
+                SharedPreferences main=context.getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE);
+                SharedPreferences ledger=context.getSharedPreferences(DASHBOARD_NAME,Context.MODE_PRIVATE);
+                SharedPreferences legacy=context.getSharedPreferences(J10ReviewStore.NAME,Context.MODE_PRIVATE);
+                SharedPreferences gate=context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE);
+                SharedPreferences journal=context.getSharedPreferences(JOURNAL_NAME,Context.MODE_PRIVATE);
+                JSONObject before=new JSONObject()
+                    .put("values",encoded(main.getAll()))
+                    .put("dashboard",encoded(ledger.getAll()))
+                    .put("j10",encoded(legacy.getAll()))
+                    .put("legacy_gates",encoded(gate.getAll()));
+                String beforeJson=before.toString();
+                JSONObject entry=new JSONObject().put("before",beforeJson)
+                    .put("sha256",sha256(beforeJson));
+                if(!journal.edit().putString(JOURNAL_KEY,entry.toString()).commit())
+                    throw new JSONException("Unable to prepare restore journal.");
+                try {
+                    replace(main,values);injectedProcessDeath("MAIN");
+                    replace(ledger,dashboard);injectedProcessDeath("LEDGER");
+                    replace(legacy,j10);injectedProcessDeath("J10");
+                    replace(gate,gates);injectedProcessDeath("GATES");
+                    if(!journal.edit().remove(JOURNAL_KEY).commit())
+                        throw new JSONException("Unable to complete restore.");
+                }catch(JSONException | RuntimeException failure) {
+                    try{recoverIfNecessary(context);}
+                    catch(RuntimeException recovery){failure.addSuppressed(recovery);}
+                    if(failure instanceof JSONException)throw (JSONException)failure;
+                    throw new JSONException("Restore aborted: "+failure.getMessage());
+                }
+                return values.length();
             }
         }
-        return mainValues.length();
+    }
+
+    private static void injectedProcessDeath(String store) {
+        if(store.equals(failAfterStoreForTest))
+            throw new AssertionError("Simulated process death after "+store);
+    }
+
+    private static void validateReceipts(JSONObject dashboard) throws JSONException {
+        JSONObject watermark=dashboard.getJSONObject(COVERAGE_KEY);
+        if(!"s".equals(watermark.getString("t")))
+            throw new JSONException("Invalid attendance coverage type.");
+        try{java.time.LocalDate.parse(watermark.getString("v"));}
+        catch(RuntimeException invalid){throw new JSONException("Invalid attendance coverage date.");}
+        if(!dashboard.has("completed_session_keys_v1"))return;
+        JSONObject entry=dashboard.getJSONObject("completed_session_keys_v1");
+        if(!"s".equals(entry.getString("t")))
+            throw new JSONException("Invalid completion ledger type.");
+        JSONArray keys=new JSONArray(entry.getString("v"));
+        for(int i=0;i<keys.length();i++){
+            String key=keys.getString(i);
+            int separator=key.indexOf('|');
+            if(separator<=0 || separator==key.length()-1)
+                throw new JSONException("Invalid completion receipt.");
+            try{java.time.LocalDate.parse(key.substring(0,separator));}
+            catch(RuntimeException invalid){throw new JSONException("Invalid receipt date.");}
+        }
     }
 
     private static JSONObject encoded(Map<String,?> all) throws JSONException {

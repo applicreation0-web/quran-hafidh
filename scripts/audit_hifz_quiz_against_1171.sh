@@ -51,8 +51,16 @@ bad=0
 while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
+    "$prefix/HifzRecoveryApplication.java")
+      if [[ "$(git hash-object "$file")" != "d198dc2ac398b68f48032f7b4f50ae4fee1b5d8f" ]]; then
+        echo "::error file=$file::P0 recovery startup hook is not byte-pinned."
+        bad=1
+      else
+        echo "EXACT P0 RECOVERY APPLICATION: $file"
+      fi
+      ;;
     "$prefix/HifzBackup.java")
-      if [[ "$(git hash-object "$file")" == "e60487c96883b16a400b06da07167979c3880388" ]]; then
+      if [[ "$(git hash-object "$file")" == "4a8c2ab0b34d4de6b33e8b14809f297373ffdbf1" ]]; then
         echo "EXACT PRE-RELEASE P0 BACKUP: $file"
       else
         echo "::error file=$file::Backup V2 byte hash differs from approved adapter"
@@ -60,7 +68,7 @@ while IFS= read -r file; do
       fi
       ;;
     "$prefix/DashboardLedger.java")
-      if [[ "$(git hash-object "$file")" == "c7f74ee850acaf20e16e08776095263ef5332d5c" ]]; then
+      if [[ "$(git hash-object "$file")" == "45363eaa2b7e12211c92f3087cdbe939a31a5730" ]]; then
         echo "EXACT M9-P0: $file"
       else
         echo "::error file=$file::M9-P0 ledger hash differs from approved proof"

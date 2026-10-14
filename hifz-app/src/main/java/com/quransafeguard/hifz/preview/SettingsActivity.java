@@ -654,7 +654,7 @@ public final class SettingsActivity extends android.app.Activity {
 
     private void confirmImportBackup(){
         new AlertDialog.Builder(this).setTitle("Importer une sauvegarde")
-            .setMessage("La progression actuelle sera entièrement remplacée par le contenu du fichier choisi. Continuer ?")
+            .setMessage("La progression actuelle sera remplacée. Attention : une ancienne sauvegarde V1 ne contient pas les validations des séances. Leur historique antérieur restera inconnu et ne créera pas de faux retard. Continuer ?")
             .setNegativeButton("Annuler",null)
             .setPositiveButton("Choisir le fichier",(d,w)->{
                 Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);

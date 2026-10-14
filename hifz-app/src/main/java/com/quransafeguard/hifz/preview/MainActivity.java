@@ -416,7 +416,7 @@ public final class MainActivity extends android.app.Activity {
         LinkedHashSet<LocalDate> completed=new LinkedHashSet<>();
         LocalDate cursor=prefs.programStartDate();
         while(!cursor.isAfter(todayDate)){
-            if(cadenceComplete(cursor))completed.add(cursor);
+            if(ledger.historyUnverifiable(cursor)||cadenceComplete(cursor))completed.add(cursor);
             cursor=cursor.plusDays(1);
         }
         return WeeklyProgramPolicy.nextDue(prefs,prefs.programStartDate(),todayDate,completed,effectiveLearningDaysPerWeek());
