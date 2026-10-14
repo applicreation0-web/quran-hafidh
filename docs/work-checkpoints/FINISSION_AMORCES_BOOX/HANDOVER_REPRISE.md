@@ -39,6 +39,7 @@ concerné n’a changé.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
 CP-02 est PASS au commit `22d4d43eb28715936c73eae93af1e05de6bc5c10`
-(CI source/JVM `38626984145`, Android `38626983992`). La reprise commence à
-CP-03 par l'inventaire différentiel des deux références graphiques et l'écriture
-des tests du parcours carte ; ne pas relancer M7-B ni les simulations M8.
+(CI source/JVM `38626984145`, Android `38626983992`). CP-03 est EN COURS : les
+références ont été comparées et les tests sont écrits. La reprise exacte est
+l'implémentation du modèle pur puis de la carte graphique, sans ancienne
+`ListView`, sans fusion de branche et sans relancer M7-B/M8.
