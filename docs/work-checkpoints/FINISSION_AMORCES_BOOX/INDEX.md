@@ -1,0 +1,14 @@
+# Index — Finition Amorces BOOX
+
+| Checkpoint | État | Commit | Preuve principale |
+|---|---|---|---|
+| [CP-00](CP00_ETAT_INITIAL.md) | PASS | à attester après création | HEAD initial et CI `1aa4bac9` |
+| CP-01 | EN COURS | — | conteneur AEAD + reconstruction 1 903/1 708/195 |
+| CP-02 | NON COMMENCÉ | — | tests promotions dominicales |
+| CP-03 | NON COMMENCÉ | — | parcours carte graphique |
+| CP-04 | NON COMMENCÉ | — | captures et tests Mémorisation libre |
+| CP-05 | NON COMMENCÉ | — | matrice finale |
+| CP-06 | NON COMMENCÉ | — | APK, signature et SHA-256 |
+| CP-07 | NON COMMENCÉ | — | bilan BOOX |
+
+Plan : [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
