@@ -23,7 +23,9 @@ public final class SemanticTitlePopupParitySourceContractTest {
         assertTrue(src.contains("window.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL)"));
         assertTrue(src.contains("window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)"));
         assertTrue(src.contains("window.setBackgroundDrawableResource(android.R.color.transparent)"));
-        assertTrue(src.contains("}, 3200L);"));
+        assertTrue(src.contains("}, arabic ? 3200L : 8000L);"));
+        assertTrue("BOOX English title must use a readable font",
+            src.contains(":Ui.text(activity, title.trim(), 14f, false);"));
         assertFalse("Al-Munir cues never had an outlined card",src.contains("shell.setBackground("));
         assertFalse("No bordered title surface",src.contains("panel.setStroke("));
         assertFalse("No artificial title card",src.contains("new android.graphics.drawable.GradientDrawable()"));

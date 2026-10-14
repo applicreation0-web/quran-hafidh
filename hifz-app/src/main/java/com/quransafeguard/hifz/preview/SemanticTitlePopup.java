@@ -58,12 +58,12 @@ final class SemanticTitlePopup {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout shell = Ui.column(activity);
         // Bare Al-Munir-style caption: no card, border, shadow or black button.
-        // The English heading is deliberately less prominent than the Mushaf.
+        // Readable E-Ink caption (14sp), still lighter than the Mushaf.
         shell.setPadding(Ui.dp(activity, 9), Ui.dp(activity, 5),
             Ui.dp(activity, 9), Ui.dp(activity, 5));
         TextView label = arabic
             ?Ui.bookText(activity, title.trim(), 14f, true)
-            :Ui.text(activity, title.trim(), 11.5f, false);
+            :Ui.text(activity, title.trim(), 14f, false);
         label.setIncludeFontPadding(false);
         label.setLineSpacing(0f, 1.02f);
         label.setGravity(Gravity.CENTER);
@@ -98,7 +98,7 @@ final class SemanticTitlePopup {
         // A semantic title is a retrieval cue, not persistent commentary.
         shell.postDelayed(() -> {
             if (dialog.isShowing() && !activity.isFinishing()) dialog.dismiss();
-        }, 3200L);
+        }, arabic ? 3200L : 8000L);
         return dialog;
     }
 }

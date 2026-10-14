@@ -272,6 +272,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
         if (next == page) { showControls(); return; }
+        closeSemanticTitle();
         closeTafsirPanels();
         mushaf.clearReveal();
         page = next;
@@ -290,6 +291,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
      *  place (no close/reopen, same A−/A+ size and edition from the reading prefs). */
     @Override public void onVerseTap(VerseRef verse) {
         boolean tafsirWasOpen = isTafsirOpen();
+        closeSemanticTitle();
         selected = verse;
         tafsirButton.setContentDescription("Tafsir " + verse.getSurah() + ":" + verse.getAyah());
         mushaf.setSelection(Collections.singletonList(verse), Collections.emptyList());
@@ -313,7 +315,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if(visible==null||visible.startPage!=page)return;
         // One M7-B-approved private title per documentary group; no title cycling.
         String label=IbnKathirQuranComPrivateTitles.approvedTitle(this,group);
-        if(label==null)return;
+        if(label==null){ closeSemanticTitle(); return; }
         showControls(); // Same Munir position: the icons remain visible BELOW the title.
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
         SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);
@@ -321,6 +323,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         // the next layout pass; re-anchor once to its measured screen position.
         readerActions.post(() ->
             SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions));
+    }
+
+    /** A visible caption is valid only for the current, titled word cue and current page. */
+    private void closeSemanticTitle() {
+        if (semanticTitleDialog != null && semanticTitleDialog.isShowing())
+            semanticTitleDialog.dismiss();
+        semanticTitleDialog = null;
     }
 
     /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */
@@ -337,6 +346,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private void toggleSemanticCues() {
         if(ibnKathirCues==null||!ibnKathirCues.isAvailable())return;
         semanticCuesEnabled=!semanticCuesEnabled;
+        if(!semanticCuesEnabled)closeSemanticTitle();
         if(!mapPreview)getSharedPreferences("hifz_study",MODE_PRIVATE).edit()
             .putBoolean("ibn_kathir_start_markers_visible",semanticCuesEnabled).apply();
         updateSemanticButton();
@@ -758,6 +768,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
     @Override public void onPageShown(int shown) {
+        if(shown!=page)closeSemanticTitle();
         page = shown;
         annotationOverlay.setPage(shown);
         updateSurahPickerLabel();

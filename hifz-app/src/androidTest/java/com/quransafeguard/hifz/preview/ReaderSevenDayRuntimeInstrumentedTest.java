@@ -77,6 +77,27 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
         if(expected==null) {
           assertNull("Never fall back to spa5k title when private corpus is absent",dialog);
+          // A prior popup must never masquerade as the label of an untitled cue.
+          Dialog stale=new Dialog(a);
+          stale.setTitle("SYNTHETIC_STALE_TITLE");
+          stale.show();
+          try {
+            java.lang.reflect.Field field=StudyReaderActivity.class.getDeclaredField("semanticTitleDialog");
+            field.setAccessible(true);
+            field.set(a,stale);
+          }catch(Exception bad){throw new AssertionError(bad);}
+          a.onSemanticCueTap("IKEN050_001_005");
+          assertFalse("Untitled cue must dismiss stale English caption",stale.isShowing());
+          Dialog staleOnPage=new Dialog(a);
+          staleOnPage.setTitle("SYNTHETIC_PREVIOUS_PAGE");
+          staleOnPage.show();
+          try {
+            java.lang.reflect.Field field=StudyReaderActivity.class.getDeclaredField("semanticTitleDialog");
+            field.setAccessible(true);
+            field.set(a,staleOnPage);
+          }catch(Exception bad){throw new AssertionError(bad);}
+          a.onPageSwipe(1);
+          assertFalse("Page change must dismiss stale semantic title",staleOnPage.isShowing());
           return;
         }
         assertNotNull(dialog);
@@ -85,7 +106,8 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         TextView title=findTitle(dialog.findViewById(android.R.id.content),expected);
         assertNotNull(title);
         assertFalse("Regular typeface required",title.getTypeface().isBold());
-        assertTrue(title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity<=12f);
+        float sp=title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity;
+        assertTrue("BOOX title must remain legible in English",sp>=13.9f&&sp<=14.1f);
       });
       if(expected==null)return; // Public CI: no private title; personal APK verifies the local pack.
       InstrumentationRegistry.getInstrumentation().waitForIdleSync();
