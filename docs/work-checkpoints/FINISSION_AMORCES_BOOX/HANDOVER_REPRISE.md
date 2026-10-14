@@ -38,6 +38,7 @@ concerné n’a changé.
 5. Exécuter seulement le test interrompu ou invalidé par un changement.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
-Après CP-01, la reprise commence à CP-02 : tests RED/GREEN des promotions
-dominicales vers le corpus actif, sans relancer les travaux documentaires ou
-les simulations longitudinales antérieurs.
+CP-02 est EN COURS : le test d'intégration des promotions dominicales est écrit.
+La reprise exacte consiste à vérifier son commit distant et sa CI source/JVM ;
+ne corriger le moteur que si cette exécution reproduit un écart. Ne pas relancer
+les travaux documentaires ni les simulations longitudinales antérieurs.
