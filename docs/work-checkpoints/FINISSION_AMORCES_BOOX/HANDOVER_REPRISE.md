@@ -38,7 +38,7 @@ concerné n’a changé.
 5. Exécuter seulement le test interrompu ou invalidé par un changement.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
-CP-02 est EN COURS : le test d'intégration des promotions dominicales est écrit.
-La reprise exacte consiste à vérifier son commit distant et sa CI source/JVM ;
-ne corriger le moteur que si cette exécution reproduit un écart. Ne pas relancer
-les travaux documentaires ni les simulations longitudinales antérieurs.
+CP-02 est PASS au commit `22d4d43eb28715936c73eae93af1e05de6bc5c10`
+(CI source/JVM `38626984145`, Android `38626983992`). La reprise commence à
+CP-03 par l'inventaire différentiel des deux références graphiques et l'écriture
+des tests du parcours carte ; ne pas relancer M7-B ni les simulations M8.

@@ -46,7 +46,7 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
   structure/intégrité/déchiffrement, produire le conteneur AEAD depuis les huit
   chunks approuvés, générer une clé privée séparée, puis committer uniquement le
   chiffré, le manifeste et les outils sans secret.
-- [ ] **CP-02 — Progression et révisions.** Ajouter les scénarios d’intégration
+- [x] **CP-02 — Progression et révisions.** Ajouter les scénarios d’intégration
   Sabqi/Itqān du dimanche et de reprise ; observer le RED éventuel, appliquer le
   correctif minimal seulement si le défaut est reproduit, puis revalider.
 - [ ] **CP-03 — Carte sémantique.** Porter la structure graphique utile de

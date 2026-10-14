@@ -4,12 +4,14 @@ Identifiant : `CP-02`
 
 Date : 2026-10-14
 
-État : **EN COURS**
+État : **PASS**
 
 ## GitHub réel
 
 - HEAD avant : `54f991be3633a5c61e4bc51a11590b10116b6406`.
-- HEAD après : à renseigner après vérification du commit distant.
+- HEAD après code/tests : `22d4d43eb28715936c73eae93af1e05de6bc5c10`.
+- Arbre local et arbre GitHub vérifiés identiques :
+  `0b10a87901a7c423a21f8c551e8d5b0027888ece`.
 
 ## Fichiers modifiés à ce stade
 
@@ -18,6 +20,7 @@ Date : 2026-10-14
 - `docs/work-checkpoints/FINISSION_AMORCES_BOOX/STATUS_CURRENT.md`
 - `docs/work-checkpoints/FINISSION_AMORCES_BOOX/INDEX.md`
 - `docs/work-checkpoints/FINISSION_AMORCES_BOOX/HANDOVER_REPRISE.md`
+- `docs/work-checkpoints/FINISSION_AMORCES_BOOX/IMPLEMENTATION_PLAN.md`
 
 ## Travail terminé
 
@@ -33,45 +36,57 @@ Date : 2026-10-14
   `activeMurajaahCorpus()`, l'absence d'entrée prématurée, l'idempotence, les
   lignes exactes, la non-réapparition des finales, l'indépendance des curseurs
   et le routage dominical.
+- Les quatre scénarios passent sur le moteur existant. Aucun défaut
+  reproductible n'a été observé ; conformément au contrat, aucun fichier de
+  production Hifz n'a été modifié.
 
-## Matrice contractuelle provisoire
+## Matrice contractuelle
 
 | Règle | Preuve prévue | État |
 |---|---|---|
-| `Appris → finale Renforcement → Acquis → active` | scénario Sabqi QCF + redémarrage | NON EXÉCUTÉ |
-| `Stabilisé → finale Consolidation → Acquis → active` | scénario Itqān QCF + redémarrage | NON EXÉCUTÉ |
-| Aucune entrée active prématurée | assertions avant finales | NON EXÉCUTÉ |
-| Aucun double crédit / saut de ligne | ensembles exacts + rejeu idempotent | NON EXÉCUTÉ |
-| Curseurs actif/passif indépendants | écritures et deux redémarrages | NON EXÉCUTÉ |
-| Aucune finale déjà validée ne réapparaît | listes finales vides après validation | NON EXÉCUTÉ |
-| Aucune Révision active/passive le dimanche | politique réelle + contrats du routeur | NON EXÉCUTÉ |
+| `Appris → finale Renforcement → Acquis → active` | scénario Sabqi QCF + redémarrage | PASS |
+| `Stabilisé → finale Consolidation → Acquis → active` | scénario Itqān QCF + redémarrage | PASS |
+| Aucune entrée active prématurée | assertions avant finales | PASS |
+| Aucun double crédit / saut de ligne | ensembles exacts + rejeu idempotent | PASS |
+| Curseurs actif/passif indépendants | écritures et deux redémarrages | PASS |
+| Aucune finale déjà validée ne réapparaît | listes finales vides après validation | PASS |
+| Aucune Révision active/passive le dimanche | politique réelle + contrats du routeur | PASS |
 
 ## Tests exécutés
 
-- `SundayPromotionActiveCorpusIntegrationTest` : **NON EXÉCUTÉ** — le poste
-  Work possède JDK 17 mais pas de distribution Gradle locale ; exécution à
-  effectuer par la CI existante après sauvegarde de ce checkpoint EN COURS.
-- Suites historiques M8 180/365/548 : non rejouées conformément à la consigne.
+- CI source/JVM `38626984145` : **PASS**. Commande exécutée par le workflow :
+  `gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace` ;
+  sortie `BUILD SUCCESSFUL`. Le task `testDebugUnitTest` inclut les quatre
+  méthodes de `SundayPromotionActiveCorpusIntegrationTest`.
+- CI Android `38626983992` : **PASS**. Sortie `OK (98 tests)`, puis les deux
+  contrôles externes fermeture forcée/reprise `OK (1 test)` et `OK (1 test)`.
+- La CI source existante a aussi rejoué automatiquement son garde M8R ; aucune
+  relance manuelle de la matrice 180/365/548 n'a été demandée dans CP-02.
 
 ## Problèmes restants et raisons
 
-- Le test doit être compilé et exécuté par la CI. Aucun correctif moteur ne
-  sera appliqué avant qu'un échec reproductible ne l'exige.
-- Le commit et les identifiants de CI doivent ensuite être inscrits ici ; le
-  jalon restera EN COURS tant que ces résultats ne sont pas lus.
+- Aucun problème restant dans le périmètre CP-02.
+- Le contrôle physique BOOX ne relève pas de ce jalon et reste réservé à
+  CP-07.
 
 ## SHA-256 des livrables concernés
 
-- Aucun livrable binaire pour CP-02 à ce stade.
+- Test d'intégration :
+  `b9ce94951f3eb6f0eaf8834b0bc987e4d8ce298efcb38655247abd0d0f2ed805`.
+- Artefact Android de preuve :
+  `sha256:02f532a1c871d8ee67f478510bfbd3c63ad077613403f749c462a432e1fbdab7`.
 
 ## Références récupérables
 
-- Branche GitHub autorisée, commit à renseigner après le push de sauvegarde.
-- CI source/JVM et Android de cette branche, identifiants à renseigner.
+- Commit GitHub code/tests : `22d4d43eb28715936c73eae93af1e05de6bc5c10`.
+- CI source/JVM : run `38626984145`, artefact d'audit
+  `11924164351` (`ibn-kathir-amorce-review-38626984145`).
+- CI Android : run `38626983992`, artefact `11923784776`
+  (`haafidh-android-runtime-22d4d43eb28715936c73eae93af1e05de6bc5c10`).
 
 ## Reprise exacte
 
-Première action : vérifier le HEAD distant du commit de sauvegarde CP-02 puis
-lire la CI source/JVM. Si le nouveau test échoue, conserver la sortie exacte,
-reproduire le défaut et appliquer le plus petit correctif nécessaire ; s'il
-passe, ne modifier aucun moteur Hifz et clôturer CP-02.
+Première action : ouvrir CP-03, comparer sans fusion les références graphiques
+`origin/work/islahi-prototype-p1-from-1-17-1` et
+`origin/work/haafidh-v3-ibn-kathir-from-1-17-1` à l'implémentation courante,
+puis écrire les tests du parcours `Sourate → bloc → miniature → Lecture → retour`.
