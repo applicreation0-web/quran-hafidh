@@ -4,7 +4,7 @@ Mis à jour : 2026-10-14.
 
 | CP | Travail | État | SHA / preuve |
 |---|---|---|---|
-| 00 | Inventaire | PASS | HEAD produit `1aa4bac93b932614388801b3cfdcd2ad313df855`; commit documentaire à attester |
+| 00 | Inventaire | PASS | produit `1aa4bac93b932614388801b3cfdcd2ad313df855`; CP `234358f33b0fa77aaccdddd2acc22e78716a9e5c` |
 | 01 | Titres GitHub | EN COURS | tests AEAD à écrire |
 | 02 | Progression et révisions | NON COMMENCÉ | — |
 | 03 | Carte sémantique | NON COMMENCÉ | — |

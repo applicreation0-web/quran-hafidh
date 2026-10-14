@@ -10,8 +10,11 @@ Date : 2026-10-14 (Europe/London).
 - HEAD GitHub observé : `1aa4bac93b932614388801b3cfdcd2ad313df855`.
 - Arbre local avant inventaire : propre.
 - HEAD après travail produit : inchangé ; ce checkpoint ne modifie que la
-  documentation. Le SHA du commit de checkpoint est attesté dans `INDEX.md`
-  après sa création, car un commit ne peut pas contenir son propre SHA.
+  documentation.
+- Commit de sauvegarde CP-00 :
+  `234358f33b0fa77aaccdddd2acc22e78716a9e5c`.
+- Le présent ajout d’attestation est un second commit documentaire, nécessaire
+  parce qu’un commit ne peut pas contenir son propre SHA.
 
 ## Preuves retrouvées
 
