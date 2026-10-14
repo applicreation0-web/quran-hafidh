@@ -23,6 +23,14 @@ while IFS= read -r file; do
     hifz-app/src/main/assets/hifzreader/reader.js)
       echo "REVIEW ALLOWED (immutable renderer delta): $file"
       ;;
+    "$APP_ROOT/HifzBackup.java")
+      if [ "$(git hash-object "$file")" != "7b7d042e08cf1a8d5a18e74cd0ac086ea0e7150c" ]; then
+        echo "::error file=$file::Pre-release backup V2 is not the audited byte-pinned adapter."
+        bad=1
+      else
+        echo "EXACT PRE-RELEASE P0 BACKUP: $file"
+      fi
+      ;;
     "$APP_ROOT/DashboardLedger.java")
       if [ "$(git hash-object "$file")" != "c7f74ee850acaf20e16e08776095263ef5332d5c" ]; then
         echo "::error file=$file::M9-P0 completion ledger differs from the exact tested source."

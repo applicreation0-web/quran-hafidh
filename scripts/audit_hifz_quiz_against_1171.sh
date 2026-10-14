@@ -51,6 +51,14 @@ bad=0
 while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
+    "$prefix/HifzBackup.java")
+      if [[ "$(git hash-object "$file")" == "7b7d042e08cf1a8d5a18e74cd0ac086ea0e7150c" ]]; then
+        echo "EXACT PRE-RELEASE P0 BACKUP: $file"
+      else
+        echo "::error file=$file::Backup V2 byte hash differs from approved adapter"
+        bad=1
+      fi
+      ;;
     "$prefix/DashboardLedger.java")
       if [[ "$(git hash-object "$file")" == "c7f74ee850acaf20e16e08776095263ef5332d5c" ]]; then
         echo "EXACT M9-P0: $file"
