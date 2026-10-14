@@ -199,6 +199,36 @@ jobs:
         env:
           IK_J2_REVIEW_PATH: ${{ runner.temp }}/ik-j2-review.json
         run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest --stacktrace
+      - name: Require real M8R 180/365/548-day JVM results
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          p=Path("hifz-app/build/test-results/testDebugUnitTest/TEST-com.quransafeguard.hifz.preview.M8TargetedLongitudinalRegressionTest.xml")
+          assert p.is_file(), f"M8R JUnit XML not produced: {p}"
+          root=ET.parse(p).getroot()
+          cases=root.findall("testcase")
+          names={x.attrib.get("name","") for x in cases}
+          for suffix in ("180DaysWithPurgeAndCatchup","365DaysWithProgrammeTransitions","548DaysWithPostNasAndDurableAttendance"):
+              assert any(suffix in name for name in names), f"M8R missing: {suffix}"
+          assert len(cases)==3, f"M8R needs exactly 3 distinct tests: {names}"
+          assert not root.findall(".//failure") and not root.findall(".//error")
+          assert not root.findall(".//skipped")
+          output=root.findtext("system-out","")
+          for horizon in (180,365,548):
+              assert f"M8R_PASS horizon={horizon}" in output, f"Missing dated receipt proof at {horizon}"
+          print("PASS: all 3 new dated M8R Hifz scenarios executed 180/365/548 days; full JUnit XML saved")
+          PY
+      - name: Preserve M8R evidence separately from historical M8
+        uses: actions/upload-artifact@v4
+        with:
+          name: hifz-m8r-dated-180-365-548-${{ github.sha }}
+          path: |
+            hifz-app/build/test-results/testDebugUnitTest/TEST-com.quransafeguard.hifz.preview.M8TargetedLongitudinalRegressionTest.xml
+          retention-days: 30
+          if-no-files-found: error
       - name: Run BOOX visual contract and existing source regressions
         run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
       - name: Save source-verified Ibn Kathir amorce review corpus (JSON ONLY; no APK)
