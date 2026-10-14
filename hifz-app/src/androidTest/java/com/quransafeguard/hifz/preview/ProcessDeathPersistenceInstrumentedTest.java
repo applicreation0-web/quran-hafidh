@@ -120,6 +120,10 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             oldV1.put("version",1);
             oldV1.remove("dashboard");
             oldV1.remove("j10");
+            // Real planner contract: import an old programme date without receipts.
+            org.json.JSONObject oldValues=oldV1.getJSONObject("values");
+            oldValues.put("programStartDate",new org.json.JSONObject().put("t","s")
+                .put("v",HifzClock.today().minusDays(185).toString()));
             assertTrue(HifzBackup.restore(context,oldV1)>0);
             assertEquals("No fabricated receipt after V1 import","[]",
                 context.getSharedPreferences(LEDGER_PREFS,Context.MODE_PRIVATE)
@@ -129,6 +133,24 @@ public final class ProcessDeathPersistenceInstrumentedTest {
                 importedLedger.historyUnverifiable(HifzClock.today().minusDays(1)));
             assertTrue("Post-import missed days must still be due",
                 !importedLedger.historyUnverifiable(HifzClock.today()));
+            // Call the ACTUAL Android MainActivity scheduler, not a source-only proxy.
+            try(androidx.test.core.app.ActivityScenario<MainActivity> scenario=
+                    androidx.test.core.app.ActivityScenario.launch(MainActivity.class)){
+                scenario.onActivity(activity->{
+                    try{
+                        java.lang.reflect.Method planner=MainActivity.class.getDeclaredMethod(
+                            "nextDueCadence",java.time.LocalDate.class);
+                        planner.setAccessible(true);
+                        com.quransafeguard.hifz.core.ScheduledCadence due=
+                            (com.quransafeguard.hifz.core.ScheduledCadence)
+                                planner.invoke(activity,HifzClock.today());
+                        assertTrue("Legacy V1 import must NEVER invent historical backlog",
+                            due==null || !due.getScheduledDate().isBefore(HifzClock.today()));
+                    }catch(ReflectiveOperationException error){
+                        throw new AssertionError("Actual MainActivity planner failed",error);
+                    }
+                });
+            }
             assertTrue("V1 import must clear unrelated target J10 history",
                 !legacy.contains(J10_SENTINEL));
             assertTrue("V1 import must not retain stale gates from the target install",
@@ -144,6 +166,25 @@ public final class ProcessDeathPersistenceInstrumentedTest {
                 throw new AssertionError("Corrupt receipt accepted"); }
             catch(org.json.JSONException expected){}
             assertBackupLedgerAndJ10(context);
+
+            // Leave a genuinely pending cross-store journal on disk for the
+            // EXTERNAL ADB force-stop. Do NOT recover in this test process.
+            org.json.JSONObject interrupted=new org.json.JSONObject(backup.toString());
+            interrupted.getJSONObject("values").put("p0-incomplete-restore-probe",
+                new org.json.JSONObject().put("t","s").put("v","new-state"));
+            HifzBackup.failAfterStoreForTest="MAIN";
+            try {
+                HifzBackup.restore(context,interrupted);
+                throw new AssertionError("No injected interruption before external force-stop");
+            }catch(AssertionError expected){
+                assertTrue(expected.getMessage(),
+                    expected.getMessage().startsWith("Simulated process death after MAIN"));
+            }finally{HifzBackup.failAfterStoreForTest=null;}
+            assertTrue("Main store must contain the uncommitted new value",
+                raw.contains("p0-incomplete-restore-probe"));
+            assertTrue("A durable prewrite journal must await new process recovery",
+                context.getSharedPreferences("quran_hifz_restore_journal_v1",
+                    Context.MODE_PRIVATE).contains("pending_restore"));
         }catch(org.json.JSONException invalid){throw new AssertionError(invalid);}
     }
 
@@ -163,6 +204,15 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertTrue("Process-death gate was not prepared",
             context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE).getBoolean(ARMED, false));
         try {
+            // The full-suite run may still share one process; the external
+            // two-phase runner kills the app before starting this verifier.
+            HifzBackup.recoverIfNecessary(context);
+            assertTrue("Interrupted import must revert staged main-store mutation",
+                !context.getSharedPreferences(HIFZ_PREFS,Context.MODE_PRIVATE)
+                    .contains("p0-incomplete-restore-probe"));
+            assertTrue("Recovery must consume the pending journal",
+                !context.getSharedPreferences("quran_hifz_restore_journal_v1",
+                    Context.MODE_PRIVATE).contains("pending_restore"));
             assertPersistedFixture(context);
             assertBackupLedgerAndJ10(context);
         } finally {

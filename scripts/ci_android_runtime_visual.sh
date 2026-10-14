@@ -54,9 +54,15 @@ run_process_death_phase() {
   test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' "$output")" -eq 1
 }
 run_process_death_phase a_prepareFixtureForExternalForceStop audit-process-death-prepare.txt
+# The prepare phase leaves an actually committed NEW main store and a durable
+# rollback journal, with other stores still OLD. Kill the real app before
+# Application.onCreate gets a chance to recover; only the fresh Android process
+# is permitted to resolve the interrupted import.
+adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
 adb shell am start -W -n \
   'com.quransafeguard.hifz.ibnkathirtest/com.quransafeguard.hifz.preview.MainActivity' \
   > audit-process-death-launch.txt
+grep -Eq 'Status: ok|Status: timeout' audit-process-death-launch.txt
 adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
 run_process_death_phase b_verifyFixtureAfterExternalForceStop audit-process-death-verify.txt
 
