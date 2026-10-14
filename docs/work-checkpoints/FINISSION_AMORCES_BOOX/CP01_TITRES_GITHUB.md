@@ -67,6 +67,14 @@ python3 scripts/verify_private_amorce_recovery.py \
 Résultat : 2/2 tests PASS ; manifeste et conteneur PASS ; reconstruction privée
 PASS pour 1 903 / 1 708 / 195 / 8.
 
+CI du HEAD d’attestation `4ae4ddb910b63e502c26b08a2ddbb76ce8f56c64` :
+
+- source/JVM `38625150851` : terminé, `success` ;
+- Android 98 tests + arrêt forcé/reprise `38625150944` : terminé, `success`.
+
+Les runs du commit produit `42ef8f29...` ont été annulés automatiquement par
+le push immédiat de l’attestation ; ils ne sont pas comptés comme PASS.
+
 ## Fichiers modifiés ou créés
 
 - `tools/amorce-aead/AmorceAeadTool.java`
