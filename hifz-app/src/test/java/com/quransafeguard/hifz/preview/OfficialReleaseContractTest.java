@@ -79,6 +79,9 @@ public final class OfficialReleaseContractTest {
             backup.contains("root.put(\"dashboard\", encoded("));
         assertTrue("J10 revision dates must be exported",
             backup.contains("root.put(\"j10\", encoded("));
+        assertTrue("Legacy gates must be explicit and cleared on V1 import",
+            backup.contains("root.put(\"legacy_gates\", encoded(") &&
+            backup.contains("version==VERSION ? root.getJSONObject(\"legacy_gates\") : new JSONObject()"));
         assertTrue("both backup versions must remain importable",
             backup.contains("version!=1 && version!=VERSION"));
         assertTrue("all data must be validated before writing",

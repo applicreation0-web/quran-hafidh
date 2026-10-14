@@ -30,6 +30,8 @@ public final class ProcessDeathPersistenceInstrumentedTest {
     private static final String EXPECTED_END = "expectedEnd";
     private static final long ACTIVE_REVIEW_ELAPSED_MS = 7L * 60_000L + 321L;
     private static final String LEDGER_PREFS = "quran_hifz_dashboard_ledger_v1";
+    private static final String LEGACY_GATES = "hifz_preview_session_gates";
+    private static final String GATE_SENTINEL = "backup-gate-marker";
     private static final String J10_SENTINEL = "line:m9-backup-fixture";
     private static final long J10_SENTINEL_DATE = 20540L;
     private static final java.time.LocalDate OLD_COMPLETION = java.time.LocalDate.of(2026,1,4);
@@ -41,6 +43,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         raw.edit().clear().commit();
         context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
         context.getSharedPreferences(GATE_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE).edit().clear().commit();
 
         HifzPrefs prefs = new HifzPrefs(context);
         GeometryRepository geometry = GeometryRepository.get(context);
@@ -67,13 +70,17 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             .putString("completed_session_keys_v1",new org.json.JSONArray().put(OLD_COMPLETION+"|"+HifzSessionActivity.SABQI).toString())
             .putString("started","2026-01-01").commit());
         assertTrue(legacy.edit().clear().putLong(J10_SENTINEL,J10_SENTINEL_DATE).commit());
+        assertTrue(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).edit()
+            .putString(GATE_SENTINEL,"persist-me").commit());
         try {
             org.json.JSONObject backup=HifzBackup.export(context);
             assertEquals(2,backup.getInt("version"));
             assertTrue(backup.getJSONObject("dashboard").has("completed_session_keys_v1"));
             assertTrue(backup.getJSONObject("j10").has(J10_SENTINEL));
+            assertTrue(backup.getJSONObject("legacy_gates").has(GATE_SENTINEL));
             assertTrue(ledger.edit().clear().commit());
             assertTrue(legacy.edit().clear().commit());
+            assertTrue(context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).edit().clear().commit());
             assertTrue(HifzBackup.restore(context,backup)>0);
             assertPersistedFixture(context);
             assertBackupLedgerAndJ10(context);
@@ -88,6 +95,8 @@ public final class ProcessDeathPersistenceInstrumentedTest {
                     .contains("completed_session_keys_v1"));
             assertTrue("V1 import must clear unrelated target J10 history",
                 !legacy.contains(J10_SENTINEL));
+            assertTrue("V1 import must not retain stale gates from the target install",
+                context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE).getAll().isEmpty());
             // Restoring the real V2 snapshot recovers exact receipts and dates.
             assertTrue(HifzBackup.restore(context,backup)>0);
             assertBackupLedgerAndJ10(context);
@@ -108,6 +117,9 @@ public final class ProcessDeathPersistenceInstrumentedTest {
         assertEquals("J10 historic review timestamp lost",
             J10_SENTINEL_DATE,context.getSharedPreferences(
                 J10ReviewStore.NAME,Context.MODE_PRIVATE).getLong(J10_SENTINEL,-1));
+        assertEquals("Legacy gate data must round-trip without reviving target data",
+            "persist-me",context.getSharedPreferences(LEGACY_GATES,Context.MODE_PRIVATE)
+                .getString(GATE_SENTINEL,null));
     }
 
     @Test public void b_verifyFixtureAfterExternalForceStop() {
@@ -122,6 +134,7 @@ public final class ProcessDeathPersistenceInstrumentedTest {
             context.getSharedPreferences(HIFZ_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
             context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).edit().clear().commit();
             context.getSharedPreferences(LEDGER_PREFS, Context.MODE_PRIVATE).edit().clear().commit();
+            context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE).edit().clear().commit();
         }
     }
 

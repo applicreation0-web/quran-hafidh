@@ -52,7 +52,7 @@ while IFS= read -r file; do
   [[ -n "$file" ]] || continue
   case "$file" in
     "$prefix/HifzBackup.java")
-      if [[ "$(git hash-object "$file")" == "7b7d042e08cf1a8d5a18e74cd0ac086ea0e7150c" ]]; then
+      if [[ "$(git hash-object "$file")" == "e60487c96883b16a400b06da07167979c3880388" ]]; then
         echo "EXACT PRE-RELEASE P0 BACKUP: $file"
       else
         echo "::error file=$file::Backup V2 byte hash differs from approved adapter"

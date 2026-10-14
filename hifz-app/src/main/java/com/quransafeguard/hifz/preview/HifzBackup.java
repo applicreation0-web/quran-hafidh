@@ -19,6 +19,7 @@ import java.util.Set;
 final class HifzBackup {
     private static final String PREFS_NAME = "quran_hifz_preview_v1";
     private static final String DASHBOARD_NAME = "quran_hifz_dashboard_ledger_v1";
+    private static final String LEGACY_GATES = "hifz_preview_session_gates";
     private static final String MAGIC = "quran-hifz-backup";
     private static final int VERSION = 2;
 
@@ -32,6 +33,7 @@ final class HifzBackup {
         root.put("values", encoded(context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getAll()));
         root.put("dashboard", encoded(context.getSharedPreferences(DASHBOARD_NAME, Context.MODE_PRIVATE).getAll()));
         root.put("j10", encoded(context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE).getAll()));
+        root.put("legacy_gates", encoded(context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE).getAll()));
         return root;
     }
 
@@ -45,9 +47,11 @@ final class HifzBackup {
         JSONObject mainValues=root.getJSONObject("values");
         JSONObject ledgerValues=version==VERSION ? root.getJSONObject("dashboard") : new JSONObject();
         JSONObject j10Values=version==VERSION ? root.getJSONObject("j10") : new JSONObject();
+        JSONObject gateValues=version==VERSION ? root.getJSONObject("legacy_gates") : new JSONObject();
         checkValues(mainValues);
         checkValues(ledgerValues);
         checkValues(j10Values);
+        checkValues(gateValues);
         // Sanity check the M9 completion list rather than importing invented dates.
         if (ledgerValues.has("completed_session_keys_v1")) {
             JSONObject e=ledgerValues.getJSONObject("completed_session_keys_v1");
@@ -64,14 +68,17 @@ final class HifzBackup {
         SharedPreferences main=context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences ledger=context.getSharedPreferences(DASHBOARD_NAME, Context.MODE_PRIVATE);
         SharedPreferences j10=context.getSharedPreferences(J10ReviewStore.NAME, Context.MODE_PRIVATE);
+        SharedPreferences gates=context.getSharedPreferences(LEGACY_GATES, Context.MODE_PRIVATE);
         synchronized (J10ReviewStore.LEGACY_STORE_LOCK) {
             JSONObject oldMain=encoded(main.getAll());
             JSONObject oldLedger=encoded(ledger.getAll());
             JSONObject oldJ10=encoded(j10.getAll());
+            JSONObject oldGates=encoded(gates.getAll());
             try {
                 replace(main,mainValues);
                 replace(ledger,ledgerValues);
                 replace(j10,j10Values);
+                replace(gates,gateValues);
             }catch(JSONException invalid){
                 // Cross-file Android preferences are not an atomic database.
                 // Best-effort rollback rather than silently accepting half a restore.
@@ -79,6 +86,7 @@ final class HifzBackup {
                 try{replace(main,oldMain);}catch(JSONException failure){recovered=false;}
                 try{replace(ledger,oldLedger);}catch(JSONException failure){recovered=false;}
                 try{replace(j10,oldJ10);}catch(JSONException failure){recovered=false;}
+                try{replace(gates,oldGates);}catch(JSONException failure){recovered=false;}
                 if(!recovered)throw new JSONException("Échec de restauration et de reprise; conserver le fichier original.");
                 throw invalid;
             }

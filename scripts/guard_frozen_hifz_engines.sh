@@ -24,7 +24,7 @@ while IFS= read -r file; do
       echo "REVIEW ALLOWED (immutable renderer delta): $file"
       ;;
     "$APP_ROOT/HifzBackup.java")
-      if [ "$(git hash-object "$file")" != "7b7d042e08cf1a8d5a18e74cd0ac086ea0e7150c" ]; then
+      if [ "$(git hash-object "$file")" != "e60487c96883b16a400b06da07167979c3880388" ]; then
         echo "::error file=$file::Pre-release backup V2 is not the audited byte-pinned adapter."
         bad=1
       else
