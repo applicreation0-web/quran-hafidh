@@ -6,7 +6,9 @@ Date : 2026-10-14 (Europe/London).
 
 - HEAD GitHub avant : `3597602ff82cb0240ac4b2d9e7600e4ce0117407`.
 - Branche : `work/haafidh-1171-ibn-kathir-integration-independent`.
-- Commit produit/checkpoint : à attester après création.
+- Commit produit/checkpoint : `42ef8f29f6a995330f63d2f22ab937a0086503aa`.
+- L’attestation du SHA est un commit documentaire distinct, car un commit ne
+  peut pas contenir son propre identifiant.
 - Référence officielle 1.17.1 : inchangée.
 
 ## Travail terminé

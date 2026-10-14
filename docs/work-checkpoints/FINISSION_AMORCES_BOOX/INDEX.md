@@ -3,7 +3,7 @@
 | Checkpoint | État | Commit | Preuve principale |
 |---|---|---|---|
 | [CP-00](CP00_ETAT_INITIAL.md) | PASS | `234358f33b0fa77aaccdddd2acc22e78716a9e5c` | HEAD initial et CI `1aa4bac9` |
-| [CP-01](CP01_TITRES_GITHUB.md) | PASS | à attester après création | AEAD + reconstruction 1 903/1 708/195 |
+| [CP-01](CP01_TITRES_GITHUB.md) | PASS | `42ef8f29f6a995330f63d2f22ab937a0086503aa` | AEAD + reconstruction 1 903/1 708/195 |
 | CP-02 | EN COURS | — | tests promotions dominicales |
 | CP-03 | NON COMMENCÉ | — | parcours carte graphique |
 | CP-04 | NON COMMENCÉ | — | captures et tests Mémorisation libre |
