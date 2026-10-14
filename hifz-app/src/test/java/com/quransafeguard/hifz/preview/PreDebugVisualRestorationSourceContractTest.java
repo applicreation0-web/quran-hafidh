@@ -67,7 +67,10 @@ public final class PreDebugVisualRestorationSourceContractTest {
         assertTrue("The OFF toggle is still explicitly persisted",
             reader.contains(".putBoolean(\"ibn_kathir_start_markers_visible\",semanticCuesEnabled)"));
         assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
-        assertTrue(reader.contains("if(label==null)return;"));
+        assertTrue("Untitled cue must immediately clear any previous caption",
+            reader.contains("if(label==null){ closeSemanticTitle(); return; }"));
+        assertTrue("Page change must close the stale caption",
+            reader.contains("closeSemanticTitle();\n        closeTafsirPanels();"));
         assertFalse(reader.contains("English heading not yet verified"));
         assertTrue(titles.contains("if(group.surah==50)return verifiedQafHeadings(group);"));
         assertTrue(titles.contains("if(group.surah==53)return verifiedNajmHeadings(group);"));
