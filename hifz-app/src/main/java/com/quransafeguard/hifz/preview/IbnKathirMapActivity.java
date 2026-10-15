@@ -59,6 +59,9 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     private ScrollView mapScroll;
     private LinearLayout mapColumn;
     private MushafView pagePreview;
+
+    // Contract: the pilot and host expose the very same real QCF MushafView.
+    void attachPilotPreview(MushafView view) { pagePreview = view; }
     private final ArrayList<View> graphicalNodes = new ArrayList<>();
 
     @Override protected void onCreate(Bundle state) {
