@@ -43,12 +43,14 @@ L'arbre applicatif gelé `92cb64b26c43d61db4e4605139fb6a725781fec6`
 est celui déjà validé par les CI CP-04 `38690267562` et `38690267503` ; CP-05
 n'a modifié que deux harnais locaux et n'a pas rejoué M8.
 
-CP-06 est **PASS**. L'APK privé signé SHA-256 `117c7e8a432803d3f1f75c97230bc3e116da0a72336f99563a1d815a7a759a09`
+CP-06 et la clôture de développement CP-07 sont **PASS**. L'APK privé signé
+SHA-256 `117c7e8a432803d3f1f75c97230bc3e116da0a72336f99563a1d815a7a759a09`
 provient du HEAD CP-05 exact `6db0e342684344634892d7da4b3c695a3138a232`
 et de l'arbre applicatif `92cb64b26c43d61db4e4605139fb6a725781fec6`.
-Les références privées récupérables sont consignées dans
-`CP06_APK_PRIVE_FINAL.md`; aucun titre clair, secret ou APK n'est dans GitHub.
+Les références récupérables sont consignées dans `CP06_APK_PRIVE_FINAL.md` et
+`CP07_BILAN_FINAL_BOOX.md`; aucun titre clair, secret ou APK n'est dans GitHub.
 
-Reprise exacte : ouvrir `CP07_BILAN_FINAL_BOOX.md`, distinguer les validations
-code, Android et APK des essais nécessitant le BOOX physique, puis clôturer sans
-inventer de GO matériel. Ne pas reconstruire l'APK CP-06 déjà vérifié.
+Les essais BOOX physiques sont **NON EXÉCUTÉ**. Reprise exacte : vérifier
+l'empreinte de l'APK, sauvegarder toute installation debug existante, puis
+exécuter la checklist CP-07 sans désinstallation à l'aveugle. Ne reconstruire
+ni l'APK ni les matrices déjà PASS sans changement du code concerné.

@@ -9,6 +9,6 @@
 | [CP-04](CP04_VISUEL_MEMORISATION_LIBRE.md) | PASS | `54f9a825caf0966572d26506b018a39bb7ecadf3` | 23 icônes + Mémorisation libre indépendante, 2 captures |
 | [CP-05](CP05_NON_REGRESSION.md) | PASS | `f22bfcdd8ff66860c55828eac27cc5738fad0fba` | arbre app gelé + matrice ciblée PASS |
 | [CP-06](CP06_APK_PRIVE_FINAL.md) | PASS | `6b3dbd4278124d87029b3b27bf09a010979a39c4` | APK privé `117c7e8a…`, CI `38695806767` |
-| CP-07 | NON COMMENCÉ | — | bilan BOOX |
+| [CP-07](CP07_BILAN_FINAL_BOOX.md) | PASS développement / NON EXÉCUTÉ BOOX | source `6db0e342` | checklist physique et clôture |
 
 Plan : [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).

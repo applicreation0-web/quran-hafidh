@@ -11,11 +11,12 @@ Mis à jour : 2026-10-15.
 | 04 | Visuel et mémorisation libre | PASS | `54f9a825`; CI `38690267562` / `38690267503` PASS |
 | 05 | Non-régression | PASS | `f22bfcdd`; arbre app `92cb64b2`; contrôles ciblés PASS |
 | 06 | APK privé | PASS | APK `117c7e8a…`; CI `38695806767`; certificat attendu |
-| 07 | BOOX et clôture | NON COMMENCÉ | BOOX physique `NON EXÉCUTÉ` |
+| 07 | BOOX et clôture | PASS développement / NON EXÉCUTÉ BOOX | checklist et limites consignées |
 
 Dernier jalon fonctionnel acquis avant cette mission : M8 complémentaire au
 HEAD `1aa4bac93b932614388801b3cfdcd2ad313df855`.
 
-Première action de reprise : ouvrir `CP07_BILAN_FINAL_BOOX.md`, construire la
-matrice finale code/émulateur/APK/BOOX et laisser tout contrôle physique
-`NON EXÉCUTÉ` en l'absence d'appareil.
+Développement clôturé. Première action de reprise : sur le BOOX physique,
+vérifier l'empreinte `117c7e8a…`, sauvegarder l'installation debug existante et
+exécuter la checklist de `CP07_BILAN_FINAL_BOOX.md` sans désinstallation à
+l'aveugle.

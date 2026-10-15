@@ -61,5 +61,5 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
   chiffré avec la clé privée, construire/signifier l’APK du HEAD CP-05, vérifier
   signature, inventaire, SHA-256, hors-ligne et reprise, puis sauvegarder les
   livrables hors Git.
-- [ ] **CP-07 — Clôture.** Distinguer code, émulateur, APK et BOOX physique ;
+- [x] **CP-07 — Clôture.** Distinguer code, émulateur, APK et BOOX physique ;
   laisser les contrôles matériels non réalisés en `NON EXÉCUTÉ`.
