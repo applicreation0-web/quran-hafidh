@@ -41,6 +41,12 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     private TextView themesTab;
     private TextView allPassagesTab;
     private boolean previewReady;
+    private boolean commentaryOpen;
+    private int commentaryScrollY;
+    private FrameLayout mapHost;
+    private ScrollView commentaryScroll;
+    private TextView commentaryTitle;
+    private TextView commentaryBody;
 
     private TextView header;
     private TextView mapSummary;
@@ -71,6 +77,8 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
             scrollY = state.getInt("scrollY", 0);
             themeChoice = state.getInt("themeChoice", -1);
             overviewScrollY = state.getInt("overviewScrollY", 0);
+            commentaryOpen = state.getBoolean("commentaryOpen", false);
+            commentaryScrollY = state.getInt("commentaryScrollY", 0);
         } else {
             surah = getIntent().getIntExtra(EXTRA_SURAH, 1);
             int ayah = getIntent().getIntExtra(EXTRA_AYAH, 1);
@@ -127,7 +135,32 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         mapColumn.setPadding(Ui.dp(this, 3), Ui.dp(this, 3), Ui.dp(this, 3), Ui.dp(this, 7));
         mapScroll.addView(mapColumn, new ScrollView.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        root.addView(mapScroll, new LinearLayout.LayoutParams(
+        // The same map ScrollView and the same QCF MushafView survive every switch.
+        mapHost = new FrameLayout(this);
+        mapHost.addView(mapScroll, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        commentaryScroll = new ScrollView(this);
+        commentaryScroll.setVerticalScrollBarEnabled(true);
+        commentaryScroll.setVisibility(View.GONE);
+        LinearLayout commentaryColumn = Ui.column(this);
+        commentaryColumn.setPadding(Ui.dp(this, 6), Ui.dp(this, 7),
+            Ui.dp(this, 6), Ui.dp(this, 10));
+        TextView backToMap = Ui.bookText(this, "← Back to thematic map", 13f, true);
+        backToMap.setClickable(true);
+        backToMap.setFocusable(true);
+        backToMap.setOnClickListener(v -> closeCommentary());
+        commentaryColumn.addView(backToMap);
+        commentaryTitle = Ui.bookText(this, "", 16f, true);
+        commentaryTitle.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 5));
+        commentaryColumn.addView(commentaryTitle);
+        commentaryBody = Ui.bookText(this, "", 14f, false);
+        commentaryBody.setTextIsSelectable(true);
+        commentaryColumn.addView(commentaryBody);
+        commentaryScroll.addView(commentaryColumn, new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        mapHost.addView(commentaryScroll, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(mapHost, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, .46f));
         root.addView(Ui.divider(this));
 
@@ -138,6 +171,11 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         previewCaption.setMaxLines(3);
         previewCaption.setPadding(Ui.dp(this, 5), Ui.dp(this, 2), Ui.dp(this, 5), Ui.dp(this, 2));
         preview.addView(previewCaption);
+        // Only this cue header opens the commentary. QCF taps still open Lecture.
+        previewCaption.setClickable(true);
+        previewCaption.setFocusable(true);
+        previewCaption.setContentDescription("Open Ibn Kathir commentary for selected passage");
+        previewCaption.setOnClickListener(v -> openCommentary());
 
         LinearLayout pageControls = Ui.row(this);
         pageControls.setGravity(Gravity.CENTER);
@@ -171,6 +209,10 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         scrollY = 0;
         overviewScrollY = 0;
         themeChoice = surah == 2 ? -1 : -2;
+        commentaryOpen = false;
+        commentaryScrollY = 0;
+        mapScroll.setVisibility(View.VISIBLE);
+        commentaryScroll.setVisibility(View.GONE);
         showSurah(true);
     }
 
@@ -194,6 +236,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         allPassagesTab.setBackground(nodeBackground(surah == 2 && themeChoice == -2));
         renderMap(groups);
         renderPreview();
+        if (commentaryOpen) showCommentaryPanel();
         int target = resetScroll ? 0 : Math.max(0, scrollY);
         mapScroll.post(() -> mapScroll.scrollTo(0, target));
     }
@@ -257,6 +300,45 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         }
     }
 
+    private void openCommentary() {
+        if (commentaryOpen || !previewReady) return;
+        scrollY = mapScroll.getScrollY();
+        commentaryScrollY = 0;
+        commentaryOpen = true;
+        showCommentaryPanel();
+    }
+
+    private void showCommentaryPanel() {
+        IbnKathirGroupIndex.Group group = currentGroup();
+        String title = IbnKathirQuranComPrivateTitles.approvedTitle(this, group);
+        commentaryTitle.setText((title == null ? "Untitled passage" : title) +
+            "\\n" + group.navigationRange());
+        IbnKathirFullCommentaryPrivate.Entry entry =
+            IbnKathirFullCommentaryPrivate.load(this, group);
+        if (entry == null) {
+            commentaryBody.setText(
+                "Full Ibn Kathir commentary is not yet verified for this passage.\\n\\n" +
+                "No generated text or commentary from a different group will be substituted.");
+        } else {
+            commentaryBody.setText("Ibn Kathir — Darussalam, volume " +
+                entry.volume + ", page " + entry.page + "\\n\\n" + entry.text);
+        }
+        mapScroll.setVisibility(View.GONE);
+        commentaryScroll.setVisibility(View.VISIBLE);
+        int target = Math.max(0, commentaryScrollY);
+        commentaryScroll.post(() -> commentaryScroll.scrollTo(0, target));
+    }
+
+    private void closeCommentary() {
+        if (!commentaryOpen) return;
+        commentaryScrollY = commentaryScroll.getScrollY();
+        commentaryOpen = false;
+        commentaryScroll.setVisibility(View.GONE);
+        mapScroll.setVisibility(View.VISIBLE);
+        int original = scrollY;
+        mapScroll.post(() -> mapScroll.scrollTo(0, original));
+    }
+
     private void openTheme(int topicIndex) {
         if (surah != 2) return;
         overviewScrollY = mapScroll.getScrollY();
@@ -271,6 +353,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     private void openThemeOverview() {
+        if (commentaryOpen) closeCommentary();
         if (surah != 2 || themeChoice == -1) return;
         themeChoice = -1;
         scrollY = overviewScrollY;
@@ -278,6 +361,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     private void openAllPassages() {
+        if (commentaryOpen) closeCommentary();
         if (surah != 2 || themeChoice == -2) return;
         if (themeChoice == -1) overviewScrollY = mapScroll.getScrollY();
         themeChoice = -2;
@@ -451,10 +535,18 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         out.putInt("scrollY", saved.scrollY);
         out.putInt("themeChoice", themeChoice);
         out.putInt("overviewScrollY", overviewScrollY);
+        out.putBoolean("commentaryOpen", commentaryOpen);
+        out.putInt("commentaryScrollY",
+            commentaryOpen && commentaryScroll != null
+                ? commentaryScroll.getScrollY() : commentaryScrollY);
         super.onSaveInstanceState(out);
     }
 
     @Override public void onBackPressed() {
+        if (commentaryOpen) {
+            closeCommentary();
+            return;
+        }
         if (surah == 2 && themeChoice >= 0) {
             openThemeOverview();
             return;
