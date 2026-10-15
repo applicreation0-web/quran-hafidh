@@ -49,7 +49,7 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
 - [x] **CP-02 — Progression et révisions.** Ajouter les scénarios d’intégration
   Sabqi/Itqān du dimanche et de reprise ; observer le RED éventuel, appliquer le
   correctif minimal seulement si le défaut est reproduit, puis revalider.
-- [ ] **CP-03 — Carte sémantique.** Porter la structure graphique utile de
+- [x] **CP-03 — Carte sémantique.** Porter la structure graphique utile de
   `IslahiMapActivity`, l’index 1 903 groupes et les miniatures QCF ; écrire les
   tests de parcours et d’état avant l’implémentation puis vérifier Android.
 - [ ] **CP-04 — Visuel et Mémorisation libre.** Auditer les 23 pictogrammes et

@@ -38,8 +38,9 @@ concerné n’a changé.
 5. Exécuter seulement le test interrompu ou invalidé par un changement.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
-CP-02 est PASS au commit `22d4d43eb28715936c73eae93af1e05de6bc5c10`
-(CI source/JVM `38626984145`, Android `38626983992`). CP-03 est EN COURS : les
-références ont été comparées et les tests sont écrits. La reprise exacte est
-l'implémentation du modèle pur puis de la carte graphique, sans ancienne
-`ListView`, sans fusion de branche et sans relancer M7-B/M8.
+CP-03 est PASS au commit `709ec47908d3bcdc4f6db1d31a6fa65edebb4f77`
+(CI source/JVM `38689001952`, Android `38689001924`, preuves Android
+`11951796542`, copie durable `libfile_90ebbaa18b0c81919fe690f11cf04e21`).
+La reprise exacte est CP-04 : ouvrir `CP04_VISUEL_MEMORISATION_LIBRE.md`,
+vérifier les preuves existantes des 23 pictogrammes et l'indépendance de
+Mémorisation libre, sans toucher aux moteurs Hifz, M7-B, M8, Quiz ou QUL.
