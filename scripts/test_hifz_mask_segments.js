@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('assert');
 
-global.window={HifzNative:null,HIFZ_BOOT:{}};
+global.window={HifzNative:null,HIFZ_BOOT:{},addEventListener(){}};
 global.document={
   getElementById(){return {querySelector(){return null;}};},
   addEventListener(){},
@@ -50,14 +50,19 @@ for(const segment of s100){
   const cell=cells.find(c=>c.key===segment.key);
   assert.ok(cell);
   assert.ok(segment.x>=cell.x0-1e-6 && segment.x+segment.width<=cell.x1+1e-6);
-  assert.strictEqual(segment.y,cell.top+0.6);
-  assert.strictEqual(Math.round(segment.height*10)/10,18.8);
+  assert.strictEqual(segment.y,cell.top+0.15);
+  assert.strictEqual(Math.round(segment.height*10)/10,19.7);
+  assert.strictEqual(segment.fullErase,true);
 }
 
 const source=require('fs').readFileSync(require('path').join(__dirname,'../hifz-app/src/main/assets/hifzreader/reader.js'),'utf8');
 assert.ok(source.includes('markerLayer(svg,polys,lines)'),'verse-number rosette layer must receive masked-line geometry');
 assert.ok(source.includes('layer.appendChild(markerLayer(svg,polys,lines))'),'verse-number rosettes must always be redrawn above masks');
-assert.ok(source.includes('Verse-number rosettes are deliberately redrawn above the random masks'));
+assert.ok(
+  source.indexOf('layer.appendChild(markerLayer(svg,polys,lines))')>
+    source.indexOf('segments.forEach(segment=>group.appendChild(maskRect(segment)))'),
+  'verse-number rosettes must be appended after every mask rectangle'
+);
 assert.ok(source.includes('maskEntropy'),'native session entropy must participate in the random draw');
 assert.ok(!source.includes('line.words'),'random masking must not depend on linguistic word geometry');
 assert.ok(!source.includes('augment_hifz_word_geometry'),'word-mapping experiment must not leak into runtime');

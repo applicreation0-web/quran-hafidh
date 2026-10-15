@@ -16,8 +16,13 @@ def test_runtime_uses_domain_schedule_as_single_source_of_truth():
     # Calendar/session selection stays schedule-driven, while a mode opened directly must obtain
     # its duration from the same domain constants without depending on whether that mode happens
     # to be scheduled today. This prevents quick-access and midnight rollover crashes.
-    assert "HifzSchedule.INSTANCE.planFor" in main, (
-        "Today/dashboard must keep consuming HifzSchedule.planFor()"
+    assert "WeeklyProgramPolicy.actionFor" in main, (
+        "Today/dashboard must keep consuming the dated weekly policy"
+    )
+    assert "HifzSchedule.INSTANCE.actionFor" in read(
+        "hifz-app/src/main/java/com/quransafeguard/hifz/preview/WeeklyProgramPolicy.java"
+    ), (
+        "The dated weekly policy must keep delegating classic cadence to HifzSchedule"
     )
     assert "fun targetMinutesFor(kind: SessionKind)" in core, (
         "HifzSchedule must expose the canonical per-mode target duration"
@@ -78,11 +83,12 @@ def test_rosettes_are_redrawn_even_when_mask_has_no_ayah_selection():
     assert "markerLayer(svg,polys,lines)" in reader
 
 
-def test_dead_cursor_setter_and_test_only_reset_copy_are_removed():
+def test_revision_cursor_repair_and_test_only_reset_copy_are_safe():
     prefs = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/HifzPrefs.java")
     settings = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/SettingsActivity.java")
 
-    assert "void setMurajaahCursor" not in prefs
+    assert "releaseRevisionCursorsFromFatiha" in prefs
+    assert "setMurajaahCursor(passive.getRanges().get(0).getStart())" in prefs
     assert '"État de test"' not in settings
     assert "Efface la progression Hifz locale" in settings
 
@@ -93,7 +99,7 @@ if __name__ == "__main__":
         test_reader_fit_cannot_be_overridden_by_user_zoom,
         test_mask_entropy_is_session_persistent_not_view_instance_random,
         test_rosettes_are_redrawn_even_when_mask_has_no_ayah_selection,
-        test_dead_cursor_setter_and_test_only_reset_copy_are_removed,
+        test_revision_cursor_repair_and_test_only_reset_copy_are_safe,
     ]
     failures = []
     for test in tests:
