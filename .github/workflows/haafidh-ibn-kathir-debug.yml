@@ -94,13 +94,15 @@ jobs:
           PY
           sdk="$ANDROID_HOME/build-tools/36.0.0"
           test -f "$sdk/lib/apksigner.jar"
+          test -f "$sdk/lib64/libc++.so"
           test -x "$sdk/zipalign"
           test -x "$sdk/aapt"
           cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
+          cp "$sdk/lib64/libc++.so" "$out/libc++.so"
           cp "$sdk/zipalign" "$out/zipalign"
           cp "$sdk/aapt" "$out/aapt"
           printf 'STAGING ONLY: this APK contains no private Ibn Kathir M7-B titles.\nDo not install or distribute as a final debug.\nCP-05 source SHA: %s\nApplication tree: %s\nPrivate titles will be inserted and signed only in a local private container.\n' "$source_sha" "$(git rev-parse HEAD:hifz-app)" > "$out/README_STAGING_ONLY.txt"
-          sha256sum "$out/public-build-UNFINALIZED-debug.apk" "$out/apksigner.jar" "$out/zipalign" "$out/aapt" > "$out/staging.sha256"
+          sha256sum "$out/public-build-UNFINALIZED-debug.apk" "$out/apksigner.jar" "$out/libc++.so" "$out/zipalign" "$out/aapt" > "$out/staging.sha256"
           echo 'PASS: code-only build intermediate exported; no private assets in public CI.'
       - name: Keep temporary intermediate for private offline injection (24 hours only)
         uses: actions/upload-artifact@v4
