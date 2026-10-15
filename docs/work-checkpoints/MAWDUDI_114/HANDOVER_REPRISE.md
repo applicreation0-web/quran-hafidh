@@ -42,3 +42,5 @@ Lot source 061–070 collecté et sauvegardé : lire CP01_LOT_061_070.md, contr�
 Lot source 071–080 collecté et sauvegardé : lire CP01_LOT_071_080.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
 
 Lot source 081–090 collecté et sauvegardé : lire CP01_LOT_081_090.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
+
+Lot source 091–100 collecté et sauvegardé : lire CP01_LOT_091_100.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
