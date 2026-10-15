@@ -54,3 +54,12 @@ Parcours canonique de travail : lire CP01_CANONICAL_DRAFT_AUDIT.json et PASSAGE_
 Lots privés partiels supplémentaires récupérés et vérifiés : voir CP01_CP03_PARTIAL_BATCHES.json. Scripts QCF numériques autonomes disponibles, sans changement de rendu ni du moteur. Révisions éditoriales partielles 11–20 et36–84 ; aucune approbation du texte OCR. Reprendre les lots éditoriaux suivants.
 
 Révisions privées 001–035 stables et récupérées : 796 propositions, aucun PASS sémantique final. Lire CP01_REVIEW_001_035_PARTIAL.json. Source brute OCR, originaux conservés ; ne pas approuver automatiquement les propositions.
+
+
+## Reprise après suspension Work, sans perte (15 octobre 2026)
+
+1. Vérifier le vrai HEAD postérieur à `d7e7022f88d4f2029a6ca158600334e1f0e26679`, git status local/les éventuels patches Work et latest CI ; ne rien écraser, ne pas reset.
+2. Lire `CP01_CONTINUATION_AUDIT_2026-10-15.md` et son JSON public. Rapport privé détaillé déjà conservé en bibliothèque sous le nom `MAWDUDI_CP01_CONTINUATION_AUDIT_PRIVATE_2026-10-15.json` avec SHA `785b28a0b580a760f8e56021244bfb431b16195447ae3e1d020398f13d563c83`. Source EPUB et 12 NAV_DRAFT ZIP déjà vérifiés.
+3. L'asset Android numérique `hifz-app/src/main/assets/mawdudi_public/passages_v1.csv` et les classes `MawdudiPassageIndex` / `MawdudiMapModel` sont des fondations read-only, sans corpus privé. CI Audit et CP08P verts sur `d7e7022f`; vérifier le test instrumenté, ne pas le compter PASS avant publication de sa preuve.
+4. Aucun titre n'est approuvé automatiquement ; les 9 adaptations, 59 candidats de terminologie, 104 ouvertures sans vérification manuelle initiale et 556 sections de commentaire restent à certifier selon les exigences du prompt final.
+5. Poursuivre CP01/CP02 sur les lots privés déjà persistés, pas de nouvelle branche/dépôt/APK de staging présenté comme final. Recette BOOX/114 sourates seulement après les gates éditoriaux et le rendu QCF réel.

@@ -126,3 +126,8 @@ MAWDUDI_CP01_LOT_111_114_INTAKE.zip : 124893 octets ; SHA-256 `c50f754adacbbf2bc
 ## Addenda56–65
 
 - MAWDUDI_CP01_MACRO_56_65_PARTIAL.zip : 13407 octets ; SHA-256 e4f35c1a138807eee7cb34ed45fdf8b5275ca5c3489304f55e860d8de7ef7faf ; récupération vérifiée.
+
+
+## Reprise indépendante — audit privé des 114 ouvertures et 12 NAV_DRAFT (2026-10-15)
+
+- `MAWDUDI_CP01_CONTINUATION_AUDIT_PRIVATE_2026-10-15.json` : **77 140 octets**, SHA-256 `785b28a0b580a760f8e56021244bfb431b16195447ae3e1d020398f13d563c83` ; sauvegardé dans la bibliothèque privée persistante (aucun texte anglais tiers sur GitHub). Les 12 ZIPs existants ont été rechargés et vérifiés, **pas de nouvelles copies de chaque lot**.

@@ -56,3 +56,12 @@ CP-01 lot 111–114 : collecte exécutée, contrôles de plages archivés sous C
 CP01 parcours : vérification indépendante des IDs/plages, 6236 uniques, zéro doublon ; douze restaurations privées avec SHA concordant. Android, miniatures et validation éditoriale non exécutés.
 
 QCF numérique : vérification locale racine, 17 tests Python PASS avec PYTHONPATH=scripts. Première invocation sans ce chemin : erreur import du test EPUB, conservée dans le rapport. Android non exécuté. Préparation QCF seulement ; rendu et miniatures non validés.
+
+
+## Reprise CI 2026-10-15 — ne pas confondre PASS ancien et nouveau
+
+- `80fc9427` : audit et régression Android historiques relancés — PASS. Fix correctif du statut des titres comme brouillons, trois tests ajoutés.
+- `95e86bb2` : audit Ibn Kathir a échoué sur la **liste de fichiers gelés**, avant tests ; pas une régression Hifz confirmée.
+- `db97b233` : première liste corrigée ; deuxième audit de baseline gelé encore FAIL pour les deux nouveaux adaptateurs ; correction ciblée apportée ensuite.
+- `d7e7022f` : `38786649459` audit source Hifz PASS ; `38786649298` pilote PUBLIC STAGING Al-Baqarah PASS. Les CI de ce staging n'attestent ni corpus privé, ni rendu physique BOOX, ni APK final.
+- `38786649334` régression Android instrumentée : **EN COURS au pointage**, ne pas déclarer PASS sans vérifier la conclusion finale et les jobs.

@@ -1,0 +1,52 @@
+{
+  "schema": "mawdudi-work-continuation-audit-public-v1",
+  "source_epub_sha256": "8d0a4c5a34bdc8404900b8b61b8a93d633c7984f3497fe74a9d846adfa454bba",
+  "private_recovery": {
+    "archives": 12,
+    "source_epub_verified": true,
+    "original_private_nav_restored": true,
+    "private_detail": "MAWDUDI_CP01_CONTINUATION_AUDIT_PRIVATE_2026-10-15.json",
+    "detail_sha256": "785b28a0b580a760f8e56021244bfb431b16195447ae3e1d020398f13d563c83"
+  },
+  "navigation": {
+    "surahs": 114,
+    "passages": 1053,
+    "ayat": 6236,
+    "duplicate_ids": 0,
+    "uncovered_ayat": 0,
+    "original_source_titles": 1044,
+    "editorial_adaptations": 9
+  },
+  "openings": {
+    "structural_present": 114,
+    "limited_manual_checks": 10,
+    "editorial_final_pass": 0
+  },
+  "terms_to_review": 59,
+  "editorial_final_pass": 0,
+  "commentary_full_verified": false,
+  "qcf_visual_verified": false,
+  "boox_physical_verified": false,
+  "code": {
+    "parent_sha": "80fc942754f3f7fd1f12e956dcae00f102de8f4e",
+    "navigation_commit": "95e86bb2d035fb9f2f0213c56d1bb8a5c9444243",
+    "guard_commits": [
+      "db97b233554b2840b6ed66693b35905038536183",
+      "d7e7022f88d4f2029a6ca158600334e1f0e26679"
+    ]
+  },
+  "ci": {
+    "audit_only": {
+      "run_id": 38786649459,
+      "status": "PASS"
+    },
+    "baqara_public_staging": {
+      "run_id": 38786649298,
+      "status": "PASS_NOT_PRIVATE_PRODUCT"
+    },
+    "hifz_android_instrumented": {
+      "run_id": 38786649334,
+      "status": "IN_PROGRESS_AT_CHECK"
+    }
+  }
+}
