@@ -88,6 +88,7 @@ while IFS= read -r file; do
     "$APP_ROOT/SemanticPassageRepository.java" | \
     "$APP_ROOT/SemanticTitlePopup.java" | \
     "$APP_ROOT/IbnKathirMapActivity.java" | \
+    "$APP_ROOT/IbnAshurBaqaraThemes.java" | \
     "$APP_ROOT/IbnKathirGroupIndex.java" | \
     "$APP_ROOT/IbnKathir"*.java | \
     "$APP_ROOT/QuranicCue"*.java | \

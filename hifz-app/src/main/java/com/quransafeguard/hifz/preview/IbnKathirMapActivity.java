@@ -35,6 +35,11 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     private int selectedGroupIndex;
     private int previewPage;
     private int scrollY;
+    // -1: Ibn Ashur thematic overview, -2: full documentary sequence; >=0 theme.
+    private int themeChoice = -1;
+    private int overviewScrollY;
+    private TextView themesTab;
+    private TextView allPassagesTab;
     private boolean previewReady;
 
     private TextView header;
@@ -43,6 +48,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     private TextView pageIndicator;
     private Button previousPage;
     private Button nextPage;
+    private LinearLayout themeTabs;
     private ScrollView mapScroll;
     private LinearLayout mapColumn;
     private MushafView pagePreview;
@@ -63,6 +69,8 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
             selectedGroupIndex = state.getInt("selectedGroupIndex", 0);
             previewPage = state.getInt("previewPage", 0);
             scrollY = state.getInt("scrollY", 0);
+            themeChoice = state.getInt("themeChoice", -1);
+            overviewScrollY = state.getInt("overviewScrollY", 0);
         } else {
             surah = getIntent().getIntExtra(EXTRA_SURAH, 1);
             int ayah = getIntent().getIntExtra(EXTRA_AYAH, 1);
@@ -96,6 +104,21 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         mapSummary.setGravity(Gravity.CENTER);
         mapSummary.setPadding(Ui.dp(this, 4), Ui.dp(this, 3), Ui.dp(this, 4), Ui.dp(this, 4));
         root.addView(mapSummary);
+
+        LinearLayout tabs = Ui.row(this);
+        tabs.setPadding(0, Ui.dp(this, 2), 0, Ui.dp(this, 3));
+        themesTab = Ui.bookText(this, "Themes", 14f, true);
+        allPassagesTab = Ui.bookText(this, "All Passages", 14f, true);
+        for (TextView tab : new TextView[]{themesTab, allPassagesTab}) {
+            tab.setGravity(Gravity.CENTER);
+            tab.setClickable(true);
+            tab.setFocusable(true);
+            tabs.addView(tab, new LinearLayout.LayoutParams(0, Ui.dp(this, 37), 1f));
+        }
+        themesTab.setOnClickListener(v -> openThemeOverview());
+        allPassagesTab.setOnClickListener(v -> openAllPassages());
+        root.addView(tabs);
+        themeTabs = tabs;
 
         mapScroll = new ScrollView(this);
         mapScroll.setFillViewport(false);
@@ -146,6 +169,8 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         selectedGroupIndex = 0;
         previewPage = 0;
         scrollY = 0;
+        overviewScrollY = 0;
+        themeChoice = surah == 2 ? -1 : -2;
         showSurah(true);
     }
 
@@ -154,20 +179,122 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         selectedGroupIndex = Math.max(0, Math.min(groups.size() - 1, selectedGroupIndex));
         IbnKathirGroupIndex.Group selected = groups.get(selectedGroupIndex);
         previewPage = IbnKathirMapModel.clampPage(selected, previewPage, geometry);
-        header.setText("Carte · " + QuranSurahNames.labelFor(surah));
-        mapSummary.setText(groups.size() + " groupes documentaires · choisir un bloc, puis toucher le Muṣḥaf");
-        buildGraphicalMap(groups);
+        themeTabs.setVisibility(surah == 2 ? View.VISIBLE : View.GONE);
+        if (surah != 2) themeChoice = -2;
+        header.setText("Map · " + QuranSurahNames.labelFor(surah));
+        if (surah == 2 && themeChoice == -1) {
+            mapSummary.setText("13 sourced themes · Ibn Ashur · overlapping verse references");
+        } else if (surah == 2 && themeChoice >= 0) {
+            IbnAshurBaqaraThemes.Theme topic = IbnAshurBaqaraThemes.all().get(themeChoice);
+            mapSummary.setText(topic.references() + " · Ibn Ashur theme · Ibn Kathir passages");
+        } else {
+            mapSummary.setText(groups.size() + " Ibn Kathir passages · tap a block then the Mushaf");
+        }
+        themesTab.setBackground(nodeBackground(surah == 2 && themeChoice != -2));
+        allPassagesTab.setBackground(nodeBackground(surah == 2 && themeChoice == -2));
+        renderMap(groups);
         renderPreview();
         int target = resetScroll ? 0 : Math.max(0, scrollY);
         mapScroll.post(() -> mapScroll.scrollTo(0, target));
+    }
+
+    private void renderMap(List<IbnKathirGroupIndex.Group> groups) {
+        if (surah == 2 && themeChoice == -1) buildThemeOverview(groups);
+        else buildGraphicalMap(groups);
+    }
+
+    /** Source-backed theme nodes. Intersections are links, not new verse borders. */
+    private void buildThemeOverview(List<IbnKathirGroupIndex.Group> groups) {
+        mapColumn.removeAllViews();
+        graphicalNodes.clear();
+        List<IbnAshurBaqaraThemes.Theme> topics = IbnAshurBaqaraThemes.all();
+        for (int i = 0; i < topics.size(); i++) {
+            final int topicIndex = i;
+            IbnAshurBaqaraThemes.Theme topic = topics.get(i);
+            if (i > 0) {
+                FrameLayout connectorHost = new FrameLayout(this);
+                View stem = new View(this);
+                stem.setBackgroundColor(0xff8d8b84);
+                connectorHost.addView(stem, new FrameLayout.LayoutParams(
+                    Math.max(1, Ui.dp(this, 2)), Ui.dp(this, 12), Gravity.CENTER));
+                mapColumn.addView(connectorHost, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 12)));
+            }
+            LinearLayout node = Ui.row(this);
+            node.setGravity(Gravity.CENTER_VERTICAL);
+            node.setPadding(Ui.dp(this, 9), Ui.dp(this, 8), Ui.dp(this, 9), Ui.dp(this, 8));
+            node.setBackground(nodeBackground(false));
+            node.setClickable(true);
+            node.setFocusable(true);
+            node.setOnClickListener(v -> openTheme(topicIndex));
+            TextView marker = Ui.text(this, Integer.toString(i+1), 12f, true);
+            marker.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+            marker.setGravity(Gravity.CENTER);
+            marker.setBackground(nodeMarker(false));
+            node.addView(marker, new LinearLayout.LayoutParams(Ui.dp(this, 38), Ui.dp(this, 38)));
+            LinearLayout copy = Ui.column(this);
+            copy.setPadding(Ui.dp(this, 10), 0, 0, 0);
+            TextView name = Ui.bookText(this, topic.titleEn, 14.5f, true);
+            TextView refs = Ui.text(this, topic.references(), 12.5f, false);
+            refs.setTextColor(Ui.MUTED);
+            TextView count = Ui.text(this,
+                IbnAshurBaqaraThemes.matchingIndices(topic, groups).size()
+                    + " overlapping Ibn Kathir passages", 11.5f, false);
+            count.setTextColor(Ui.MUTED);
+            copy.addView(name);
+            copy.addView(refs);
+            copy.addView(count);
+            node.addView(copy, new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            if ((i & 1) == 0) params.rightMargin = Ui.dp(this, 14);
+            else params.leftMargin = Ui.dp(this, 14);
+            node.setContentDescription(topic.titleEn + " · " + topic.references()
+                + " · open related passages");
+            mapColumn.addView(node, params);
+            graphicalNodes.add(node);
+        }
+    }
+
+    private void openTheme(int topicIndex) {
+        if (surah != 2) return;
+        overviewScrollY = mapScroll.getScrollY();
+        List<Integer> related = IbnAshurBaqaraThemes.matchingIndices(
+            IbnAshurBaqaraThemes.all().get(topicIndex), index.groupsForSurah(2));
+        if (related.isEmpty()) return;
+        themeChoice = topicIndex;
+        selectedGroupIndex = related.get(0);
+        previewPage = IbnKathirMapModel.pageSpan(currentGroup(), geometry).first;
+        scrollY = 0;
+        showSurah(true);
+    }
+
+    private void openThemeOverview() {
+        if (surah != 2 || themeChoice == -1) return;
+        themeChoice = -1;
+        scrollY = overviewScrollY;
+        showSurah(false);
+    }
+
+    private void openAllPassages() {
+        if (surah != 2 || themeChoice == -2) return;
+        if (themeChoice == -1) overviewScrollY = mapScroll.getScrollY();
+        themeChoice = -2;
+        scrollY = 0;
+        showSurah(true);
     }
 
     /** A vertical chain of alternating nodes: deliberately not the retired numbered list. */
     private void buildGraphicalMap(List<IbnKathirGroupIndex.Group> groups) {
         mapColumn.removeAllViews();
         graphicalNodes.clear();
+        int visible = 0;
         for (int i = 0; i < groups.size(); i++) {
-            if (i > 0) {
+            if (surah == 2 && themeChoice >= 0
+                    && !IbnAshurBaqaraThemes.all().get(themeChoice).intersects(groups.get(i)))
+                continue;
+            if (visible > 0) {
                 FrameLayout connectorHost = new FrameLayout(this);
                 View connector = new View(this);
                 connector.setBackgroundColor(0xff8d8b84);
@@ -215,10 +342,11 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             int offset = Ui.dp(this, 20);
-            if ((i & 1) == 0) params.rightMargin = offset;
+            if ((visible & 1) == 0) params.rightMargin = offset;
             else params.leftMargin = offset;
             mapColumn.addView(node, params);
             graphicalNodes.add(node);
+            visible++;
         }
     }
 
@@ -244,7 +372,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         selectedGroupIndex = position;
         IbnKathirGroupIndex.Group group = currentGroup();
         previewPage = IbnKathirMapModel.pageSpan(group, geometry).first;
-        buildGraphicalMap(index.groupsForSurah(surah));
+        renderMap(index.groupsForSurah(surah));
         mapScroll.post(() -> mapScroll.scrollTo(0, scrollY));
         renderPreview();
     }
@@ -321,7 +449,17 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         out.putInt("selectedGroupIndex", saved.groupIndex);
         out.putInt("previewPage", saved.previewPage);
         out.putInt("scrollY", saved.scrollY);
+        out.putInt("themeChoice", themeChoice);
+        out.putInt("overviewScrollY", overviewScrollY);
         super.onSaveInstanceState(out);
+    }
+
+    @Override public void onBackPressed() {
+        if (surah == 2 && themeChoice >= 0) {
+            openThemeOverview();
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override protected void onDestroy() {
