@@ -109,7 +109,7 @@ surah,notices_source,expected_ayahs,covered_ayahs,gaps,duplicates,capture_comple
 108,1,3,3,,,True,IN_PROGRESS
 109,1,6,6,,,True,IN_PROGRESS
 110,0,3,0,1 2 3,,True,IN_PROGRESS
-111,,,,,,,NOT_EXECUTED
-112,,,,,,,NOT_EXECUTED
-113,,,,,,,NOT_EXECUTED
-114,,,,,,,NOT_EXECUTED
+111,1,5,5,,,True,IN_PROGRESS
+112,0,4,0,1 2 3 4,,True,IN_PROGRESS
+113,0,5,0,1 2 3 4 5,,True,IN_PROGRESS
+114,1,6,6,,,True,IN_PROGRESS

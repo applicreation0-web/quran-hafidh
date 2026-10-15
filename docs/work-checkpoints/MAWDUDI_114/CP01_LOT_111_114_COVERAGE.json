@@ -1,0 +1,109 @@
+[
+  {
+    "surah": 111,
+    "source_notice_count": 1,
+    "covered_ayahs": 5,
+    "expected_ayahs": 5,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-111.json",
+        "sha256": "14acf84eff8b0246daf3c9718e3af1759d24887ff16b4f415cc969bb78047aa8"
+      }
+    ]
+  },
+  {
+    "surah": 112,
+    "source_notice_count": 0,
+    "covered_ayahs": 0,
+    "expected_ayahs": 4,
+    "gap_verses": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": false,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-112.json",
+        "sha256": "d08d0b88222530e9d3794979b7036995780ce275140d562cd85b76b63ec6713f"
+      }
+    ]
+  },
+  {
+    "surah": 113,
+    "source_notice_count": 0,
+    "covered_ayahs": 0,
+    "expected_ayahs": 5,
+    "gap_verses": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": false,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-113-completion1.json",
+        "sha256": "be8f3d5c3563e7b2c8464f35512da1452db60733302139939db1438e662b1192"
+      },
+      {
+        "name": "web-113.json",
+        "sha256": "503817baa7862f06eb95f76fac7026ea62398e7ce9987671691915e1738d509a"
+      }
+    ]
+  },
+  {
+    "surah": 114,
+    "source_notice_count": 1,
+    "covered_ayahs": 6,
+    "expected_ayahs": 6,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-114-completion1.json",
+        "sha256": "932927f4dac7358dd227593097f76a1edeb9809826a222fe296d679c1493beeb"
+      },
+      {
+        "name": "web-114-completion2.json",
+        "sha256": "1f27a5d26c37b077cf9be75cc0cec9e4db731cc2326246b792aa42e2c57f93c0"
+      },
+      {
+        "name": "web-114.json",
+        "sha256": "d250ee588032885f95cce04200758f89e5a9f937085364197c03fd7b699bf638"
+      }
+    ]
+  }
+]
