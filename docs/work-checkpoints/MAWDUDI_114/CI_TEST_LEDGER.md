@@ -77,3 +77,7 @@ Six synthetic Python tests passed locally; CI step added to audit-only workflow 
 ## CP02 1210-page retention / QCF pilot correction — 15 October 2026
 
 New code-only metadata audit `scripts/mawdudi_hocr_epub_retention.py` and five synthetic regression tests (5/5 local PASS); existing six scan-locator tests (6/6 local PASS). Baseline CI for fcd1b786: audit PASS and instrumented Android PASS, separately recorded. Commit de07de56 adds the retention tool and fixes the Al-Baqarah pilot's last-page calculation via shared MawdudiMapModel; new audit, CP08P staging, and Android CI initiated on de07de56 — outcomes must be checked before PASS claims. 1210 real pages compared privately; 19 severe/high source OCR loss candidates, 1189 without major differences, 1 review, 1 low-evidence; 41 previously absent EPUB verse labels on the high-risk pages. No proof of correct notes, verified prose or rights; no private sources uploaded publicly.
+
+## CP03/CP04 reversible navigation model (8cc1f02a)
+
+Added read-only MawdudiMapModel.Navigation and Snapshot, plus two JVM tests using 1,053 real canonical passages, all 114 surahs and real QCF geometry. This is new code, NOT a completed UI or release. Prior commit de07de56: audit CI PASS, CP08P staging PASS, Android regression PASS. CI on 8cc1f02a initiated and remains PENDING at this checkpoint; do not reuse prior PASS. No private editorial content included.
