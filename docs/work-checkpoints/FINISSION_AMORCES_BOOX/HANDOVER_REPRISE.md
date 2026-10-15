@@ -43,14 +43,12 @@ L'arbre applicatif gelé `92cb64b26c43d61db4e4605139fb6a725781fec6`
 est celui déjà validé par les CI CP-04 `38690267562` et `38690267503` ; CP-05
 n'a modifié que deux harnais locaux et n'a pas rejoué M8.
 
-CP-06 est **EN COURS**. La clé AEAD et la JKS M9 sont retrouvées et le certificat
-attendu est vérifié. L'ancien APK récupéré est tronqué et ne doit pas être
-utilisé. Le workflow public existant est épinglé au HEAD CP-05 exact
-`6db0e342684344634892d7da4b3c695a3138a232` et à l'arbre applicatif
-`92cb64b26c43d61db4e4605139fb6a725781fec6`.
+CP-06 est **PASS**. L'APK privé signé SHA-256 `117c7e8a432803d3f1f75c97230bc3e116da0a72336f99563a1d815a7a759a09`
+provient du HEAD CP-05 exact `6db0e342684344634892d7da4b3c695a3138a232`
+et de l'arbre applicatif `92cb64b26c43d61db4e4605139fb6a725781fec6`.
+Les références privées récupérables sont consignées dans
+`CP06_APK_PRIVE_FINAL.md`; aucun titre clair, secret ou APK n'est dans GitHub.
 
-Reprise exacte : déclencher manuellement `Quran Haafidh CP06 — intermediate APK
-only, no private titles`, attendre son résultat réel et récupérer l'artefact
-sans titres. Ensuite seulement, reconstruire les huit chunks hors dépôt,
-injecter, aligner et signer localement. Ne jamais envoyer le corpus clair, la
-clé, le mot de passe ou l'APK vers un artefact GitHub public.
+Reprise exacte : ouvrir `CP07_BILAN_FINAL_BOOX.md`, distinguer les validations
+code, Android et APK des essais nécessitant le BOOX physique, puis clôturer sans
+inventer de GO matériel. Ne pas reconstruire l'APK CP-06 déjà vérifié.

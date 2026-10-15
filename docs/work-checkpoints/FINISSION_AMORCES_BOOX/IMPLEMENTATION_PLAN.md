@@ -57,7 +57,7 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
   libre, corriger uniquement les écarts prouvés et produire des captures.
 - [x] **CP-05 — Non-régression.** Exécuter les suites pertinentes et la matrice
   fonctionnelle sans rejouer automatiquement M8 ; geler le HEAD candidat.
-- [ ] **CP-06 — Debug privé BOOX.** Reconstruire localement le corpus depuis le
+- [x] **CP-06 — Debug privé BOOX.** Reconstruire localement le corpus depuis le
   chiffré avec la clé privée, construire/signifier l’APK du HEAD CP-05, vérifier
   signature, inventaire, SHA-256, hors-ligne et reprise, puis sauvegarder les
   livrables hors Git.
