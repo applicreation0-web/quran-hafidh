@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/haafidh-cp08p-baqara-staging.yml
       - hifz-app/build.gradle.kts
+      - hifz-app/src/main/AndroidManifest.xml
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraPilotSpec.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraAyahThemeTitles.java
