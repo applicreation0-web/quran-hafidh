@@ -1,0 +1,52 @@
+{
+  "schema": "mawdudi-cp02-bookreader-crosscheck-public-v1",
+  "source_epub_sha256": "8d0a4c5a34bdc8404900b8b61b8a93d633c7984f3497fe74a9d846adfa454bba",
+  "source_hocr_sha256": "ca74b97f3dbc0e93119472c2dbed22dfa8f1d36a391dc4fcaebab9c78a54a921",
+  "scan_item": "towards-understanding-quran-maududi",
+  "historical_ocr_issues": 109,
+  "exact_hocr_word_candidates": 44,
+  "bracketed_epub_candidates": 65,
+  "cases_with_at_most_five_scan_page_candidates": 107,
+  "broad": [
+    {
+      "reference": "24:3",
+      "pages": 32
+    },
+    {
+      "reference": "66:5",
+      "pages": 7
+    }
+  ],
+  "visual_observations": [
+    {
+      "ref": "2:97",
+      "page": 50,
+      "state": "VISIBLE_IN_BROWSER_VIEW"
+    },
+    {
+      "ref": "2:98",
+      "page": 50,
+      "state": "NOT_SEEN_IN_BROWSER_VIEW"
+    },
+    {
+      "ref": "2:99",
+      "page": 50,
+      "state": "NOT_SEEN_IN_BROWSER_VIEW"
+    },
+    {
+      "ref": "2:100",
+      "page": 50,
+      "state": "VISIBLE_IN_BROWSER_VIEW"
+    },
+    {
+      "ref": "2:217",
+      "page": 110,
+      "state": "NOT_SEEN_IN_BROWSER_VIEW"
+    }
+  ],
+  "approved_commentary": 0,
+  "approved_notes": 0,
+  "applied_repairs": 0,
+  "license_confirmed": false,
+  "explanation": "Visual non-detection is inconclusive, OCR markers are not verified original commentary."
+}

@@ -135,3 +135,7 @@ MAWDUDI_CP01_LOT_111_114_INTAKE.zip : 124893 octets ; SHA-256 `c50f754adacbbf2bc
 ## CP01–CP02 independent continuation, 15 Oct 2026
 
 Private persistent Library folder `MAWDUDI_WORK_CONTINUATION_2026-10-15` (no tokens or private storage identifiers): `CP01_114_SOURATES_INTEGRITY_PRIVATE_V2.json`, 103371 bytes, SHA-256 `10d0568f290625d8e6cc1b81a602867ddf8a4feedb88ad1debd3b4ba784edb4a`; `CP02_REVERIFY_FIRST25_PRIVATE.json`, 8143 bytes, SHA-256 `82a33b096179c614a074a096df96210236273f98f2e18d2c4d4547baebdaabed`. The two reproduction scripts are retained in the same private folder. JSON files report case-level source headings and are deliberately not published. Public checkpoint JSONs contain only statistics and IDs. Private upload completed successfully and filenames are recoverable. Verify hashes at every Work restart.
+
+## CP02 original-scan metadata saved 2026-10-15
+
+Persistent Library folder `/MAWDUDI_WORK_CONTINUATION_2026-10-15` holds `CP02_OCR_SCAN_RECONCILIATION_V1.json` (109 candidate cases, metadata only), `CP02_BROWSER_SCAN_FIRST5_REVIEW_PRIVATE.json`, `mawdudi_ocr_page_reconcile.py`, `test_mawdudi_ocr_page_reconcile.py`, and five label observations. Sources remain unchanged. Browser scans are an OCR corroboration step, NOT an independent editorial edition nor reproduction permission. The new public repository retains only tool code, safe tests and aggregate source-reference metadata.

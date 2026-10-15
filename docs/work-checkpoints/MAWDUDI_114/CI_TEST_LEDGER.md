@@ -69,3 +69,7 @@ QCF numérique : vérification locale racine, 17 tests Python PASS avec PYTHONPA
 ## Continuation QCF page-end bug (2026-10-15)
 
 Commit `872fac3479af70bac3581b0568f4261b33c66927` changes ONLY MawdudiMapModel.lastPage to use the last physical line of the final ayah; adds `MawdudiMapModelRealQcfTest` using 1,053 real passages and the canonical 604-page geometry. CI runs `38788572252` (audit) and `38788572349` (Android regression) were **in progress when inspected**. Do not mark PASS until actual conclusion; public baseline success on `d7e7022f` is historical proof only.
+
+## CP02 EPUB/hOCR safe locator — 15 October 2026
+
+Six synthetic Python tests passed locally; CI step added to audit-only workflow and must be checked on its new HEAD. Original EPUB and user-provided hOCR metadata: 109 cases, 44 exact hOCR word labels, 107 cases <=5 candidate scan pages. Five browser scan candidates examined; 2 visible and 3 not confirmed. No source prose exported, 0 textual editorial approvals and 0 automated repairs. Previous two JVM+Hifz CI runs PASS on af238389. This new change MUST obtain its own CI PASS before promoting.
