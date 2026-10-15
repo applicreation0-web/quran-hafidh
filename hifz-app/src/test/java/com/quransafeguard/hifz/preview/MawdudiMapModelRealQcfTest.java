@@ -43,4 +43,62 @@ public final class MawdudiMapModelRealQcfTest {
         assertTrue("Real QCF index should contain multipage passages",
             multiPagePassages>0);
     }
+
+    @Test public void navigationKeepsQcfReadingStateAcrossAll114Surahs() throws Exception {
+        MawdudiPassageIndex index=MawdudiPassageIndex.parse(read(
+            "hifz-app/src/main/assets/mawdudi_public/passages_v1.csv",
+            "src/main/assets/mawdudi_public/passages_v1.csv"));
+        GeometryRepository g=GeometryRepository.fromJson(read(
+            "app/src/main/assets/reader109/geometry.json",
+            "../app/src/main/assets/reader109/geometry.json"));
+        MawdudiMapModel.Navigation nav=new MawdudiMapModel.Navigation(index,g,1,1);
+        assertFalse(nav.movePassage(-1));
+        for(MawdudiPassageIndex.Passage passage:index.all()) {
+            nav.select(passage);
+            assertSame(passage,nav.passage());
+            assertEquals(passage.id,MawdudiMapModel.firstPage(passage,g),nav.page());
+            java.util.List<VerseRef> focus=nav.highlighted();
+            assertFalse("Empty real QCF page "+passage.id,focus.isEmpty());
+            for(VerseRef v:focus) {
+                assertEquals(passage.id,passage.surah,v.getSurah());
+                assertTrue(passage.id,passage.contains(v.getAyah()));
+            }
+            VerseRef jump=nav.readerJumpVerse();
+            assertTrue(passage.contains(jump.getAyah()));
+            nav.setMapScrollY(196);
+            nav.setCommentaryScrollY(47);
+            nav.setCommentaryOpen(true);
+            MawdudiMapModel.Snapshot before=nav.snapshot();
+            nav.turnPage(1);
+            nav.movePassage(1);
+            nav.restore(before);
+            assertSame(passage,nav.passage());
+            assertEquals(MawdudiMapModel.firstPage(passage,g),nav.page());
+            assertEquals(196,nav.mapScrollY());
+            assertEquals(47,nav.commentaryScrollY());
+            assertTrue(nav.commentaryOpen());
+            assertEquals(passage.id,nav.snapshot().id);
+        }
+        nav.select(index.all().get(index.count()-1));
+        assertFalse(nav.movePassage(1));
+        nav.select(index.at(1,1));
+        assertTrue(nav.movePassage(1));
+        assertEquals(2,nav.passage().surah);
+        assertEquals(1,nav.passage().firstAyah);
+    }
+    @Test public void staleSnapshotFailsClosedInsteadOfJumpingToWrongVerse() throws Exception {
+        MawdudiPassageIndex index=MawdudiPassageIndex.parse(read(
+            "hifz-app/src/main/assets/mawdudi_public/passages_v1.csv",
+            "src/main/assets/mawdudi_public/passages_v1.csv"));
+        GeometryRepository g=GeometryRepository.fromJson(read(
+            "app/src/main/assets/reader109/geometry.json",
+            "../app/src/main/assets/reader109/geometry.json"));
+        MawdudiMapModel.Navigation nav=new MawdudiMapModel.Navigation(index,g,2,97);
+        try {
+            nav.restore(new MawdudiMapModel.Snapshot("wrong-index",nav.passage().ordinal,
+                nav.page(),0,0,false));
+            fail("A changed canonical source must not restore to a different verse.");
+        } catch(IllegalArgumentException expected) {}
+    }
+
 }
