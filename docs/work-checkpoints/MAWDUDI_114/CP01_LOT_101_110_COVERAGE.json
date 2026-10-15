@@ -1,0 +1,232 @@
+[
+  {
+    "surah": 101,
+    "source_notice_count": 0,
+    "covered_ayahs": 0,
+    "expected_ayahs": 11,
+    "gap_verses": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": false,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-101.json",
+        "sha256": "739c09d9325020c3486e0e68600895fc301264717d477f978f52db3316407046"
+      }
+    ]
+  },
+  {
+    "surah": 102,
+    "source_notice_count": 1,
+    "covered_ayahs": 8,
+    "expected_ayahs": 8,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-102.json",
+        "sha256": "8d9cd4a10ce03a7cbd58d1d072d758ee194b893e8b47199a0304e27b11359691"
+      }
+    ]
+  },
+  {
+    "surah": 103,
+    "source_notice_count": 0,
+    "covered_ayahs": 0,
+    "expected_ayahs": 3,
+    "gap_verses": [
+      1,
+      2,
+      3
+    ],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": false,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-103.json",
+        "sha256": "5b4a78b35f5da2d08f3903a870e10a44d14ed12a7c1f532c8dd612848333f8e7"
+      }
+    ]
+  },
+  {
+    "surah": 104,
+    "source_notice_count": 1,
+    "covered_ayahs": 9,
+    "expected_ayahs": 9,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-104.json",
+        "sha256": "9c3830ba33ccc6e2048f39eceaf765b8fd555e064587fb779e9fdf1ea06dbd95"
+      }
+    ]
+  },
+  {
+    "surah": 105,
+    "source_notice_count": 1,
+    "covered_ayahs": 5,
+    "expected_ayahs": 5,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-105.json",
+        "sha256": "70d76321ffdc9ff732e803ca1dbc694938a730a47f95d2132a97a5fc9a718aa5"
+      }
+    ]
+  },
+  {
+    "surah": 106,
+    "source_notice_count": 1,
+    "covered_ayahs": 4,
+    "expected_ayahs": 4,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-106.json",
+        "sha256": "b4d4a3a73a04299c580e2005dc88588428f0a01b7d7677bea46d58d3b28125f4"
+      }
+    ]
+  },
+  {
+    "surah": 107,
+    "source_notice_count": 1,
+    "covered_ayahs": 7,
+    "expected_ayahs": 7,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-107.json",
+        "sha256": "aa147e982bfcd82ccf6c31c69121bf76c6d93d15c2cf366c4729d2421a85fe68"
+      }
+    ]
+  },
+  {
+    "surah": 108,
+    "source_notice_count": 1,
+    "covered_ayahs": 3,
+    "expected_ayahs": 3,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-108.json",
+        "sha256": "553867c9891125ec2386bb3834cc8cad9f404bbdaaf951b442c08cae7ba84b64"
+      }
+    ]
+  },
+  {
+    "surah": 109,
+    "source_notice_count": 1,
+    "covered_ayahs": 6,
+    "expected_ayahs": 6,
+    "gap_verses": [],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": true,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-109.json",
+        "sha256": "c6c9b73efd0b1e26e8813e9ab6dc568f041579435d181b7ac240f6f1cde42849"
+      }
+    ]
+  },
+  {
+    "surah": 110,
+    "source_notice_count": 0,
+    "covered_ayahs": 0,
+    "expected_ayahs": 3,
+    "gap_verses": [
+      1,
+      2,
+      3
+    ],
+    "duplicates": [],
+    "invalid_ranges": [],
+    "capture_complete": true,
+    "ayah_theme_index_present": false,
+    "missing_source_lines": [],
+    "source_errors": [],
+    "editorial_status": "IN_PROGRESS",
+    "first_recognized_epub_label": 1,
+    "snapshot_hashes": [
+      {
+        "name": "web-110.json",
+        "sha256": "591e1238fdae2d0288f470a8963b2397e6b18c245ef33fcb2e915a21709ea3e4"
+      }
+    ]
+  }
+]

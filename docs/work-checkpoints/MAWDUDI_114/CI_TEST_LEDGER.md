@@ -48,3 +48,5 @@ CP-01 lot 071–080 : collecte exécutée, contrôles de plages archivés sous C
 CP-01 lot 081–090 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_081_090_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.
 
 CP-01 lot 091–100 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_091_100_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.
+
+CP-01 lot 101–110 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_101_110_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.
