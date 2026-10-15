@@ -1,11 +1,16 @@
 checkpoint,lot,status,evidence
 CP-00,initial_git_inventory,PASS,CP00_INITIAL_INVENTORY.json
-CP-00,epub_integrity,PASS,PRIVATE_ASSETS_MANIFEST.md
-CP-00,edition_and_completeness,EN COURS,
-CP-01,editorial_114,NON EXÉCUTÉ,
-CP-02,commentary_556,NON EXÉCUTÉ,
-CP-03,qcf_coordinates,NON EXÉCUTÉ,
-CP-04,interface,NON EXÉCUTÉ,
-CP-05,regression,NON EXÉCUTÉ,
-CP-06,final_apk,NON EXÉCUTÉ,
-CP-07,delivery,NON EXÉCUTÉ,
+CP-00,historical_ci_inventory,PASS,CI_TEST_LEDGER.md
+CP-00,epub_crc_sha,PASS,EPUB_STRUCTURAL_AUDIT.json
+CP-00,114_headings_inventory,PASS_STRUCTURE_ONLY,EPUB_114_LABEL_INVENTORY.csv
+CP-00,109_unresolved_labels,A CONTROLER,EPUB_UNRESOLVED_109.csv
+CP-00,audit_tool_8_tests,PASS,CI_TEST_LEDGER.md
+CP-00,new_private_checkpoint,BLOQUE_STORAGE_FULL,CP00_REPORT.md
+CP-00,private_restore_simulation,NON EXECUTE,CP00_REPORT.md
+CP-01,editorial_lot_001_010,NON EXECUTE,
+CP-02,commentary_556,NON EXECUTE,
+CP-03,qcf_coordinates,NON EXECUTE,
+CP-04,interface,NON EXECUTE,
+CP-05,regression,NON EXECUTE,
+CP-06,final_apk,NON EXECUTE,
+CP-07,delivery,NON EXECUTE,

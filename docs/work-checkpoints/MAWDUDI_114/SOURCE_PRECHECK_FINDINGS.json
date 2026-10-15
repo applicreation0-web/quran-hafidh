@@ -1,0 +1,37 @@
+{
+  "access_date": "2026-10-15",
+  "scope": "CP00 source precheck only; CP01 not started",
+  "cases": [
+    {
+      "case": "AYAH-002-134",
+      "url": "https://www.alim.org/surah-info/2/",
+      "second_url": "https://islamicstudies.info/reference/reference.php?sura=2",
+      "finding": "The displayed Ayah Themes intervals pass from 133 to 135. No title for 134 in either displayed index. Mirroring is not independent corroboration.",
+      "decision": "UNRESOLVED; do not extend an adjacent passage automatically."
+    },
+    {
+      "case": "REFERENCE-002-INVALID-SECTION",
+      "url": "https://islamicstudies.info/reference/reference.php?sura=2",
+      "finding": "Extra section interval 287-286 after the valid 284-286 interval.",
+      "decision": "Invalid range; exclude from any count until canonical section index validated."
+    },
+    {
+      "case": "AYAH-054-045-055",
+      "url": "https://islamicstudies.info/reference/reference.php?sura=54",
+      "finding": "Displayed Ayah Themes intervals: 1-8, 9-22, 23-40, 41-44. Navigation would omit 45-55. An additional invalid technical section is 56-55.",
+      "decision": "UNRESOLVED; technical section 41-55 does not supply a missing Ayah Theme title."
+    },
+    {
+      "case": "AYAH-055-056-078",
+      "url": "https://www.alim.org/surah-info/55/",
+      "finding": "Displayed Ayah Themes intervals: 1-14, 15-25, 26-32, 33-45, 46-55. Navigation would omit 56-78.",
+      "decision": "UNRESOLVED; no automatic retitling or range extension."
+    },
+    {
+      "case": "AYAH-019-BOUNDS",
+      "url": "https://www.alim.org/surah-info/19/",
+      "finding": "Displayed intervals: 1-15,16-26,27-34,35-40,41-50,51-57,58-65,66-82,83-98. These numeric bounds cover 1-98 without a gap. The reference-site page could not be fetched.",
+      "decision": "ALIM numeric bounds checked only. No title/content approval or cross-edition resolution."
+    }
+  ]
+}
