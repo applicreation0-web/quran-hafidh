@@ -122,3 +122,7 @@ MAWDUDI_CP01_LOT_111_114_INTAKE.zip : 124893 octets ; SHA-256 `c50f754adacbbf2bc
 ## Addenda46–55
 
 - MAWDUDI_CP01_MACRO_46_55_PARTIAL.zip : 10788 octets ; SHA-256 2e3e1a9129ebe4e994cdb0de660f0dd5462f25089ce7bf0e20538b1c4fb90cbc ; récupération vérifiée.
+
+## Addenda56–65
+
+- MAWDUDI_CP01_MACRO_56_65_PARTIAL.zip : 13407 octets ; SHA-256 e4f35c1a138807eee7cb34ed45fdf8b5275ca5c3489304f55e860d8de7ef7faf ; récupération vérifiée.
