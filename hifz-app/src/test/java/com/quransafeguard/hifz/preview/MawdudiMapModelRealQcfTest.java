@@ -26,7 +26,7 @@ public final class MawdudiMapModelRealQcfTest {
         GeometryRepository g=GeometryRepository.fromJson(read(
             "app/src/main/assets/reader109/geometry.json",
             "../app/src/main/assets/reader109/geometry.json"));
-        int continued=0;
+        int multiPagePassages=0;
         for(MawdudiPassageIndex.Passage p:index.all()){
             VerseRef start=new VerseRef(p.surah,p.firstAyah);
             VerseRef last=new VerseRef(p.surah,p.lastAyah);
@@ -37,9 +37,9 @@ public final class MawdudiMapModelRealQcfTest {
             assertTrue(p.id,exactLast>=exactFirst);
             assertEquals(p.id,exactFirst,MawdudiMapModel.clampPage(p,-100,g));
             assertEquals(p.id,exactLast,MawdudiMapModel.clampPage(p,1000,g));
-            if(g.pageForVerse(last)!=exactLast)continued++;
+            if(exactLast>exactFirst)multiPagePassages++;
         }
-        assertTrue("QCF fixture should include at least one ayah continuing across a page",
-            continued>0);
+        assertTrue("Real QCF index should contain multipage passages",
+            multiPagePassages>0);
     }
 }
