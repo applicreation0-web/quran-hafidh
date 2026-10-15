@@ -198,6 +198,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         preview.addView(controls);
 
         mushaf = new MushafView(host);
+        host.attachPilotPreview(mushaf);
         mushaf.setContentDescription("Muṣḥaf QCF, toucher pour ouvrir Lecture plein écran");
         mushaf.setListener(this);
         preview.addView(mushaf, new LinearLayout.LayoutParams(-1, 0, 1f));
