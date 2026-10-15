@@ -18,6 +18,8 @@ val semanticV23TitleOutput = generatedSemanticAssetsDir.resolve("semantic/semant
 // Exact Quran-word boxes (quran-ws/quran-svg-elements v1.1.2) used only by the Quiz prompt.
 val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
+// Only the CP-08P staging workflow opts into the separate personal phone-pilot ID.
+val cp08BaqaraPilot = System.getenv("CP08_BAQARAH_PILOT") == "1"
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
     inputs.dir(hifzTafsirSourceDir)
@@ -330,8 +332,8 @@ android {
         getByName("debug") {
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
-            applicationIdSuffix = ".ibnkathirtest"
-            versionNameSuffix = "-IbnKathir-DEBUG"
+            applicationIdSuffix = if (cp08BaqaraPilot) ".ibnkathirbaqarapilot" else ".ibnkathirtest"
+            versionNameSuffix = if (cp08BaqaraPilot) "-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
             isMinifyEnabled = false
