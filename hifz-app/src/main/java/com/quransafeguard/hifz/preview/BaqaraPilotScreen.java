@@ -3,6 +3,7 @@ package com.quransafeguard.hifz.preview;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
+import android.text.TextUtils;
 import android.graphics.drawable.GradientDrawable;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -66,6 +67,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
     private LinearLayout mapColumn, root;
     private TextView pageIndicator, caption, mapHeading, commentaryHeading, commentaryBody;
     private Button previousPage, nextPage, previousCommentaryVerse, nextCommentaryVerse;
+    private LinearLayout pageControlsRow;
     private MushafView mushaf;
     private LinearLayout.LayoutParams mapSizing, previewSizing;
 
@@ -124,7 +126,8 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         mapHeader.addView(overview, new LinearLayout.LayoutParams(Ui.dp(host, 48), Ui.dp(host, 48)));
         mapHeading = Ui.bookText(host, "", 13.5f, true);
         mapHeading.setGravity(Gravity.CENTER_VERTICAL);
-        mapHeading.setMaxLines(2);
+        mapHeading.setSingleLine(true);
+        mapHeading.setEllipsize(TextUtils.TruncateAt.END);
         mapHeader.addView(mapHeading, new LinearLayout.LayoutParams(0, Ui.dp(host, 37), 1f));
         Button scale = Ui.iconButton(activity, "", "Focus", v -> {
             mushafExpanded = !mushafExpanded; updateSplit();
@@ -137,7 +140,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         mapScroll = new ScrollView(host);
         mapScroll.setVerticalScrollBarEnabled(false);
         mapColumn = Ui.column(host);
-        mapColumn.setPadding(Ui.dp(host, 5), Ui.dp(host, 2), Ui.dp(host, 5), Ui.dp(host, 9));
+        mapColumn.setPadding(Ui.dp(host, 5), Ui.dp(host, 1), Ui.dp(host, 5), Ui.dp(host, 3));
         mapScroll.addView(mapColumn, new ScrollView.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -174,13 +177,14 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         mapHost = new FrameLayout(host);
         mapHost.addView(mapScroll, new FrameLayout.LayoutParams(-1, -1));
         mapHost.addView(commentaryScroll, new FrameLayout.LayoutParams(-1, -1));
-        mapSizing = new LinearLayout.LayoutParams(-1, 0, .22f);
+        mapSizing = new LinearLayout.LayoutParams(-1, 0, .18f);
         root.addView(mapHost, mapSizing);
         root.addView(Ui.divider(host));
 
         LinearLayout preview = Ui.column(host);
         caption = Ui.bookText(host, "", 13.5f, true);
-        caption.setMaxLines(2);
+        caption.setMaxLines(1);
+        caption.setEllipsize(TextUtils.TruncateAt.END);
         caption.setGravity(Gravity.CENTER);
         caption.setPadding(Ui.dp(host, 8), Ui.dp(host, 4),
             Ui.dp(host, 8), Ui.dp(host, 2));
@@ -201,23 +205,24 @@ final class BaqaraPilotScreen implements MushafView.Listener {
             new LinearLayout.LayoutParams(Ui.dp(host, 48), Ui.dp(host, 48)));
         preview.addView(cueNavigation);
 
-        LinearLayout controls = Ui.row(host);
-        controls.setGravity(Gravity.CENTER_VERTICAL);
+        pageControlsRow = Ui.row(host);
+        pageControlsRow.setGravity(Gravity.CENTER_VERTICAL);
         previousPage = Ui.iconButton(activity, "", "Page précédente", v -> turnPage(-1));
         nextPage = Ui.iconButton(activity, "", "Page suivante", v -> turnPage(1));
         pageIndicator = Ui.text(host, "", 12f, true);
         pageIndicator.setGravity(Gravity.CENTER);
-        controls.addView(previousPage);
-        controls.addView(pageIndicator, new LinearLayout.LayoutParams(0, -2, 1f));
-        controls.addView(nextPage);
-        preview.addView(controls);
+        pageControlsRow.addView(previousPage);
+        pageControlsRow.addView(pageIndicator, new LinearLayout.LayoutParams(0, -2, 1f));
+        pageControlsRow.addView(nextPage);
+        // A one-page passage needs no second navigation row: keep the Mushaf larger.
+        preview.addView(pageControlsRow);
 
         mushaf = new MushafView(host);
         host.attachPilotPreview(mushaf);
         mushaf.setContentDescription("Muṣḥaf QCF, toucher pour ouvrir Lecture plein écran");
         mushaf.setListener(this);
         preview.addView(mushaf, new LinearLayout.LayoutParams(-1, 0, 1f));
-        previewSizing = new LinearLayout.LayoutParams(-1, 0, .78f);
+        previewSizing = new LinearLayout.LayoutParams(-1, 0, .82f);
         root.addView(preview, previewSizing);
 
         host.setContentView(root);
@@ -230,8 +235,8 @@ final class BaqaraPilotScreen implements MushafView.Listener {
 
     private void updateSplit() {
         if (mapSizing == null || previewSizing == null) return;
-        mapSizing.weight = mushafExpanded ? .10f : .22f;
-        previewSizing.weight = mushafExpanded ? .90f : .78f;
+        mapSizing.weight = mushafExpanded ? .09f : .18f;
+        previewSizing.weight = mushafExpanded ? .91f : .82f;
         mapHost.setLayoutParams(mapSizing);
         if (previewSizing != null && root.getChildCount() > 0)
             root.getChildAt(root.getChildCount() - 1).setLayoutParams(previewSizing);
@@ -280,7 +285,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
             row.setPadding(0, Ui.dp(host, 2), 0, Ui.dp(host, 2));
             LinearLayout spine = marker(false);
             row.addView(spine, new LinearLayout.LayoutParams(
-                Ui.dp(host, 27), Ui.dp(host, 51)));
+                Ui.dp(host, 27), Ui.dp(host, 46)));
             LinearLayout text = Ui.column(host);
             TextView name = Ui.bookText(host, block.displayTitle, 14f, true);
             name.setMaxLines(2);
@@ -315,7 +320,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(0, Ui.dp(host, 2), 0, Ui.dp(host, 2));
             row.addView(marker(active), new LinearLayout.LayoutParams(
-                Ui.dp(host, 27), Ui.dp(host, 49)));
+                Ui.dp(host, 27), Ui.dp(host, 46)));
             LinearLayout text = Ui.column(host);
             TextView name = Ui.bookText(host, passage.title, 13.5f, true);
             name.setMaxLines(2);
@@ -390,6 +395,8 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         caption.setText(chosen().title + "   ·   " + chosen().range());
         pageIndicator.setText("Page " + previewPage +
             (first == last ? "" : "  ·  " + first + "–" + last));
+        // Suppress redundant page arrows on single-page passages, not the gestures.
+        pageControlsRow.setVisibility(first == last ? View.GONE : View.VISIBLE);
         previousPage.setEnabled(previewPage > first);
         nextPage.setEnabled(previewPage < last);
         previousPage.setAlpha(previewPage > first ? 1f : .28f);

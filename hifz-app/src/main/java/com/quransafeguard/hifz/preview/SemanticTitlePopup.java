@@ -2,6 +2,7 @@ package com.quransafeguard.hifz.preview;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.text.TextUtils;
 import android.graphics.Point;
 import android.view.View;
 import android.view.Gravity;
@@ -59,12 +60,15 @@ final class SemanticTitlePopup {
         LinearLayout shell = Ui.column(activity);
         // Bare Al-Munir-style caption: no card, border, shadow or black button.
         // Readable E-Ink caption (14sp), still lighter than the Mushaf.
-        shell.setPadding(Ui.dp(activity, 9), Ui.dp(activity, 5),
-            Ui.dp(activity, 9), Ui.dp(activity, 5));
+        shell.setPadding(Ui.dp(activity, 7), Ui.dp(activity, 3),
+            Ui.dp(activity, 7), Ui.dp(activity, 3));
         TextView label = arabic
             ?Ui.bookText(activity, title.trim(), 14f, true)
             :Ui.text(activity, title.trim(), 14f, false);
         label.setIncludeFontPadding(false);
+        label.setMaxLines(2);
+        label.setEllipsize(TextUtils.TruncateAt.END);
+        label.setContentDescription(title.trim());
         label.setLineSpacing(0f, 1.02f);
         label.setGravity(Gravity.CENTER);
         label.setTextDirection(arabic ? android.view.View.TEXT_DIRECTION_RTL : android.view.View.TEXT_DIRECTION_LTR);
@@ -84,7 +88,7 @@ final class SemanticTitlePopup {
             window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL);
             window.setBackgroundDrawableResource(android.R.color.transparent);
             int max = Math.min(activity.getResources().getDisplayMetrics().widthPixels
-                - Ui.dp(activity, 28), Ui.dp(activity, 480));
+                - Ui.dp(activity, 28), Ui.dp(activity, 390));
             // Initially invisible, NOT at a guessed position. The caller
             // must measure readerActions and invoke positionAboveIcons(...).
             WindowManager.LayoutParams attrs=window.getAttributes();
@@ -95,6 +99,24 @@ final class SemanticTitlePopup {
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         }
 
+        // Review sessions already call show(...) from their Mushaf cue handler.
+        // Anchor there to their actual last control row without changing a
+        // frozen Hifz engine, adding another button or guessing screen insets.
+        // Lecture uses showEnglish(...) with its explicitly measured icon row.
+        if (arabic) {
+            View content = activity.findViewById(android.R.id.content);
+            if (content instanceof ViewGroup) {
+                ViewGroup holder = (ViewGroup) content;
+                if (holder.getChildCount() > 0
+                    && holder.getChildAt(holder.getChildCount()-1) instanceof ViewGroup) {
+                    ViewGroup screen = (ViewGroup) holder.getChildAt(holder.getChildCount()-1);
+                    if (screen.getChildCount() > 0) {
+                        View toolbar = screen.getChildAt(screen.getChildCount()-1);
+                        toolbar.post(() -> positionAboveIcons(activity, dialog, toolbar));
+                    }
+                }
+            }
+        }
         // A semantic title is a retrieval cue, not persistent commentary.
         shell.postDelayed(() -> {
             if (dialog.isShowing() && !activity.isFinishing()) dialog.dismiss();
