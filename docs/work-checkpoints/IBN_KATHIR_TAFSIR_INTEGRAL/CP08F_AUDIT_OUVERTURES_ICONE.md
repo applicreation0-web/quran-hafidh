@@ -29,3 +29,13 @@ Date : 2026-10-15. Référence : branche de CP-08 sur `fcb76642b9e03b1d030212e6c
 
 ## Reprise
 Procéder à la vérification documentaire ciblée des premiers blocs ; proposer les titres et cas litigieux à l'utilisateur avant édition du paquet. En parallèle, demander la validation du pictogramme ; ne pas modifier les moteurs Hifz, le Muṣḥaf ni QUL.
+
+## CP-08F complémentaire — titres d'amorces « Israelites » (décision utilisateur du 15 octobre)
+
+- Étendre la vérification terminologique au **corpus entier des clés d'amorces approuvées** et non uniquement aux titres des premiers blocs ou aux thèmes Ibn ʿĀshūr.
+- Réaliser d'abord un inventaire privé des titres contenant `Jews`, `Jewish`, `Children of Israel`, `Israelites`, etc. et de leurs ID `IKEN...`, avec référence Ibn Kathīr, passage coranique, contexte, terme original et décision.
+- **Modifier le libellé de la clé d'amorce visible à l'écran**, et synchroniser ce même libellé sur la carte graphique, la recherche et l'en-tête cliquable du commentaire lorsque `Israelites` est fidèle aux versets et au contexte. Les textes anglais originaux et les citations ne sont jamais modifiés.
+- Préserver `Jews` lorsque l'auteur désigne `al-Yahūd` en tant que communauté religieuse, et ne pas remplacer `People of the Book` lorsque cette expression est la plus fidèle.
+- Mettre les variantes approuvées dans la couche d'affichage du corpus privé, avec la preuve éditoriale, puis reconstituer ses huit chunks chiffrés et vérifier les invariants 1 903 groupes / 1 708 titres / 195 sans titre sauf arbitrage utilisateur distinct.
+- Tester, pour chaque adaptation : même intitulé stable dans les amorces, la carte et le Tafsir, aucune altération du commentaire original, aucune frontière de verset modifiée, aucune régression des moteurs Hifz. Ne jamais committer les titres en clair sur ce dépôt public.
+- **État : À AUDITER ET À APPLIQUER — non encore réalisé dans le paquet privé ni dans l'APK CP-06.**
