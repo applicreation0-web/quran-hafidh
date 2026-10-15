@@ -34,3 +34,7 @@ MAWDUDI_CP01_LOT_031_040_INTAKE.zip : 130231 octets ; SHA-256 `1ef264e45fcd87447
 ## CP-01 lot 041–050
 
 MAWDUDI_CP01_LOT_041_050_INTAKE.zip : 132804 octets ; SHA-256 `d2900f62a409f606f013990dffa0a6dc7a27b9ef770bdf1dc4c8926113829b0b`. Sauvegarde et récupération vérifiées ; index, introductions et queues privées. Référence privée uniquement dans le reçu privé.
+
+## CP-01 lot 051–060
+
+MAWDUDI_CP01_LOT_051_060_INTAKE.zip : 123732 octets ; SHA-256 `90e3060a215606b15235ae569d6f9ba6eb79d800fc14adf2e566e0db9a225854`. Sauvegarde et récupération vérifiées ; index, introductions et queues privées. Référence privée uniquement dans le reçu privé.
