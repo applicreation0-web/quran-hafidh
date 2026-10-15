@@ -12,7 +12,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docs/FROZEN_UI_ICONS_13_PLUS_10.tsv"
-PRIMARY = ["home","book-open","network","key-round","book-text","scan","brain","flag",
+PRIMARY = ["home","book-open","waypoints","key-round","book-text","scan","brain","flag",
            "pencil","check-circle","chart-no-axes-column","refresh-cw","arrow-left"]
 SECONDARY = ["check","x","undo-2","trash-2","info","eye","mic","play","pause","ellipsis"]
 PIN = "f93beca5957187620e30ae771d220d88501be621"
@@ -30,7 +30,6 @@ if sum(r[0]=="principal" for r in rows) != 13: fail("Primary count changed")
 if sum(r[0]=="secondaire" for r in rows) != 10: fail("Secondary count changed")
 immutable = {
     "ic_ui_reading.xml":"630eb9f4ded2387ab929f5945c6b634b5dee6b85",
-    "ic_ui_semantic_map.xml":"bea50ef9f3c35c903fbe36400660053dbb075c54",
     "ic_ui_tafsir.xml":"ca2b48f87f4f561a018361127d1d152243cd146e",
     "ic_ui_edit.xml":"9770d143f2854f6356d773375a5e42d2d52dc6e0",
 }
@@ -78,4 +77,4 @@ if reader.count('readerActions.addView(')<4: fail("4 permanent reader controls m
 if 'Ui.iconButton(this, "", "Focus"' in reader: fail("Focus improperly added as fifth permanent icon")
 hifz=(ROOT/"hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java").read_text(encoding="utf-8")
 if 'R.drawable.ic_hifz_anchor' not in hifz: fail("Itqan anchoring pictogram removed")
-print(f"PASS: byte integrity for exact {len(PRIMARY)}+{len(SECONDARY)} contract files; 4 historical originals immutable; Lucide commit {PIN}")
+print(f"PASS: byte integrity for exact {len(PRIMARY)}+{len(SECONDARY)} contract files; 3 historical originals immutable; Lucide commit {PIN}")

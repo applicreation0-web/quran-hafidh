@@ -19,6 +19,7 @@ PIN = "f93beca5957187620e30ae771d220d88501be621"
 APPROVED = {
     "ic_ui_home.xml": "075fef82ef28951d424364a03c780f69eed7317636dce17eed8df1be17d21e79",
     "ic_ui_recall_key.xml": "2b54255d7f1e763e565f4572020f80ac372dca5a534ed2e72322babc627f0354",
+    "ic_ui_semantic_map.xml": "1324709d9daf48750193221e9785d73ba25b02917a345966b202f0e7395a5a24",
     "ic_ui_focus.xml": "986142e0e21c65c88c9329a650e5a7175fde99daaa6cede32330506b676577a7",
     "ic_ui_revision.xml": "270e67099393a0a6b3ebdf119d1c5ca07a12ec3111eb9d0a48b531652a97ff05",
     "ic_ui_difficulty.xml": "b1d45d0d1cf89f441984c1ec818ec5d9d52e2b9f61a05551ae521c21974f726c",
@@ -68,8 +69,7 @@ if key[1].get(A + "fillColor") != "#121211" or key[1].get(A + "strokeWidth") != 
     raise SystemExit("SILHOUETTE FAIL: approved stroked keyhole missing")
 
 manual = [row[3] for row in rows if row[5] == "frozen-original"]
-if set(manual) != {"ic_ui_reading.xml", "ic_ui_semantic_map.xml",
-                   "ic_ui_tafsir.xml", "ic_ui_edit.xml"}:
+if set(manual) != {"ic_ui_reading.xml", "ic_ui_tafsir.xml", "ic_ui_edit.xml"}:
     raise SystemExit("SILHOUETTE FAIL: manual-review inventory changed")
-print(f"PASS: 19 approved Lucide silhouettes match pinned geometry {PIN}; "
-      "4 historical originals remain NON_CERTIFIABLE without approved references")
+print(f"PASS: 20 approved Lucide silhouettes match pinned geometry {PIN}; "
+      "3 historical originals remain NON_CERTIFIABLE without approved references")
