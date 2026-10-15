@@ -29,6 +29,15 @@ Date : 2026-10-15.
 5. Vérifier les conditions de réutilisation de l'édition Darussalam avant toute distribution ; la lecture sur Archive.org n'autorise pas automatiquement la redistribution du texte de traduction. Ne pas publier d'APK contenant les commentaires.
 6. Chargement local asynchrone ou paresseux des commentaires longs, prise en charge de l'OCR incomplet, mémoire bornée, taille de police et contraste E-Ink. Pas de réseau demandé par Android ; pas de mutation de préférences Hifz.
 
+## Langue et terminologie anglaise — décision utilisateur (2026-10-15)
+
+- La carte globale (rubriques adaptées d'Ibn ʿĀshūr) et les titres d'amorces Ibn Kathīr restent **en anglais** ; ne pas imposer une traduction française dans ces vues.
+- Pour l'affichage éditorial, privilégier **“Israelites”** lorsqu'une rubrique se réfère spécifiquement à *Banī Isrāʾīl*, aux Enfants d'Israël ou à leurs descendants dans un contexte historique. Envisager de remplacer un “Jews” déjà employé seulement si la source du passage rend cette formulation historiquement et exégétiquement fidèle.
+- Ne **jamais** substituer automatiquement “Israelites” à “Jews” : les deux termes ne sont pas toujours synonymes. Lorsque la source mentionne spécifiquement *al-Yahūd* / une communauté religieuse juive, conserver **“Jews”**. Lorsque le Coran renvoie aux détenteurs de l'Écriture, conserver **“People of the Book/Scripture”** si ce terme est le plus fidèle.
+- **Ne modifier aucun texte original** d'Ibn Kathīr, d'Ibn ʿĀshūr ou du commentaire OCR. Conserver les chaînes originales, leurs références et leur provenance ; si un intitulé de navigation est adapté, utiliser un champ distinct `display_title_en` ou une table d'overrides sourcés (ID du bloc/thème, original, adaptation, justification, référence).
+- Contrôler en priorité les titres sensibles dans les premières amorces (audit CP-08F). Pas de changement global automatique, pas de titre de remplacement non vérifié. Les contenus éditoriaux privés ne doivent pas être committés en clair sur GitHub public.
+- Les treize rubriques globales d'Al-Baqarah dérivées de Quran.com / Ibn ʿĀshūr sont des thèmes **pouvant se chevaucher**, et non un découpage exclusif en treize plages successives ; conserver les références des versets et la distinction entre citation exacte et formulation de navigation.
+
 ## Checkpoints et preuves — ne pas sauter les étapes
 - **CP-08A Sources** : disponibilité du texte OCR des 10 volumes, hashes, nombre de pages, comparaisons avec M7, liste des lacunes OCR. **NON EXÉCUTÉ**.
 - **CP-08B Correspondances** : table `group_id → volume → PDF/OCR pages → start/end offset → fiabilité` ; assertion 1 903 IDs, doublons 0, gaps signalés, faux appariements bloqués. **NON EXÉCUTÉ**.
