@@ -34,3 +34,5 @@ Captures complètes : PASS de collecte ; couverture numérique 1473/1473 : PASS 
 CP-01 lot 011–020 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_011_020_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.
 
 CP-01 lot 021–030 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_021_030_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.
+
+CP-01 lot 031–040 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_031_040_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.

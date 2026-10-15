@@ -30,3 +30,5 @@ Lire CP01_LOT_001_010.md. Récupérer son archive privée par le nom du manifest
 Lot source 011–020 collecté et sauvegardé : lire CP01_LOT_011_020.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
 
 Lot source 021–030 collecté et sauvegardé : lire CP01_LOT_021_030.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
+
+Lot source 031–040 collecté et sauvegardé : lire CP01_LOT_031_040.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
