@@ -93,6 +93,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
                 : state.getInt("bp_requested_ayah", 1);
             baqaraPilot = new BaqaraPilotScreen(this, geometry, state, requestedAyah);
             baqaraPilot.display();
+            pagePreview = baqaraPilot.mushafForIntegrityCheck();
             return;
         }
         buildScreen();
@@ -617,7 +618,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
 
     @Override protected void onDestroy() {
         if (baqaraPilot != null) baqaraPilot.destroy();
-        if (pagePreview != null) pagePreview.destroySafely();
+        else if (pagePreview != null) pagePreview.destroySafely();
         super.onDestroy();
     }
 }
