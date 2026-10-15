@@ -51,7 +51,7 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
         // Two-line header (spec 23.8): title, then "Passage … · masque X %".
         LinearLayout titles=Ui.column(this);titles.setPadding(0,0,0,0);titles.setGravity(Gravity.CENTER);Ui.weight(titles,1f);
         TextView title=Ui.bookText(this,"Mémorisation libre",15f,true);title.setGravity(Gravity.CENTER);titles.addView(title);
-        selection = Ui.text(this,"",11.5f,false); selection.setTextColor(Ui.MUTED); selection.setGravity(Gravity.CENTER); selection.setSingleLine(true); titles.addView(selection);
+        selection = Ui.text(this,"",11.5f,false); selection.setTextColor(Ui.MUTED); selection.setGravity(Gravity.CENTER); selection.setMaxLines(2); titles.addView(selection);
         top.addView(titles);
         top.addView(new View(this),new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
         root.addView(top);
@@ -81,10 +81,10 @@ public final class FreeMemActivity extends android.app.Activity implements Musha
             if(k>0){TextView bar=Ui.text(this,"|",14,false);bar.setTextColor(Ui.LINE);masks.addView(bar);}
             Button b=new Button(this);b.setAllCaps(false);b.setText(String.valueOf(value));b.setTextSize(14f);
             b.setBackgroundColor(android.graphics.Color.TRANSPARENT);b.setStateListAnimator(null);b.setElevation(0f);
-            b.setMinWidth(Ui.dp(this,44));b.setMinimumWidth(Ui.dp(this,44));b.setMinHeight(Ui.dp(this,40));b.setMinimumHeight(Ui.dp(this,40));
+            b.setMinWidth(Ui.dp(this,48));b.setMinimumWidth(Ui.dp(this,48));b.setMinHeight(Ui.dp(this,48));b.setMinimumHeight(Ui.dp(this,48));
             b.setPadding(Ui.dp(this,6),0,Ui.dp(this,6),0);b.setContentDescription("Masque "+value+" %");
             b.setOnClickListener(v->{mask=value;save();mushaf.setMask(mask);updateSelectionLabel();updateMaskButtons();});
-            b.setTag(value);maskButtons.add(b);masks.addView(b,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,Ui.dp(this,40)));
+            b.setTag(value);maskButtons.add(b);masks.addView(b,new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,Ui.dp(this,48)));
         }
         root.addView(masks);
 

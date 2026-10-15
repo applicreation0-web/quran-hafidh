@@ -11,6 +11,8 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.quransafeguard.hifz.core.VerseRef;
+
 import org.junit.Test;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -188,7 +190,7 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
         }
     }
 
-    @Test public void weeklyProgramCanBeChosenDirectlyWithoutEngineCredit() {
+    @Test public void weeklyProgramAndFreeMemStayUsableWithoutEngineCredit() {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             scenario.onActivity(activity->{
@@ -213,6 +215,70 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
             saveScreenshot("audit-programme-dialogue.png");
             scenario.onActivity(activity->assertFalse("Schedule selector must not close MainActivity",activity.isFinishing()));
         }
+
+        Context context=ApplicationProvider.getApplicationContext();
+        android.content.SharedPreferences freeState=context.getSharedPreferences(
+            "free_mem_preview",Context.MODE_PRIVATE);
+        java.util.Map<String,?> originalFree=new java.util.HashMap<>(freeState.getAll());
+        try {
+            assertTrue(freeState.edit().clear().commit());
+            try(ActivityScenario<FreeMemActivity> free=ActivityScenario.launch(FreeMemActivity.class)) {
+                awaitMushafPage(free,"mushaf","Mémorisation libre avant sélection");
+                java.util.concurrent.atomic.AtomicReference<java.util.Map<String,?>> hifzBefore=
+                    new java.util.concurrent.atomic.AtomicReference<>();
+                free.onActivity(activity->{
+                    TextView caption=(TextView)reflect(activity,"selection");
+                    assertEquals("La légende doit pouvoir occuper deux lignes",2,caption.getMaxLines());
+                    @SuppressWarnings("unchecked")
+                    List<android.widget.Button> masks=(List<android.widget.Button>)reflect(activity,"maskButtons");
+                    assertEquals(5,masks.size());
+                    for(android.widget.Button button:masks) {
+                        assertTrue("Masque trop étroit",button.getMinimumWidth()>=Ui.dp(activity,48));
+                        assertTrue("Masque trop bas",button.getMinimumHeight()>=Ui.dp(activity,48));
+                    }
+                    hifzBefore.set(new java.util.HashMap<>(activity.getSharedPreferences(
+                        "quran_hifz_preview_v1",Context.MODE_PRIVATE).getAll()));
+                });
+                saveScreenshot("audit-cp04-memo-libre-avant.png");
+
+                free.onActivity(activity->{
+                    activity.onVerseTap(new VerseRef(1,1));
+                    activity.onVerseTap(new VerseRef(1,2));
+                    @SuppressWarnings("unchecked")
+                    List<android.widget.Button> masks=(List<android.widget.Button>)reflect(activity,"maskButtons");
+                    assertTrue(masks.get(3).performClick()); // 75 %
+                    View add=viewByDescription(activity.findViewById(android.R.id.content),
+                        "Ajouter une répétition");
+                    assertNotNull(add);
+                    assertTrue(add.performClick());
+                });
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                saveScreenshot("audit-cp04-memo-libre-apres.png");
+                free.recreate();
+                awaitMushafPage(free,"mushaf","Mémorisation libre reprise");
+                free.onActivity(activity->{
+                    assertEquals(75,((Integer)reflect(activity,"mask")).intValue());
+                    assertEquals(1,((Integer)reflect(activity,"count")).intValue());
+                    assertEquals(new VerseRef(1,1),reflect(activity,"start"));
+                    assertEquals(new VerseRef(1,2),reflect(activity,"end"));
+                    assertEquals("Mémorisation libre ne doit écrire aucun état Hifz",
+                        hifzBefore.get(),new java.util.HashMap<>(activity.getSharedPreferences(
+                            "quran_hifz_preview_v1",Context.MODE_PRIVATE).getAll()));
+                });
+            }
+        } finally {
+            android.content.SharedPreferences.Editor restore=freeState.edit().clear();
+            for(java.util.Map.Entry<String,?> entry:originalFree.entrySet()) {
+                Object value=entry.getValue();String key=entry.getKey();
+                if(value instanceof String)restore.putString(key,(String)value);
+                else if(value instanceof Integer)restore.putInt(key,(Integer)value);
+                else if(value instanceof Long)restore.putLong(key,(Long)value);
+                else if(value instanceof Boolean)restore.putBoolean(key,(Boolean)value);
+                else if(value instanceof Float)restore.putFloat(key,(Float)value);
+                else throw new AssertionError("Unknown free-memory state type: "+key);
+            }
+            assertTrue(restore.commit());
+        }
     }
 
     private static Object reflect(Object owner,String name) {
@@ -229,6 +295,19 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
             method.setAccessible(true);
             method.invoke(owner);
         } catch(Exception x) {throw new AssertionError("Cannot invoke runtime action "+name,x);}
+    }
+
+    private static View viewByDescription(View node,String description) {
+        CharSequence current=node.getContentDescription();
+        if(current!=null&&description.contentEquals(current))return node;
+        if(node instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group=(android.view.ViewGroup)node;
+            for(int i=0;i<group.getChildCount();i++) {
+                View found=viewByDescription(group.getChildAt(i),description);
+                if(found!=null)return found;
+            }
+        }
+        return null;
     }
 
     private static String resumedActivityName() {
