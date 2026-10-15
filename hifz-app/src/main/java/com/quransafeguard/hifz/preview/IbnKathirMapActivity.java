@@ -251,7 +251,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         mapColumn.removeAllViews();
         graphicalNodes.clear();
         // One hub and thirteen siblings, never a chained numbered passage list.
-        TextView hub=Ui.bookText(this, "AL-BAQARAH\\n13 THEMES · IBN ʿĀSHŪR", 15f, true);
+        TextView hub=Ui.bookText(this, "AL-BAQARAH\n13 THEMES · IBN ʿĀSHŪR", 15f, true);
         hub.setGravity(Gravity.CENTER);
         hub.setPadding(Ui.dp(this, 9),Ui.dp(this, 11),Ui.dp(this, 9),Ui.dp(this, 11));
         hub.setBackground(nodeBackground(false));
@@ -300,7 +300,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
             mapColumn.addView(row,rowParams);
         }
         TextView source=Ui.text(this,
-            "Thematic index adapted from Ibn Ashur via Quran.com.\\n"
+            "Thematic index adapted from Ibn Ashur via Quran.com.\n"
             + "Themes may overlap; All Passages preserves all 173 canonical blocks.",
             11.5f,false);
         source.setGravity(Gravity.CENTER);
@@ -353,16 +353,16 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
         IbnKathirGroupIndex.Group group = currentGroup();
         String title = IbnKathirQuranComPrivateTitles.approvedTitle(this, group);
         commentaryTitle.setText((title == null ? "Untitled passage" : title) +
-            "\\n" + group.navigationRange());
+            "\n" + group.navigationRange());
         IbnKathirFullCommentaryPrivate.Entry entry =
             IbnKathirFullCommentaryPrivate.load(this, group);
         if (entry == null) {
             commentaryBody.setText(
-                "Full Ibn Kathir commentary is not yet verified for this passage.\\n\\n" +
+                "Full Ibn Kathir commentary is not yet verified for this passage.\n\n" +
                 "No generated text or commentary from a different group will be substituted.");
         } else {
             commentaryBody.setText("Ibn Kathir — Darussalam, volume " +
-                entry.volume + ", page " + entry.page + "\\n\\n" + entry.text);
+                entry.volume + ", page " + entry.page + "\n\n" + entry.text);
         }
         mapScroll.setVisibility(View.GONE);
         commentaryScroll.setVisibility(View.VISIBLE);
