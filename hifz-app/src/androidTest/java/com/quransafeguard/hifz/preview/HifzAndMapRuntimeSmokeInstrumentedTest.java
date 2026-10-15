@@ -161,6 +161,27 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
             saveScreenshot("audit-cp08p-baqara-all-173-passages.png");
             largeMap.onActivity(activity->{
+                MushafView untouched=(MushafView)reflect(activity,"pagePreview");
+                TextView selectedCue=(TextView)reflect(activity,"previewCaption");
+                assertTrue("Only the selected cue header opens the offline commentary panel",
+                    selectedCue.performClick());
+                assertTrue((Boolean)reflect(activity,"commentaryOpen"));
+                assertEquals(View.GONE,((ScrollView)reflect(activity,"mapScroll")).getVisibility());
+                assertSame("Commentary must not recreate QCF MushafView",untouched,
+                    reflect(activity,"pagePreview"));
+                assertEquals(View.VISIBLE,
+                    ((ScrollView)reflect(activity,"commentaryScroll")).getVisibility());
+                assertTrue("No fabricated commentary when private pack is unavailable",
+                    ((TextView)reflect(activity,"commentaryBody")).getText().length()>0);
+                activity.onBackPressed();
+                assertFalse((Boolean)reflect(activity,"commentaryOpen"));
+                assertSame(untouched, reflect(activity,"pagePreview"));
+                assertEquals(View.VISIBLE,
+                    ((ScrollView)reflect(activity,"mapScroll")).getVisibility());
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            saveScreenshot("audit-cp08p-baqara-tafsir-panel-return.png");
+            largeMap.onActivity(activity->{
                 TextView tab=(TextView)reflect(activity,"themesTab");
                 assertTrue(tab.performClick());
                 assertEquals(13,((List<?>)reflect(activity,"graphicalNodes")).size());
