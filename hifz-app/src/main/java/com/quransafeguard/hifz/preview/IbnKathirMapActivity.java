@@ -29,6 +29,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     static final String EXTRA_SURAH = "mapSurah";
     static final String EXTRA_AYAH = "mapAyah";
 
+    private BaqaraPilotScreen baqaraPilot;
     private IbnKathirGroupIndex index;
     private GeometryRepository geometry;
     private int surah = 1;
@@ -86,6 +87,14 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
             selectedGroupIndex = IbnKathirMapModel.groupIndexForAyah(surah, ayah, index);
         }
         surah = Math.max(1, Math.min(114, surah));
+        if (surah == 2) {
+            int requestedAyah = state == null
+                ? getIntent().getIntExtra(EXTRA_AYAH, 1)
+                : state.getInt("bp_requested_ayah", 1);
+            baqaraPilot = new BaqaraPilotScreen(this, geometry, state, requestedAyah);
+            baqaraPilot.display();
+            return;
+        }
         buildScreen();
         showSurah(false);
     }
@@ -567,6 +576,13 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     @Override public void onPageSwipe(int delta) { turnPreviewPage(delta); }
 
     @Override protected void onSaveInstanceState(Bundle out) {
+        if (baqaraPilot != null) {
+            out.putInt("surah", 2);
+            out.putInt("bp_requested_ayah", 1);
+            baqaraPilot.save(out);
+            super.onSaveInstanceState(out);
+            return;
+        }
         scrollY = mapScroll == null ? scrollY : mapScroll.getScrollY();
         IbnKathirMapModel.SavedState saved = new IbnKathirMapModel.SavedState(
             surah, selectedGroupIndex, previewPage, scrollY);
@@ -584,6 +600,10 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     @Override public void onBackPressed() {
+        if (baqaraPilot != null) {
+            if (!baqaraPilot.handleBack()) super.onBackPressed();
+            return;
+        }
         if (commentaryOpen) {
             closeCommentary();
             return;
@@ -596,6 +616,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     @Override protected void onDestroy() {
+        if (baqaraPilot != null) baqaraPilot.destroy();
         if (pagePreview != null) pagePreview.destroySafely();
         super.onDestroy();
     }
