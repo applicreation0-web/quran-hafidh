@@ -87,6 +87,8 @@ while IFS= read -r file; do
     "$APP_ROOT/QuizQuestion.java" | \
     "$APP_ROOT/SemanticPassageRepository.java" | \
     "$APP_ROOT/SemanticTitlePopup.java" | \
+    "$APP_ROOT/MawdudiPassageIndex.java" | \
+    "$APP_ROOT/MawdudiMapModel.java" | \
     "$APP_ROOT/BaqaraPilotSpec.java" | \
     "$APP_ROOT/BaqaraAyahThemeTitles.java" | \
     "$APP_ROOT/BaqaraPilotScreen.java" | \
