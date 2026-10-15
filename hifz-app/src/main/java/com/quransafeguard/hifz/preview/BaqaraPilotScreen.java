@@ -153,9 +153,9 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         tafsirControls.setGravity(Gravity.CENTER_VERTICAL);
         tafsirControls.addView(returnToMap, new LinearLayout.LayoutParams(
             Ui.dp(host, 44), Ui.dp(host, 40)));
-        previousCommentaryVerse = Ui.iconButton(host, "", "Verset précédent de ce passage",
+        previousCommentaryVerse = Ui.iconButton(activity, "", "Verset précédent",
             v -> moveCommentaryVerse(-1));
-        nextCommentaryVerse = Ui.iconButton(host, "", "Verset suivant de ce passage",
+        nextCommentaryVerse = Ui.iconButton(activity, "", "Verset suivant",
             v -> moveCommentaryVerse(1));
         tafsirControls.addView(previousCommentaryVerse, new LinearLayout.LayoutParams(
             Ui.dp(host, 44), Ui.dp(host, 40)));
