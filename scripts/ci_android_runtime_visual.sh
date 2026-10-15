@@ -66,6 +66,7 @@ grep -Eq 'Status: ok|Status: timeout' audit-process-death-launch.txt
 adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
 run_process_death_phase b_verifyFixtureAfterExternalForceStop audit-process-death-verify.txt
 
+# Mandatory screenshots now target the 10-stage Mawdudi pilot, not retired 13-themes cards.
 # Screen evidence is mandatory. Keep test APK installed until copying pixels.
 mkdir -p audit-runtime-screens
 device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
@@ -87,9 +88,8 @@ for file in audit-lecture-mushaf.png \
             audit-cp03-carte-multipage.png \
             audit-cp03-carte-lecture.png \
             audit-cp03-carte-retour.png \
-            audit-cp08p-baqara-13-themes.png \
-            audit-cp08p-baqara-all-173-passages.png \
-            audit-cp08p-baqara-tafsir-panel-return.png \
+            audit-mawdudi-baqara-10-continuous-stages.png \
+            audit-mawdudi-baqara-compact-map-commentary-return.png \
             audit-cp04-memo-libre-avant.png \
             audit-cp04-memo-libre-apres.png; do
   test -s "audit-runtime-screens/$file"
