@@ -1,0 +1,13 @@
+{
+  "status": "PARTIAL_NO_SEMANTIC_PASS",
+  "verified_archives": [
+    {
+      "name": "MAWDUDI_CP01_REVIEW_105_114_PARTIAL_V1.zip",
+      "start": 105,
+      "end": 114,
+      "bytes": 71062,
+      "sha256": "7dc15274316a8b62452b54ddf402410f8d4571f8d68fe689bfed8a75b1adb116",
+      "restore_verified": true
+    }
+  ]
+}

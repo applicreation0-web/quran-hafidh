@@ -114,3 +114,7 @@ MAWDUDI_CP01_LOT_111_114_INTAKE.zip : 124893 octets ; SHA-256 `c50f754adacbbf2bc
 
 - MAWDUDI_CP01_REVIEW_095_104_PARTIAL_V1.zip : 40289 octets ; SHA-256 `0f40403a7482d5258cb97fa3cc2f8dd00f531d796bf2b782a733b037d13d611f` ; récupération vérifiée.
 - MAWDUDI_CP02_FIRST25_SOURCE_PREFLIGHT.zip : 187771 octets ; SHA-256 `aa920bbb5fec5d02abc2044dec45340e3260cfa3b1d1f480eacc0c21d5c61481` ; récupération vérifiée.
+
+## Révision105–114
+
+- MAWDUDI_CP01_REVIEW_105_114_PARTIAL_V1.zip : 71062 octets ; SHA-256 `7dc15274316a8b62452b54ddf402410f8d4571f8d68fe689bfed8a75b1adb116` ; récupération vérifiée.
