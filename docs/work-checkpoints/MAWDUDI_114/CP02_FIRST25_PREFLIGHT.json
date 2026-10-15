@@ -1,0 +1,777 @@
+{
+  "status": "STRUCTURAL_PREFLIGHT_ONLY",
+  "expected_total_historical": 556,
+  "historical_total_revalidated": false,
+  "new_full_text_passes": 0,
+  "rows": [
+    {
+      "global_ordinal": 1,
+      "section_id": "s001sec001",
+      "surah": 1,
+      "section_number": 1,
+      "start": 1,
+      "end": 7,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=1&verse=1&to=7",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_1.html",
+        "EPUB/page_2.html",
+        "EPUB/page_3.html",
+        "EPUB/page_4.html"
+      ],
+      "raw_evidence_sha256": "b332ff4e3a8ccbd33853ba313066d4f391d699325b8e791f63f2579d294a34a1",
+      "passage_links": [
+        "s001a001b007"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "REVIEWED_WITH_CONFIRMED_OCR_DEFECTS",
+      "notes_audit": "MISSING_EDITOR_FOOTNOTE_AFTER_NOTE_4_VS_WEB_EDITION",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 2,
+      "section_id": "s002sec001",
+      "surah": 2,
+      "section_number": 1,
+      "start": 1,
+      "end": 7,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=1&to=7",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_9.html",
+        "EPUB/page_10.html",
+        "EPUB/page_11.html",
+        "EPUB/page_12.html"
+      ],
+      "raw_evidence_sha256": "b74e52ed8c90d12fa561ac50c957ab728c03f7a0a4b0fa875abeaeffbee89198",
+      "passage_links": [
+        "s002a001b005",
+        "s002a006b007"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 3,
+      "section_id": "s002sec002",
+      "surah": 2,
+      "section_number": 2,
+      "start": 8,
+      "end": 20,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=8&to=20",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_12.html",
+        "EPUB/page_13.html",
+        "EPUB/page_14.html",
+        "EPUB/page_15.html"
+      ],
+      "raw_evidence_sha256": "714e7babce3f7fc1804cf6af32703966aaa535e37304af1c2054dd0cde651515",
+      "passage_links": [
+        "s002a008b016",
+        "s002a017b020"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 4,
+      "section_id": "s002sec003",
+      "surah": 2,
+      "section_number": 3,
+      "start": 21,
+      "end": 29,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=21&to=29",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_16.html",
+        "EPUB/page_17.html",
+        "EPUB/page_18.html",
+        "EPUB/page_19.html",
+        "EPUB/page_20.html"
+      ],
+      "raw_evidence_sha256": "bfc62468ca1614432270ec679ebf8062e45b419e3e79b4ef30d1fa43bb5b9a8d",
+      "passage_links": [
+        "s002a021b022",
+        "s002a023b024",
+        "s002a025b025",
+        "s002a026b027",
+        "s002a028b029"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 5,
+      "section_id": "s002sec004",
+      "surah": 2,
+      "section_number": 4,
+      "start": 30,
+      "end": 39,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=30&to=39",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_20.html",
+        "EPUB/page_21.html",
+        "EPUB/page_22.html",
+        "EPUB/page_23.html",
+        "EPUB/page_24.html",
+        "EPUB/page_25.html",
+        "EPUB/page_26.html",
+        "EPUB/page_27.html"
+      ],
+      "raw_evidence_sha256": "1520b040451524153cf25c89ea2c27017b25a9d1bd5c95b1749496ae32137959",
+      "passage_links": [
+        "s002a030b030",
+        "s002a031b033",
+        "s002a034b035",
+        "s002a036b036",
+        "s002a037b037",
+        "s002a038b039"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 6,
+      "section_id": "s002sec005",
+      "surah": 2,
+      "section_number": 5,
+      "start": 40,
+      "end": 46,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=40&to=46",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_27.html",
+        "EPUB/page_28.html",
+        "EPUB/page_29.html",
+        "EPUB/page_30.html",
+        "EPUB/page_31.html"
+      ],
+      "raw_evidence_sha256": "b171acf2667ffbeb99a4851ab9b6b91a51399daa7a65eba49d55e39fa842cd38",
+      "passage_links": [
+        "s002a040b043",
+        "s002a044b044",
+        "s002a045b046"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 7,
+      "section_id": "s002sec006",
+      "surah": 2,
+      "section_number": 6,
+      "start": 47,
+      "end": 59,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=47&to=59",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_31.html",
+        "EPUB/page_32.html",
+        "EPUB/page_33.html",
+        "EPUB/page_34.html",
+        "EPUB/page_35.html"
+      ],
+      "raw_evidence_sha256": "80ed8e143448b96db6759b7b5d44ababe0ff3f91b478cc2f5aef34b14c617290",
+      "passage_links": [
+        "s002a047b048",
+        "s002a049b050",
+        "s002a051b052",
+        "s002a053b054",
+        "s002a055b057",
+        "s002a058b059"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 8,
+      "section_id": "s002sec007",
+      "surah": 2,
+      "section_number": 7,
+      "start": 60,
+      "end": 61,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=60&to=61",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_35.html",
+        "EPUB/page_36.html",
+        "EPUB/page_37.html"
+      ],
+      "raw_evidence_sha256": "b175a5cb463f9e66170ee82f2f69c4b36ff71fb1e5119e86990a3365d1e5c8b8",
+      "passage_links": [
+        "s002a060b060",
+        "s002a061b061"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 9,
+      "section_id": "s002sec008",
+      "surah": 2,
+      "section_number": 8,
+      "start": 62,
+      "end": 71,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=62&to=71",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_37.html",
+        "EPUB/page_38.html",
+        "EPUB/page_39.html",
+        "EPUB/page_40.html"
+      ],
+      "raw_evidence_sha256": "09d3606139979457c7e149f674e8410237f09f2d27bf998e0d15b3e51073eca4",
+      "passage_links": [
+        "s002a062b062",
+        "s002a063b064",
+        "s002a065b066",
+        "s002a067b071"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 10,
+      "section_id": "s002sec009",
+      "surah": 2,
+      "section_number": 9,
+      "start": 72,
+      "end": 82,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=72&to=82",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_41.html",
+        "EPUB/page_42.html",
+        "EPUB/page_43.html",
+        "EPUB/page_44.html"
+      ],
+      "raw_evidence_sha256": "b6751e53930cc04daa484fb9618f39d8d3959933a2581783fe2d63fef3d8b8e9",
+      "passage_links": [
+        "s002a072b074",
+        "s002a075b077",
+        "s002a078b079",
+        "s002a080b082"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 11,
+      "section_id": "s002sec010",
+      "surah": 2,
+      "section_number": 10,
+      "start": 83,
+      "end": 86,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=83&to=86",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_44.html",
+        "EPUB/page_45.html",
+        "EPUB/page_46.html"
+      ],
+      "raw_evidence_sha256": "d7f5702a41d821ae15733e6d2b2ac1f1cdfee45a6df5d08c657f970db70eac34",
+      "passage_links": [
+        "s002a083b083",
+        "s002a084b086"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 12,
+      "section_id": "s002sec011",
+      "surah": 2,
+      "section_number": 11,
+      "start": 87,
+      "end": 96,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=87&to=96",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_46.html",
+        "EPUB/page_47.html",
+        "EPUB/page_48.html",
+        "EPUB/page_49.html",
+        "EPUB/page_50.html",
+        "EPUB/page_51.html"
+      ],
+      "raw_evidence_sha256": "d4d258847ffe3051d4f6aff4532569a6255ca00b6c86f2816d831cb109b0acf5",
+      "passage_links": [
+        "s002a087b088",
+        "s002a089b090",
+        "s002a091b092",
+        "s002a093b093",
+        "s002a094b096"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 13,
+      "section_id": "s002sec012",
+      "surah": 2,
+      "section_number": 12,
+      "start": 97,
+      "end": 103,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=97&to=103",
+      "section_title": null,
+      "missing_ayah_labels": [
+        97,
+        98,
+        99,
+        100
+      ],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_51.html",
+        "EPUB/page_52.html",
+        "EPUB/page_53.html"
+      ],
+      "raw_evidence_sha256": "191b12339bd7cab230a7bcf6d8442a3d0c828920c514952cabd785c213760cc5",
+      "passage_links": [
+        "s002a097b098",
+        "s002a099b100",
+        "s002a101b103"
+      ],
+      "label_preflight": "UNRESOLVED_LABELS",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 14,
+      "section_id": "s002sec013",
+      "surah": 2,
+      "section_number": 13,
+      "start": 104,
+      "end": 112,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=104&to=112",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_53.html",
+        "EPUB/page_54.html",
+        "EPUB/page_55.html",
+        "EPUB/page_56.html"
+      ],
+      "raw_evidence_sha256": "ddb2fe9682b6e98e5b69a20636e1e67db7c381b341c65c91a06c1d089a62279b",
+      "passage_links": [
+        "s002a104b105",
+        "s002a106b107",
+        "s002a108b108",
+        "s002a109b109",
+        "s002a110b110",
+        "s002a111b112"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 15,
+      "section_id": "s002sec014",
+      "surah": 2,
+      "section_number": 14,
+      "start": 113,
+      "end": 121,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=113&to=121",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_56.html",
+        "EPUB/page_57.html",
+        "EPUB/page_58.html",
+        "EPUB/page_59.html"
+      ],
+      "raw_evidence_sha256": "e695022285e53b61271b694449bfa886bc65b67bc6a3e5e064e6019c1f7c7ea3",
+      "passage_links": [
+        "s002a113b113",
+        "s002a114b114",
+        "s002a115b115",
+        "s002a116b117",
+        "s002a118b119",
+        "s002a120b121"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 16,
+      "section_id": "s002sec015",
+      "surah": 2,
+      "section_number": 15,
+      "start": 122,
+      "end": 129,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=122&to=129",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_60.html",
+        "EPUB/page_61.html",
+        "EPUB/page_62.html",
+        "EPUB/page_63.html",
+        "EPUB/page_64.html"
+      ],
+      "raw_evidence_sha256": "18a766ea94e813dca83f17526fabdb2457daceccaa9c9656db5b9f248942bc4c",
+      "passage_links": [
+        "s002a122b123",
+        "s002a124b124",
+        "s002a125b126",
+        "s002a127b129"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 17,
+      "section_id": "s002sec016",
+      "surah": 2,
+      "section_number": 16,
+      "start": 130,
+      "end": 141,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=130&to=141",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_64.html",
+        "EPUB/page_65.html",
+        "EPUB/page_66.html",
+        "EPUB/page_67.html",
+        "EPUB/page_68.html",
+        "EPUB/page_69.html",
+        "EPUB/page_70.html"
+      ],
+      "raw_evidence_sha256": "f3ccb21037c8bb3ac697c098fd9a1c7aae9b3a987e8362ee5e31dd53c2a9d0a4",
+      "passage_links": [
+        "s002a130b132",
+        "s002a133b133",
+        "s002a134b134",
+        "s002a135b135",
+        "s002a136b137",
+        "s002a138b138",
+        "s002a139b141"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 18,
+      "section_id": "s002sec017",
+      "surah": 2,
+      "section_number": 17,
+      "start": 142,
+      "end": 147,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=142&to=147",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_70.html",
+        "EPUB/page_71.html",
+        "EPUB/page_72.html",
+        "EPUB/page_73.html",
+        "EPUB/page_74.html",
+        "EPUB/page_75.html"
+      ],
+      "raw_evidence_sha256": "be91ebae9cc41cabb496022f5e735c1b9ff24a642230e7d7eb29d2cbc66f3436",
+      "passage_links": [
+        "s002a142b142",
+        "s002a143b143",
+        "s002a144b147"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 19,
+      "section_id": "s002sec018",
+      "surah": 2,
+      "section_number": 18,
+      "start": 148,
+      "end": 151,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=148&to=151",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_75.html",
+        "EPUB/page_76.html"
+      ],
+      "raw_evidence_sha256": "d7f2964fce8733e892705b8a4c21a6b1429f63eae2c7f6507d34ae1f2b321556",
+      "passage_links": [
+        "s002a148b152"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 20,
+      "section_id": "s002sec019",
+      "surah": 2,
+      "section_number": 19,
+      "start": 152,
+      "end": 163,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=152&to=163",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_76.html",
+        "EPUB/page_77.html",
+        "EPUB/page_78.html",
+        "EPUB/page_79.html",
+        "EPUB/page_80.html",
+        "EPUB/page_81.html"
+      ],
+      "raw_evidence_sha256": "926a66a19ff52a28895e5f403d4f2d6b7fa8486a462b99e53ab4de49164aa4a9",
+      "passage_links": [
+        "s002a148b152",
+        "s002a153b153",
+        "s002a154b154",
+        "s002a155b157",
+        "s002a158b158",
+        "s002a159b163"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 21,
+      "section_id": "s002sec020",
+      "surah": 2,
+      "section_number": 20,
+      "start": 164,
+      "end": 167,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=164&to=167",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_81.html",
+        "EPUB/page_82.html",
+        "EPUB/page_83.html"
+      ],
+      "raw_evidence_sha256": "deda0c501a4d33ed906cc54305c4e4999c64e7795385792266e1d06f6c9f4f69",
+      "passage_links": [
+        "s002a164b164",
+        "s002a165b167"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 22,
+      "section_id": "s002sec021",
+      "surah": 2,
+      "section_number": 21,
+      "start": 168,
+      "end": 176,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=168&to=176",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_83.html",
+        "EPUB/page_84.html",
+        "EPUB/page_85.html",
+        "EPUB/page_86.html"
+      ],
+      "raw_evidence_sha256": "ef4d71868d1bb1de007f95e42c458c1fc00c7725a6d7f46cdb153a2732559868",
+      "passage_links": [
+        "s002a168b169",
+        "s002a170b171",
+        "s002a172b173",
+        "s002a174b176"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 23,
+      "section_id": "s002sec022",
+      "surah": 2,
+      "section_number": 22,
+      "start": 177,
+      "end": 182,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=177&to=182",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_87.html",
+        "EPUB/page_88.html",
+        "EPUB/page_89.html",
+        "EPUB/page_90.html"
+      ],
+      "raw_evidence_sha256": "7435acd669af538b65fea78d22752ad80796a1e8a190c39cbba72a9da154244c",
+      "passage_links": [
+        "s002a177b177",
+        "s002a178b179",
+        "s002a180b182"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 24,
+      "section_id": "s002sec023",
+      "surah": 2,
+      "section_number": 23,
+      "start": 183,
+      "end": 188,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=183&to=188",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_90.html",
+        "EPUB/page_91.html",
+        "EPUB/page_92.html",
+        "EPUB/page_93.html",
+        "EPUB/page_94.html",
+        "EPUB/page_95.html",
+        "EPUB/page_96.html"
+      ],
+      "raw_evidence_sha256": "28c12b33fba975b95304e6471c3183184d74967120c0490bdac37a2b06a68148",
+      "passage_links": [
+        "s002a183b184",
+        "s002a185b185",
+        "s002a186b186",
+        "s002a187b187",
+        "s002a188b188"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    },
+    {
+      "global_ordinal": 25,
+      "section_id": "s002sec024",
+      "surah": 2,
+      "section_number": 24,
+      "start": 189,
+      "end": 196,
+      "source_url": "https://www.islamicstudies.info/quran/towards.php?sura=2&verse=189&to=196",
+      "section_title": null,
+      "missing_ayah_labels": [],
+      "ambiguous_ayah_labels": [],
+      "members": [
+        "EPUB/page_96.html",
+        "EPUB/page_97.html",
+        "EPUB/page_98.html",
+        "EPUB/page_99.html",
+        "EPUB/page_100.html",
+        "EPUB/page_101.html",
+        "EPUB/page_102.html"
+      ],
+      "raw_evidence_sha256": "5e5aac22e31c2d56ea017b52c2b5c252d2f2219c15db9468d3e712fa7f0d0622",
+      "passage_links": [
+        "s002a189b189",
+        "s002a190b193",
+        "s002a194b194",
+        "s002a195b195",
+        "s002a196b196"
+      ],
+      "label_preflight": "LABELS_PRESENT_NOT_TEXT_VALIDATED",
+      "body_audit": "NOT_PASSED",
+      "notes_audit": "NOT_PASSED",
+      "edition_match": "UNVERIFIED",
+      "rights": "UNVERIFIED"
+    }
+  ]
+}

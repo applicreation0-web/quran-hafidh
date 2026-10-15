@@ -1,0 +1,21 @@
+{
+  "status": "PARTIAL_NOT_FINAL_APPROVAL",
+  "verified_archives": [
+    {
+      "name": "MAWDUDI_CP01_REVIEW_095_104_PARTIAL_V1.zip",
+      "start": 95,
+      "end": 104,
+      "bytes": 40289,
+      "sha256": "0f40403a7482d5258cb97fa3cc2f8dd00f531d796bf2b782a733b037d13d611f",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP02_FIRST25_SOURCE_PREFLIGHT.zip",
+      "start": 1,
+      "end": 25,
+      "bytes": 187771,
+      "sha256": "aa920bbb5fec5d02abc2044dec45340e3260cfa3b1d1f480eacc0c21d5c61481",
+      "restore_verified": true
+    }
+  ]
+}
