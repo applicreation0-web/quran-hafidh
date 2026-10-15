@@ -140,14 +140,33 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
                     .putExtra(IbnKathirMapActivity.EXTRA_AYAH,286))) {
             awaitMushafPage(largeMap,"pagePreview","Grande sourate Al-Baqara");
             largeMap.onActivity(activity->{
+                List<?> themes=(List<?>)reflect(activity,"graphicalNodes");
+                assertEquals("Ibn Ashur Al-Baqarah overview must show 13 sourced themes",
+                    13,themes.size());
+                assertEquals(-1,((Integer)reflect(activity,"themeChoice")).intValue());
+                assertEquals(173,IbnKathirGroupIndex.shared().groupsForSurah(2).size());
+            });
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+            saveScreenshot("audit-cp08p-baqara-13-themes.png");
+            largeMap.onActivity(activity->{
+                TextView tab=(TextView)reflect(activity,"allPassagesTab");
+                assertTrue("All Passages tab must open complete corpus",tab.performClick());
                 List<?> nodes=(List<?>)reflect(activity,"graphicalNodes");
+                assertEquals("All 173 Ibn Kathir canonical groups must be reachable",
+                    173,nodes.size());
                 int selected=(Integer)reflect(activity,"selectedGroupIndex");
-                assertTrue("Al-Baqara must exercise a large graphical map",nodes.size()>50);
                 View node=(View)nodes.get(selected);
                 ((ScrollView)reflect(activity,"mapScroll")).scrollTo(0,node.getTop());
             });
             InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            saveScreenshot("audit-cp03-carte-grande-sourate.png");
+            saveScreenshot("audit-cp08p-baqara-all-173-passages.png");
+            largeMap.onActivity(activity->{
+                TextView tab=(TextView)reflect(activity,"themesTab");
+                assertTrue(tab.performClick());
+                assertEquals(13,((List<?>)reflect(activity,"graphicalNodes")).size());
+                // The real QCF view survives switching between both map modes.
+                assertNotNull(reflect(activity,"pagePreview"));
+            });
         }
     }
 
