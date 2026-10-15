@@ -18,3 +18,7 @@ Définir ces deux variables avec les chemins réels de la source privée et d’
 8. Pour 109 labels non reconnus, conserver la preuve/source et ne jamais compléter par IA ou une substitution globale. Les crochets de la sourate 9 sont déjà gérés ; ne pas les réauditer comme des omissions.
 9. SOURCE_PRECHECK_FINDINGS.json contient les anomalies d’index 2/19/54/55. Aucune correction de bornes ou de titres n’est approuvée.
 10. Préserver les moteurs Hifz, QCF et l’officielle. Aucun texte protégé, identifiant privé, APK ou secret dans GitHub/CI publics. CP-02 à CP-07 restent NON EXÉCUTÉS.
+
+## Actualisation : stockage disponible
+
+CP00_CLOSURE.md remplace les étapes de levée de quota ci-dessus : archive privée sauvegardée, récupérée et contrôlée. Reprendre CP-01 lot 001–010 au premier élément non terminé, sans refaire l’inventaire acquis. Les identifiants du paquet sont dans le reçu privé uniquement.

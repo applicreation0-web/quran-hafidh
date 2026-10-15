@@ -20,3 +20,9 @@ Aucun de ces runs ne prouve la présence d’un corpus Mawdudi final ni une rece
 - Diff app/hifz-app/chatgpt depuis le HEAD de départ : vide. Aucun test Android/JVM/runtime nouveau, aucun APK.
 - Écriture initiale GitHub par git push : refus automatique avant publication, puis échec d’authentification shell après expurgation. Sauvegarde expurgée réussie par connecteur GitHub au commit 9354af43 et relue à distance.
 - Sauvegarde privée ZIP : FAIL (quota de stockage), aucune persistance nouvelle revendiquée.
+
+## Reprise après libération d’espace
+
+- Nouvelle sauvegarde privée : PASS ; récupération et empreintes : PASS.
+- Simulation isolée depuis le paquet récupéré : PASS ; JSON égal au résultat historique. Aucun nouveau PASS éditorial.
+- Vérification CI de branche : toujours runs 38738763440 / 38738763412 / 38738763463 au HEAD applicatif 00fb6986 ; historiques.

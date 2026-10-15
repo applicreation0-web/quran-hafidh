@@ -10,3 +10,7 @@
 ## Nouvelle tentative de sauvegarde
 
 Checkpoint privé local : 7 942 544 octets ; SHA-256 `120acb9664b3176c3f3548cb8cbf3fad95cc2107bfa2ba527184ea6ddd74efe8`. Sauvegarde durable REFUSÉE : `library_storage_limit_exceeded`. Aucun nouvel identifiant durable confirmé. Le chemin local n’est pas une preuve de persistance.
+
+## Sauvegarde après libération d’espace — RÉUSSIE
+
+QURAN_HAAFIDH_MAWDUDI_CP00_REPRISE.zip : 4 952 389 octets ; SHA-256 `661c3decba27030ad8c9c632da8b053a8aa57474efe9f7436d5d0a0cc53083c9`. Récupération indépendante et SHA source vérifiés. Le paquet de 7 942 544 octets antérieur n’a pas été enregistré ; ne pas confondre les deux. Référence récupérable : nom exact ci-dessus, identifiant dans le reçu privé seulement.

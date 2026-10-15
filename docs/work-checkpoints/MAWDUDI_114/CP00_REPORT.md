@@ -47,3 +47,7 @@ Conformément à H0.2, CP-00 n’est pas déclaré sauvegardé intégralement et
 4. Exécuter la procédure reproductible de HANDOVER_REPRISE.md ; comparer le JSON aux résultats déjà acquis, ne pas recommencer l’exploration.
 5. Clôturer CP-00 seulement après preuve de persistance, puis CP-01 lot 001–010 et sauvegarde avant 011. Traiter les 109 labels comme dossiers éditoriaux ; collecte complémentaire ciblée, jamais 114 téléchargements redondants.
 6. CP-02 à CP-07 restent NON EXÉCUTÉS ; ne pas reprendre les anciens CP comme des validations du nouveau produit.
+
+## Mise à jour postérieure — blocage de stockage levé
+
+La sauvegarde privée a désormais réussi, avec récupération, empreintes et simulation isolée vérifiées. Voir CP00_CLOSURE.md ; les constats éditoriaux ci-dessus restent ouverts. L’échec initial est conservé pour l’historique.

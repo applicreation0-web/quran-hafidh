@@ -5,9 +5,9 @@ CP-00,epub_crc_sha,PASS,EPUB_STRUCTURAL_AUDIT.json
 CP-00,114_headings_inventory,PASS_STRUCTURE_ONLY,EPUB_114_LABEL_INVENTORY.csv
 CP-00,109_unresolved_labels,A CONTROLER,EPUB_UNRESOLVED_109.csv
 CP-00,audit_tool_8_tests,PASS,CI_TEST_LEDGER.md
-CP-00,new_private_checkpoint,BLOQUE_STORAGE_FULL,CP00_REPORT.md
-CP-00,private_restore_simulation,NON EXECUTE,CP00_REPORT.md
-CP-01,editorial_lot_001_010,NON EXECUTE,
+CP-00,new_private_checkpoint,PASS,CP00_CLOSURE.md
+CP-00,private_restore_simulation,PASS,CP00_CLOSURE.md
+CP-01,editorial_lot_001_010,EN COURS,
 CP-02,commentary_556,NON EXECUTE,
 CP-03,qcf_coordinates,NON EXECUTE,
 CP-04,interface,NON EXECUTE,
