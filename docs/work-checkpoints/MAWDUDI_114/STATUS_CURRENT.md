@@ -1,10 +1,11 @@
 # Mawdudi 114 — état courant
 
-2026-10-15. CP-00 TERMINÉ : sauvegarde privée réussie, archive récupérée et empreintes vérifiées, simulation isolée reproductible. Voir CP00_CLOSURE.md.
+2026-10-15. CP-00 TERMINÉ et sauvegardé : commit `38345c1e9af3102e0c4d4f998c580037e99fb833`, récupération et simulation isolée vérifiées.
+CP-01 EN COURS : lot 001–010 collecté et sauvegardé, revue éditoriale partielle.
 
-HEAD de reprise vérifié : `be47a9d1ff863880d57fb7b54153d7ee04b4f52f`. Le commit de clôture suit sur la même branche.
-CP-01 EN COURS : premier lot sourates 001–010, aucun PASS éditorial annoncé.
+449 notices source ; 450 passages de travail ; couverture numérique 1473/1473 ayat du lot. 72 unités macro lues dans les introductions ; 10 ouvertures revues pour le titre seulement. 44 cas terminologiques à contrôler.
+Aucun PASS éditorial intégral du lot et aucun PASS QCF/texte/commentaires.
 
-Acquis conservés : 114 en-têtes, 6127 labels ayah reconnus, 109 non résolus dans 37 sourates ; huit tests synthétiques de l’outil.
-Prochain travail : index Ayah Themes du lot 001–010, introductions et bornes sourcées, contrôle des ouvertures ; sauvegarde par lot.
-CP-02 à CP-07 NON EXÉCUTÉS. Aucun code applicatif modifié, aucun APK Mawdudi final.
+Dernier paquet privé : MAWDUDI_CP01_LOT_001_010_INTAKE.zip (référence, taille et SHA dans le manifeste expurgé ; identifiant privé hors GitHub).
+Suite : contrôle sémantique détaillé des titres acquis et acquisition des index 011–020, sauvegarde avant de dépasser dix nouvelles sourates.
+CP-02 à CP-07 NON EXÉCUTÉS ; aucun code Android modifié, aucun APK nouveau.

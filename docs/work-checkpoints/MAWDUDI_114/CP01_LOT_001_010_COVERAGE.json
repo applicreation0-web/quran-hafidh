@@ -1,0 +1,176 @@
+[
+  {
+    "surah": 1,
+    "source_notice_count": 1,
+    "navigation_passages": 1,
+    "covered_ayahs": 7,
+    "expected_ayahs": 7,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-001.json",
+        "sha256": "cd78e429eb5fe87fe690a30c5c93abb6f87af3052ea7dda936941533b19887e1"
+      }
+    ]
+  },
+  {
+    "surah": 2,
+    "source_notice_count": 141,
+    "navigation_passages": 142,
+    "covered_ayahs": 286,
+    "expected_ayahs": 286,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-002.json",
+        "sha256": "25ea8ae4e1aac4410b2e3c4713af6e7dc480e8dcc441433ee00170ed73d0c3d8"
+      }
+    ]
+  },
+  {
+    "surah": 3,
+    "source_notice_count": 59,
+    "navigation_passages": 59,
+    "covered_ayahs": 200,
+    "expected_ayahs": 200,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-003.json",
+        "sha256": "35e4526f665795520658ddd7da518bafe3dd58a2d81a0ff94753d5908c7fd9d4"
+      }
+    ]
+  },
+  {
+    "surah": 4,
+    "source_notice_count": 63,
+    "navigation_passages": 63,
+    "covered_ayahs": 176,
+    "expected_ayahs": 176,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-004.json",
+        "sha256": "e450e69da6818256bb1df6a8861996a14d7ed8eb8cb971b56b5772e58fb8a441"
+      }
+    ]
+  },
+  {
+    "surah": 5,
+    "source_notice_count": 37,
+    "navigation_passages": 37,
+    "covered_ayahs": 120,
+    "expected_ayahs": 120,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-005.json",
+        "sha256": "ba916ba79e0f10449fbc9ebc3bbf06bef9a1ba6c7c7828bb5688c0dc12f94065"
+      }
+    ]
+  },
+  {
+    "surah": 6,
+    "source_notice_count": 40,
+    "navigation_passages": 40,
+    "covered_ayahs": 165,
+    "expected_ayahs": 165,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-006.json",
+        "sha256": "6b787fd09ad52f2e3e0c008044fbd35008e7c8f6b92f9bd7f3db18a61acd2051"
+      }
+    ]
+  },
+  {
+    "surah": 7,
+    "source_notice_count": 39,
+    "navigation_passages": 39,
+    "covered_ayahs": 206,
+    "expected_ayahs": 206,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-007.json",
+        "sha256": "916c786b1f1627b7496c92893123bb0d6ba902bc6af646eb6656ce0dfcb0f9ac"
+      }
+    ]
+  },
+  {
+    "surah": 8,
+    "source_notice_count": 14,
+    "navigation_passages": 14,
+    "covered_ayahs": 75,
+    "expected_ayahs": 75,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-008-tail.json",
+        "sha256": "de6d801899f7f57df73b30b3f4c7acbdf9d3d6742f783a69a3687490f15db4fb"
+      },
+      {
+        "name": "web-008.json",
+        "sha256": "a6cad67f27b6a198df50f9292a1d05e48d6310103b0525b3dad788e8caa74785"
+      }
+    ]
+  },
+  {
+    "surah": 9,
+    "source_notice_count": 31,
+    "navigation_passages": 31,
+    "covered_ayahs": 129,
+    "expected_ayahs": 129,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-009.json",
+        "sha256": "6a21e5a9a3b89d58fd83536602d1f850884debf2fe89eb28b8ee75acd5d51a2a"
+      }
+    ]
+  },
+  {
+    "surah": 10,
+    "source_notice_count": 24,
+    "navigation_passages": 24,
+    "covered_ayahs": 109,
+    "expected_ayahs": 109,
+    "gap_verses": [],
+    "duplicates": [],
+    "capture_complete": true,
+    "editorial_status": "IN_PROGRESS",
+    "snapshot_hashes": [
+      {
+        "name": "web-010.json",
+        "sha256": "2bc51ba1aa3bc79f911e12dfc0d99f7254c1e9e4c617e1bda5e1d26807fde553"
+      }
+    ]
+  }
+]

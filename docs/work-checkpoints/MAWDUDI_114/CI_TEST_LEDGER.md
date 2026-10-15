@@ -26,3 +26,7 @@ Aucun de ces runs ne prouve la présence d’un corpus Mawdudi final ni une rece
 - Nouvelle sauvegarde privée : PASS ; récupération et empreintes : PASS.
 - Simulation isolée depuis le paquet récupéré : PASS ; JSON égal au résultat historique. Aucun nouveau PASS éditorial.
 - Vérification CI de branche : toujours runs 38738763440 / 38738763412 / 38738763463 au HEAD applicatif 00fb6986 ; historiques.
+
+## CP-01 lot 001–010
+
+Captures complètes : PASS de collecte ; couverture numérique 1473/1473 : PASS de contrôle de bornes. Archive privée sauvegardée/récupérée/hash : PASS. Revue de tous les titres, terminologie, texte et QCF : EN COURS ou NON EXÉCUTÉ selon les matrices. Aucun test Android nouveau.

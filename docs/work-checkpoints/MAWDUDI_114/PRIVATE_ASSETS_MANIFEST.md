@@ -14,3 +14,7 @@ Checkpoint privé local : 7 942 544 octets ; SHA-256 `120acb9664b3176c3f3548cb8c
 ## Sauvegarde après libération d’espace — RÉUSSIE
 
 QURAN_HAAFIDH_MAWDUDI_CP00_REPRISE.zip : 4 952 389 octets ; SHA-256 `661c3decba27030ad8c9c632da8b053a8aa57474efe9f7436d5d0a0cc53083c9`. Récupération indépendante et SHA source vérifiés. Le paquet de 7 942 544 octets antérieur n’a pas été enregistré ; ne pas confondre les deux. Référence récupérable : nom exact ci-dessus, identifiant dans le reçu privé seulement.
+
+## CP-01 lot 001–010 — collecte / revue partielle
+
+MAWDUDI_CP01_LOT_001_010_INTAKE.zip : 188 000 octets ; SHA-256 `94d65b9317c14d17b2e803c9a94b1cd69022ce1e104c05b954dfde1eff6b216e`. Sauvegarde et récupération vérifiées. 28 membres, dont manifestes, index source et de travail, introductions, ouvertures et queue terminologique.

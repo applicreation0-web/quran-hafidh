@@ -22,3 +22,7 @@ Définir ces deux variables avec les chemins réels de la source privée et d’
 ## Actualisation : stockage disponible
 
 CP00_CLOSURE.md remplace les étapes de levée de quota ci-dessus : archive privée sauvegardée, récupérée et contrôlée. Reprendre CP-01 lot 001–010 au premier élément non terminé, sans refaire l’inventaire acquis. Les identifiants du paquet sont dans le reçu privé uniquement.
+
+## Reprise CP-01
+
+Lire CP01_LOT_001_010.md. Récupérer son archive privée par le nom du manifeste et l’identifiant du reçu privé ; vérifier son SHA. Les CSV publics fournissent les IDs et bornes, jamais les titres. Aucun titre ne doit être recréé à partir d’un ID. Contrôler les éléments encore PENDING ; ne pas compter la collecte comme une validation finale des dix sourates.
