@@ -48,3 +48,5 @@ Lot source 091–100 collecté et sauvegardé : lire CP01_LOT_091_100.md, contr�
 Lot source 101–110 collecté et sauvegardé : lire CP01_LOT_101_110.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
 
 Lot source 111–114 collecté et sauvegardé : lire CP01_LOT_111_114.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.
+
+Parcours canonique de travail : lire CP01_CANONICAL_DRAFT_AUDIT.json et PASSAGE_INDEX_PUBLIC.csv. 1053 IDs couvrent 6236 ayat ; ce résultat numérique ne vaut pas validation éditoriale. Les douze archives NAV_DRAFT restaurées constituent les données privées correspondantes.

@@ -62,3 +62,18 @@ MAWDUDI_CP01_LOT_101_110_INTAKE.zip : 91965 octets ; SHA-256 `52f22de51d138fa6f3
 ## CP-01 lot 111–114
 
 MAWDUDI_CP01_LOT_111_114_INTAKE.zip : 124893 octets ; SHA-256 `c50f754adacbbf2bc579e55b5dc271aa7fa79ea8d9796a852f444c432905b61f`. Sauvegarde et récupération vérifiées ; index, introductions et queues privées. Référence privée uniquement dans le reçu privé.
+
+## Parcours de travail — 12 lots restaurés
+
+- MAWDUDI_CP01_LOT_001_010_NAV_DRAFT.zip : 32411 octets ; SHA-256 `bad90747f3b63bf76ebb14ddbcd3011ad7d7dc4ee8cb9a04820ef9c3ff5836e1` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_011_020_NAV_DRAFT.zip : 14463 octets ; SHA-256 `f91274bd25809f87105b3f1618a0127c52d20833d5244a671a8bba311236d964` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_021_030_NAV_DRAFT.zip : 13558 octets ; SHA-256 `d187cb0bb75f4849c9b04d7d0dfb9f84c355c847f6c9cab4d5f7367fc87a5b01` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_031_040_NAV_DRAFT.zip : 10895 octets ; SHA-256 `3a0080701615d89f085327e62d90aa8d447bb819d510e0aa9de362e346075db1` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_041_050_NAV_DRAFT.zip : 7573 octets ; SHA-256 `60e7e4f9960f0eb1ec1fb9f6af9c38f66fa67e6952cccbfd17b00dbe4cf37da4` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_051_060_NAV_DRAFT.zip : 6425 octets ; SHA-256 `2f691201b83b0a57566634956b959978ace90846d8f303c77dfbee598ad85ea1` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_061_070_NAV_DRAFT.zip : 4005 octets ; SHA-256 `55f14360667579e37990a3da15585d853b2a1777b891f2c22990389a3981d6d0` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_071_080_NAV_DRAFT.zip : 4161 octets ; SHA-256 `a2225a856bbb861455e30aa263d1dd24b6387136a14eee1f088ed5f4d62aa30d` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_081_090_NAV_DRAFT.zip : 2913 octets ; SHA-256 `365b8b7e5e78fdc0ff64d3817ea20e1f958be62022b077428c641557b17d1153` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_091_100_NAV_DRAFT.zip : 2586 octets ; SHA-256 `828ab86e6f4850f8153210fd94fbf7dcd5ce2345ceb26da3365a7a55ff1b2917` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_101_110_NAV_DRAFT.zip : 2554 octets ; SHA-256 `91e543310429de0605615b75cdb6ab4795592606818e6119e31895144455cbc0` ; récupération vérifiée.
+- MAWDUDI_CP01_LOT_111_114_NAV_DRAFT.zip : 1678 octets ; SHA-256 `bdf93f00375086cf226694bf11b65b5fc9a4c4e67e57d8cb7e9f0bb00b5ed3a0` ; récupération vérifiée.
