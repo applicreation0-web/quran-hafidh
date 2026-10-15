@@ -139,3 +139,7 @@ Private persistent Library folder `MAWDUDI_WORK_CONTINUATION_2026-10-15` (no tok
 ## CP02 original-scan metadata saved 2026-10-15
 
 Persistent Library folder `/MAWDUDI_WORK_CONTINUATION_2026-10-15` holds `CP02_OCR_SCAN_RECONCILIATION_V1.json` (109 candidate cases, metadata only), `CP02_BROWSER_SCAN_FIRST5_REVIEW_PRIVATE.json`, `mawdudi_ocr_page_reconcile.py`, `test_mawdudi_ocr_page_reconcile.py`, and five label observations. Sources remain unchanged. Browser scans are an OCR corroboration step, NOT an independent editorial edition nor reproduction permission. The new public repository retains only tool code, safe tests and aggregate source-reference metadata.
+
+## CP02 private 19-page OCR recovery work packet
+
+`/MAWDUDI_WORK_CONTINUATION_2026-10-15/CP02_PRIVATE_OCR_RECOVERY_CANDIDATES_19_PAGES.zip` (134,875 bytes, SHA256 `012d19ee1d16e2175fe62121bd7f9e496ae41ad4b343c14b264faec9a598fb23`) saved and ZIP CRC independently checked. Contains 19 hOCR-page text DRAFTS, word bounding boxes/confidence and per-page original EPUB SHA-256 / extracted page SHA-256. PRIVATE; never publish to GitHub, public CI or releases. `CP02_HOCR_EPUB_RETENTION_1210_METADATA.json`, retention and packet-building scripts stored in the same private Library folder. Original EPUB and MHT unchanged. This archive is NOT certified English commentary nor rights evidence.

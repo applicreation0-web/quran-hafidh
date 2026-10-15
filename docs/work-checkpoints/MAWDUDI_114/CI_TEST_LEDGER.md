@@ -73,3 +73,7 @@ Commit `872fac3479af70bac3581b0568f4261b33c66927` changes ONLY MawdudiMapModel.l
 ## CP02 EPUB/hOCR safe locator — 15 October 2026
 
 Six synthetic Python tests passed locally; CI step added to audit-only workflow and must be checked on its new HEAD. Original EPUB and user-provided hOCR metadata: 109 cases, 44 exact hOCR word labels, 107 cases <=5 candidate scan pages. Five browser scan candidates examined; 2 visible and 3 not confirmed. No source prose exported, 0 textual editorial approvals and 0 automated repairs. Previous two JVM+Hifz CI runs PASS on af238389. This new change MUST obtain its own CI PASS before promoting.
+
+## CP02 1210-page retention / QCF pilot correction — 15 October 2026
+
+New code-only metadata audit `scripts/mawdudi_hocr_epub_retention.py` and five synthetic regression tests (5/5 local PASS); existing six scan-locator tests (6/6 local PASS). Baseline CI for fcd1b786: audit PASS and instrumented Android PASS, separately recorded. Commit de07de56 adds the retention tool and fixes the Al-Baqarah pilot's last-page calculation via shared MawdudiMapModel; new audit, CP08P staging, and Android CI initiated on de07de56 — outcomes must be checked before PASS claims. 1210 real pages compared privately; 19 severe/high source OCR loss candidates, 1189 without major differences, 1 review, 1 low-evidence; 41 previously absent EPUB verse labels on the high-risk pages. No proof of correct notes, verified prose or rights; no private sources uploaded publicly.
