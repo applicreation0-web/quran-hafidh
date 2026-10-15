@@ -81,3 +81,7 @@ New code-only metadata audit `scripts/mawdudi_hocr_epub_retention.py` and five s
 ## CP03/CP04 reversible navigation model (8cc1f02a)
 
 Added read-only MawdudiMapModel.Navigation and Snapshot, plus two JVM tests using 1,053 real canonical passages, all 114 surahs and real QCF geometry. This is new code, NOT a completed UI or release. Prior commit de07de56: audit CI PASS, CP08P staging PASS, Android regression PASS. CI on 8cc1f02a initiated and remains PENDING at this checkpoint; do not reuse prior PASS. No private editorial content included.
+
+## f61c6aaa — Jalalayn reused, CI pending
+
+Three fresh workflows triggered on `f61c6aaae327d94eb76d503c8a6d40c815c01602` : existing audit `38803559641`, Android regression `38803559861`, CP08P staging `38803559657`. Latest observed all in_progress/queued; **not PASS** until completed. Functional device interaction with note rendering, passage next/previous, BOOX hardware **NOT EXECUTED**. Prior `d5c3bfd2` CI green is independent historical evidence, not evidence of this code.
