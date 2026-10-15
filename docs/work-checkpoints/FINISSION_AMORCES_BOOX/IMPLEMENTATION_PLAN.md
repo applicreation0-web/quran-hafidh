@@ -55,7 +55,7 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
 - [x] **CP-04 — Visuel et Mémorisation libre.** Auditer les 23 pictogrammes et
   les zones tactiles, ajouter les assertions d’indépendance de Mémorisation
   libre, corriger uniquement les écarts prouvés et produire des captures.
-- [ ] **CP-05 — Non-régression.** Exécuter les suites pertinentes et la matrice
+- [x] **CP-05 — Non-régression.** Exécuter les suites pertinentes et la matrice
   fonctionnelle sans rejouer automatiquement M8 ; geler le HEAD candidat.
 - [ ] **CP-06 — Debug privé BOOX.** Reconstruire localement le corpus depuis le
   chiffré avec la clé privée, construire/signifier l’APK du HEAD CP-05, vérifier

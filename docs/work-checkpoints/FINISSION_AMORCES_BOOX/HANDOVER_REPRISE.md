@@ -38,9 +38,13 @@ concerné n’a changé.
 5. Exécuter seulement le test interrompu ou invalidé par un changement.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
-CP-04 est PASS au commit `54f9a825caf0966572d26506b018a39bb7ecadf3`
-(CI source/JVM `38690267562`, Android `38690267503`, preuves Android
-`11951608972`, copie durable `libfile_5a9485b8e3908191be0dcf0e18d932ae`).
-La reprise exacte est CP-05 : ouvrir `CP05_NON_REGRESSION.md`, geler le HEAD
-candidat et compléter seulement les contrôles bloquants non déjà couverts,
-sans toucher aux moteurs Hifz, M7-B, M8, Quiz ou QUL.
+CP-05 est PASS au commit `f22bfcdd8ff66860c55828eac27cc5738fad0fba`.
+L'arbre applicatif gelé `92cb64b26c43d61db4e4605139fb6a725781fec6`
+est celui déjà validé par les CI CP-04 `38690267562` et `38690267503` ; CP-05
+n'a modifié que deux harnais locaux et n'a pas rejoué M8.
+
+La reprise exacte est CP-06 : ouvrir `CP06_APK_PRIVE_FINAL.md` et
+`CP00_ETAT_INITIAL.md`, localiser sans les afficher les entrées privées AEAD et
+M9, vérifier le certificat, reconstruire les huit chunks hors dépôt, puis
+compiler/signifier l'unique APK depuis le HEAD CP-05. Ne jamais envoyer le
+corpus clair, la clé, le mot de passe ou l'APK vers un artefact GitHub public.

@@ -7,7 +7,7 @@
 | [CP-02](CP02_PROGRESSION_REVISIONS_DIMANCHE.md) | PASS | `22d4d43eb28715936c73eae93af1e05de6bc5c10` | promotions Sabqi/Itqān vers active + redémarrage |
 | [CP-03](CP03_CARTE_SEMANTIQUE.md) | PASS | `709ec47908d3bcdc4f6db1d31a6fa65edebb4f77` | CI source/JVM + Android 98/98, 5 captures carte |
 | [CP-04](CP04_VISUEL_MEMORISATION_LIBRE.md) | PASS | `54f9a825caf0966572d26506b018a39bb7ecadf3` | 23 icônes + Mémorisation libre indépendante, 2 captures |
-| CP-05 | NON COMMENCÉ | — | matrice finale |
+| [CP-05](CP05_NON_REGRESSION.md) | PASS | `f22bfcdd8ff66860c55828eac27cc5738fad0fba` | arbre app gelé + matrice ciblée PASS |
 | CP-06 | NON COMMENCÉ | — | APK, signature et SHA-256 |
 | CP-07 | NON COMMENCÉ | — | bilan BOOX |
 
