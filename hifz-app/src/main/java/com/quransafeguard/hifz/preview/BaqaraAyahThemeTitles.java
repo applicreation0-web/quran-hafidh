@@ -43,7 +43,6 @@ final class BaqaraAyahThemeTitles {
 
     /** Fail closed when a private file is absent or invalid: NEVER substitute Ibn Kathir titles. */
     static List<Passage> load(Context context) {
-        ArrayList<Passage> passages = new ArrayList<>();
         try (InputStream in = context.getAssets().open(ASSET);
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             byte[] buffer = new byte[8192];
@@ -53,7 +52,19 @@ final class BaqaraAyahThemeTitles {
                 if (size > 160000) throw new IllegalStateException("Unexpected title-pack size");
                 out.write(buffer, 0, read);
             }
-            JSONObject pack = new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
+            return parseUnapprovedDraft(out.toString(StandardCharsets.UTF_8.name()));
+        } catch (Exception invalidOrMissing) {
+            return Collections.singletonList(new Passage(1, 286,
+                "PRIVATE AYAH THEMES TITLES NOT INSTALLED — NOT A USER DEBUG", false));
+        }
+    }
+
+    /** Validates source labels and bounds, never editorial truth. This private draft
+     * may not self-approve titles: future approvals require an independently
+     * reviewed manifest instead of fields supplied by the title pack itself. */
+    static List<Passage> parseUnapprovedDraft(String raw) throws Exception {
+        ArrayList<Passage> passages = new ArrayList<>();
+        JSONObject pack = new JSONObject(raw);
             if (pack.getInt("surah") != 2 || !"Ayah Themes".equals(pack.getString("source")))
                 throw new IllegalStateException("Wrong English navigation corpus");
             JSONArray rows = pack.getJSONArray("passages");
@@ -70,7 +81,8 @@ final class BaqaraAyahThemeTitles {
                 if (first > expectedStart)
                     passages.add(new Passage(expectedStart, first - 1,
                         "Title under source verification", false));
-                passages.add(new Passage(first, last, title, true));
+                // Structurally readable != source-corroborated or semantically approved.
+                passages.add(new Passage(first, last, title, false));
                 expectedStart = last + 1;
             }
             if (expectedStart <= 286)
@@ -80,9 +92,5 @@ final class BaqaraAyahThemeTitles {
                     || passages.get(passages.size() - 1).last != 286)
                 throw new IllegalStateException("Incomplete range");
             return Collections.unmodifiableList(passages);
-        } catch (Exception invalidOrMissing) {
-            return Collections.singletonList(new Passage(1, 286,
-                "PRIVATE AYAH THEMES TITLES NOT INSTALLED — NOT A USER DEBUG", false));
-        }
     }
 }
