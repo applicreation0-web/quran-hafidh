@@ -1,0 +1,76 @@
+{
+  "schema": "mawdudi-bookreader-page-alignment-public-v2",
+  "count_user_scans": 11,
+  "offset": -1,
+  "examples": [
+    {
+      "reader": 581,
+      "epub": 582,
+      "missing": [
+        "7:202"
+      ]
+    },
+    {
+      "reader": 960,
+      "epub": 961,
+      "missing": [
+        "16:59",
+        "16:60"
+      ]
+    },
+    {
+      "reader": 1072,
+      "epub": 1073,
+      "missing": [
+        "18:55",
+        "18:56"
+      ]
+    }
+  ],
+  "epub_high_risk_pages": [
+    50,
+    110,
+    215,
+    228,
+    288,
+    344,
+    362,
+    482,
+    549,
+    582,
+    960,
+    961,
+    993,
+    1009,
+    1032,
+    1073,
+    1106,
+    1124,
+    1143
+  ],
+  "reader_high_risk_pages": [
+    49,
+    109,
+    214,
+    227,
+    287,
+    343,
+    361,
+    481,
+    548,
+    581,
+    959,
+    960,
+    992,
+    1008,
+    1031,
+    1072,
+    1105,
+    1123,
+    1142
+  ],
+  "screenshots_uploaded_to_github": false,
+  "protected_commentary_transcribed": false,
+  "source_text_approved": false,
+  "note": "Original reader screenshots were compared visually to internal EPUB page names; reported missing verse numbers are not final validation of commentary notes."
+}

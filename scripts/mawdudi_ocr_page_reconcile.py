@@ -18,6 +18,12 @@ from zipfile import ZipFile
 
 EPUB_SHA = '8d0a4c5a34bdc8404900b8b61b8a93d633c7984f3497fe74a9d846adfa454bba'
 BOOK_URL = 'https://archive.org/details/towards-understanding-quran-maududi/page/n{}/mode/1up'
+
+def reader_page_for_epub_member(page):
+    """BookReader displayed page n(K) maps to EPUB/page_(K+1).html."""
+    if type(page) is not int or not 1 <= page <= 3116:
+        raise ValueError('invalid EPUB page for reader')
+    return page - 1
 REF = re.compile(r'[\[(](\d{1,3})\s*:\s*(\d{1,3})[\])]')
 HEADING = re.compile(r'^(\d{1,3})[.,]?\s+(?:Sura(?:h)?\s+|(?=An Nahl\b))', re.I)
 PAGE = re.compile(r'EPUB/page_(\d+)\.html')
@@ -88,18 +94,21 @@ def classify_case(surah, ayah, pages, hocr, browser=None):
         candidates=exact_epub;kind='EPUB_EXACT_REQUIRES_IMAGE'
     else:
         candidates=list(range(left,right+1));kind='EPUB_BRACKET_REQUIRES_IMAGE'
-    if not candidates or candidates[0]<0 or candidates[-1]>3116:
+    if not candidates or candidates[0]<1 or candidates[-1]>3116:
         raise ValueError('No usable reader-page candidates')
     if any(p not in [x['page'] for x in pages] for p in candidates) and kind!='HOCR_EXACT_REQUIRES_IMAGE':
         raise ValueError('candidate outside chapter pages')
     visual=(browser or {}).get('status','NOT_EXECUTED')
     if visual not in {'NOT_EXECUTED','VISIBLE_IN_BROWSER_VIEW','NOT_SEEN_IN_BROWSER_VIEW','UNCERTAIN'}:
         raise ValueError('Unknown visual evidence state')
-    if visual!='NOT_EXECUTED' and (browser or {}).get('page') not in candidates:
-        raise ValueError('Visual page does not match candidate location')
+    reader_pages=[reader_page_for_epub_member(page) for page in candidates]
+    if visual!='NOT_EXECUTED' and (browser or {}).get('page') not in reader_pages:
+        raise ValueError('Visual BookReader page does not match candidate EPUB page')
     return {'surah':surah,'ayah':ayah,'case_id':f'EPUB-LABEL-{surah:03d}-{ayah:03d}',
       'ocr_status':hocr['status'],'index_mode':kind,'candidate_pages':candidates,
-      'bookreader_urls':[BOOK_URL.format(x) for x in candidates[:12]],
+      'bookreader_pages':reader_pages,
+      'bookreader_page_offset':-1,
+      'bookreader_urls':[BOOK_URL.format(x) for x in reader_pages[:12]],
       'epub_exact_pages':exact_epub,'hocr_exact_pages':hocr_pages,
       'browser_visual_state':visual,'browser_page':(browser or {}).get('page'),
       'scan_alignment':'CANDIDATE_ONLY','commentary_body':'NOT_VERIFIED',
@@ -126,13 +135,15 @@ def reconcile(epub,hocr_cases,issues,observations):
         records.append(record)
     statuses=Counter(r['index_mode'] for r in records)
     visual=Counter(r['browser_visual_state'] for r in records)
-    return {'schema':'mawdudi-ocr-scan-review-v1','epub_sha256':EPUB_SHA,
+    return {'schema':'mawdudi-ocr-scan-review-v2','epub_sha256':EPUB_SHA,
       'hocr_sha256':src.get('source_hocr_sha256'), 'total':109,
       'page_candidates_le_5':sum(len(r['candidate_pages'])<=5 for r in records),
       'modes':dict(statuses),'visual_evidence':dict(visual),
       'approved_source_text':0,'auto_repairs':0,
       'copyrighted_passages_embedded':False,
-      'warning':'Browser non-detection is not proof of absence; OCR hits do not prove translation/notes or license.',
+      'bookreader_alignment':'EPUB/page_N.html -> BookReader n(N-1), checked on 11 user scan photos',
+      'legacy_browser_observations':'RECHECK_REQUIRED',
+      'warning':'EPUB indexes differ from BookReader display; non-detection is not proof of absence; OCR hits do not prove translation/notes or license.',
       'cases':records}
 
 def main():
