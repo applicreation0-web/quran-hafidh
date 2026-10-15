@@ -1,0 +1,11 @@
+checkpoint,lot,status,evidence
+CP-00,initial_git_inventory,PASS,CP00_INITIAL_INVENTORY.json
+CP-00,epub_integrity,PASS,PRIVATE_ASSETS_MANIFEST.md
+CP-00,edition_and_completeness,EN COURS,
+CP-01,editorial_114,NON EXÉCUTÉ,
+CP-02,commentary_556,NON EXÉCUTÉ,
+CP-03,qcf_coordinates,NON EXÉCUTÉ,
+CP-04,interface,NON EXÉCUTÉ,
+CP-05,regression,NON EXÉCUTÉ,
+CP-06,final_apk,NON EXÉCUTÉ,
+CP-07,delivery,NON EXÉCUTÉ,
