@@ -477,6 +477,9 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         out.putBoolean("bp_expanded", mushafExpanded);
     }
 
+    /** Expose the same real QCF view for existing runtime integrity tests. */
+    MushafView mushafForIntegrityCheck() { return mushaf; }
+
     void destroy() {
         if (mushaf != null) mushaf.destroySafely();
     }
