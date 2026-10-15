@@ -86,6 +86,59 @@ public final class MawdudiMapModelRealQcfTest {
         assertEquals(2,nav.passage().surah);
         assertEquals(1,nav.passage().firstAyah);
     }
+    @Test public void jalalaynFocusStaysInsideEveryCanonicalPassageOnRealQcf() throws Exception {
+        MawdudiPassageIndex index=MawdudiPassageIndex.parse(read(
+            "hifz-app/src/main/assets/mawdudi_public/passages_v1.csv",
+            "src/main/assets/mawdudi_public/passages_v1.csv"));
+        GeometryRepository g=GeometryRepository.fromJson(read(
+            "app/src/main/assets/reader109/geometry.json",
+            "../app/src/main/assets/reader109/geometry.json"));
+        MawdudiMapModel.Navigation nav=new MawdudiMapModel.Navigation(index,g,1,1);
+        int checked=0;
+        for(MawdudiPassageIndex.Passage passage:index.all()) {
+            nav.selectVerse(passage.surah,passage.lastAyah);
+            assertSame(passage,nav.passage());
+            assertEquals(passage.lastAyah,nav.commentaryAyah());
+            assertEquals(passage.surah,nav.commentaryVerse().getSurah());
+            assertEquals(passage.lastAyah,nav.readerJumpVerse().getAyah());
+            assertEquals(g.pageForVerse(new VerseRef(passage.surah,passage.lastAyah)),nav.page());
+            assertFalse("Must not leave passage via Tafsir arrow",nav.moveCommentaryVerse(1));
+            if(passage.firstAyah!=passage.lastAyah) {
+                assertTrue(nav.moveCommentaryVerse(-1));
+                assertEquals(passage.lastAyah-1,nav.commentaryAyah());
+            } else assertFalse(nav.moveCommentaryVerse(-1));
+            nav.setCommentaryOpen(true);
+            nav.setMapScrollY(31);
+            nav.setCommentaryScrollY(18);
+            MawdudiMapModel.Snapshot snap=nav.snapshot();
+            nav.movePassage(1);
+            nav.restore(snap);
+            assertEquals(snap.commentaryAyah,nav.commentaryAyah());
+            assertEquals(snap.page,nav.page());
+            assertEquals(31,nav.mapScrollY());
+            assertEquals(18,nav.commentaryScrollY());
+            assertTrue(nav.commentaryOpen());
+            checked++;
+        }
+        assertEquals(1053,checked);
+    }
+
+    @Test public void staleCommentaryVerseOrPassageBoundaryFailsClosed() throws Exception {
+        MawdudiPassageIndex index=MawdudiPassageIndex.parse(read(
+            "hifz-app/src/main/assets/mawdudi_public/passages_v1.csv",
+            "src/main/assets/mawdudi_public/passages_v1.csv"));
+        GeometryRepository g=GeometryRepository.fromJson(read(
+            "app/src/main/assets/reader109/geometry.json",
+            "../app/src/main/assets/reader109/geometry.json"));
+        MawdudiMapModel.Navigation nav=new MawdudiMapModel.Navigation(index,g,2,97);
+        MawdudiPassageIndex.Passage p=nav.passage();
+        int invalid=p.lastAyah+1;
+        try{nav.setCommentaryVerse(invalid);fail();}catch(IllegalArgumentException expected){}
+        try{nav.restore(new MawdudiMapModel.Snapshot(p.id,p.ordinal,nav.page(),
+            0,0,true,invalid));fail();}catch(IllegalArgumentException expected){}
+        try{nav.moveCommentaryVerse(2);fail();}catch(IllegalArgumentException expected){}
+    }
+
     @Test public void staleSnapshotFailsClosedInsteadOfJumpingToWrongVerse() throws Exception {
         MawdudiPassageIndex index=MawdudiPassageIndex.parse(read(
             "hifz-app/src/main/assets/mawdudi_public/passages_v1.csv",

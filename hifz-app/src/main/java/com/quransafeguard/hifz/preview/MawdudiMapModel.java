@@ -57,6 +57,7 @@ final class MawdudiMapModel {
         private int page;
         private int mapScrollY;
         private int commentaryScrollY;
+        private int commentaryAyah;
         private boolean commentaryOpen;
 
         Navigation(MawdudiPassageIndex index, GeometryRepository geometry, int surah, int ayah) {
@@ -70,17 +71,40 @@ final class MawdudiMapModel {
         int page() { return page; }
         int mapScrollY() { return mapScrollY; }
         int commentaryScrollY() { return commentaryScrollY; }
+        int commentaryAyah() { return commentaryAyah; }
+        VerseRef commentaryVerse() { return new VerseRef(current.surah,commentaryAyah); }
         boolean commentaryOpen() { return commentaryOpen; }
         void setMapScrollY(int y) { mapScrollY=Math.max(0,y); }
         void setCommentaryScrollY(int y) { commentaryScrollY=Math.max(0,y); }
         void setCommentaryOpen(boolean value) { commentaryOpen=value; }
-        void selectVerse(int surah,int ayah) { select(index.at(surah,ayah)); }
+        /** A reader verse returns to that same real QCF word/verse, never to a
+         *  nearby passage start. This is a map selection, not Hifz credit. */
+        void selectVerse(int surah,int ayah) {
+            select(index.at(surah,ayah));
+            setCommentaryVerse(ayah);
+        }
+        void setCommentaryVerse(int ayah) {
+            if (!current.contains(ayah))
+                throw new IllegalArgumentException("Tafsir verse outside selected passage");
+            commentaryAyah=ayah;
+            page=geometry.pageForVerse(new VerseRef(current.surah,ayah));
+            commentaryScrollY=0;
+        }
+        boolean moveCommentaryVerse(int direction) {
+            if (direction!=1 && direction!=-1)
+                throw new IllegalArgumentException("Tafsir step must be +/-1");
+            int desired=commentaryAyah+direction;
+            if (!current.contains(desired)) return false;
+            setCommentaryVerse(desired);
+            return true;
+        }
         void select(MawdudiPassageIndex.Passage passage) {
             if (passage==null || passage.ordinal<0 || passage.ordinal>=index.count()
                 || index.all().get(passage.ordinal)!=passage)
                 throw new IllegalArgumentException("foreign or missing canonical passage");
             current=passage;
             page=firstPage(passage,geometry);
+            commentaryAyah=passage.firstAyah;
             mapScrollY=0;
             commentaryScrollY=0;
             commentaryOpen=false;
@@ -109,11 +133,12 @@ final class MawdudiMapModel {
         VerseRef readerJumpVerse() {
             List<VerseRef> selected=highlighted();
             if(selected.isEmpty())throw new IllegalStateException("no QCF verses on passage page");
-            return selected.get(0);
+            VerseRef focused=commentaryVerse();
+            return selected.contains(focused) ? focused : selected.get(0);
         }
         Snapshot snapshot() {
             return new Snapshot(current.id,current.ordinal,page,mapScrollY,
-                    commentaryScrollY,commentaryOpen);
+                    commentaryScrollY,commentaryOpen,commentaryAyah);
         }
         /** Validate the same stable passage ID before restoring any reading position. */
         void restore(Snapshot saved) {
@@ -123,6 +148,10 @@ final class MawdudiMapModel {
             if(!candidate.id.equals(saved.id))
                 throw new IllegalArgumentException("stale canonical source; refuse silent re-target");
             select(candidate);
+            int restoredAyah=saved.commentaryAyah==0 ? candidate.firstAyah : saved.commentaryAyah;
+            if(!candidate.contains(restoredAyah))
+                throw new IllegalArgumentException("saved Tafsir verse outside canonical passage");
+            commentaryAyah=restoredAyah;
             page=clampPage(candidate,saved.page,geometry);
             mapScrollY=Math.max(0,saved.mapScrollY);
             commentaryScrollY=Math.max(0,saved.commentaryScrollY);
@@ -131,12 +160,16 @@ final class MawdudiMapModel {
     }
     static final class Snapshot {
         final String id;
-        final int ordinal,page,mapScrollY,commentaryScrollY;
+        final int ordinal,page,mapScrollY,commentaryScrollY,commentaryAyah;
         final boolean commentaryOpen;
         Snapshot(String id,int ordinal,int page,int mapY,int commentY,boolean open) {
+            this(id,ordinal,page,mapY,commentY,open,0); // older read-only snapshots
+        }
+        Snapshot(String id,int ordinal,int page,int mapY,int commentY,
+                 boolean open,int selectedAyah) {
             this.id=id;this.ordinal=ordinal;this.page=page;
             this.mapScrollY=mapY;this.commentaryScrollY=commentY;
-            this.commentaryOpen=open;
+            this.commentaryOpen=open;this.commentaryAyah=selectedAyah;
         }
     }
 
