@@ -42,7 +42,8 @@ final class BaqaraPilotScreen implements MushafView.Listener {
     private final IbnKathirMapActivity host;
     private final GeometryRepository geometry;
     private final List<BaqaraPilotSpec.Theme> themes;
-    private final List<BaqaraAyahThemeTitles.Passage> passages;
+    private List<BaqaraAyahThemeTitles.Passage> passages;
+    private final int initialAyah;
 
     private int theme = -1; // -1: global Maududi overview; >=0: Ayah Themes in one macro range.
     private int selectedIndex;
@@ -66,9 +67,10 @@ final class BaqaraPilotScreen implements MushafView.Listener {
                       int requestedAyah) {
         this.host = activity;
         this.geometry = geometry;
+        initialAyah = Math.max(1, Math.min(286, requestedAyah));
         themes = BaqaraPilotSpec.themes();
         passages = BaqaraAyahThemeTitles.load(activity);
-        selectedIndex = passageIndexForAyah(Math.max(1, Math.min(286, requestedAyah)));
+        selectedIndex = passageIndexForAyah(initialAyah);
         if (saved != null) {
             theme = Math.max(-1, Math.min(9, saved.getInt("bp_theme", -1)));
             selectedIndex = Math.max(0, Math.min(passages.size() - 1,
@@ -176,7 +178,22 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         caption.setClickable(true);
         caption.setFocusable(true);
         caption.setOnClickListener(v -> openCommentary());
-        preview.addView(caption);
+        LinearLayout cueNavigation = Ui.row(host);
+        cueNavigation.setGravity(Gravity.CENTER_VERTICAL);
+        TextView previousCue = Ui.bookText(host, "‹", 22f, true);
+        previousCue.setGravity(Gravity.CENTER);
+        previousCue.setContentDescription("Passage précédent");
+        previousCue.setOnClickListener(v -> movePassage(-1));
+        cueNavigation.addView(previousCue,
+            new LinearLayout.LayoutParams(Ui.dp(host, 36), Ui.dp(host, 40)));
+        cueNavigation.addView(caption, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView nextCue = Ui.bookText(host, "›", 22f, true);
+        nextCue.setGravity(Gravity.CENTER);
+        nextCue.setContentDescription("Passage suivant");
+        nextCue.setOnClickListener(v -> movePassage(1));
+        cueNavigation.addView(nextCue,
+            new LinearLayout.LayoutParams(Ui.dp(host, 36), Ui.dp(host, 40)));
+        preview.addView(cueNavigation);
 
         LinearLayout controls = Ui.row(host);
         controls.setGravity(Gravity.CENTER_VERTICAL);
@@ -202,6 +219,30 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         drawMap(false);
         if (commentaryOpen) displayCommentary();
         renderPreview();
+        if (BaqaraAyahThemeTitles.isMissing(passages)) loadOnlineTitles();
+    }
+
+    private void loadOnlineTitles() {
+        new Thread(() -> {
+            try {
+                List<BaqaraAyahThemeTitles.Passage> result =
+                    BaqaraAyahThemeTitles.fetchAndCache(host);
+                host.runOnUiThread(() -> {
+                    int chosenAyah = BaqaraAyahThemeTitles.isMissing(passages)
+                        ? initialAyah : chosen().first;
+                    passages = result;
+                    selectedIndex = passageIndexForAyah(chosenAyah);
+                    previewPage = 0;
+                    drawMap(false);
+                    renderPreview();
+                });
+            } catch (Exception sourceUnavailable) {
+                host.runOnUiThread(() -> {
+                    if (mapHeading != null && BaqaraAyahThemeTitles.isMissing(passages))
+                        mapHeading.setText("Titles unavailable · connect to internet");
+                });
+            }
+        }, "baqara-ayah-themes").start();
     }
 
     private void updateSplit() {
@@ -282,7 +323,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
             BaqaraAyahThemeTitles.Passage passage = passages.get(i);
             // A passage belongs to exactly one macro stage, by its first ayah.
             // Crossing a macro border NEVER truncates that actual ayah passage.
-            if (!area.contains(passage.first)) continue;
+            if (passage.last < area.first || passage.first > area.last) continue;
             final int position = i;
             boolean active = position == selectedIndex;
             LinearLayout row = Ui.row(host);
