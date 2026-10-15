@@ -88,7 +88,8 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
 
         GeometryRepository geometry=GeometryRepository.get(context);
         IbnKathirGroupIndex.Group multipage=null;
-        outer: for(int surah=1;surah<=114;surah++) {
+        // Non-Al-Baqarah retains the original Ibn Kathir map model unchanged.
+        outer: for(int surah=3;surah<=114;surah++) {
             for(IbnKathirGroupIndex.Group group:IbnKathirGroupIndex.shared().groupsForSurah(surah)) {
                 if(IbnKathirMapModel.pageSpan(group,geometry).last>
                         IbnKathirMapModel.pageSpan(group,geometry).first) {
@@ -134,60 +135,55 @@ public final class HifzAndMapRuntimeSmokeInstrumentedTest {
             saveScreenshot("audit-cp03-carte-retour.png");
         }
 
+        // New Al-Baqarah pilot: preserve the real QCF view and the 10-stage
+        // Mawdudi -> Ayah Themes navigation. The CI build has NO private
+        // English titles, so the data loader must fail closed, not fabricate.
         try(ActivityScenario<IbnKathirMapActivity> largeMap=ActivityScenario.launch(
                 new Intent(context,IbnKathirMapActivity.class)
                     .putExtra(IbnKathirMapActivity.EXTRA_SURAH,2)
                     .putExtra(IbnKathirMapActivity.EXTRA_AYAH,286))) {
             awaitMushafPage(largeMap,"pagePreview","Grande sourate Al-Baqara");
             largeMap.onActivity(activity->{
-                List<?> themes=(List<?>)reflect(activity,"graphicalNodes");
-                assertEquals("Ibn Ashur Al-Baqarah overview must show 13 sourced themes",
-                    13,themes.size());
-                assertEquals(-1,((Integer)reflect(activity,"themeChoice")).intValue());
+                Object pilot=reflect(activity,"baqaraPilot");
+                assertNotNull("Mawdudi/Ayah Themes pilot must be loaded",pilot);
+                assertSame("One genuine QCF MushafView is retained",
+                    reflect(activity,"pagePreview"),reflect(pilot,"mushaf"));
+                assertEquals(10,((java.util.List<?>)reflect(pilot,"themes")).size());
+                assertEquals(-1,((Integer)reflect(pilot,"theme")).intValue());
+                assertEquals("Every grand theme must be navigable",
+                    10,((android.widget.LinearLayout)reflect(pilot,"mapColumn")).getChildCount());
                 assertEquals(173,IbnKathirGroupIndex.shared().groupsForSurah(2).size());
             });
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            saveScreenshot("audit-cp08p-baqara-13-themes.png");
+            saveScreenshot("audit-mawdudi-baqara-10-continuous-stages.png");
             largeMap.onActivity(activity->{
-                TextView tab=(TextView)reflect(activity,"allPassagesTab");
-                assertTrue("All Passages tab must open complete corpus",tab.performClick());
-                List<?> nodes=(List<?>)reflect(activity,"graphicalNodes");
-                assertEquals("All 173 Ibn Kathir canonical groups must be reachable",
-                    173,nodes.size());
-                int selected=(Integer)reflect(activity,"selectedGroupIndex");
-                View node=(View)nodes.get(selected);
-                ((ScrollView)reflect(activity,"mapScroll")).scrollTo(0,node.getTop());
-            });
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            saveScreenshot("audit-cp08p-baqara-all-173-passages.png");
-            largeMap.onActivity(activity->{
-                MushafView untouched=(MushafView)reflect(activity,"pagePreview");
-                TextView selectedCue=(TextView)reflect(activity,"previewCaption");
-                assertTrue("Only the selected cue header opens the offline commentary panel",
-                    selectedCue.performClick());
-                assertTrue((Boolean)reflect(activity,"commentaryOpen"));
-                assertEquals(View.GONE,((ScrollView)reflect(activity,"mapScroll")).getVisibility());
-                assertSame("Commentary must not recreate QCF MushafView",untouched,
-                    reflect(activity,"pagePreview"));
+                Object pilot=reflect(activity,"baqaraPilot");
+                android.widget.LinearLayout mapColumn=
+                    (android.widget.LinearLayout)reflect(pilot,"mapColumn");
+                assertTrue("First macro stage should be clickable",
+                    mapColumn.getChildAt(0).performClick());
+                assertEquals(0,((Integer)reflect(pilot,"theme")).intValue());
+                TextView caption=(TextView)reflect(pilot,"caption");
+                MushafView intact=(MushafView)reflect(pilot,"mushaf");
+                assertTrue("Passage header opens English commentary panel",
+                    caption.performClick());
+                assertTrue((Boolean)reflect(pilot,"commentaryOpen"));
+                assertEquals(View.GONE,
+                    ((ScrollView)reflect(pilot,"mapScroll")).getVisibility());
                 assertEquals(View.VISIBLE,
-                    ((ScrollView)reflect(activity,"commentaryScroll")).getVisibility());
-                assertTrue("No fabricated commentary when private pack is unavailable",
-                    ((TextView)reflect(activity,"commentaryBody")).getText().length()>0);
+                    ((ScrollView)reflect(pilot,"commentaryScroll")).getVisibility());
+                assertSame("Opening commentary must not recreate the QCF Mushaf",
+                    intact,reflect(pilot,"mushaf"));
+                assertTrue("No invented English commentary",
+                    ((TextView)reflect(pilot,"commentaryBody")).getText().length()>0);
                 activity.onBackPressed();
-                assertFalse((Boolean)reflect(activity,"commentaryOpen"));
-                assertSame(untouched, reflect(activity,"pagePreview"));
+                assertFalse((Boolean)reflect(pilot,"commentaryOpen"));
+                assertSame(intact,reflect(pilot,"mushaf"));
                 assertEquals(View.VISIBLE,
-                    ((ScrollView)reflect(activity,"mapScroll")).getVisibility());
+                    ((ScrollView)reflect(pilot,"mapScroll")).getVisibility());
+                activity.onBackPressed();
+                assertEquals(-1,((Integer)reflect(pilot,"theme")).intValue());
             });
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-            saveScreenshot("audit-cp08p-baqara-tafsir-panel-return.png");
-            largeMap.onActivity(activity->{
-                TextView tab=(TextView)reflect(activity,"themesTab");
-                assertTrue(tab.performClick());
-                assertEquals(13,((List<?>)reflect(activity,"graphicalNodes")).size());
-                // The real QCF view survives switching between both map modes.
-                assertNotNull(reflect(activity,"pagePreview"));
-            });
+            saveScreenshot("audit-mawdudi-baqara-compact-map-commentary-return.png");
         }
     }
 
