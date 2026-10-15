@@ -210,30 +210,6 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         drawMap(false);
         if (commentaryOpen) displayCommentary();
         renderPreview();
-        if (BaqaraAyahThemeTitles.isMissing(passages)) loadOnlineTitles();
-    }
-
-    private void loadOnlineTitles() {
-        new Thread(() -> {
-            try {
-                List<BaqaraAyahThemeTitles.Passage> result =
-                    BaqaraAyahThemeTitles.fetchAndCache(host);
-                host.runOnUiThread(() -> {
-                    int chosenAyah = BaqaraAyahThemeTitles.isMissing(passages)
-                        ? initialAyah : chosen().first;
-                    passages = result;
-                    selectedIndex = passageIndexForAyah(chosenAyah);
-                    previewPage = 0;
-                    drawMap(false);
-                    renderPreview();
-                });
-            } catch (Exception sourceUnavailable) {
-                host.runOnUiThread(() -> {
-                    if (mapHeading != null && BaqaraAyahThemeTitles.isMissing(passages))
-                        mapHeading.setText("Titles unavailable · connect to internet");
-                });
-            }
-        }, "baqara-ayah-themes").start();
     }
 
     private void updateSplit() {
