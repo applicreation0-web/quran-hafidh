@@ -87,7 +87,9 @@ for file in audit-lecture-mushaf.png \
             audit-cp03-carte-multipage.png \
             audit-cp03-carte-lecture.png \
             audit-cp03-carte-retour.png \
-            audit-cp03-carte-grande-sourate.png \
+            audit-cp08p-baqara-13-themes.png \
+            audit-cp08p-baqara-all-173-passages.png \
+            audit-cp08p-baqara-tafsir-panel-return.png \
             audit-cp04-memo-libre-avant.png \
             audit-cp04-memo-libre-apres.png; do
   test -s "audit-runtime-screens/$file"
