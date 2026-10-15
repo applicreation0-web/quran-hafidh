@@ -34,6 +34,7 @@ public final class MawdudiMapModelRealQcfTest {
             int exactLast=g.line(g.lastLineIndex(last)).page;
             assertEquals(p.id,exactFirst,MawdudiMapModel.firstPage(p,g));
             assertEquals(p.id,exactLast,MawdudiMapModel.lastPage(p,g));
+            assertEquals(p.id,exactLast,MawdudiMapModel.lastPageForVerse(last,g));
             assertTrue(p.id,exactLast>=exactFirst);
             assertEquals(p.id,exactFirst,MawdudiMapModel.clampPage(p,-100,g));
             assertEquals(p.id,exactLast,MawdudiMapModel.clampPage(p,1000,g));

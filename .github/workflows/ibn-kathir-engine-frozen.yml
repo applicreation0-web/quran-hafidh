@@ -26,6 +26,8 @@ jobs:
           fetch-depth: 0
       - name: CP02 OCR source-safe metadata regression (no private inputs)
         run: python3 scripts/test_mawdudi_ocr_page_reconcile.py
+      - name: CP02 OCR retention regression (synthetic data only)
+        run: python3 scripts/test_mawdudi_hocr_epub_retention.py
       - name: Freeze all Hifz engines, core, persistence and Mushaf renderer
         shell: bash
         run: bash scripts/guard_frozen_hifz_engines.sh

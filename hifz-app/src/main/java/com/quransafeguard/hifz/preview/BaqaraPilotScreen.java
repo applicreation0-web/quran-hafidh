@@ -350,7 +350,9 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         return geometry.pageForVerse(new VerseRef(2, chosen().first));
     }
     private int pageEnd() {
-        return geometry.pageForVerse(new VerseRef(2, chosen().last));
+        // Share the real QCF final-line resolver with the 114-surah map model.
+        // pageForVerse() returns only the FIRST page of a verse.
+        return MawdudiMapModel.lastPageForVerse(new VerseRef(2, chosen().last), geometry);
     }
 
     private void renderPreview() {

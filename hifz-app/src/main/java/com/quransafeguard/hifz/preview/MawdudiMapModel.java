@@ -19,7 +19,10 @@ final class MawdudiMapModel {
         // A single ayah may continue onto the next QCF page. pageForVerse()
         // resolves its FIRST page and therefore clips the final page of a
         // passage. Resolve the actual last physical line instead.
-        VerseRef last = new VerseRef(p.surah, p.lastAyah);
+        return lastPageForVerse(new VerseRef(p.surah, p.lastAyah), g);
+    }
+    static int lastPageForVerse(VerseRef last, GeometryRepository g) {
+        if (last == null || g == null) throw new IllegalArgumentException("verse/geometry");
         return g.line(g.lastLineIndex(last)).page;
     }
     static int clampPage(MawdudiPassageIndex.Passage p,int desired,GeometryRepository g) {
