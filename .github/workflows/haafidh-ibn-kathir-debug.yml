@@ -1,4 +1,5 @@
 name: Quran Haafidh CP06 — intermediate APK only, no private titles
+# CP-06 staging trigger receipt: 2026-10-15, frozen source 6db0e342.
 
 on:
   push:
