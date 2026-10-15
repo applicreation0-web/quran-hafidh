@@ -51,7 +51,7 @@ final class IbnAshurBaqaraThemes {
     private static final List<Theme> ALL;
     static {
         List<Theme> t = new ArrayList<>();
-        t.add(new Theme("opening", "The Opening Challenge", 1,1,23,23));
+        t.add(new Theme("opening", "Divine Revelation and the Challenge to Produce a Surah", 1,1,23,23));
         t.add(new Theme("humanity", "Believers, Disbelievers and Hypocrites", 2,20));
         t.add(new Theme("adam", "Adam and Satan's Enmity", 30,39));
         t.add(new Theme("israelites", "History of the Israelites and the Covenant", 40,123));
