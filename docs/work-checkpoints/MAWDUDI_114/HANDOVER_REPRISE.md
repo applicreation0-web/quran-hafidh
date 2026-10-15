@@ -52,3 +52,5 @@ Lot source 111–114 collecté et sauvegardé : lire CP01_LOT_111_114.md, contr�
 Parcours canonique de travail : lire CP01_CANONICAL_DRAFT_AUDIT.json et PASSAGE_INDEX_PUBLIC.csv. 1053 IDs couvrent 6236 ayat ; ce résultat numérique ne vaut pas validation éditoriale. Les douze archives NAV_DRAFT restaurées constituent les données privées correspondantes.
 
 Lots privés partiels supplémentaires récupérés et vérifiés : voir CP01_CP03_PARTIAL_BATCHES.json. Scripts QCF numériques autonomes disponibles, sans changement de rendu ni du moteur. Révisions éditoriales partielles 11–20 et36–84 ; aucune approbation du texte OCR. Reprendre les lots éditoriaux suivants.
+
+Révisions privées 001–035 stables et récupérées : 796 propositions, aucun PASS sémantique final. Lire CP01_REVIEW_001_035_PARTIAL.json. Source brute OCR, originaux conservés ; ne pas approuver automatiquement les propositions.

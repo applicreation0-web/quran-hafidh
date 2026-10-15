@@ -1,0 +1,33 @@
+{
+  "status": "PARTIAL_NO_SEMANTIC_PASS",
+  "new_verified_archives": [
+    {
+      "name": "MAWDUDI_CP01_REVIEW_001_010_PARTIAL_V1.zip",
+      "start": 1,
+      "end": 10,
+      "bytes": 1053149,
+      "sha256": "10256e0fdbb33a4823532366ca26a2ae23e2c1cc5f4a66d2fc034bcd3da17ab8",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_021_030_PARTIAL_V1.zip",
+      "start": 21,
+      "end": 30,
+      "bytes": 137257,
+      "sha256": "44598acb8c030e488d66c4557f28e1952e89fb43bb0db46431232eb16022c7a7",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_031_035_PARTIAL_V1.zip",
+      "start": 31,
+      "end": 35,
+      "bytes": 133022,
+      "sha256": "19a0686fed3663a9ce2bb0656db89f09f06ccbe3334d0b8250620b2047de1fde",
+      "restore_verified": true
+    }
+  ],
+  "passages_001_010": 450,
+  "passages_011_035": 346,
+  "original_titles_preserved": true,
+  "whole_span_text_verified": false
+}
