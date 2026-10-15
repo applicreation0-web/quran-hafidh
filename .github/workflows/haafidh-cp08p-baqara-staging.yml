@@ -1,0 +1,89 @@
+name: CP08P Al-Baqarah Android pilot — PUBLIC STAGING without private titles
+on:
+  push:
+    branches:
+      - work/haafidh-1171-ibn-kathir-integration-independent
+    paths:
+      - .github/workflows/haafidh-cp08p-baqara-staging.yml
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnAshurBaqaraThemes.java
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/IbnAshurBaqaraThemesTest.java
+      - hifz-app/src/main/res/drawable/ic_ui_semantic_map.xml
+      - scripts/guard_frozen_hifz_engines.sh
+      - scripts/audit_hifz_quiz_against_1171.sh
+      - docs/FROZEN_UI_ICONS_13_PLUS_10.tsv
+      - scripts/verify_contractual_ui_icons.py
+      - scripts/verify_approved_icon_silhouettes.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cp08p-pilot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Freeze Hifz engines and auditable Lucide silhouette
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/guard_frozen_hifz_engines.sh
+          bash scripts/audit_hifz_quiz_against_1171.sh
+          python3 scripts/verify_contractual_ui_icons.py
+          python3 scripts/verify_approved_icon_silhouettes.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Android SDK for existing AGP
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Verify Al-Baqarah themes, overlap and canonical Ibn Kathir borders
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest --tests "com.quransafeguard.hifz.preview.IbnAshurBaqaraThemesTest" --stacktrace
+      - name: Assemble code-only Android prototype
+        run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
+      - name: Fail-closed audit and isolate staging file (never final APK)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/cp08p-staging"
+          mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -name '*.apk' -type f)
+          test "${#apks[@]}" -eq 1
+          cp "${apks[0]}" "$RUNNER_TEMP/cp08p-staging/CP08P-NOT-FINAL-BAQARAH-UNFINALIZED.apk"
+          python3 - "$RUNNER_TEMP/cp08p-staging/CP08P-NOT-FINAL-BAQARAH-UNFINALIZED.apk" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as pack:
+              names=pack.namelist()
+              forbidden=[n for n in names if n.startswith('assets/ibn_kathir_qurancom_private/')
+                         or n.startswith('assets/ibn_kathir_full_commentary_private/')]
+              assert not forbidden, forbidden
+          print('PASS: no private titles, commentary, or keys in public artifact')
+          PY
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          cp "$sdk/lib/apksigner.jar" "$RUNNER_TEMP/cp08p-staging/apksigner.jar"
+          cp "$sdk/lib64/libc++.so" "$RUNNER_TEMP/cp08p-staging/libc++.so"
+          cp "$sdk/zipalign" "$RUNNER_TEMP/cp08p-staging/zipalign"
+          printf 'PUBLIC STAGING ONLY, not a deliverable to install.\nSource: %s\nPrivate English title/commentary packs are intentionally absent.\nPrivate injection and signing MUST occur offline before any user test.\n' "$(git rev-parse HEAD)" > "$RUNNER_TEMP/cp08p-staging/README-NOT-FINAL.txt"
+          (cd "$RUNNER_TEMP/cp08p-staging" && sha256sum * > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CP08P-BAQARAH-STAGING-NO-PRIVATE-${{ github.sha }}
+          path: ${{ runner.temp }}/cp08p-staging/
+          retention-days: 2
+          if-no-files-found: error
