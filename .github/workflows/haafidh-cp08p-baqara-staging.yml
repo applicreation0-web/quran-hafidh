@@ -76,7 +76,7 @@ jobs:
           test "${#apks[@]}" -eq 1
           cp "${apks[0]}" "$RUNNER_TEMP/cp08p-staging/CP08P-NOT-FINAL-BAQARAH-UNFINALIZED.apk"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging ${apks[0]} \
-            | grep -F "name='com.quransafeguard.hifz.ibnkathirbaqarapilot'"
+            | grep -F "name='com.quransafeguard.hifz.mawdudibaqara'"
           python3 - "$RUNNER_TEMP/cp08p-staging/CP08P-NOT-FINAL-BAQARAH-UNFINALIZED.apk" <<'PY'
           import sys, zipfile
           with zipfile.ZipFile(sys.argv[1]) as pack:
