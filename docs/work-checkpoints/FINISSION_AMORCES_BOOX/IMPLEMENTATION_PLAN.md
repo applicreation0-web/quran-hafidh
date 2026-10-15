@@ -52,7 +52,7 @@ RÉVISIONS ET DEBUG BOOX », reçu le 14 octobre 2026.
 - [x] **CP-03 — Carte sémantique.** Porter la structure graphique utile de
   `IslahiMapActivity`, l’index 1 903 groupes et les miniatures QCF ; écrire les
   tests de parcours et d’état avant l’implémentation puis vérifier Android.
-- [ ] **CP-04 — Visuel et Mémorisation libre.** Auditer les 23 pictogrammes et
+- [x] **CP-04 — Visuel et Mémorisation libre.** Auditer les 23 pictogrammes et
   les zones tactiles, ajouter les assertions d’indépendance de Mémorisation
   libre, corriger uniquement les écarts prouvés et produire des captures.
 - [ ] **CP-05 — Non-régression.** Exécuter les suites pertinentes et la matrice

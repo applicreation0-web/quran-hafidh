@@ -38,9 +38,9 @@ concerné n’a changé.
 5. Exécuter seulement le test interrompu ou invalidé par un changement.
 6. Mettre à jour le checkpoint avant toute nouvelle étape.
 
-CP-03 est PASS au commit `709ec47908d3bcdc4f6db1d31a6fa65edebb4f77`
-(CI source/JVM `38689001952`, Android `38689001924`, preuves Android
-`11951796542`, copie durable `libfile_90ebbaa18b0c81919fe690f11cf04e21`).
-La reprise exacte est CP-04 : ouvrir `CP04_VISUEL_MEMORISATION_LIBRE.md`,
-vérifier les preuves existantes des 23 pictogrammes et l'indépendance de
-Mémorisation libre, sans toucher aux moteurs Hifz, M7-B, M8, Quiz ou QUL.
+CP-04 est PASS au commit `54f9a825caf0966572d26506b018a39bb7ecadf3`
+(CI source/JVM `38690267562`, Android `38690267503`, preuves Android
+`11951608972`, copie durable `libfile_5a9485b8e3908191be0dcf0e18d932ae`).
+La reprise exacte est CP-05 : ouvrir `CP05_NON_REGRESSION.md`, geler le HEAD
+candidat et compléter seulement les contrôles bloquants non déjà couverts,
+sans toucher aux moteurs Hifz, M7-B, M8, Quiz ou QUL.
