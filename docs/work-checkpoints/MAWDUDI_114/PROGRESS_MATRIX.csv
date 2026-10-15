@@ -83,3 +83,4 @@ CP-04,existing_jalalayn_repository_6236,REUSED_CODE_WITH_EXISTING_DB_CONTRACT,CP
 CP-04,baqarah_inline_jalalayn_commentary,IMPLEMENTED_CI_PENDING,CP04_JALALAYN_EXISTING_TAFSIR.md
 CP-04,remaining_113_maps_jalalayn,NOT_IMPLEMENTED,STATUS_CURRENT.md
 CP-05,jalalayn_baqara_ci_f61c6aaa,PENDING,CI_TEST_LEDGER.md
+CP-00,resume_complete_prompt,PASS,CP00_REPRISE_2026-10-15.json

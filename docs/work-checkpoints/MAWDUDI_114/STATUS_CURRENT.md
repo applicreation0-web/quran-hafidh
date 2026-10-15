@@ -1,64 +1,14 @@
-# Mawdudi 114 — état courant
+# Mawdudi / Ayah Themes / Jalalayn — reprise courante
 
-CP-00 terminé et reprise isolée vérifiée. CP-01 en cours : les 114 index source sont capturés ; 1 044 notices originales et neuf adaptations de plages manquantes forment un parcours de travail de 1 053 passages, couvrant 6 236 versets sans doublon. Contrôle numérique uniquement : aucune approbation éditoriale globale.
+Base distante vérifiée : `a9313041db86f6d4609ba281c578edd130dca8f9`. Branche unique inchangée. Ancien checkout et ses modifications conservés sans écrasement ; reprise propre séparée. Voir `CP00_REPRISE_2026-10-15.json`.
 
-Les douze archives privées du parcours de travail ont été sauvegardées, récupérées et vérifiées par SHA-256. La révision des titres, des introductions et des ouvertures est répartie par sourates ; les cas OCR demeurent explicitement partiels. CP-02 demeure ouvert (texte, notes, édition, droits). Préparation numérique QCF en cours ; miniatures et validation visuelle non exécutées. Aucun nouvel APK.
+- CP00 réconciliation : effectuée. Aucune recapture de source.
+- Dernières 3 CI applicatives `d5291279` : success (runs 38806447738, 38806447712, 38806448018). Documentation `a9313041` avec skip CI.
+- Nouveau contrôle Python Mawdudi : 22 tests PASS. Base Jalalayn existante : intégrité SQLite ok, 6236 entrées.
+- CP01 : 1053 plages / 114 sourates / 6236 versets, validation éditoriale NON TERMINÉE. 1044 titres source + 9 adaptations à distinguer. 59 dossiers terminologiques historiques à examiner.
+- CP02 : clés Lecture/Révisions encore historiques, migration NON TERMINÉE.
+- CP03 : modèle numérique global existant, écran réel encore pilote Baqarah.
+- CP04 : raccordement Jalalayn pilote existant, généralisation à terminer.
+- CP05–CP07 : non clos ; aucun nouvel APK final ; BOOX physique NON TESTÉ.
 
-HEAD précédent confirmé : `7212a149d6d293c495e2857e3a1bdd1a382e4973`. Le commit de ce checkpoint suit sur la même branche. Reprendre la révision éditoriale et l’audit des commentaires, sans recommencer les captures source validées.
-
-
-## Reprise auditée 2026-10-15 — source complète du statut : CP01_CONTINUATION_AUDIT_2026-10-15.md
-
-SHA avant nouveau checkpoint documentaire : `d7e7022f88d4f2029a6ca158600334e1f0e26679` (vérifié distant). EPUB privé + 12 ZIPs NAV_DRAFT récupérés indépendamment depuis la bibliothèque persistante, SHA originaux contrôlés, 1053 IDs/6236 ayat/114 sourates sans trou ni doublon. L'original anglais reste privé. Rapport individuel privé persistant `MAWDUDI_CP01_CONTINUATION_AUDIT_PRIVATE_2026-10-15.json` (77 140 octets, SHA 785b28a0b580a760f8e56021244bfb431b16195447ae3e1d020398f13d563c83). 10/114 premières ouvertures seulement avec revue manuelle partielle, zéro PASS sémantique final, 59 dossiers de vocabulaire en attente. CP02 commentaires et droits ouverts. Intégration NUMÉRIQUE Android séparée réalisée, non branchée comme interface finale. Les CI de gel/audit et staging du commit d7e7022f sont vertes ; tests Android instrumentés encore en cours. Aucun nouvel APK complet ni essais BOOX.
-
-NE PAS reproduire la collecte source ni recommencer CP00. Reprendre au premier lot NON APPROUVÉ de CP01, puis CP02. Ne pas confondre asset numérique de navigation et produit final. Vérifier la régression 38786649334 avant tout nouveau statut vert.
-
-## Continuation CP01–CP03 — independent source and QCF checks (15 Oct 2026)
-
-CP01 original 12 NAV_DRAFT archives independently parsed: 114 surahs, 1,053 passages, 6,236 ayat; all stable IDs, ordinal/previous/next links, coverage, origins, source references checked. 1,044 literal Ayah Themes headings (PRIVATE), 9 separately tagged editorial adaptations. All 114 openings screened for preface-keyword contamination (0 automated flags; **NOT** semantic approval). 59 candidate terminology passages logged. Zero titles in draft empty under correct origin rules. **0/1,053 final semantic approvals**; 114 opening meaning gates OPEN.
-
-CP02: source EPUB SHA-256 rechecked; the retained evidence for historical sections 1–25 independently reproduced **25/25 raw SHA-256** values, with missing labels at 2:97–100 and a footnote/OCR defect in 1:1–7. **0 newly approved bodies or notes**; 531 historical sections not yet cross-checked in this new independent pass. Original edition/translation and offline embedding authorization remain unverified.
-
-CP03: canonical 1,053-range Android model already present; physical QCF bridge now fixes a bug when the last ayah of a passage continues onto a later page (commit `872fac3479af70bac3581b0568f4261b33c66927`). Added real geometry whole-index regression; **CI pending** at this checkpoint. Real miniatures, highlight positioning and physical BOOX still NOT EXECUTED. Do not route the user-facing final product to unapproved content.
-
-PRIVATE persisted in Library: `/MAWDUDI_WORK_CONTINUATION_2026-10-15/CP01_114_SOURATES_INTEGRITY_PRIVATE_V2.json` (103,371 bytes, SHA-256 `10d0568f290625d8e6cc1b81a602867ddf8a4feedb88ad1debd3b4ba784edb4a`), `CP02_REVERIFY_FIRST25_PRIVATE.json` (8,143 bytes, SHA-256 `82a33b096179c614a074a096df96210236273f98f2e18d2c4d4547baebdaabed`). Both scripts independently saved there. Public counts only in CP01_SOURCE_INTEGRITY_PUBLIC_V2.json / CP02_REVERIFY_FIRST25_PUBLIC.json. No third-party title/body text in GitHub.
-
-**Gates:** CP01 numeric PASS / semantic BLOCKED_PENDING_REVIEW; CP02 structural source first25 REVERIFIED / 556 body+notes NOT APPROVED; CP03 page-end bug FIXED / visual NOT TESTED; CP04–CP07 NOT COMPLETE. The final APK is not ready. Resume without collecting the source archives again.
-
-## CP02 — BookReader OCR / EPUB source audit 2026-10-15
-
-New independent source-safe Python tool `scripts/mawdudi_ocr_page_reconcile.py` and six synthetic tests. Inputs already verified on a private copy: 109 cases, 44 exact hOCR words, 65 other candidate locations, 107 references within 5-page scan windows, 2 broad review windows (24:3: 32 pages; 66:5: 7 pages). All are CANDIDATES, NOT corrections. Five original BookReader scan markers inspected: page n50, 2:97 and 2:100 visible, 2:98 and 2:99 NOT CONFIRMED; page n110, 2:217 NOT CONFIRMED. Browser non-detection is not proof of absence; mark 3 as discrepancy pending zoom/image validation. 0 newly editorial-approved texts, notes or sections, 0 automated repairs; rights/edition unresolved. The detailed 109-case metadata-only ledger, preliminary 5-observation evidence and both scripts were saved in the persistent private Library folder `/MAWDUDI_WORK_CONTINUATION_2026-10-15`. EPUB and hOCR originals immutable; no Maududi protected text in GitHub/CI. New CI required before PASS claim. CP01 numeric pass; CP02 incomplete; CP03 QCF compile regressions passed on af238389; CP04–07 not complete.
-
-## CP02 — 1 210 pages hOCR ↔ EPUB, audit de conservation du texte
-
-Nouvel audit métadonnées par page (script `scripts/mawdudi_hocr_epub_retention.py`) sur sources réelles conservées : 1 210 pages hOCR comparées aux 1 210 pages EPUB correspondantes, **1 189 sans différence OCR majeure**, **14 pertes critiques candidates**, **5 pertes fortes candidates**, 1 différence à réexaminer et 1 page insuffisamment probante. Total **19 pages fortement dégradées** = [50,110,215,228,288,344,362,482,549,582,960,961,993,1009,1032,1073,1106,1124,1143]. Les **41 repères hOCR absents de la page EPUB correspondante** sont tous parmi ces 19 pages; les **3 autres repères hOCR** figurent déjà dans l'EPUB (10:14, 19:84, 20:78). Cette corrélation identifie une perte de texte OCR localisée dans le corpus de 1 210 pages, mais **ne prouve pas la complétude ni la justesse de l'édition** et ne couvre pas les pages 1 210–3 116.
-
-Paquet privé durable `CP02_PRIVATE_OCR_RECOVERY_CANDIDATES_19_PAGES.zip` = 134 875 octets, SHA-256 `012d19ee1d16e2175fe62121bd7f9e496ae41ad4b343c14b264faec9a598fb23`, contient 19 brouillons de pages OCR avec ordre des mots, confiance/coordonnées, manifestes source/EPUB et hashes. **0 pages insérées dans l'application, 0 commentaires approuvés**; les pages candidates ne sont pas une réparation validée. Conservé dans la bibliothèque privée `/MAWDUDI_WORK_CONTINUATION_2026-10-15/`, aucun texte source dans le dépôt GitHub. Les sources d'origine ne sont pas modifiées.
-
-CP03 : commit `de07de56aec7d6e1526ae6b832c513270345331a` aligne `BaqaraPilotScreen.pageEnd()` sur `MawdudiMapModel.lastPageForVerse()` (dernier verset pouvant continuer sur une autre page). Test QCF réel sur 1053 intervalles adapté ; **CI NOUVELLE EN COURS**, pas de PASS anticipé ni BOOX physique. CP04–CP07 et APK privé final NON TERMINÉS. Edition exacte, correction des notes et droits d'intégration toujours ouverts.
-
-## CP03–CP04 — navigation réversible sans édition non validée
-
-Commit `8cc1f02a4680af3a7509a82134b23802a6427716` : `MawdudiMapModel.Navigation` conserve le passage canonique, page QCF, positions de défilement carte/commentaire et panneau commentaire ouvert. Passage +/-1 continue aux frontières des sourates; navigation de page limitée au passage; `readerJumpVerse` vérifie la sélection QCF réelle; `Snapshot` refuse les identifiants caducs avant restitution. Aucun accès aux magasins/moteurs Hifz. Deux nouvelles méthodes de test sur 1053 passages et données QCF réelles : **CI EN COURS** à cette sauvegarde; aucun PASS inventé. Cela prépare le lien carte ↔ Mushaf demandé, **mais le composant ne remplace pas encore la vraie interface Android complète** et aucun texte privé non approuvé n'est activé. CP04 demeure IN_PROGRESS; CP06–CP07 NOT_COMPLETE.
-
-## CP02 — audit direct sur 11 captures utilisateur du BookReader (15 Oct 2026)
-
-ERREUR D'INDEX DETECTEE ET CORRIGEE : le numéro affiché `nK` dans BookReader correspond au fichier interne `EPUB/page_{K+1}.html`, pas `EPUB/page_K.html`. Les 19 liens de revue antérieurs étaient décalés d'une page ; liste exacte corrigée et métadonnées publiques dans `CP02_BOOKREADER_ALIGNMENT_PUBLIC_V2.json`. Commit code `d5c3bfd2e9e8336f3d93cb9616c7b8dab002827c` corrige le script et ses tests ; les anciennes observations du navigateur ne sont pas réutilisées comme validations du bon fichier. CI du nouveau commit non encore certifiée à cette sauvegarde.
-
-11 pages fournies et comparées réellement aux noms/repères internes de l'EPUB. Trois preuves de perte OCR (extraits de métadonnées uniquement) : **n581 ⇔ EPUB/page_582.html**, verset **7:202** imprimé mais absent du texte EPUB correspondant; **n960 ⇔ EPUB/page_961.html**, **16:59–60** imprimés mais absents du texte EPUB correspondant; **n1072 ⇔ EPUB/page_1073.html**, **18:55–56** imprimés avec notes 52–53, fichier EPUB à seulement 2 mots extraits (0 % de conservation de mots hOCR). Les 8 autres images renseignent les pages voisines, sans prouver à elles seules une perte sur les pages précédentes. L'EPUB et le hOCR restent immuables ; **0 correction textuelle appliquée, 0 commentaire/note certifié**.
-
-Dossier d'audit **privé** sauvegardé en bibliothèque : `/MAWDUDI_WORK_CONTINUATION_2026-10-15/CP02_USER_SCREENSHOTS_AUDIT_PRIVATE_2026-10-15.json`, SHA-256 `35aab640c1a837664c2b29bed27e83a3f614dd38840177ff06e14fd4a116aaa6`. Script de comparaison sauvegardé dans le même dossier. **Les captures d'écran elles-mêmes n'ont pas été copiées en bibliothèque ni dans GitHub.** Prochaine étape : contrôler les 16 autres pages de risque avec les liens corrigés, confronter les notes aux images, conserver les différences en privé, puis poursuivre CP02 sans inventer la conformité éditoriale ou les droits.
-
-## Pivot commentaire — Jalalayn déjà intégré (15 octobre 2026)
-
-**Décision utilisateur finale** : la carte conserve les grands thèmes Maududi et les intitulés de navigation Ayah Themes, MAIS son **commentaire vient de Tafsir al-Jalalayn déjà embarqué dans Quran Haafidh**, pas de l'EPUB Maududi. Aucune création ou copie d'un nouveau corpus Jalalayn. Code existant vérifié : `TafsirRepository.java`, base `al_jalalayn_en.sqlite` de 6236 entrées attendues, 4 segments `app/src/plus/assets/tafsir/al_jalalayn_en.sqlite.gz.partXX`; lecture vérifiant SQLite. CP02 Maududi OCR devient **historique/non bloquant pour le commentaire**; les grandes divisions thématiques peuvent rester à auditer contre Maududi. Ne jamais relancer l'import des 556 commentaires Maududi comme condition du nouveau lecteur.
-
-Commit `f61c6aaae327d94eb76d503c8a6d40c815c01602` : Al-Baqarah (`BaqaraPilotScreen`) récupère Jalalayn par verset via le dépôt Tafsir offline existant. Panneau sans changer de Mushaf, texte et notes d'origine, plages de versets bornées au passage, récupération du scroll/état, protection contre callbacks IO périmés. Ancien chargement de texte Maududi et lien source externe retirés de la vue. Test bornes synthétiques dédié. Trois CI déclenchées sur ce SHA, **NON CERTIFIÉES PASS** au checkpoint. Aucun changement moteurs Hifz, SQLite ni renderer QCF.
-
-**Reste à faire** : finir la carte 114 sourates (pas de repli Ibn Kathir final), valider éditorialement titres Ayah Themes/étapes Maududi, tests fonctionnels et BOOX du panneau Jalalayn, source/édition droits du Jalalayn selon politique déjà retenue, puis APK privé exact. CP04 en cours; CP05–CP07 non achevés. Aucune assertion de finalisation ni de debug complet.
-
-## CP04 — Interface fluide et amorces Lecture/Révisions
-
-Nouvelle contrainte utilisateur : **aucun pavé, priorité Mushaf, continuité linéaire ; conserver les clés d'amorce dans Lecture ET Révisions**. Patch UI `d5291279ff859e30bef718c9d164495d50f2abed` : pilote Al-Baqarah carte initiale 18 % / Mushaf 82 % (focus 9 % / 91 %), nœuds de l'axe compacts, bandeau et titre du passage sur une ligne elliptique (accessible au complet par le panneau existant), commandes de changement de page masquées pour les passages sur une seule page. `SemanticTitlePopup` limité à deux lignes / 390dp, sans animation ni fond occultant ; alignement du titre des séances de révision au-dessus de leur barre de commandes mesurée automatiquement, sans changement `HifzSessionActivity`. En Lecture, l'ancrage explicite au-dessus des icônes reste inchangé. Sources QCF, Hifz et corpus non touchés.
-
-**État réel** : les clés existantes dans la Lecture et les révisions habilitées utilisent toujours le **corpus historique**, pas les 1 053 futures frontières Ayah Themes. Il ne faut pas confondre correction de présentation et migration sémantique. La validation éditoriale Ayah Themes (1 044 + 9 exceptions) et les 114 écrans finaux restent non terminés. Tests historiques `547e50b1` PASS, 3 CI `d5291279` déclenchées mais NON CONCLUES à la date de ce checkpoint. Tests visuels BOOX et APK privé final NON exécutés.
+Contrat final : Maududi pour macro-thèmes seulement ; passages Ayah Themes ; commentaire Jalalayn déjà intégré. L’audit OCR des commentaires Maududi est historique et ne bloque plus Jalalayn. Poursuivre CP01 sans nouvelle collecte ni nouvelle branche.

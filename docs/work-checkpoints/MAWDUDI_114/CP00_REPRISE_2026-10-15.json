@@ -1,0 +1,82 @@
+{
+  "scope": "CP00 resume, not repetition of historical source intake",
+  "base_head": "a9313041db86f6d4609ba281c578edd130dca8f9",
+  "branch": "work/haafidh-1171-ibn-kathir-integration-independent",
+  "official": "7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21",
+  "local_recovery": [
+    {
+      "path": "chatgpt/app/src/main/assets/mushaf/hafs/kfqc/svg-br/367.svg.br",
+      "old_sha256": "8d4906c9f7c58564df41223c59d593599a903f88771fc6a362e71fad74694f9b",
+      "current_sha256": "b0b49c5ffd24b9edd6877d3a517863c75ff023b579cea015833b6ef6d23c6ea1",
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    },
+    {
+      "path": "docs/work-checkpoints/MAWDUDI_114/OPENINGS_114_AUDIT.csv",
+      "old_sha256": "61f5529cc1b5bd364fc5f8f2aa9a87eb8725c3f72b85adc3275a232c849a09a7",
+      "current_sha256": "b7f65f982f08becb26c21ca4d6e4363dce44395c5d766f9d1a4ec5cb573ad217",
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    },
+    {
+      "path": "docs/work-checkpoints/MAWDUDI_114/PRIVATE_ASSETS_MANIFEST.md",
+      "old_sha256": "872a38084c7dc24d7fe919b45d36d3e3deb8e495ae7b630ca08781826d6e2276",
+      "current_sha256": "3adbf3bd98d9464df6fd416d5dfcd9fbeda951859d01c6f4c179906949c6cca5",
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    },
+    {
+      "path": "docs/work-checkpoints/MAWDUDI_114/CP01_EDITORIAL_HANDOFF_AUDIT.json",
+      "old_sha256": "6cda1f37eadd9ce9843d4f92c1d991187e2151502ad54fa5079ee83ef535736c",
+      "current_sha256": null,
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    },
+    {
+      "path": "docs/work-checkpoints/MAWDUDI_114/CP01_MACRO_46_55_PARTIAL.json",
+      "old_sha256": "c0f34e5d99dcbcade1af8284cbe565d3c96f13c6321c51ecc8bc2f88ce3fa77c",
+      "current_sha256": "c0f34e5d99dcbcade1af8284cbe565d3c96f13c6321c51ecc8bc2f88ce3fa77c",
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    },
+    {
+      "path": "docs/work-checkpoints/MAWDUDI_114/CP01_MACRO_56_65_PARTIAL.json",
+      "old_sha256": "1df3199dd574989b6649a5edb68b30dbcdc003e27129127e6775bc6af2d19541",
+      "current_sha256": "1df3199dd574989b6649a5edb68b30dbcdc003e27129127e6775bc6af2d19541",
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    },
+    {
+      "path": "docs/work-checkpoints/MAWDUDI_114/CP01_REVIEW_105_114_PARTIAL.json",
+      "old_sha256": "2f752c182acd65901b5c3fbbc87a1ef63fe6c36e477efb764bc6d5f9a30d32a1",
+      "current_sha256": "2f752c182acd65901b5c3fbbc87a1ef63fe6c36e477efb764bc6d5f9a30d32a1",
+      "action": "OLD_WORKSPACE_PRESERVED_NO_OVERWRITE"
+    }
+  ],
+  "ci": {
+    "head_with_checks": "d5291279ff859e30bef718c9d164495d50f2abed",
+    "runs": [
+      38806447738,
+      38806447712,
+      38806448018
+    ],
+    "all": "success",
+    "a9313041": "documentation-only skip ci, no new check claimed"
+  },
+  "new_tests": {
+    "command": "PYTHONPATH=scripts python -B -m unittest discover -s scripts -p 'test_mawdudi*.py'",
+    "result": "PASS",
+    "tests": 22
+  },
+  "jalalayn": {
+    "integrity_check": "ok",
+    "verse_commentary_rows": 6236,
+    "source": "existing 4 asset segments, immutable"
+  },
+  "input_hashes": {
+    "passages_v1.csv": "9957688bfeef4e1af06e838e230167e5f17a6a1ef1cfafddf9033face9247bf6",
+    "attached_prompt": "022f3b9a54e920242823c110c51957eba3814cfa37af5e918e2f0627bb29efe0"
+  },
+  "remaining": {
+    "editorial": "NOT_COMPLETE",
+    "cue_migration": "NOT_COMPLETE",
+    "map114": "NOT_COMPLETE",
+    "jalalayn_ui114": "NOT_COMPLETE",
+    "physical_boox": "NOT_EXECUTED",
+    "final_private_apk": "NOT_BUILT"
+  }
+}

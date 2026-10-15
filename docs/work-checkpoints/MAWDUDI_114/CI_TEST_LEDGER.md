@@ -92,3 +92,7 @@ Three fresh workflows triggered on `f61c6aaae327d94eb76d503c8a6d40c815c01602` : 
 - Runs audit source `38806448018`, Hifz + sept jours `38806447738`, pilote Baqarah `38806447712` déclenchés, résultats **PENDING** à ce checkpoint.
 - Pas de revendication PASS matériel ou de compilation complète non vérifiée.
 - Le titre des clés en Lecture et Révisions reste issu du corpus antérieur jusqu'à activation Ayah Themes validée ; les contrôles existants restent actifs.
+
+## Reprise du prompt complet — nouveaux contrôles
+
+22 tests Python Mawdudi PASS locaux ; commande dans CP00_REPRISE_2026-10-15.json. SQLite Jalalayn existant : intégrité ok, 6236 entrées. REST latest branch vérifié : trois runs d5291279 PASS (38806447738, 38806447712, 38806448018), résultats historiques, pas de nouvel Android exécuté. a9313041 documentaire skip CI. Aucun APK final ni recette physique.

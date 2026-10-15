@@ -95,3 +95,7 @@ Lire `CP04_JALALAYN_EXISTING_TAFSIR.md`. Les commentaires Maududi sont **retiré
 ### Reprise sobre du 15 octobre 2026 — d5291279
 
 Ne pas refaire le pivot Jalalayn ni les 11+3 captures OCR déjà analysées. Interface légère prioritaire, aucun ajout de composants volumineux. Lire `CP04_MINIMAL_UI_READING_REVISIONS.md` et vérifier 3 CI du SHA `d5291279ff859e30bef718c9d164495d50f2abed` (audit, Hifz Android, pilote Baqarah). Le cadre Hifz frozen n'a subi aucun changement; clés actuelles en Lecture/Révisions conservées. Le remplacement de leurs anciens points d'ancrage par 1053 passages Ayah Themes attend la revue éditoriale (1044 titres candidats, 9 exceptions), sans prétendre 1053 titres approuvés. Restant : dérouler les 114 cartes réelles en gardant le Mushaf majoritaire, contrôle physique BOOX et debug personnel exact.
+
+## Reprise stricte du prompt complet, 15 octobre 2026
+
+Lire STATUS_CURRENT.md, CP00_REPRISE_2026-10-15.json et SURAH_DELIVERY_MATRIX.csv. Base a9313041. Ancien checkout sale préservé. Contrat final Jalalayn : ignorer les anciennes étapes exigeant un commentaire Maududi final. 22 tests Python nouveaux PASS, trois dernières CI d5291279 PASS historiques vérifiés. Continuer par audit éditorial privé ; aucune activation du draft ni nouvelle collecte.
