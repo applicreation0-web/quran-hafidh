@@ -103,6 +103,7 @@ while IFS= read -r file; do
     "$prefix/ItqanFourSessionSnapshot.java" | \
     "$prefix/ItqanFourSessionStore.java" | \
     "$prefix/MainActivity.java" | \
+    "$prefix/QuranSurahNames.java" | \
     "$prefix/SettingsActivity.java" | \
     "$prefix/StudyReaderActivity.java" | \
     "$prefix/WordGeometryRepository.java" | \
