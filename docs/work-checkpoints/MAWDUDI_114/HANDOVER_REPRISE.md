@@ -26,3 +26,5 @@ CP00_CLOSURE.md remplace les étapes de levée de quota ci-dessus : archive priv
 ## Reprise CP-01
 
 Lire CP01_LOT_001_010.md. Récupérer son archive privée par le nom du manifeste et l’identifiant du reçu privé ; vérifier son SHA. Les CSV publics fournissent les IDs et bornes, jamais les titres. Aucun titre ne doit être recréé à partir d’un ID. Contrôler les éléments encore PENDING ; ne pas compter la collecte comme une validation finale des dix sourates.
+
+Lot source 011–020 collecté et sauvegardé : lire CP01_LOT_011_020.md, contrôler son SHA dans le manifeste et reprendre selon SOURCE_INTAKE_PROGRESS.csv. Révisions éditoriales encore en cours ; aucune collecte ne vaut validation de titre.

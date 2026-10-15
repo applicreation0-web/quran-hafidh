@@ -30,3 +30,5 @@ Aucun de ces runs ne prouve la présence d’un corpus Mawdudi final ni une rece
 ## CP-01 lot 001–010
 
 Captures complètes : PASS de collecte ; couverture numérique 1473/1473 : PASS de contrôle de bornes. Archive privée sauvegardée/récupérée/hash : PASS. Revue de tous les titres, terminologie, texte et QCF : EN COURS ou NON EXÉCUTÉ selon les matrices. Aucun test Android nouveau.
+
+CP-01 lot 011–020 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_011_020_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.

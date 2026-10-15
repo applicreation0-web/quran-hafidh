@@ -18,3 +18,7 @@ QURAN_HAAFIDH_MAWDUDI_CP00_REPRISE.zip : 4 952 389 octets ; SHA-256 `661c3decba2
 ## CP-01 lot 001–010 — collecte / revue partielle
 
 MAWDUDI_CP01_LOT_001_010_INTAKE.zip : 188 000 octets ; SHA-256 `94d65b9317c14d17b2e803c9a94b1cd69022ce1e104c05b954dfde1eff6b216e`. Sauvegarde et récupération vérifiées. 28 membres, dont manifestes, index source et de travail, introductions, ouvertures et queue terminologique.
+
+## CP-01 lot 011–020
+
+MAWDUDI_CP01_LOT_011_020_INTAKE.zip : 106727 octets ; SHA-256 `5fad30458999ca767b1fa412bdb79d3c1778bb5bbc127e5382bcf4a1e5769685`. Sauvegarde et récupération vérifiées ; index, introductions et queues privées. Référence privée uniquement dans le reçu privé.
