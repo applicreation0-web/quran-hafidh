@@ -332,8 +332,8 @@ android {
         getByName("debug") {
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
-            applicationIdSuffix = if (cp08BaqaraPilot) ".ibnkathirbaqarapilot" else ".ibnkathirtest"
-            versionNameSuffix = if (cp08BaqaraPilot) "-Baqara-PILOT" else "-IbnKathir-DEBUG"
+            applicationIdSuffix = if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
+            versionNameSuffix = if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
             isMinifyEnabled = false
