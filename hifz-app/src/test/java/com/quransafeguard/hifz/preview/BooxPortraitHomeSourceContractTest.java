@@ -54,10 +54,11 @@ public final class BooxPortraitHomeSourceContractTest {
     @Test public void routingAndComputedTodayStayIntact() throws Exception {
         String home=read(MAIN);
         assertTrue(home.contains("Ui.settingRow(this, \"Aujourd’hui\", \"…\", v -> openToday())"));
-        for (String label : new String[]{"Lecture","Parcours Hifz","Mémorisation libre","Progression"}) {
+        for (String label : new String[]{"Lecture","Carte","Parcours Hifz","Mémorisation libre","Progression"}) {
             assertTrue("Missing "+label,home.contains("homeNavLine(root, \""+label+"\""));
         }
         assertTrue(home.contains("new Intent(this, StudyReaderActivity.class)"));
+        assertTrue(home.contains("new Intent(this, IbnKathirMapActivity.class)"));
         assertTrue(home.contains("new Intent(this, FreeMemActivity.class)"));
         assertFalse(home.contains("new Intent(this, QuizActivity.class)"));
         assertFalse(home.contains("homeNavLine(root, \"Quiz\""));
@@ -67,7 +68,7 @@ public final class BooxPortraitHomeSourceContractTest {
         assertTrue(home.contains("WeeklyDashboardPlanner"));
         assertTrue("Home rows have identical compact touch targets",
             home.contains("line.setMinimumHeight(Ui.dp(this, 56))"));
-        assertFalse(home.contains("homeNavLine(root, \"Carte\""));
+        assertTrue(home.contains("homeNavLine(root, \"Carte\""));
     }
 
     @Test public void fixedLucideSilhouettesAreActuallyPresentNotOnlyNames() throws Exception {

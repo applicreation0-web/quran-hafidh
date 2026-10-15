@@ -72,7 +72,7 @@ device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
 adb shell ls -la "$device_dir"
 adb pull "$device_dir/." audit-runtime-screens/
 count="$(find audit-runtime-screens -type f -name 'audit-*.png' | wc -l | tr -d ' ')"
-test "$count" -ge 14
+test "$count" -ge 19
 find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q . && {
   echo "::error::At least one required screenshot is empty"; exit 1;
 } || true
@@ -82,7 +82,12 @@ find audit-runtime-screens -type f -name 'audit-*.png' -size 0 -print | grep -q 
 # screens, but must NOT claim private title pixels were exercised.
 for file in audit-lecture-mushaf.png \
             audit-accueil-sans-quiz.png audit-calendrier-sept-jours.png \
-            audit-itqan-4dates.png; do
+            audit-itqan-4dates.png \
+            audit-cp03-carte-courte.png \
+            audit-cp03-carte-multipage.png \
+            audit-cp03-carte-lecture.png \
+            audit-cp03-carte-retour.png \
+            audit-cp03-carte-grande-sourate.png; do
   test -s "audit-runtime-screens/$file"
 done
 private_dir=hifz-app/src/main/assets/ibn_kathir_qurancom_private

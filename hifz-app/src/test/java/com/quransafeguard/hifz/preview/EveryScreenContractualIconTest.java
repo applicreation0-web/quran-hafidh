@@ -14,8 +14,8 @@ import static org.junit.Assert.*;
 /**
  * Every literal icon-only action on every production screen must map to a
  * real drawable; no silent fallback to an improvised unicode glyph.
- * Old Quiz and semantic-list Carte screens are intentionally absent.
- * Every remaining production screen must still use mapped icons.
+ * The semantic Carte is graphical (never the retired numbered list).
+ * Every production screen must still use mapped icons.
  */
 public final class EveryScreenContractualIconTest {
     private static final String ROOT =
@@ -35,7 +35,7 @@ public final class EveryScreenContractualIconTest {
         String[] screens = {
             "MainActivity", "StudyReaderActivity",
             "HifzSessionActivity", "FreeMemActivity",
-            "ProgressMapActivity", "SettingsActivity", "WeakVersesActivity",
+            "ProgressMapActivity", "IbnKathirMapActivity", "SettingsActivity", "WeakVersesActivity",
             "HifzAudioDialog"
         };
         int matches = 0;

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Mushaf-first private Quran.com Ibn Kathir titles: no public corpus, no browser."""
+"""CP-03 graphical map + private Quran.com titles: offline, fail-closed, no old list."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 java=root/"hifz-app/src/main/java/com/quransafeguard/hifz/preview"
 lecture=(java/"StudyReaderActivity.java").read_text(encoding="utf-8")
 titles=(java/"IbnKathirQuranComPrivateTitles.java").read_text(encoding="utf-8")
 manifest=(root/"hifz-app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+home=(java/"MainActivity.java").read_text(encoding="utf-8")
+map_source=(java/"IbnKathirMapActivity.java").read_text(encoding="utf-8")
 for token in ('onSemanticCueTap(String passageId)',
               'IbnKathirQuranComPrivateTitles.approvedTitle(this,group)',
               'SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)',
@@ -23,10 +25,20 @@ for forbidden in ('openIbnKathirMap','Intent.ACTION_VIEW',
                   'new Intent(this,IbnKathirMapActivity.class)',
                   'IbnKathirQuranComSource.urlForGroup'):
     assert forbidden not in lecture, "External list/network dependency: "+forbidden
-for name in ('IbnKathirMapActivity.java','IbnKathirQuranComSource.java','QuizActivity.java'):
+for name in ('IbnKathirQuranComSource.java','QuizActivity.java'):
     assert not (java/name).exists(), "Retired runtime class persists: "+name
-assert 'IbnKathirMapActivity' not in manifest and 'QuizActivity' not in manifest
+assert '<activity android:name=".IbnKathirMapActivity"' in manifest
+assert 'new Intent(this, IbnKathirMapActivity.class)' in home
+assert 'QuizActivity' not in manifest
 assert 'android.permission.RECORD_AUDIO' not in manifest
+for token in ('buildGraphicalMap', 'new MushafView(this)', 'setHighlightVerses(exact)',
+              'IbnKathirQuranComPrivateTitles.approvedTitle(this, group)', 'Sans titre',
+              'StudyReaderActivity.EXTRA_JUMP_PAGE', 'StudyReaderActivity.EXTRA_JUMP_VERSE',
+              'StudyReaderActivity.EXTRA_MAP_PREVIEW', 'onSaveInstanceState', 'scrollY'):
+    assert token in map_source, "Graphical map contract missing: "+token
+for forbidden in ('ListView', 'ArrayAdapter', 'IbnKathirOfflineTitles',
+                  'IbnKathirTitlePack', 'Intent.ACTION_VIEW', 'https://'):
+    assert forbidden not in map_source, "Old list/network/title source returned: "+forbidden
 for token in ('ibn_kathir_qurancom_private','IK_APPROVED_FINAL_V2',
               'M7B_1903_2026-10-13','validateApprovedTitle','FAILED.put(chunk,true)'):
     assert token in titles, "Private fail-closed title contract missing: "+token
@@ -40,4 +52,4 @@ assert not tracked, "PRIVATE source is tracked in PUBLIC repo"
 assert 'lastQuranComHeadingIndex' not in lecture, "Carousel state must be absent"
 assert 'sourceHeadings(this,group)' not in lecture, "Legacy title source must be retired"
 assert 'firstThematicIndex' not in titles, "V1 display-order sorting must be retired"
-print("PASS: M7-B V2 single-title private loader, no carousel/fallback/Quiz, no private text")
+print("PASS: CP-03 graphical QCF map + M7-B V2 single-title private loader; no old list/carousel/network/Quiz/private text")

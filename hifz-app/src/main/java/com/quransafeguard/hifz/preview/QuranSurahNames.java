@@ -121,13 +121,26 @@ final class QuranSurahNames {
         return surah + " · " + name(surah);
     }
 
-    /** Shared "jump to a surah" dialog for every screen that navigates the Mushaf by page. */
-    static void showPicker(android.app.Activity activity, GeometryRepository geometry, java.util.function.IntConsumer onPageChosen) {
+    private static String[] pickerItems() {
         String[] items = new String[114];
         for (int surah = 1; surah <= 114; surah++) items[surah - 1] = labelFor(surah);
+        return items;
+    }
+
+    /** Shared picker for screens such as the semantic map which select a surah, not a page. */
+    static void showSurahPicker(android.app.Activity activity,
+                                java.util.function.IntConsumer onSurahChosen) {
+        new android.app.AlertDialog.Builder(activity)
+            .setTitle("Choisir une sourate")
+            .setItems(pickerItems(), (dialog, which) -> onSurahChosen.accept(which + 1))
+            .show();
+    }
+
+    /** Shared "jump to a surah" dialog for every screen that navigates the Mushaf by page. */
+    static void showPicker(android.app.Activity activity, GeometryRepository geometry, java.util.function.IntConsumer onPageChosen) {
         new android.app.AlertDialog.Builder(activity)
             .setTitle("Aller à une sourate")
-            .setItems(items, (dialog, which) -> onPageChosen.accept(geometry.pageForVerse(new com.quransafeguard.hifz.core.VerseRef(which + 1, 1))))
+            .setItems(pickerItems(), (dialog, which) -> onPageChosen.accept(geometry.pageForVerse(new com.quransafeguard.hifz.core.VerseRef(which + 1, 1))))
             .show();
     }
 }

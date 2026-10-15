@@ -83,10 +83,13 @@ indirect_roles=re.findall(r'\baddRoundAction\s*\(\s*"(?:[^"\\]|\\.)*"\s*,\s*"([^
                          hifz)
 check(len(indirect_roles)>=8, "Hifz round-action call-site inventory reduced")
 check(all(role in roles for role in indirect_roles), "unmapped indirect Hifz action")
-# Quiz and list-map are intentionally deleted; preserve every other icon-bearing
-# screen and the immutable vector contract rather than counting removed UI.
-check(not (PREVIEW/"QuizActivity.java").exists() and not (PREVIEW/"IbnKathirMapActivity.java").exists(),
-      "retired Quiz/Carte source unexpectedly returned")
+# Quiz stays deleted. CP-03 restores Carte only as a graphical QCF map and its
+# compact actions must remain covered by the immutable vector contract above.
+check(not (PREVIEW/"QuizActivity.java").exists(), "retired Quiz source unexpectedly returned")
+map_source=(PREVIEW/"IbnKathirMapActivity.java").read_text(encoding="utf-8")
+check("buildGraphicalMap" in map_source and "ListView" not in map_source
+      and "ArrayAdapter" not in map_source,
+      "Carte must be the reviewed graphical map, never the retired list")
 check(len(screens)>=8 and all_actions>=38, "active Hifz icon inventory unexpectedly shrank")
 # All contracted action types are explicit in the central mapper, even where
 # their screen is hidden until Hifz progresses.
