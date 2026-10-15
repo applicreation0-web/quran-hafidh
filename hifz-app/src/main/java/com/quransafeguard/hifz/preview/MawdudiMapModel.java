@@ -16,7 +16,11 @@ final class MawdudiMapModel {
     }
     static int lastPage(MawdudiPassageIndex.Passage p, GeometryRepository g) {
         if(p==null || g==null)throw new IllegalArgumentException("passage/geometry");
-        return g.pageForVerse(new VerseRef(p.surah,p.lastAyah));
+        // A single ayah may continue onto the next QCF page. pageForVerse()
+        // resolves its FIRST page and therefore clips the final page of a
+        // passage. Resolve the actual last physical line instead.
+        VerseRef last = new VerseRef(p.surah, p.lastAyah);
+        return g.line(g.lastLineIndex(last)).page;
     }
     static int clampPage(MawdudiPassageIndex.Passage p,int desired,GeometryRepository g) {
         return Math.max(firstPage(p,g),Math.min(lastPage(p,g),desired));
