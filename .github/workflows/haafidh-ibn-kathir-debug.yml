@@ -1,4 +1,4 @@
-name: Quran Haafidh M9 — intermediate APK only, no private titles
+name: Quran Haafidh CP06 — intermediate APK only, no private titles
 
 on:
   push:
@@ -13,34 +13,28 @@ permissions:
   actions: read
 
 concurrency:
-  group: haafidh-1171-itqan-4dates-debug-${{ github.ref }}
+  group: haafidh-1171-cp06-debug-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   build-verified-debug:
-    # Seven runtime tests include one live Itqan tap/recreate in the established
-    # ReaderSevenDayRuntimeInstrumentedTest; publish only after exact-SHA proof.
+    # The workflow definition may evolve after CP-05, but the public intermediate
+    # is always compiled from the exact frozen CP-05 source commit below.
     runs-on: ubuntu-latest
     timeout-minutes: 65
     steps:
-      - name: Checkout EXACT tested branch
+      - name: Checkout exact frozen CP-05 source
         uses: actions/checkout@v4
         with:
+          ref: 6db0e342684344634892d7da4b3c695a3138a232
           fetch-depth: 0
-      - name: Lint runtime proof scripts before checking independent evidence
+      - name: Require exact CP-05 commit and frozen application tree
         shell: bash
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "6db0e342684344634892d7da4b3c695a3138a232"
+          test "$(git rev-parse HEAD:hifz-app)" = "92cb64b26c43d61db4e4605139fb6a725781fec6"
           bash -n scripts/ci_android_runtime_visual.sh
-          python3 -m py_compile scripts/require_same_sha_ci.py
-      - name: Require independent Hifz/source and seven-day Android pixel tests on SAME SHA
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REF" = "refs/heads/work/haafidh-1171-ibn-kathir-integration-independent"
-          python3 scripts/require_same_sha_ci.py
       - name: Enforce official 1.17.1 Hifz freeze and exact Quiz-removal exceptions
         shell: bash
         run: |
@@ -74,32 +68,43 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Run full Hifz behavioural tests and seven-day BOOX source contracts
-        run: gradle --no-daemon :hifz-core:test :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest --stacktrace
+      - name: Run source contracts without replaying the frozen M8 matrix
+        run: gradle --no-daemon :hifz-app:sourceContractTest --stacktrace
       - name: Assemble exactly ONE isolated DEBUG APK (never release)
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
-      - name: Export M9 build intermediate and Android signing tools (NO PRIVATE TITLES)
+      - name: Export CP-06 build intermediate and Android signing tools (NO PRIVATE TITLES)
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
-          out="$RUNNER_TEMP/haafidh-m9-intermediate"
+          source_sha="$(git rev-parse HEAD)"
+          test "$source_sha" = "6db0e342684344634892d7da4b3c695a3138a232"
+          out="$RUNNER_TEMP/haafidh-cp06-intermediate"
           mkdir -p "$out"
           mapfile -t apks < <(find hifz-app/build/outputs/apk/debug -type f -name '*.apk')
           test "${#apks[@]}" -eq 1
           cp "${apks[0]}" "$out/public-build-UNFINALIZED-debug.apk"
+          python3 - "$out/public-build-UNFINALIZED-debug.apk" <<'PY'
+          import sys,zipfile
+          with zipfile.ZipFile(sys.argv[1]) as archive:
+              private=[name for name in archive.namelist()
+                       if name.startswith('assets/ibn_kathir_qurancom_private/')]
+          assert not private, private
+          print('PASS: public intermediate contains zero private title assets')
+          PY
           sdk="$ANDROID_HOME/build-tools/36.0.0"
           test -f "$sdk/lib/apksigner.jar"
           test -x "$sdk/zipalign"
+          test -x "$sdk/aapt"
           cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
           cp "$sdk/zipalign" "$out/zipalign"
-          printf 'STAGING ONLY: this APK contains no private Ibn Kathir M7-B titles.\nDo not install or distribute as a final M9 debug.\nSource SHA: %s\nPrivate titles will be inserted and signed only in a local private container.\n' "$GITHUB_SHA" > "$out/README_STAGING_ONLY.txt"
-          sha256sum "$out/public-build-UNFINALIZED-debug.apk" "$out/apksigner.jar" "$out/zipalign" > "$out/staging.sha256"
+          cp "$sdk/aapt" "$out/aapt"
+          printf 'STAGING ONLY: this APK contains no private Ibn Kathir M7-B titles.\nDo not install or distribute as a final debug.\nCP-05 source SHA: %s\nApplication tree: %s\nPrivate titles will be inserted and signed only in a local private container.\n' "$source_sha" "$(git rev-parse HEAD:hifz-app)" > "$out/README_STAGING_ONLY.txt"
+          sha256sum "$out/public-build-UNFINALIZED-debug.apk" "$out/apksigner.jar" "$out/zipalign" "$out/aapt" > "$out/staging.sha256"
           echo 'PASS: code-only build intermediate exported; no private assets in public CI.'
       - name: Keep temporary intermediate for private offline injection (24 hours only)
         uses: actions/upload-artifact@v4
         with:
-          name: M9-STAGING-NO-PRIVATE-TITLES-${{ github.sha }}
-          path: ${{ runner.temp }}/haafidh-m9-intermediate/
+          name: CP06-STAGING-NO-PRIVATE-TITLES-${{ github.sha }}
+          path: ${{ runner.temp }}/haafidh-cp06-intermediate/
           retention-days: 1
           if-no-files-found: error
