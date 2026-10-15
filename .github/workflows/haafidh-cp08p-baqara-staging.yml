@@ -7,6 +7,10 @@ on:
       - .github/workflows/haafidh-cp08p-baqara-staging.yml
       - hifz-app/build.gradle.kts
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraPilotSpec.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraAyahThemeTitles.java
+      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraPilotScreen.java
+      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/BaqaraPilotSpecTest.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnAshurBaqaraThemes.java
       - hifz-app/src/test/java/com/quransafeguard/hifz/preview/IbnAshurBaqaraThemesTest.java
       - hifz-app/src/main/res/drawable/ic_ui_semantic_map.xml
@@ -58,7 +62,7 @@ jobs:
         with:
           gradle-version: '9.5.0'
       - name: Verify Al-Baqarah themes, overlap and canonical Ibn Kathir borders
-        run: gradle --no-daemon :hifz-app:testDebugUnitTest --tests "com.quransafeguard.hifz.preview.IbnAshurBaqaraThemesTest" --stacktrace
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest --tests "com.quransafeguard.hifz.preview.IbnAshurBaqaraThemesTest" --tests "com.quransafeguard.hifz.preview.BaqaraPilotSpecTest" --stacktrace
       - name: Assemble code-only Android prototype
         run: gradle --no-daemon :hifz-app:assembleDebug --stacktrace
       - name: Fail-closed audit and isolate staging file (never final APK)
@@ -76,7 +80,8 @@ jobs:
           with zipfile.ZipFile(sys.argv[1]) as pack:
               names=pack.namelist()
               forbidden=[n for n in names if n.startswith('assets/ibn_kathir_qurancom_private/')
-                         or n.startswith('assets/ibn_kathir_full_commentary_private/')]
+                         or n.startswith('assets/ibn_kathir_full_commentary_private/')
+                         or n.startswith('assets/mawdudi_baqara_private/')]
               assert not forbidden, forbidden
           print('PASS: no private titles, commentary, or keys in public artifact')
           PY
@@ -84,7 +89,7 @@ jobs:
           cp "$sdk/lib/apksigner.jar" "$RUNNER_TEMP/cp08p-staging/apksigner.jar"
           cp "$sdk/lib64/libc++.so" "$RUNNER_TEMP/cp08p-staging/libc++.so"
           cp "$sdk/zipalign" "$RUNNER_TEMP/cp08p-staging/zipalign"
-          printf 'PUBLIC STAGING ONLY, not a deliverable to install.\nSource: %s\nPrivate English title/commentary packs are intentionally absent.\nPrivate injection and signing MUST occur offline before any user test.\n' "$(git rev-parse HEAD)" > "$RUNNER_TEMP/cp08p-staging/README-NOT-FINAL.txt"
+          printf 'PUBLIC STAGING ONLY, not a deliverable to install.\nSource: %s\nPrivate Ayah Themes title and Mawdudi commentary packs are intentionally absent.\nPrivate injection and signing MUST occur offline before any user test.\n' "$(git rev-parse HEAD)" > "$RUNNER_TEMP/cp08p-staging/README-NOT-FINAL.txt"
           (cd "$RUNNER_TEMP/cp08p-staging" && sha256sum * > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
