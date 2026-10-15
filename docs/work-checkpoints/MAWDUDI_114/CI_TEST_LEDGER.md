@@ -54,3 +54,5 @@ CP-01 lot 101–110 : collecte exécutée, contrôles de plages archivés sous C
 CP-01 lot 111–114 : collecte exécutée, contrôles de plages archivés sous CP01_LOT_111_114_COVERAGE.json, sauvegarde/récupération/hash PASS. Sémantique, QCF et Android non validés.
 
 CP01 parcours : vérification indépendante des IDs/plages, 6236 uniques, zéro doublon ; douze restaurations privées avec SHA concordant. Android, miniatures et validation éditoriale non exécutés.
+
+QCF numérique : vérification locale racine, 17 tests Python PASS avec PYTHONPATH=scripts. Première invocation sans ce chemin : erreur import du test EPUB, conservée dans le rapport. Android non exécuté. Préparation QCF seulement ; rendu et miniatures non validés.

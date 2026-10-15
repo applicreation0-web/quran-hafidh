@@ -1,0 +1,187 @@
+{
+  "status": "PARTIAL_NOT_PRODUCT_APPROVAL",
+  "batches": [
+    {
+      "name": "MAWDUDI_CP01_REVIEW_PARTIAL_046_055.zip",
+      "start": 46,
+      "end": 55,
+      "sha256": "0deef120b1129392846454768cb842c35670efdf8fe7658f4c1d2ecfe59e9319",
+      "bytes": 74424,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_PARTIAL_056_065.zip",
+      "start": 56,
+      "end": 65,
+      "sha256": "91c2ae742a454e7f8023402a836b8c032d030bc1872741261a68e5720e2cfe1f",
+      "bytes": 63194,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_PARTIAL_066_075.zip",
+      "start": 66,
+      "end": 75,
+      "sha256": "b77acda6e7ddf5cdf5cc9907a21468bf0521ec453f4c68adfd339d1ee97858b3",
+      "bytes": 57599,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_PARTIAL_076_084.zip",
+      "start": 76,
+      "end": 84,
+      "sha256": "15850a39653d0a09e46d0680a7c8f1d9c0c39e70fd3dbcacc0cca1d8090ea5c4",
+      "bytes": 44417,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_001_010.zip",
+      "start": 1,
+      "end": 10,
+      "sha256": "7806225bac8881590c84c2f671ed8ab13532243d9571a9cce8244e846a7e13d5",
+      "bytes": 941772,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_011_020.zip",
+      "start": 11,
+      "end": 20,
+      "sha256": "b58713cc7843ead36ca6f56b4e3939c2ed3f53b19ff7296aad730acfb6a8c027",
+      "bytes": 452680,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_021_030.zip",
+      "start": 21,
+      "end": 30,
+      "sha256": "fb20718b39f1f9715e1062575f7b0b55a516a22b888f8388e76d51834ffe1a04",
+      "bytes": 391471,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_031_040.zip",
+      "start": 31,
+      "end": 40,
+      "sha256": "3af375235a44e71f545669d5236712dbb92cd835c7f8dfc9debef39210e26be4",
+      "bytes": 296480,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_041_050.zip",
+      "start": 41,
+      "end": 50,
+      "sha256": "78df9834f7877095ec14956215e2af6236bfea2a7c00d90012ed75629a617669",
+      "bytes": 199428,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_051_060.zip",
+      "start": 51,
+      "end": 60,
+      "sha256": "81fb6a55da5445d97cfd6384e242a67a8960116412bd0c348c06cd41cd7d9e19",
+      "bytes": 139821,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_061_070.zip",
+      "start": 61,
+      "end": 70,
+      "sha256": "0534760cadb88c82b7f602af16ad825054f1441fa383671476a195b3c4cc2412",
+      "bytes": 88752,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_071_080.zip",
+      "start": 71,
+      "end": 80,
+      "sha256": "3d533cafafe73907ec26ce3aa9165fa52d44fb2d2a52aaf07a7061dc4a3ef1eb",
+      "bytes": 78055,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_081_090.zip",
+      "start": 81,
+      "end": 90,
+      "sha256": "37bf5a134850b47171f16ca3db3b6c378f059076cf21edaed94d4dbd45a5a568",
+      "bytes": 43588,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_091_100.zip",
+      "start": 91,
+      "end": 100,
+      "sha256": "394b9ceda9264bc41f57676d385731b76d4d823e07d574a036d7d019662cef7e",
+      "bytes": 24961,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_101_110.zip",
+      "start": 101,
+      "end": 110,
+      "sha256": "d00faa391e8edf7b0119536930f2c49eb05ee62616049d8762bbb15a6381d873",
+      "bytes": 15918,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP03_NUMERIC_PREPARATION_111_114.zip",
+      "start": 111,
+      "end": 114,
+      "sha256": "83a3bc4bacec682fcb10b0707edba67d3af8813ad97148b845dbdcbefe1b2192",
+      "bytes": 10455,
+      "status": "PREPARATION_NOT_FINAL",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_011_020_PARTIAL.zip",
+      "start": 11,
+      "end": 20,
+      "sha256": "f5652306a31255e990097d2ef0e70279dcaabb5d47f7ed15c0a2b39eea1e98c5",
+      "bytes": 157425,
+      "restore_verified": true,
+      "status": "succeeded"
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_036_045_PARTIAL.zip",
+      "start": 36,
+      "end": 45,
+      "sha256": "4cc341a12df9fc39307565639a00d91c22b6c70de30ead1560a86499e246fbba",
+      "bytes": 102102,
+      "restore_verified": true,
+      "status": "succeeded"
+    }
+  ],
+  "qcf_numeric": {
+    "passages": 1053,
+    "ayat": 6236,
+    "pages": 604,
+    "word_boxes": 77432,
+    "first_word_markers": 1053,
+    "multipage_passages": 388,
+    "mapping_issues": 0,
+    "editorial": "OPEN",
+    "thumbnails": "NOT_EXECUTED",
+    "boox": "NOT_EXECUTED",
+    "cp03": "NOT_COMPLETE"
+  },
+  "root_verification": {
+    "python_tests": 17,
+    "result": "PASS",
+    "command": "PYTHONPATH=scripts python3 -m unittest scripts.test_mawdudi_map_qcf scripts.test_audit_mawdudi_epub",
+    "previous_invocation": "FAIL_IMPORT_PATH_CORRECTED_WITH_PYTHONPATH",
+    "android": "NOT_EXECUTED"
+  }
+}
