@@ -63,3 +63,11 @@ Révisions privées 001–035 stables et récupérées : 796 propositions, aucun
 3. L'asset Android numérique `hifz-app/src/main/assets/mawdudi_public/passages_v1.csv` et les classes `MawdudiPassageIndex` / `MawdudiMapModel` sont des fondations read-only, sans corpus privé. CI Audit et CP08P verts sur `d7e7022f`; vérifier le test instrumenté, ne pas le compter PASS avant publication de sa preuve.
 4. Aucun titre n'est approuvé automatiquement ; les 9 adaptations, 59 candidats de terminologie, 104 ouvertures sans vérification manuelle initiale et 556 sections de commentaire restent à certifier selon les exigences du prompt final.
 5. Poursuivre CP01/CP02 sur les lots privés déjà persistés, pas de nouvelle branche/dépôt/APK de staging présenté comme final. Recette BOOX/114 sourates seulement après les gates éditoriaux et le rendu QCF réel.
+
+### Independent continuation (after SHA `872fac3479af70bac3581b0568f4261b33c66927`)
+
+Read STATUS_CURRENT.md and the two public JSON records `CP01_SOURCE_INTEGRITY_PUBLIC_V2.json`, `CP02_REVERIFY_FIRST25_PUBLIC.json` before doing any extra extraction. Recover the two source audit JSON documents AND their scripts from persistent Library folder `/MAWDUDI_WORK_CONTINUATION_2026-10-15`; verify recorded SHA-256 and ensure no private text enters GitHub/CI. Original EPUB and 12 NAV_DRAFT archives remain persistently saved separately; reverify their SHA before use, never re-extract as new work.
+
+Specific next unresolved tasks: independently review meaning/source of all 1,053 fine titles, macro theme source notes and all 114 first blocks; contextual review of 59 terminology candidates and nine editorial adaptations; compare all 556 historical English commentary sections/notes to an identified licensed edition and resolve OCR; finish genuine QCF thumbnails and two-way map/mushaf navigation for 114 surahs; finish Android Hifz/BOOX regression, then only a validated licensed private signed APK. The Android QCF page-end fix was committed and has a new JVM regression, not yet asserted PASS on its own SHA here.
+
+Do not conflate the 25 raw SHA reproductions with text correctness. Never call a staging APK final; do not route other surahs back into Ibn Kathir in the final private package.

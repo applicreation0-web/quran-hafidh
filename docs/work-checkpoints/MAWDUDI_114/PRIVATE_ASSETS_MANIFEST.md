@@ -131,3 +131,7 @@ MAWDUDI_CP01_LOT_111_114_INTAKE.zip : 124893 octets ; SHA-256 `c50f754adacbbf2bc
 ## Reprise indépendante — audit privé des 114 ouvertures et 12 NAV_DRAFT (2026-10-15)
 
 - `MAWDUDI_CP01_CONTINUATION_AUDIT_PRIVATE_2026-10-15.json` : **77 140 octets**, SHA-256 `785b28a0b580a760f8e56021244bfb431b16195447ae3e1d020398f13d563c83` ; sauvegardé dans la bibliothèque privée persistante (aucun texte anglais tiers sur GitHub). Les 12 ZIPs existants ont été rechargés et vérifiés, **pas de nouvelles copies de chaque lot**.
+
+## CP01–CP02 independent continuation, 15 Oct 2026
+
+Private persistent Library folder `MAWDUDI_WORK_CONTINUATION_2026-10-15` (no tokens or private storage identifiers): `CP01_114_SOURATES_INTEGRITY_PRIVATE_V2.json`, 103371 bytes, SHA-256 `10d0568f290625d8e6cc1b81a602867ddf8a4feedb88ad1debd3b4ba784edb4a`; `CP02_REVERIFY_FIRST25_PRIVATE.json`, 8143 bytes, SHA-256 `82a33b096179c614a074a096df96210236273f98f2e18d2c4d4547baebdaabed`. The two reproduction scripts are retained in the same private folder. JSON files report case-level source headings and are deliberately not published. Public checkpoint JSONs contain only statistics and IDs. Private upload completed successfully and filenames are recoverable. Verify hashes at every Work restart.

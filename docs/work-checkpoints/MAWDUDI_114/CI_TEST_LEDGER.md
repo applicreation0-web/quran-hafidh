@@ -65,3 +65,7 @@ QCF numérique : vérification locale racine, 17 tests Python PASS avec PYTHONPA
 - `db97b233` : première liste corrigée ; deuxième audit de baseline gelé encore FAIL pour les deux nouveaux adaptateurs ; correction ciblée apportée ensuite.
 - `d7e7022f` : `38786649459` audit source Hifz PASS ; `38786649298` pilote PUBLIC STAGING Al-Baqarah PASS. Les CI de ce staging n'attestent ni corpus privé, ni rendu physique BOOX, ni APK final.
 - `38786649334` régression Android instrumentée : **EN COURS au pointage**, ne pas déclarer PASS sans vérifier la conclusion finale et les jobs.
+
+## Continuation QCF page-end bug (2026-10-15)
+
+Commit `872fac3479af70bac3581b0568f4261b33c66927` changes ONLY MawdudiMapModel.lastPage to use the last physical line of the final ayah; adds `MawdudiMapModelRealQcfTest` using 1,053 real passages and the canonical 604-page geometry. CI runs `38788572252` (audit) and `38788572349` (Android regression) were **in progress when inspected**. Do not mark PASS until actual conclusion; public baseline success on `d7e7022f` is historical proof only.

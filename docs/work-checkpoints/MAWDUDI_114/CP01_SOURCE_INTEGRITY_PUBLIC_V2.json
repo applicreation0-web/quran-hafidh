@@ -1,0 +1,30 @@
+{
+  "schema": "mawdudi-cp01-source-integrity-public-v2",
+  "source_epub_sha256": "8d0a4c5a34bdc8404900b8b61b8a93d633c7984f3497fe74a9d846adfa454bba",
+  "private_nav_archive_count": 12,
+  "surahs": 114,
+  "passages": 1053,
+  "ayat": 6236,
+  "source_original_title_count": 1044,
+  "editorial_adaptation_count": 9,
+  "adaptation_ids": [
+    "s002a134b134",
+    "s040a061b061",
+    "s054a045b055",
+    "s055a056b078",
+    "s101a001b011",
+    "s103a001b003",
+    "s110a001b003",
+    "s112a001b004",
+    "s113a001b005"
+  ],
+  "source_title_presence": true,
+  "canonical_boundary_sequence_verified": true,
+  "previous_next_links_verified": true,
+  "opening_preface_keyword_screened": 114,
+  "keyword_flags": 0,
+  "opening_semantic_final_passes": 0,
+  "terminology_candidates": 59,
+  "semantically_approved_final": 0,
+  "remark": "Static audits over exact archived private draft; no text meaning, source edition or QCF visual approval."
+}

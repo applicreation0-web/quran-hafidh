@@ -1,0 +1,21 @@
+{
+  "schema": "mawdudi-cp02-public-reverification-v1",
+  "source_epub_sha256": "8d0a4c5a34bdc8404900b8b61b8a93d633c7984f3497fe74a9d846adfa454bba",
+  "source_preflight_zip_sha256": "aa920bbb5fec5d02abc2044dec45340e3260cfa3b1d1f480eacc0c21d5c61481",
+  "first_section_ordinals": "1-25",
+  "source_evidence_hash_matches": 25,
+  "original_evidence_data_restored": true,
+  "sections_missing_verse_labels": 1,
+  "missing_verse_references": [
+    "2:97",
+    "2:98",
+    "2:99",
+    "2:100"
+  ],
+  "first_section_footnote_defect": true,
+  "full_text_and_notes_approved": 0,
+  "other_historical_sections_not_rechecked": 531,
+  "license_confirmed": false,
+  "original_english_edition_confirmed": false,
+  "remark": "Hash equality is structural reproducibility, not correctness/authorization."
+}
