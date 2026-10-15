@@ -4,7 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.style.StyleSpan;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -18,14 +20,12 @@ import android.widget.Toast;
 
 import com.quransafeguard.hifz.core.VerseRef;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Al-Baqarah PRIVATE phone pilot: one continuous map, two scales, no large cards.
@@ -52,7 +52,12 @@ final class BaqaraPilotScreen implements MushafView.Listener {
     private int scrollY;
     private int priorScroll;
     private int commentaryScrollY;
+    private int commentaryAyah;
+    private int commentaryRequest;
     private boolean commentaryOpen;
+    private boolean destroyed;
+    private final ExecutorService commentaryIo = Executors.newSingleThreadExecutor();
+    private final TafsirRepository jalalayn;
     private boolean ready;
     private boolean mushafExpanded;
 
@@ -60,7 +65,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
     private FrameLayout mapHost;
     private LinearLayout mapColumn, root;
     private TextView pageIndicator, caption, mapHeading, commentaryHeading, commentaryBody;
-    private Button previousPage, nextPage;
+    private Button previousPage, nextPage, previousCommentaryVerse, nextCommentaryVerse;
     private MushafView mushaf;
     private LinearLayout.LayoutParams mapSizing, previewSizing;
 
@@ -69,6 +74,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         this.host = activity;
         this.activity = activity;
         this.geometry = geometry;
+        jalalayn = new TafsirRepository(activity);
         initialAyah = Math.max(1, Math.min(286, requestedAyah));
         themes = BaqaraPilotSpec.themes();
         passages = BaqaraAyahThemeTitles.load(activity);
@@ -82,8 +88,10 @@ final class BaqaraPilotScreen implements MushafView.Listener {
             priorScroll = saved.getInt("bp_prior", 0);
             commentaryOpen = saved.getBoolean("bp_commentary", false);
             commentaryScrollY = saved.getInt("bp_commentary_scroll", 0);
+            commentaryAyah = saved.getInt("bp_commentary_ayah", passages.get(selectedIndex).first);
             mushafExpanded = saved.getBoolean("bp_expanded", false);
         }
+        if (commentaryAyah == 0) commentaryAyah = passages.get(selectedIndex).first;
     }
 
     void display() {
@@ -141,18 +149,25 @@ final class BaqaraPilotScreen implements MushafView.Listener {
             Ui.dp(host, 12), Ui.dp(host, 12));
         Button returnToMap = Ui.iconButton(activity, "", "Retour", v -> closeCommentary());
         returnToMap.setContentDescription("Retour à la carte");
-        commentaryColumn.addView(returnToMap, new LinearLayout.LayoutParams(
-            Ui.dp(host, 44), Ui.dp(host, 35)));
+        LinearLayout tafsirControls = Ui.row(host);
+        tafsirControls.setGravity(Gravity.CENTER_VERTICAL);
+        tafsirControls.addView(returnToMap, new LinearLayout.LayoutParams(
+            Ui.dp(host, 44), Ui.dp(host, 40)));
+        previousCommentaryVerse = Ui.iconButton(host, "", "Verset précédent de ce passage",
+            v -> moveCommentaryVerse(-1));
+        nextCommentaryVerse = Ui.iconButton(host, "", "Verset suivant de ce passage",
+            v -> moveCommentaryVerse(1));
+        tafsirControls.addView(previousCommentaryVerse, new LinearLayout.LayoutParams(
+            Ui.dp(host, 44), Ui.dp(host, 40)));
+        tafsirControls.addView(nextCommentaryVerse, new LinearLayout.LayoutParams(
+            Ui.dp(host, 44), Ui.dp(host, 40)));
+        commentaryColumn.addView(tafsirControls);
         commentaryHeading = Ui.bookText(host, "", 15f, true);
         commentaryColumn.addView(commentaryHeading);
         commentaryBody = Ui.bookText(host, "", 13.5f, false);
         commentaryBody.setPadding(0, Ui.dp(host, 7), 0, Ui.dp(host, 10));
         commentaryBody.setTextIsSelectable(true);
         commentaryColumn.addView(commentaryBody);
-        TextView sourceLink = Ui.bookText(host, "↗  Open English commentary source", 12f, true);
-        sourceLink.setPadding(0, Ui.dp(host, 6), 0, Ui.dp(host, 6));
-        sourceLink.setOnClickListener(v -> openSourceInBrowser());
-        commentaryColumn.addView(sourceLink);
         commentaryScroll.addView(commentaryColumn, new ScrollView.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -342,6 +357,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         scrollY = mapScroll.getScrollY();
         selectedIndex = position;
         previewPage = 0;
+        commentaryAyah = chosen().first;
         drawMap(false);
         renderPreview();
     }
@@ -366,6 +382,11 @@ final class BaqaraPilotScreen implements MushafView.Listener {
                 exact.add(verse);
         }
         List<VerseRef> selected = new ArrayList<>(exact);
+        // In commentary focus, highlight the exact verse already linked to Jalalayn.
+        if (commentaryOpen && commentaryAyah >= chosen().first && commentaryAyah <= chosen().last) {
+            VerseRef focus = new VerseRef(2, commentaryAyah);
+            if (exact.contains(focus)) selected = Collections.singletonList(focus);
+        }
         caption.setText(chosen().title + "   ·   " + chosen().range());
         pageIndicator.setText("Page " + previewPage +
             (first == last ? "" : "  ·  " + first + "–" + last));
@@ -387,6 +408,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         if (next == selectedIndex) return;
         selectedIndex = next;
         previewPage = 0;
+        commentaryAyah = chosen().first;
         int newTheme = BaqaraPilotSpec.themeIndexForAyah(chosen().first);
         if (newTheme != theme) { theme = newTheme; scrollY = 0; }
         drawMap(false);
@@ -397,64 +419,114 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         if (commentaryOpen) return;
         scrollY = mapScroll.getScrollY();
         commentaryScrollY = 0;
+        commentaryAyah = chosen().first;
         commentaryOpen = true;
         displayCommentary();
     }
 
+    /** Uses the EXISTING audited offline Jalalayn database. Macro theme labels
+     *  alone come from Mawdudi; source commentary and notes never do. */
     private void displayCommentary() {
-        BaqaraAyahThemeTitles.Passage passage = chosen();
-        commentaryHeading.setText(passage.title + "\n" + passage.range());
-        int firstSection = BaqaraPilotSpec.sectionIndexForAyah(passage.first);
-        int lastSection = BaqaraPilotSpec.sectionIndexForAyah(passage.last);
-        StringBuilder text = new StringBuilder();
-        for (int i = firstSection; i <= lastSection && i >= 0; i++) {
-            int[] range = BaqaraPilotSpec.sectionRange(i);
-            text.append("Mawdudi · Section ").append(i + 1)
-                .append(" · 2:").append(range[0]).append("–").append(range[1]).append("\n\n");
-            String privateText = privateCommentary(i + 1);
-            text.append(privateText == null
-                ? "Complete English commentary not installed in this private build. " +
-                  "Open the source to consult this section. No invented commentary is shown."
-                : privateText);
-            text.append("\n\n");
-        }
-        commentaryBody.setText(text.toString().trim());
+        if (!commentaryOpen) return;
         mapScroll.setVisibility(View.GONE);
         commentaryScroll.setVisibility(View.VISIBLE);
+        showCommentaryVerse();
         commentaryScroll.post(() -> commentaryScroll.scrollTo(0, Math.max(0, commentaryScrollY)));
     }
 
-    private String privateCommentary(int section) {
-        String path = String.format(Locale.ROOT,
-            "mawdudi_baqara_private/commentary_section_%02d.txt", section);
-        try (InputStream in = host.getAssets().open(path);
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int read, size = 0;
-            while ((read = in.read(buffer)) != -1) {
-                size += read;
-                if (size > 160000) return null;
-                out.write(buffer, 0, read);
-            }
-            String s = out.toString(StandardCharsets.UTF_8.name()).trim();
-            return s.length() < 100 ? null : s;
-        } catch (Exception unavailable) { return null; }
+    static int boundedTafsirAyah(int first, int last, int ayah) {
+        if (first < 1 || last < first || last > 286)
+            throw new IllegalArgumentException("Invalid Al-Baqarah passage");
+        return Math.max(first, Math.min(last, ayah));
     }
 
-    private void openSourceInBrowser() {
-        int i = Math.max(0, BaqaraPilotSpec.sectionIndexForAyah(chosen().first));
-        int[] range = BaqaraPilotSpec.sectionRange(i);
-        Uri url = Uri.parse("https://www.islamicstudies.info/quran/towards.php?sura=2"
-            + "&verse=" + range[0] + "&to=" + range[1]);
-        try { host.startActivity(new Intent(Intent.ACTION_VIEW, url)); }
-        catch (Exception ignored) {
-            Toast.makeText(host, "Unable to open the external source", Toast.LENGTH_SHORT).show();
+    static int stepTafsirAyah(int first, int last, int ayah, int direction) {
+        if (direction != -1 && direction != 1)
+            throw new IllegalArgumentException("Tafsir step must be +/-1");
+        return boundedTafsirAyah(first, last,
+            boundedTafsirAyah(first, last, ayah) + direction);
+    }
+
+    private void moveCommentaryVerse(int direction) {
+        if (!commentaryOpen) return;
+        int next = stepTafsirAyah(chosen().first, chosen().last, commentaryAyah, direction);
+        if (next == commentaryAyah) return;
+        commentaryAyah = next;
+        commentaryScrollY = 0;
+        showCommentaryVerse();
+        commentaryScroll.post(() -> commentaryScroll.scrollTo(0, 0));
+    }
+
+    private void showCommentaryVerse() {
+        if (!commentaryOpen || destroyed) return;
+        BaqaraAyahThemeTitles.Passage passage = chosen();
+        commentaryAyah = boundedTafsirAyah(passage.first, passage.last, commentaryAyah);
+        final int ayah = commentaryAyah;
+        final int passageIndex = selectedIndex;
+        final int request = ++commentaryRequest;
+        final VerseRef verse = new VerseRef(2, ayah);
+        previousCommentaryVerse.setEnabled(ayah > passage.first);
+        nextCommentaryVerse.setEnabled(ayah < passage.last);
+        previousCommentaryVerse.setAlpha(ayah > passage.first ? 1f : .28f);
+        nextCommentaryVerse.setAlpha(ayah < passage.last ? 1f : .28f);
+        commentaryHeading.setText("Jalalayn · 2:" + ayah + "\n" + passage.range());
+        commentaryBody.setText("Loading existing offline Tafsir al-Jalalayn…");
+        if (ready) {
+            int focusPage = geometry.pageForVerse(verse);
+            if (previewPage != focusPage) previewPage = focusPage;
+            renderPreview();
         }
+        commentaryIo.execute(() -> {
+            TafsirRepository.Entry result = null;
+            try { result = jalalayn.load(verse); }
+            catch (Exception unavailable) { /* Existing offline repository fails closed. */ }
+            final TafsirRepository.Entry entry = result;
+            host.runOnUiThread(() -> {
+                if (destroyed || !commentaryOpen || commentaryRequest != request ||
+                    passageIndex != selectedIndex || ayah != commentaryAyah) return;
+                if (entry == null) {
+                    commentaryBody.setText("Jalalayn unavailable for this verse in this build.");
+                    return;
+                }
+                commentaryBody.setText(renderExistingJalalayn(entry));
+            });
+        });
+    }
+
+    private static void appendJalalaynRuns(SpannableStringBuilder builder,
+                                           List<TafsirRepository.Run> runs) {
+        for (TafsirRepository.Run run : runs) {
+            int from = builder.length();
+            builder.append(run.text);
+            int style = 0;
+            switch (run.style) {
+                case BOLD: case TECHNICAL_TERM: style = Typeface.BOLD; break;
+                case BOLD_ITALIC: style = Typeface.BOLD_ITALIC; break;
+                case ITALIC: case TRANSLITERATION: case POETRY: style = Typeface.ITALIC; break;
+                default: break;
+            }
+            if (style != 0 && builder.length() > from)
+                builder.setSpan(new StyleSpan(style), from, builder.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+    }
+
+    private static CharSequence renderExistingJalalayn(TafsirRepository.Entry entry) {
+        SpannableStringBuilder output = new SpannableStringBuilder();
+        String attribution = entry.metadataLine();
+        if (!attribution.isEmpty()) output.append(attribution).append("\n\n");
+        appendJalalaynRuns(output, entry.commentaryRuns);
+        for (TafsirRepository.Note note : entry.notes) {
+            output.append("\n\nNote ").append(Integer.toString(note.number)).append("\n");
+            appendJalalaynRuns(output, note.runs);
+        }
+        return output;
     }
 
     private void closeCommentary() {
         if (!commentaryOpen) return;
         commentaryScrollY = commentaryScroll.getScrollY();
+        commentaryRequest++;
         commentaryOpen = false;
         commentaryScroll.setVisibility(View.GONE);
         mapScroll.setVisibility(View.VISIBLE);
@@ -478,12 +550,16 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         out.putInt("bp_commentary_scroll", commentaryOpen
             ? commentaryScroll.getScrollY() : commentaryScrollY);
         out.putBoolean("bp_expanded", mushafExpanded);
+        out.putInt("bp_commentary_ayah", commentaryAyah);
     }
 
     /** Expose the same real QCF view for existing runtime integrity tests. */
     MushafView mushafForIntegrityCheck() { return mushaf; }
 
     void destroy() {
+        destroyed = true;
+        commentaryRequest++;
+        commentaryIo.shutdownNow();
         if (mushaf != null) mushaf.destroySafely();
     }
 
@@ -504,7 +580,16 @@ final class BaqaraPilotScreen implements MushafView.Listener {
     @Override public void onReady() { ready = true; renderPreview(); }
     @Override public void onError(String message) { caption.setText("Muṣḥaf unavailable"); }
     @Override public void onPageShown(int page) {}
-    @Override public void onVerseTap(VerseRef verse) { openReader(); }
+    @Override public void onVerseTap(VerseRef verse) {
+        if (commentaryOpen && verse.getSurah() == 2
+            && verse.getAyah() >= chosen().first && verse.getAyah() <= chosen().last) {
+            commentaryAyah = verse.getAyah();
+            commentaryScrollY = 0;
+            showCommentaryVerse();
+            return;
+        }
+        openReader();
+    }
     @Override public void onSurfaceTap() { openReader(); }
     @Override public void onPageSwipe(int delta) { turnPage(delta); }
 }

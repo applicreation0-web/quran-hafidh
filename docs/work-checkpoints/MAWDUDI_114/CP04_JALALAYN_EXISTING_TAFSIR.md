@@ -1,0 +1,9 @@
+# CP04 — Raccorder la carte Al-Baqarah au Tafsir Jalalayn existant
+
+Décision utilisateur (15 octobre 2026) : **le commentaire n'est plus Maududi**. Jalalayn est déjà contenu dans les actifs officiels de l'application (`app/src/plus/assets/tafsir/al_jalalayn_en.sqlite.gz.part00..03`), exploités par le préparateur de build et par `TafsirRepository`, dont la base exige 6 236 entrées et vérifie l'intégrité SQLite. **Pas de téléchargement ni d'autre corpus.**
+
+Implémentation : `BaqaraPilotScreen` remplace l'ancien chargement de sections Maududi privées / lien navigateur par des requêtes de `TafsirRepository.load(VerseRef)` sur un seul thread IO. La vue commentaire est le panneau existant de carte, sans déplacer le Mushaf QCF; navigation au verset précédent/suivant bornée au passage Ayah Themes; sélection du verset sur le Mushaf lorsqu'il apparaît sur la même page; retour conserve la carte et le défilement. Texte Jalalayn rendu avec les styles présents dans ses `Run`, ses notes d'origine et l'attribution, jamais recopié ou enregistré sur GitHub. Les appels obsolètes asynchrones sont ignorés; arrêt du thread à destruction du pilote. Si le corpus est absent dans une variante de build, afficher une indisponibilité et ne jamais inventer de texte.
+
+**Séparation inchangée** : grands thèmes Maududi, intitulés de navigation Ayah Themes (encore non approuvés éditorialement), commentaires Jalalayn du Tafsir déjà présent dans l'application. Aucun moteur Hifz, lecteur QCF, scheduling, comptes ni base Tafsir n'a été modifié.
+
+Régression synthétique `BaqaraJalalaynPassageBoundsTest` : borne tous les versets de la sourate et interdit toute navigation inter-passage. Audit CI obligatoire avant mention PASS. Ce lot ne généralise pas encore l'UI aux 113 autres sourates : le routage historique Ibn Kathir hors Al-Baqarah reste à remplacer dans CP04. CP06–07 / APK BOOX privé final **NON TERMINÉS**.
