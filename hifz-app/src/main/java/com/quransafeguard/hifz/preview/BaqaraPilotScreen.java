@@ -159,7 +159,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         mapHost = new FrameLayout(host);
         mapHost.addView(mapScroll, new FrameLayout.LayoutParams(-1, -1));
         mapHost.addView(commentaryScroll, new FrameLayout.LayoutParams(-1, -1));
-        mapSizing = new LinearLayout.LayoutParams(-1, 0, .34f);
+        mapSizing = new LinearLayout.LayoutParams(-1, 0, .22f);
         root.addView(mapHost, mapSizing);
         root.addView(Ui.divider(host));
 
@@ -202,7 +202,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         mushaf.setContentDescription("Muṣḥaf QCF, toucher pour ouvrir Lecture plein écran");
         mushaf.setListener(this);
         preview.addView(mushaf, new LinearLayout.LayoutParams(-1, 0, 1f));
-        previewSizing = new LinearLayout.LayoutParams(-1, 0, .66f);
+        previewSizing = new LinearLayout.LayoutParams(-1, 0, .78f);
         root.addView(preview, previewSizing);
 
         host.setContentView(root);
@@ -215,8 +215,8 @@ final class BaqaraPilotScreen implements MushafView.Listener {
 
     private void updateSplit() {
         if (mapSizing == null || previewSizing == null) return;
-        mapSizing.weight = mushafExpanded ? .15f : .34f;
-        previewSizing.weight = mushafExpanded ? .85f : .66f;
+        mapSizing.weight = mushafExpanded ? .10f : .22f;
+        previewSizing.weight = mushafExpanded ? .90f : .78f;
         mapHost.setLayoutParams(mapSizing);
         if (previewSizing != null && root.getChildCount() > 0)
             root.getChildAt(root.getChildCount() - 1).setLayoutParams(previewSizing);
