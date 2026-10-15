@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Pilot only: live Ayah Themes titles are downloaded on the user device; never embedded in public CI. -->
-    <uses-permission android:name="android.permission.INTERNET" />
-
     <application
         android:name=".HifzRecoveryApplication"
         android:allowBackup="false"
