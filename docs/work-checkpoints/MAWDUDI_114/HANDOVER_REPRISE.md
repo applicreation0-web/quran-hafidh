@@ -91,3 +91,7 @@ Newest functional head `d5c3bfd2e9e8336f3d93cb9616c7b8dab002827c` on the single 
 ### Pivot Work — commentaires Jalalayn déjà présents (15 octobre 2026)
 
 Lire `CP04_JALALAYN_EXISTING_TAFSIR.md`. Les commentaires Maududi sont **retirés du périmètre du produit final** : ne pas refaire l'OCR/hOCR des 556 sections dans le but d'alimenter la carte. Maududi sert uniquement aux macro-thèmes; Ayah Themes aux titres; Jalalayn existant fournit le commentaire anglais et les notes, indépendamment. Premier composant raccordé sur Al-Baqarah au SHA `f61c6aaae327d94eb76d503c8a6d40c815c01602`, sans manipuler la base Tafsir ni les moteurs Hifz. Vérifier les CI de ce SHA et les tests UI/instrumentés; poursuivre le raccordement aux 113 autres sourates, l'alignement QCF et la certification du corpus des titres avant tout APK privé.
+
+### Reprise sobre du 15 octobre 2026 — d5291279
+
+Ne pas refaire le pivot Jalalayn ni les 11+3 captures OCR déjà analysées. Interface légère prioritaire, aucun ajout de composants volumineux. Lire `CP04_MINIMAL_UI_READING_REVISIONS.md` et vérifier 3 CI du SHA `d5291279ff859e30bef718c9d164495d50f2abed` (audit, Hifz Android, pilote Baqarah). Le cadre Hifz frozen n'a subi aucun changement; clés actuelles en Lecture/Révisions conservées. Le remplacement de leurs anciens points d'ancrage par 1053 passages Ayah Themes attend la revue éditoriale (1044 titres candidats, 9 exceptions), sans prétendre 1053 titres approuvés. Restant : dérouler les 114 cartes réelles en gardant le Mushaf majoritaire, contrôle physique BOOX et debug personnel exact.

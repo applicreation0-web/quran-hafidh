@@ -85,3 +85,10 @@ Added read-only MawdudiMapModel.Navigation and Snapshot, plus two JVM tests usin
 ## f61c6aaa — Jalalayn reused, CI pending
 
 Three fresh workflows triggered on `f61c6aaae327d94eb76d503c8a6d40c815c01602` : existing audit `38803559641`, Android regression `38803559861`, CP08P staging `38803559657`. Latest observed all in_progress/queued; **not PASS** until completed. Functional device interaction with note rendering, passage next/previous, BOOX hardware **NOT EXECUTED**. Prior `d5c3bfd2` CI green is independent historical evidence, not evidence of this code.
+
+## CP04 compact interface / revue clés
+
+- Source commit `d5291279ff859e30bef718c9d164495d50f2abed`.
+- Runs audit source `38806448018`, Hifz + sept jours `38806447738`, pilote Baqarah `38806447712` déclenchés, résultats **PENDING** à ce checkpoint.
+- Pas de revendication PASS matériel ou de compilation complète non vérifiée.
+- Le titre des clés en Lecture et Révisions reste issu du corpus antérieur jusqu'à activation Ayah Themes validée ; les contrôles existants restent actifs.
