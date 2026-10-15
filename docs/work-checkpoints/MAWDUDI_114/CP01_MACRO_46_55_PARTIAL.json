@@ -1,0 +1,13 @@
+{
+  "status": "PARTIAL_SOURCE_OCR_NOT_FINAL_PASS",
+  "verified_archives": [
+    {
+      "name": "MAWDUDI_CP01_MACRO_46_55_PARTIAL.zip",
+      "start": 46,
+      "end": 55,
+      "bytes": 10788,
+      "sha256": "2e3e1a9129ebe4e994cdb0de660f0dd5462f25089ce7bf0e20538b1c4fb90cbc",
+      "restore_verified": true
+    }
+  ]
+}
