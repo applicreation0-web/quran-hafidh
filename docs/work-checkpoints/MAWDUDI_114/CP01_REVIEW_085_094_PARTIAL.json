@@ -1,0 +1,21 @@
+{
+  "status": "PARTIAL_NO_SEMANTIC_PASS",
+  "verified_archives": [
+    {
+      "name": "MAWDUDI_CP01_REVIEW_036_045_PARTIAL_V2.zip",
+      "start": 36,
+      "end": 45,
+      "bytes": 10373,
+      "sha256": "4cdbe84a29af9d4fa82dbbc84ad030d4dca229343baf9158f577e3dc3eac9472",
+      "restore_verified": true
+    },
+    {
+      "name": "MAWDUDI_CP01_REVIEW_085_094_PARTIAL_V2.zip",
+      "start": 85,
+      "end": 94,
+      "bytes": 46376,
+      "sha256": "29f6caf23602eb52223483dda8210a4047475f83010ab005156e3cb8e18b3bf8",
+      "restore_verified": true
+    }
+  ]
+}
