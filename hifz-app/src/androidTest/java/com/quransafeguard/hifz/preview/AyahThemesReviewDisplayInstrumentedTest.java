@@ -115,6 +115,8 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      java.lang.reflect.Method title=MawdudiMapScreen.class.getDeclaredMethod("showCurrentTitle");
      title.setAccessible(true);title.invoke(screen.get());
      assertEquals(expected,((Integer)field(screen.get(),"page")).intValue());
+     assertTrue("Short titles must not reserve a large empty sheet",
+       ((android.view.View)field(screen.get(),"titlePanel")).getLayoutParams().height<=80*a.getResources().getDisplayMetrics().density);
     }catch(Exception e){throw new AssertionError(e);}
    });
    awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
@@ -174,6 +176,30 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      }
     }catch(Exception ex){throw new AssertionError(ex);}
    });
+   MawdudiMapScreen originalScreen=screen.get();
+   scenario.onActivity(a->{
+    try {
+     MawdudiPassageIndex canonical=(MawdudiPassageIndex)field(originalScreen,"index");
+     MawdudiMapScreen baqarah=new MawdudiMapScreen(a,GeometryRepository.get(a),canonical,
+       (AyahThemesCueIndex)field(originalScreen,"titles"),(MawdudiMapData)field(originalScreen,"macros"),2,47,null);
+     baqarah.display();
+     java.lang.reflect.Method level=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);level.setAccessible(true);level.invoke(baqarah,false);
+     java.lang.reflect.Field opened=MawdudiMapScreen.class.getDeclaredField("passageOpen");opened.setAccessible(true);opened.setBoolean(baqarah,true);
+     baqarah.refresh();screen.set(baqarah);selected.set(canonical.at(2,47));
+    }catch(Exception e){throw new AssertionError(e);}
+   });
+   awaitAtlasThumbnails(scenario,screen,selected.get(),7);
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-baqarah-two-rows-page7.png");
+   scenario.onActivity(a->{
+    try {
+     java.lang.reflect.Method title=MawdudiMapScreen.class.getDeclaredMethod("showTitle",String.class);title.setAccessible(true);
+     StringBuilder caption=new StringBuilder();for(int k=0;k<12;k++)caption.append("SYNTHETIC long caption for viewport regression. ");
+     title.invoke(screen.get(),caption.toString());
+    }catch(Exception e){throw new AssertionError(e);}
+   });
+   awaitAtlasThumbnails(scenario,screen,selected.get(),7);
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-baqarah-long-title-page7.png");
+   scenario.onActivity(a->{screen.get().destroy();screen.set(originalScreen);});
   }
  }
  @Test public void titleTargetPreservesPassiveEndpointAndArmedActiveWeakMark()throws Exception {

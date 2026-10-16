@@ -188,7 +188,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
   passageTitle.setText(surah+":"+focusStart+(focusStart==focusEnd?"":"–"+focusEnd)+" · "+text);
   // The full caption has its own bounded space; it never overlays Quran text.
   int available=activity.findViewById(android.R.id.content).getHeight();
-  titlePanel.getLayoutParams().height=Math.max(Ui.dp(activity,80),Math.min(Ui.dp(activity,180),available/4));
+  int width=Math.max(1,titlePanel.getWidth());
+  passageTitle.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),
+      View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
+  int pageBudget=available-sunHeight-Ui.dp(activity,48+48+100+140+32);
+  int limit=Math.max(Ui.dp(activity,56),Math.min(Math.min(Ui.dp(activity,180),available/4),pageBudget));
+  titlePanel.getLayoutParams().height=Math.min(limit,Math.max(Ui.dp(activity,56),passageTitle.getMeasuredHeight()));
   titlePanel.requestLayout();titlePanel.scrollTo(0,0);
  }
  private void showCurrentTitle(){
