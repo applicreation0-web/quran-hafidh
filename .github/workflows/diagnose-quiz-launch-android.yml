@@ -15,7 +15,7 @@ concurrency:
 jobs:
   reproduce:
     # The CP-06 marker changes only its public staging workflow; the frozen
-    # application tree already owns the 98/98 Android evidence.
+    # application tree already owns the 99/99 Android evidence.
     if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[cp06-staging-only]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -36,21 +36,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Require the complete 98-test Android source set
+      - name: Require the complete 99-test Android source set
         shell: bash
         run: |
           set -euo pipefail
           files="$(find hifz-app/src/androidTest/java -type f -name '*.java' | wc -l)"
           tests="$(grep -R --include='*.java' -E '^[[:space:]]*@Test' hifz-app/src/androidTest/java | wc -l)"
           printf 'Android instrumented inventory: %s files / %s tests\n' "$files" "$tests"
-          test "$files" -eq 25
-          test "$tests" -eq 98
+          test "$files" -eq 26
+          test "$tests" -eq 99
       - name: Enable KVM for genuine Android execution
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: Run all 98 Hifz Android tests and collect authorized pixels
+      - name: Run all 99 Hifz Android tests and collect authorized pixels
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34

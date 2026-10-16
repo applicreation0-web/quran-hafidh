@@ -70,6 +70,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private AnchoringQueue.ItqanProtocol itqanSessionProtocol = AnchoringQueue.ItqanProtocol.FULL;
     private ItqanRegimeStore.UnitPlan itqanUnitPlan;
     private SemanticPassageRepository semanticPassages;
+    private AyahThemesCueIndex ayahThemesTitles;
     private android.app.Dialog semanticTitleDialog;
     private ItqanMaintenancePolicy.Regime itqanRegime = ItqanMaintenancePolicy.Regime.DEEP_FIRST_PASS;
     private boolean fractionatedItqan;
@@ -142,6 +143,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
         try {
             geometry = GeometryRepository.get(this);
             semanticPassages = SemanticPassageRepository.shared(this);
+            ayahThemesTitles = AyahThemesCueIndex.load(this);
         } catch (Throwable error) {
             Ui.showFatal(this, "La géométrie du Mushaf est indisponible. Fermez puis rouvrez l’application.");
             return;
@@ -1744,9 +1746,13 @@ public final class HifzSessionActivity extends android.app.Activity implements M
 
     @Override public void onPageSwipe(int delta){goPage(delta);}
     @Override public void onSemanticCueTap(String passageId) {
-        if (semanticPassages == null) return;
-        SemanticPassageRepository.Cue cue = semanticPassages.cue(passageId);
-        if (cue != null) semanticTitleDialog = SemanticTitlePopup.show(this, cue.title, semanticTitleDialog);
+        if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
+        semanticTitleDialog=null;
+        if(ayahThemesTitles==null||passageId==null||!passageId.startsWith("AT:"))return;
+        String title=ayahThemesTitles.titleForVisibleStart(currentPage,passageId.substring(3));
+        if(title==null)return;
+        semanticTitleDialog=SemanticTitlePopup.showEnglish(this,title,null);
+        SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,actions);
     }
     /** Apprentissage, Stabilisation, Renforcement and Consolidation share one reading focus. */
     private boolean usesReadingFocus() {
@@ -1956,6 +1962,11 @@ public final class HifzSessionActivity extends android.app.Activity implements M
             }
             restoreMurajaahEndpointSelectionOnCurrentPage();
         }
+        if(semanticTitleDialog!=null&&semanticTitleDialog.isShowing())semanticTitleDialog.dismiss();
+        semanticTitleDialog=null;
+        boolean titleTargets=isMurajaahMode() || (ITQAN.equals(mode) && currentMask==100
+            && itqanUnit!=null && ItqanMaintenancePolicy.anchoredRecallRep(itqanRegime,prefs.itqanRep()));
+        if(titleTargets)AyahThemesReviewDisplay.apply(this,mushaf,ayahThemesTitles,page);
     }
     @Override protected void onResume(){
         super.onResume();
