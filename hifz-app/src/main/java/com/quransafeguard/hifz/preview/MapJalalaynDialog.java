@@ -45,38 +45,38 @@ final class MapJalalaynDialog {
         return boundedAyah(first,last,boundedAyah(first,last,ayah)+direction);
     }
 
-    MapJalalaynDialog(Activity host,int surah,int first,int last,int requestedAyah) {
+    MapJalalaynDialog(Activity activity,int surah,int first,int last,int requestedAyah) {
         if(surah<1||surah>114)throw new IllegalArgumentException("Invalid surah");
-        this.activity=host;
+        this.activity=activity;
         this.surah=surah;
         this.first=first;
         this.last=last;
         ayah=boundedAyah(first,last,requestedAyah);
-        repository=new TafsirRepository(host);
-        dialog=new Dialog(host);
+        repository=new TafsirRepository(activity);
+        dialog=new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout shell=Ui.column(host);
+        LinearLayout shell=Ui.column(activity);
         shell.setBackgroundColor(Ui.PAPER);
-        shell.setPadding(Ui.dp(host,8),Ui.dp(host,5),Ui.dp(host,8),Ui.dp(host,7));
+        shell.setPadding(Ui.dp(activity,8),Ui.dp(activity,5),Ui.dp(activity,8),Ui.dp(activity,7));
 
-        LinearLayout controls=Ui.row(host);
+        LinearLayout controls=Ui.row(activity);
         controls.setGravity(Gravity.CENTER_VERTICAL);
-        controls.addView(Ui.iconButton(host,"","Retour à la carte",v->close()),
-            new LinearLayout.LayoutParams(Ui.dp(host,44),Ui.dp(host,44)));
-        previous=Ui.iconButton(host,"","Verset précédent",v->move(-1));
-        controls.addView(previous,new LinearLayout.LayoutParams(Ui.dp(host,44),Ui.dp(host,44)));
-        heading=Ui.text(host,"",14f,true);
+        controls.addView(Ui.iconButton(activity,"","Retour",v->close()),
+            new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,44)));
+        previous=Ui.iconButton(activity,"","Verset précédent",v->move(-1));
+        controls.addView(previous,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,44)));
+        heading=Ui.text(activity,"",14f,true);
         heading.setGravity(Gravity.CENTER);
-        controls.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(host,44),1));
-        next=Ui.iconButton(host,"","Verset suivant",v->move(1));
-        controls.addView(next,new LinearLayout.LayoutParams(Ui.dp(host,44),Ui.dp(host,44)));
+        controls.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
+        next=Ui.iconButton(activity,"","Verset suivant",v->move(1));
+        controls.addView(next,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,44)));
         shell.addView(controls);
 
-        scroll=new ScrollView(host);
+        scroll=new ScrollView(activity);
         scroll.setVerticalScrollBarEnabled(true);
-        body=Ui.bookText(host,"",13.5f,false);
+        body=Ui.bookText(activity,"",13.5f,false);
         body.setTextIsSelectable(true);
-        body.setPadding(Ui.dp(host,6),Ui.dp(host,5),Ui.dp(host,6),Ui.dp(host,5));
+        body.setPadding(Ui.dp(activity,6),Ui.dp(activity,5),Ui.dp(activity,6),Ui.dp(activity,5));
         scroll.addView(body,new ScrollView.LayoutParams(-1,-2));
         shell.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         dialog.setContentView(shell);
