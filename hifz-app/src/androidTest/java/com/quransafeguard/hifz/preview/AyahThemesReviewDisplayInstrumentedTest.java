@@ -92,6 +92,11 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      // asserting that its passage graph is attached, measured and navigable.
      java.lang.reflect.Method showPassages=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);
      showPassages.setAccessible(true);showPassages.invoke(map,false);
+     // Opening an unit deliberately shows only its QCF thumbnails. A separate
+     // passage selection reveals the single-page focus and full reader action.
+     java.lang.reflect.Field passageOpen=MawdudiMapScreen.class.getDeclaredField("passageOpen");
+     passageOpen.setAccessible(true);passageOpen.setBoolean(map,true);
+     map.refresh();
      a.attachPilotPreview(map.mushaf());screen.set(map);selected.set(canonical.at(3,175));
     }catch(Exception ex){throw new AssertionError(ex);}
    });
