@@ -518,7 +518,7 @@ final class BaqaraPilotScreen implements MushafView.Listener {
         }
     }
 
-    private static CharSequence renderExistingJalalayn(TafsirRepository.Entry entry) {
+    static CharSequence renderExistingJalalayn(TafsirRepository.Entry entry) {
         SpannableStringBuilder output = new SpannableStringBuilder();
         String attribution = entry.metadataLine();
         if (!attribution.isEmpty()) output.append(attribution).append("\n\n");
