@@ -83,14 +83,19 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  MushafView mushaf(){return mushaf;}
  private void closeTitle(){if(popup!=null&&popup.isShowing())popup.dismiss();popup=null;}
- private void showTitle(String text){closeTitle();popup=SemanticTitlePopup.showEnglish(activity,text,null);SemanticTitlePopup.positionAboveIcons(activity,popup,icons);}
+ private void showTitle(String text){closeTitle();popup=SemanticTitlePopup.showEnglishFull(activity,text,null);SemanticTitlePopup.positionAboveIcons(activity,popup,icons);}
  private void select(int n,int a,int b,String title) {
   selected=n;focusStart=a;focusEnd=b;page=geometry.pageForVerse(new VerseRef(surah,a));refresh();showTitle(title);
  }
  void refresh(){
   if(heading==null)return;
   MawdudiMapData.Macro macro=macros.at(surah,focusStart);
-  heading.setText(QuranSurahNames.labelFor(surah)+" · "+macro.label);heading.setContentDescription(heading.getText());
+  // Source packs currently contain placeholder macro labels, not certified Maududi titles.
+  // Never expose these technical strings as theology or substitute invented headings.
+  String surahLabel=QuranSurahNames.labelFor(surah);
+  heading.setText(macros.forSurah(surah).size()>1
+      ?surahLabel+" · "+macro.start+"–"+macro.end:surahLabel);
+  heading.setContentDescription(heading.getText());
   graph.requestLayout();graph.invalidate();
   axis.post(()->axis.scrollTo(Math.max(0,graph.position(selected)-axis.getWidth()/3),0));
   renderPage();
