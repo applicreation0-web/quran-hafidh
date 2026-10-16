@@ -113,7 +113,7 @@ public final class MainActivity extends android.app.Activity {
         path.addView(parcoursTodayAction);
         path.addView(Ui.divider(this));
 
-        LinearLayout sabqi = navLine(path, "Apprentissage", "5 lignes", v -> openMode(HifzSessionActivity.SABQI));
+        LinearLayout sabqi = navLine(path, "Apprentissage", "1 page/semaine", v -> openMode(HifzSessionActivity.SABQI));
         itqanCard = navLine(path, "Stabilisation", stabilizationProgramCue(),
             v -> openMode(HifzSessionActivity.ITQAN));
         LinearLayout itqan = itqanCard;
@@ -307,7 +307,7 @@ public final class MainActivity extends android.app.Activity {
     /** Describes the selected weekly plan, never a stale fixed 22-line budget. */
     private String stabilizationProgramCue() {
         return prefs.itqanPostNasMaintenance() ? "1 hizb · entretien"
-            : "2 pages / 4 séances";
+            : "2 pages/semaine";
     }
 
     /** Option 7B: where the Stabilisation rotation stands, e.g. "Hizb 52 · 3/61 séances". */
