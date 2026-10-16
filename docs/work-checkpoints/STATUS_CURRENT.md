@@ -1,3 +1,16 @@
+# Atlas simplifié — debug signé du 16 octobre 2026
+
+Code final : `600058942b51a5775a5dec774d321ef0a39a236d`.
+APK : `Quran-Haafidh-ATLAS-SIMPLIFIE-60005894-PRIVATE-DEBUG.apk`.
+SHA-256 : `8132e5fceccf06ad1b5588f8dee2d1558993a060f5394c2c286cb07d6e0c48c1`.
+
+Page entière et titre intégré sans fenêtre opaque ; pastilles de page, curseurs agrandis, règle arrondie, feuilletage dans l'unité et deux actions restantes. Android 38960138661 PASS (101 + 1 + 1, 29 captures), JVM/source 38960138983 PASS, compilation sans textes 38960139016 PASS. Signature v2/v3 et compatibilité statique avec le debug 91890d74 PASS.
+
+**RELEASE BLOQUÉE** : runtime privé signé, audit indépendant et recette physique BOOX non exécutés. Sources et textes Hifz/Jalalayn/arabes et les trois assets privés inchangés. Aucun secret ou contenu privé dans GitHub/CI.
+Voir [ATLAS_QCF_114/CP_ATLAS_SIMPLIFICATION_2026-10-16.md](ATLAS_QCF_114/CP_ATLAS_SIMPLIFICATION_2026-10-16.md). Ce checkpoint est documentaire ; les résultats appartiennent au code final 60005894, sans relance inutile de CI après documentation.
+
+---
+
 # Atlas QCF — signature personnelle vérifiée, 16 octobre 2026
 
 Le debug personnel `Quran-Haafidh-ATLAS-91890d74-PRIVATE-DEBUG.apk` est signé avec le certificat du Soleil de référence. SHA-256 : `5e06fb6d343b9173bf203991437fef94d6ed511262e8ddfc4aaca64f9c08a3f6`.
