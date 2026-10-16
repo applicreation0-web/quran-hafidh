@@ -11,12 +11,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Reported directly: the home screen's "Stabilisation" quick-access card showed the bare word
- * "Répétitions" underneath, with no quantity — unlike "Apprentissage", whose "5 lignes" cue (a
- * true frozen constant, SABQI_LINES) states a concrete amount. Stabilisation's own per-block
- * repetition count isn't a fixed constant (35 or 40, depending on protocol — see
- * PreviewConfig.itqanTotalReps), but its weekly line target is (STABILIZATION_WEEKLY_LINES = 22),
- * so the cue now states that instead, matching Apprentissage's concrete-quantity style.
+ * Home quick-access cues use the same units for both weekly objectives:
+ * Apprentissage 1 page/semaine; Stabilisation 2 pages/semaine.
+ * Per-session details and repetitions remain inside the actual sessions.
  */
 public final class QuickAccessCardCueSourceContractTest {
     private static String read(String repoPath) throws Exception {
@@ -30,8 +27,10 @@ public final class QuickAccessCardCueSourceContractTest {
     @Test public void stabilisationCueStatesAConcreteQuantityLikeApprentissageDoes() throws Exception {
         String ui = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/Ui.java");
         String main = read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/MainActivity.java");
-        assertTrue("Apprentissage's cue must keep stating its frozen constant",
-            main.contains("navLine(path, \"Apprentissage\", \"5 lignes\""));
+        assertTrue("Apprentissage states its weekly objective, not per-session lines",
+            main.contains("navLine(path, \"Apprentissage\", \"1 page/semaine\""));
+        assertTrue("Stabilisation uses the identical page/week unit",
+            main.contains("2 pages/semaine"));
         assertTrue("Stabilisation's cue must state its own fixed weekly line target, not a vague word",
             ui.contains(": PreviewConfig.STABILIZATION_WEEKLY_LINES + \" lignes/semaine\""));
         assertFalse("the old unquantified label must not remain", ui.contains("? \"Répétitions\""));
