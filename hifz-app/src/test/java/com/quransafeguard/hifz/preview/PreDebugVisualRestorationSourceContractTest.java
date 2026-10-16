@@ -59,16 +59,16 @@ public final class PreDebugVisualRestorationSourceContractTest {
                 .contains("weeklyProgramTransitionsV1"));
     }
 
-    @Test public void unverifiedIbnKathirHeadingsAreNotDisplayedAsTechnicalLabels() throws Exception {
+    @Test public void onlyOwnerApprovedAyahThemesLabelsDisplayedAndLegacySourceRemainsAuditOnly() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
         String titles=read("hifz-app/src/audit/legacy-ibn-kathir/java/IbnKathirOfflineTitles.java");
         assertTrue("First launch highlights the available exact-word amorces",
-            reader.contains(".getBoolean(\"ibn_kathir_start_markers_visible\",true)"));
+            reader.contains(".getBoolean(\"ayah_themes_start_markers_visible\",true)"));
         assertTrue("The OFF toggle is still explicitly persisted",
-            reader.contains(".putBoolean(\"ibn_kathir_start_markers_visible\",semanticCuesEnabled)"));
-        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
+            reader.contains(".putBoolean(\"ayah_themes_start_markers_visible\",semanticCuesEnabled)"));
+        assertTrue(reader.contains("AyahThemesCueIndex.load(this)"));
         assertTrue("Untitled cue must immediately clear any previous caption",
-            reader.contains("if(label==null){ closeSemanticTitle(); return; }"));
+            reader.contains("if(label==null){closeSemanticTitle();return;}"));
         assertTrue("Page change must close the stale caption",
             reader.contains("closeSemanticTitle();\n        closeTafsirPanels();"));
         assertFalse(reader.contains("English heading not yet verified"));
