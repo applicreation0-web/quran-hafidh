@@ -29,6 +29,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private TextView heading,pageLabel;
  private LinearLayout icons;
  private Dialog popup;
+ private MapJalalaynDialog commentary;
  MawdudiMapScreen(Activity h,GeometryRepository g,MawdudiPassageIndex i,AyahThemesCueIndex t,
                    MawdudiMapData m,int s,int a,Bundle saved)throws Exception {
   if(t==null)throw new IllegalStateException("private titles unavailable");
@@ -63,6 +64,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   LinearLayout top=Ui.row(activity);top.setGravity(Gravity.CENTER_VERTICAL);
   top.addView(Ui.iconButton(activity,"","Retour",v->activity.finish()),new LinearLayout.LayoutParams(Ui.dp(activity,42),Ui.dp(activity,44)));
   heading=Ui.text(activity,"",12f,false);heading.setMaxLines(2);heading.setEllipsize(TextUtils.TruncateAt.END);
+  heading.setClickable(true);heading.setFocusable(true);heading.setOnClickListener(v->openCommentary());
   top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
   top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);refresh();})),new LinearLayout.LayoutParams(Ui.dp(activity,42),Ui.dp(activity,44)));
   root.addView(top);
@@ -83,6 +85,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  MushafView mushaf(){return mushaf;}
  private void closeTitle(){if(popup!=null&&popup.isShowing())popup.dismiss();popup=null;}
+ private void openCommentary(){
+  closeTitle();
+  if(commentary!=null)commentary.close();
+  commentary=new MapJalalaynDialog(activity,surah,focusStart,focusEnd,focusStart);
+  commentary.show();
+ }
  private void showTitle(String text){closeTitle();popup=SemanticTitlePopup.showEnglishFull(activity,text,null);SemanticTitlePopup.positionAboveIcons(activity,popup,icons);}
  private void select(int n,int a,int b,String title) {
   selected=n;focusStart=a;focusEnd=b;page=geometry.pageForVerse(new VerseRef(surah,a));refresh();showTitle(title);
@@ -95,7 +103,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   String surahLabel=QuranSurahNames.labelFor(surah);
   heading.setText(macros.forSurah(surah).size()>1
       ?surahLabel+" · "+macro.start+"–"+macro.end:surahLabel);
-  heading.setContentDescription(heading.getText());
+  heading.setContentDescription("Ouvrir Jalalayn · "+heading.getText());
   graph.requestLayout();graph.invalidate();
   axis.post(()->axis.scrollTo(Math.max(0,graph.position(selected)-axis.getWidth()/3),0));
   renderPage();
@@ -118,8 +126,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   closeTitle();activity.startActivity(intent);
  }
  void save(Bundle b){b.putInt("map114Surah",surah);b.putInt("map114Ayah",current().firstAyah);b.putInt("map114Page",page);b.putInt("map114FocusStart",focusStart);b.putInt("map114FocusEnd",focusEnd);b.putBoolean("map114Expanded",expanded);}
- boolean back(){if(popup!=null&&popup.isShowing()){closeTitle();return true;}return false;}
- void destroy(){closeTitle();if(mushaf!=null)mushaf.destroySafely();}
+ boolean back(){if(commentary!=null&&commentary.isShowing()){commentary.close();commentary=null;return true;}if(popup!=null&&popup.isShowing()){closeTitle();return true;}return false;}
+ void destroy(){closeTitle();if(commentary!=null){commentary.close();commentary=null;}if(mushaf!=null)mushaf.destroySafely();}
  @Override public void onReady(){ready=true;renderPage();}
  @Override public void onPageShown(int p){}
  @Override public void onError(String error){pageLabel.setText("Muṣḥaf indisponible");}
