@@ -27,7 +27,13 @@ public final class SemanticPassageRepositoryTest {
 
     private static byte[] read(String repoPath) throws Exception {
         Path direct = Paths.get(repoPath);
-        return Files.readAllBytes(Files.exists(direct) ? direct : Paths.get("..", repoPath));
+        if (!Files.exists(direct)) direct=Paths.get("..",repoPath);
+        if (!Files.exists(direct) && repoPath.startsWith("hifz-app/build/")) {
+            String isolated=repoPath.replace("hifz-app/build/","hifz-app/build-private114/");
+            direct=Paths.get(isolated);
+            if (!Files.exists(direct)) direct=Paths.get("..",isolated);
+        }
+        return Files.readAllBytes(direct);
     }
 
     private static String sha256(byte[] raw) throws Exception {
