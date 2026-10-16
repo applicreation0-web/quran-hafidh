@@ -362,87 +362,183 @@ final class MawdudiMapScreen implements MushafView.Listener {
  @Override public void onVerseTap(VerseRef verse){openReader();}
  @Override public void onSurfaceTap(){openReader();}
 
- /** Level one: source-backed macro boundaries only; no fabricated Maududi titles.
-  * A one-unit surah is shown honestly as a complete surah, not a made-up theme.
-  * Choosing a unit opens its constituent original Ayah Themes passages.
+ /** Layout common to both levels. The stable clockwise ray position is
+  * a mnemonic, independent from the physical length of a Maududi unit.
+  * A titleless unit is always "Unité N", with its source-verified verse range.
   */
- private final class OverviewGraph extends View {
-  final Paint pen=new Paint(Paint.ANTI_ALIAS_FLAG);
-  final int step=Ui.dp(activity,178);
-  OverviewGraph(){super(activity);setFocusable(true);}
-  int position(int n){return Math.max(0,n)*step;}
-  @Override protected void onMeasure(int w,int h){
-   setMeasuredDimension(Math.max(step,macros.forSurah(surah).size()*step),Ui.dp(activity,78));
+ private float sunCx(int w){return w/2f;}
+ private float sunCy(int h){return h*.41f;}
+ private float sunRadius(int w,int h){return Math.min(w*.32f,h*.30f);}
+ private float sunX(int i,int total,int w,int h){
+  return sunCx(w)+sunRadius(w,h)*(float)Math.sin(2*Math.PI*i/Math.max(1,total));
+ }
+ private float sunY(int i,int total,int w,int h){
+  return sunCy(h)-sunRadius(w,h)*(float)Math.cos(2*Math.PI*i/Math.max(1,total));
+ }
+ private int sunUnitAt(float x,float y,int w,int h){
+  int count=macros.forSurah(surah).size(),candidate=-1;
+  float best=Ui.dp(activity,36)*Ui.dp(activity,36);
+  for(int i=0;i<count;i++){
+   float dx=x-sunX(i,count,w,h),dy=y-sunY(i,count,w,h);
+   float dist=dx*dx+dy*dy;
+   if(dist<best){best=dist;candidate=i;}
   }
-  @Override protected void onDraw(Canvas c){
-   java.util.List<MawdudiMapData.Macro> units=macros.forSurah(surah);
-   float y=Ui.dp(activity,47);
-   pen.setColor(Ui.INK);pen.setStrokeWidth(Ui.dp(activity,1));
-   if(units.size()>1)c.drawLine(step/2f,y,Math.max(step/2f,getWidth()-step/2f),y,pen);
-   Rect clip=c.getClipBounds();
-   for(int k=0;k<units.size();k++){
-    float x=step*(k+.5f);
-    if(x+step<clip.left||x-step>clip.right)continue;
-    MawdudiMapData.Macro m=units.get(k);
-    // Genuine thematic *titles* are not in this pack. Numbered discourse
-    // boundaries exist only for surahs 3 and 9.
-    String label="Unité "+(k+1);
-    pen.setTextAlign(Paint.Align.CENTER);
-    pen.setTextSize(Ui.dp(activity,12));pen.setColor(Ui.INK);
-    c.drawText(label,x,Ui.dp(activity,20),pen);
-    pen.setColor(Ui.PAPER);c.drawCircle(x,y,Ui.dp(activity,10),pen);
-    pen.setColor(Ui.INK);c.drawCircle(x,y,Ui.dp(activity,k==activeMacro?5:3),pen);
-    pen.setTextSize(Ui.dp(activity,10));pen.setColor(Ui.INK);
-    c.drawText(surah+":"+m.start+"–"+m.end,x,Ui.dp(activity,71),pen);
+  return candidate;
+ }
+ private void drawSun(Canvas c,Paint p,int w,int h){
+  java.util.List<MawdudiMapData.Macro> list=macros.forSurah(surah);
+  int count=list.size();
+  float cx=sunCx(w),cy=sunCy(h);
+  p.setAntiAlias(true);p.setStyle(Paint.Style.STROKE);
+  p.setStrokeWidth(Ui.dp(activity,1));p.setColor(Ui.INK);
+  c.drawCircle(cx,cy,Ui.dp(activity,37),p);
+  p.setTextAlign(Paint.Align.CENTER);p.setStyle(Paint.Style.FILL);
+  p.setTextSize(Ui.dp(activity,13));
+  String center=QuranSurahNames.labelFor(surah);
+  String name=TextUtils.ellipsize(center,new android.text.TextPaint(p),Ui.dp(activity,67),
+      TextUtils.TruncateAt.END).toString();
+  c.drawText(name,cx,cy+Ui.dp(activity,4),p);
+  p.setTextSize(Ui.dp(activity,9));c.drawText(surah+" · "+count+" unités",cx,cy+Ui.dp(activity,19),p);
+  for(int k=0;k<count;k++){
+   float x=sunX(k,count,w,h),y=sunY(k,count,w,h);
+   p.setStyle(Paint.Style.STROKE);
+   p.setStrokeWidth(Ui.dp(activity,k==activeMacro?2:1));
+   c.drawLine(cx+(x-cx)*.33f,cy+(y-cy)*.33f,x,y,p);
+   p.setStyle(Paint.Style.FILL);
+   c.drawCircle(x,y,Ui.dp(activity,k==activeMacro?5:3),p);
+   float dx=(x-cx)/Math.max(1,sunRadius(w,h));
+   float dy=(y-cy)/Math.max(1,sunRadius(w,h));
+   float labelX=Math.max(Ui.dp(activity,35),Math.min(w-Ui.dp(activity,35),x+dx*Ui.dp(activity,23)));
+   float labelY=Math.max(Ui.dp(activity,11),Math.min(h-Ui.dp(activity,17),y+dy*Ui.dp(activity,17)));
+   p.setTextSize(Ui.dp(activity,10));
+   c.drawText("Unité "+(k+1),labelX,labelY,p);
+   // The selected unit alone shows its canonical source range nearby.
+   if(k==activeMacro){
+    p.setTextSize(Ui.dp(activity,9));
+    MawdudiMapData.Macro unit=list.get(k);
+    c.drawText(surah+":"+unit.start+"–"+unit.end,labelX,labelY+Ui.dp(activity,11),p);
    }
   }
+ }
+ /** Level 1: ten rays for Al-Baqarah, all visible at once, with the
+  * clockwise order stable even when the user changes the active unit.
+  */
+ private final class OverviewGraph extends View {
+  final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  OverviewGraph(){super(activity);setFocusable(true);}
+  int position(int ignored){return 0;}
+  @Override protected void onMeasure(int w,int h){
+   setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
+  }
+  @Override protected void onDraw(Canvas canvas){drawSun(canvas,paint,getWidth(),getHeight());}
   @Override public boolean onTouchEvent(MotionEvent event){
    if(event.getAction()!=MotionEvent.ACTION_UP)return true;
-   int i=(int)(event.getX()/step);
-   if(i<0||i>=macros.forSurah(surah).size())return false;
+   int i=sunUnitAt(event.getX(),event.getY(),getWidth(),getHeight());
+   if(i<0)return true;
    openMacro(i);performClick();return true;
   }
   @Override public boolean performClick(){super.performClick();return true;}
  }
+ /**
+  * Level 2: keep every unit visible in the same radial coordinate system.
+  * From the active unit a SECOND branching fan shows passages; the nearby
+  * seven nodes scroll through the original corpus, including the approved
+  * surah 27 display-only subnodes. No passage or title is synthesized.
+  */
  private final class Graph extends View {
-  final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);final int step=Ui.dp(activity,178);
+  final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+  final class Node {
+   final int index,first,last;
+   final String title;
+   Node(int n,int a,int b,String t){index=n;first=a;last=b;title=t;}
+  }
   Graph(){super(activity);setFocusable(true);}
-  boolean split(int n){MawdudiPassageIndex.Passage p=passages.get(n);return p.surah==27&&p.firstAyah==67&&p.lastAyah==82&&subnodes.length()==3;}
+  boolean split(int n){MawdudiPassageIndex.Passage p=passages.get(n);
+   return p.surah==27&&p.firstAyah==67&&p.lastAyah==82&&subnodes.length()==3;}
   boolean inMacro(int n){
    MawdudiPassageIndex.Passage p=passages.get(n);
    MawdudiMapData.Macro m=macro();
    return p.firstAyah<=m.end&&p.lastAyah>=m.start;
   }
   int units(int n){return !inMacro(n)?0:split(n)?3:1;}
-  int position(int n){int x=0;for(int k=0;k<n;k++)x+=units(k)*step;return x;}
-  @Override protected void onMeasure(int w,int h){setMeasuredDimension(Math.max(1,position(passages.size())),Ui.dp(activity,78));}
-  @Override protected void onDraw(Canvas canvas){
-   paint.setColor(Ui.INK);paint.setStrokeWidth(Ui.dp(activity,1));float y=Ui.dp(activity,47);
-   canvas.drawLine(step/2f,y,Math.max(step/2f,getWidth()-step/2f),y,paint);
-   Rect clip=canvas.getClipBounds();
-   for(int n=0;n<passages.size();n++)for(int child=0;child<units(n);child++) {
-    float x=position(n)+step*(child+.5f);if(x+step<clip.left||x-step>clip.right)continue;
-    MawdudiPassageIndex.Passage p=passages.get(n);String title=titles.titleForPassage(p.id);int a=p.firstAyah,b=p.lastAyah;
-    try{if(split(n)){JSONObject sub=subnodes.getJSONObject(child);title=sub.getString("title");a=sub.getInt("start");b=sub.getInt("end");}}catch(JSONException invalid){continue;}
-    if(title==null)continue;
-    paint.setColor(Ui.INK);paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,12));
-    // Two compact original title lines above one unobtrusive point. Full title on tap.
-    String first=title,second="";if(paint.measureText(title)>step-16){int cut=paint.breakText(title,true,step-20,null);int space=title.lastIndexOf(' ',cut);if(space>0)cut=space;first=title.substring(0,cut);second=title.substring(cut).trim();}
-    canvas.drawText(first,x,Ui.dp(activity,15),paint);
-    if(!second.isEmpty())canvas.drawText(TextUtils.ellipsize(second,new android.text.TextPaint(paint),step-16,TextUtils.TruncateAt.END).toString(),x,Ui.dp(activity,29),paint);
-    paint.setColor(Ui.PAPER);canvas.drawCircle(x,y,Ui.dp(activity,10),paint);
-    paint.setColor(Ui.INK);canvas.drawCircle(x,y,Ui.dp(activity,n==selected?5:3),paint);
-    paint.setColor(Ui.INK);paint.setTextSize(Ui.dp(activity,10));canvas.drawText(surah+":"+a+"–"+b,x,Ui.dp(activity,71),paint);
+  int position(int ignored){return 0;}
+  java.util.List<Node> nodes(){
+   java.util.List<Node> result=new ArrayList<>();
+   for(int n=0;n<passages.size();n++){
+    if(!inMacro(n))continue;
+    MawdudiPassageIndex.Passage p=passages.get(n);
+    if(split(n)){
+     for(int k=0;k<subnodes.length();k++){
+      try{
+       JSONObject child=subnodes.getJSONObject(k);
+       result.add(new Node(n,child.getInt("start"),child.getInt("end"),child.getString("title")));
+      }catch(JSONException invalid){throw new IllegalStateException("invalid approved QCF subnode",invalid);}
+     }
+    } else result.add(new Node(n,p.firstAyah,p.lastAyah,titles.titleForPassage(p.id)));
+   }
+   return result;
+  }
+  int selectedOrdinalZero(java.util.List<Node> nodes){
+   for(int k=0;k<nodes.size();k++)
+    if(nodes.get(k).index==selected&&nodes.get(k).first==focusStart
+        &&nodes.get(k).last==focusEnd)return k;
+   for(int k=0;k<nodes.size();k++)if(nodes.get(k).index==selected)return k;
+   return 0;
+  }
+  int currentNodeOrdinal(){java.util.List<Node> items=nodes();return items.isEmpty()?0:selectedOrdinalZero(items)+1;}
+  String selectedTitle(){java.util.List<Node> items=nodes();
+   return items.isEmpty()?"":items.get(selectedOrdinalZero(items)).title;
+  }
+  @Override protected void onMeasure(int w,int h){
+   setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
+  }
+  @Override protected void onDraw(Canvas c){
+   int w=getWidth(),h=getHeight();
+   drawSun(c,paint,w,h);
+   java.util.List<Node> items=nodes();
+   if(items.isEmpty())return;
+   int ix=selectedOrdinalZero(items);
+   int n=macros.forSurah(surah).size();
+   float x=sunX(activeMacro,n,w,h),y=sunY(activeMacro,n,w,h);
+   float hubX=w*.5f,hubY=h*.80f;
+   paint.setColor(Ui.INK);paint.setStyle(Paint.Style.STROKE);
+   paint.setStrokeWidth(Ui.dp(activity,1.25f));
+   Path arm=new Path();arm.moveTo(x,y);
+   arm.quadTo(x+(hubX-x)*.3f,hubY,hubX,hubY);
+   c.drawPath(arm,paint);
+   int first=Math.max(0,Math.min(items.size()-7,ix-3));
+   int visible=Math.min(7,items.size());
+   for(int j=0;j<visible;j++){
+    int index=first+j;
+    float px=w*(.10f+.8f*(j+.5f)/visible);
+    float py=h*.91f-Ui.dp(activity,(j%2)*7);
+    Path branch=new Path();branch.moveTo(hubX,hubY);
+    branch.quadTo(px,hubY+Ui.dp(activity,3),px,py);
+    c.drawPath(branch,paint);
+    paint.setStyle(Paint.Style.FILL);paint.setColor(Ui.INK);
+    c.drawCircle(px,py,Ui.dp(activity,index==ix?5:3),paint);
+    paint.setTextSize(Ui.dp(activity,9));paint.setTextAlign(Paint.Align.CENTER);
+    c.drawText("P"+(index+1),px,Math.min(h-Ui.dp(activity,1),py+Ui.dp(activity,13)),paint);
+    paint.setStyle(Paint.Style.STROKE);
    }
   }
   @Override public boolean onTouchEvent(MotionEvent event){
    if(event.getAction()!=MotionEvent.ACTION_UP)return true;
-   float x=event.getX();for(int n=0;n<passages.size();n++)if(x>=position(n)&&x<position(n+1)) {
-    MawdudiPassageIndex.Passage p=passages.get(n);int child=Math.min(units(n)-1,(int)((x-position(n))/step));
-    try{if(split(n)){JSONObject sub=subnodes.getJSONObject(child);select(n,sub.getInt("start"),sub.getInt("end"),sub.getString("title"));}
-     else select(n,p.firstAyah,p.lastAyah,titles.titleForPassage(p.id));}catch(JSONException invalid){return false;}
-    performClick();return true;
-   }return false;
+   float x=event.getX(),y=event.getY();int w=getWidth(),h=getHeight();
+   int unit=sunUnitAt(x,y,w,h);
+   if(unit>=0){openMacro(unit);performClick();return true;}
+   java.util.List<Node> items=nodes();if(items.isEmpty())return true;
+   int selectedNode=selectedOrdinalZero(items),visible=Math.min(7,items.size());
+   int first=Math.max(0,Math.min(items.size()-7,selectedNode-3));
+   for(int j=0;j<visible;j++){
+    float px=w*(.10f+.8f*(j+.5f)/visible),py=h*.91f-Ui.dp(activity,(j%2)*7);
+    if(Math.abs(x-px)<Ui.dp(activity,24)&&Math.abs(y-py)<Ui.dp(activity,29)){
+     Node target=items.get(first+j);
+     select(target.index,target.first,target.last,target.title);
+     performClick();return true;
+    }
+   }
+   return true;
   }
   @Override public boolean performClick(){super.performClick();return true;}
  }
