@@ -1,6 +1,6 @@
 name: Quran Haafidh 114 — code-only private-flag staging for OFFLINE local signing
 # Isolated JVM fixture paths fixed (2026-10-16); preserve all 446 tests.
-# BOOX SUN-173 private debug staging: immutable 1053 Ayah Themes, 173 sourced/fallback units, real QCF gallery, active recall 6 edge words. Offline signing only; NO PRIVATE JSON in CI.
+# FINAL BOOX SUN-173 private debug: max-size QCF passage, 173 sourced/fallback units, four-thumbnail E-Ink galleries, Ayah Themes recall starts + six boundary words; private assets injected and signed OFFLINE only.
 
 on:
   push:
