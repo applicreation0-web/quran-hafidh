@@ -502,7 +502,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
    float x=sunX(activeMacro,n,w,h),y=sunY(activeMacro,n,w,h);
    float hubX=w*.5f,hubY=h*.80f;
    paint.setColor(Ui.INK);paint.setStyle(Paint.Style.STROKE);
-   paint.setStrokeWidth(Ui.dp(activity,1.25f));
+   paint.setStrokeWidth(Ui.dp(activity,1));
    Path arm=new Path();arm.moveTo(x,y);
    arm.quadTo(x+(hubX-x)*.3f,hubY,hubX,hubY);
    c.drawPath(arm,paint);
