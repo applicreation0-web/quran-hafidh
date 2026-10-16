@@ -255,7 +255,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   java.util.List<VerseRef> visible=MawdudiMapModel.highlightedVerses(current(),page,geometry);if(visible.isEmpty())return;
   Intent intent=new Intent(activity,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page)
    .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,visible.get(0).toString()).putExtra(StudyReaderActivity.EXTRA_MAP_PREVIEW,true)
-   .putExtra("map114PassageId",current().id).putExtra("map114FocusStart",focusStart).putExtra("map114FocusEnd",focusEnd);
+   .putExtra("map114Surah",surah).putExtra("map114PassageId",current().id).putExtra("map114FocusStart",focusStart).putExtra("map114FocusEnd",focusEnd);
   closeTitle();activity.startActivity(intent);
  }
  void save(Bundle b){b.putBoolean("map114Overview",overview);b.putInt("map114MacroSelected",activeMacro);b.putInt("map114Surah",surah);b.putInt("map114Ayah",current().firstAyah);b.putInt("map114Page",page);b.putInt("map114FocusStart",focusStart);b.putInt("map114FocusEnd",focusEnd); }
