@@ -21,8 +21,8 @@ k=source("IbnKathirFirstWordsCorpus.java")
 r=source("SemanticPassageRepository.java")
 checks=[
  ("J1 exact deterministic 1903 QCF two-word starts", 'index.count()!=1903' in k and 'EXPECTED_QCF_WORDS = 77432' in k and 'group.startAyah+":1"' in k and "inside?2:1" in k),
- ("J1 old recall masks frozen, Lecture Ayah Themes source separate", "IbnKathirFirstWordsCorpus.load(wordGeometry)" in r and "semanticPassages.readerCuesForPage(page)" in h and "ayahThemesCues.forPage(page)" in source("StudyReaderActivity.java") and "IbnKathirQuranComPrivateTitles.approvedTitle(this,group)" not in source("StudyReaderActivity.java")),
- ("J1 fail-open masked recall", "if (cues.length() == 0) itqanAnchorFailOpen = true;" in h and "hasCompleteExactGeometryForPage(currentPage)" in h),
+ ("J1 Itqan old cues frozen, user-approved active review uses Ayah Themes", "IbnKathirFirstWordsCorpus.load(wordGeometry)" in r and "semanticPassages.readerCuesForPage(currentPage)" in h and "ayahThemesTitles.forPage(page)" in h and "ayahThemesCues.forPage(page)" in source("StudyReaderActivity.java") and "IbnKathirQuranComPrivateTitles.approvedTitle(this,group)" not in source("StudyReaderActivity.java")),
+ ("J1 fail-open masked recall", "if (cues.length() == 0) itqanAnchorFailOpen = true;" in h and "if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0" in h and "!activeAyahThemesReady" in h and "WordGeometryRepository.shared(this).pageLandmarkBoxes(page)" in h),
  ("J2 new x40 and frozen old plans", "BALANCED_20_5_5_5_5" in source("ItqanRegimeStore.java") and "next<=20" in source("ItqanBalancedMaskSchedule.java")),
  ("J2 completion lines physical same surah", "if(endOfPhysicalPage || endOfSurah)" in source("ItqanCompletionBoundaryPolicy.java") and "!onlySurah(candidate,surah)" in source("ItqanCompletionBoundaryPolicy.java")),
  ("J3 date-scoped programme", "weeklyProgramFor(date)" in m and "prefs.weeklyProgramFor(day)" in source("WeeklyProgramPolicy.java")),
