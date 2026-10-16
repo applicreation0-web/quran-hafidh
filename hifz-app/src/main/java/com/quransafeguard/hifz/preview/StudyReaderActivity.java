@@ -61,8 +61,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private VerseRef pendingJumpVerse;
     private Button tafsirButton;
     private Button semanticButton;
-    private IbnKathirRecitationStarts recitationStarts;
-    private SemanticPassageRepository ibnKathirCues;
+    private AyahThemesCueIndex ayahThemesCues;
     private boolean semanticCuesEnabled;
     private android.app.Dialog semanticTitleDialog;
     /** Phone Tafsir: a non-modal bottom panel inside the reader (Mushaf stays tappable above it). */
@@ -93,16 +92,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         hifzPrefs = new HifzPrefs(this);
         largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        // Lecture only: verified Ibn Kathir passage starts, separate from Hifz masks.
-        try {
-            recitationStarts=new IbnKathirRecitationStarts(
-                IbnKathirGroupIndex.shared(),WordGeometryRepository.shared(this));
-            ibnKathirCues=SemanticPassageRepository.shared(this);
-        } catch(RuntimeException unavailable){recitationStarts=null;}
-        semanticCuesEnabled=recitationStarts!=null&&recitationStarts.isAvailable()
-            && ibnKathirCues!=null&&ibnKathirCues.isAvailable()
+        // CP02 Lecture-only: 1053 Ayah Themes starts with exact QCF word-1 geometry.
+        // No private pack means no markers, NEVER a fallback to old documentary headings.
+        ayahThemesCues=AyahThemesCueIndex.load(this);
+        semanticCuesEnabled=ayahThemesCues!=null
             && (mapPreview||getSharedPreferences("hifz_study",MODE_PRIVATE)
-                .getBoolean("ibn_kathir_start_markers_visible",true));
+                .getBoolean("ayah_themes_start_markers_visible",true));
 
         rootRow = new LinearLayout(this);
         rootRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -165,7 +160,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         tafsirButton = tafsirReaderAction();
         readerActions.addView(tafsirButton);
         semanticButton = Ui.iconButton(this, "", "Afficher les amorces", v -> toggleSemanticCues());
-        semanticButton.setVisibility(ibnKathirCues!=null&&ibnKathirCues.isAvailable()?View.VISIBLE:View.GONE);
+        semanticButton.setVisibility(ayahThemesCues!=null?View.VISIBLE:View.GONE);
         readerActions.addView(semanticButton);
         updateSemanticButton();
         annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
@@ -305,22 +300,13 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (controlsVisible) hideControls(); else showControls();
     }
     @Override public void onSemanticCueTap(String passageId) {
-        if(!semanticCuesEnabled||recitationStarts==null)return;
-        IbnKathirGroupIndex.Group group=recitationStarts.groupForId(passageId);
-        if(group==null||ibnKathirCues==null)return;
-        // Only a real highlighted QCF start visible on THIS Mushaf page may
-        // open its corresponding title. A stale/off-page bridge event must
-        // never show a plausible but unrelated English heading.
-        SemanticPassageRepository.Cue visible=ibnKathirCues.cue(passageId);
-        if(visible==null||visible.startPage!=page)return;
-        // One M7-B-approved private title per documentary group; no title cycling.
-        String label=IbnKathirQuranComPrivateTitles.approvedTitle(this,group);
-        if(label==null){ closeSemanticTitle(); return; }
-        showControls(); // Same Munir position: the icons remain visible BELOW the title.
+        if(!semanticCuesEnabled||ayahThemesCues==null)return;
+        // A title is shown only for a real first-word anchor on this QCF page.
+        String label=ayahThemesCues.titleForVisibleStart(page,passageId);
+        if(label==null){closeSemanticTitle();return;}
+        showControls();
         semanticTitleDialog=SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog);
         SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions);
-        // After a GONE-to-VISIBLE transition the toolbar may gain height on
-        // the next layout pass; re-anchor once to its measured screen position.
         readerActions.post(() ->
             SemanticTitlePopup.positionAboveIcons(this,semanticTitleDialog,readerActions));
     }
@@ -332,7 +318,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         semanticTitleDialog = null;
     }
 
-    /** Lecture-only Ibn Kathir source starts: NOT editorially approved mnemonic keys. */
+    /** Lecture-only Ayah Themes visual cues, never Hifz mask/cursor changes. */
     private void toggleAnnotationMode() {
         annotationEnabled = !annotationEnabled;
         annotationOverlay.setDrawingEnabled(annotationEnabled);
@@ -344,11 +330,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private void toggleSemanticCues() {
-        if(ibnKathirCues==null||!ibnKathirCues.isAvailable())return;
+        if(ayahThemesCues==null)return;
         semanticCuesEnabled=!semanticCuesEnabled;
         if(!semanticCuesEnabled)closeSemanticTitle();
         if(!mapPreview)getSharedPreferences("hifz_study",MODE_PRIVATE).edit()
-            .putBoolean("ibn_kathir_start_markers_visible",semanticCuesEnabled).apply();
+            .putBoolean("ayah_themes_start_markers_visible",semanticCuesEnabled).apply();
         updateSemanticButton();
         applySemanticCues();
         showControls();
@@ -366,11 +352,11 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void applySemanticCues() {
         if (mushaf == null) return;
-        if(!semanticCuesEnabled||ibnKathirCues==null||!ibnKathirCues.isAvailable()){
+        if(!semanticCuesEnabled||ayahThemesCues==null){
             mushaf.clearSemanticCues();
             return;
         }
-        mushaf.setSemanticCues(ibnKathirCues.readerCuesForPage(page),false,true);
+        mushaf.setSemanticCues(ayahThemesCues.forPage(page),false,true);
     }
 
     private void showControls() {

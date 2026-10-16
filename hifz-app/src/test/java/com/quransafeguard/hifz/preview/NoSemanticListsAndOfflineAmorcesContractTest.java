@@ -15,7 +15,11 @@ public final class NoSemanticListsAndOfflineAmorcesContractTest {
     assertFalse(s.contains("new Intent(this,IbnKathirMapActivity.class)"));
     assertFalse(s.contains("Ui.iconButton(this, \"\", \"Carte\""));
     assertTrue(s.contains("SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)"));
-    assertTrue("Reader must load ONLY M7-B approved private titles",
+    assertTrue("Reader must load ONLY the private 114-surah Ayah Themes pack",
+      s.contains("AyahThemesCueIndex.load(this)"));
+    assertTrue("The QCF markers are supplied by Ayah Themes rather than Ibn Kathir",
+      s.contains("ayahThemesCues.forPage(page)"));
+    assertFalse("No old Ibn Kathir English headings in Lecture",
       s.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
     assertFalse("Old spa5k source headings must not be displayed",
       s.contains("IbnKathirTitlePack.sourceHeadings(this,group)"));
