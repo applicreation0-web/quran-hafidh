@@ -1,0 +1,60 @@
+QURAN HAAFIDH — ATLAS QCF — REPRISE VERIFIEE
+16 octobre 2026. RELEASE BLOQUEE. Aucun nouvel APK installable livré.
+
+DEPOT ET CODE
+applicreation0-web/quran-hafidh
+Branche unique : work/haafidh-1171-ibn-kathir-integration-independent
+Commit du code compile et teste : 91890d7412821103113c5faf98f3aafd750643bb
+Point de depart verifie : c237433e56c21eeb544ce409593cbb148e6a07a8
+Aucun nouveau depot, branche, PR ou release.
+
+CORRECTIONS
+- Le test Android controlait encore le Mushaf integre et cache dans l'ancienne carte. Il controle maintenant les SVG QCF reels, leur chargement, leurs contours de versets surlignes et leur viewport, puis le lecteur plein ecran et le retour exact. Les 101 tests sont conserves.
+- Blocage reel aux frontieres de An-Nisa : 4:101-104 chevauche U7/U8. Resolution de l'unite du passage suivant/precedent au lieu de supposer une seule unite adjacente. Aucun passage canonique fractionne.
+- Commandes Android et boutons de miniatures portes a 48 dp/CSS px ; test des cinq cibles Android de la barre de passages.
+- Budget de hauteur de l'Atlas calcule sur la fenetre courante et ses insets, puis ajuste aux dimensions reelles mesurees. Hauteur minimale distincte pour deux rangees d'unites.
+- Seuls MawdudiMapScreen.java et MapQcfThumbnails.java changent en production. Aucun moteur Hifz, stockage, masque, texte arabe, corpus prive ou Jalalayn modifie.
+
+PREUVES SUR 91890d74
+PASS — CI Android 38952593226 : OK (101 tests), preparation 1/1, verification apres arret force 1/1 ; 25 captures d'emulateur. Tests publics avec titres synthetiques, aucun titre prive envoye en CI.
+PASS — CI JVM/source 38952593472. XML M8R : 3 tests, 0 echec, 0 erreur ; 180, 365 et 548 jours. Ce sont trois scenarios dates, pas une nouvelle repetition des 80 scenarios historiques.
+PASS — compilation drapeau prive SANS donnees privees : 38952593215 ; artefact 12069480052.
+PASS — 9 tests Python de cartographie et contrat source local.
+PASS — methode Java de navigation extraite du code reel : 2138 transitions, 0 echec. Meme harnais sur c237433e : 2 echecs reproduits. Les dependances geometriques du harnais sont remplacees ; la preuve Android complete reste la CI ci-dessus.
+PASS — 604 SVG, 6236 contours, 0 page absente/malformee, 0 desaccord avec geometry.json, 173 limites d'unites resolues dans les ressources de l'ancien Soleil.
+PASS — 615 assets Mushaf/geometrie/Jalalayn compares octet par octet entre le nouveau code compile et le Soleil : aucun changement. Les trois assets prives sont identiques aux SHA epingles dans PrivateDisplayIntegrity.
+
+CAPTURES
+audit-map114-synthetic-return.png montre les deux miniatures QCF reellement rendues avec surlignage. audit-map114-synthetic-reader-focus.png montre la lecture pleine page. Les titres SYNTHETIC sont des donnees de test, pas des titres editoriaux.
+La premiere capture graph-qcf a ete prise avant la premiere peinture du compositeur WebView : zone de miniatures blanche. Elle ne constitue PAS une preuve visuelle de miniatures rendues ; utiliser la capture de retour. Le test DOM passe et la capture de retour confirme le rendu. Aucun resultat physique BOOX deduit de ces images.
+
+ASSEMBLAGE PRIVE LOCAL
+Quran-Haafidh-ATLAS-91890d74-UNSIGNED-NON_INSTALLABLE.apk
+Vrai code Android compile avec drapeau prive, trois assets approuves injectes hors GitHub/CI, signatures precedentes retirees, zipalign verifie. Archive CRC verifiee.
+NON SIGNE. NON INSTALLABLE. Ce fichier est un candidat de reprise technique, pas le debug personnel final. Voir BUILD_RECEIPT.json pour SHA-256 et detail.
+Package attendu du build : com.quransafeguard.hifz.ayahthemes114private
+Version du build : 1.17.1-AyahThemes114-PRIVATE ; versionCode 39.
+
+SIGNATURE BLOQUANTE
+Certificat du Soleil installe, verifie avec apksigner :
+85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e
+Cle privee correspondante introuvable dans les fichiers recuperes.
+La cle M9 retrouvee a un autre certificat (b75ba0a3...). La cle Quran-Hifz-release retrouvee aussi (68437510...). Aucune de ces cles n'a servi a signer ce candidat. Ne jamais desinstaller l'application existante pour contourner cette incompatibilite.
+Les outils et le script de finalisation controlent le certificat AVANT signature. Aucun mot de passe ni keystore n'est inclus dans ce paquet.
+
+RESTANT AVANT DEBUG ET RELEASE
+1. Retrouver le keystore du certificat 85cd...061e et ses acces. Signer le candidat local apres controle, verifier signature, package et compatibilite de mise a jour. Sauvegarder les acquis avant installation ; pas de desinstallation.
+2. Tester le binaire prive signe exact : les captures CI publiques/synthetiques ne certifient pas les pixels des titres prives.
+3. Recette physique BOOX : 15 lignes, tailles/densites utiles, toutes les commandes, titres longs, non-scrolling, navigation, Jalalayn, reprise et restauration de sauvegarde. NON EXECUTE a distance.
+4. Audit Work High DISTINCT et READ-ONLY sur le SHA et l'APK signes exacts. NON EXECUTE ; aucun verdict independant PASS revendique.
+5. Release privee uniquement apres ces validations. Pas de GitHub Release publique.
+
+LIMITES A CONSERVER
+- 173 unites ; decoupages Maududi detailles pour 2..9. Pour 106 sourates, une unite globale : ne pas pretendre a un decoupage mawdudien exhaustif pour ces sourates.
+- Jalalayn conserve son defilement existant par verset. La pagination de son long texte n'est pas implementee, pour respecter le gel de ce composant ; ce point reste ouvert.
+- Les autres densites, rotation/recreation de l'Atlas et petites surfaces ne sont pas certifiees par le seul test visuel representatif execute ici.
+- c237433e : CI Android 38950306892 FAIL (101 tests, 1 echec) ; JVM PASS. Ne pas recycler ce resultat en PASS.
+- Les runs intermediaires annules durant les corrections ne sont pas des PASS du commit final.
+
+REPRISE
+Verifier le HEAD reel, git status et les CI avant toute operation. Reprendre ce code et ces preuves ; ne pas recommencer CP00/01. Ne placer aucun asset prive dans GitHub ou une CI publique. Ne jamais confondre ce paquet NON INSTALLABLE avec une release.

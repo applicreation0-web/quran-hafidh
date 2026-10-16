@@ -1,3 +1,15 @@
+# Atlas QCF — reprise technique du 16 octobre 2026
+
+Code compilé et testé : `91890d7412821103113c5faf98f3aafd750643bb`.
+CI Android `38952593226` PASS (101 + 1 + 1), JVM/source `38952593472` PASS, compilation code privé sans données `38952593215` PASS.
+
+**CP-ATLAS-04 PARTIEL — DEBUG INSTALLABLE ET RELEASE BLOQUÉS.** Le candidat privé est assemblé mais non signé. La clé du certificat `85cd816f5213ae81f450146789c13ec476df54d7be8cc5f806decc9ed3f7061e` manque ; audit indépendant et recette BOOX physique NON EXÉCUTÉS. Aucune désinstallation ni remplacement de signature.
+
+Détails et limites : [ATLAS_QCF_114/STATUS_CURRENT.md](ATLAS_QCF_114/STATUS_CURRENT.md).
+Ce checkpoint est documentaire ; les résultats sont rattachés au SHA de code ci-dessus, pas à un binaire nouvellement signé.
+
+---
+
 # Current Work 5.6 status
 
 Date: 2026-10-12.
