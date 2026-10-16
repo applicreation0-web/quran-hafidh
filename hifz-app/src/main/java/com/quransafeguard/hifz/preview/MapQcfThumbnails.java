@@ -14,14 +14,15 @@ import java.util.Locale;
 
 /**
  * Semantic route ONLY: authentic KFQC SVG page miniatures, not approximate text
- * boxes or screenshots. A bounded two-page window avoids loading forty
- * complete SVGs into an E-Ink WebView at once. All pages remain reachable.
+ * boxes or screenshots. A single complete page stays inside its measured viewport. Unit pages
+ * remain reachable through round page badges and reader-direction swipes.
  */
 final class MapQcfThumbnails extends WebView {
- interface Listener { void onPageChosen(int page); }
- private static final int CHUNK=2;
+ interface Listener { void onPageChosen(int page); default void onOpenReading(int page){onPageChosen(page);} }
+ private String renderKey="";
+ private int passageFirstPage,passageLastPage;
  private final Listener listener;
- private int start,end,selected,chunkStart;
+ private int start,end,selected;
  private int markSurah,markFirst,markLast;
  private boolean markOnlyBoundaries;
  MapQcfThumbnails(Context context,Listener listener){
@@ -37,21 +38,22 @@ final class MapQcfThumbnails extends WebView {
   showPages(first,last,selectedPage,0,0,0,false);
  }
  void showPages(int first,int last,int selectedPage,int s,int firstAyah,int lastAyah,boolean boundariesOnly){
+  showPages(first,last,selectedPage,s,firstAyah,lastAyah,boundariesOnly,boundariesOnly?0:first,boundariesOnly?0:last);
+ }
+ void showPages(int first,int last,int selectedPage,int s,int firstAyah,int lastAyah,boolean boundariesOnly,int focusFirstPage,int focusLastPage){
   if(s<0||s>114||firstAyah<0||lastAyah<0||firstAyah>lastAyah)throw new IllegalArgumentException("QCF verse highlight range");
-  markSurah=s;markFirst=firstAyah;markLast=lastAyah;markOnlyBoundaries=boundariesOnly;
   if(first<1||last>604||last<first)throw new IllegalArgumentException("QCF thumbnail range");
-  int previousStart=start,previousEnd=end;
-  start=first;end=last;selected=Math.max(first,Math.min(last,selectedPage));
-  if(previousStart!=first||previousEnd!=last)
-   chunkStart=first+((selected-first)/CHUNK)*CHUNK;
-  else if(selected<chunkStart||selected>=chunkStart+CHUNK)
-   chunkStart=first+((selected-first)/CHUNK)*CHUNK;
+  int chosen=Math.max(first,Math.min(last,selectedPage));
+  String key=first+":"+last+":"+chosen+":"+s+":"+firstAyah+":"+lastAyah+":"+boundariesOnly+":"+focusFirstPage+":"+focusLastPage;
+  if(key.equals(renderKey))return;
+  renderKey=key;start=first;end=last;selected=chosen;
+  markSurah=s;markFirst=firstAyah;markLast=lastAyah;markOnlyBoundaries=boundariesOnly;
+  passageFirstPage=focusFirstPage;passageLastPage=focusLastPage;
   drawChunk();
  }
  private void step(int delta){
-  int next=Math.max(start,Math.min(end,chunkStart+delta*CHUNK));
-  if(next==chunkStart)return;
-  chunkStart=next;drawChunk();
+  int next=Math.max(start,Math.min(end,selected+(delta<0?-1:1)));
+  if(next!=selected&&listener!=null)listener.onPageChosen(next);
  }
  private static String readSvg(Context context,int page)throws Exception{
   String path=String.format(Locale.ROOT,"mushaf/hafs/kfqc/svg-br/%03d.svg.br",page);
@@ -93,35 +95,42 @@ final class MapQcfThumbnails extends WebView {
  private void drawChunk(){
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
-      .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f2;color:#121211;font:14px sans-serif}")
-      .append("header{display:flex;justify-content:space-between;align-items:center;height:48px;padding:0 8px}")
-      .append("button{border:1px solid #bbb;background:transparent;color:#111;font:16px sans-serif;min-height:48px;padding:5px 11px}")
-      .append("main{height:calc(100% - 48px);display:flex;justify-content:center;align-items:stretch;gap:8px;padding:4px 8px;overflow:hidden}")
-      .append(".tile{display:flex;flex-direction:column;width:calc(50% - 4px);height:100%;min-width:0;min-height:0;text-align:center;background:transparent;border:0;padding:0}")
-      .append(".tile.selected{border-bottom:3px solid #111}.tile img{display:block;width:100%;height:calc(100% - 24px);min-height:0;object-fit:contain}")
-      .append(".num{font-size:13px;font-weight:bold;line-height:23px;flex:none}</style></head><body><header><button onclick='MapPages.step(-1)' aria-label='Pages précédentes'>‹</button>")
-      .append("<span>Pages QCF ").append(chunkStart).append("–").append(Math.min(end,chunkStart+CHUNK-1))
-      .append(" / ").append(start).append("–").append(end).append("</span>")
-      .append("<button onclick='MapPages.step(1)' aria-label='Pages suivantes'>›</button></header><main>");
-  for(int p=chunkStart;p<=Math.min(end,chunkStart+CHUNK-1);p++){
-   try{
-    String svg=highlightExactVersePolygons(readSvg(getContext(),p));
-    String base64=android.util.Base64.encodeToString(svg.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
-    html.append("<button class='tile").append(p==selected?" selected":"").append("' aria-label='Voir page ")
-        .append(p).append("' onclick='MapPages.open(").append(p).append(")'><img alt='' src='data:image/svg+xml;base64,")
-        .append(base64).append("'><div class='num'>").append(p).append("</div></button>");
-   }catch(Exception invalid){
-    html.append("<span>Page ").append(p).append(" indisponible</span>");
-   }
+   .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:14px sans-serif}")
+   .append("body{display:flex;flex-direction:column}.tile{flex:1;min-height:0;width:100%;display:flex;justify-content:center;padding:4px 8px;overflow:hidden}")
+   .append(".paper{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}")
+   .append(".paper img{display:block;flex:none;object-fit:contain;width:1px;height:1px;max-width:100%;max-height:100%}")
+   .append("footer{height:100px;flex:none;text-align:center;padding:2px 6px 8px}.range{height:24px;line-height:24px;font-size:12px}")
+   .append("nav{height:64px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
+   .append("button{flex:none;width:48px;height:48px;min-width:48px;min-height:48px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
+   .append("button.passage{border:2px solid #121211;font-weight:bold}button[aria-current=page]{width:56px;height:56px;background:#121211;color:#faf8f0;border:2px solid #121211;font-weight:bold;outline:1px solid #121211;outline-offset:2px}")
+   .append("button[hidden]{display:none}</style><script>")
+   .append("function fit(){var img=document.querySelector('.paper img'),box=document.querySelector('.paper');if(!img||!img.naturalWidth||!box)return;var ratio=img.naturalWidth/img.naturalHeight;var w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
+   .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/54)));if(count>1&&count%2===0)count--;var first=Math.max(")
+   .append(start).append(",Math.min(").append(end).append("-count+1,").append(selected).append("-Math.floor(count/2)));nav.querySelectorAll('button').forEach(b=>b.hidden=Number(b.textContent)<first||Number(b.textContent)>=first+count);}")
+   .append("var touch=null,ignoreClick=0;document.addEventListener('touchstart',e=>{if(e.touches.length===1)touch={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});")
+   .append("document.addEventListener('touchend',e=>{if(!touch)return;var dx=e.changedTouches[0].clientX-touch.x,dy=e.changedTouches[0].clientY-touch.y;touch=null;if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.2){e.preventDefault();ignoreClick=Date.now()+400;MapPages.step(dx>0?1:-1);}});")
+   .append("function readPage(p){if(Date.now()>ignoreClick)MapPages.open(p);}function choosePage(p){if(Date.now()>ignoreClick)MapPages.choose(p);}</script></head><body>");
+  try{
+   String svg=highlightExactVersePolygons(readSvg(getContext(),selected));
+   String base64=android.util.Base64.encodeToString(svg.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
+   html.append("<main class='tile selected'><div class='paper' role='button' tabindex='0' aria-label='Lecture page ").append(selected)
+       .append("' onclick='readPage(").append(selected).append(")'><img alt='Page ").append(selected)
+       .append(" entière' onload='fit()' src='data:image/svg+xml;base64,").append(base64).append("'></div></main>");
+  }catch(Exception invalid){html.append("<main class='tile'>Page indisponible</main>");}
+  html.append("<footer><div class='range'>").append(start==end?"Page ":"Pages ").append(start);
+  if(end!=start)html.append(" à ").append(end);
+  html.append("</div><nav aria-label='Pages de l’unité'>");
+  for(int p=start;p<=end;p++){
+   html.append("<button class='page").append(p>=passageFirstPage&&p<=passageLastPage?" passage":"").append("' aria-label='Page ").append(p).append("'");
+   if(p==selected)html.append(" aria-current='page'");
+   html.append(" onclick='choosePage(").append(p).append(")'>").append(p).append("</button>");
   }
-  html.append("</main></body></html>");
+  html.append("</nav></footer><script>new ResizeObserver(()=>{fit();pills();}).observe(document.body);fit();pills();</script></body></html>");
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
  private final class Bridge {
-  @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta<0?-1:1));}
-  @JavascriptInterface public void open(int page){
-   if(page<start||page>end)return;
-   post(()->{selected=page;if(listener!=null)listener.onPageChosen(page);});
-  }
+  @JavascriptInterface public void step(int delta){post(()->MapQcfThumbnails.this.step(delta));}
+  @JavascriptInterface public void choose(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onPageChosen(page);});}
+  @JavascriptInterface public void open(int page){if(page>=start&&page<=end)post(()->{if(listener!=null)listener.onOpenReading(page);});}
  }
 }

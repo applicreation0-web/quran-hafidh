@@ -124,6 +124,12 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     catch(Exception e){throw new AssertionError(e);}
    });
    awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
+   swipeAtlasPage(scenario,screen,true);
+   awaitAtlasThumbnails(scenario,screen,selected.get(),expected+1);
+   scenario.onActivity(a->assertEquals("Page swipes stay in the selected unit",3,((Integer)field(screen.get(),"activeMacro")).intValue()));
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-page-badges-swipe.png");
+   swipeAtlasPage(scenario,screen,false);
+   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
    scenario.onActivity(a->screen.get().openReader());
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    AtomicReference<StudyReaderActivity> reader=new AtomicReference<>();
@@ -260,6 +266,20 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    android.os.SystemClock.sleep(250);
   }
   fail("Real highlighted QCF thumbnail not rendered in the Atlas viewport on page "+page);
+ }
+ private static void swipeAtlasPage(ActivityScenario<IbnKathirMapActivity> scenario,
+     AtomicReference<MawdudiMapScreen> screen,boolean next)throws Exception {
+  AtomicReference<int[]> bounds=new AtomicReference<>();
+  scenario.onActivity(a->{android.view.View v=(android.view.View)field(screen.get(),"thumbnails");int[] xy=new int[2];v.getLocationOnScreen(xy);bounds.set(new int[]{xy[0],xy[1],v.getWidth(),v.getHeight()});});
+  int[] b=bounds.get();float from=b[0]+b[2]*(next?.25f:.75f),to=b[0]+b[2]*(next?.75f:.25f),y=b[1]+b[3]*.4f;
+  android.app.Instrumentation inst=androidx.test.platform.app.InstrumentationRegistry.getInstrumentation();
+  long down=android.os.SystemClock.uptimeMillis();
+  for(int i=0;i<=10;i++) {
+   int action=i==0?android.view.MotionEvent.ACTION_DOWN:i==10?android.view.MotionEvent.ACTION_UP:android.view.MotionEvent.ACTION_MOVE;
+   android.view.MotionEvent event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,from+(to-from)*i/10,y,0);
+   inst.sendPointerSync(event);event.recycle();android.os.SystemClock.sleep(15);
+  }
+  inst.waitForIdleSync();
  }
  private static Object field(Object o,String name) {
   try{java.lang.reflect.Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}catch(Exception e){throw new AssertionError(e);}
