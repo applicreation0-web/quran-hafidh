@@ -56,13 +56,16 @@ public final class RevisionActiveLandmarkLineSourceContractTest {
             "private List<String> applyActiveLandmarks(int page) {", "private void updateMurajaahActions()");
         assertTrue("must read the full page's lines, masking is now handled at cell granularity, not by dropping a whole line",
             helper.contains("geometry.lineIdsOnPage(page)"));
-        // Master addendum: the half-line heuristic is retired in favour of exact word holes —
-        // the page's real first/last three words plus the page's Al-Munīr amorces.
-        assertTrue("no old half-line landmark fallback is used", helper.contains("mushaf.setLandmarkLines(null, null);"));
-        assertTrue("anchors only when every box on the page is exact",
-            helper.contains("semanticPassages.hasCompleteExactGeometryForPage(page)"));
-        assertTrue(helper.contains("semanticPassages.pageLandmarkBoxes(page)"));
-        assertTrue(helper.contains("mushaf.setSemanticCues(exact ? semanticPassages.readerCuesForPage(page) : new org.json.JSONArray(), exact, false);"));
+        // Approved replacement: retain first/last THREE physical page words,
+        // switch only active-review cue starts from the historical source to
+        // exact Ayah Themes first-word geometry. The renderer is unchanged.
+        assertTrue("no old half-line heuristic",helper.contains("mushaf.setLandmarkLines(null, null);"));
+        assertTrue("six first/last page words stay visible",helper.contains("pageLandmarkBoxes(page)"));
+        assertTrue("new approved passage starts only",helper.contains("ayahThemesTitles.forPage(page)"));
+        assertTrue("one exact start word per passage",helper.contains("cue.getInt(\"anchorWordCount\") != 1"));
+        assertTrue("no mask with incomplete source data",helper.contains("activeAyahThemesReady = false;"));
+        assertTrue("new starts drawn through unchanged renderer",helper.contains("mushaf.setSemanticCues(newStarts, true, false);"));
+        assertTrue("no historic cue holes in active helper",!helper.contains("semanticPassages.readerCuesForPage"));
         assertTrue("every page-entry/page-swipe path in active mode must route through this one helper",
             countOccurrences(session, "applyActiveLandmarks(") >= 5);
         assertTrue("no active-mode call site may bypass the helper with the raw page lookup",
