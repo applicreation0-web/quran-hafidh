@@ -95,7 +95,7 @@ final class MapQcfThumbnails extends WebView {
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
       .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f2;color:#121211;font:14px sans-serif}")
       .append("header{display:flex;justify-content:space-between;align-items:center;height:48px;padding:0 8px}")
-      .append("button{border:1px solid #bbb;background:transparent;color:#111;font:16px sans-serif;min-height:44px;padding:5px 11px}")
+      .append("button{border:1px solid #bbb;background:transparent;color:#111;font:16px sans-serif;min-height:48px;padding:5px 11px}")
       .append("main{height:calc(100% - 48px);display:flex;justify-content:center;align-items:stretch;gap:8px;padding:4px 8px;overflow:hidden}")
       .append(".tile{display:flex;flex-direction:column;width:calc(50% - 4px);height:100%;min-width:0;min-height:0;text-align:center;background:transparent;border:0;padding:0}")
       .append(".tile.selected{border-bottom:3px solid #111}.tile img{display:block;width:100%;height:calc(100% - 24px);min-height:0;object-fit:contain}")

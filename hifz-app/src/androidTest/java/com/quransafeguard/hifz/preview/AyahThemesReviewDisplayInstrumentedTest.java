@@ -132,6 +132,28 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    scenario.onActivity(a->assertEquals(expected,((Integer)field(screen.get(),"page")).intValue()));
    awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-return.png");
+   scenario.onActivity(a->{
+    try {
+     // 4:101-104 spans two units: adjacent passage navigation must cross
+     // both memberships without repeating the passage or becoming stuck.
+     for(int direction:new int[]{1,-1}) {
+      MawdudiMapScreen original=screen.get();
+      MawdudiMapScreen boundary=new MawdudiMapScreen(a,GeometryRepository.get(a),
+        (MawdudiPassageIndex)field(original,"index"),(AyahThemesCueIndex)field(original,"titles"),
+        (MawdudiMapData)field(original,"macros"),4,direction>0?101:104,null);
+      try {
+       boundary.display();
+       java.lang.reflect.Method level=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);
+       level.setAccessible(true);level.invoke(boundary,false);
+       java.lang.reflect.Method move=MawdudiMapScreen.class.getDeclaredMethod("movePassage",int.class);
+       move.setAccessible(true);move.invoke(boundary,direction);
+       int position=(Integer)field(boundary,"selected");
+       MawdudiPassageIndex.Passage actual=((MawdudiPassageIndex)field(original,"index")).forSurah(4).get(position);
+       assertEquals("Canonical adjacency across two unit memberships",direction>0?"s004a105b112":"s004a097b100",actual.id);
+      } finally {boundary.destroy();}
+     }
+    }catch(Exception ex){throw new AssertionError(ex);}
+   });
   }
  }
  @Test public void titleTargetPreservesPassiveEndpointAndArmedActiveWeakMark()throws Exception {
@@ -195,6 +217,12 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    scenario.onActivity(a->{
     android.webkit.WebView view=(android.webkit.WebView)field(screen.get(),"thumbnails");
     assertTrue("Real QCF thumbnails must be visible",view.isShown());
+    android.view.ViewGroup icons=(android.view.ViewGroup)field(screen.get(),"icons");
+    float density=a.getResources().getDisplayMetrics().density;
+    for(int i=0;i<icons.getChildCount();i++) {
+     android.view.View target=icons.getChildAt(i);
+     assertTrue("Atlas touch targets must be at least 48dp",target.getWidth()+1>=48*density&&target.getHeight()+1>=48*density);
+    }
     view.evaluateJavascript(script,v->{result.set(v);done.countDown();});
    });
    assertTrue("Atlas JavaScript timed out",done.await(15,TimeUnit.SECONDS));

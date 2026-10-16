@@ -115,23 +115,32 @@ final class MawdudiMapScreen implements MushafView.Listener {
  void display() {
   LinearLayout root=Ui.column(activity);root.setBackgroundColor(Ui.PAPER);
   LinearLayout top=Ui.row(activity);top.setGravity(Gravity.CENTER_VERTICAL);
-  top.addView(Ui.iconButton(activity,"","Retour",v->goBack()),new LinearLayout.LayoutParams(Ui.dp(activity,42),Ui.dp(activity,44)));
+  top.addView(Ui.iconButton(activity,"","Retour",v->goBack()),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   heading=Ui.text(activity,"",12f,false);heading.setMaxLines(2);heading.setEllipsize(TextUtils.TruncateAt.END);
   heading.setClickable(true);heading.setFocusable(true);heading.setOnClickListener(v->chooseUnit());
-  top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
-  top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,42),Ui.dp(activity,44)));
+  top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
+  top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   root.addView(top);
-  // Screen-width sun remains present at both levels. The details are branches
-  // of the selected ray, never an unrelated list or rectangular tile.
-  float density=activity.getResources().getDisplayMetrics().density;
-  float widthDp=activity.getResources().getDisplayMetrics().widthPixels/density;
-  sunHeight=Ui.dp(activity,(int)Math.max(172,Math.min(210,widthDp*0.38f)));
+  // Use the current window (including density/zoom and system-bar insets),
+  // then its measured content bounds; physical display dimensions can be stale.
+  int windowWidth=activity.getResources().getDisplayMetrics().widthPixels;
+  if(android.os.Build.VERSION.SDK_INT>=30){
+   WindowMetrics metrics=activity.getWindowManager().getCurrentWindowMetrics();
+   android.graphics.Insets insets=metrics.getWindowInsets().getInsets(
+       WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+   windowWidth=metrics.getBounds().width()-insets.left-insets.right;
+  }
+  sunHeight=atlasHeight(windowWidth,activity.getResources().getDisplayMetrics().heightPixels);
   axis=new HorizontalScrollView(activity);axis.setFillViewport(true);
   axis.setHorizontalScrollBarEnabled(false);
   graph=new Graph();overviewGraph=new OverviewGraph();
   axis.addView(overview?overviewGraph:graph,
       new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,sunHeight));
   root.addView(axis,new LinearLayout.LayoutParams(-1,sunHeight));
+  root.addOnLayoutChangeListener((v,left,topEdge,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{
+   int height=atlasHeight(right-left,bottom-topEdge);
+   if(height!=sunHeight){sunHeight=height;refresh();}
+  });
   passageTitle=Ui.text(activity,"",13.5f,true);
   passageTitle.setGravity(Gravity.CENTER);
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
@@ -146,26 +155,26 @@ final class MawdudiMapScreen implements MushafView.Listener {
   pageActions=Ui.row(activity);
   pageActions.setGravity(Gravity.CENTER_VERTICAL);
   previousPageButton=Ui.iconButton(activity,"","Page précédente",v->turn(-1));
-  pageActions.addView(previousPageButton,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,38)));
+  pageActions.addView(previousPageButton,new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   pageLabel=Ui.text(activity,"",11f,false);pageLabel.setGravity(Gravity.CENTER);
-  pageActions.addView(pageLabel,new LinearLayout.LayoutParams(0,Ui.dp(activity,38),1));
+  pageActions.addView(pageLabel,new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   nextPageButton=Ui.iconButton(activity,"","Page suivante",v->turn(1));
-  pageActions.addView(nextPageButton,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,38)));
+  pageActions.addView(nextPageButton,new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   root.addView(pageActions);
   icons=Ui.row(activity);icons.setGravity(Gravity.CENTER_VERTICAL);
   icons.addView(Ui.iconButton(activity,"","Passage précédent du corpus",v->movePassage(-1)),
-      new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
+      new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   TextView complete=Ui.text(activity,"Aa",16f,true);
   complete.setGravity(Gravity.CENTER);complete.setClickable(true);complete.setFocusable(true);
   complete.setContentDescription("Titre complet du passage Ayah Themes");
   complete.setOnClickListener(v->showCurrentTitle());
-  icons.addView(complete,new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
+  icons.addView(complete,new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   icons.addView(Ui.iconButton(activity,"","Tafsir",v->openCommentary()),
-      new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
+      new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),
-      new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
+      new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   icons.addView(Ui.iconButton(activity,"","Passage suivant du corpus",v->movePassage(1)),
-      new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
+      new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
   root.addView(icons);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();
@@ -221,13 +230,9 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(next<0||next>=passages.size())return;
   MawdudiPassageIndex.Passage passage=passages.get(next);
   if(!graph.inMacro(next)){
-   int target=activeMacro+direction;
-   java.util.List<MawdudiMapData.Macro> units=macros.forSurah(surah);
-   if(target<0||target>=units.size())return;
-   MawdudiMapData.Macro adjacent=units.get(target);
-   // Move to the NEXT canonical passage, never repeat a passage crossing two units.
-   if(passage.firstAyah>adjacent.end||passage.lastAyah<adjacent.start)return;
-   activeMacro=target;
+   // The current passage can span multiple units (4:101-104 spans U7/U8).
+   // Resolve the next passage's actual unit instead of assuming one unit step.
+   activeMacro=macroIndex(surah,direction>0?passage.firstAyah:passage.lastAyah);
   }
   selected=next;focusStart=passage.firstAyah;focusEnd=passage.lastAyah;
   passageOpen=true;
@@ -366,6 +371,13 @@ final class MawdudiMapScreen implements MushafView.Listener {
  @Override public void onSurfaceTap(){openReader();}
 
  /** Stable unit coordinates and a physical Mushaf page-scale strip. */
+ private int atlasHeight(int width,int height){
+  int minimum=Ui.dp(activity,macros.forSurah(surah).size()>6?194:172);
+  int desired=Ui.dp(activity,(int)Math.max(172,Math.min(210,width/activity.getResources().getDisplayMetrics().density*.38f)));
+  // Keep a useful thumbnail viewport after headings and both navigation rows.
+  int budget=height-Ui.dp(activity,48+56+48+48+180);
+  return Math.max(minimum,Math.min(desired,budget));
+ }
  private float atlasX(int index,int total,int width){
   int columns=Math.min(6,total);
   return width*((index%columns)+.5f)/columns;
