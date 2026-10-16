@@ -72,6 +72,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private TextView rubPicker;
     private boolean controlsVisible = true;
     private boolean mapPreview;
+    private MawdudiMapData mapPreviewUnits;
+    private MapJalalaynDialog mapPreviewJalalayn;
     private boolean largeScreen;
     private HifzPrefs hifzPrefs;
     private GeometryRepository geometry;
@@ -82,6 +84,14 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         mapPreview = getIntent().getBooleanExtra(EXTRA_MAP_PREVIEW, false);
+        if(mapPreview) {
+            try {
+                mapPreviewUnits=MawdudiMapData.load(this,MawdudiPassageIndex.load(this));
+            }catch(Exception missingPrivateData){
+                // Fail closed: no fabricated/mislocated unit boundary annotations.
+                mapPreviewUnits=null;
+            }
+        }
         int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
         page = jumpPage >= 1 && jumpPage <= 604
             ? jumpPage : getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
@@ -267,6 +277,20 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
+        if(mapPreview) {
+            // In the map-linked reader, turning a page cannot escape the
+            // selected Ayah Themes passage. The ordinary Hifz reader is unchanged.
+            try {
+                int surah=getIntent().getIntExtra("map114Surah",0);
+                int first=getIntent().getIntExtra("map114FocusStart",0);
+                int last=getIntent().getIntExtra("map114FocusEnd",0);
+                GeometryRepository qcf=GeometryRepository.get(this);
+                if(surah>=1&&surah<=114&&first>=1&&last>=first) {
+                    next=Math.max(qcf.pageForVerse(new VerseRef(surah,first)),
+                        Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,last),qcf),next));
+                }
+            } catch(RuntimeException invalidPreview) {return;}
+        }
         if (next == page) { showControls(); return; }
         closeSemanticTitle();
         closeTafsirPanels();
@@ -391,12 +415,22 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             showControls();
             return;
         }
+        if(mapPreview) {
+            // BOOX semantic route: full-screen commentary, never split the QCF.
+            if(mapPreviewJalalayn!=null)mapPreviewJalalayn.close();
+            int first=getIntent().getIntExtra("map114FocusStart",verse.getAyah());
+            int last=getIntent().getIntExtra("map114FocusEnd",verse.getAyah());
+            mapPreviewJalalayn=new MapJalalaynDialog(this,verse.getSurah(),first,last,verse.getAyah());
+            mapPreviewJalalayn.show();
+            return;
+        }
         if (largeScreen) { openSideTafsir(verse); return; }
         openBottomTafsir(verse);
     }
 
     private boolean isTafsirOpen() {
-        return (largeScreen && sideTafsir != null && sideTafsir.getVisibility() == View.VISIBLE)
+        return (mapPreviewJalalayn!=null&&mapPreviewJalalayn.isShowing())
+            || (largeScreen && sideTafsir != null && sideTafsir.getVisibility() == View.VISIBLE)
             || (!largeScreen && bottomTafsir != null && bottomTafsir.getVisibility() == View.VISIBLE);
     }
 
@@ -437,6 +471,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
 
     private void closeTafsirPanels() {
+        if(mapPreviewJalalayn!=null){mapPreviewJalalayn.close();mapPreviewJalalayn=null;}
         closeSideTafsir();
         if (bottomTafsir != null && bottomTafsir.getVisibility() == View.VISIBLE) closeBottomTafsir();
     }
@@ -790,6 +825,12 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         updateSurahPickerLabel();
         updateRubPickerLabel();
         applySemanticCues();
+        if(mapPreview&&mapPreviewUnits!=null){
+            int surah=getIntent().getIntExtra("map114Surah",0);
+            if(surah>=1&&surah<=114)
+                MapUnitMarkers.show(mushaf,shown,surah,
+                    mapPreviewUnits.forSurah(surah),GeometryRepository.get(this));
+        }
     }
     @Override public void onBackPressed() {
         if (isTafsirOpen()) { closeTafsirPanels(); return; }
@@ -801,6 +842,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return super.onKeyDown(keyCode, event);
     }
     @Override protected void onDestroy() {
+        if(mapPreviewJalalayn!=null){mapPreviewJalalayn.close();mapPreviewJalalayn=null;}
         io.shutdownNow();
         if (semanticTitleDialog != null && semanticTitleDialog.isShowing()) semanticTitleDialog.dismiss();
         if (mushaf != null) {
