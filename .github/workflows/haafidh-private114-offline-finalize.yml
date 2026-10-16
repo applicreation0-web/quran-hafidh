@@ -1,0 +1,92 @@
+name: Quran Haafidh 114 — code-only private-flag staging for OFFLINE local signing
+
+on:
+  push:
+    branches:
+      - work/haafidh-1171-ibn-kathir-integration-independent
+    paths:
+      - .github/workflows/haafidh-private114-offline-finalize.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: haafidh-private114-staging-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compile-code-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      AYAH_THEMES_PRIVATE_114: "1"
+    steps:
+      - name: Checkout exact branch code only
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Enforce frozen Hifz, QCF, source and BOOX guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/guard_frozen_hifz_engines.sh
+          bash scripts/audit_hifz_quiz_against_1171.sh
+          python3 scripts/verify_j6_icon_roles.py
+      - name: Generate only public-safe private-build Android label and provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          # No title, macro, special-node or commentary text is ever available here.
+          mkdir -p hifz-app/src/private114/assets
+          cat > hifz-app/src/private114/AndroidManifest.xml <<EOF
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"><application android:label="Quran Haafidh Privé 114" tools:replace="android:label"><meta-data android:name="quran.haafidh.source_sha" android:value="$(git rev-parse HEAD)" /></application></manifest>
+          EOF
+          test ! -e hifz-app/src/private114/assets/ayah_themes_private
+          git check-ignore -q hifz-app/src/private114/AndroidManifest.xml
+          git status --porcelain | grep -qv . || { echo "Source unexpectedly modified"; exit 1; }
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
+      - name: Install pinned Android SDK
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.0'
+      - name: Compile private-flag Android code without private data
+        shell: bash
+        run: gradle --no-daemon :hifz-app:testDebugUnitTest :hifz-app:sourceContractTest :hifz-app:assembleDebug --stacktrace
+      - name: Stage only code, signing tools, and NO private texts
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/code-only-for-local-private-assembly"
+          mkdir -p "$out"
+          mapfile -t apks < <(find hifz-app/build-private114/outputs/apk/debug -type f -name '*.apk')
+          test "${#apks[@]}" -eq 1
+          cp "${apks[0]}" "$out/CODE-ONLY-NOT-INSTALLABLE.apk"
+          python3 - "$out/CODE-ONLY-NOT-INSTALLABLE.apk" <<'PY'
+          import zipfile,sys
+          with zipfile.ZipFile(sys.argv[1]) as archive:
+              assert not [name for name in archive.namelist() if name.startswith('assets/ayah_themes_private/')]
+          print('PASS: zero private title, macro or subnode files in CI')
+          PY
+          sdk="$ANDROID_HOME/build-tools/36.0.0"
+          cp "$sdk/lib/apksigner.jar" "$out/apksigner.jar"
+          cp "$sdk/zipalign" "$out/zipalign"
+          if test -f "$sdk/lib64/libc++.so"; then cp "$sdk/lib64/libc++.so" "$out/libc++.so"; fi
+          printf 'Only compiled PRIVATE-FLAG CODE; ZERO private texts. Inject 3 exact private source assets and re-sign on local machine. Source: %s\n' "$(git rev-parse HEAD)" > "$out/README-CODE-ONLY-NOT-INSTALLABLE.txt"
+          (cd "$out" && sha256sum CODE-ONLY-NOT-INSTALLABLE.apk apksigner.jar zipalign > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: haafidh-private114-CODE-ONLY-NO-TITLES-${{ github.sha }}
+          path: ${{ runner.temp }}/code-only-for-local-private-assembly/
+          retention-days: 1
+          if-no-files-found: error
