@@ -31,7 +31,7 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
         }
         android.widget.LinearLayout itqan=(android.widget.LinearLayout)reflect(a,"itqanCard");
         assertEquals("No engine diagnostics inside Parcours Hifz",
-            "2 pages / 4 séances",Ui.settingValue(itqan).getText().toString());
+            "2 pages/semaine",Ui.settingValue(itqan).getText().toString());
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-accueil-sans-quiz.png");
     }
