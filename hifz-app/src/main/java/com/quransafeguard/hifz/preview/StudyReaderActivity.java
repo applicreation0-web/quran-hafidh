@@ -85,6 +85,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         int jumpPage = getIntent().getIntExtra(EXTRA_JUMP_PAGE, 0);
         page = jumpPage >= 1 && jumpPage <= 604
             ? jumpPage : getSharedPreferences("hifz_study", MODE_PRIVATE).getInt("page", 1);
+        if(mapPreview&&state!=null)page=state.getInt("map114ReaderPage",page);
         String jumpVerse = getIntent().getStringExtra(EXTRA_JUMP_VERSE);
         if (jumpVerse != null) {
             try { pendingJumpVerse = GeometryRepository.parseVerse(jumpVerse); } catch (RuntimeException malformed) { /* ignore */ }
@@ -276,7 +277,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (!mapPreview) getSharedPreferences("hifz_study", MODE_PRIVATE).edit().putInt("page", page).apply();
         updateSurahPickerLabel();
         updateRubPickerLabel();
-        mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+        if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         showControls();
     }
 
@@ -742,14 +743,43 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         return text;
     }
 
+    /** Only the new map route carries a canonical focus; Tafsir behavior is unchanged. */
+    private boolean showMap114Focus() {
+        String id=getIntent().getStringExtra("map114PassageId");
+        if(!mapPreview||id==null)return false;
+        try {
+            MawdudiPassageIndex.Passage passage=null;
+            for(MawdudiPassageIndex.Passage p:MawdudiPassageIndex.load(this).all())if(p.id.equals(id)){passage=p;break;}
+            if(passage==null)return false;
+            int first=getIntent().getIntExtra("map114FocusStart",passage.firstAyah);
+            int last=getIntent().getIntExtra("map114FocusEnd",passage.lastAyah);
+            if(!passage.contains(first)||!passage.contains(last)||first>last)return false;
+            GeometryRepository qcf=GeometryRepository.get(this);
+            java.util.List<VerseRef> focus=new java.util.ArrayList<>();
+            for(VerseRef verse:MawdudiMapModel.highlightedVerses(passage,page,qcf))
+                if(verse.getAyah()>=first&&verse.getAyah()<=last)focus.add(verse);
+            selected=focus.isEmpty()?null:focus.get(0);
+            tafsirButton.setContentDescription(selected==null?"Tafsir · touchez un verset puis ouvrez le commentaire"
+                :"Tafsir "+selected.getSurah()+":"+selected.getAyah());
+            mushaf.setHighlightVerses(focus);
+            mushaf.show(page,focus,focus.isEmpty()?Collections.emptyList():qcf.lineIdsForVerseRange(
+                new VerseRef(passage.surah,first),new VerseRef(passage.surah,last)),0,!focus.isEmpty());
+            return true;
+        } catch(RuntimeException invalidMapFocus) {return false;}
+    }
+    @Override protected void onSaveInstanceState(Bundle out) {
+        if(mapPreview)out.putInt("map114ReaderPage",page);
+        super.onSaveInstanceState(out);
+    }
+
     @Override public void onReady() {
         if (pendingJumpVerse != null) {
             selected = pendingJumpVerse;
             tafsirButton.setContentDescription("Tafsir " + pendingJumpVerse.getSurah() + ":" + pendingJumpVerse.getAyah());
-            mushaf.show(page, Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
+            if(!showMap114Focus())mushaf.show(page, Collections.singletonList(pendingJumpVerse), Collections.emptyList(), 0);
             pendingJumpVerse = null;
         } else {
-            mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
+            if(!showMap114Focus())mushaf.show(page, Collections.emptyList(), Collections.emptyList(), 0);
         }
     }
     @Override public void onError(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }

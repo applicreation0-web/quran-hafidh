@@ -15,3 +15,6 @@ local.properties
 
 # CP02 private owner-approved Ayah Themes titles, never public and never CI artifacts.
 /hifz-app/src/main/assets/ayah_themes_private/
+
+# Local-only 114-surah private build overlay; absent from release/public CI.
+/hifz-app/src/private114/

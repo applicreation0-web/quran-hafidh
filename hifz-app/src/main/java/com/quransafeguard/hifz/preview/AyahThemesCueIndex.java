@@ -146,6 +146,11 @@ final class AyahThemesCueIndex {
         return out;
     }
 
+    /** Stable canonical label for the graphical map; source text is never changed. */
+    String titleForPassage(String id) {
+        Cue cue=byId.get(id);return cue==null?null:cue.title;
+    }
+
     /** Refuse stale taps or locations from unrelated historical boundaries. */
     String titleForVisibleStart(int page,String id) {
         Cue cue=byId.get(id);

@@ -27,11 +27,11 @@ mkdir -p audit-runtime-screens
 device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
 adb pull "$device_dir/." audit-runtime-screens/ || true
 
-# AndroidJUnitRunner is authoritative: the complete checked-in suite has 99 tests.
+# AndroidJUnitRunner is authoritative: the complete checked-in suite has 100 tests.
 # A bare Android shell exit code is not sufficient to prove test success.
-grep -Fxq 'OK (99 tests)' audit-runtime-instrumentation.txt
+grep -Fxq 'OK (100 tests)' audit-runtime-instrumentation.txt
 grep -Fxq 'INSTRUMENTATION_CODE: -1' audit-runtime-instrumentation.txt
-test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq 99
+test "$(grep -Fc 'INSTRUMENTATION_STATUS_CODE: 0' audit-runtime-instrumentation.txt)" -eq 100
 if grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed|FATAL EXCEPTION|INSTRUMENTATION_STATUS_CODE: -[0-9]+' audit-runtime-instrumentation.txt; then
   echo "::error::Android instrumented tests contain a failure; no debug allowed"
   exit 1
@@ -91,7 +91,10 @@ for file in audit-lecture-mushaf.png \
             audit-mawdudi-baqara-10-continuous-stages.png \
             audit-mawdudi-baqara-compact-map-commentary-return.png \
             audit-cp04-memo-libre-avant.png \
-            audit-cp04-memo-libre-apres.png; do
+            audit-cp04-memo-libre-apres.png \
+            audit-map114-synthetic-graph-qcf.png \
+            audit-map114-synthetic-reader-focus.png \
+            audit-map114-synthetic-return.png; do
   test -s "audit-runtime-screens/$file"
 done
 private_dir=hifz-app/src/main/assets/ibn_kathir_qurancom_private
@@ -104,8 +107,8 @@ if [ -d "$private_dir" ]; then
     echo "::error::Private Quran.com heading created no visible UI transition"
     exit 1
   fi
-  echo "PASS: 99 live Android tests + $count screenshots, including PRIVATE title pixels"
+  echo "PASS: 100 live Android tests + $count screenshots, including PRIVATE title pixels"
 else
-  echo "PASS: 99 live Android tests + external force-stop persistence + $count screenshots, PUBLIC no-title fail-closed only"
+  echo "PASS: 100 live Android tests + external force-stop persistence + $count screenshots, PUBLIC no-title fail-closed only"
   echo "::notice::Quran.com English title pixels remain UNVERIFIED until private Work audit"
 fi

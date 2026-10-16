@@ -19,6 +19,7 @@ val semanticV23TitleOutput = generatedSemanticAssetsDir.resolve("semantic/semant
 val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 // Only the CP-08P staging workflow opts into the separate personal phone-pilot ID.
+val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
 val cp08BaqaraPilot = System.getenv("CP08_BAQARAH_PILOT") == "1"
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {
@@ -312,9 +313,14 @@ android {
         versionCode = 39
         versionName = "1.17.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
     }
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
+    if (private114) {
+        sourceSets.getByName("debug").assets.srcDir("src/private114/assets")
+        sourceSets.getByName("debug").manifest.srcFile("src/private114/AndroidManifest.xml")
+    }
 
     signingConfigs {
         create("release") {
@@ -332,8 +338,8 @@ android {
         getByName("debug") {
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
-            applicationIdSuffix = if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
-            versionNameSuffix = if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
+            applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
+            versionNameSuffix = if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
             isMinifyEnabled = false

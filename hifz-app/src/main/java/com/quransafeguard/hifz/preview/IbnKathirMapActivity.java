@@ -30,6 +30,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     static final String EXTRA_AYAH = "mapAyah";
 
     private BaqaraPilotScreen baqaraPilot;
+    private MawdudiMapScreen map114;
     private IbnKathirGroupIndex index;
     private GeometryRepository geometry;
     private int surah = 1;
@@ -66,6 +67,19 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        if(BuildConfig.AYAH_THEMES_FINAL_PRIVATE) {
+            try {
+                GeometryRepository qcf=GeometryRepository.get(this);
+                MawdudiPassageIndex canonical=MawdudiPassageIndex.load(this);
+                map114=new MawdudiMapScreen(this,qcf,canonical,AyahThemesCueIndex.load(this),
+                    MawdudiMapData.load(this,canonical),getIntent().getIntExtra(EXTRA_SURAH,1),
+                    getIntent().getIntExtra(EXTRA_AYAH,1),state);
+                map114.display();pagePreview=map114.mushaf();
+            } catch(Exception unavailable) {
+                Ui.showFatal(this,"Le corpus privé vérifié des 114 sourates est indisponible.");
+            }
+            return; // A final private build NEVER falls back to an old map/list.
+        }
         try {
             index = IbnKathirGroupIndex.shared();
             geometry = GeometryRepository.get(this);
@@ -552,6 +566,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     private void openPreviewInReader() {
+        if(map114!=null){map114.openReader();return;}
         IbnKathirGroupIndex.Group group = currentGroup();
         List<VerseRef> exact = IbnKathirMapModel.highlightedVerses(group, previewPage, geometry);
         if (exact.isEmpty()) {
@@ -580,6 +595,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     @Override public void onPageSwipe(int delta) { turnPreviewPage(delta); }
 
     @Override protected void onSaveInstanceState(Bundle out) {
+        if(map114!=null){map114.save(out);super.onSaveInstanceState(out);return;}
         if (baqaraPilot != null) {
             out.putInt("surah", 2);
             out.putInt("bp_requested_ayah", 1);
@@ -604,6 +620,7 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     @Override public void onBackPressed() {
+        if(map114!=null){if(!map114.back())super.onBackPressed();return;}
         if (baqaraPilot != null) {
             if (!baqaraPilot.handleBack()) super.onBackPressed();
             return;
@@ -620,7 +637,8 @@ public final class IbnKathirMapActivity extends Activity implements MushafView.L
     }
 
     @Override protected void onDestroy() {
-        if (baqaraPilot != null) baqaraPilot.destroy();
+        if(map114!=null)map114.destroy();
+        else if (baqaraPilot != null) baqaraPilot.destroy();
         else if (pagePreview != null) pagePreview.destroySafely();
         super.onDestroy();
     }

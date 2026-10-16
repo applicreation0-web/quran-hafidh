@@ -116,6 +116,8 @@ while IFS= read -r file; do
     "$prefix/IbnKathirGroupIndex.java" | \
     "$prefix/MawdudiPassageIndex.java" | \
     "$prefix/MawdudiMapModel.java" | \
+    "$prefix/MawdudiMapData.java" | \
+    "$prefix/MawdudiMapScreen.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
     "$prefix/BaqaraPilotSpec.java" | \

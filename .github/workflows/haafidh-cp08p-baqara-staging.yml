@@ -1,26 +1,5 @@
 name: CP08P Al-Baqarah Android pilot — PUBLIC STAGING without private titles
 on:
-  push:
-    branches:
-      - work/haafidh-1171-ibn-kathir-integration-independent
-    paths:
-      - .github/workflows/haafidh-cp08p-baqara-staging.yml
-      - hifz-app/build.gradle.kts
-      - hifz-app/src/main/AndroidManifest.xml
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnKathirMapActivity.java
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraPilotSpec.java
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraAyahThemeTitles.java
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/BaqaraPilotScreen.java
-      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/BaqaraPilotSpecTest.java
-      - hifz-app/src/main/java/com/quransafeguard/hifz/preview/IbnAshurBaqaraThemes.java
-      - hifz-app/src/test/java/com/quransafeguard/hifz/preview/IbnAshurBaqaraThemesTest.java
-      - hifz-app/src/main/res/drawable/ic_ui_semantic_map.xml
-      - scripts/guard_frozen_hifz_engines.sh
-      - scripts/audit_hifz_quiz_against_1171.sh
-      - scripts/audit_hifz_quiz_against_1171.sh
-      - docs/FROZEN_UI_ICONS_13_PLUS_10.tsv
-      - scripts/verify_contractual_ui_icons.py
-      - scripts/verify_approved_icon_silhouettes.py
   workflow_dispatch:
 
 permissions:
