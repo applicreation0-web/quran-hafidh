@@ -58,14 +58,15 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-calendrier-sept-jours.png");
     }
  }
- @Test public void quranComPrivateTitleIsPageScopedOrFailsClosedWhenNotBundled() {
+ @Test public void ayahThemesPrivateTitleIsPageScopedOrFailsClosedWhenNotBundled() {
     Context context=ApplicationProvider.getApplicationContext();
-    IbnKathirGroupIndex.Group qaf=IbnKathirGroupIndex.shared().containing(50,1);
-    String expected=IbnKathirQuranComPrivateTitles.approvedTitle(context,qaf);
+    AyahThemesCueIndex cues=AyahThemesCueIndex.load(context);
+    MawdudiPassageIndex.Passage qaf=MawdudiPassageIndex.load(context).at(50,1);
+    String expected=cues==null?null:cues.titleForVisibleStart(518,qaf.id);
     android.content.Intent intent=new android.content.Intent(context,StudyReaderActivity.class)
       .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,518);
     try(ActivityScenario<StudyReaderActivity> scenario=ActivityScenario.launch(intent)){
-      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quran.com Qaf title");
+      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Ayah Themes Qaf title");
       scenario.onActivity(a->{
         if(Boolean.FALSE.equals(reflect(a,"semanticCuesEnabled"))) {
           try {
@@ -73,10 +74,10 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
             enable.setAccessible(true);enable.invoke(a);
           }catch(Exception error){throw new AssertionError(error);}
         }
-        a.onSemanticCueTap("IKEN050_001_005");
+        a.onSemanticCueTap(qaf.id);
         Dialog dialog=(Dialog)reflect(a,"semanticTitleDialog");
         if(expected==null) {
-          assertNull("Never fall back to spa5k title when private corpus is absent",dialog);
+          assertNull("Never fall back to a legacy title when private corpus is absent",dialog);
           // A prior popup must never masquerade as the label of an untitled cue.
           Dialog stale=new Dialog(a);
           stale.setTitle("SYNTHETIC_STALE_TITLE");
@@ -86,7 +87,7 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
             field.setAccessible(true);
             field.set(a,stale);
           }catch(Exception bad){throw new AssertionError(bad);}
-          a.onSemanticCueTap("IKEN050_001_005");
+          a.onSemanticCueTap(qaf.id);
           assertFalse("Untitled cue must dismiss stale English caption",stale.isShowing());
           Dialog staleOnPage=new Dialog(a);
           staleOnPage.setTitle("SYNTHETIC_PREVIOUS_PAGE");
@@ -133,13 +134,16 @@ public final class ReaderSevenDayRuntimeInstrumentedTest {
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Quran.com Baqarah");
       scenario.onActivity(a->{
-        IbnKathirGroupIndex.Group b=IbnKathirGroupIndex.shared().containing(2,1);
-        String heading=IbnKathirQuranComPrivateTitles.approvedTitle(a,b);
-        assertNotNull("Private M7-B corpus must contain approved contextual 2:1",heading);
+        MawdudiPassageIndex.Passage b=MawdudiPassageIndex.load(a).at(2,1);
+        String heading=cues.titleForVisibleStart(2,b.id);
+        assertNotNull("Private Ayah Themes pack must contain approved contextual 2:1",heading);
         a.onSemanticCueTap(b.id);
         Dialog popup=(Dialog)reflect(a,"semanticTitleDialog");
         assertNotNull(popup);
         assertTrue(containsText(popup.findViewById(android.R.id.content),heading));
+        a.onSemanticCueTap("SYNTHETIC_UNKNOWN_ID");
+        assertFalse("Unknown cue must clear a valid prior title",popup.isShowing());
+        assertNull(reflect(a,"semanticTitleDialog"));
       });
       HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-qurancom-baqarah-private.png");
     }

@@ -300,7 +300,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         if (controlsVisible) hideControls(); else showControls();
     }
     @Override public void onSemanticCueTap(String passageId) {
-        if(!semanticCuesEnabled||ayahThemesCues==null)return;
+        if(!semanticCuesEnabled||ayahThemesCues==null){closeSemanticTitle();return;}
         // A title is shown only for a real first-word anchor on this QCF page.
         String label=ayahThemesCues.titleForVisibleStart(page,passageId);
         if(label==null){closeSemanticTitle();return;}
