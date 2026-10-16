@@ -68,7 +68,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private void choose(int s,int ayah) {
   surah=s;passages=index.forSurah(s);MawdudiPassageIndex.Passage p=index.at(s,ayah);
   selected=passages.indexOf(p);page=MawdudiMapModel.firstPage(p,geometry);focusStart=p.firstAyah;focusEnd=p.lastAyah;
-  overview=macros.forSurah(s).size()>1;
+  passageOpen=false;overview=macros.forSurah(s).size()>1;
   activeMacro=macroIndex(s,ayah);
  }
  private int macroIndex(int s,int ayah){
@@ -220,8 +220,15 @@ final class MawdudiMapScreen implements MushafView.Listener {
   while(next>=0&&next<passages.size()&&!graph.inMacro(next))next+=direction;
   if(next<0||next>=passages.size()){
    int target=activeMacro+direction;
-   if(target>=0&&target<macros.forSurah(surah).size())openMacro(target);
-   return;
+   java.util.List<MawdudiMapData.Macro> units=macros.forSurah(surah);
+   if(target<0||target>=units.size())return;
+   MawdudiMapData.Macro newUnit=units.get(target);
+   MawdudiPassageIndex.Passage nextPassage=index.at(surah,
+       direction>0?newUnit.start:newUnit.end);
+   activeMacro=target;selected=passages.indexOf(nextPassage);
+   focusStart=nextPassage.firstAyah;focusEnd=nextPassage.lastAyah;
+   page=geometry.pageForVerse(new VerseRef(surah,focusStart));
+   passageOpen=true;refresh();return;
   }
   MawdudiPassageIndex.Passage p=passages.get(next);
   // Passage navigation always retains its canonical source boundaries,
