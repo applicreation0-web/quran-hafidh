@@ -88,8 +88,9 @@ public final class ItqanFullOnlyPostNasSourceContractTest {
         assertEquals(1, count(main, "if (itqanCue != null) itqanCue.setText(stabilizationProgramCue());"));
         assertTrue("Post-Nas summary stays a concise hizb cue",
             main.contains("prefs.itqanPostNasMaintenance() ? \"1 hizb · entretien\""));
-        assertTrue("The menu gives the same amount of detail to every Hifz mode",
-            main.contains("2 pages / 4 séances"));
+        assertTrue("Both weekly menu goals are expressed in pages, without session counts",
+            main.contains("2 pages/semaine") && main.contains("1 page/semaine"));
+        assertFalse("Detailed session count belongs inside Itqan",main.contains("2 pages / 4 séances"));
         assertFalse("A detailed weekly quota belongs inside Itqan, not its menu",
             main.contains("30 lignes/semaine · 4 séances"));
     }
