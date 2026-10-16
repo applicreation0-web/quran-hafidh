@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 /** Compact, non-dimming semantic title panel; intentionally lighter than the Tafsir sheet. */
@@ -23,6 +24,57 @@ final class SemanticTitlePopup {
     /** Same bottom-anchored, non-dimming Al-Munir title sheet, English typography. */
     static Dialog showEnglish(Activity activity,String title,Dialog previous) {
         return create(activity,title,previous,false);
+    }
+
+    /**
+     * The linear 114-surah map keeps its on-axis labels compact, but a tap must
+     * never lose any words from the genuine Ayah Themes title. This separate,
+     * scrollable caption has no card/border and does not change Lecture or Hifz.
+     * Unlike short retrieval cues, it remains open until the reader dismisses it.
+     */
+    static Dialog showEnglishFull(Activity activity, String title, Dialog previous) {
+        if (previous != null && previous.isShowing()) previous.dismiss();
+        if (activity == null || activity.isFinishing() || title == null || title.trim().isEmpty())
+            return null;
+        Dialog dialog = new Dialog(activity);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        ScrollView scroll = new ScrollView(activity);
+        scroll.setFillViewport(false);
+        scroll.setVerticalScrollBarEnabled(true);
+        scroll.setPadding(Ui.dp(activity, 10), Ui.dp(activity, 8),
+            Ui.dp(activity, 10), Ui.dp(activity, 8));
+        scroll.setBackgroundColor(Ui.PAPER);
+        TextView label = Ui.text(activity, title.trim(), 14f, false);
+        label.setTextColor(Ui.INK);
+        label.setTextDirection(View.TEXT_DIRECTION_LTR);
+        label.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        label.setGravity(Gravity.CENTER);
+        label.setIncludeFontPadding(false);
+        label.setLineSpacing(0f, 1.08f);
+        label.setContentDescription(title.trim());
+        scroll.addView(label);
+        dialog.setContentView(scroll);
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            window.setWindowAnimations(0);
+            window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL);
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+            int width = Math.min(activity.getResources().getDisplayMetrics().widthPixels
+                - Ui.dp(activity, 28), Ui.dp(activity, 390));
+            int height = Math.min(Ui.dp(activity, 210),
+                activity.getResources().getDisplayMetrics().heightPixels / 3);
+            WindowManager.LayoutParams attrs = window.getAttributes();
+            attrs.alpha = 0f;
+            attrs.y = 0;
+            window.setAttributes(attrs);
+            window.setLayout(Math.max(Ui.dp(activity, 160), width),
+                Math.max(Ui.dp(activity, 72), height));
+        }
+        return dialog;
     }
 
     /** Match Al-Munir: the ENTIRE heading sheet ends above the real
