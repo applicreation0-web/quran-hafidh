@@ -109,7 +109,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   heading=Ui.text(activity,"",12f,false);heading.setMaxLines(2);heading.setEllipsize(TextUtils.TruncateAt.END);
   heading.setClickable(true);heading.setFocusable(true);heading.setOnClickListener(v->openCommentary());
   top.addView(heading,new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
-  top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);refresh();})),new LinearLayout.LayoutParams(Ui.dp(activity,42),Ui.dp(activity,44)));
+  top.addView(Ui.iconButton(activity,"","Choisir une sourate",v->QuranSurahNames.showSurahPicker(activity,s->{choose(s,1);setLevel(true);})),new LinearLayout.LayoutParams(Ui.dp(activity,42),Ui.dp(activity,44)));
   root.addView(top);
   axis=new HorizontalScrollView(activity);axis.setHorizontalScrollBarEnabled(false);
   graph=new Graph();overviewGraph=new OverviewGraph();
