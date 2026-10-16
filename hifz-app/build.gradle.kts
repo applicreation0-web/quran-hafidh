@@ -2,6 +2,10 @@ plugins {
     id("com.android.application")
 }
 
+// Separate intermediates prevent private/public incremental asset contamination.
+val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
+if (private114) layout.buildDirectory.set(file("build-private114"))
+
 val generatedHifzAssetsDir = layout.buildDirectory.dir("generated/hifzAssets").get().asFile
 val generatedHifzTafsirDir = layout.buildDirectory.dir("generated/hifzTafsir").get().asFile
 val hifzTafsirSourceDir = rootProject.file("app/src/plus/assets/tafsir")
@@ -19,7 +23,6 @@ val semanticV23TitleOutput = generatedSemanticAssetsDir.resolve("semantic/semant
 val quranWordGeometrySourceDir = file("src/main/word-source/quran-ws-v1.1.2")
 val hasReleaseSigning = !System.getenv("HIFZ_KEYSTORE_PATH").isNullOrBlank()
 // Only the CP-08P staging workflow opts into the separate personal phone-pilot ID.
-val private114 = System.getenv("AYAH_THEMES_PRIVATE_114") == "1"
 val cp08BaqaraPilot = System.getenv("CP08_BAQARAH_PILOT") == "1"
 
 val prepareHifzTafsirRelease by tasks.registering(Exec::class) {

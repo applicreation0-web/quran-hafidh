@@ -18,3 +18,5 @@ local.properties
 
 # Local-only 114-surah private build overlay; absent from release/public CI.
 /hifz-app/src/private114/
+
+/hifz-app/build-private114/

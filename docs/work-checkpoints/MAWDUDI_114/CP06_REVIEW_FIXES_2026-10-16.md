@@ -14,3 +14,5 @@ Les quatre seuls ajouts UI à HifzSessionActivity sont toujours reconstruits exa
 
 Historique : audit source 38889877548 FAIL au contrôle de nom d’icône ; Android 38889877569 PASS 100. Ces résultats appartiennent à 4992ccd, pas au nouveau SHA. Nouvelle CI et build privé à terminer. Essais privés réels et BOOX : NOT_RUN.
 Reprise : compiler/contrôler au SHA de ce commit, attendre les deux CI puis figer provenance et APK privés.
+
+Suite au commit 709eccd4 : les 446 JVM + 244 contrats passent localement. Empaquetage du test APK réussi après suppression automatique d’un état temporaire périmé. CI Android 38891449248 arrêtée avant émulateur : compteur source resté à 100, corrigé à 101 sans supprimer de test. Sorties locales historiques privées/public mélangées dans les intermédiaires AGP : répertoire build-private114 séparé ajouté ; build public nettoyé puis recontrôlé avant toute diffusion. Aucun titre n’a été envoyé en CI. Nouvelle CI attendue au commit de ce complément.
