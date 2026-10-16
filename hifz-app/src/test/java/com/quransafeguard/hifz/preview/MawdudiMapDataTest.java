@@ -10,8 +10,15 @@ public final class MawdudiMapDataTest {
    int last=ps.get(ps.size()-1).lastAyah;
    int[][] bounds=s==2?new int[][]{{1,20},{21,29},{30,39},{40,120},{121,141},{142,152},{153,251},{252,260},{261,283},{284,286}}:
     s==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:
-    s==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
-   for(int[] b:bounds)rows.put(new JSONObject().put("surah",s).put("start",b[0]).put("end",b[1]).put("label","SYNTHETIC MACRO").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":s==2?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
+    s==4?new int[][]{{1,35},{36,42},{43,43},{44,57},{58,72},{73,100},{101,103},{104,104},{105,135},{136,175},{176,176}}:
+    s==5?new int[][]{{1,10},{11,26},{27,32},{33,40},{41,50},{51,69},{70,86},{87,108},{109,119},{120,120}}:
+    s==6?new int[][]{{1,12},{13,24},{25,32},{33,73},{74,90},{91,108},{109,154},{155,160},{161,165}}:
+    s==7?new int[][]{{1,10},{11,25},{26,53},{54,58},{59,171},{172,174},{175,179},{180,198},{199,206}}:
+    s==8?new int[][]{{1,41},{42,54},{55,59},{60,66},{67,71},{72,75}}:
+    s==9?new int[][]{{1,12},{13,37},{38,72},{73,90},{91,110},{111,118},{119,127},{128,129}}:new int[][]{{1,last}};
+   for(int[] b:bounds)rows.put(new JSONObject().put("surah",s).put("start",b[0]).put("end",b[1]).put("label","SYNTHETIC MACRO").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":
+        s==5&&b[0]==120?"SOURCE_CONCLUSION_FROM_INTRODUCTION":
+        (s==2||s>=4)?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
   }
   return new JSONObject().put("schema","MAWDUDI_SOURCE_SAFE_MACROS_V1").put("macros",rows);
  }
@@ -24,7 +31,7 @@ public final class MawdudiMapDataTest {
  }
  @Test public void completeSourceSafeMacrosCoverAll114Surahs()throws Exception {
   MawdudiMapData data=MawdudiMapData.parse(synthetic().toString(),AyahThemesCueIndexTest.canonical());
-  assertEquals(128,data.count());assertEquals(4,data.forSurah(3).size());assertEquals(10,data.forSurah(2).size());
+  assertEquals(173,data.count());assertEquals(4,data.forSurah(3).size());assertEquals(10,data.forSurah(2).size());assertEquals(11,data.forSurah(4).size());assertEquals(9,data.forSurah(7).size());
   assertEquals(121,data.at(2,121).start);
   assertEquals(121,data.at(3,175).start);assertEquals(200,data.at(3,175).end);
  }
