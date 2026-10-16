@@ -30,7 +30,11 @@ final class MapUnitMarkers {
    MawdudiMapData.Macro unit=units.get(k);
    if(unit.surah!=surah)throw new IllegalArgumentException("wrong surah unit");
    if(geometry.pageForVerse(new VerseRef(surah,unit.start))!=page)continue;
-   result.put(new JSONObject().put("verse",surah+":"+unit.start).put("unit",k+1));
+   try {
+    result.put(new JSONObject().put("verse",surah+":"+unit.start).put("unit",k+1));
+   } catch(org.json.JSONException invalid) {
+    throw new IllegalStateException("invalid private boundary marker",invalid);
+   }
   }
   return result;
  }
