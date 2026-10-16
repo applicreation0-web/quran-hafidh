@@ -55,7 +55,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   int ayah=saved==null?a:saved.getInt("map114Ayah",a);
   choose(surah,ayah);
   if(saved!=null) {
-   overview=saved.getBoolean("map114Overview",true);
+   overview=saved.getBoolean("map114Overview",true)&&macros.forSurah(surah).size()>1;
    passageOpen=saved.getBoolean("map114PassageOpen",false);
    int restored=saved.getInt("map114MacroSelected",activeMacro);
    if(restored>=0&&restored<macros.forSurah(surah).size())activeMacro=restored;
@@ -68,7 +68,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private void choose(int s,int ayah) {
   surah=s;passages=index.forSurah(s);MawdudiPassageIndex.Passage p=index.at(s,ayah);
   selected=passages.indexOf(p);page=MawdudiMapModel.firstPage(p,geometry);focusStart=p.firstAyah;focusEnd=p.lastAyah;
-  overview=true;
+  overview=macros.forSurah(s).size()>1;
   activeMacro=macroIndex(s,ayah);
  }
  private int macroIndex(int s,int ayah){
@@ -79,8 +79,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  private MawdudiMapData.Macro macro(){return macros.forSurah(surah).get(activeMacro);}
  private void setLevel(boolean overviewMode){
-  overview=overviewMode;
-  if(overviewMode)passageOpen=false;
+  overview=overviewMode&&macros.forSurah(surah).size()>1;
+  if(overview)passageOpen=false;
   closeTitle();
   if(commentary!=null){commentary.close();commentary=null;}
   if(axis!=null){
@@ -331,7 +331,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   closeTitle();activity.startActivity(intent);
  }
  void save(Bundle b){b.putBoolean("map114Overview",overview);b.putBoolean("map114PassageOpen",passageOpen);b.putInt("map114MacroSelected",activeMacro);b.putInt("map114Surah",surah);b.putInt("map114Ayah",current().firstAyah);b.putInt("map114Page",page);b.putInt("map114FocusStart",focusStart);b.putInt("map114FocusEnd",focusEnd); }
- boolean back(){if(commentary!=null&&commentary.isShowing()){commentary.close();commentary=null;return true;}if(popup!=null&&popup.isShowing()){closeTitle();return true;}if(passageOpen){passageOpen=false;refresh();return true;}if(!overview){setLevel(true);return true;}return false;}
+ boolean back(){if(commentary!=null&&commentary.isShowing()){commentary.close();commentary=null;return true;}if(popup!=null&&popup.isShowing()){closeTitle();return true;}if(passageOpen){passageOpen=false;refresh();return true;}if(!overview){if(macros.forSurah(surah).size()>1){setLevel(true);return true;}return false;}return false;}
  void destroy(){closeTitle();if(commentary!=null){commentary.close();commentary=null;}if(mushaf!=null)mushaf.destroySafely();if(thumbnails!=null)thumbnails.destroy();}
  @Override public void onReady(){ready=true;renderPage();}
  @Override public void onPageShown(int p){
