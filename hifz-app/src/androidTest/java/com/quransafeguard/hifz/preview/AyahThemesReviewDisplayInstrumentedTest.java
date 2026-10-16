@@ -129,13 +129,14 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    HifzPrefs prefs=new HifzPrefs(c);GeometryRepository g=GeometryRepository.get(c);
    com.quransafeguard.hifz.core.VerseRef verse=new com.quransafeguard.hifz.core.VerseRef(1,1);
    assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(new com.quransafeguard.hifz.core.VerseRange(verse,new com.quransafeguard.hifz.core.VerseRef(1,7))),g));
+   prefs.setMurajaahCursor(verse); // Bootstrap default 2:1 lies outside this Fatiha-only fixture.
    for(String mode:new String[]{HifzSessionActivity.MURAJAAH,HifzSessionActivity.MURAJAAH_ACTIVE}) {
     try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(new Intent(c,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode))) {
      HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Review title gesture "+mode);
      CountDownLatch done=new CountDownLatch(1);
      scenario.onActivity(a->{
       try {
-       assertNotNull(field(a,"murajaahPlan"));
+       assertNotNull("Review fixture must have a plan: "+mode+" / "+((android.widget.TextView)field(a,"program")).getText(),field(a,"murajaahPlan"));
        java.lang.reflect.Field armed=a.getClass().getDeclaredField("weakMarkMode");armed.setAccessible(true);armed.setBoolean(a,HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode));
        String script;
        try(java.io.InputStream in=a.getAssets().open("ayah_themes_display/review_titles.js")) {
