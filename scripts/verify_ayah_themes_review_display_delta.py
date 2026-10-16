@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Exact UI-only substitutions over the immutable 491aae Hifz session source.
-No changes to masks, geometry, engines, counters or persistence are permitted.
+Only the exact source-backed active-recall cue substitution is permitted; the renderer, scheduling, counters and persistence remain frozen.
 """
 from pathlib import Path
 import hashlib,subprocess
@@ -14,12 +14,22 @@ def expected_source(baseline):
     for old,new in CHANGES:
         assert baseline.count(old)==1,"ambiguous approved UI insertion"
         baseline=baseline.replace(old,new,1)
+    # User-authorized active-recall substitution, no other Hifz logic changes:
+    # preserve 6 exact page-edge words, replace the previous source-key holes by
+    # Ayah Themes passage-start word boxes. The protected QCF renderer is frozen.
+    active_delta=[
+        ("    /**\n     * Révision active masks a whole page, but a learner rarely has every page's exact start/end\n     * verse memorized — without some landmark, a page swipe leaves no way to confirm the recall is\n     * picking up at the right point, or where to stop before turning the page. The page's real\n     * first three and last three words, and each Al-Munīr amorce beginning on the page, stay\n     * visible as exact holes in the paper mask (see reader.js applyProtectedWordHoles).\n     */\n    private List<String> applyActiveLandmarks(int page) {\n        List<String> all = geometry.lineIdsOnPage(page);\n        // The old half-line heuristic is retired: the page's real first three and last three\n        // words plus every Al-Munīr amorce starting on it are exact holes in the paper mask —\n        // enabled only when every one of those boxes exists exactly (quran-ws word geometry).\n        // Otherwise no anchor hole at all: nothing approximated, Révéler still works.\n        mushaf.setLandmarkLines(null, null);\n        boolean exact = semanticPassages != null && semanticPassages.isAvailable()\n            && semanticPassages.hasCompleteExactGeometryForPage(page);\n        mushaf.setPageLandmarkBoxes(exact ? semanticPassages.pageLandmarkBoxes(page) : new org.json.JSONArray());\n        mushaf.setSemanticCues(exact ? semanticPassages.readerCuesForPage(page) : new org.json.JSONArray(), exact, false);\n        return all;\n    }\n\n", "    /**\n     * Révision active only. The six exact first/last page-word landmarks are\n     * retained. The historical Ibn Kathir/Munir cue holes are REPLACED by the\n     * first exact physical QCF word of each approved Ayah Themes passage that\n     * begins on the page. None of the corpus, mask code, other Hifz modes,\n     * progress counters or page geometry is modified by this display adapter.\n     *\n     * A page with no new passage beginning still retains six page landmarks.\n     * If source data or exact word boxes are missing, fail OPEN (never hide\n     * Quran text with an incomplete set of landmarks).\n     */\n    private boolean activeAyahThemesReady;\n    private List<String> applyActiveLandmarks(int page) {\n        List<String> lines = geometry.lineIdsOnPage(page);\n        mushaf.setLandmarkLines(null, null);\n        activeAyahThemesReady = false;\n        org.json.JSONArray firstLast = new org.json.JSONArray();\n        org.json.JSONArray newStarts = new org.json.JSONArray();\n        try {\n            if (ayahThemesTitles != null) {\n                firstLast = WordGeometryRepository.shared(this).pageLandmarkBoxes(page);\n                newStarts = ayahThemesTitles.forPage(page);\n                if (firstLast.length() == 6) {\n                    // One exact source-word box per new Ayah Themes passage start.\n                    // Do not synthesize cues or approximate a word position.\n                    activeAyahThemesReady = true;\n                    for (int i=0;i<newStarts.length();i++) {\n                        org.json.JSONObject cue = newStarts.getJSONObject(i);\n                        if (cue.getInt(\"anchorWordCount\") != 1 ||\n                                cue.getJSONArray(\"boxes\").length() != 1 ||\n                                cue.getString(\"id\").isEmpty()) {\n                            activeAyahThemesReady = false;\n                            break;\n                        }\n                    }\n                }\n            }\n        } catch (Exception incomplete) {\n            activeAyahThemesReady = false;\n        }\n        if (activeAyahThemesReady) {\n            mushaf.setPageLandmarkBoxes(firstLast);\n            mushaf.setSemanticCues(newStarts, true, false);\n        } else {\n            mushaf.clearPageLandmarkBoxes();\n            mushaf.clearSemanticCues();\n        }\n        return lines;\n    }\n\n"),
+        ("        if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0\n                && (semanticPassages == null || !semanticPassages.isAvailable()\n                    || !semanticPassages.hasCompleteExactGeometryForPage(currentPage)))\n            return 0;\n", "        if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0\n                && !activeAyahThemesReady) return 0;\n"),
+    ]
+    for old,new in active_delta:
+        assert baseline.count(old)==1,"Ambiguous active-review substitution"
+        baseline=baseline.replace(old,new,1)
     return baseline
 
 def main():
     frozen=subprocess.check_output(["git","show",FROZEN_BLOB],text=True)
     assert Path(PATH).read_text()==expected_source(frozen),"Unapproved delta outside exact Ayah Themes display hooks"
     subprocess.run(["node","scripts/test_ayah_themes_review_overlay.js"],check=True)
-    print("PASS: exact independent Ayah Themes title display only; pinned Hifz mask/engine source unchanged")
+    print("PASS: exact Ayah Themes titles + authorized active recall cue holes, six page-edge landmarks retained; engine/persistence unchanged")
 
 if __name__=="__main__":main()
