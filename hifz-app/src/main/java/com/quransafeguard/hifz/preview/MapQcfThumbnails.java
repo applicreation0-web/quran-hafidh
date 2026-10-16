@@ -53,7 +53,7 @@ final class MapQcfThumbnails extends WebView {
       ByteArrayOutputStream out=new ByteArrayOutputStream()){
    byte[] block=new byte[8192];int n;
    while((n=input.read(block))!=-1){
-    if(out.size()+n>700_000)throw new IllegalStateException("Oversized QCF page");
+    if(out.size()+n>850_000)throw new IllegalStateException("Oversized QCF page; compare audited SVG corpus maximum 762348 bytes");
     out.write(block,0,n);
    }
    String svg=new String(out.toByteArray(),StandardCharsets.UTF_8);
