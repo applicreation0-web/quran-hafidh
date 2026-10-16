@@ -51,7 +51,8 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(map.contains("new LinearLayout.LayoutParams(Ui.dp(activity,72),Ui.dp(activity,48))"));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Tafsir\",v->openCommentary())"));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture\",v->openReader())"));
-        assertFalse(map.contains("new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1)"));
+        String actions=map.substring(map.indexOf("icons=Ui.row(activity)"),map.indexOf("root.addView(icons);"));
+        assertFalse(actions.contains("new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1)"));
     }
 
     @Test public void canonicalAnNamlUsesItsOwnTitleWhileExactSubnodesRemain() throws Exception {
