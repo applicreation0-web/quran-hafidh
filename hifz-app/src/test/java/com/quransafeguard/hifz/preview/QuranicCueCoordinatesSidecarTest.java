@@ -20,6 +20,11 @@ public final class QuranicCueCoordinatesSidecarTest {
     private static String read(String path) throws Exception {
         Path p=Paths.get(path);
         if (!Files.exists(p)) p=Paths.get("..",path);
+        if (!Files.exists(p) && path.startsWith("hifz-app/build/")) {
+            String isolated=path.replace("hifz-app/build/","hifz-app/build-private114/");
+            p=Paths.get(isolated);
+            if (!Files.exists(p)) p=Paths.get("..",isolated);
+        }
         return new String(Files.readAllBytes(p),StandardCharsets.UTF_8);
     }
 
