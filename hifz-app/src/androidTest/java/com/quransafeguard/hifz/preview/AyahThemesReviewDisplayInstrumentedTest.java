@@ -78,9 +78,9 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
       .put("display_label_approved_by_user",p.editorialAdaptation));
      for(int n=1;n<=114;n++) {
       java.util.List<MawdudiPassageIndex.Passage> ps=canonical.forSurah(n);int last=ps.get(ps.size()-1).lastAyah;
-      int[][] bounds=n==2?new int[][]{{1,20},{21,29},{30,39},{40,120},{121,141},{142,152},{153,251},{252,260},{261,283},{284,286}}:n==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:n==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
+      int[][] bounds=n==2?new int[][]{{1,20},{21,29},{30,39},{40,120},{121,141},{142,152},{153,251},{252,260},{261,283},{284,286}}:n==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:n==4?new int[][]{{1,35},{36,42},{43,43},{44,57},{58,72},{73,100},{101,103},{104,104},{105,135},{136,175},{176,176}}:n==5?new int[][]{{1,10},{11,26},{27,32},{33,40},{41,50},{51,69},{70,86},{87,108},{109,119},{120,120}}:n==6?new int[][]{{1,12},{13,24},{25,32},{33,73},{74,90},{91,108},{109,154},{155,160},{161,165}}:n==7?new int[][]{{1,10},{11,25},{26,53},{54,58},{59,171},{172,174},{175,179},{180,198},{199,206}}:n==8?new int[][]{{1,41},{42,54},{55,59},{60,66},{67,71},{72,75}}:n==9?new int[][]{{1,12},{13,37},{38,72},{73,90},{91,110},{111,118},{119,127},{128,129}}:new int[][]{{1,last}};
       for(int[] b:bounds)macros.put(new JSONObject().put("surah",n).put("start",b[0]).put("end",b[1])
-       .put("label","SYNTHETIC macro heading").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":n==2?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
+       .put("label","SYNTHETIC macro heading").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":n==5&&b[0]==120?"SOURCE_CONCLUSION_FROM_INTRODUCTION":(n==2||n>=4)?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
      }
      AyahThemesCueIndex titles=AyahThemesCueIndex.parse(new JSONObject().put("schema",AyahThemesCueIndex.SCHEMA).put("passages",rows).toString(),canonical,WordGeometryRepository.shared(a));
      MawdudiMapData macro=MawdudiMapData.parse(new JSONObject().put("schema","MAWDUDI_SOURCE_SAFE_MACROS_V1").put("macros",macros).toString(),canonical);
