@@ -12,3 +12,6 @@ local.properties
 
 # Personal Quran.com Tafsir title sidecar; NEVER commit API data to public GitHub.
 /hifz-app/src/main/assets/ibn_kathir_qurancom_private/
+
+# CP02 private owner-approved Ayah Themes titles, never public and never CI artifacts.
+/hifz-app/src/main/assets/ayah_themes_private/
