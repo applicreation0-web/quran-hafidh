@@ -130,7 +130,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   pageActions.addView(nextPageButton,new LinearLayout.LayoutParams(Ui.dp(activity,44),Ui.dp(activity,38)));
   root.addView(pageActions);
   icons=Ui.row(activity);icons.setGravity(Gravity.CENTER_VERTICAL);
-  icons.addView(Ui.iconButton(activity,"","Passage précédent",v->movePassage(-1)),
+  icons.addView(Ui.iconButton(activity,"","Passage précédent du corpus",v->movePassage(-1)),
       new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
   TextView complete=Ui.text(activity,"Aa",16f,true);
   complete.setGravity(Gravity.CENTER);complete.setClickable(true);complete.setFocusable(true);
@@ -141,7 +141,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
       new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
   icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),
       new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
-  icons.addView(Ui.iconButton(activity,"","Passage suivant",v->movePassage(1)),
+  icons.addView(Ui.iconButton(activity,"","Passage suivant du corpus",v->movePassage(1)),
       new LinearLayout.LayoutParams(0,Ui.dp(activity,44),1));
   root.addView(icons);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
