@@ -118,6 +118,7 @@ while IFS= read -r file; do
     "$prefix/MawdudiMapModel.java" | \
     "$prefix/MawdudiMapData.java" | \
     "$prefix/MawdudiMapScreen.java" | \
+    "$prefix/MapJalalaynDialog.java" | \
     "$prefix/AyahThemesCueIndex.java" | \
     "$prefix/AyahThemesReviewDisplay.java" | \
     "$prefix/PrivateDisplayIntegrity.java" | \
