@@ -201,8 +201,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
    return;
   }
   MawdudiPassageIndex.Passage p=passages.get(next);
-  selected=next;focusStart=Math.max(p.firstAyah,macro().start);
-  focusEnd=Math.min(p.lastAyah,macro().end);
+  // Passage navigation always retains its canonical source boundaries,
+  // including Ayah Themes 2:120–121 across adjacent source units.
+  selected=next;focusStart=p.firstAyah;
+  focusEnd=p.lastAyah;
   page=geometry.pageForVerse(new VerseRef(surah,focusStart));
   refresh();
  }
@@ -252,9 +254,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  private void turn(int d){int next=MawdudiMapModel.clampFocusPage(surah,focusStart,focusEnd,page+d,geometry);if(next==page)return;closeTitle();page=next;renderPage();}
  void openReader(){
-  java.util.List<VerseRef> visible=MawdudiMapModel.highlightedVerses(current(),page,geometry);if(visible.isEmpty())return;
+  java.util.List<VerseRef> visible=MawdudiMapModel.highlightedVerses(current(),page,geometry);
+  VerseRef jump=null;
+  for(VerseRef v:visible)if(v.getAyah()>=focusStart&&v.getAyah()<=focusEnd){jump=v;break;}
+  if(jump==null)return;
   Intent intent=new Intent(activity,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page)
-   .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,visible.get(0).toString()).putExtra(StudyReaderActivity.EXTRA_MAP_PREVIEW,true)
+   .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,jump.toString()).putExtra(StudyReaderActivity.EXTRA_MAP_PREVIEW,true)
    .putExtra("map114Surah",surah).putExtra("map114PassageId",current().id).putExtra("map114FocusStart",focusStart).putExtra("map114FocusEnd",focusEnd);
   closeTitle();activity.startActivity(intent);
  }
