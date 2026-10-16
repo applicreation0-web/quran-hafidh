@@ -6,13 +6,13 @@ Le prompt privé du 16 octobre supplante les anciens checkpoints sur le périmè
 | Étape | État | Preuve / suite |
 |---|---|---|
 | CP00/CP01 | acquis, non recommencés | pack source-ready joint, SHA locaux vérifiés |
-| CP02-A | ACTIVE / correction en validation | CP02A_REPRISE_2026-10-16.md ; CI nouveau SHA attendue |
-| CP02-B | NOT_RUN | pack privé non encore intégré |
+| CP02-A | DONE | 3c2585bc : audit 38886134356 et Android 38886134378 PASS 98/98 |
+| CP02-B | ACTIVE / PARTIAL | asset privé local ignoré ; validation 1053/QCF PASS, APK privé NOT_RUN |
 | CP02-C | NOT_RUN | affichage Révisions à intégrer sans changer masques |
 | CP03 | PARTIAL historique | cartes 114 à réaliser |
 | CP04 | PARTIAL historique | liaison graphique QCF à terminer |
 | CP05 | PARTIAL historique | rendu privé à vérifier |
-| CP06 | FAIL historique | 97/98 au SHA de base, pas de nouveau PASS Android |
+| CP06 | FAIL historique | base 97/98 remplacée par PASS 98/98 au 3c2585bc ; produit final encore non audité |
 | CP07 | NOT_RUN | aucun APK final ; BOOX PHYSIQUE NON TESTÉ |
 
-Reprise : vérifier CI au SHA réel avant CP02-B. Jalalayn, Hifz et textes/QCF gelés.
+Reprise : terminer compilation et UI privées CP02-B au SHA 3c2585bc. Jalalayn, Hifz et textes/QCF gelés.
