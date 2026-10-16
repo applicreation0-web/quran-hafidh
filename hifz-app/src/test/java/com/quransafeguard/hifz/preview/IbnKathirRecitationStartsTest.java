@@ -89,7 +89,12 @@ public final class IbnKathirRecitationStartsTest {
         assertFalse(reader.contains("semanticPassages.readerCuesForPage(page)"));
         assertFalse(reader.contains("putBoolean(\"semantic_cues_enabled\""));
         String hifz=source("HifzSessionActivity.java");
-        assertTrue(hifz.contains("semanticPassages.readerCuesForPage(page)"));
+        // User-approved 2026-10-16: active review uses Ayah Themes, while the
+        // separate post-An-Nas Itqan source and frozen QCF renderer are untouched.
+        assertTrue(hifz.contains("semanticPassages.readerCuesForPage(currentPage)"));
+        assertTrue(hifz.contains("ayahThemesTitles.forPage(page)"));
+        assertTrue(hifz.contains("WordGeometryRepository.shared(this).pageLandmarkBoxes(page)"));
+        assertTrue(hifz.contains("!activeAyahThemesReady"));
         assertTrue(hifz.contains("applyActiveLandmarks("));
         assertTrue(hifz.contains("applyItqanAnchors("));
     }
