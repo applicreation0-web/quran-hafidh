@@ -11,7 +11,7 @@ public final class MawdudiMapDataTest {
    int[][] bounds=s==2?new int[][]{{1,20},{21,29},{30,39},{40,120},{121,141},{142,152},{153,251},{252,260},{261,283},{284,286}}:
     s==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:
     s==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
-   for(int[] b:bounds)rows.put(new JSONObject().put("surah",s).put("start",b[0]).put("end",b[1]).put("label","SYNTHETIC MACRO").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
+   for(int[] b:bounds)rows.put(new JSONObject().put("surah",s).put("start",b[0]).put("end",b[1]).put("label","SYNTHETIC MACRO").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":s==2?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
   }
   return new JSONObject().put("schema","MAWDUDI_SOURCE_SAFE_MACROS_V1").put("macros",rows);
  }
