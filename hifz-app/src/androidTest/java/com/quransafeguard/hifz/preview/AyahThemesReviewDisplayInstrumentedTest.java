@@ -110,6 +110,20 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
       android.view.View.GONE,screen.get().mushaf().getVisibility());
    });
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-graph-qcf.png");
+   scenario.onActivity(a->{
+    try {
+     java.lang.reflect.Method title=MawdudiMapScreen.class.getDeclaredMethod("showCurrentTitle");
+     title.setAccessible(true);title.invoke(screen.get());
+     assertEquals(expected,((Integer)field(screen.get(),"page")).intValue());
+    }catch(Exception e){throw new AssertionError(e);}
+   });
+   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-inline-title-entire-page.png");
+   scenario.onActivity(a->{
+    try {java.lang.reflect.Method close=MawdudiMapScreen.class.getDeclaredMethod("closeTitle");close.setAccessible(true);close.invoke(screen.get());}
+    catch(Exception e){throw new AssertionError(e);}
+   });
+   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
    scenario.onActivity(a->screen.get().openReader());
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    AtomicReference<StudyReaderActivity> reader=new AtomicReference<>();
@@ -200,8 +214,13 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      AtomicReference<MawdudiMapScreen> screen,MawdudiPassageIndex.Passage passage,int page)throws Exception {
   String script="(function(){var tile=document.querySelector('.tile.selected');"+
    "var img=tile&&tile.querySelector('img');if(!img||!img.complete||!img.naturalWidth)return false;"+
-   "if(Number(tile.querySelector('.num').textContent)!="+page+")return false;"+
+   "var badge=document.querySelector('[aria-current=page]');if(!badge||Number(badge.textContent)!="+page+")return false;"+
+   "if(document.body.textContent.includes('QCF')||document.body.textContent.includes(' / '))return false;"+
+   "if(badge.getBoundingClientRect().width<52||getComputedStyle(badge).borderRadius==='0px')return false;"+
    "var r=img.getBoundingClientRect();if(r.width<=0||r.height<=0||r.top<0||r.bottom>innerHeight+1)return false;"+
+   "var paper=document.querySelector('.paper').getBoundingClientRect();"+
+   "if(r.left<paper.left-1||r.right>paper.right+1||r.top<paper.top-1||r.bottom>paper.bottom+1)return false;"+
+   "if(Math.abs(r.width/r.height-img.naturalWidth/img.naturalHeight)>.02)return false;"+
    "if(document.documentElement.scrollHeight>innerHeight+1)return false;"+
    "var src=img.getAttribute('src');if(!src.startsWith('data:image/svg+xml;base64,'))return false;"+
    "var svg=new DOMParser().parseFromString(atob(src.split(',')[1]),'image/svg+xml');"+
@@ -218,6 +237,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     android.webkit.WebView view=(android.webkit.WebView)field(screen.get(),"thumbnails");
     assertTrue("Real QCF thumbnails must be visible",view.isShown());
     android.view.ViewGroup icons=(android.view.ViewGroup)field(screen.get(),"icons");
+    assertEquals("Keep only commentary and reading actions",2,icons.getChildCount());
     float density=a.getResources().getDisplayMetrics().density;
     for(int i=0;i<icons.getChildCount();i++) {
      android.view.View target=icons.getChildAt(i);
@@ -226,7 +246,17 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     view.evaluateJavascript(script,v->{result.set(v);done.countDown();});
    });
    assertTrue("Atlas JavaScript timed out",done.await(15,TimeUnit.SECONDS));
-   if("true".equals(result.get()))return;
+   if("true".equals(result.get())) {
+    CountDownLatch painted=new CountDownLatch(1);
+    scenario.onActivity(a->{
+     android.webkit.WebView view=(android.webkit.WebView)field(screen.get(),"thumbnails");
+     view.postVisualStateCallback(1,new android.webkit.WebView.VisualStateCallback(){
+      @Override public void onComplete(long request){view.postOnAnimation(()->view.postOnAnimation(painted::countDown));}
+     });
+    });
+    assertTrue("Atlas compositor must paint before screenshots",painted.await(15,TimeUnit.SECONDS));
+    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();return;
+   }
    android.os.SystemClock.sleep(250);
   }
   fail("Real highlighted QCF thumbnail not rendered in the Atlas viewport on page "+page);
