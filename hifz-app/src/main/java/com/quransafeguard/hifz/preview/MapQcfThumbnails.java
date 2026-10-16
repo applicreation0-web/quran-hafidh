@@ -102,7 +102,7 @@ final class MapQcfThumbnails extends WebView {
    .append("footer{height:100px;flex:none;text-align:center;padding:2px 6px 8px}.range{height:24px;line-height:24px;font-size:12px}")
    .append("nav{height:64px;display:flex;gap:4px;align-items:center;justify-content:center;overflow:hidden}")
    .append("button{flex:none;width:48px;height:48px;min-width:48px;min-height:48px;border:1px solid #b7b6b0;border-radius:50%;background:transparent;color:#121211;font:14px sans-serif;padding:0}")
-   .append("button.passage{border:2px solid #121211;font-weight:bold}button[aria-current=page]{width:56px;height:56px;background:#121211;color:#faf8f0;border:2px solid #121211;font-weight:bold;outline:1px solid #121211;outline-offset:2px}")
+   .append("button.passage{border-width:2px;font-weight:bold}button.even{background:#121211;color:#faf8f0;border-color:#121211}button.odd{background:#faf8f0;color:#121211;border-color:#98978f}button[aria-current=page]{width:56px;height:56px;border:2px solid #121211;font-weight:bold;outline:2px solid #121211;outline-offset:2px}")
    .append("button[hidden]{display:none}</style><script>")
    .append("function fit(){var img=document.querySelector('.paper img'),box=document.querySelector('.paper');if(!img||!img.naturalWidth||!box)return;var ratio=img.naturalWidth/img.naturalHeight;var w=Math.max(1,Math.min(box.clientWidth-4,(box.clientHeight-4)*ratio));img.style.width=w+'px';img.style.height=(w/ratio)+'px';}")
    .append("function pills(){var nav=document.querySelector('nav');if(!nav)return;var count=Math.max(1,Math.min(7,Math.floor((nav.clientWidth-12)/54)));if(count>1&&count%2===0)count--;var first=Math.max(")
@@ -121,7 +121,7 @@ final class MapQcfThumbnails extends WebView {
   if(end!=start)html.append(" à ").append(end);
   html.append("</div><nav aria-label='Pages de l’unité'>");
   for(int p=start;p<=end;p++){
-   html.append("<button class='page").append(p>=passageFirstPage&&p<=passageLastPage?" passage":"").append("' aria-label='Page ").append(p).append("'");
+   html.append("<button class='page ").append(p%2==0?"even":"odd").append(p>=passageFirstPage&&p<=passageLastPage?" passage":"").append("' aria-label='Page ").append(p).append(p%2==0?" paire":" impaire").append("'");
    if(p==selected)html.append(" aria-current='page'");
    html.append(" onclick='choosePage(").append(p).append(")'>").append(p).append("</button>");
   }
