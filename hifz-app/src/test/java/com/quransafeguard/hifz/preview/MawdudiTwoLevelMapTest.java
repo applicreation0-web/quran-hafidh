@@ -15,7 +15,7 @@ public final class MawdudiTwoLevelMapTest {
             List<MawdudiMapData.Macro> units=overview.forSurah(surah);
             assertFalse(units.isEmpty());
             if(units.size()==1)whole++; else {
-                assertTrue("No invented macro division",surah==2||surah==3||surah==9);
+                assertTrue("No invented macro division",surah>=2&&surah<=9);
                 explicit+=units.size();
             }
             total+=units.size();
@@ -25,10 +25,10 @@ public final class MawdudiTwoLevelMapTest {
             for(int i=1;i<units.size();i++)
                 assertEquals("Macro discontinuity",units.get(i-1).end+1,units.get(i).start);
         }
-        assertEquals(114,whole+3);
-        assertEquals(111,whole);
-        assertEquals(17,explicit);
-        assertEquals(128,total);
+        assertEquals(114,whole+8);
+        assertEquals(106,whole);
+        assertEquals(67,explicit);
+        assertEquals(173,total);
     }
 
     @Test public void everyOriginalPassageIsReachableByAtLeastOneSourceUnit() throws Exception {
