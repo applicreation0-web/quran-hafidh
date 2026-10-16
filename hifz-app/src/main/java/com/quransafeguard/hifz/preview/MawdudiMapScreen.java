@@ -94,8 +94,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
   // remains a single unmodified Ayah Themes passage in the canonical index.
   MawdudiPassageIndex.Passage first=index.at(surah,chosen.start);
   selected=passages.indexOf(first);
-  focusStart=chosen.start;
-  focusEnd=Math.min(first.lastAyah,chosen.end);
+  // Never split an original Ayah Themes passage at a Maududi boundary.
+  // E.g. 2:120–121 remains one passage in both adjoining units.
+  focusStart=first.firstAyah;
+  focusEnd=first.lastAyah;
   page=geometry.pageForVerse(new VerseRef(surah,chosen.start));
   activeMacro=ordinal;
   setLevel(false);
@@ -176,7 +178,16 @@ final class MawdudiMapScreen implements MushafView.Listener {
    MawdudiMapData.Macro u=units.get(k);
    chooser.getMenu().add(0,k,k,"Unité "+(k+1)+" · "+surah+":"+u.start+"–"+u.end);
   }
-  chooser.setOnMenuItemClickListener(item->{openMacro(item.getItemId());return true;});
+  final int markerOption=100000;
+  chooser.getMenu().add(1,markerOption,units.size()+1,
+      "Repères U dans le Mushaf : "+(MapUnitMarkers.enabled(activity)?"activés":"désactivés"));
+  chooser.setOnMenuItemClickListener(item->{
+   if(item.getItemId()==markerOption){
+    MapUnitMarkers.toggle(activity);
+    if(ready)applyUnitMarkers();
+   } else openMacro(item.getItemId());
+   return true;
+  });
   chooser.show();
  }
  private void movePassage(int direction){
@@ -251,7 +262,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
  boolean back(){if(commentary!=null&&commentary.isShowing()){commentary.close();commentary=null;return true;}if(popup!=null&&popup.isShowing()){closeTitle();return true;}if(!overview){setLevel(true);return true;}return false;}
  void destroy(){closeTitle();if(commentary!=null){commentary.close();commentary=null;}if(mushaf!=null)mushaf.destroySafely();}
  @Override public void onReady(){ready=true;renderPage();}
- @Override public void onPageShown(int p){fitMapPage();}
+ @Override public void onPageShown(int p){
+  if(p!=page)return;
+  fitMapPage();
+ }
  /** Refit only this map's WebView using its *measured* viewport, not CSS 100vh
   * which may refer to the containing Android window and clip QCF line 15.
   * Does not modify the shared Mushaf renderer or its exact SVG coordinates.
@@ -262,10 +276,14 @@ final class MawdudiMapScreen implements MushafView.Listener {
    "if(!host||!page)return;var svg=page.querySelector('svg');"+
    "var vb=svg&&svg.viewBox&&svg.viewBox.baseVal;"+
    "var ratio=vb&&vb.width&&vb.height?vb.width/vb.height:345/550;"+
-   "var width=Math.max(10,Math.min(host.clientWidth-50,(host.clientHeight-8)*ratio));"+
-   "page.style.width=width+'px';page.style.maxHeight=(host.clientHeight-8)+'px';"+
+   "var width=Math.max(10,Math.min(host.clientWidth-72,(host.clientHeight-6)*ratio));"+
+   "page.style.width=width+'px';page.style.maxWidth='none';page.style.maxHeight=(host.clientHeight-6)+'px';"+
    "})();";
-  mushaf.evaluateJavascript(js,null);
+  mushaf.evaluateJavascript(js,ignored->applyUnitMarkers());
+ }
+ private void applyUnitMarkers(){
+  if(mushaf==null||!ready)return;
+  MapUnitMarkers.show(mushaf,page,surah,macros.forSurah(surah),geometry);
  }
  @Override public void onError(String error){pageLabel.setText("Muṣḥaf indisponible");}
  @Override public void onPageSwipe(int delta){turn(delta);}
