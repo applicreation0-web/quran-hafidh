@@ -78,16 +78,21 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
       .put("display_label_approved_by_user",p.editorialAdaptation));
      for(int n=1;n<=114;n++) {
       java.util.List<MawdudiPassageIndex.Passage> ps=canonical.forSurah(n);int last=ps.get(ps.size()-1).lastAyah;
-      int[][] bounds=n==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:n==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
+      int[][] bounds=n==2?new int[][]{{1,20},{21,29},{30,39},{40,120},{121,141},{142,152},{153,251},{252,260},{261,283},{284,286}}:n==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:n==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
       for(int[] b:bounds)macros.put(new JSONObject().put("surah",n).put("start",b[0]).put("end",b[1])
-       .put("label","SYNTHETIC macro heading").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
+       .put("label","SYNTHETIC macro heading").put("status",bounds.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":n==2?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF"));
      }
      AyahThemesCueIndex titles=AyahThemesCueIndex.parse(new JSONObject().put("schema",AyahThemesCueIndex.SCHEMA).put("passages",rows).toString(),canonical,WordGeometryRepository.shared(a));
      MawdudiMapData macro=MawdudiMapData.parse(new JSONObject().put("schema","MAWDUDI_SOURCE_SAFE_MACROS_V1").put("macros",macros).toString(),canonical);
      ((MushafView)field(a,"pagePreview")).destroySafely();
      MawdudiMapScreen map=new MawdudiMapScreen(a,GeometryRepository.get(a),canonical,titles,macro,3,175,null);
      java.lang.reflect.Field f=IbnKathirMapActivity.class.getDeclaredField("map114");f.setAccessible(true);f.set(a,map);
-     map.display();a.attachPilotPreview(map.mushaf());screen.set(map);selected.set(canonical.at(3,175));
+     map.display();
+     // The map now correctly starts on level 1. Enter level 2 explicitly before
+     // asserting that its passage graph is attached, measured and navigable.
+     java.lang.reflect.Method showPassages=MawdudiMapScreen.class.getDeclaredMethod("setLevel",boolean.class);
+     showPassages.setAccessible(true);showPassages.invoke(map,false);
+     a.attachPilotPreview(map.mushaf());screen.set(map);selected.set(canonical.at(3,175));
     }catch(Exception ex){throw new AssertionError(ex);}
    });
    HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"pagePreview","114-surah graphical QCF map");
