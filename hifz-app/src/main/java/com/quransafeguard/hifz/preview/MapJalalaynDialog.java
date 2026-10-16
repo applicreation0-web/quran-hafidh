@@ -74,7 +74,7 @@ final class MapJalalaynDialog {
 
         scroll=new ScrollView(activity);
         scroll.setVerticalScrollBarEnabled(true);
-        body=Ui.bookText(activity,"",13.5f,false);
+        body=Ui.bookText(activity,"",17f,false);
         body.setTextIsSelectable(true);
         body.setPadding(Ui.dp(activity,6),Ui.dp(activity,5),Ui.dp(activity,6),Ui.dp(activity,5));
         scroll.addView(body,new ScrollView.LayoutParams(-1,-2));
@@ -89,14 +89,16 @@ final class MapJalalaynDialog {
         dialog.show();
         Window window=dialog.getWindow();
         if(window!=null) {
+            // BOOX portrait: a real full-screen reading sheet, no partial overlay
+            // covering the QCF or forcing the user to zoom. Underlying map is
+            // kept in memory, untouched, and restored precisely on dismiss.
             window.setGravity(Gravity.CENTER);
             window.setWindowAnimations(0);
             window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
             window.setBackgroundDrawableResource(android.R.color.transparent);
-            Point screen=new Point();
-            activity.getWindowManager().getDefaultDisplay().getRealSize(screen);
-            window.setLayout(Math.max(Ui.dp(activity,200),screen.x-Ui.dp(activity,24)),
-                Math.max(Ui.dp(activity,220),screen.y*3/5));
+            window.setLayout(WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT);
         }
         render();
     }
