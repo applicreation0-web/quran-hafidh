@@ -12,7 +12,7 @@ import com.quransafeguard.hifz.core.VerseRef;
 import org.json.*;
 import java.util.*;
 
-/** Sun-shaped BOOX semantic map: sourah -> sourced units -> Ayah Themes passages -> authentic QCF thumbnails. No Hifz mutations. */
+/** Physical QCF page-scale Atlas: sourah -> sourced units -> Ayah Themes passages -> authentic QCF thumbnails. No Hifz mutations. */
 final class MawdudiMapScreen implements MushafView.Listener {
  private final Activity activity;
  private final GeometryRepository geometry;
@@ -125,7 +125,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   // of the selected ray, never an unrelated list or rectangular tile.
   float density=activity.getResources().getDisplayMetrics().density;
   float widthDp=activity.getResources().getDisplayMetrics().widthPixels/density;
-  sunHeight=Ui.dp(activity,(int)Math.max(240,Math.min(410,widthDp*0.89f)));
+  sunHeight=Ui.dp(activity,(int)Math.max(172,Math.min(210,widthDp*0.38f)));
   axis=new HorizontalScrollView(activity);axis.setFillViewport(true);
   axis.setHorizontalScrollBarEnabled(false);
   graph=new Graph();overviewGraph=new OverviewGraph();
@@ -138,7 +138,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   passageTitle.setOnClickListener(v->showCurrentTitle());
   root.addView(passageTitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,56)));
   thumbnails=new MapQcfThumbnails(activity,p->onThumbnailPage(p));
-  root.addView(thumbnails,new LinearLayout.LayoutParams(-1,Ui.dp(activity,142)));
+  root.addView(thumbnails,new LinearLayout.LayoutParams(-1,0,1));
   mushaf=new MushafView(activity);mushaf.setListener(this);
   root.addView(mushaf,new LinearLayout.LayoutParams(-1,0,1));
   // The Mushaf remains the largest view. Page arrows only exist on multipage
@@ -244,7 +244,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   int total=macros.forSurah(surah).size();
   if(overview){
    heading.setText(surahLabel+" · "+total+" unités");
-   passageTitle.setText("Touchez un rayon pour ouvrir ses passages");
+   passageTitle.setText("Touchez une unité, puis ses passages et ses pages QCF");
   }else if(!passageOpen){
    heading.setText(surahLabel+" · Unité "+(activeMacro+1)+"/"+total);
    passageTitle.setText("Unité "+(activeMacro+1)+" · "+surah+":"+unit.start+"–"+unit.end
@@ -258,7 +258,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   heading.setContentDescription("Changer d'unité · "+heading.getText());
   // When a passage opens, make the QCF page the dominant surface by shrinking
   // the sun, not by asking the reader to zoom in. E-Ink has no transitions.
-  int desiredHeight=passageOpen?Math.max(Ui.dp(activity,158),sunHeight/2):sunHeight;
+  int desiredHeight=sunHeight;
   ViewGroup.LayoutParams vp=axis.getLayoutParams();
   if(vp.height!=desiredHeight){vp.height=desiredHeight;axis.setLayoutParams(vp);}
   View child=axis.getChildAt(0);
@@ -273,50 +273,34 @@ final class MawdudiMapScreen implements MushafView.Listener {
   renderPage();
  }
  private void renderPage(){
-  // The general view never carries a permanently embedded Quran page.
-  if(overview){
-   passageTitle.setVisibility(View.GONE);thumbnails.setVisibility(View.GONE);
-   mushaf.setVisibility(View.GONE);icons.setVisibility(View.GONE);
-   pageActions.setVisibility(View.GONE);return;
-  }
+  // The Atlas never compresses the authentic 15-line QCF reader beneath a diagram.
+  // Existing StudyReaderActivity supplies full-screen reading and Android Back.
+  mushaf.setVisibility(View.GONE);
   passageTitle.setVisibility(View.VISIBLE);
   thumbnails.setVisibility(View.VISIBLE);
-  if(!passageOpen){
-   mushaf.setVisibility(View.GONE);icons.setVisibility(View.GONE);
-   pageActions.setVisibility(View.GONE);
-   MawdudiMapData.Macro selectedUnit=macro();
-   int first=geometry.pageForVerse(new VerseRef(surah,selectedUnit.start));
-   int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,selectedUnit.end),geometry);
-   thumbnails.showPages(first,last,first);
+  icons.setVisibility(!overview&&passageOpen?View.VISIBLE:View.GONE);
+  pageActions.setVisibility(View.GONE);
+  if(overview||!passageOpen){
+   MawdudiMapData.Macro chosen=macro();
+   int start=geometry.pageForVerse(new VerseRef(surah,chosen.start));
+   int end=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,chosen.end),geometry);
+   thumbnails.showPages(start,end,Math.max(start,Math.min(end,page)));
    return;
   }
-  icons.setVisibility(View.VISIBLE);
-  mushaf.setVisibility(View.VISIBLE);
-  MawdudiPassageIndex.Passage p=current();page=MawdudiMapModel.clampFocusPage(surah,focusStart,focusEnd,page,geometry);
+  page=MawdudiMapModel.clampFocusPage(surah,focusStart,focusEnd,page,geometry);
   int first=geometry.pageForVerse(new VerseRef(surah,focusStart));
   int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
-  // On a one-page passage the authentic QCF page is already visible; avoid
-  // wasting vertical space and memory on a duplicate miniature.
-  boolean multiPage=last>first;
-  thumbnails.setVisibility(multiPage?View.VISIBLE:View.GONE);
-  if(multiPage)thumbnails.showPages(first,last,page);
-  if(!ready)return;
-  java.util.List<VerseRef> visible=new ArrayList<>();
-  for(VerseRef v:MawdudiMapModel.highlightedVerses(p,page,geometry))if(v.getAyah()>=focusStart&&v.getAyah()<=focusEnd)visible.add(v);
-  java.util.List<String> lines=geometry.lineIdsForVerseRange(new VerseRef(surah,focusStart),new VerseRef(surah,focusEnd));
-  mushaf.setHighlightVerses(visible);mushaf.show(page,visible,lines,0,true);
-  int startPage=geometry.pageForVerse(new VerseRef(surah,focusStart));
-  int endPage=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
-  boolean multiple=endPage>startPage;
+  thumbnails.showPages(first,last,page);
+  boolean multiple=last>first;
   pageActions.setVisibility(multiple?View.VISIBLE:View.GONE);
-  previousPageButton.setEnabled(page>startPage);
-  nextPageButton.setEnabled(page<endPage);
-  previousPageButton.setAlpha(page>startPage?1f:.25f);
-  nextPageButton.setAlpha(page<endPage?1f:.25f);
+  previousPageButton.setEnabled(page>first);
+  nextPageButton.setEnabled(page<last);
+  previousPageButton.setAlpha(page>first?1f:.25f);
+  nextPageButton.setAlpha(page<last?1f:.25f);
   pageLabel.setText("Page "+page+" · "+surah+":"+focusStart+"–"+focusEnd);
  }
  private void onThumbnailPage(int desired){
-  if(overview)return;
+  if(overview)openMacro(activeMacro);
   if(!passageOpen){
    // A page thumbnail of an opened UNIT resolves to the first original
    // passage on that physical QCF page. Nothing is synthesized or split.
@@ -378,67 +362,62 @@ final class MawdudiMapScreen implements MushafView.Listener {
  @Override public void onVerseTap(VerseRef verse){openReader();}
  @Override public void onSurfaceTap(){openReader();}
 
- /** Layout common to both levels. The stable clockwise ray position is
-  * a mnemonic, independent from the physical length of a Maududi unit.
-  * A titleless unit is always "Unité N", with its source-verified verse range.
-  */
- private float sunCx(int w){return w/2f;}
- private float sunCy(int h){return h*.41f;}
- private float sunRadius(int w,int h){return Math.min(w*.32f,h*.30f);}
- private float sunX(int i,int total,int w,int h){
-  return sunCx(w)+sunRadius(w,h)*(float)Math.sin(2*Math.PI*i/Math.max(1,total));
+ /** Stable unit coordinates and a physical Mushaf page-scale strip. */
+ private float atlasX(int index,int total,int width){
+  int columns=Math.min(6,total);
+  return width*((index%columns)+.5f)/columns;
  }
- private float sunY(int i,int total,int w,int h){
-  return sunCy(h)-sunRadius(w,h)*(float)Math.cos(2*Math.PI*i/Math.max(1,total));
+ private float atlasY(int index,int total){
+  return Ui.dp(activity,total>6&&index>=6?74:27);
  }
- private int sunUnitAt(float x,float y,int w,int h){
-  int count=macros.forSurah(surah).size(),candidate=-1;
-  float best=Ui.dp(activity,36)*Ui.dp(activity,36);
+ private int atlasUnitAt(float x,float y,int width){
+  int count=macros.forSurah(surah).size(),winner=-1;
+  float best=Ui.dp(activity,25)*Ui.dp(activity,25);
   for(int i=0;i<count;i++){
-   float dx=x-sunX(i,count,w,h),dy=y-sunY(i,count,w,h);
-   float dist=dx*dx+dy*dy;
-   if(dist<best){best=dist;candidate=i;}
+   float dx=x-atlasX(i,count,width),dy=y-atlasY(i,count);
+   float d=dx*dx+dy*dy;if(d<best){best=d;winner=i;}
   }
-  return candidate;
+  return winner;
  }
- private void drawSun(Canvas c,Paint p,int w,int h){
-  java.util.List<MawdudiMapData.Macro> list=macros.forSurah(surah);
-  int count=list.size();
-  float cx=sunCx(w),cy=sunCy(h);
-  p.setAntiAlias(true);p.setStyle(Paint.Style.STROKE);
-  p.setStrokeWidth(Ui.dp(activity,1));p.setColor(Ui.INK);
-  c.drawCircle(cx,cy,Ui.dp(activity,37),p);
-  p.setTextAlign(Paint.Align.CENTER);p.setStyle(Paint.Style.FILL);
-  p.setTextSize(Ui.dp(activity,13));
-  String center=QuranSurahNames.labelFor(surah);
-  String name=TextUtils.ellipsize(center,new android.text.TextPaint(p),Ui.dp(activity,67),
-      TextUtils.TruncateAt.END).toString();
-  c.drawText(name,cx,cy+Ui.dp(activity,4),p);
-  p.setTextSize(Ui.dp(activity,9));c.drawText(surah+" · "+count+" unités",cx,cy+Ui.dp(activity,19),p);
-  for(int k=0;k<count;k++){
-   float x=sunX(k,count,w,h),y=sunY(k,count,w,h);
+ private void drawAtlas(Canvas c,Paint p,int width,int height){
+  java.util.List<MawdudiMapData.Macro> units=macros.forSurah(surah);
+  int total=units.size();int columns=Math.min(6,total);
+  p.setAntiAlias(true);p.setColor(Ui.INK);
+  p.setStrokeWidth(Ui.dp(activity,1));p.setTextAlign(Paint.Align.CENTER);
+  // All units stay visible at fixed places; no sun rays, no card tiles.
+  for(int i=0;i<total;i++){
+   float x=atlasX(i,total,width),y=atlasY(i,total);
    p.setStyle(Paint.Style.STROKE);
-   p.setStrokeWidth(Ui.dp(activity,k==activeMacro?2:1));
-   c.drawLine(cx+(x-cx)*.33f,cy+(y-cy)*.33f,x,y,p);
+   if(i%columns!=columns-1&&i+1<total&&(i+1)/columns==i/columns)
+    c.drawLine(x+Ui.dp(activity,8),y,atlasX(i+1,total,width)-Ui.dp(activity,8),y,p);
    p.setStyle(Paint.Style.FILL);
-   c.drawCircle(x,y,Ui.dp(activity,k==activeMacro?5:3),p);
-   float dx=(x-cx)/Math.max(1,sunRadius(w,h));
-   float dy=(y-cy)/Math.max(1,sunRadius(w,h));
-   float labelX=Math.max(Ui.dp(activity,35),Math.min(w-Ui.dp(activity,35),x+dx*Ui.dp(activity,23)));
-   float labelY=Math.max(Ui.dp(activity,11),Math.min(h-Ui.dp(activity,17),y+dy*Ui.dp(activity,17)));
-   p.setTextSize(Ui.dp(activity,10));
-   c.drawText("Unité "+(k+1),labelX,labelY,p);
-   // The selected unit alone shows its canonical source range nearby.
-   if(k==activeMacro){
-    p.setTextSize(Ui.dp(activity,9));
-    MawdudiMapData.Macro unit=list.get(k);
-    c.drawText(surah+":"+unit.start+"–"+unit.end,labelX,labelY+Ui.dp(activity,11),p);
-   }
+   c.drawCircle(x,y,Ui.dp(activity,i==activeMacro?6:4),p);
+   p.setTextSize(Ui.dp(activity,11));c.drawText("U"+(i+1),x,y-Ui.dp(activity,11),p);
   }
+  int firstPage=geometry.pageForVerse(new VerseRef(surah,1));
+  java.util.List<MawdudiPassageIndex.Passage> all=index.forSurah(surah);
+  int lastPage=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,all.get(all.size()-1).lastAyah),geometry);
+  int pageCount=Math.max(1,lastPage-firstPage+1);
+  float left=Ui.dp(activity,17),right=width-Ui.dp(activity,17);
+  float top=Ui.dp(activity,total>6?108:69),bottom=top+Ui.dp(activity,13);
+  p.setStyle(Paint.Style.STROKE);c.drawRect(left,top,right,bottom,p);
+  MawdudiMapData.Macro active=macro();
+  int a=geometry.pageForVerse(new VerseRef(surah,active.start));
+  int b=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,active.end),geometry);
+  float x1=left+(a-firstPage)*(right-left)/pageCount;
+  float x2=left+(b-firstPage+1)*(right-left)/pageCount;
+  p.setStyle(Paint.Style.FILL);
+  c.drawRect(x1,top,Math.max(x1+Ui.dp(activity,2),x2),bottom,p);
+  p.setStyle(Paint.Style.STROKE);
+  for(MawdudiMapData.Macro unit:units){
+   int pg=geometry.pageForVerse(new VerseRef(surah,unit.start));
+   float tick=left+(pg-firstPage)*(right-left)/pageCount;
+   c.drawLine(tick,top-Ui.dp(activity,3),tick,bottom+Ui.dp(activity,3),p);
+  }
+  p.setStyle(Paint.Style.FILL);p.setTextSize(Ui.dp(activity,10));
+  p.setTextAlign(Paint.Align.LEFT);c.drawText("Pages "+firstPage+"–"+lastPage,left,bottom+Ui.dp(activity,16),p);
+  p.setTextAlign(Paint.Align.RIGHT);c.drawText("U"+(activeMacro+1)+" · "+a+"–"+b,right,bottom+Ui.dp(activity,16),p);
  }
- /** Level 1: ten rays for Al-Baqarah, all visible at once, with the
-  * clockwise order stable even when the user changes the active unit.
-  */
  private final class OverviewGraph extends View {
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
   OverviewGraph(){super(activity);setFocusable(true);}
@@ -447,10 +426,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
    setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),
        axis==null||axis.getLayoutParams()==null?sunHeight:axis.getLayoutParams().height);
   }
-  @Override protected void onDraw(Canvas canvas){drawSun(canvas,paint,getWidth(),getHeight());}
+  @Override protected void onDraw(Canvas canvas){drawAtlas(canvas,paint,getWidth(),getHeight());}
   @Override public boolean onTouchEvent(MotionEvent event){
    if(event.getAction()!=MotionEvent.ACTION_UP)return true;
-   int i=sunUnitAt(event.getX(),event.getY(),getWidth(),getHeight());
+   int i=atlasUnitAt(event.getX(),event.getY(),getWidth());
    if(i<0)return true;
    openMacro(i);performClick();return true;
   }
@@ -509,54 +488,47 @@ final class MawdudiMapScreen implements MushafView.Listener {
   @Override protected void onMeasure(int w,int h){
    setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
   }
-  @Override protected void onDraw(Canvas c){
-   int w=getWidth(),h=getHeight();
-   drawSun(c,paint,w,h);
-   java.util.List<Node> items=nodes();
-   if(items.isEmpty())return;
-   int ix=selectedOrdinalZero(items);
-   int n=macros.forSurah(surah).size();
-   float x=sunX(activeMacro,n,w,h),y=sunY(activeMacro,n,w,h);
-   float hubX=w*.5f,hubY=h*.80f;
-   paint.setColor(Ui.INK);paint.setStyle(Paint.Style.STROKE);
-   paint.setStrokeWidth(Ui.dp(activity,1));
-   Path arm=new Path();arm.moveTo(x,y);
-   arm.quadTo(x+(hubX-x)*.3f,hubY,hubX,hubY);
-   c.drawPath(arm,paint);
-   int first=Math.max(0,Math.min(items.size()-7,ix-3));
-   int visible=Math.min(7,items.size());
-   for(int j=0;j<visible;j++){
-    int index=first+j;
-    float px=w*(.10f+.8f*(j+.5f)/visible);
-    float py=h*.91f-Ui.dp(activity,(j%2)*7);
-    Path branch=new Path();branch.moveTo(hubX,hubY);
-    branch.quadTo(px,hubY+Ui.dp(activity,3),px,py);
-    c.drawPath(branch,paint);
-    paint.setStyle(Paint.Style.FILL);paint.setColor(Ui.INK);
-    c.drawCircle(px,py,Ui.dp(activity,index==ix?5:3),paint);
-    paint.setTextSize(Ui.dp(activity,9));paint.setTextAlign(Paint.Align.CENTER);
-    c.drawText("P"+(index+1),px,Math.min(h-Ui.dp(activity,1),py+Ui.dp(activity,13)),paint);
-    paint.setStyle(Paint.Style.STROKE);
+  private int firstVisible(java.util.List<Node> items){
+  return Math.max(0,Math.min(Math.max(0,items.size()-5),selectedOrdinalZero(items)-2));
+ }
+ private float passageX(int j,int visible,int width){return width*(j+.5f)/visible;}
+ private float passageY(int height){return height-Ui.dp(activity,26);}
+ @Override protected void onDraw(Canvas canvas){
+  int width=getWidth(),height=getHeight();
+  drawAtlas(canvas,paint,width,height);
+  java.util.List<Node> items=nodes();if(items.isEmpty())return;
+  int first=firstVisible(items),visible=Math.min(5,items.size());
+  int selectedIndex=selectedOrdinalZero(items);
+  float y=passageY(height);
+  paint.setColor(Ui.INK);paint.setStrokeWidth(Ui.dp(activity,1));
+  paint.setStyle(Paint.Style.STROKE);
+  if(visible>1)canvas.drawLine(passageX(0,visible,width),y,passageX(visible-1,visible,width),y,paint);
+  for(int j=0;j<visible;j++){
+   int ordinal=first+j;Node n=items.get(ordinal);
+   float x=passageX(j,visible,width);
+   paint.setStyle(Paint.Style.FILL);
+   canvas.drawCircle(x,y,Ui.dp(activity,ordinal==selectedIndex?5:3),paint);
+   paint.setTextAlign(Paint.Align.CENTER);paint.setTextSize(Ui.dp(activity,9));
+   canvas.drawText(n.first==n.last?String.valueOf(n.first):n.first+"–"+n.last,x,y-Ui.dp(activity,13),paint);
+  }
+ }
+ @Override public boolean onTouchEvent(MotionEvent event){
+  if(event.getAction()!=MotionEvent.ACTION_UP)return true;
+  int width=getWidth(),height=getHeight();
+  int unit=atlasUnitAt(event.getX(),event.getY(),width);
+  if(unit>=0){openMacro(unit);performClick();return true;}
+  java.util.List<Node> items=nodes();if(items.isEmpty())return true;
+  int first=firstVisible(items),visible=Math.min(5,items.size());
+  for(int j=0;j<visible;j++){
+   float x=passageX(j,visible,width),y=passageY(height);
+   if(Math.abs(event.getX()-x)<Ui.dp(activity,27)&&Math.abs(event.getY()-y)<Ui.dp(activity,25)){
+    Node node=items.get(first+j);
+    select(node.index,node.first,node.last,node.title);
+    performClick();return true;
    }
   }
-  @Override public boolean onTouchEvent(MotionEvent event){
-   if(event.getAction()!=MotionEvent.ACTION_UP)return true;
-   float x=event.getX(),y=event.getY();int w=getWidth(),h=getHeight();
-   int unit=sunUnitAt(x,y,w,h);
-   if(unit>=0){openMacro(unit);performClick();return true;}
-   java.util.List<Node> items=nodes();if(items.isEmpty())return true;
-   int selectedNode=selectedOrdinalZero(items),visible=Math.min(7,items.size());
-   int first=Math.max(0,Math.min(items.size()-7,selectedNode-3));
-   for(int j=0;j<visible;j++){
-    float px=w*(.10f+.8f*(j+.5f)/visible),py=h*.91f-Ui.dp(activity,(j%2)*7);
-    if(Math.abs(x-px)<Ui.dp(activity,24)&&Math.abs(y-py)<Ui.dp(activity,29)){
-     Node target=items.get(first+j);
-     select(target.index,target.first,target.last,target.title);
-     performClick();return true;
-    }
-   }
-   return true;
-  }
-  @Override public boolean performClick(){super.performClick();return true;}
+  return true;
+ }
+ @Override public boolean performClick(){super.performClick();return true;}
  }
 }
