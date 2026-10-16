@@ -215,26 +215,22 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  private void movePassage(int direction){
   if(overview){openMacro(activeMacro);return;}
+  if(direction!=1&&direction!=-1)return;
   closeTitle();
   int next=selected+direction;
-  while(next>=0&&next<passages.size()&&!graph.inMacro(next))next+=direction;
-  if(next<0||next>=passages.size()){
+  if(next<0||next>=passages.size())return;
+  MawdudiPassageIndex.Passage passage=passages.get(next);
+  if(!graph.inMacro(next)){
    int target=activeMacro+direction;
    java.util.List<MawdudiMapData.Macro> units=macros.forSurah(surah);
    if(target<0||target>=units.size())return;
-   MawdudiMapData.Macro newUnit=units.get(target);
-   MawdudiPassageIndex.Passage nextPassage=index.at(surah,
-       direction>0?newUnit.start:newUnit.end);
-   activeMacro=target;selected=passages.indexOf(nextPassage);
-   focusStart=nextPassage.firstAyah;focusEnd=nextPassage.lastAyah;
-   page=geometry.pageForVerse(new VerseRef(surah,focusStart));
-   passageOpen=true;refresh();return;
+   MawdudiMapData.Macro adjacent=units.get(target);
+   // Move to the NEXT canonical passage, never repeat a passage crossing two units.
+   if(passage.firstAyah>adjacent.end||passage.lastAyah<adjacent.start)return;
+   activeMacro=target;
   }
-  MawdudiPassageIndex.Passage p=passages.get(next);
-  // Passage navigation always retains its canonical source boundaries,
-  // including Ayah Themes 2:120–121 across adjacent source units.
-  selected=next;focusStart=p.firstAyah;
-  focusEnd=p.lastAyah;passageOpen=true;
+  selected=next;focusStart=passage.firstAyah;focusEnd=passage.lastAyah;
+  passageOpen=true;
   page=geometry.pageForVerse(new VerseRef(surah,focusStart));
   refresh();
  }
