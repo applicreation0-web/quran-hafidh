@@ -1,4 +1,5 @@
 name: Quran Haafidh 114 — code-only private-flag staging for OFFLINE local signing
+# Isolated JVM fixture paths fixed (2026-10-16); preserve all 446 tests.
 
 on:
   push:
