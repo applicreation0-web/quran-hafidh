@@ -21,6 +21,7 @@ final class AyahThemesReviewDisplay {
             for(int i=0;i<source.length();i++) {
                 JSONObject cue=source.getJSONObject(i);
                 targets.put(new JSONObject().put("id",cue.getString("id"))
+                    .put("surah",cue.getInt("surah")).put("start",cue.getInt("start"))
                     .put("boxes",cue.getJSONArray("boxes")));
             }
             String script=new String(out.toByteArray(),StandardCharsets.UTF_8);

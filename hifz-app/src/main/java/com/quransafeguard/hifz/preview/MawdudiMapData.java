@@ -16,6 +16,7 @@ final class MawdudiMapData {
  static String read(Context c,String asset)throws Exception {
   try(InputStream in=c.getAssets().open(asset);ByteArrayOutputStream out=new ByteArrayOutputStream()) {
    byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1){if(out.size()+n>2_000_000)throw new IllegalStateException("oversized map pack");out.write(b,0,n);}
+   PrivateDisplayIntegrity.verify(asset,out.toByteArray());
    return new String(out.toByteArray(),StandardCharsets.UTF_8);
   }
  }

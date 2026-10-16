@@ -1,18 +1,18 @@
 # État de reprise — 16 octobre 2026
 
-Branche unique : work/haafidh-1171-ibn-kathir-integration-independent. Base 4d9c80fcc3c90c8cc5c56b4cb52cd2ebe86503d6.
-Le prompt privé du 16 octobre supplante les anciens checkpoints sur le périmètre éditorial et le gel Jalalayn.
+Branche unique : work/haafidh-1171-ibn-kathir-integration-independent. Base officielle gelée : 7fd45bbe3d2e67a2e21c6f8ca1d5ae935d1f0d21.
+Le prompt privé du 16 octobre supplante les anciennes demandes Jalalayn.
 
 | Étape | État | Preuve / suite |
 |---|---|---|
-| CP00/CP01 | acquis, non recommencés | pack source-ready joint, SHA locaux vérifiés |
-| CP02-A | DONE | 3c2585bc : audit 38886134356 et Android 38886134378 PASS 98/98 |
-| CP02-B | PARTIAL / UI BLOCKED | APK privé intermédiaire compilé ; Java pack + QCF PASS ; pixels privés non testés |
-| CP02-C | PARTIAL / CI PASS | ddabcab3 audit + 99 Android PASS ; originaux privés à vérifier sur appareil |
-| CP03 | ACTIVE / PARTIAL | graphes 114 codés ; 444 JVM + 244 contrats PASS ; nouvelle CI 100 attendue |
-| CP04 | PARTIAL | focus QCF/aller-retour codés, essai Android nouveau SHA attendu |
-| CP05 | PARTIAL historique | rendu privé à vérifier |
-| CP06 | FAIL historique | base 97/98 remplacée par PASS 98/98 au 3c2585bc ; produit final encore non audité |
-| CP07 | NOT_RUN | aucun APK final ; BOOX PHYSIQUE NON TESTÉ |
+| CP00/CP01 | DONE acquis | pack approuvé joint, empreintes et sources comparées |
+| CP02-A | DONE | 3c2585bc : deux CI PASS 98 Android |
+| CP02-B | PARTIAL | vrai pack privé et probe Java 1053 débuts/604 pages PASS ; pixels privés NOT_RUN |
+| CP02-C | PARTIAL | ddabcab : 99 Android PASS ; geste natif préservé après revue, nouvelle CI 101 requise |
+| CP03 | PARTIAL | graphe 114, 119 macros ; 4992ccd Android 100 PASS ; UI privée exhaustive NOT_RUN |
+| CP04 | PARTIAL | aller-retour QCF Android synthétique PASS ; sous-focus corrigé après revue |
+| CP05 | PARTIAL | captures téléphone inspectées ; BOOX physique NOT_RUN |
+| CP06 | ACTIVE | revue contradictoire corrigée ; audit nouveau SHA et 101 Android à attendre |
+| CP07 | NOT_RUN final | APK intermédiaire compilé ; APK final à reconstruire au nouveau SHA |
 
-Reprise : terminer compilation et UI privées CP02-B au SHA 3c2585bc. Jalalayn, Hifz et textes/QCF gelés.
+Reprise : CP06 au commit portant ce fichier ; ne pas reprendre CP00/CP01. Ancien workspace dirty conservé. Titres, macros et sous-nœuds restent privés et exclus de GitHub/CI. Jalalayn, QCF et moteurs Hifz gelés.

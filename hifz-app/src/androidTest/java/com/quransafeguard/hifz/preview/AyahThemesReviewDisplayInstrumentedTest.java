@@ -122,6 +122,43 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-return.png");
   }
  }
+ @Test public void titleTargetPreservesPassiveEndpointAndArmedActiveWeakMark()throws Exception {
+  Context c=ApplicationProvider.getApplicationContext();JSONObject backup=HifzBackup.export(c);
+  try {
+   c.getSharedPreferences("quran_hifz_preview_v1",Context.MODE_PRIVATE).edit().clear().commit();
+   HifzPrefs prefs=new HifzPrefs(c);GeometryRepository g=GeometryRepository.get(c);
+   com.quransafeguard.hifz.core.VerseRef verse=new com.quransafeguard.hifz.core.VerseRef(1,1);
+   assertTrue(prefs.setV6AcquiredRanges(Collections.singletonList(new com.quransafeguard.hifz.core.VerseRange(verse,new com.quransafeguard.hifz.core.VerseRef(1,7))),g));
+   for(String mode:new String[]{HifzSessionActivity.MURAJAAH,HifzSessionActivity.MURAJAAH_ACTIVE}) {
+    try(ActivityScenario<HifzSessionActivity> scenario=ActivityScenario.launch(new Intent(c,HifzSessionActivity.class).putExtra(HifzSessionActivity.EXTRA_MODE,mode))) {
+     HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"mushaf","Review title gesture "+mode);
+     CountDownLatch done=new CountDownLatch(1);
+     scenario.onActivity(a->{
+      try {
+       assertNotNull(field(a,"murajaahPlan"));
+       java.lang.reflect.Field armed=a.getClass().getDeclaredField("weakMarkMode");armed.setAccessible(true);armed.setBoolean(a,HifzSessionActivity.MURAJAAH_ACTIVE.equals(mode));
+       String script;
+       try(java.io.InputStream in=a.getAssets().open("ayah_themes_display/review_titles.js")) {
+        java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] b=new byte[4096];int n;while((n=in.read(b))!=-1)out.write(b,0,n);script=new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
+       }
+       // Real production installer/native bridge over exact QCF first-word geometry.
+       WordGeometryRepository.WordBox word=null;
+       for(WordGeometryRepository.WordBox w:WordGeometryRepository.shared(a).wordsForPage(1))if(w.surah==1&&w.ayah==1&&w.word==1){word=w;break;}
+       assertNotNull(word);
+       JSONArray cues=new JSONArray().put(new JSONObject().put("id","s001a001b007").put("surah",1).put("start",1).put("boxes",new JSONArray().put(word.boxJson())));
+       ((MushafView)field(a,"mushaf")).evaluateJavascript(script+";window.AyahThemesReviewDisplay.install("+cues+");document.querySelector('.ayah-themes-title-targets rect').dispatchEvent(new MouseEvent('click',{bubbles:true}));",v->done.countDown());
+      }catch(Exception e){throw new AssertionError(e);}
+     });
+     assertTrue(done.await(15,TimeUnit.SECONDS));
+     androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+     scenario.onActivity(a->{
+      if(HifzSessionActivity.MURAJAAH.equals(mode))assertEquals(verse,field(a,"murajaahActualEnd"));
+      else {assertEquals(false,field(a,"weakMarkMode"));assertTrue(new HifzPrefs(a).murajaahWeakVerses().contains(verse));}
+     });
+    }
+   }
+  }finally{HifzBackup.restore(c,backup);}
+ }
  private static Object field(Object o,String name) {
   try{java.lang.reflect.Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}catch(Exception e){throw new AssertionError(e);}
  }

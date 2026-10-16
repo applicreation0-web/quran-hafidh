@@ -56,6 +56,7 @@ final class AyahThemesCueIndex {
                 if(out.size()+n>2_000_000)throw new IllegalStateException("oversized title pack");
                 out.write(chunk,0,n);
             }
+            PrivateDisplayIntegrity.verify(ASSET,out.toByteArray());
             return parse(new String(out.toByteArray(),StandardCharsets.UTF_8),
                 MawdudiPassageIndex.load(context),WordGeometryRepository.shared(context));
         } catch (Exception notInstalledOrInvalid) {
@@ -135,6 +136,7 @@ final class AyahThemesCueIndex {
                     .put("id",cue.id)
                     .put("index",out.length()+1)
                     .put("title",cue.title)
+                    .put("surah",cue.surah).put("start",cue.start)
                     .put("anchor","")
                     .put("anchorWordCount",1)
                     .put("boxes",new JSONArray().put(word.boxJson()))

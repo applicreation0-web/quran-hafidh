@@ -1,7 +1,7 @@
 /* Display-only targets. No access to masks, recall holes, selection or Hifz state. */
 (function(root){
  'use strict';
- function mountTitleTargets(svg,cues,send){
+ function mountTitleTargets(svg,cues,send,verseTap){
   const doc=svg.ownerDocument,ns='http://www.w3.org/2000/svg';
   const layer=doc.createElementNS(ns,'g');
   layer.setAttribute('class','ayah-themes-title-targets');
@@ -19,7 +19,11 @@
     r.setAttribute('stroke-width','0.6');r.setAttribute('stroke-opacity','0.45');
     r.setAttribute('pointer-events','all');r.setAttribute('role','button');
     r.setAttribute('aria-label','Show passage title');
-    r.onclick=e=>{e.stopPropagation();send('AT:'+c.id);};
+    r.onclick=e=>{e.stopPropagation();
+     // Preserve the exact original verse gesture, including review endpoints/weak marking.
+     if(verseTap&&Number.isInteger(c.surah)&&Number.isInteger(c.start))verseTap(c.surah,c.start);
+     send('AT:'+c.id);
+    };
     layer.appendChild(r);
    });
   });
@@ -31,7 +35,8 @@
   clear();
   const svg=typeof currentSvg==='function'?currentSvg():null;
   if(!svg||!Array.isArray(cues)||!cues.length)return;
-  layer=mountTitleTargets(svg,cues,id=>root.HifzNative&&root.HifzNative.semanticCueTap(id));
+  layer=mountTitleTargets(svg,cues,id=>root.HifzNative&&root.HifzNative.semanticCueTap(id),
+    (s,a)=>root.HifzNative&&root.HifzNative.verseTap(s,a));
   // The immutable renderer can append a new mask. Move ONLY this display group
   // above it; never remove/rewrite any mask, historical cue or Quran glyph.
   observer=new MutationObserver(()=>{if(layer&&svg.lastElementChild!==layer)svg.appendChild(layer);});

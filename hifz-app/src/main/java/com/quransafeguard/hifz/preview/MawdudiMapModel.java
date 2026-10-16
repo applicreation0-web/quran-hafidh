@@ -28,6 +28,11 @@ final class MawdudiMapModel {
     static int clampPage(MawdudiPassageIndex.Passage p,int desired,GeometryRepository g) {
         return Math.max(firstPage(p,g),Math.min(lastPage(p,g),desired));
     }
+    static int clampFocusPage(int surah,int first,int last,int desired,GeometryRepository g) {
+        int start=g.pageForVerse(new VerseRef(surah,first));
+        int end=lastPageForVerse(new VerseRef(surah,last),g);
+        return Math.max(start,Math.min(end,desired));
+    }
     static List<VerseRef> highlightedVerses(MawdudiPassageIndex.Passage p,int page,
                                             GeometryRepository g) {
         if(page<firstPage(p,g) || page>lastPage(p,g))

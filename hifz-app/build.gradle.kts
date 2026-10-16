@@ -313,7 +313,6 @@ android {
         versionCode = 39
         versionName = "1.17.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
     }
 
     sourceSets.getByName("main").assets.srcDir(generatedHifzAssetsDir)
@@ -336,12 +335,14 @@ android {
 
     buildTypes {
         getByName("debug") {
+            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", private114.toString())
             isDebuggable = false
             // Isolated personal test install; never overwrites the official 1.17.1 package.
             applicationIdSuffix = if (private114) ".ayahthemes114private" else if (cp08BaqaraPilot) ".mawdudibaqara" else ".ibnkathirtest"
             versionNameSuffix = if (private114) "-AyahThemes114-PRIVATE" else if (cp08BaqaraPilot) "-Mawdudi-Baqara-PILOT" else "-IbnKathir-DEBUG"
         }
         getByName("release") {
+            buildConfigField("boolean", "AYAH_THEMES_FINAL_PRIVATE", "false")
             isMinifyEnabled = false
             isDebuggable = false
             if (hasReleaseSigning) signingConfig = signingConfigs.getByName("release")

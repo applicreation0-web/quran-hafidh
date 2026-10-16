@@ -19,6 +19,16 @@ public final class MawdudiMapModelRealQcfTest {
         assertTrue("Required real geometry/asset is missing: "+relative,f.isFile());
         return new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8);
     }
+    @Test public void approved27SubrangesKeepTheirOwnPhysicalPageBounds()throws Exception {
+        GeometryRepository g=GeometryRepository.fromJson(read("app/src/main/assets/reader109/geometry.json","../app/src/main/assets/reader109/geometry.json"));
+        for(int[] range:new int[][]{{67,75},{76,81},{82,82}}) {
+            int first=g.line(g.firstLineIndex(new VerseRef(27,range[0]))).page;
+            int last=g.line(g.lastLineIndex(new VerseRef(27,range[1]))).page;
+            assertEquals(first,MawdudiMapModel.clampFocusPage(27,range[0],range[1],0,g));
+            assertEquals(last,MawdudiMapModel.clampFocusPage(27,range[0],range[1],999,g));
+            for(int p=first;p<=last;p++)assertEquals(p,MawdudiMapModel.clampFocusPage(27,range[0],range[1],p,g));
+        }
+    }
     @Test public void allCanonicalPassagesHaveExactFirstAndLastPhysicalPages() throws Exception {
         MawdudiPassageIndex index=MawdudiPassageIndex.parse(read(
             "hifz-app/src/main/assets/mawdudi_public/passages_v1.csv",

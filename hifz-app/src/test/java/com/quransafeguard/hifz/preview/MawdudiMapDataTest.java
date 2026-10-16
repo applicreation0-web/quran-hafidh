@@ -14,6 +14,13 @@ public final class MawdudiMapDataTest {
   }
   return new JSONObject().put("schema","MAWDUDI_SOURCE_SAFE_MACROS_V1").put("macros",rows);
  }
+ @Test public void authenticatedBytesRejectCoordinatedSourceAndDisplayRewrite()throws Exception {
+  byte[] original="approved synthetic wording".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  String digest="f2831504829969a63dc49fa2000086f7e38b024884efb498f5fd860282e602b6";
+  assertTrue(PrivateDisplayIntegrity.matches(original,digest));
+  assertFalse(PrivateDisplayIntegrity.matches("rewritten synthetic wording".getBytes(java.nio.charset.StandardCharsets.UTF_8),digest));
+  try{PrivateDisplayIntegrity.verify(AyahThemesCueIndex.ASSET,original);fail("unapproved bytes accepted");}catch(IllegalStateException expected){}
+ }
  @Test public void completeSourceSafeMacrosCoverAll114Surahs()throws Exception {
   MawdudiMapData data=MawdudiMapData.parse(synthetic().toString(),AyahThemesCueIndexTest.canonical());
   assertEquals(119,data.count());assertEquals(4,data.forSurah(3).size());assertEquals(1,data.forSurah(2).size());

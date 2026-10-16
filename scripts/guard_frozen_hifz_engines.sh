@@ -93,6 +93,7 @@ while IFS= read -r file; do
     "$APP_ROOT/MawdudiMapScreen.java" | \
     "$APP_ROOT/AyahThemesCueIndex.java" | \
     "$APP_ROOT/AyahThemesReviewDisplay.java" | \
+    "$APP_ROOT/PrivateDisplayIntegrity.java" | \
     "$APP_ROOT/BaqaraPilotSpec.java" | \
     "$APP_ROOT/BaqaraAyahThemeTitles.java" | \
     "$APP_ROOT/BaqaraPilotScreen.java" | \
