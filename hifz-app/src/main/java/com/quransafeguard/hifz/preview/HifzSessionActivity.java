@@ -1365,24 +1365,53 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     }
 
     /**
-     * Révision active masks a whole page, but a learner rarely has every page's exact start/end
-     * verse memorized — without some landmark, a page swipe leaves no way to confirm the recall is
-     * picking up at the right point, or where to stop before turning the page. The page's real
-     * first three and last three words, and each Al-Munīr amorce beginning on the page, stay
-     * visible as exact holes in the paper mask (see reader.js applyProtectedWordHoles).
+     * Révision active only. The six exact first/last page-word landmarks are
+     * retained. The historical Ibn Kathir/Munir cue holes are REPLACED by the
+     * first exact physical QCF word of each approved Ayah Themes passage that
+     * begins on the page. None of the corpus, mask code, other Hifz modes,
+     * progress counters or page geometry is modified by this display adapter.
+     *
+     * A page with no new passage beginning still retains six page landmarks.
+     * If source data or exact word boxes are missing, fail OPEN (never hide
+     * Quran text with an incomplete set of landmarks).
      */
+    private boolean activeAyahThemesReady;
     private List<String> applyActiveLandmarks(int page) {
-        List<String> all = geometry.lineIdsOnPage(page);
-        // The old half-line heuristic is retired: the page's real first three and last three
-        // words plus every Al-Munīr amorce starting on it are exact holes in the paper mask —
-        // enabled only when every one of those boxes exists exactly (quran-ws word geometry).
-        // Otherwise no anchor hole at all: nothing approximated, Révéler still works.
+        List<String> lines = geometry.lineIdsOnPage(page);
         mushaf.setLandmarkLines(null, null);
-        boolean exact = semanticPassages != null && semanticPassages.isAvailable()
-            && semanticPassages.hasCompleteExactGeometryForPage(page);
-        mushaf.setPageLandmarkBoxes(exact ? semanticPassages.pageLandmarkBoxes(page) : new org.json.JSONArray());
-        mushaf.setSemanticCues(exact ? semanticPassages.readerCuesForPage(page) : new org.json.JSONArray(), exact, false);
-        return all;
+        activeAyahThemesReady = false;
+        org.json.JSONArray firstLast = new org.json.JSONArray();
+        org.json.JSONArray newStarts = new org.json.JSONArray();
+        try {
+            if (ayahThemesTitles != null) {
+                firstLast = WordGeometryRepository.shared(this).pageLandmarkBoxes(page);
+                newStarts = ayahThemesTitles.forPage(page);
+                if (firstLast.length() == 6) {
+                    // One exact source-word box per new Ayah Themes passage start.
+                    // Do not synthesize cues or approximate a word position.
+                    activeAyahThemesReady = true;
+                    for (int i=0;i<newStarts.length();i++) {
+                        org.json.JSONObject cue = newStarts.getJSONObject(i);
+                        if (cue.getInt("anchorWordCount") != 1 ||
+                                cue.getJSONArray("boxes").length() != 1 ||
+                                cue.getString("id").isEmpty()) {
+                            activeAyahThemesReady = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        } catch (Exception incomplete) {
+            activeAyahThemesReady = false;
+        }
+        if (activeAyahThemesReady) {
+            mushaf.setPageLandmarkBoxes(firstLast);
+            mushaf.setSemanticCues(newStarts, true, false);
+        } else {
+            mushaf.clearPageLandmarkBoxes();
+            mushaf.clearSemanticCues();
+        }
+        return lines;
     }
 
     private void updateMurajaahActions() {
@@ -1822,9 +1851,7 @@ public final class HifzSessionActivity extends android.app.Activity implements M
     private int displayedMask() {
         if (ITQAN.equals(mode) && itqanAnchorFailOpen) return 0;
         if (MURAJAAH_ACTIVE.equals(mode) && currentMask > 0
-                && (semanticPassages == null || !semanticPassages.isAvailable()
-                    || !semanticPassages.hasCompleteExactGeometryForPage(currentPage)))
-            return 0;
+                && !activeAyahThemesReady) return 0;
         return currentMask;
     }
 
