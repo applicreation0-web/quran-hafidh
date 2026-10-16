@@ -26,11 +26,12 @@ final class MawdudiMapData {
  static MawdudiMapData parse(String raw,MawdudiPassageIndex index)throws JSONException {
   JSONObject root=new JSONObject(raw);
   if(!"MAWDUDI_SOURCE_SAFE_MACROS_V1".equals(root.optString("schema")))throw new IllegalStateException("wrong macro schema");
-  JSONArray rows=root.getJSONArray("macros");if(rows.length()!=119)throw new IllegalStateException("missing macro");
+  JSONArray rows=root.getJSONArray("macros");if(rows.length()!=128)throw new IllegalStateException("missing macro");
   List<Macro> macros=new ArrayList<>();int i=0;
   for(int s=1;s<=114;s++) {
    List<MawdudiPassageIndex.Passage> ps=index.forSurah(s);int last=ps.get(ps.size()-1).lastAyah;
-   int[][] exact=s==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:
+   int[][] exact=s==2?new int[][]{{1,20},{21,29},{30,39},{40,120},{121,141},{142,152},{153,251},{252,260},{261,283},{284,286}}:
+    s==3?new int[][]{{1,32},{33,63},{64,120},{121,200}}:
     s==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
    for(int[] range:exact) {
     JSONObject row=rows.getJSONObject(i++);
