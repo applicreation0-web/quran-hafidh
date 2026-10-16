@@ -159,11 +159,12 @@ final class MawdudiMapScreen implements MushafView.Listener {
   // Page badges and swipes replace both page arrows and passage arrows.
   icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);
   icons.setMinimumHeight(Ui.dp(activity,56));
-  icons.addView(Ui.iconButton(activity,"","Tafsir",v->openCommentary()),
-      new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
-  icons.addView(new View(activity),new LinearLayout.LayoutParams(Ui.dp(activity,72),Ui.dp(activity,48)));
-  icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),
-      new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
+  LinearLayout.LayoutParams tafsirPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
+  tafsirPos.rightMargin=Ui.dp(activity,36);
+  icons.addView(Ui.iconButton(activity,"","Tafsir",v->openCommentary()),tafsirPos);
+  LinearLayout.LayoutParams readerPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
+  readerPos.leftMargin=Ui.dp(activity,36);
+  icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),readerPos);
   root.addView(icons);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();
