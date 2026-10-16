@@ -1,3 +1,14 @@
+# Atlas QCF — signature personnelle vérifiée, 16 octobre 2026
+
+Le debug personnel `Quran-Haafidh-ATLAS-91890d74-PRIVATE-DEBUG.apk` est signé avec le certificat du Soleil de référence. SHA-256 : `5e06fb6d343b9173bf203991437fef94d6ed511262e8ddfc4aaca64f9c08a3f6`.
+
+Signatures v2/v3, alignement, CRC et compatibilité statique avec l'APK Soleil de référence : PASS. Même package et versionCode 39. Aucun contenu applicatif modifié par la signature. Aucun keystore, mot de passe ou texte privé dans GitHub/CI. Aucune installation ni modification de données Hifz effectuée.
+
+**RELEASE BLOQUÉE** : exécution du binaire privé signé, audit indépendant favorable, recette BOOX physique et sauvegarde/restauration restent à valider. Voir [ATLAS_QCF_114/SIGNATURE_VERIFIED_2026-10-16.md](ATLAS_QCF_114/SIGNATURE_VERIFIED_2026-10-16.md).
+Le code reste `91890d7412821103113c5faf98f3aafd750643bb` ; ce checkpoint ne modifie que la documentation, sans nouvelle compilation ni CI inutile.
+
+---
+
 # Atlas QCF — reprise technique du 16 octobre 2026
 
 Code compilé et testé : `91890d7412821103113c5faf98f3aafd750643bb`.
