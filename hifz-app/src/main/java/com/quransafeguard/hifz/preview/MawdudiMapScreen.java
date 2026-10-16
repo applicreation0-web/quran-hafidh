@@ -256,6 +256,18 @@ final class MawdudiMapScreen implements MushafView.Listener {
    passageTitle.setText(surah+":"+focusStart+"–"+focusEnd+" · "+graph.selectedTitle());
   }
   heading.setContentDescription("Changer d'unité · "+heading.getText());
+  // When a passage opens, make the QCF page the dominant surface by shrinking
+  // the sun, not by asking the reader to zoom in. E-Ink has no transitions.
+  int desiredHeight=passageOpen?Math.max(Ui.dp(activity,158),sunHeight/2):sunHeight;
+  ViewGroup.LayoutParams vp=axis.getLayoutParams();
+  if(vp.height!=desiredHeight){vp.height=desiredHeight;axis.setLayoutParams(vp);}
+  View child=axis.getChildAt(0);
+  if(child!=null){
+   ViewGroup.LayoutParams childParams=child.getLayoutParams();
+   if(childParams.height!=desiredHeight){
+    childParams.height=desiredHeight;child.setLayoutParams(childParams);
+   }
+  }
   graph.requestLayout();graph.invalidate();
   overviewGraph.requestLayout();overviewGraph.invalidate();
   renderPage();
@@ -283,7 +295,11 @@ final class MawdudiMapScreen implements MushafView.Listener {
   MawdudiPassageIndex.Passage p=current();page=MawdudiMapModel.clampFocusPage(surah,focusStart,focusEnd,page,geometry);
   int first=geometry.pageForVerse(new VerseRef(surah,focusStart));
   int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
-  thumbnails.showPages(first,last,page);
+  // On a one-page passage the authentic QCF page is already visible; avoid
+  // wasting vertical space and memory on a duplicate miniature.
+  boolean multiPage=last>first;
+  thumbnails.setVisibility(multiPage?View.VISIBLE:View.GONE);
+  if(multiPage)thumbnails.showPages(first,last,page);
   if(!ready)return;
   java.util.List<VerseRef> visible=new ArrayList<>();
   for(VerseRef v:MawdudiMapModel.highlightedVerses(p,page,geometry))if(v.getAyah()>=focusStart&&v.getAyah()<=focusEnd)visible.add(v);
@@ -428,7 +444,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
   OverviewGraph(){super(activity);setFocusable(true);}
   int position(int ignored){return 0;}
   @Override protected void onMeasure(int w,int h){
-   setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
+   setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),
+       axis==null||axis.getLayoutParams()==null?sunHeight:axis.getLayoutParams().height);
   }
   @Override protected void onDraw(Canvas canvas){drawSun(canvas,paint,getWidth(),getHeight());}
   @Override public boolean onTouchEvent(MotionEvent event){
