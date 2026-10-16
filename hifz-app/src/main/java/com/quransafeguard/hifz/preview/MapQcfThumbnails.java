@@ -14,12 +14,12 @@ import java.util.Locale;
 
 /**
  * Semantic route ONLY: authentic KFQC SVG page miniatures, not approximate text
- * boxes or screenshots. A bounded four-page window avoids loading forty
+ * boxes or screenshots. A bounded two-page window avoids loading forty
  * complete SVGs into an E-Ink WebView at once. All pages remain reachable.
  */
 final class MapQcfThumbnails extends WebView {
  interface Listener { void onPageChosen(int page); }
- private static final int CHUNK=4;
+ private static final int CHUNK=2;
  private final Listener listener;
  private int start,end,selected,chunkStart;
  MapQcfThumbnails(Context context,Listener listener){
@@ -64,13 +64,13 @@ final class MapQcfThumbnails extends WebView {
  private void drawChunk(){
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
-      .append("<style>*{box-sizing:border-box}body{margin:0;background:#faf8f2;color:#121211;font:14px sans-serif}")
-      .append("header{display:flex;justify-content:space-between;align-items:center;height:31px;padding:0 8px}")
-      .append("button{border:1px solid #bbb;background:transparent;color:#111;font:16px sans-serif;padding:2px 11px}")
-      .append("main{display:flex;justify-content:space-around;align-items:center;gap:7px;padding:0 7px}")
-      .append(".tile{width:24%;min-width:54px;text-align:center;background:transparent;border:0;padding:0}")
-      .append(".tile.selected{border-bottom:3px solid #111}.tile img{width:auto;max-width:100%;height:105px;object-fit:contain}")
-      .append(".num{font-size:12px}</style></head><body><header><button onclick='MapPages.step(-1)' aria-label='Pages précédentes'>‹</button>")
+      .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f2;color:#121211;font:14px sans-serif}")
+      .append("header{display:flex;justify-content:space-between;align-items:center;height:48px;padding:0 8px}")
+      .append("button{border:1px solid #bbb;background:transparent;color:#111;font:16px sans-serif;min-height:44px;padding:5px 11px}")
+      .append("main{height:calc(100% - 48px);display:flex;justify-content:center;align-items:stretch;gap:8px;padding:4px 8px;overflow:hidden}")
+      .append(".tile{display:flex;flex-direction:column;width:calc(50% - 4px);height:100%;min-width:0;min-height:0;text-align:center;background:transparent;border:0;padding:0}")
+      .append(".tile.selected{border-bottom:3px solid #111}.tile img{display:block;width:100%;height:calc(100% - 24px);min-height:0;object-fit:contain}")
+      .append(".num{font-size:13px;font-weight:bold;line-height:23px;flex:none}</style></head><body><header><button onclick='MapPages.step(-1)' aria-label='Pages précédentes'>‹</button>")
       .append("<span>Pages QCF ").append(chunkStart).append("–").append(Math.min(end,chunkStart+CHUNK-1))
       .append(" / ").append(start).append("–").append(end).append("</span>")
       .append("<button onclick='MapPages.step(1)' aria-label='Pages suivantes'>›</button></header><main>");
