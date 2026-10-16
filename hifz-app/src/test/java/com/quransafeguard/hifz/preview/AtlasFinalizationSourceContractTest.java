@@ -48,7 +48,9 @@ public final class AtlasFinalizationSourceContractTest {
         String map=read(ROOT+"MawdudiMapScreen.java");
         assertTrue(map.contains("icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);"));
         assertTrue(map.contains("icons.setMinimumHeight(Ui.dp(activity,56));"));
-        assertTrue(map.contains("new LinearLayout.LayoutParams(Ui.dp(activity,72),Ui.dp(activity,48))"));
+        assertTrue(map.contains("tafsirPos.rightMargin=Ui.dp(activity,36);"));
+        assertTrue(map.contains("readerPos.leftMargin=Ui.dp(activity,36);"));
+        assertFalse(map.contains("icons.addView(new View(activity)"));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Tafsir\",v->openCommentary())"));
         assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture\",v->openReader())"));
         String actions=map.substring(map.indexOf("icons=Ui.row(activity)"),map.indexOf("root.addView(icons);"));
