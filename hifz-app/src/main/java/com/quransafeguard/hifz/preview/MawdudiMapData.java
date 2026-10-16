@@ -35,7 +35,7 @@ final class MawdudiMapData {
     s==9?new int[][]{{1,37},{38,72},{73,129}}:new int[][]{{1,last}};
    for(int[] range:exact) {
     JSONObject row=rows.getJSONObject(i++);
-    String expected=exact.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF";
+    String expected=exact.length==1?"WHOLE_SURAH_ONLY_NO_NEW_SPLIT_INVENTED":s==2?"SOURCE_BOUNDARY_CONFIRMED_IN_INTRODUCTION":"SOURCE_BOUNDARY_CONFIRMED_FROM_PDF";
     if(row.getInt("surah")!=s||row.getInt("start")!=range[0]||row.getInt("end")!=range[1]
        ||!expected.equals(row.getString("status")))throw new IllegalStateException("unapproved macro boundary");
     String label=row.getString("label");if(label.trim().isEmpty()||label.length()>1000)throw new IllegalStateException("missing macro label");
