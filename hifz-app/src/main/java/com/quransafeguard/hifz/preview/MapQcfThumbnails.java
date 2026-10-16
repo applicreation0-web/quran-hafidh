@@ -22,6 +22,8 @@ final class MapQcfThumbnails extends WebView {
  private static final int CHUNK=2;
  private final Listener listener;
  private int start,end,selected,chunkStart;
+ private int markSurah,markFirst,markLast;
+ private boolean markOnlyBoundaries;
  MapQcfThumbnails(Context context,Listener listener){
   super(context);this.listener=listener;
   setBackgroundColor(Color.rgb(250,248,242));
@@ -32,6 +34,11 @@ final class MapQcfThumbnails extends WebView {
   addJavascriptInterface(new Bridge(),"MapPages");
  }
  void showPages(int first,int last,int selectedPage){
+  showPages(first,last,selectedPage,0,0,0,false);
+ }
+ void showPages(int first,int last,int selectedPage,int s,int firstAyah,int lastAyah,boolean boundariesOnly){
+  if(s<0||s>114||firstAyah<0||lastAyah<0||firstAyah>lastAyah)throw new IllegalArgumentException("QCF verse highlight range");
+  markSurah=s;markFirst=firstAyah;markLast=lastAyah;markOnlyBoundaries=boundariesOnly;
   if(first<1||last>604||last<first)throw new IllegalArgumentException("QCF thumbnail range");
   int previousStart=start,previousEnd=end;
   start=first;end=last;selected=Math.max(first,Math.min(last,selectedPage));
@@ -61,6 +68,28 @@ final class MapQcfThumbnails extends WebView {
    return svg;
   }
  }
+ /** The original SVG contains transparent exact 'ayahPolygon' paths, one
+  * per physical verse shape. Highlight those paths directly, never fabricate
+  * line-based boxes that also cover neighboring verses. */
+ private String highlightExactVersePolygons(String svg){
+  if(markSurah==0||markFirst==0)return svg;
+  StringBuilder css=new StringBuilder("<style>");
+  if(markOnlyBoundaries){
+   appendSelector(css,markFirst);
+   if(markLast!=markFirst){css.append(',');appendSelector(css,markLast);}
+  }else{
+   for(int a=markFirst;a<=markLast;a++){
+    if(a>markFirst)css.append(',');
+    appendSelector(css,a);
+   }
+  }
+  css.append("{fill:#999!important;fill-opacity:0.23!important;stroke:#333!important;stroke-width:0.25!important;}</style>");
+  return svg.replace("</svg>",css.toString()+"</svg>");
+ }
+ private void appendSelector(StringBuilder css,int ayah){
+  css.append("path.ayahPolygon[surah='").append(markSurah)
+     .append("'][ayah='").append(ayah).append("']");
+ }
  private void drawChunk(){
   StringBuilder html=new StringBuilder(4000);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1'>")
@@ -76,7 +105,7 @@ final class MapQcfThumbnails extends WebView {
       .append("<button onclick='MapPages.step(1)' aria-label='Pages suivantes'>›</button></header><main>");
   for(int p=chunkStart;p<=Math.min(end,chunkStart+CHUNK-1);p++){
    try{
-    String svg=readSvg(getContext(),p);
+    String svg=highlightExactVersePolygons(readSvg(getContext(),p));
     String base64=android.util.Base64.encodeToString(svg.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
     html.append("<button class='tile").append(p==selected?" selected":"").append("' aria-label='Voir page ")
         .append(p).append("' onclick='MapPages.open(").append(p).append(")'><img alt='' src='data:image/svg+xml;base64,")
