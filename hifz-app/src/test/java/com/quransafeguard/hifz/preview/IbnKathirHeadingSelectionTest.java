@@ -36,9 +36,11 @@ public final class IbnKathirHeadingSelectionTest {
         assertTrue(Files.isRegularFile(audit.resolve("IbnKathirTitlePack.java")));
     }
 
-    @Test public void readerUsesOnlyThePrivateQuranComTitleProvider() throws Exception {
+    @Test public void readerUsesOnlyThePrivateAyahThemesTitleProvider() throws Exception {
         String reader=read("hifz-app/src/main/java/com/quransafeguard/hifz/preview/StudyReaderActivity.java");
-        assertTrue(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
+        assertTrue(reader.contains("AyahThemesCueIndex.load(this)"));
+        assertTrue(reader.contains("ayahThemesCues.forPage(page)"));
+        assertFalse(reader.contains("IbnKathirQuranComPrivateTitles.approvedTitle(this,group)"));
         assertFalse(reader.contains("IbnKathirOfflineTitles.verifiedHeadings(group)"));
         assertFalse(reader.contains("IbnKathirTitlePack.sourceHeadings(this,group)"));
     }
