@@ -157,11 +157,13 @@ final class MawdudiMapScreen implements MushafView.Listener {
   mushaf=new MushafView(activity);mushaf.setListener(this);
   root.addView(mushaf,new LinearLayout.LayoutParams(-1,0,1));
   // Page badges and swipes replace both page arrows and passage arrows.
-  icons=Ui.row(activity);icons.setGravity(Gravity.CENTER_VERTICAL);
+  icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);
+  icons.setMinimumHeight(Ui.dp(activity,56));
   icons.addView(Ui.iconButton(activity,"","Tafsir",v->openCommentary()),
-      new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
+      new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
+  icons.addView(new View(activity),new LinearLayout.LayoutParams(Ui.dp(activity,72),Ui.dp(activity,48)));
   icons.addView(Ui.iconButton(activity,"","Lecture",v->openReader()),
-      new LinearLayout.LayoutParams(0,Ui.dp(activity,48),1));
+      new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48)));
   root.addView(icons);
   activity.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
   activity.setContentView(root);refresh();
@@ -505,8 +507,10 @@ final class MawdudiMapScreen implements MushafView.Listener {
    return 0;
   }
   int currentNodeOrdinal(){java.util.List<Node> items=nodes();return items.isEmpty()?0:selectedOrdinalZero(items)+1;}
-  String selectedTitle(){java.util.List<Node> items=nodes();
-   return items.isEmpty()?"":items.get(selectedOrdinalZero(items)).title;
+  String selectedTitle(){
+   // Whole-passage focus must not borrow the first visual subnode title.
+   for(Node n:nodes())if(n.index==selected&&n.first==focusStart&&n.last==focusEnd)return n.title;
+   return titles.titleForPassage(current().id);
   }
   @Override protected void onMeasure(int w,int h){
    setMeasuredDimension(Math.max(1,MeasureSpec.getSize(w)),sunHeight);
