@@ -284,13 +284,13 @@ final class MawdudiMapScreen implements MushafView.Listener {
    MawdudiMapData.Macro chosen=macro();
    int start=geometry.pageForVerse(new VerseRef(surah,chosen.start));
    int end=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,chosen.end),geometry);
-   thumbnails.showPages(start,end,Math.max(start,Math.min(end,page)));
+   thumbnails.showPages(start,end,Math.max(start,Math.min(end,page)),surah,chosen.start,chosen.end,true);
    return;
   }
   page=MawdudiMapModel.clampFocusPage(surah,focusStart,focusEnd,page,geometry);
   int first=geometry.pageForVerse(new VerseRef(surah,focusStart));
   int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
-  thumbnails.showPages(first,last,page);
+  thumbnails.showPages(first,last,page,surah,focusStart,focusEnd,false);
   boolean multiple=last>first;
   pageActions.setVisibility(multiple?View.VISIBLE:View.GONE);
   previousPageButton.setEnabled(page>first);
