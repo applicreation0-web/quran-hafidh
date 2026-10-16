@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CP-03 graphical map + private Quran.com titles: offline, fail-closed, no old list."""
+"""CP-03 historical graphical map; CP02 Lecture now uses only approved private Ayah Themes titles."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 java=root/"hifz-app/src/main/java/com/quransafeguard/hifz/preview"
@@ -9,10 +9,10 @@ manifest=(root/"hifz-app/src/main/AndroidManifest.xml").read_text(encoding="utf-
 home=(java/"MainActivity.java").read_text(encoding="utf-8")
 map_source=(java/"IbnKathirMapActivity.java").read_text(encoding="utf-8")
 for token in ('onSemanticCueTap(String passageId)',
-              'IbnKathirQuranComPrivateTitles.approvedTitle(this,group)',
+              'AyahThemesCueIndex.load(this)',
               'SemanticTitlePopup.showEnglish(this,label,semanticTitleDialog)',
               'readerActions.addView(semanticButton)',
-              'ibnKathirCues.readerCuesForPage(page)', '"Masquer les amorces"'):
+              'ayahThemesCues.forPage(page)', '"Masquer les amorces"'):
     assert token in lecture, "Missing Mushaf-first role: "+token
 for legacy in ('IbnKathirOfflineTitles.verifiedHeadings(group)',
                'IbnKathirTitlePack.sourceHeadings(this,group)'):
@@ -52,4 +52,4 @@ assert not tracked, "PRIVATE source is tracked in PUBLIC repo"
 assert 'lastQuranComHeadingIndex' not in lecture, "Carousel state must be absent"
 assert 'sourceHeadings(this,group)' not in lecture, "Legacy title source must be retired"
 assert 'firstThematicIndex' not in titles, "V1 display-order sorting must be retired"
-print("PASS: CP-03 graphical QCF map + M7-B V2 single-title private loader; no old list/carousel/network/Quiz/private text")
+print("PASS: CP02 Ayah Themes Lecture + historical CP03 graphical map kept isolated; no old Lecture headings or network")
