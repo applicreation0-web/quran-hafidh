@@ -97,16 +97,17 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
      java.lang.reflect.Field passageOpen=MawdudiMapScreen.class.getDeclaredField("passageOpen");
      passageOpen.setAccessible(true);passageOpen.setBoolean(map,true);
      map.refresh();
-     a.attachPilotPreview(map.mushaf());screen.set(map);selected.set(canonical.at(3,175));
+     screen.set(map);selected.set(canonical.at(3,175));
     }catch(Exception ex){throw new AssertionError(ex);}
    });
-   HifzAndMapRuntimeSmokeInstrumentedTest.awaitMushafPage(scenario,"pagePreview","114-surah graphical QCF map");
    int expected=GeometryRepository.get(context).pageForVerse(new com.quransafeguard.hifz.core.VerseRef(3,selected.get().firstAyah));
+   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
    scenario.onActivity(a->{
     assertEquals(expected,((Integer)field(screen.get(),"page")).intValue());
     assertEquals("Graph",field(screen.get(),"graph").getClass().getSimpleName());
     assertTrue(((android.view.View)field(screen.get(),"graph")).getWidth()>0);
-    assertFalse(((java.util.List<?>)field(screen.get().mushaf(),"lastSelection")).isEmpty());
+    assertEquals("Atlas must reserve full-page QCF for the reader",
+      android.view.View.GONE,screen.get().mushaf().getVisibility());
    });
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-graph-qcf.png");
    scenario.onActivity(a->screen.get().openReader());
@@ -129,6 +130,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
    scenario.onActivity(a->assertEquals(expected,((Integer)field(screen.get(),"page")).intValue()));
+   awaitAtlasThumbnails(scenario,screen,selected.get(),expected);
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-map114-synthetic-return.png");
   }
  }
@@ -169,6 +171,37 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     }
    }
   }finally{HifzBackup.restore(c,backup);}
+ }
+ /** Removing a real SVG, its exact verse highlight, or its visible viewport
+  * must fail this check. The Atlas no longer renders its hidden MushafView. */
+ private static void awaitAtlasThumbnails(ActivityScenario<IbnKathirMapActivity> scenario,
+     AtomicReference<MawdudiMapScreen> screen,MawdudiPassageIndex.Passage passage,int page)throws Exception {
+  String script="(function(){var tile=document.querySelector('.tile.selected');"+
+   "var img=tile&&tile.querySelector('img');if(!img||!img.complete||!img.naturalWidth)return false;"+
+   "if(Number(tile.querySelector('.num').textContent)!="+page+")return false;"+
+   "var r=img.getBoundingClientRect();if(r.width<=0||r.height<=0||r.top<0||r.bottom>innerHeight+1)return false;"+
+   "if(document.documentElement.scrollHeight>innerHeight+1)return false;"+
+   "var src=img.getAttribute('src');if(!src.startsWith('data:image/svg+xml;base64,'))return false;"+
+   "var svg=new DOMParser().parseFromString(atob(src.split(',')[1]),'image/svg+xml');"+
+   "if(svg.querySelector('parsererror'))return false;"+
+   "var style=Array.from(svg.querySelectorAll('style')).map(s=>s.textContent).join('');"+
+   "return Array.from(svg.querySelectorAll('path.ayahPolygon')).some(p=>"+
+   "Number(p.getAttribute('surah'))==="+passage.surah+"&&Number(p.getAttribute('ayah'))>="+passage.firstAyah+
+   "&&Number(p.getAttribute('ayah'))<="+passage.lastAyah+
+   "&&style.includes(\"path.ayahPolygon[surah='\"+p.getAttribute('surah')+\"'][ayah='\"+p.getAttribute('ayah')+\"']\")"+
+   "&&style.includes('fill-opacity:0.23!important'));})()";
+  for(int attempt=0;attempt<44;attempt++) {
+   CountDownLatch done=new CountDownLatch(1);AtomicReference<String> result=new AtomicReference<>();
+   scenario.onActivity(a->{
+    android.webkit.WebView view=(android.webkit.WebView)field(screen.get(),"thumbnails");
+    assertTrue("Real QCF thumbnails must be visible",view.isShown());
+    view.evaluateJavascript(script,v->{result.set(v);done.countDown();});
+   });
+   assertTrue("Atlas JavaScript timed out",done.await(15,TimeUnit.SECONDS));
+   if("true".equals(result.get()))return;
+   android.os.SystemClock.sleep(250);
+  }
+  fail("Real highlighted QCF thumbnail not rendered in the Atlas viewport on page "+page);
  }
  private static Object field(Object o,String name) {
   try{java.lang.reflect.Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}catch(Exception e){throw new AssertionError(e);}
