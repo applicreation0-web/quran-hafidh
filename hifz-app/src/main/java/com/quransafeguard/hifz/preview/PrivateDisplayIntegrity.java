@@ -7,7 +7,7 @@ final class PrivateDisplayIntegrity {
     static void verify(String asset,byte[] bytes) throws Exception {
         String expected=null;
         if ("ayah_themes_private/titles_114.json".equals(asset)) expected="a42914ae968c77bc7224f5126a41cc3e92099fbc797a91b01d74405d242eb209";
-        if ("ayah_themes_private/macros_114.json".equals(asset)) expected="43076b7a0a0ddcfbafe3708ee3d45e7f9a75d8c1bb2573cda4bae59e4c0b9268";
+        if ("ayah_themes_private/macros_114.json".equals(asset)) expected="41cc16f1f8cb7a0189bd0798e4f51d1d6449e61d2ac168039782bb0d22ca6a38";
         if ("ayah_themes_private/special_27.json".equals(asset)) expected="d3fb2a7cc23f84851f83caa14ab23a549b8f410529930131dd2c2560d7450404";
         if(expected==null||!matches(bytes,expected))throw new IllegalStateException("unapproved private display asset");
     }
