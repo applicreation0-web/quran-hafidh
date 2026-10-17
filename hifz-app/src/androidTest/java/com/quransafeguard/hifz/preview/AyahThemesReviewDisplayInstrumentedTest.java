@@ -258,6 +258,9 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
          MawdudiPassageIndex.load(a).forSurah(4).size()>=23);
     }catch(Exception ex){throw new AssertionError(ex);}
    });
+   awaitAtlasFullPage(scenario,screen,
+       GeometryRepository.get(context).pageForVerse(
+           new com.quransafeguard.hifz.core.VerseRef(4,176)));
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-an-nisa-u11-sliding-units.png");
    scenario.onActivity(a->screen.get().destroy());
   }
