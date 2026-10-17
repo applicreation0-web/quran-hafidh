@@ -76,9 +76,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     private MapJalalaynDialog mapPreviewJalalayn;
     // Atlas-only navigation state; never changes ordinary reading or Hifz settings.
     private boolean mapUnitPreview;
-    private boolean unitBounded = true;
     private TextView atlasCueFooter;
-    private Button atlasLimitButton;
     private Button atlasPassageUp,atlasPassageDown;
     private java.util.List<MawdudiPassageIndex.Passage> atlasPassages=java.util.Collections.emptyList();
     private int atlasPassagePosition=-1;
@@ -94,9 +92,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
         super.onCreate(state);
         mapPreview = getIntent().getBooleanExtra(EXTRA_MAP_PREVIEW, false);
         mapUnitPreview = mapPreview && getIntent().getBooleanExtra("map114UnitMode", false);
-        // Atlas passage focus replaces the legacy zoom/free-mode toggle.
-        // A restored Activity must not reopen the old non-focused state.
-        if(mapUnitPreview)unitBounded=true;
         if(mapPreview) {
             try {
                 mapPreviewUnits=MawdudiMapData.load(this,MawdudiPassageIndex.load(this));
@@ -210,11 +205,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             readerActions.addView(atlasPassageUp);
             readerActions.addView(atlasPassageDown);
             updateAtlasPassageButtons();
-            atlasLimitButton=Ui.iconButton(this,"","Focus",
-                v->toggleAtlasUnitLimit());
-            atlasLimitButton.setVisibility(View.GONE); // Replace zoom/focus control with passage arrows.
-            readerActions.addView(atlasLimitButton);
-            updateAtlasUnitLimitButton();
         }
         updateSemanticButton();
         annotationButton = Ui.iconButton(this, "", "Annoter", v -> toggleAnnotationMode());
@@ -333,7 +323,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     private void setPage(int requested) {
         int next = Math.max(1, Math.min(604, requested));
-        if(mapPreview && (!mapUnitPreview || unitBounded)) {
+        if(mapPreview) {
             // In the map-linked reader, turning a page cannot escape the
             // selected Ayah Themes passage. The ordinary Hifz reader is unchanged.
             try {
@@ -370,7 +360,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     @Override public void onVerseTap(VerseRef verse) {
         boolean tafsirWasOpen = isTafsirOpen();
         closeSemanticTitle();
-        if(mapUnitPreview&&unitBounded){
+        if(mapUnitPreview){
             int s=getIntent().getIntExtra("map114Surah",0);
             int first=getIntent().getIntExtra("map114FocusStart",0);
             int last=getIntent().getIntExtra("map114FocusEnd",0);
@@ -459,7 +449,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             mushaf.clearSemanticCues();
             return;
         }
-        if(mapUnitPreview && unitBounded){
+        if(mapUnitPreview){
             org.json.JSONArray all=ayahThemesCues.forUnitPage(page,
                 getIntent().getIntExtra("map114Surah",0),
                 getIntent().getIntExtra("map114FocusStart",0),
@@ -475,28 +465,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             mushaf.setSemanticCues(active,false,true);
         }
         else mushaf.setSemanticCues(ayahThemesCues.forPage(page),false,true);
-    }
-
-    private void updateAtlasUnitLimitButton(){
-        if(atlasLimitButton==null)return;
-        atlasLimitButton.setSelected(unitBounded);
-        Ui.setIconDescription(atlasLimitButton,unitBounded
-            ?"Unité bornée · toucher pour lire librement"
-            :"Lecture libre · toucher pour revenir aux limites de l'unité");
-    }
-
-    private void toggleAtlasUnitLimit(){
-        if(!mapUnitPreview)return;
-        unitBounded=!unitBounded;
-        updateAtlasUnitLimitButton();
-        if(unitBounded){
-            // Existing setPage clamp also respects a final ayah continued on a second QCF page.
-            setPage(page);
-        }
-        if(!showMap114Focus())
-            mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
-        applySemanticCues();
-        updateAtlasCueFooter();
     }
 
     private void selectAtlasPassageOnPage(int nextPage){
@@ -969,7 +937,6 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     /** Atlas uses the existing Sabqi/Itqan context veil, scoped to the active genuine passage. */
     private boolean showMap114Focus() {
         if(mapUnitPreview) {
-            if(!unitBounded)return false;
             int surah=getIntent().getIntExtra("map114Surah",0);
             int unitFirst=getIntent().getIntExtra("map114FocusStart",0);
             int unitLast=getIntent().getIntExtra("map114FocusEnd",0);
@@ -1023,8 +990,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
     }
     @Override protected void onSaveInstanceState(Bundle out) {
         if(mapPreview)out.putInt("map114ReaderPage",page);
-        if(mapUnitPreview){out.putBoolean("map114UnitBounded",unitBounded);
-            out.putInt("map114PassageIndex",atlasPassagePosition);}
+        if(mapUnitPreview)out.putInt("map114PassageIndex",atlasPassagePosition);
         super.onSaveInstanceState(out);
     }
 
@@ -1059,7 +1025,7 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             int surah=getIntent().getIntExtra("map114Surah",0);
             if(surah>=1&&surah<=114){
                 GeometryRepository originalQcf=GeometryRepository.get(this);
-                if(mapUnitPreview&&unitBounded)
+                if(mapUnitPreview)
                     MapUnitMarkers.showScoped(mushaf,shown,surah,
                         mapPreviewUnits.forSurah(surah),originalQcf);
                 else
