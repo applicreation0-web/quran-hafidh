@@ -31,7 +31,7 @@ final class MapQcfThumbnails extends WebView {
      new java.util.LinkedHashMap<Integer,String>(8,0.75f,true){
       @Override protected boolean removeEldestEntry(java.util.Map.Entry<Integer,String> entry){return size()>6;}
      };
- private String cachedSvg(int page)throws Exception{
+ private synchronized String cachedSvg(int page)throws Exception{
   String svg=vectorCache.get(page);
   if(svg==null){svg=readSvg(getContext(),page);vectorCache.put(page,svg);}
   return svg;
@@ -201,21 +201,21 @@ final class MapQcfThumbnails extends WebView {
   loadDataWithBaseURL(null,html.toString(),"text/html","UTF-8",null);
  }
  private final class Bridge {
-  /** Sequential on-device rasterization of authentic local QCF SVG pages.
-   * Never loads multiple full pages in one HTML document.
+  /** Decode on the WebView JavaScript bridge worker, never on Android's UI thread.
+   * Only inject the prepared authentic SVG after validating its generation.
    */
   @JavascriptInterface public void thumb(int page,int generation){
    if(page<1||page>604)return;
+   String encoded;
+   try{
+    String original=cachedSvg(page);
+    encoded=android.util.Base64.encodeToString(
+        original.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
+   }catch(Exception unavailable){encoded="";}
+   final String prepared=encoded;
    post(()->{
     if(!mosaicMode||generation!=mosaicGeneration||page<mosaicFirst||page>Math.min(end,mosaicFirst+5))return;
-    try{
-     String original=cachedSvg(page);
-     String encoded=android.util.Base64.encodeToString(
-         original.getBytes(StandardCharsets.UTF_8),android.util.Base64.NO_WRAP);
-     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+encoded+"',"+generation+");",null);
-    }catch(Exception unavailable){
-     evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'',"+generation+");",null);
-    }
+    evaluateJavascript("if(window.receiveThumb)receiveThumb("+page+",'"+prepared+"',"+generation+");",null);
    });
   }
   @JavascriptInterface public void shift(int delta){post(()->MapQcfThumbnails.this.shiftMosaic(delta));}
