@@ -102,7 +102,7 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    awaitAtlasMosaic(scenario,screen);
    scenario.onActivity(a->{
     assertEquals("Unit 4 must be selected",3,((Integer)field(screen.get(),"activeMacro")).intValue());
-    assertEquals("Atlas displays only the unit graph","OverviewGraph",
+    assertEquals("Atlas displays the selected unit graph, not the root overview","Graph",
       ((android.widget.HorizontalScrollView)field(screen.get(),"axis")).getChildAt(0).getClass().getSimpleName());
     assertFalse("A unit mosaic has no passage selected",(Boolean)field(screen.get(),"passageOpen"));
     assertEquals("Mosaic starts at the first physical QCF page",first,((Integer)field(screen.get(),"page")).intValue());
