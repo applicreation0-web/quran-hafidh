@@ -153,16 +153,17 @@ final class MawdudiMapScreen implements MushafView.Listener {
    int height=atlasHeight(right-left,bottom-topEdge);
    if(height!=sunHeight){sunHeight=height;refresh();}
   });
+  boolean compact=activity.getResources().getDisplayMetrics().heightPixels<Ui.dp(activity,700);
   passageTitle=Ui.text(activity,"",16f,true);
   passageTitle.setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.BOLD);
   passageTitle.setGravity(Gravity.CENTER);
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
   passageTitle.setOnClickListener(v->showCurrentTitle());
-  passageTitle.setMinHeight(Ui.dp(activity,50));
+  passageTitle.setMinHeight(Ui.dp(activity,compact?44:50));
   titlePanel=new ScrollView(activity);titlePanel.setFillViewport(false);
   titlePanel.setVerticalScrollBarEnabled(true);
   titlePanel.addView(passageTitle,new ScrollView.LayoutParams(-1,-2));
-  root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,56)));
+  root.addView(titlePanel,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?48:56)));
   selectedPassageTitle=Ui.text(activity,"",12.5f,false);
   selectedPassageTitle.setTypeface(android.graphics.Typeface.create("sans-serif",android.graphics.Typeface.ITALIC));
   selectedPassageTitle.setTextColor(Ui.INK);
@@ -171,7 +172,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   selectedPassageTitle.setEllipsize(null);
   selectedPassageTitle.setPadding(Ui.dp(activity,8),0,Ui.dp(activity,8),Ui.dp(activity,2));
   selectedPassageTitle.setContentDescription("Titre Ayah Themes du passage actif");
-  root.addView(selectedPassageTitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,48)));
+  root.addView(selectedPassageTitle,new LinearLayout.LayoutParams(-1,Ui.dp(activity,compact?44:48)));
   thumbnails=new MapQcfThumbnails(activity,new MapQcfThumbnails.Listener(){
    @Override public void onPageChosen(int p){onThumbnailPage(p);}
    @Override public void onOpenReading(int p){onThumbnailPage(p);openReader();}
@@ -181,7 +182,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
   root.addView(mushaf,new LinearLayout.LayoutParams(-1,0,1));
   // Page badges and swipes replace both page arrows and passage arrows.
   icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);
-  icons.setMinimumHeight(Ui.dp(activity,56));
+  icons.setMinimumHeight(Ui.dp(activity,compact?48:56));
   LinearLayout.LayoutParams tafsirPos=new LinearLayout.LayoutParams(Ui.dp(activity,48),Ui.dp(activity,48));
   tafsirPos.rightMargin=Ui.dp(activity,36);
   icons.addView(Ui.iconButton(activity,"","Carte",v->{passageOpen=false;refresh();}),tafsirPos);
@@ -193,11 +194,14 @@ final class MawdudiMapScreen implements MushafView.Listener {
   activity.setContentView(root);refresh();
  }
  MushafView mushaf(){return mushaf;}
+ private int captionHeight(){
+  return Ui.dp(activity,activity.getResources().getDisplayMetrics().heightPixels<Ui.dp(activity,700)?48:56);
+ }
  private void closeTitle(){
   if(!titleExpanded)return;
   titleExpanded=false;
   passageTitle.setMaxLines(3);passageTitle.setEllipsize(TextUtils.TruncateAt.END);
-  titlePanel.getLayoutParams().height=Ui.dp(activity,56);titlePanel.requestLayout();titlePanel.scrollTo(0,0);
+  titlePanel.getLayoutParams().height=captionHeight();titlePanel.requestLayout();titlePanel.scrollTo(0,0);
  }
  private void openCommentary(){
   if(overview){openMacro(activeMacro);return;}
@@ -219,7 +223,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
       View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
   int pageBudget=available-sunHeight-Ui.dp(activity,48+48+100+140+32);
   int limit=Math.max(Ui.dp(activity,56),Math.min(Math.min(Ui.dp(activity,180),available/4),pageBudget));
-  titlePanel.getLayoutParams().height=Math.min(limit,Math.max(Ui.dp(activity,56),passageTitle.getMeasuredHeight()));
+  titlePanel.getLayoutParams().height=Math.min(limit,Math.max(captionHeight(),passageTitle.getMeasuredHeight()));
   titlePanel.requestLayout();titlePanel.scrollTo(0,0);
  }
  private void showCurrentTitle(){
@@ -470,7 +474,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private int atlasHeight(int width,int height){
   // One unit row for both Al-Fatiha and 11-unit An-Nisa. The second line is
   // reserved for the five canonical Ayah Themes passages, not for more units.
-  return Ui.dp(activity,118);
+  // Compact phones gain vertical space without shrinking the two rails on BOOX.
+  return Ui.dp(activity,height<Ui.dp(activity,700)?98:118);
  }
  private float atlasX(int visibleOrdinal,int width){
   return width*(visibleOrdinal+.5f)/visibleUnitCount();
