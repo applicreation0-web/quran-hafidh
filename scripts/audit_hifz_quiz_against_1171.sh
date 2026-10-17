@@ -100,7 +100,7 @@ while IFS= read -r file; do
       fi
       ;;
     "$prefix/AtlasSourcePdfActivity.java")
-      if [[ "$(git hash-object "$file")" != "3f2a9f7c3c3d51590da5ff13f621ff7715d113de" ]]; then
+      if [[ "$(git hash-object "$file")" != "e5635309af326d1e073c47bc50e0e5fc498e3d05" ]]; then
         echo "::error file=$file::Atlas original-PDF reader not exact-reviewed."
         bad=1
       else

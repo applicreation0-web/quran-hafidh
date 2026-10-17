@@ -34,7 +34,7 @@ public final class AtlasSourcePdfActivity extends Activity {
   super.onCreate(state);
   LinearLayout root=Ui.column(this);root.setBackgroundColor(Ui.PAPER);
   LinearLayout header=Ui.row(this);header.setGravity(Gravity.CENTER_VERTICAL);
-  header.addView(Ui.iconButton(this,"","Retour à Atlas",v->finish()),
+  header.addView(Ui.iconButton(this,"","Retour",v->finish()),
      new LinearLayout.LayoutParams(Ui.dp(this,48),Ui.dp(this,48)));
   heading=Ui.bookText(this,"Commentaire original · ouverture…",14f,true);
   heading.setGravity(Gravity.CENTER);
