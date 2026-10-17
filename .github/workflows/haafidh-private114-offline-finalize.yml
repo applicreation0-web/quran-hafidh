@@ -1,6 +1,7 @@
 name: Quran Haafidh 114 — code-only private-flag staging for OFFLINE local signing
 # Isolated JVM fixture paths fixed (2026-10-16); preserve all 446 tests.
 # ATLAS QCF: fit captions to their text and preserve page space, including two-row Baqarah.
+# STAGING FINALE DU 17-10-2026: CI code-only, aucune ressource privee; compilation du HEAD courant pour signature locale.
 # FINALISATION CP5 2026-10-16: rebuild code-only after weekly page goals, even/odd badges, centered Tafsir/Lecture and An-Naml title fix.
 # HISTORICAL SUN-173 QCF AUDIT: all 604 SVG thumbnails enabled after 762348-byte corpus maximum check; 173 units, source titles and active recall protected; offline private signing only.
 
