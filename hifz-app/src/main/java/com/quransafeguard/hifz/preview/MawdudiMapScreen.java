@@ -274,17 +274,14 @@ final class MawdudiMapScreen implements MushafView.Listener {
  private void renderPage(){
   mushaf.setVisibility(View.GONE);
   passageTitle.setVisibility(overview?View.GONE:View.VISIBLE);
-  thumbnails.setVisibility(View.VISIBLE);
+  // ROOT is a map only: keep the selected unit/page cursor but never render
+  // a surah-wide QCF mosaic. This also prevents costly SVG decoding on BOOX.
+  thumbnails.setVisibility(overview?View.GONE:View.VISIBLE);
   icons.setVisibility(overview?View.GONE:View.VISIBLE);
   MawdudiMapData.Macro unit=macro();
   if(overview){
-   java.util.List<MawdudiPassageIndex.Passage> all=index.forSurah(surah);
-   int first=geometry.pageForVerse(new VerseRef(surah,1));
-   int last=MawdudiMapModel.lastPageForVerse(
-       new VerseRef(surah,all.get(all.size()-1).lastAyah),geometry);
-   page=Math.max(first,Math.min(last,page));
-   thumbnails.setMosaic(true);
-   thumbnails.showPages(first,last,page,surah,unit.start,unit.end,true,0,0);
+   // The root has no page previews. Unit selection remains highlighted
+   // in the Atlas graph, while its last page cursor is preserved.
    return;
   }
   int first=geometry.pageForVerse(new VerseRef(surah,unit.start));
@@ -447,8 +444,8 @@ final class MawdudiMapScreen implements MushafView.Listener {
    c.drawCircle(tick,(top+bottom)/2,Ui.dp(activity,1),p);
   }
   p.setStyle(Paint.Style.FILL);p.setTextSize(Ui.dp(activity,10));
-  p.setTextAlign(Paint.Align.LEFT);c.drawText("Pages "+firstPage+" à "+lastPage,left,bottom+Ui.dp(activity,16),p);
-  p.setTextAlign(Paint.Align.RIGHT);c.drawText("U"+(activeMacro+1)+" · "+a+" à "+b,right,bottom+Ui.dp(activity,16),p);
+  p.setTextAlign(Paint.Align.LEFT);c.drawText("Pages "+firstPage+"–"+lastPage,left,bottom+Ui.dp(activity,16),p);
+  p.setTextAlign(Paint.Align.RIGHT);c.drawText("U"+(activeMacro+1)+" · "+a+"–"+b,right,bottom+Ui.dp(activity,16),p);
  }
  private final class OverviewGraph extends View {
   final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
