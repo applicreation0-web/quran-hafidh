@@ -66,7 +66,7 @@ grep -Eq 'Status: ok|Status: timeout' audit-process-death-launch.txt
 adb shell am force-stop com.quransafeguard.hifz.ibnkathirtest
 run_process_death_phase b_verifyFixtureAfterExternalForceStop audit-process-death-verify.txt
 
-# Mandatory screenshots now target the 10-stage Mawdudi pilot, not retired 13-themes cards.
+# Mandatory screenshots target the current direct-QCF Atlas, not the removed mosaic.
 # Screen evidence is mandatory. Keep test APK installed until copying pixels.
 mkdir -p audit-runtime-screens
 device_dir=/sdcard/Android/data/com.quransafeguard.hifz.ibnkathirtest/files
@@ -92,7 +92,9 @@ for file in audit-lecture-mushaf.png \
             audit-mawdudi-baqara-compact-map-commentary-return.png \
             audit-cp04-memo-libre-avant.png \
             audit-cp04-memo-libre-apres.png \
-            audit-atlas-unit-only-real-qcf-mosaic.png \
+            audit-atlas-direct-qcf-unit-and-passages.png \
+            audit-atlas-an-nisa-u11-sliding-units.png \
+            audit-atlas-inline-jalalayn-qcf-visible.png \
             audit-atlas-unit-swiped-original-qcf-page.png \
             audit-atlas-unit-reading-return-exact-page.png; do
   test -s "audit-runtime-screens/$file"
@@ -101,9 +103,14 @@ done
 # The old passage-graph screenshots have been intentionally retired.
 test ! -f audit-runtime-screens/audit-map114-synthetic-graph-qcf.png || \
   echo "::notice::Historical passage-graph screenshot exists but is not the approved Atlas proof"
-if cmp -s audit-runtime-screens/audit-atlas-unit-only-real-qcf-mosaic.png \
+if cmp -s audit-runtime-screens/audit-atlas-direct-qcf-unit-and-passages.png \
           audit-runtime-screens/audit-atlas-unit-swiped-original-qcf-page.png; then
-  echo "::error::Atlas mosaic and full QCF page rendered identical pixels"
+  echo "::error::Atlas direct QCF page did not change after a page swipe"
+  exit 1
+fi
+if cmp -s audit-runtime-screens/audit-atlas-direct-qcf-unit-and-passages.png \
+          audit-runtime-screens/audit-atlas-inline-jalalayn-qcf-visible.png; then
+  echo "::error::Opening Jalalayn did not change the Atlas reading pixels"
   exit 1
 fi
 
