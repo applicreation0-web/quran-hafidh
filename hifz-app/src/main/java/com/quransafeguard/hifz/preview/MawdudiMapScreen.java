@@ -294,23 +294,20 @@ final class MawdudiMapScreen implements MushafView.Listener {
   thumbnails.showPages(first,last,page,surah,unit.start,unit.end,true,0,0);
  }
  private void onThumbnailPage(int desired){
-  closeTitle();if(overview)openMacro(activeMacro);
-  MawdudiMapData.Macro unit=macro();
-  int start=geometry.pageForVerse(new VerseRef(surah,unit.start));
-  int end=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry);
-  if(passageOpen){start=Math.min(start,MawdudiMapModel.firstPage(current(),geometry));end=Math.max(end,MawdudiMapModel.lastPage(current(),geometry));}
-  desired=Math.max(start,Math.min(end,desired));
-  int currentFirst=geometry.pageForVerse(new VerseRef(surah,focusStart));
-  int currentLast=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
-  if(!passageOpen||desired<currentFirst||desired>currentLast){
-   for(int n=0;n<passages.size();n++){
-    MawdudiPassageIndex.Passage p=passages.get(n);
-    if(graph.inMacro(n)&&desired>=MawdudiMapModel.firstPage(p,geometry)&&desired<=MawdudiMapModel.lastPage(p,geometry)){
-     selected=n;focusStart=p.firstAyah;focusEnd=p.lastAyah;passageOpen=true;break;
-    }
+  closeTitle();
+  if(overview){
+   int target=activeMacro;
+   for(VerseRef verse:geometry.versesOnLines(geometry.lineIdsOnPage(desired))){
+    if(verse.getSurah()!=surah)continue;
+    target=macroIndex(surah,verse.getAyah());break;
    }
+   openMacro(target);
   }
-  page=desired;refresh();
+  MawdudiMapData.Macro unit=macro();
+  page=Math.max(geometry.pageForVerse(new VerseRef(surah,unit.start)),
+      Math.min(MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry),desired));
+  passageOpen=true; // Selected PHYSICAL page, never a selected Ayah Themes passage.
+  refresh();
  }
  private void turn(int d){onThumbnailPage(page+d);}
  private void moveWithinUnit(int d){
@@ -318,18 +315,44 @@ final class MawdudiMapScreen implements MushafView.Listener {
   if(next>=0&&next<passages.size()&&graph.inMacro(next))movePassage(d);
  }
  void openReader(){
-  if(overview||!passageOpen)return;
-  java.util.List<VerseRef> visible=MawdudiMapModel.highlightedVerses(current(),page,geometry);
-  VerseRef jump=null;
-  for(VerseRef v:visible)if(v.getAyah()>=focusStart&&v.getAyah()<=focusEnd){jump=v;break;}
-  if(jump==null)return;
-  Intent intent=new Intent(activity,StudyReaderActivity.class).putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page)
-   .putExtra(StudyReaderActivity.EXTRA_JUMP_VERSE,jump.toString()).putExtra(StudyReaderActivity.EXTRA_MAP_PREVIEW,true)
-   .putExtra("map114Surah",surah).putExtra("map114PassageId",current().id).putExtra("map114FocusStart",focusStart).putExtra("map114FocusEnd",focusEnd);
-  closeTitle();activity.startActivity(intent);
+  if(overview)return;
+  MawdudiMapData.Macro unit=macro();
+  Intent intent=new Intent(activity,StudyReaderActivity.class)
+      .putExtra(StudyReaderActivity.EXTRA_JUMP_PAGE,page)
+      .putExtra(StudyReaderActivity.EXTRA_MAP_PREVIEW,true)
+      .putExtra("map114UnitMode",true)
+      .putExtra("map114Surah",surah)
+      .putExtra("map114UnitOrdinal",activeMacro+1)
+      .putExtra("map114FocusStart",unit.start)
+      .putExtra("map114FocusEnd",unit.end);
+  closeTitle();
+  activity.startActivityForResult(intent,11436);
  }
- void save(Bundle b){b.putBoolean("map114Overview",overview);b.putBoolean("map114PassageOpen",passageOpen);b.putInt("map114MacroSelected",activeMacro);b.putInt("map114Surah",surah);b.putInt("map114Ayah",current().firstAyah);b.putInt("map114Page",page);b.putInt("map114FocusStart",focusStart);b.putInt("map114FocusEnd",focusEnd); }
- boolean back(){if(commentary!=null&&commentary.isShowing()){commentary.close();commentary=null;return true;}if(titleExpanded){closeTitle();return true;}if(passageOpen){passageOpen=false;refresh();return true;}if(!overview){if(macros.forSurah(surah).size()>1){setLevel(true);return true;}return false;}return false;}
+ void returnFromReader(int returnedSurah,int ordinal,int returnedPage){
+  if(returnedSurah!=surah||ordinal!=activeMacro+1)return;
+  MawdudiMapData.Macro unit=macro();
+  int first=geometry.pageForVerse(new VerseRef(surah,unit.start));
+  int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry);
+  page=Math.max(first,Math.min(last,returnedPage));
+  overview=false;passageOpen=true;
+  refresh();
+ }
+ void save(Bundle b){
+  b.putBoolean("map114Overview",overview);
+  b.putBoolean("map114PassageOpen",passageOpen);
+  b.putInt("map114MacroSelected",activeMacro);
+  b.putInt("map114Surah",surah);
+  b.putInt("map114Ayah",macro().start);
+  b.putInt("map114Page",page);
+  b.putInt("map114FocusStart",macro().start);
+  b.putInt("map114FocusEnd",macro().end);
+ }
+ boolean back(){
+  if(titleExpanded){closeTitle();return true;}
+  if(passageOpen){passageOpen=false;refresh();return true;}
+  if(!overview&&macros.forSurah(surah).size()>1){setLevel(true);return true;}
+  return false;
+ }
  void destroy(){closeTitle();if(commentary!=null){commentary.close();commentary=null;}if(mushaf!=null)mushaf.destroySafely();if(thumbnails!=null)thumbnails.destroy();}
  @Override public void onReady(){ready=true;renderPage();}
  @Override public void onPageShown(int p){
