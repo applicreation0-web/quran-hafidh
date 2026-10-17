@@ -103,16 +103,16 @@ final class MapQcfThumbnails extends WebView {
   */
  private void drawMosaic(){
   int count=end-start+1;
-  int columns=count>40?10:count>20?8:count>10?5:count>4?3:Math.max(1,count);
+  int columns=count>6?3:count>3?3:Math.max(1,count);
   int rows=(count+columns-1)/columns;
   StringBuilder html=new StringBuilder(8192);
   html.append("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>")
       .append("<style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#faf8f0;color:#121211;font:12px sans-serif}")
-      .append(".grid{display:grid;width:100%;height:100%;min-height:0;padding:5px;gap:5px;grid-template-columns:repeat(")
+      .append(".grid{display:grid;width:100%;height:100%;min-height:0;padding:5px;gap:5px;align-content:center;grid-template-columns:repeat(")
       .append(columns).append(",minmax(0,1fr));grid-template-rows:repeat(").append(rows).append(",minmax(0,1fr))}")
-      .append("button{border:1px solid #999;background:white;padding:2px;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;overflow:hidden}")
+      .append("button{border:1px solid #999;background:white;padding:2px;min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}")
       .append("button.current{border:2px solid #121211;outline:2px solid #121211;outline-offset:-3px}")
-      .append("img{object-fit:contain;flex:1;width:100%;min-height:0;pointer-events:none}")
+      .append("img{object-fit:contain;flex:1;width:100%;height:100%;min-height:0;pointer-events:none}")
       .append("b{display:inline-block;min-height:14px;font-size:10px;line-height:14px;border-radius:9px;padding:0 4px;font-weight:500}")
       .append(".even b{background:#121211;color:#faf8f0}.odd b{background:#faf8f0;color:#121211;border:1px solid #888}")
       .append(".current b{outline:1px solid #121211;outline-offset:1px;font-weight:bold}</style></head><body><div class='grid'>");
@@ -130,11 +130,11 @@ final class MapQcfThumbnails extends WebView {
       .append("function receiveThumb(p,src){var el=document.getElementById('qcf'+p);")
       .append("if(!el)return;var img=new Image();")
       .append("function done(){img.onload=null;img.onerror=null;img.src='';setTimeout(requestNext,0);}")
-      .append("img.onload=function(){try{var c=document.createElement('canvas');c.width=106;c.height=162;")
-      .append("var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,106,162);")
+      .append("img.onload=function(){try{var c=document.createElement('canvas');c.width=318;c.height=486;")
+      .append("var ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,318,486);")
       .append("var ratio=img.naturalWidth/img.naturalHeight;")
-      .append("var w=Math.min(106,Math.max(1,Math.round(162*ratio)));")
-      .append("ctx.drawImage(img,Math.floor((106-w)/2),0,w,162);")
+      .append("var w=Math.min(318,Math.max(1,Math.round(486*ratio)));")
+      .append("ctx.drawImage(img,Math.floor((318-w)/2),0,w,486);")
       .append("el.src=c.toDataURL('image/png');c.width=0;c.height=0;")
       .append("}catch(e){el.alt='Miniature indisponible';}done();};")
       .append("img.onerror=function(){el.alt='Miniature indisponible';done();};")
