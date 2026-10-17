@@ -132,6 +132,48 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
     android.os.SystemClock.sleep(250);
    }
    assertNotNull("Reader must open the authentic QCF page",reader.get());
+   // Jalalayn stays in the SAME Activity, with the authentic QCF Mushaf visible.
+   // Test both phone bottom host and BOOX side host without mutating Tafsir assets.
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
+    try{
+     StudyReaderActivity active=reader.get();
+     assertNotNull("Atlas passage focus must select a Tafsir verse",field(active,"selected"));
+     java.lang.reflect.Method open=StudyReaderActivity.class.getDeclaredMethod("openTafsir");
+     open.setAccessible(true);open.invoke(active);
+     boolean wide=(Boolean)field(active,"largeScreen");
+     android.view.ViewGroup panel=(android.view.ViewGroup)field(active,
+         wide?"sideTafsir":"bottomTafsir");
+     assertNotNull("Inline Jalalayn host exists",panel);
+     assertEquals("Inline Jalalayn must be visible",android.view.View.VISIBLE,panel.getVisibility());
+     assertTrue("Jalalayn has a live embedded text panel",panel.getChildCount()>0);
+     assertEquals("Mushaf must stay visible",android.view.View.VISIBLE,
+         ((MushafView)field(active,"mushaf")).getVisibility());
+     Object tafsir=field(active,"mapPreviewJalalayn");
+     assertNotNull("Jalalayn controller must be live",tafsir);
+     assertNull("Lecture must not open the old fullscreen Tafsir dialog",field(tafsir,"dialog"));
+     assertTrue("Inline Tafsir is active",(Boolean)tafsir.getClass()
+         .getDeclaredMethod("isShowing").invoke(tafsir));
+    }catch(Exception error){throw new AssertionError(error);}
+   });
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-inline-jalalayn-qcf-visible.png");
+   androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
+    StudyReaderActivity active=reader.get();
+    int before=(Integer)field(active,"page");
+    Object selectedBefore=field(active,"selected");
+    boolean wide=(Boolean)field(active,"largeScreen");
+    android.view.ViewGroup panel=(android.view.ViewGroup)field(active,
+        wide?"sideTafsir":"bottomTafsir");
+    active.onBackPressed(); // Close Tafsir only; do not finish Lecture.
+    assertEquals("Panel must actually close, not hide a full-screen dialog",
+        android.view.View.GONE,panel.getVisibility());
+    assertEquals("Closing Jalalayn preserves exact QCF page",before,
+        ((Integer)field(active,"page")).intValue());
+    assertEquals("Closing Jalalayn preserves the active verse",selectedBefore,
+        field(active,"selected"));
+    assertEquals("Closing Jalalayn leaves QCF visible",android.view.View.VISIBLE,
+        ((MushafView)field(active,"mushaf")).getVisibility());
+   });
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
     assertEquals(first+2,((Integer)field(reader.get(),"page")).intValue());
     assertTrue("Atlas reading must be unit-scoped",(Boolean)field(reader.get(),"mapUnitPreview"));
