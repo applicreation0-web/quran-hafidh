@@ -44,21 +44,36 @@ public final class AtlasFinalizationSourceContractTest {
         assertTrue(pages.contains("MapPages.step(dx>0?1:-1)"));
     }
 
-    @Test public void atlasHasOnlyUnitMosaicAndReaderActions() throws Exception {
+    @Test public void atlasUsesSingleSlidingUnitRailAndDirectAuthenticQcf() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
-        assertTrue(map.contains("icons=Ui.row(activity);icons.setGravity(Gravity.CENTER);"));
-        assertTrue(map.contains("icons.setMinimumHeight(Ui.dp(activity,56));"));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Carte\""));
-        assertTrue(map.contains("Ui.iconButton(activity,\"\",\"Lecture\""));
-        String actions=map.substring(map.indexOf("icons=Ui.row(activity)"),map.indexOf("root.addView(icons);"));
-        assertFalse("No commentary link from Atlas", actions.contains("openCommentary()"));
-        assertTrue("Unit nodes only, not a separate passage graph",map.contains("axis.addView(overviewGraph,"));
-        assertFalse(map.contains("axis.addView(graph,"));
-        assertTrue(map.contains("thumbnails.setMosaic(!passageOpen)"));
-        assertTrue(map.contains("activity.startActivityForResult(intent,11436)"));
+        assertTrue("Exactly five unit positions maximum",
+            map.contains("Math.min(5,unitCount())"));
+        assertTrue("Every unit remains reachable by sliding",
+            map.contains("shiftUnitWindow(dx>0?-1:1)"));
+        assertTrue("Active unit remains distinctly circled",
+            map.contains("ordinal==activeMacro"));
+        assertTrue("Second five-position Ayah Themes rail is retained",
+            map.contains("Math.min(5,items.size())"));
+        assertTrue("Unit title is larger and bold",map.contains("Ui.text(activity,\"\",16f,true)"));
+        assertTrue("Passage title is smaller and italic",
+            map.contains("Ui.text(activity,\"\",12.5f,false)")
+                &&map.contains("Typeface.ITALIC"));
+        assertTrue("Only direct authentic QCF full page is shown",
+            map.contains("thumbnails.setMosaic(false)"));
+        assertFalse("No redundant third page band above Mushaf",
+            map.contains("c.drawText(\"Pages \"+firstPage"));
+        assertTrue("QCF page pills stay below Mushaf",
+            read(ROOT+"MapQcfThumbnails.java").contains("aria-current='page'"));
+        assertTrue("Gray shading uses the entire active Ayah Themes passage",
+            map.contains("thumbnails.showPages(first,last,page,surah,focusStart,focusEnd,false,"));
+        assertTrue("Existing Lecture action is retained",map.contains("Ui.iconButton(activity,\"\",\"Lecture\""));
+        assertTrue("Lecture carries the selected passage, not just the unit",
+            map.contains(".putExtra(\"map114PassageId\",current().id)"));
+        assertTrue("Open/return QCF page stays in its unit",
+            map.contains("activity.startActivityForResult(intent,11436)"));
     }
 
-        @Test public void sourcePassagesRemainUnchangedButNeverAppearAsAtlasNodes() throws Exception {
+    @Test public void sourcePassagesRemainUnchangedButNeverAppearAsAtlasNodes() throws Exception {
         String map=read(ROOT+"MawdudiMapScreen.java");
         assertTrue("Canonical passage node code remains source-only",map.contains("return titles.titleForPassage(current().id);"));
         assertTrue("Atlas uses only source-backed unit labels",map.contains("passageTitle.setText(unit.label);"));
