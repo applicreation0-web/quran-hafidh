@@ -135,7 +135,9 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{
     assertEquals(first+2,((Integer)field(reader.get(),"page")).intValue());
     assertTrue("Atlas reading must be unit-scoped",(Boolean)field(reader.get(),"mapUnitPreview"));
-    assertTrue("Unit boundary is on by default",(Boolean)field(reader.get(),"unitBounded"));
+    assertNotNull("Atlas has an explicit previous-passage arrow",field(reader.get(),"atlasPassageUp"));
+    assertNotNull("Atlas has an explicit next-passage arrow",field(reader.get(),"atlasPassageDown"));
+    assertTrue("Atlas focus resolves a real passage",((Integer)field(reader.get(),"atlasPassagePosition"))>=0);
     assertNotNull("Page-dependent Ayah Themes footer",(android.widget.TextView)field(reader.get(),"atlasCueFooter"));
     assertEquals(121,reader.get().getIntent().getIntExtra("map114FocusStart",-1));
     assertEquals(200,reader.get().getIntent().getIntExtra("map114FocusEnd",-1));
