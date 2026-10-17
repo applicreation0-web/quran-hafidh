@@ -442,6 +442,8 @@ public final class StudyReaderActivity extends android.app.Activity implements M
             // Existing setPage clamp also respects a final ayah continued on a second QCF page.
             setPage(page);
         }
+        if(!showMap114Focus())
+            mushaf.show(page,Collections.emptyList(),Collections.emptyList(),0);
         applySemanticCues();
         updateAtlasCueFooter();
     }
@@ -875,6 +877,28 @@ public final class StudyReaderActivity extends android.app.Activity implements M
 
     /** Only the new map route carries a canonical focus; Tafsir behavior is unchanged. */
     private boolean showMap114Focus() {
+        if(mapUnitPreview) {
+            // QCF remains a complete physical page. The existing read-only
+            // focus veil distinguishes neighboring verses on shared pages.
+            if(!unitBounded)return false;
+            int surah=getIntent().getIntExtra("map114Surah",0);
+            int first=getIntent().getIntExtra("map114FocusStart",0);
+            int last=getIntent().getIntExtra("map114FocusEnd",0);
+            if(surah<1||surah>114||first<1||last<first)return false;
+            try {
+                GeometryRepository qcf=GeometryRepository.get(this);
+                java.util.List<VerseRef> focus=new java.util.ArrayList<>();
+                for(VerseRef v:qcf.versesOnLines(qcf.lineIdsOnPage(page)))
+                    if(v.getSurah()==surah&&v.getAyah()>=first&&v.getAyah()<=last&&!focus.contains(v))
+                        focus.add(v);
+                if(focus.isEmpty())return false;
+                mushaf.setHighlightVerses(focus);
+                mushaf.show(page,focus,
+                    qcf.lineIdsForVerseRange(new VerseRef(surah,first),new VerseRef(surah,last)),
+                    0,true);
+                return true;
+            }catch(RuntimeException badGeometry){return false;}
+        }
         String id=getIntent().getStringExtra("map114PassageId");
         if(!mapPreview||id==null)return false;
         try {
