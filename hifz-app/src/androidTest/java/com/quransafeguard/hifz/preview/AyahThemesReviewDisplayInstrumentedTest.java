@@ -99,15 +99,24 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    int last=MawdudiMapModel.lastPageForVerse(new com.quransafeguard.hifz.core.VerseRef(3,200),
        GeometryRepository.get(context));
    assertTrue("This fixture contains several physical pages",last>first+2);
-   awaitAtlasMosaic(scenario,screen);
+   awaitAtlasFullPage(scenario,screen,first);
    scenario.onActivity(a->{
     assertEquals("Unit 4 must be selected",3,((Integer)field(screen.get(),"activeMacro")).intValue());
     assertEquals("Atlas displays the selected unit graph, not the root overview","Graph",
       ((android.widget.HorizontalScrollView)field(screen.get(),"axis")).getChildAt(0).getClass().getSimpleName());
-    assertFalse("A unit mosaic has no passage selected",(Boolean)field(screen.get(),"passageOpen"));
-    assertEquals("Mosaic starts at the first physical QCF page",first,((Integer)field(screen.get(),"page")).intValue());
+    assertTrue("Unit goes straight to physical QCF, without an intermediate mosaic",
+      (Boolean)field(screen.get(),"passageOpen"));
+    android.widget.TextView unitTitle=(android.widget.TextView)field(screen.get(),"passageTitle");
+    android.widget.TextView sourceTitle=(android.widget.TextView)field(screen.get(),"selectedPassageTitle");
+    assertTrue("Unit heading must be larger",unitTitle.getTextSize()>sourceTitle.getTextSize());
+    assertTrue("Unit heading must be bold",
+      (unitTitle.getTypeface().getStyle()&android.graphics.Typeface.BOLD)!=0);
+    assertTrue("Selected source heading must be italic",
+      (sourceTitle.getTypeface().getStyle()&android.graphics.Typeface.ITALIC)!=0);
+    assertTrue("No empty source title",sourceTitle.length()>0);
+    assertEquals("Direct QCF starts at the first unit page",first,((Integer)field(screen.get(),"page")).intValue());
    });
-   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-only-real-qcf-mosaic.png");
+   HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-direct-qcf-unit-and-passages.png");
    scenario.onActivity(a->{
     try {
      java.lang.reflect.Method openPage=MawdudiMapScreen.class.getDeclaredMethod("onThumbnailPage",int.class);
@@ -204,29 +213,6 @@ public final class AyahThemesReviewDisplayInstrumentedTest {
    HifzAndMapRuntimeSmokeInstrumentedTest.saveScreenshot("audit-atlas-unit-reading-return-exact-page.png");
    scenario.onActivity(a->screen.get().destroy());
   }
- }
- /** Real QCF mosaic shows at most six native-ratio vector pages per BOOX viewport. */
- private static void awaitAtlasMosaic(ActivityScenario<IbnKathirMapActivity> scenario,
-     AtomicReference<MawdudiMapScreen> screen)throws Exception {
-  String script="(function(){var grid=document.querySelector('.grid');"+
-    "if(!grid||grid.querySelectorAll('button').length<1||grid.querySelectorAll('button').length>6)return false;"+
-    "if(document.documentElement.scrollHeight>innerHeight+1||!window.mosaicPaintReady)return false;"+
-    "return Array.from(grid.querySelectorAll('img')).every(x=>"+
-    "x.complete&&x.naturalWidth>0&&x.naturalHeight>0&&x.loading==='eager'&&Math.abs(x.naturalWidth/x.naturalHeight-345/550)<0.03&&x.getAttribute('src').startsWith('data:image/svg+xml;base64,'));})()";
-  for(int attempt=0;attempt<72;attempt++){
-   CountDownLatch ready=new CountDownLatch(1);
-   AtomicReference<String> result=new AtomicReference<>();
-   scenario.onActivity(a->((android.webkit.WebView)field(screen.get(),"thumbnails"))
-     .evaluateJavascript(script,v->{result.set(v);ready.countDown();}));
-   assertTrue(ready.await(15,TimeUnit.SECONDS));
-   if("true".equals(result.get())){
-    // Decode completion is not the same as Android WebView compositor completion.
-    android.os.SystemClock.sleep(350);
-    return;
-   }
-   android.os.SystemClock.sleep(250);
-  }
-  fail("All displayed Atlas thumbnail SVG pages must load at the native QCF ratio");
  }
  /** Unit-only page view: original SVG fully contained, never a fake page or passage text. */
  private static void awaitAtlasFullPage(ActivityScenario<IbnKathirMapActivity> scenario,
