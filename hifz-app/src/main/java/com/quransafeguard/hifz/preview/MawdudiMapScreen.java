@@ -204,21 +204,7 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  private void showCurrentTitle(){
   if(overview){openMacro(activeMacro);return;}
-  if(!passageOpen){
-   Intent source=new Intent(activity,AtlasSourcePdfActivity.class);
-   source.putExtra(AtlasSourcePdfActivity.EXTRA_SURAH,surah);
-   source.putExtra(AtlasSourcePdfActivity.EXTRA_AYAH,macro().start);
-   activity.startActivity(source);return;
-  }
-  if(surah==27&&focusStart>=67&&focusEnd<=82&&subnodes.length()==3){
-   try {for(int k=0;k<subnodes.length();k++){
-    JSONObject child=subnodes.getJSONObject(k);
-    if(child.getInt("start")==focusStart&&child.getInt("end")==focusEnd){
-     showTitle(child.getString("title"));return;
-    }
-   }}catch(JSONException invalid){return;}
-  }
-  showTitle(titles.titleForPassage(current().id));
+  showTitle(macro().label); // The selected unit's approved caption, never a PDF.
  }
  private void chooseUnit(){
   PopupMenu chooser=new PopupMenu(activity,heading);
@@ -262,61 +248,50 @@ final class MawdudiMapScreen implements MushafView.Listener {
  }
  void refresh(){
   if(heading==null)return;
-  // The private macro pack currently contains placeholder labels, NOT authentic
-  // Maududi headings. Show only verified structural ranges; never invent titles.
   MawdudiMapData.Macro unit=macro();
   String surahLabel=QuranSurahNames.labelFor(surah);
   int total=macros.forSurah(surah).size();
   if(overview){
    heading.setText(surahLabel+" · "+total+" unités");
-   passageTitle.setText("Touchez une unité, puis ses passages et ses pages");
-  }else if(!passageOpen){
-   heading.setText(surahLabel+" · Unité "+(activeMacro+1));
-   passageTitle.setText("Unité "+(activeMacro+1)+" · "+surah+":"+unit.start+"–"+unit.end
-       +" · "+graph.nodes().size()+" passages");
+   passageTitle.setText("");
   }else{
-   int within=graph.currentNodeOrdinal();
-   int count=graph.nodes().size();
-   heading.setText(surahLabel+" · Unité "+(activeMacro+1)+" · Passage "+within);
-   passageTitle.setText(surah+":"+focusStart+(focusStart==focusEnd?"":"–"+focusEnd)+" · "+graph.selectedTitle());
+   heading.setText(surahLabel+" · U"+(activeMacro+1)+"/"+total);
+   passageTitle.setText(unit.label);
   }
   heading.setContentDescription("Changer d'unité · "+heading.getText());
-  // The Atlas remains stable while the page fits its own remaining viewport.
-  // No animations or text overlays cover the Mushaf.
   int desiredHeight=sunHeight;
   ViewGroup.LayoutParams vp=axis.getLayoutParams();
   if(vp.height!=desiredHeight){vp.height=desiredHeight;axis.setLayoutParams(vp);}
   View child=axis.getChildAt(0);
   if(child!=null){
-   ViewGroup.LayoutParams childParams=child.getLayoutParams();
-   if(childParams.height!=desiredHeight){
-    childParams.height=desiredHeight;child.setLayoutParams(childParams);
-   }
+   ViewGroup.LayoutParams cp=child.getLayoutParams();
+   if(cp.height!=desiredHeight){cp.height=desiredHeight;child.setLayoutParams(cp);}
   }
   graph.requestLayout();graph.invalidate();
   overviewGraph.requestLayout();overviewGraph.invalidate();
   renderPage();
  }
  private void renderPage(){
-  // The Atlas never compresses the authentic 15-line QCF reader beneath a diagram.
-  // Existing StudyReaderActivity supplies full-screen reading and Android Back.
   mushaf.setVisibility(View.GONE);
-  passageTitle.setVisibility(View.VISIBLE);
+  passageTitle.setVisibility(overview?View.GONE:View.VISIBLE);
   thumbnails.setVisibility(View.VISIBLE);
-  icons.setVisibility(!overview&&passageOpen?View.VISIBLE:View.GONE);
-  MawdudiMapData.Macro chosen=macro();
-  int unitFirst=geometry.pageForVerse(new VerseRef(surah,chosen.start));
-  int unitLast=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,chosen.end),geometry);
-  if(overview||!passageOpen){
-   page=Math.max(unitFirst,Math.min(unitLast,page));
-   thumbnails.showPages(unitFirst,unitLast,page,surah,chosen.start,chosen.end,true,0,0);
+  icons.setVisibility(overview?View.GONE:View.VISIBLE);
+  MawdudiMapData.Macro unit=macro();
+  if(overview){
+   java.util.List<MawdudiPassageIndex.Passage> all=index.forSurah(surah);
+   int first=geometry.pageForVerse(new VerseRef(surah,1));
+   int last=MawdudiMapModel.lastPageForVerse(
+       new VerseRef(surah,all.get(all.size()-1).lastAyah),geometry);
+   page=Math.max(first,Math.min(last,page));
+   thumbnails.setMosaic(true);
+   thumbnails.showPages(first,last,page,surah,unit.start,unit.end,true,0,0);
    return;
   }
-  int first=geometry.pageForVerse(new VerseRef(surah,focusStart));
-  int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,focusEnd),geometry);
-  page=MawdudiMapModel.clampFocusPage(surah,focusStart,focusEnd,page,geometry);
-  // Keep canonical boundary-spanning passages whole, including their last page.
-  thumbnails.showPages(Math.min(unitFirst,first),Math.max(unitLast,last),page,surah,focusStart,focusEnd,false,first,last);
+  int first=geometry.pageForVerse(new VerseRef(surah,unit.start));
+  int last=MawdudiMapModel.lastPageForVerse(new VerseRef(surah,unit.end),geometry);
+  page=Math.max(first,Math.min(last,page));
+  thumbnails.setMosaic(!passageOpen);
+  thumbnails.showPages(first,last,page,surah,unit.start,unit.end,true,0,0);
  }
  private void onThumbnailPage(int desired){
   closeTitle();if(overview)openMacro(activeMacro);
