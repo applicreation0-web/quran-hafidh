@@ -91,6 +91,22 @@ while IFS= read -r file; do
         echo "EXACT M10 WORD LOOKUP FOUNDATION: $file"
       fi
       ;;
+    "$prefix/AtlasPrivateV2.java")
+      if [[ "$(git hash-object "$file")" != "955304414fe110092fad800263f6a4f44fb870af" ]]; then
+        echo "::error file=$file::Atlas documentary index not exact-reviewed."
+        bad=1
+      else
+        echo "EXACT CP09 DOCUMENTARY INDEX: $file"
+      fi
+      ;;
+    "$prefix/AtlasSourcePdfActivity.java")
+      if [[ "$(git hash-object "$file")" != "3f2a9f7c3c3d51590da5ff13f621ff7715d113de" ]]; then
+        echo "::error file=$file::Atlas original-PDF reader not exact-reviewed."
+        bad=1
+      else
+        echo "EXACT CP09 SOURCE READER: $file"
+      fi
+      ;;
     "$prefix/HifzSessionActivity.java" | \
     "$prefix/HifzPrefs.java" | \
     "$prefix/ConsolidationCycleEngine.java" | \

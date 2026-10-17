@@ -12,6 +12,7 @@ on:
     paths:
       - .github/workflows/haafidh-private114-offline-finalize.yml
       - scripts/guard_frozen_hifz_engines.sh
+      - scripts/audit_hifz_quiz_against_1171.sh
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasPrivateV2.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/AtlasSourcePdfActivity.java
       - hifz-app/src/main/java/com/quransafeguard/hifz/preview/MawdudiMapData.java
