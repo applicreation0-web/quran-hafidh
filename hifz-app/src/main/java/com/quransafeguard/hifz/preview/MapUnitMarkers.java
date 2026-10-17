@@ -63,7 +63,10 @@ final class MapUnitMarkers {
    "var left=Math.max(1,r.left-box.left-29);"+
    "marks.forEach(function(x){"+
    "var els=m.querySelectorAll('.ayahPolygon');var target=null;"+
-   "for(var i=0;i<els.length;i++){if(els[i].getAttribute('data-verse')===x.verse){"+
+   "var verseParts=x.verse.split(':');"+
+   "for(var i=0;i<els.length;i++){var e=els[i];"+
+   "if(e.getAttribute('data-verse')===x.verse||"+
+   "(e.getAttribute('surah')===verseParts[0]&&e.getAttribute('ayah')===verseParts[1])){"+
    "var t=els[i].getBoundingClientRect();if(!target||(x.edge==='end'?t.bottom>target.bottom:t.top<target.top))target=t;"+
    "}}"+
    "if(!target)return;"+
